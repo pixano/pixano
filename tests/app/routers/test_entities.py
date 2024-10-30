@@ -33,18 +33,20 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("entity_image", ["entity_image_0", "entity_image_1"], None, None, 0),
-        ("entity_image", None, ["0", "1"], None, 0),
-        ("entity_image", None, None, 2, 0),
-        ("entity_image", None, None, 2, None),
-        ("entity_image", None, None, 10, 2),
-        ("entities_video", None, ["1"], 2, 1),
+        ("entity_image", None, ["entity_image_0", "entity_image_1"], None, None, 0),
+        ("entity_image", None, None, ["0", "1"], None, 0),
+        ("entity_image", None, None, None, 2, 0),
+        ("entity_image", "id = 'entity_image_0'", None, None, 2, 0),
+        ("entity_image", None, None, None, 2, None),
+        ("entity_image", None, None, None, 10, 2),
+        ("entities_video", None, None, ["1"], 2, 1),
     ],
 )
 def test_get_entities(
     table: str,
+    where: str | None,
     ids: list[str] | None,
     item_ids: list[str] | None,
     limit: int | None,
@@ -56,6 +58,7 @@ def test_get_entities(
         dataset=dataset_multi_view_tracking_and_image,
         group=SchemaGroup.ENTITY,
         table=table,
+        where=where,
         ids=ids,
         item_ids=item_ids,
         limit=limit,

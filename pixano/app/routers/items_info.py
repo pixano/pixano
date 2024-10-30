@@ -31,6 +31,7 @@ router = APIRouter(prefix="/items_info", tags=["Items"])
 async def get_items_info(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
+    where: str | None = None,
     ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
@@ -40,6 +41,7 @@ async def get_items_info(
     Args:
         dataset_id: Dataset ID.
         settings: App settings.
+        where: Where clause for the item table.
         ids: IDs.
         item_ids: Item IDs.
         limit: Limit number of items.
@@ -52,7 +54,7 @@ async def get_items_info(
     assert_table_in_group(dataset, SchemaGroup.ITEM.value, SchemaGroup.ITEM)
 
     try:
-        item_rows = get_rows(dataset, SchemaGroup.ITEM.value, ids, None, limit, skip)
+        item_rows = get_rows(dataset, SchemaGroup.ITEM.value, where, ids, None, limit, skip)
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except DatasetAccessError as err:

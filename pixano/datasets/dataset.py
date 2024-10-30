@@ -329,11 +329,18 @@ class Dataset:
         ids: list[str] | None = None,
         limit: int | None = None,
         skip: int = 0,
+        where: str | None = None,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
-        self, table_name: str, ids: str, limit: int | None = None, skip: int = 0, item_ids: None = None
+        self,
+        table_name: str,
+        ids: str,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        item_ids: None = None,
     ) -> BaseSchema | None: ...
 
     def get_data(
@@ -342,12 +349,14 @@ class Dataset:
         ids: list[str] | str | None = None,
         limit: int | None = None,
         skip: int = 0,
+        where: str | None = None,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
 
         Args:
             table_name: Table name.
+            where: Where clause.
             ids: ids to read.
             limit: Amount of items to read.
             skip: The number of data to skip.
@@ -374,13 +383,24 @@ class Dataset:
         table = self.open_table(table_name)
         if ids is None:
             if item_ids is None:
-                query = TableQueryBuilder(table).limit(limit).offset(skip)
+                if where is not None:
+                    query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+                else:
+                    query = TableQueryBuilder(table).limit(limit).offset(skip)
             else:
                 sql_item_ids = to_sql_list(item_ids)
-                query = TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip)
+                if where is not None:
+                    where += f" AND item_ref.id IN {sql_item_ids}"
+                else:
+                    where = f"item_ref.id IN {sql_item_ids}"
+                query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
         else:
             sql_ids = to_sql_list(ids)
-            query = TableQueryBuilder(table).where(f"id in {sql_ids}")
+            if where is not None:
+                where += f" AND id IN {sql_ids}"
+            else:
+                where = f"id IN {sql_ids}"
+            query = TableQueryBuilder(table).where(where)
 
         schema = self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
 
@@ -418,7 +438,7 @@ class Dataset:
 
         _validate_ids_and_limit_and_skip(ids, limit, skip)
 
-        items = self.get_data(SchemaGroup.ITEM.value, ids, limit, skip)
+        items = self.get_data(table_name=SchemaGroup.ITEM.value, where=None, ids=ids, limit=limit, skip=skip)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]

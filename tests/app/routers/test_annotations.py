@@ -33,18 +33,21 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("bbox_image", ["bbox_image_0", "bbox_image_1"], None, None, 0),
-        ("bbox_image", None, ["0", "1"], None, 0),
-        ("bbox_image", None, None, 2, 0),
-        ("bbox_image", None, None, 2, None),
-        ("bbox_image", None, None, 10, 2),
-        ("bboxes_video", None, ["2"], 2, 1),
+        ("bbox_image", None, ["bbox_image_0", "bbox_image_1"], None, None, 0),
+        ("bbox_image", None, ["bbox_image_0", "bbox_image_1"], None, None, 0),
+        ("bbox_image", None, None, ["0", "1"], None, 0),
+        ("bbox_image", None, None, None, 2, 0),
+        ("bbox_image", "id = 'bbox_image_0'", None, None, 2, 0),
+        ("bbox_image", None, None, None, 2, None),
+        ("bbox_image", None, None, None, 10, 2),
+        ("bboxes_video", None, None, ["2"], 2, 1),
     ],
 )
 def test_get_annotations(
     table: str,
+    where: str | None,
     ids: list[str] | None,
     item_ids: list[str] | None,
     limit: int | None,
@@ -56,6 +59,7 @@ def test_get_annotations(
         dataset=dataset_multi_view_tracking_and_image,
         group=SchemaGroup.ANNOTATION,
         table=table,
+        where=where,
         ids=ids,
         item_ids=item_ids,
         limit=limit,

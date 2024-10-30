@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from urllib.parse import quote
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -18,15 +20,17 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 
 @pytest.mark.parametrize(
-    "ids, limit, skip",
+    "where, ids, limit, skip",
     [
-        (["0", "1"], None, 0),
-        (None, 2, 0),
-        (None, 2, None),
-        (None, 10, 2),
+        (None, ["0", "1"], None, 0),
+        (None, None, 2, 0),
+        ("id = '0'", None, 2, 0),
+        (None, None, 2, None),
+        (None, None, 10, 2),
     ],
 )
 def test_get_items_info(
+    where: str | None,
     ids: list[str] | None,
     limit: int | None,
     skip: int | None,
@@ -42,10 +46,18 @@ def test_get_items_info(
         url += "limit=" + str(limit)
     if skip is not None:
         url += "&skip=" + str(skip)
+    if where is not None:
+        url += "&where=" + quote(where)
 
     dataset_items = dataset_multi_view_tracking_and_image.get_dataset_items(
         ids, limit, skip if skip is not None else 0
     )
+    items = dataset_multi_view_tracking_and_image.get_data(
+        "item", where=where, ids=ids, limit=limit, skip=skip if skip is not None else 0
+    )
+    kept_items_ids = {item.id for item in items}
+    dataset_items = [dataset_item for dataset_item in dataset_items if dataset_item.id in kept_items_ids]
+
     schemas_data = [
         dataset_item.to_schemas_data(dataset_multi_view_tracking_and_image.schema) for dataset_item in dataset_items
     ]

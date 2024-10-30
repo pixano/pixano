@@ -33,9 +33,10 @@ async def get_annotations(
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
-    item_ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
+    item_ids: list[str] | None = Query(None),
 ) -> list[AnnotationModel]:
     """Get annotations.
 
@@ -44,14 +45,25 @@ async def get_annotations(
         table: Table name.
         settings: App settings.
         ids: IDs.
-        item_ids: Item IDs.
         limit: Limit number of annotations.
         skip: Skip number of annotations.
+        where: Where clause.
+        item_ids: Item IDs.
 
     Returns:
         List of annotations.
     """
-    return await get_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, settings, ids, item_ids, limit, skip)
+    return await get_rows_handler(
+        dataset_id=dataset_id,
+        group=SchemaGroup.ANNOTATION,
+        table=table,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=item_ids,
+        limit=limit,
+        skip=skip,
+    )
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)

@@ -33,20 +33,22 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("image", ["image_0", "image_1"], None, None, 0),
-        ("image", None, ["0", "1"], None, 0),
-        ("image", None, None, 2, 0),
-        ("image", None, None, 2, None),
-        ("image", None, None, 10, 2),
-        ("video", None, ["1"], 2, 1),
+        ("image", None, ["image_0", "image_1"], None, None, 0),
+        ("image", None, None, ["0", "1"], None, 0),
+        ("image", None, None, None, 2, 0),
+        ("image", "id = 'image_0'", None, None, 2, 0),
+        ("image", None, None, None, 2, None),
+        ("image", None, None, None, 10, 2),
+        ("video", None, None, ["1"], 2, 1),
     ],
 )
 def test_get_views(
     table: str,
     ids: list[str] | None,
     item_ids: list[str] | None,
+    where: str | None,
     limit: int | None,
     skip: int | None,
     app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
@@ -56,6 +58,7 @@ def test_get_views(
         dataset=dataset_multi_view_tracking_and_image,
         group=SchemaGroup.VIEW,
         table=table,
+        where=where,
         ids=ids,
         item_ids=item_ids,
         limit=limit,

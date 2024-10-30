@@ -34,6 +34,7 @@ async def get_items(
     ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
 ) -> list[ItemModel]:
     """Get items.
 
@@ -43,12 +44,21 @@ async def get_items(
         ids: IDs.
         limit: Limit number of items.
         skip: Skip number of items.
+        where: Where clause.
 
     Returns:
         List of items.
     """
     return await get_rows_handler(
-        dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, settings, ids, None, limit, skip
+        dataset_id=dataset_id,
+        group=SchemaGroup.ITEM,
+        table=SchemaGroup.ITEM.value,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=None,
+        limit=limit,
+        skip=skip,
     )
 
 

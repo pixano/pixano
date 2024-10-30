@@ -91,6 +91,7 @@ def assert_table_in_group(dataset: Dataset, table: str, group: SchemaGroup) -> N
 def get_rows(
     dataset: Dataset,
     table: str,
+    where: str | None = None,
     ids: list[str] | None = None,
     item_ids: list[str] | None = None,
     limit: int | None = None,
@@ -101,6 +102,7 @@ def get_rows(
     Args:
         dataset: Dataset.
         table: Table name.
+        where: Where clause.
         ids: IDs.
         item_ids: Item IDs.
         limit: Limit number of rows.
@@ -110,7 +112,7 @@ def get_rows(
         List of rows.
     """
     try:
-        rows = dataset.get_data(table, ids, limit, skip, item_ids)
+        rows = dataset.get_data(table_name=table, where=where, ids=ids, limit=limit, skip=skip, item_ids=item_ids)
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:
@@ -296,6 +298,7 @@ async def get_rows_handler(
     group: SchemaGroup,
     table: str,
     settings: Settings,
+    where: str | None = None,
     ids: list[str] | None = None,
     item_ids: list[str] | None = None,
     limit: int | None = None,
@@ -308,6 +311,7 @@ async def get_rows_handler(
         group: Schema group.
         table: Table name.
         settings: App settings.
+        where: Where clause.
         ids: IDs.
         item_ids: Item IDs.
         limit: Limit number of rows.
@@ -319,7 +323,7 @@ async def get_rows_handler(
     group = validate_group(group)
     dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
-    rows = get_rows(dataset, table, ids, item_ids, limit, skip)
+    rows = get_rows(dataset=dataset, table=table, where=where, ids=ids, item_ids=item_ids, limit=limit, skip=skip)
     models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows)
     return models
 

@@ -33,18 +33,20 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("source", ["source_0", "source_1"], None, None, 0),
-        ("source", None, None, 2, 0),
-        ("source", None, None, 2, None),
-        ("source", None, None, 10, 2),
+        ("source", None, ["source_0", "source_1"], None, None, 0),
+        ("source", None, None, None, 2, 0),
+        ("source", "id = 'source_0'", None, None, 2, 0),
+        ("source", None, None, None, 2, None),
+        ("source", None, None, None, 10, 2),
     ],
 )
 def test_get_sources(
     table: str,
     ids: list[str] | None,
     item_ids: list[str] | None,
+    where: str | None,
     limit: int | None,
     skip: int | None,
     app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
@@ -55,6 +57,7 @@ def test_get_sources(
         group=SchemaGroup.SOURCE,
         table=table,
         ids=ids,
+        where=where,
         item_ids=item_ids,
         limit=limit,
         skip=skip,
