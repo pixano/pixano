@@ -120,7 +120,7 @@ async def get_browser(
         # VIEWS -> thumbnails previews
         for view in tables_view:
             if item_first_media[view][item.id] is not None:
-                row[view] = item_first_media[view][item.id].open(dataset.path / "media")
+                row[view] = item_first_media[view][item.id].open(settings.media_dir)
         # ITEM features
         for feat in vars(item).keys():
             row[feat] = getattr(item, feat)
