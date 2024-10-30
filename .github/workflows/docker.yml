@@ -10,9 +10,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 env:
   TEST_TAG: pixano/pixano:test
@@ -22,9 +19,6 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -45,7 +39,7 @@ jobs:
 
       - name: Test
         run: |
-          docker run -p 8000:8000 --name pixano -d ${{ env.TEST_TAG }}
+          docker run -p 8000:8000 --name pixano -d -v ./app/library:/app/library ${{ env.TEST_TAG }}
           sleep 5
           EXPECTED_RESPONSE='{"detail":"No datasets found in /app/library."}'
           RESPONSE=$(curl http://localhost:8000/datasets/info)
