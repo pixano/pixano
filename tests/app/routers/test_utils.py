@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from urllib.parse import quote
+
 import pytest
 from fastapi import HTTPException
 from fastapi.applications import FastAPI
@@ -21,7 +23,6 @@ from pixano.app.routers.utils import (
 )
 from pixano.app.settings import Settings
 from pixano.datasets.dataset import Dataset
-from pixano.features import BBox
 from pixano.features.schemas.schema_group import SchemaGroup
 
 
@@ -78,6 +79,13 @@ def test_get_rows(
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=10&skip=200")
     assert response.status_code == 404
     assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/bbox_image."}
+
+    where = quote("id = 'bbox_image_0'")
+    response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=1000&where=" + where)
+    assert response.status_code == 200
+    assert response.json() == jsonable_encoder(
+        two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image[0:1]
+    )
 
 
 def test_get_model_from_row(

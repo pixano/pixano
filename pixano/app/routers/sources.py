@@ -34,6 +34,7 @@ async def get_sources(
     ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
 ) -> list[SourceModel]:
     """Get sources.
 
@@ -43,12 +44,21 @@ async def get_sources(
         ids: IDs.
         limit: Limit number of sources.
         skip: Skip number of sources.
+        where: Where clause.
 
     Returns:
         List of sources.
     """
     return await get_rows_handler(
-        dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, settings, ids, None, limit, skip
+        dataset_id=dataset_id,
+        group=SchemaGroup.SOURCE,
+        table=SchemaGroup.SOURCE.value,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=None,
+        limit=limit,
+        skip=skip,
     )
 
 

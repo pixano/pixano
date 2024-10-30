@@ -42,7 +42,7 @@ async def get_browser(
         Dataset explorer page.
     """
     # Load dataset
-    dataset = get_dataset(id, settings.library_dir, None)
+    dataset = get_dataset(id, settings.library_dir, settings.media_dir)
 
     semantic_search = False
     if query != "" or table != "":
@@ -82,16 +82,16 @@ async def get_browser(
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
         item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
 
-        item_rows = get_rows(dataset, table_item, item_ids)
+        item_rows = get_rows(dataset=dataset, table=table_item, ids=item_ids)
         item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
     else:
-        item_rows = get_rows(dataset, table_item, None, None, limit, skip)
+        item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip)
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}
     for view in tables_view:
         try:
-            view_rows = get_rows(dataset, view, None, item_ids)
+            view_rows = get_rows(dataset=dataset, table=view, item_ids=item_ids)
         except HTTPException:
             view_rows = []
         item_first_media[view] = {}

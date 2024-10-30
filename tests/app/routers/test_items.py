@@ -33,16 +33,18 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("item", ["0", "1"], None, None, 0),
-        ("item", None, None, 2, 0),
-        ("item", None, None, 2, None),
-        ("item", None, None, 10, 2),
+        ("item", None, ["0", "1"], None, None, 0),
+        ("item", None, None, None, 2, 0),
+        ("item", "id = '0'", None, None, 2, 0),
+        ("item", None, None, None, 2, None),
+        ("item", None, None, None, 10, 2),
     ],
 )
 def test_get_items(
     table: str,
+    where: str | None,
     ids: list[str] | None,
     item_ids: list[str] | None,
     limit: int | None,
@@ -54,6 +56,7 @@ def test_get_items(
         dataset=dataset_multi_view_tracking_and_image,
         group=SchemaGroup.ITEM,
         table=table,
+        where=where,
         ids=ids,
         item_ids=item_ids,
         limit=limit,

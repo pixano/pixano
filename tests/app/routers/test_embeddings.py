@@ -33,18 +33,20 @@ from .utils import (
 
 
 @pytest.mark.parametrize(
-    "table, ids, item_ids, limit, skip",
+    "table, where, ids, item_ids, limit, skip",
     [
-        ("image_embedding", ["image_embedding_0", "image_embedding_1"], None, None, 0),
-        ("image_embedding", None, ["0", "1"], None, 0),
-        ("image_embedding", None, None, 2, 0),
-        ("image_embedding", None, None, 2, None),
-        ("image_embedding", None, None, 10, 2),
-        ("video_embeddings", None, ["1"], 2, 1),
+        ("image_embedding", None, ["image_embedding_0", "image_embedding_1"], None, None, 0),
+        ("image_embedding", None, None, ["0", "1"], None, 0),
+        ("image_embedding", None, None, None, 2, 0),
+        ("image_embedding", "id = 'image_embedding_0'", None, None, 2, 0),
+        ("image_embedding", None, None, None, 2, None),
+        ("image_embedding", None, None, None, 10, 2),
+        ("video_embeddings", None, None, ["1"], 2, 1),
     ],
 )
 def test_get_embeddings(
     table: str,
+    where: str | None,
     ids: list[str] | None,
     item_ids: list[str] | None,
     limit: int | None,
@@ -56,6 +58,7 @@ def test_get_embeddings(
         dataset=dataset_multi_view_tracking_and_image,
         group=SchemaGroup.EMBEDDING,
         table=table,
+        where=where,
         ids=ids,
         item_ids=item_ids,
         limit=limit,

@@ -117,11 +117,12 @@ class TestDataset:
         assert set(tables.keys()) == set(dataset_image_bboxes_keypoint.schema.schemas.keys())
 
     @pytest.mark.parametrize(
-        "table_name,type,ids,item_ids,limit,skip,expected_output",
+        "table_name,type,where,ids,item_ids,limit,skip,expected_output",
         [
             (
                 "item",
                 Item,
+                None,
                 None,
                 None,
                 3,
@@ -153,6 +154,25 @@ class TestDataset:
             (
                 "item",
                 Item,
+                "metadata='metadata_0'",
+                None,
+                None,
+                3,
+                0,
+                [
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    }
+                ],
+            ),
+            (
+                "item",
+                Item,
+                None,
                 None,
                 None,
                 3,
@@ -184,6 +204,7 @@ class TestDataset:
             (
                 "item",
                 Item,
+                None,
                 ["0", "1"],
                 None,
                 None,
@@ -208,6 +229,25 @@ class TestDataset:
             (
                 "item",
                 Item,
+                "metadata='metadata_0'",
+                ["0", "1"],
+                None,
+                None,
+                0,
+                [
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                ],
+            ),
+            (
+                "item",
+                Item,
+                None,
                 None,
                 ["0", "1"],
                 None,
@@ -232,6 +272,7 @@ class TestDataset:
             (
                 "image",
                 Image,
+                None,
                 ["image_0", "image_1"],
                 None,
                 None,
@@ -265,6 +306,7 @@ class TestDataset:
                 "image",
                 Image,
                 None,
+                None,
                 ["0", "1"],
                 None,
                 0,
@@ -293,13 +335,44 @@ class TestDataset:
                     },
                 ],
             ),
+            (
+                "image",
+                Image,
+                "url='image_0.jpg'",
+                None,
+                ["0", "1"],
+                None,
+                0,
+                [
+                    {
+                        "id": "image_0",
+                        "item_ref": {"id": "0", "name": "item"},
+                        "parent_ref": {"id": "", "name": ""},
+                        "url": "image_0.jpg",
+                        "width": 100,
+                        "height": 100,
+                        "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                ],
+            ),
         ],
     )
     def test_get_data(
-        self, table_name, type, ids, item_ids, limit, skip, expected_output, dataset_image_bboxes_keypoint: Dataset
+        self,
+        table_name,
+        type,
+        where,
+        ids,
+        item_ids,
+        limit,
+        skip,
+        expected_output,
+        dataset_image_bboxes_keypoint: Dataset,
     ):
         data = dataset_image_bboxes_keypoint.get_data(
-            table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+            table_name=table_name, where=where, ids=ids, limit=limit, skip=skip, item_ids=item_ids
         )
         assert isinstance(data, list) and all(isinstance(d, type) for d in data)
         for d, e in zip(data, expected_output, strict=True):
