@@ -58,9 +58,9 @@ jobs:
               docker rm pixano
               exit 1
           fi
+
       - name: Build and push latest
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}
