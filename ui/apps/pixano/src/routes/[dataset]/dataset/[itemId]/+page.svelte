@@ -60,7 +60,8 @@ License: CECILL-C
             //NOTE: slice(-2) is not very safe, it suppose users respect the ""<dataset_path>/media" rule
             //but as ds.media_dir is an absolute path, we need to make this assumption...
             //Note2: we will need to revert this when/if we POST/PUT views
-            const media_dir = "data/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
+            //const media_dir = "media/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
+            const media_dir = "media/";
             Object.values(item.views).map((view) => {
               if (Array.isArray(view)) {
                 const video = view;

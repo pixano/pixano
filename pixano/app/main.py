@@ -69,6 +69,12 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             StaticFiles(directory=settings.library_dir),
             name="data",
         )
+        print("MOUNT MEDIA DIR on /media:", settings.media_dir)
+        app.mount(
+            "/media",
+            StaticFiles(directory=settings.media_dir),
+            name="media",
+        )
 
     # Include routers
     app.include_router(annotations_router)
