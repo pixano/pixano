@@ -10,7 +10,7 @@ on:
   push:
     paths:
       - "ui/**"
-      - ".github/workflows/**"
+      - ".github/workflows/lint_and_format_front.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
@@ -18,7 +18,7 @@ on:
   pull_request:
     paths:
       - "ui/**"
-      - ".github/workflows/**"
+      - ".github/workflows/lint_and_format_front.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
