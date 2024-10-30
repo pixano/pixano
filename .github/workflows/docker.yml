@@ -43,9 +43,9 @@ jobs:
           mkdir -p library/fake_dataset
           touch library/fake_dataset/info.json
           echo '{"id": "fake_dataset", "name": "Fake Dataset", "description": "A fake dataset for testing purposes"}' > library/fake_dataset/info.json
-          docker run -p 8000:8000 --name pixano -d -v /home/data ${{ env.TEST_TAG }}
+          docker run -p 8000:8000 --name pixano -d -v ./library:/app/library ${{ env.TEST_TAG }}
           sleep 5
-          EXCPECTED_RESPONSE='[{\"id\":\"fake_dataset\",\"name\":\"Fake Dataset\",\"description\":\"A fake dataset for testing purposes\"}]'
+          EXPECTED_RESPONSE='[{\"id\":\"fake_dataset\",\"name\":\"Fake Dataset\",\"description\":\"A fake dataset for testing purposes\"}]'
           RESPONSE=$(curl http://localhost:8000/datasets/info)
           if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
               echo "Test Passed: Service returned expected response."
