@@ -42,28 +42,31 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     )
 
     # Mount folders
-    if isinstance(settings.data_dir, S3Path):
+    if isinstance(settings.library_dir, S3Path):
         # If S3, mount models parent folder
         # Check if folder exists
-        if not settings.model_dir.exists():
-            raise FileNotFoundError(f"Local model directory '{settings.model_dir.absolute()}' not found")
+        if settings.models_dir is None:
+            raise FileNotFoundError("Local model directory not provided")
+        elif not settings.models_dir.exists():
+            raise FileNotFoundError(f"Local model directory '{settings.models_dir.absolute()}' not found")
         # Mount
         app.mount(
             "/data",
-            StaticFiles(directory=settings.model_dir.parent),
+            StaticFiles(directory=settings.models_dir.parent),
             name="data",
         )
     else:
         # If local, mount datasets folder with models subfolder
         # Check if folder exists
-        if not settings.data_dir.exists():
-            raise FileNotFoundError(f"Dataset library '{settings.data_dir.absolute()}' not found")
+        if not settings.library_dir.exists():
+            raise FileNotFoundError(f"Dataset library '{settings.library_dir.absolute()}' not found")
         # Create models subfolder in case it doesn't exist yet
-        settings.model_dir.mkdir(exist_ok=True)
+        if settings.models_dir is not None and not settings.models_dir.exists():
+            settings.models_dir.mkdir(exist_ok=True)
         # Mount
         app.mount(
             "/data",
-            StaticFiles(directory=settings.data_dir),
+            StaticFiles(directory=settings.library_dir),
             name="data",
         )
 

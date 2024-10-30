@@ -39,7 +39,7 @@ class Image(View):
         """Open image.
 
         Args:
-            media_dir: image path
+            media_dir: Path to the media directory. If the URL is relative, it is relative to this directory.
             output_type: output type.
 
         Returns:
@@ -54,8 +54,8 @@ class Image(View):
         """Open URL image.
 
         Args:
-            url: image url
-            media_dir: uri prefix
+            url: image url relative to media_dir or absolute.
+            media_dir: path to the media directory.
             output_type: output type.
 
         Raises:
@@ -116,7 +116,7 @@ def create_image(
     width: int | None = None,
     height: int | None = None,
     format: str | None = None,
-    other_path: Path | None = None,
+    url_relative_path: Path | None = None,
 ) -> Image:
     """Create an `Image` instance.
 
@@ -128,7 +128,7 @@ def create_image(
         width: The image width. If None, the width is extracted from the image file.
         height: The image height. If None, the height is extracted from the image file.
         format: The image format. If None, the format is extracted from the image file.
-        other_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path.
 
     Returns:
         The created `Image` instance.
@@ -146,9 +146,9 @@ def create_image(
         height = img.height
         format = img.format
 
-    if other_path is not None:
-        other_path = Path(other_path)
-        url = url.relative_to(other_path)
+    if url_relative_path is not None:
+        url_relative_path = Path(url_relative_path)
+        url = url.relative_to(url_relative_path)
 
     return Image(
         id=id, item_ref=item_ref, parent_ref=parent_ref, url=url.as_posix(), width=width, height=height, format=format

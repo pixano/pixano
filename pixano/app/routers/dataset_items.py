@@ -38,7 +38,7 @@ async def get_dataset_items(
     Returns:
         List of dataset items.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.get_dataset_items(ids, limit, skip)
@@ -85,7 +85,7 @@ async def create_dataset_items(
     Returns:
         List of dataset items.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
@@ -134,7 +134,7 @@ async def update_dataset_items(
     Returns:
         List of dataset items.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
@@ -180,7 +180,7 @@ async def delete_dataset_items(
         ids: IDs.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     dataset.delete_dataset_items(ids)
     return

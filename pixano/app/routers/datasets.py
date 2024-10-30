@@ -35,19 +35,19 @@ async def get_datasets_info(
     """
     try:
         infos_and_paths: list[tuple[DatasetInfo, Path]] = DatasetInfo.load_directory(
-            directory=settings.data_dir, return_path=True
+            directory=settings.library_dir, return_path=True
         )
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
-            detail=f"No datasets found in {settings.data_dir.absolute()}.",
+            detail=f"No datasets found in {settings.library_dir.absolute()}.",
         )
 
     if len(infos_and_paths) > 0:
         return [DatasetInfoModel.from_dataset_info(info, path) for info, path in infos_and_paths]
     raise HTTPException(
         status_code=404,
-        detail=f"No datasets found in {settings.data_dir.absolute()}.",
+        detail=f"No datasets found in {settings.library_dir.absolute()}.",
     )
 
 
@@ -66,11 +66,11 @@ async def get_dataset_info(
         List of dataset infos.
     """
     try:
-        info, path = DatasetInfo.load_id(id, settings.data_dir, return_path=True)
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {id} not found in {settings.data_dir.absolute()}.",
+            detail=f"Dataset {id} not found in {settings.library_dir.absolute()}.",
         )
 
     return DatasetInfoModel.from_dataset_info(info, path)
@@ -90,7 +90,7 @@ async def get_dataset(
     Returns:
         Dataset.
     """
-    return DatasetModel.from_dataset(get_dataset_utils(id, settings.data_dir, None))
+    return DatasetModel.from_dataset(get_dataset_utils(id, settings.library_dir, settings.media_dir))
 
 
 @router.get("/{id}/{table}/count", response_model=int)
@@ -109,7 +109,7 @@ async def get_table_count(
     Returns:
         The number of rows in the table.
     """
-    dataset = get_dataset_utils(id, settings.data_dir, None)
+    dataset = get_dataset_utils(id, settings.library_dir, settings.media_dir)
     try:
         db_table = dataset.open_table(table)
     except DatasetAccessError as e:

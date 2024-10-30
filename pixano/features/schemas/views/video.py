@@ -44,7 +44,7 @@ def create_video(
     height: int | None = None,
     format: str | None = None,
     duration: float | None = None,
-    other_path: Path | None = None,
+    url_relative_path: Path | None = None,
 ) -> Video:
     """Create a `Video` instance.
 
@@ -61,7 +61,7 @@ def create_video(
         height: The video height. If None, the height is extracted from the video file.
         format: The video format. If None, the format is extracted from the video file.
         duration: The video duration. If None, the duration is extracted from the video file.
-        other_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path.
 
     Returns:
         The created `Video` instance.
@@ -108,9 +108,9 @@ def create_video(
         format = url.suffix[1:]
         duration = float(metadata["duration"])
 
-    if other_path is not None:
-        other_path = Path(other_path)
-        url = url.relative_to(other_path)
+    if url_relative_path is not None:
+        url_relative_path = Path(url_relative_path)
+        url = url.relative_to(url_relative_path)
 
     return Video(
         id=id,

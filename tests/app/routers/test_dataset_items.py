@@ -110,7 +110,7 @@ def test_get_dataset_items_error(
     response = client.get(url)
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong query parameters
@@ -153,7 +153,7 @@ def test_get_dataset_item_error(app_and_settings_with_client: tuple[FastAPI, Set
     response = client.get("/dataset_items/dataset_multi_view_tracking_and_image_wrong/0")
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong dataset_item ID
@@ -220,7 +220,7 @@ def test_create_dataset_items_error(
     )
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong data
@@ -280,7 +280,7 @@ def test_create_dataset_item_error(
     )
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong dataset_item ID
@@ -365,7 +365,7 @@ def test_update_dataset_items_error(
     )
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong data
@@ -427,7 +427,7 @@ def test_update_dataset_item_error(
     )
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
     # Wrong dataset_item ID
@@ -482,7 +482,7 @@ def test_delete_dataset_items_error(
     response = client.delete(f"/dataset_items/dataset_multi_view_tracking_and_image_wrong/{delete_ids_url}")
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }
 
 
@@ -517,5 +517,5 @@ def test_delete_dataset_item_error(
     response = client.delete("/dataset_items/dataset_multi_view_tracking_and_image_wrong/0")
     assert response.status_code == 404
     assert response.json() == {
-        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.library_dir}."
     }

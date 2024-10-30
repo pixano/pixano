@@ -48,7 +48,7 @@ async def get_items_info(
     Returns:
         List of items info.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
     assert_table_in_group(dataset, SchemaGroup.ITEM.value, SchemaGroup.ITEM)
 
     try:

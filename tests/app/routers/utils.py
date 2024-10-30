@@ -79,7 +79,7 @@ def _test_get_rows_handler_error(
     url = base_url(group, "wrong_dataset", table)
     response = client.get(url)
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -140,7 +140,7 @@ def _test_get_row_handler_error(
     # Wrong dataset ID
     response = client.get(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -209,7 +209,7 @@ def _test_create_rows_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -286,7 +286,7 @@ def _test_create_row_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -379,7 +379,7 @@ def _test_update_rows_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -460,7 +460,7 @@ def _test_update_row_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -517,7 +517,7 @@ def _test_delete_rows_handler_error(
     # Wrong dataset ID
     response = client.delete(base_url(group, "wrong_dataset", table) + delete_ids_url)
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -557,7 +557,7 @@ def _test_delete_row_handler_error(
     # Wrong dataset ID
     response = client.delete(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:

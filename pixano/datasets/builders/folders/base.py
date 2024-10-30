@@ -75,7 +75,12 @@ class FolderBaseBuilder(DatasetBuilder):
     EXTENSIONS: list[str]
 
     def __init__(
-        self, source_dir: Path | str, target_dir: Path | str, schemas: type[DatasetItem], info: DatasetInfo
+        self,
+        source_dir: Path | str,
+        target_dir: Path | str,
+        schemas: type[DatasetItem],
+        info: DatasetInfo,
+        urls_relative_path: Path | str | None = None,
     ) -> None:
         """Initialize the FolderBaseBuilder.
 
@@ -84,9 +89,18 @@ class FolderBaseBuilder(DatasetBuilder):
             target_dir: The target directory for the dataset.
             schemas: The schemas for the dataset tables.
             info: User informations (name, description, ...) for the dataset.
+            urls_relative_path: The path to build relative URLs for the views. Should be source_dir or one of
+                its parents. Useful to build dataset libraries by using the parent of the source_dir.
         """
         super().__init__(target_dir, schemas, info)
         self.source_dir = Path(source_dir)
+        if urls_relative_path is None:
+            urls_relative_path = self.source_dir
+        else:
+            urls_relative_path = Path(urls_relative_path)
+        if urls_relative_path not in list(self.source_dir.parents) + [self.source_dir]:
+            raise ValueError("url_relative_path must be a parent of source_dir.")
+        self.urls_relative_path = urls_relative_path
 
         view_name = None
         entity_name = None
@@ -177,7 +191,11 @@ class FolderBaseBuilder(DatasetBuilder):
             )
 
         return create_instance_of_schema(
-            view_schema, id=shortuuid.uuid(), item_ref=ItemRef(id=item.id), url=view_file, other_path=self.source_dir
+            view_schema,
+            id=shortuuid.uuid(),
+            item_ref=ItemRef(id=item.id),
+            url=view_file,
+            url_relative_path=self.urls_relative_path,
         )
 
     def _create_entities(

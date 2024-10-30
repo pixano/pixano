@@ -317,7 +317,7 @@ async def get_rows_handler(
         List of models.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows)
@@ -362,7 +362,7 @@ async def create_rows_handler(
         List of rows.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     rows_rows = create_rows(dataset, table, rows)
     rows_models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows_rows)
@@ -445,7 +445,7 @@ async def update_rows_handler(
         List of rows.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     row_rows = update_rows(dataset, table, rows)
     row_models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], row_rows)
@@ -482,7 +482,7 @@ async def delete_rows_handler(
         settings: App settings.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     delete_rows(dataset, table, ids)
     return None
