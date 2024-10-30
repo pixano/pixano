@@ -6,243 +6,301 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu } from "@pixano/core";
+  import { ContextMenu, Annotation, Entity, BBox, Keypoints, Track, Tracklet } from "@pixano/core";
   import type {
-    Tracklet,
     TrackletItem,
-    TrackletWithItems,
-    VideoItemBBox,
-    VideoObject,
+    MView,
+    SaveItem,
+    SequenceFrame,
+    KeypointsTemplate,
   } from "@pixano/core";
-  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    annotations,
+    entities,
+    selectedTool,
+    saveData,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
-    objectIdBeingEdited,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import {
-    addKeyItem,
-    deleteTracklet,
-    mapSplittedTrackToObject,
-    mapTrackItemsToObject,
-    splitTrackletInTwo,
-  } from "../../lib/api/videoApi";
+  import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { highlightCurrentObject } from "../../lib/api/objectsApi";
-  import { onMount } from "svelte";
+  import { highlightCurrentObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
-  export let object: VideoObject;
+  export let track: Track;
+  export let views: MView;
   export let onTimeTrackClick: (imageIndex: number) => void;
-  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
+  export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[];
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
-  let trackWithItems: TrackletWithItems[];
-  let views: string[];
+  let tracklets: Tracklet[];
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 
-  $: {
-    if (object.track) {
-      let view_set = new Set<string>();
-      object.track.forEach((tracklet) => {
-        view_set.add(tracklet.view_id);
-      });
-      views = Array.from(view_set);
-    }
+  $: if (track) {
+    tracklets = $annotations.filter(
+      (ann) => ann.is_tracklet && ann.data.entity_ref.id === track.id,
+    ) as Tracklet[];
   }
 
   const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
     const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
-    rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
+    rightClickFrameIndex = Math.round(rightClickFrame * ($lastFrameIndex + 1));
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const onContextMenu = (event: MouseEvent) => {
-    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+  const onContextMenu = (event: MouseEvent, tracklet: Tracklet | null = null) => {
+    if (tracklet) annotations.update((oldObjects) => highlightCurrentObject(oldObjects, tracklet));
     moveCursorToPosition(event.clientX);
     selectedTool.set(panTool);
   };
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
     onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
-    objectIdBeingEdited.set(object.id);
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: obj.id === object.id,
+    annotations.update((objects) =>
+      objects.map((ann) => {
+        const to_highlight =
+          (!ann.is_tracklet &&
+            ann.data.entity_ref.id === track.id &&
+            ann.ui.frame_index === frameIndex) ||
+          (ann.is_tracklet && ann.id === track.id);
+        ann.ui.highlighted = to_highlight ? "self" : "none";
+        ann.ui.displayControl = {
+          ...ann.ui.displayControl,
+          editing: to_highlight,
         };
-        return obj;
+        return ann;
       }),
     );
   };
 
-  const onAddKeyItemClick = (tracklet: TrackletWithItems | MouseEvent) => {
-    if ("view_id" in tracklet) {
-      trackWithItems = addKeyItem(
-        rightClickFrameIndex,
-        $lastFrameIndex,
-        trackWithItems,
-        tracklet.view_id,
-      );
-      itemObjects.update((objects) =>
-        objects.map((obj) => {
-          if (obj.id === object.id && obj.datasetItemType === "video") {
-            const { boxes, keypoints } = mapTrackItemsToObject(
-              trackWithItems,
-              object,
-              rightClickFrameIndex,
-            );
-            return { ...obj, track: trackWithItems, boxes, keypoints };
-          }
-          return obj;
-        }),
-      );
-      //svelte hack to detect change in trackWithItems -- it requires a for-in loop
-      // eslint-disable-next-line
-      for (const i in trackWithItems) {
-        trackWithItems[i] = { ...trackWithItems[i] }; //destructuration required, else optimizer(?) remove it...
-      }
-
-      onEditKeyItemClick(rightClickFrameIndex);
-      canSave.set(true);
-    } else {
+  const onAddKeyItemClick = (tracklet: Tracklet | MouseEvent) => {
+    if (tracklet instanceof MouseEvent) {
       //MouseEvent, need to determine view_id
       //TODO
       confirm("Adding a key point outside of a tracklet is forbidden for now");
+    } else {
+      let newItemBBox: BBox | undefined = undefined;
+      let newItemKpt: Keypoints | undefined = undefined;
+      //an interpolated obj should exist: use it
+      const interpolatedBox = bboxes.find(
+        (box) =>
+          box.ui.frame_index === rightClickFrameIndex &&
+          tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
+      );
+      if (interpolatedBox) {
+        const newItemOrig = structuredClone(interpolatedBox);
+        const { ui, ...noUIfieldsBBox } = newItemOrig;
+        newItemBBox = new BBox(noUIfieldsBBox);
+        newItemBBox.ui = ui;
+        //coords are denormalized: normalize them
+        const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
+          newItemBBox.ui.frame_index!
+        ];
+        const [x, y, w, h] = newItemBBox.data.coords;
+        newItemBBox.data.coords = [
+          x / current_sf.data.width,
+          y / current_sf.data.height,
+          w / current_sf.data.width,
+          h / current_sf.data.height,
+        ];
+        const save_new_item: SaveItem = {
+          change_type: "add",
+          object: newItemBBox,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
+      }
+      const interpolatedKpt = keypoints.find(
+        (kpt) =>
+          kpt.ui!.frame_index === rightClickFrameIndex &&
+          tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
+      );
+      if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
+        const keypointsRef = $annotations.find(
+          (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_keypoints,
+        ) as Keypoints;
+        if (keypointsRef) {
+          const newItemOrig = structuredClone(keypointsRef);
+          const { ui, ...noUIfieldsBBox } = newItemOrig;
+          newItemKpt = new Keypoints(noUIfieldsBBox);
+          newItemKpt.ui = ui;
+          if (interpolatedKpt.ui!.displayControl)
+            newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
+          if (interpolatedKpt.ui!.highlighted)
+            newItemKpt.ui.highlighted = interpolatedKpt.ui!.highlighted;
+          if (interpolatedKpt.ui!.displayControl)
+            newItemKpt.ui.displayControl = {
+              hidden: interpolatedKpt.ui!.displayControl.hidden,
+              editing: interpolatedKpt.ui!.displayControl.editing, //TODO maybe we should just set it to true ?
+            };
+          newItemKpt.id = interpolatedKpt.id;
+          newItemKpt.ui.frame_index = interpolatedKpt.ui!.frame_index;
+          newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
+          //coords are denormalized: normalize them (??is that so ? to check)
+          const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
+            interpolatedKpt.ui!.frame_index!
+          ];
+          const coords = [];
+          const states = [];
+          for (const vertex of interpolatedKpt.vertices) {
+            coords.push(vertex.x / current_sf.data.width);
+            coords.push(vertex.y / current_sf.data.height);
+            states.push(vertex.features.state ? vertex.features.state : "visible");
+          }
+          newItemKpt.data.coords = coords;
+          newItemKpt.data.states = states;
+
+          const save_new_item: SaveItem = {
+            change_type: "add",
+            object: newItemKpt,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
+        }
+      }
+      //TODO no interpolated Mask yet
+
+      if (newItemBBox || newItemKpt) {
+        annotations.update((objects) => {
+          objects.map((obj) => {
+            if (obj.is_tracklet && obj.id === tracklet.id) {
+              const obj_tracket = obj as Tracklet;
+              // add item in childs
+              if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];
+              if (newItemKpt) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemKpt];
+              obj_tracket.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+            }
+            return obj;
+          });
+          if (newItemBBox) objects.push(newItemBBox);
+          if (newItemKpt) objects.push(newItemKpt);
+          objects.sort((a, b) => sortByFrameIndex(a, b));
+          return objects;
+        });
+        entities.update((objects) =>
+          objects.map((entity) => {
+            if (entity.id === tracklet.data.entity_ref.id) {
+              if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
+              if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
+              entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+            }
+            return entity;
+          }),
+        );
+      }
+      onEditKeyItemClick(rightClickFrameIndex);
     }
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
-  const findPreviousAndNext = (items: TrackletItem[], targetIndex: number): [number, number] => {
+  const findPreviousAndNext = (tracklet: Tracklet, targetIndex: number): [number, number] => {
     let low = 0;
-    let high = items.length - 1;
+    let high = tracklet.ui.childs.length - 1;
     let mid;
-    let previousItem: TrackletItem | null = null;
-    let nextItem: TrackletItem | null = null;
+    let previousItem: Annotation | null = null;
+    let nextItem: Annotation | null = null;
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (items[mid].frame_index <= targetIndex) {
-        previousItem = items[mid];
+      if (tracklet.ui.childs[mid].ui.frame_index! <= targetIndex) {
+        previousItem = tracklet.ui.childs[mid];
         low = mid + 1;
       } else {
-        nextItem = items[mid];
+        nextItem = tracklet.ui.childs[mid];
         high = mid - 1;
       }
     }
     return [
-      previousItem ? previousItem.frame_index : targetIndex,
-      nextItem ? nextItem.frame_index : targetIndex + 1,
+      previousItem ? previousItem.ui.frame_index! : targetIndex,
+      nextItem ? nextItem.ui.frame_index! : targetIndex + 1,
     ];
   };
 
-  const onSplitTrackletClick = (tracklet: TrackletWithItems) => {
-    const [prev, next] = findPreviousAndNext(tracklet.items, rightClickFrameIndex);
-    trackWithItems = splitTrackletInTwo(
-      trackWithItems,
-      tracklet,
-      rightClickFrameIndex,
-      prev,
-      next,
-      object.id,
-    );
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        if (obj.id === object.id && obj.datasetItemType === "video") {
-          const { boxes, keypoints } = mapSplittedTrackToObject(trackWithItems, object);
-          return { ...obj, track: trackWithItems, boxes, keypoints };
+  const onSplitTrackletClick = (tracklet: Tracklet) => {
+    const [prev, next] = findPreviousAndNext(tracklet, rightClickFrameIndex);
+    const newOnRight = splitTrackletInTwo(tracklet, prev, next);
+    //add Entity child
+    entities.update((objects) =>
+      objects.map((entity) => {
+        if (entity.is_track && entity.id === track.id) {
+          entity.ui.childs = [...entity.ui.childs!, newOnRight];
+          entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
         }
-        return obj;
+        return entity;
       }),
     );
-    object.track = trackWithItems;
-    canSave.set(true);
+    annotations.update((objects) => objects.concat(newOnRight));
   };
 
-  const onDeleteTrackletClick = (tracklet: TrackletWithItems) => {
-    itemObjects.update((objects) => deleteTracklet(objects, object.id, tracklet));
-    updateTracks();
-    canSave.set(true);
-  };
-
-  const findNeighborItems = (frameIndex: VideoItemBBox["frame_index"]): [number, number] => {
-    const allItems = trackWithItems.reduce(
-      (acc, tracklet) => [...acc, ...tracklet.items],
-      [] as TrackletItem[],
+  const onDeleteTrackletClick = (tracklet: Tracklet) => {
+    const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
+    let to_del_entity: Entity | null = null;
+    entities.update((objects) =>
+      objects.map((entity) => {
+        if (entity.is_track && entity.id === track.id)
+          entity.ui.childs = entity.ui.childs?.filter(
+            (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
+          );
+        if (entity.ui.childs?.length == 0) {
+          to_del_entity = entity;
+        }
+        return entity;
+      }),
     );
-    const nextItem =
-      allItems.find((item) => item.frame_index > frameIndex && item.is_key)?.frame_index ||
-      $lastFrameIndex;
-    const prevItem =
-      allItems
-        .slice()
-        .reverse()
-        .find((item) => item.frame_index < frameIndex && item.is_key)?.frame_index || 0;
-
-    return [prevItem, nextItem];
-  };
-
-  const getTrackletItem = (ann: TrackletItem) => {
-    let item: TrackletItem = {
-      frame_index: ann.frame_index,
-      tracklet_id: ann.tracklet_id,
+    annotations.update((anns) =>
+      anns.filter((ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id),
+    );
+    tracklet.ui.childs?.forEach((ann) => {
+      const save_del_ann: SaveItem = {
+        change_type: "delete",
+        object: ann,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
+    });
+    const save_del_tracklet: SaveItem = {
+      change_type: "delete",
+      object: tracklet,
     };
-    if (ann.is_key) item.is_key = ann.is_key;
-    if (ann.is_thumbnail) item.is_thumbnail = ann.is_thumbnail;
-    if (ann.hidden) item.hidden = ann.hidden;
-    return item;
-  };
-
-  const updateTracks = () => {
-    trackWithItems = [];
-    for (const tracklet of object.track) {
-      const boxes = object.boxes
-        ? object.boxes.filter(
-            (box) =>
-              box.view_id === tracklet.view_id &&
-              box.frame_index >= tracklet.start &&
-              box.frame_index <= tracklet.end,
-          )
-        : [];
-      const keypoints = object.keypoints
-        ? object.keypoints.filter(
-            (kp) =>
-              kp.view_id === tracklet.view_id &&
-              kp.frame_index >= tracklet.start &&
-              kp.frame_index <= tracklet.end,
-          )
-        : [];
-      let items: TrackletItem[] = [];
-      for (const ann of boxes) {
-        items.push(getTrackletItem(ann));
-      }
-      for (const ann of keypoints) {
-        const item = getTrackletItem(ann);
-        if (!items.find((it) => it.frame_index == item.frame_index))
-          items.push(getTrackletItem(ann));
-      }
-      trackWithItems.push({
-        ...tracklet,
-        items: items,
-      });
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_tracklet));
+    if (to_del_entity) {
+      const save_del_entity: SaveItem = {
+        change_type: "delete",
+        object: to_del_entity,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_entity));
     }
   };
 
-  onMount(() => {
-    updateTracks();
-  });
+  const findNeighborItems = (frameIndex: number): [number, number] => {
+    let previous: number = 0;
+    let nextChild: Annotation | undefined = undefined;
+    let next: number = $lastFrameIndex;
+
+    for (const subtracklet of tracklets) {
+      for (const child of subtracklet.ui.childs) {
+        if (child.ui.frame_index! < frameIndex) {
+          previous = child.ui.frame_index!;
+        } else if (child.ui.frame_index! > frameIndex) {
+          if (!nextChild || child.ui.frame_index! < nextChild.ui.frame_index!) {
+            nextChild = child;
+            next = nextChild.ui.frame_index!;
+          }
+        }
+      }
+    }
+    return [previous, next];
+  };
 </script>
 
-{#if trackWithItems}
+{#if track && tracklets}
   <div
     class="flex gap-5 relative h-12 my-auto z-20"
-    id={`video-object-${object.id}`}
+    id={`video-object-${track.id}`}
     style={`width: ${$videoControls.zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
     role="complementary"
@@ -262,20 +320,17 @@ License: CECILL-C
       </ContextMenu.Content>
       -->
     </ContextMenu.Root>
-    {#each trackWithItems as tracklet (tracklet)}
+    {#each tracklets as tracklet (tracklet)}
       <ObjectTracklet
         {tracklet}
-        {object}
+        {track}
         {views}
         onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
         {onContextMenu}
         {onEditKeyItemClick}
-        {getTrackletItem}
         onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
         onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
         {findNeighborItems}
-        {updateTracks}
-        {updateView}
         {moveCursorToPosition}
       />
     {/each}

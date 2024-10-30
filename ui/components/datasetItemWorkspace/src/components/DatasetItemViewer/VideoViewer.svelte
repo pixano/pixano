@@ -9,42 +9,43 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
 
   import {
+    DatasetItem,
+    Annotation,
+    BBox,
+    Keypoints,
+    Track,
+    SequenceFrame,
     type EditShape,
-    type Tracklet,
-    type VideoDatasetItem,
-    type ItemObject,
+    type KeypointsTemplate,
+    type ImagesPerView,
+    type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
     itemBboxes,
+    itemKeypoints,
     itemMasks,
-    itemObjects,
+    tracklets,
+    entities,
+    annotations,
+    views,
     newShape,
     selectedTool,
     colorScale,
-    itemKeypoints,
     selectedKeypointsTemplate,
     imageSmoothing,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import {
-    lastFrameIndex,
-    currentFrameIndex,
-    objectIdBeingEdited,
-  } from "../../lib/stores/videoViewerStores";
-
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { onMount } from "svelte";
+  import { derived } from "svelte/store";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-  import {
-    boxLinearInterpolation,
-    editKeyItemInTracklet,
-    keypointsLinearInterpolation,
-  } from "../../lib/api/videoApi";
+  import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
-  export let selectedItem: VideoDatasetItem;
+  export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
@@ -54,18 +55,87 @@ License: CECILL-C
     }
   }
 
+  let tracks: Track[] = [];
+  entities.subscribe((entities) => {
+    tracks = entities.filter((entity) => entity.is_track);
+  });
+
+  const current_itemBBoxes = derived(
+    [itemBboxes, currentFrameIndex, tracklets],
+    ([$itemBboxes, $currentFrameIndex, $tracklets]) => {
+      const current_bboxes_and_interpolated: BBox[] = [];
+      const current_tracklets = $tracklets.filter(
+        (tracklet) =>
+          tracklet.data.start_timestep <= $currentFrameIndex &&
+          tracklet.data.end_timestep >= $currentFrameIndex,
+      );
+      for (const tracklet of current_tracklets) {
+        const bbox_childs_ids = new Set(
+          tracklet.ui.childs.filter((ann) => ann.is_bbox).map((bbox) => bbox.id),
+        );
+        const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
+        const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
+        if (box) current_bboxes_and_interpolated.push(box);
+        else if (bbox_childs.length > 1) {
+          const sample_bbox = bbox_childs[0];
+          const view_id = ($views[sample_bbox.data.view_ref.name] as SequenceFrame[])[
+            $currentFrameIndex
+          ].id;
+          const interpolated_box = boxLinearInterpolation(bbox_childs, $currentFrameIndex, view_id);
+          if (interpolated_box) current_bboxes_and_interpolated.push(interpolated_box);
+        }
+      }
+      return current_bboxes_and_interpolated;
+    },
+  );
+
+  const current_itemKeypoints = derived(
+    [itemKeypoints, currentFrameIndex, tracklets],
+    ([$itemKeypoints, $currentFrameIndex, $tracklets]) => {
+      const current_kpts_and_interpolated: KeypointsTemplate[] = [];
+      const current_tracklets = $tracklets.filter(
+        (tracklet) =>
+          tracklet.data.start_timestep <= $currentFrameIndex &&
+          tracklet.data.end_timestep >= $currentFrameIndex,
+      );
+      for (const tracklet of current_tracklets) {
+        const kpt_childs_ids = new Set(
+          tracklet.ui.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
+        );
+        const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
+        const kpt = kpt_childs.find((kpt) => kpt.ui!.frame_index === $currentFrameIndex);
+        if (kpt) current_kpts_and_interpolated.push(kpt);
+        else if (kpt_childs.length > 1) {
+          const sample_kpt = kpt_childs[0];
+          const view_id = ($views[sample_kpt.viewRef!.name] as SequenceFrame[])[$currentFrameIndex]
+            .id;
+          const interpolated_kpt = keypointsLinearInterpolation(
+            kpt_childs,
+            $currentFrameIndex,
+            view_id,
+          );
+          if (interpolated_kpt) current_kpts_and_interpolated.push(interpolated_kpt);
+        }
+      }
+      return current_kpts_and_interpolated;
+    },
+  );
+
   let inspectorMaxHeight = 250;
   let expanding = false;
-  let currentFrame: number = 0;
 
-  let imagesPerView: Record<string, HTMLImageElement[]> = {};
+  let imagesPerView: ImagesPerView = {};
 
-  let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
+  let imagesFilesUrls: Record<string, Record<string, string>[]> = Object.entries(
+    selectedItem.views,
+  ).reduce(
     (acc, [key, value]) => {
-      acc[key] = value.map((view) => view.uri);
+      acc[key] = (value as SequenceFrame[]).map((view) => {
+        return { id: view.id, url: view.data.url };
+      });
       return acc;
     },
-    {} as Record<string, string[]>,
+    {} as Record<string, Record<string, string>[]>,
   );
 
   let isLoaded = false;
@@ -73,10 +143,10 @@ License: CECILL-C
   onMount(() => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      image.src = `/${urls[0]}`;
+      image.src = `/${urls[0].url}`;
       imagesPerView = {
         ...imagesPerView,
-        [key]: [image],
+        [key]: [{ id: urls[0].id, element: image }],
       };
     });
 
@@ -86,144 +156,137 @@ License: CECILL-C
       0,
     );
     lastFrameIndex.set(longestView - 1);
-
-    updateView(0);
   });
 
-  const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
+  const updateView = (imageIndex: number) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      const src = `/${urls[imageIndex]}`;
+      const src = `/${urls[imageIndex].url}`;
       if (!src) return;
       image.src = src;
+      //NOTE double image, this allows caching (but weird...)
       imagesPerView = {
         ...imagesPerView,
-        [key]: [...(imagesPerView[key] || []), image].slice(-2),
+        [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
+          -2,
+        ),
       };
     });
-
-    itemObjects.update((objects) => {
-      objects = objects.map((object) => {
-        if (object.datasetItemType !== "video") return object;
-        let { displayedMBox, displayedMKeypoints } = object;
-
-        if (object.boxes) {
-          let new_displayedMBox = [];
-          //Need to add bbox if not present beforehand
-          for (const view in imagesPerView) {
-            let frame_bbox = object.boxes.find(
-              (bbox) => bbox.view_id == view && bbox.frame_index == imageIndex,
-            );
-            if (frame_bbox) {
-              let dispViewBBox = displayedMBox
-                ? displayedMBox.find((bbox) => bbox.view_id == view)
-                : undefined;
-              if (!dispViewBBox) {
-                if (!displayedMBox) displayedMBox = [];
-                displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
-              }
-            }
-          }
-          if (displayedMBox) {
-            for (let displayedBox of displayedMBox) {
-              const newCoords = boxLinearInterpolation(
-                newTrack || object.track,
-                imageIndex,
-                object.boxes,
-                displayedBox.view_id!,
-              );
-
-              if (newCoords && newCoords.every((value) => value)) {
-                displayedBox = { ...displayedBox, coords: newCoords, frame_index: imageIndex };
-              }
-              displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-              new_displayedMBox.push(displayedBox);
-            }
-            object = { ...object, displayedMBox: new_displayedMBox };
-          }
-        }
-
-        if (object.keypoints) {
-          let new_displayedMKeypoints = [];
-          //Need to add keypoint if not present beforehand
-          for (const view in imagesPerView) {
-            let frame_kpt = object.keypoints.find(
-              (kpt) => kpt.view_id == view && kpt.frame_index == imageIndex,
-            );
-            if (frame_kpt) {
-              let dispViewKpt = displayedMKeypoints
-                ? displayedMKeypoints.find((kpt) => kpt.view_id == view)
-                : undefined;
-              if (!dispViewKpt) {
-                if (!displayedMKeypoints) displayedMKeypoints = [];
-                displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
-              }
-            }
-          }
-          if (displayedMKeypoints) {
-            for (let displayedKeypoints of displayedMKeypoints) {
-              const vertices = keypointsLinearInterpolation(
-                object,
-                imageIndex,
-                displayedKeypoints.view_id!,
-              );
-              if (vertices) {
-                displayedKeypoints = { ...displayedKeypoints, vertices, frame_index: imageIndex };
-              }
-              displayedKeypoints.displayControl = {
-                ...displayedKeypoints.displayControl,
-                hidden: !vertices,
-              };
-              new_displayedMKeypoints.push(displayedKeypoints);
-            }
-            object = { ...object, displayedMKeypoints: new_displayedMKeypoints };
-          }
-        }
-        return object;
-      });
-      function findEarlierTracklet(item: ItemObject): number {
-        if (item.datasetItemType !== "video") return 0;
-        if (item.track.length === 0) return 0;
-        return item.track.reduce(
-          (min, obj) => (obj.start < min ? obj.start : min),
-          item.track[0].start,
-        );
-      }
-      objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
-      return objects;
-    });
-
-    currentFrame = imageIndex;
   };
 
-  const updateOrCreateBox = (shape: EditShape) => {
-    const currentFrame = $currentFrameIndex;
+  const editKeyItemInTracklet = (
+    annotations: Annotation[],
+    shape: EditShape,
+    currentFrame: number,
+  ): { objects: Annotation[]; save_data: SaveItem } => {
+    let saveData: SaveItem;
+    let updated_annotations: Annotation[];
+    //find corresponding annotation
+    const update_ann = annotations.find((ann) => ann.id === shape.shapeId);
+    if (update_ann) {
+      if (update_ann.is_bbox && shape.type === "bbox") {
+        (update_ann as BBox).data.coords = shape.coords;
+      } else if (update_ann.is_keypoints && shape.type === "keypoints") {
+        const coords = [];
+        const states = [];
+        for (const vertex of shape.vertices) {
+          coords.push(vertex.x);
+          coords.push(vertex.y);
+          states.push(vertex.features.state ? vertex.features.state : "visible");
+        }
+        (update_ann as Keypoints).data.coords = coords;
+        (update_ann as Keypoints).data.states = states;
+      } else if (update_ann.is_mask) {
+        console.log("TODO! mask");
+        //mask not implemented yet in video
+      } else {
+        // should not happen
+        console.error(
+          `ERROR: mismatching types ${shape.type} & ${update_ann.table_info.base_schema}`,
+        );
+      }
+      //update
+      updated_annotations = annotations.map((ann) => (ann.id === update_ann.id ? update_ann : ann));
+      saveData = {
+        change_type: "update",
+        object: update_ann,
+      };
+    } else {
+      //updated an interpolated annotation: create it
+      //use start ann of interpolated as base for new ann
+      let new_ann: Annotation;
+      if (shape.type === "bbox") {
+        const interpolated_box = $current_itemBBoxes.find((box) => box.id === shape.shapeId);
+        if (interpolated_box && "startRef" in interpolated_box) {
+          const newBBox = structuredClone(interpolated_box.startRef as BBox);
+          newBBox.id = shape.shapeId;
+          newBBox.data.coords = shape.coords;
+          newBBox.data.view_ref = shape.viewRef;
+          newBBox.ui.frame_index = currentFrame;
+          newBBox.updated_at = new Date(Date.now()).toISOString();
+          new_ann = newBBox;
+        }
+      } else if (shape.type === "keypoints") {
+        const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
+        if (interpolated_kpt && "startRef" in interpolated_kpt) {
+          const keypointRef = annotations.find(
+            (ann) => ann.is_keypoints && ann.id === interpolated_kpt.ui!.startRef?.id,
+          ) as Keypoints;
+          if (keypointRef) {
+            const newKpt = structuredClone(keypointRef);
+            const coords = [];
+            const states = [];
+            for (const vertex of shape.vertices) {
+              coords.push(vertex.x);
+              coords.push(vertex.y);
+              states.push(vertex.features.state ? vertex.features.state : "visible");
+            }
+            newKpt.id = shape.shapeId;
+            newKpt.data.coords = coords;
+            newKpt.data.states = states;
+            newKpt.data.view_ref = shape.viewRef;
+            newKpt.ui.frame_index = currentFrame;
+            newKpt.updated_at = new Date(Date.now()).toISOString();
+            new_ann = newKpt;
+          }
+        }
+      } else if (shape.type === "mask") {
+        console.log("TODO! mask");
+        //mask not implemented yet in video
+      }
+      //update
+      //TODO note: lint warnings because KPT and mask not covered yet. (new_ann not set in these cases))
+      updated_annotations = [...annotations, new_ann];
+      saveData = {
+        change_type: "add",
+        object: new_ann,
+      };
+    }
+    return {
+      objects: updated_annotations,
+      save_data: saveData,
+    };
+  };
+
+  const updateOrCreateShape = (shape: EditShape) => {
     if (shape.type === "bbox" || shape.type === "keypoints") {
-      let { objects, save_data } = editKeyItemInTracklet(
-        $itemObjects,
-        shape,
-        currentFrame,
-        $objectIdBeingEdited,
-      );
-      $itemObjects = objects;
+      let { objects, save_data } = editKeyItemInTracklet($annotations, shape, $currentFrameIndex);
+      annotations.set(objects);
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
     } else {
-      itemObjects.update((objects) => updateExistingObject(objects, shape));
-      if (shape.highlighted === "self") {
-        objectIdBeingEdited.set(shape.shapeId);
-      }
+      annotations.update((objects) => updateExistingObject(objects, shape));
     }
   };
 
   $: {
     const shape = $newShape;
     if (shape.status === "editing") {
-      updateOrCreateBox(shape);
+      updateOrCreateShape(shape);
     }
   }
 
-  $: selectedTool.set($selectedTool);
+  //$: selectedTool.set($selectedTool);
 
   const startExpand = () => {
     expanding = true;
@@ -247,16 +310,18 @@ License: CECILL-C
   role="tab"
   tabindex="0"
 >
-  {#if isLoaded}
+  {#if isLoaded && $current_itemBBoxes}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id + currentFrame}
+        selectedItemId={selectedItem.item.id}
         {imagesPerView}
         colorScale={$colorScale[1]}
-        bboxes={$itemBboxes}
+        bboxes={$current_itemBBoxes}
         masks={$itemMasks}
-        keypoints={$itemKeypoints}
-        selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
+        keypoints={$current_itemKeypoints}
+        selectedKeypointTemplate={templates.find(
+          (t) => t.template_id === $selectedKeypointsTemplate,
+        )}
         canvasSize={inspectorMaxHeight}
         {embeddings}
         isVideo={true}
@@ -271,7 +336,12 @@ License: CECILL-C
       class="h-full grow max-h-[25%] overflow-hidden"
       style={`max-height: ${inspectorMaxHeight}px`}
     >
-      <VideoInspector {updateView} />
+      <VideoInspector
+        bind:tracks
+        {updateView}
+        bboxes={$current_itemBBoxes}
+        keypoints={$current_itemKeypoints}
+      />
     </div>
   {/if}
 </section>

@@ -38,7 +38,7 @@ License: CECILL-C
 
   // Parse a feature into a table cell
 
-  Object.values(items.cols).forEach((col) => {
+  Object.values(items.columns).forEach((col) => {
     // Add field to column list
     itemColumns.push(
       table.column({

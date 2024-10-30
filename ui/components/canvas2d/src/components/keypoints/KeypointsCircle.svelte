@@ -12,7 +12,6 @@ License: CECILL-C
 
   import type Konva from "konva";
   import LabelTag from "../LabelTag.svelte";
-  import { onMount } from "svelte";
 
   export let stage: Konva.Stage;
   export let zoomFactor: number;
@@ -22,7 +21,7 @@ License: CECILL-C
   export let draggable: boolean = false;
   export let color: string = "rgb(0,128,0)";
   export let opacity: number = 1;
-  export let onPointDragMove: (pointId: number) => void;
+  export let onPointDragMove: (pointId: number, event: Event) => void;
   export let onPointStateChange: (pointId: number, value: VertexStates) => void;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
 
@@ -48,7 +47,21 @@ License: CECILL-C
     showLabel = false;
   };
 
-  const onCircleClick = (state: VertexStates) => {
+  const onCircleClick = (e: Event) => {
+    if (!vertex.features.state || !draggable) return;
+    e.preventDefault();
+    const target = e.target as unknown as Konva.Node;
+    if (target === stage) return;
+    menuNode.style.display = "block";
+    menuNode.style.top = stage.getPointerPosition().y + "px";
+    menuNode.style.left = stage.getPointerPosition().x + "px";
+  };
+
+  const hideMenu = () => {
+    menuNode.style.display = "none";
+  };
+
+  const onMenuClick = (state: VertexStates) => {
     onPointStateChange(vertexIndex, state);
     menuNode.style.display = "none";
   };
@@ -65,22 +78,6 @@ License: CECILL-C
   $: {
     fill = defineFill(vertex.features);
   }
-
-  let hasStateFeature = !!vertex.features.state;
-
-  onMount(() => {
-    if (!hasStateFeature) return;
-    const circle = stage.findOne(`#keypoint-${keypointsId}-${vertexIndex}`);
-    circle.addEventListener("contextmenu", (e) => {
-      if (!draggable) return;
-      e.preventDefault();
-      const target = e.target as unknown as Konva.Node;
-      if (target === stage) return;
-      menuNode.style.display = "block";
-      menuNode.style.top = stage.getPointerPosition().y + "px";
-      menuNode.style.left = stage.getPointerPosition().x + "px";
-    });
-  });
 </script>
 
 <div
@@ -88,20 +85,21 @@ License: CECILL-C
   style="display: none;"
   class="absolute bg-white shadow-sm"
   bind:this={menuNode}
+  on:pointerleave={hideMenu}
 >
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
-    on:click={() => onCircleClick("visible")}
+    on:click={() => onMenuClick("visible")}
     disabled={vertex.features.state === "visible"}>Visible</button
   >
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
-    on:click={() => onCircleClick("hidden")}
+    on:click={() => onMenuClick("hidden")}
     disabled={vertex.features.state === "hidden"}>Hidden</button
   >
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
-    on:click={() => onCircleClick("invisible")}
+    on:click={() => onMenuClick("invisible")}
     disabled={vertex.features.state === "invisible"}>Invisible</button
   >
 </div>
@@ -113,14 +111,16 @@ License: CECILL-C
     fill,
     stroke: "white",
     strokeWidth: 1 / zoomFactor,
+    shadowForStrokeEnabled: false,
     id: `keypoint-${keypointsId}-${vertexIndex}`,
     draggable,
     opacity,
     cancelBubble: true,
   }}
-  on:dragmove={() => onPointDragMove(vertexIndex)}
+  on:dragmove={(event) => onPointDragMove(vertexIndex, event)}
   on:mouseover={onMouseOver}
   on:mouseleave={onMouseLeave}
+  on:click={onCircleClick}
 />
 {#if vertex.features?.label}
   <LabelTag

@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, views } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -18,10 +18,13 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot } from "@pixano/core";
+  import { SliderRoot, Track, BBox, type KeypointsTemplate } from "@pixano/core";
   import { onMount } from "svelte";
 
   export let updateView: (frameIndex: number) => void;
+  export let tracks: Track[];
+  export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[];
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -29,12 +32,14 @@ License: CECILL-C
   });
 
   const onTimeTrackClick = (index: number) => {
-    currentFrameIndex.set(index);
-    updateView($currentFrameIndex);
+    if ($currentFrameIndex !== index) {
+      currentFrameIndex.set(index);
+      updateView($currentFrameIndex);
+    }
   };
 
-  itemObjects.subscribe((value) => {
-    const highlightedObject = value.find((item) => item.highlighted === "self");
+  annotations.subscribe((value) => {
+    const highlightedObject = value.find((item) => item.ui.highlighted === "self");
     if (!highlightedObject) return;
     const element = document.querySelector(`#video-object-${highlightedObject.id}`);
     if (element) {
@@ -51,12 +56,17 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each Object.values($itemObjects) as object}
-        {#if object.datasetItemType === "video"}
-          <VideoPlayerRow>
-            <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView} />
-          </VideoPlayerRow>
-        {/if}
+      {#each tracks as track (track.ui.childs)}
+        <VideoPlayerRow>
+          <ObjectTrack
+            slot="timeTrack"
+            {track}
+            views={$views}
+            {onTimeTrackClick}
+            {bboxes}
+            {keypoints}
+          />
+        </VideoPlayerRow>
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">

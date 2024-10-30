@@ -6,13 +6,15 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Combobox, cn, type ObjectThumbnail } from "@pixano/core";
+  import { Combobox, cn, type ObjectThumbnail, Entity } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import {
-    itemObjects,
+    annotations,
+    entities,
+    views,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -21,43 +23,50 @@ License: CECILL-C
     createObjectCardId,
     defineObjectThumbnail,
     sortObjectsByModel,
+    getObjectsEntities,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allItemsSortedByModel: ObjectsSortedByModelType = {
+  const allEntitiesSortedByModel: ObjectsSortedByModelType<Entity> = {
     [GROUND_TRUTH]: [],
     [PRE_ANNOTATION]: [],
   };
-
+  let allModels: string[] = [];
+  let selectedModel: string = "";
   let thumbnail: ObjectThumbnail | null = null;
 
-  itemObjects.subscribe((objects) => {
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
+  $: $annotations, $entities, handleAnnotationSortedByModel();
+
+  const handleAnnotationSortedByModel = () => {
+    //console.log("ObjectInspector refresh fired", $annotations, $entities);
+    const allAnnotationsSortedByModel = sortObjectsByModel($annotations);
+    //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
+    for (const model in allAnnotationsSortedByModel) {
+      allEntitiesSortedByModel[model] = getObjectsEntities(
+        allAnnotationsSortedByModel[model],
+        $entities,
+      );
+    }
+    allModels = Object.keys(allEntitiesSortedByModel).filter(
+      (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
+    );
+    selectedModel =
+      Object.keys(allEntitiesSortedByModel).find(
+        (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
+      ) || "";
+    //scroll and set thumbnail to highlighted object if any
+    const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
     if (highlightedObject) {
-      thumbnail = defineObjectThumbnail($itemMetas, highlightedObject);
+      thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
+      const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } else {
       thumbnail = null;
     }
-  });
-
-  itemObjects.subscribe((objects) => {
-    allItemsSortedByModel = sortObjectsByModel(objects);
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
-
-  let allModels = Object.keys(allItemsSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  );
-
-  let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  )[0];
+  };
 </script>
 
 <div class="p-2 flex flex-col h-[calc(100vh-200px)]">
@@ -83,17 +92,17 @@ License: CECILL-C
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}
-        numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
+        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].length}
       >
-        {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-          <ObjectCard bind:itemObject />
+        {#each allEntitiesSortedByModel[GROUND_TRUTH] as entity}
+          <ObjectCard bind:entity />
         {/each}
       </ObjectsModelSection>
       {#if selectedModel}
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allItemsSortedByModel[selectedModel]?.length || 0}
+          numberOfItem={allEntitiesSortedByModel[selectedModel]?.length || 0}
         >
           <Combobox
             slot="modelSelection"
@@ -104,8 +113,8 @@ License: CECILL-C
               label: model,
             }))}
           />
-          {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-            <ObjectCard bind:itemObject />
+          {#each allEntitiesSortedByModel[selectedModel] || [] as entity}
+            <ObjectCard bind:entity />
           {/each}
         </ObjectsModelSection>
       {/if}

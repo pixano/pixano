@@ -8,9 +8,8 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
 
-  import { SelectModal, WarningModal } from "@pixano/core";
+  import { SelectModal, WarningModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import type { DatasetInfo, DatasetItem } from "@pixano/core";
   import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
@@ -22,7 +21,7 @@ License: CECILL-C
 
   export let models: Array<string>;
   export let currentDatasetId: DatasetInfo["id"];
-  export let selectedItemId: DatasetItem["id"];
+  export let selectedItemId: string;
   export let embeddings: Embeddings;
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";

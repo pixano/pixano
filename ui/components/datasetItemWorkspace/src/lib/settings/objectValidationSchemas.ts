@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ItemFeature } from "@pixano/core";
 import { z } from "zod";
 import type { CreateObjectSchemaDefinition } from "../types/datasetItemWorkspaceTypes";
 
@@ -25,11 +24,13 @@ export const otherInputSchema = z.object({
 
 export const createObjectInputsSchema = z.array(z.union([listInputSchema, otherInputSchema]));
 
-export const mapInputsToValueType = (setupArray: ItemFeature[]) =>
+export type InputFeatures = z.infer<typeof createObjectInputsSchema>;
+
+export const mapInputsToValueType = (setupArray: InputFeatures) =>
   setupArray.reduce<CreateObjectSchemaDefinition>((acc, cur) => {
-    if (cur.dtype === "str" || cur.dtype === "list") {
+    if (cur.type === "str" || cur.type === "list") {
       acc[cur.name] = z.string();
-    } else if (cur.dtype === "int" || cur.dtype === "float") {
+    } else if (cur.type === "int" || cur.type === "float") {
       acc[cur.name] = z.number();
     } else {
       acc[cur.name] = z.boolean();
@@ -40,6 +41,6 @@ export const mapInputsToValueType = (setupArray: ItemFeature[]) =>
     return acc;
   }, {});
 
-export const createSchemaFromFeatures = (setupArray: ItemFeature[]) => {
+export const createSchemaFromFeatures = (setupArray: InputFeatures) => {
   return z.object(mapInputsToValueType(setupArray));
 };

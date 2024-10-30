@@ -33,7 +33,7 @@ License: CECILL-C
     if (tool?.type !== "KEY_POINT") {
       selectedKeypointsTemplate.set(null);
     } else {
-      selectedKeypointsTemplate.set(templates[0].id);
+      selectedKeypointsTemplate.set(templates[0].template_id);
     }
   });
 </script>
@@ -49,14 +49,14 @@ License: CECILL-C
   {#if $selectedTool?.type === "KEY_POINT"}
     {#each templates as template}
       <IconButton
-        tooltipContent={template.id}
-        on:click={() => onTemplateClick(template.id)}
-        selected={$selectedKeypointsTemplate === template.id}
+        tooltipContent={template.template_id}
+        on:click={() => onTemplateClick(template.template_id)}
+        selected={$selectedKeypointsTemplate === template.template_id}
       >
         {#each template.vertices as vertex}
           <div
             class="w-1 h-1 bg-primary rounded-full absolute"
-            style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.id === $selectedKeypointsTemplate)}`}
+            style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.template_id === $selectedKeypointsTemplate)}`}
           />
         {/each}
       </IconButton>

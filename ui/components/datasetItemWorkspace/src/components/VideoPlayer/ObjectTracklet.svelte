@@ -7,50 +7,50 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import type {
+  import {
+    Track,
     Tracklet,
-    VideoObject,
-    VideoItemBBox,
-    TrackletWithItems,
-    TrackletItem,
+    SequenceFrame,
+    type TrackletItem,
+    type MView,
+    type SaveItem,
   } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
   import {
     colorScale,
-    itemObjects,
+    annotations,
     selectedTool,
+    saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { highlightCurrentObject } from "../../lib/api/objectsApi";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import {
-    filterTrackletItems,
-    getNewTrackletValues,
-    mapTrackletItems,
-  } from "../../lib/api/videoApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
-  export let object: VideoObject;
-  export let tracklet: TrackletWithItems;
-  export let views: string[];
-  export let onContextMenu: (event: MouseEvent) => void;
-  export let getTrackletItem: (ann: TrackletItem) => TrackletItem;
+  import { panTool } from "../../lib/settings/selectionTools";
+
+  export let track: Track;
+  export let tracklet: Tracklet;
+  export let views: MView;
+  export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborItems: (frameIndex: number) => [number, number];
-  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
-  export let updateTracks: () => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
-  const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
+  const getLeft = (tracklet: Tracklet) =>
+    (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
-    const end = tracklet.end > $lastFrameIndex ? $lastFrameIndex : tracklet.end;
-    return ((end - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+    const end =
+      tracklet.data.end_timestep > $lastFrameIndex ? $lastFrameIndex : tracklet.data.end_timestep;
+    return ((end - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
   };
-  const getHeight = (views: string[]) => 80 / views.length;
-  const getTop = (tracklet: Tracklet, views: string[]) => {
-    return 10 + (80 * views.indexOf(tracklet.view_id)) / views.length;
+  const getHeight = (views: MView) => 80 / Object.keys(views).length;
+  const getTop = (tracklet: Tracklet, views: MView) => {
+    return (
+      10 +
+      (80 * Object.keys(views).indexOf(tracklet.data.view_ref.name)) / Object.keys(views).length
+    );
   };
 
   let width: number = getWidth(tracklet);
@@ -60,125 +60,97 @@ License: CECILL-C
   let trackletElement: HTMLElement;
 
   $: oneFrameInPixel =
-    trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
-  $: color = $colorScale[1](object.id);
+    trackletElement?.getBoundingClientRect().width /
+    (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  $: color = $colorScale[1](track.id);
 
-  const updateTrackletWidth = (
-    newFrameIndex: VideoItemBBox["frame_index"],
-    draggedFrameIndex: VideoItemBBox["frame_index"],
-  ): boolean => {
+  $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
+
+  const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
-
-    if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex >= nextFrameIndex - 1) return false;
-
-    const isStart = draggedFrameIndex === tracklet.start;
-    const isEnd = draggedFrameIndex === tracklet.end;
+    if (
+      newFrameIndex !== draggedFrameIndex &&
+      (newFrameIndex < prevFrameIndex + 1 || newFrameIndex > nextFrameIndex - 1)
+    )
+      return false;
+    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
+    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
+    if (!(isStart || isEnd)) return false;
     if (isStart) {
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
-      width = ((tracklet.end - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+      width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
     }
     if (isEnd) {
-      width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+      width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
     }
-    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
-    updateView(newFrameIndex, [newTracklet]);
-    //TODO canSave.set(true); //NO, it's done on dragMe > mouseUp (else too mush calls)
-    currentFrameIndex.set(newFrameIndex);
     return true;
   };
 
-  const filterTracklet = (
-    newFrameIndex: VideoItemBBox["frame_index"],
-    draggedFrameIndex: VideoItemBBox["frame_index"],
-  ) => {
-    tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((obj) => {
-        if (obj.id === object.id && obj.datasetItemType === "video") {
-          obj.track = obj.track.map((trackItem) => {
-            if (trackItem.id === tracklet.id) {
-              return tracklet;
-            }
-            return trackItem;
-          });
-          const { boxes, keypoints } = mapTrackletItems(obj, tracklet);
-          obj.boxes = boxes;
-          obj.keypoints = keypoints;
+  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
+    if (newFrameIndex <= prevFrameIndex) newFrameIndex = prevFrameIndex + 1;
+    if (newFrameIndex >= nextFrameIndex) newFrameIndex = nextFrameIndex - 1;
+    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
+    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
+    const newViewId = (views[tracklet.data.view_ref.name] as SequenceFrame[])[newFrameIndex].id;
+    let movedAnn = tracklet.ui.childs[0];
+    if (isStart) tracklet.data.start_timestep = newFrameIndex;
+    if (isEnd) {
+      movedAnn = tracklet.ui.childs[tracklet.ui.childs.length - 1];
+      tracklet.data.end_timestep = newFrameIndex;
+    }
+    movedAnn.ui.frame_index = newFrameIndex;
+    movedAnn.data.view_ref.id = newViewId;
+
+    annotations.update((objects) =>
+      objects.map((ann) => {
+        if (ann.is_tracklet && ann.id === tracklet.id) {
+          if (isStart) {
+            (ann as Tracklet).data.start_timestep = newFrameIndex;
+          }
+          if (isEnd) {
+            (ann as Tracklet).data.end_timestep = newFrameIndex;
+          }
         }
-        return obj;
+        if (ann.id === movedAnn.id) {
+          ann.ui.frame_index = newFrameIndex;
+          ann.data.view_ref.id = newViewId;
+        }
+        return ann;
       }),
     );
+    const save_tracklet_resized: SaveItem = {
+      change_type: "update",
+      object: tracklet,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_tracklet_resized));
+    const save_ann_moved: SaveItem = {
+      change_type: "update",
+      object: movedAnn,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_ann_moved));
+    currentFrameIndex.set(newFrameIndex);
   };
 
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
-  };
-
-  const onDoubleClick = () => {
-    selectedTool.set(panTool);
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: obj.id === object.id,
-        };
-        return obj;
-      }),
-    );
-  };
-
-  const updateTracklet = () => {
-    const boxes = object.boxes
-      ? object.boxes.filter(
-          (box) =>
-            box.view_id === tracklet.view_id &&
-            box.frame_index >= tracklet.start &&
-            box.frame_index <= tracklet.end,
-        )
-      : [];
-    const keypoints = object.keypoints
-      ? object.keypoints.filter(
-          (kp) =>
-            kp.view_id === tracklet.view_id &&
-            kp.frame_index >= tracklet.start &&
-            kp.frame_index <= tracklet.end,
-        )
-      : [];
-    let items: TrackletItem[] = [];
-    for (const ann of boxes) {
-      items.push(getTrackletItem(ann));
-    }
-    for (const ann of keypoints) {
-      const item = getTrackletItem(ann);
-      if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
-    }
-    const new_tracklet = object.track.find((trklet) => trklet.id === tracklet.id);
-    tracklet = {
-      ...(new_tracklet ? new_tracklet : tracklet),
-      items: items,
-    };
-    console.log("UpdTracklet", object, tracklet);
-    updateTracks();
   };
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("absolute border-y border-white", {
-      "opacity-100": object.highlighted === "self",
-      "opacity-30": object.highlighted === "none",
+      "opacity-100": tracklet.ui.highlighted === "self",
+      "opacity-30": tracklet.ui.highlighted === "none",
     })}
     style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      on:contextmenu|preventDefault={(e) => onContextMenu(e)}
+      on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
       class="h-full w-full"
       bind:this={trackletElement}
       on:click={(e) => onClick(e.clientX)}
-      on:dblclick={onDoubleClick}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
@@ -189,19 +161,18 @@ License: CECILL-C
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.items as item}
-  {#if item.is_key}
-    <TrackletKeyItem
-      {item}
-      {color}
-      {height}
-      {top}
-      {oneFrameInPixel}
-      {onEditKeyItemClick}
-      objectId={object.id}
-      {updateTrackletWidth}
-      {updateTracklet}
-      {filterTracklet}
-    />
-  {/if}
+{#each tracklet_annotations_frame_indexes as itemFrameIndex}
+  <TrackletKeyItem
+    {itemFrameIndex}
+    {tracklet}
+    {color}
+    {height}
+    {top}
+    {oneFrameInPixel}
+    {onEditKeyItemClick}
+    {onClick}
+    trackId={track.id}
+    {canContinueDragging}
+    {updateTrackletWidth}
+  />
 {/each}
