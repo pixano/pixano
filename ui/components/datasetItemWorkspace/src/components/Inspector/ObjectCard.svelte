@@ -33,7 +33,8 @@ License: CECILL-C
     getTopEntity,
     createObjectCardId,
     toggleObjectDisplayControl,
-    highlightCurrentObject,
+    highlightAnnotation,
+    unhighlightAnnotation,
     defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
@@ -49,6 +50,7 @@ License: CECILL-C
   let showIcons: boolean = false;
 
   $: features = createFeature<EntityType>(entity, $datasetSchema);
+  $: isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === 'self');
   $: isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
   $: isVisible =
     entity.ui.childs?.find((ann) => getTopEntity(ann, $entities).id === entity.id)?.ui
@@ -134,15 +136,15 @@ License: CECILL-C
     );
   };
 
-  const onColoredDotClick = () =>
-    entity.ui.childs?.forEach((ann) => {
-      if (ann.ui.datasetItemType === "video") {
-        if (ann.ui.frame_index === $currentFrameIndex)
-          annotations.update((objects) => highlightCurrentObject(objects, ann));
-      } else {
-        annotations.update((objects) => highlightCurrentObject(objects, ann));
-      }
-    });
+  const onColoredDotClick = () => {
+    const entity_childs_ids = entity.ui.childs?.map((ann) => ann.id);
+    annotations.update((objects) =>
+      objects.map((ann) => {
+        if (entity_childs_ids?.includes(ann.id)) return highlightAnnotation(ann);
+        else return unhighlightAnnotation(ann, isHighlighted?isHighlighted:false);
+      }),
+    );
+  };
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);
@@ -162,7 +164,7 @@ License: CECILL-C
 >
   <div
     class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
-    style="border-color:{entity.ui.childs?.some((ann) => ann.ui.highlighted === 'self')
+    style="border-color:{isHighlighted
       ? color
       : 'transparent'}"
   >

@@ -1092,7 +1092,7 @@ License: CECILL-C
   async function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
-    if (newShape.status === "none" || newShape.status == "editing") {
+    if (newShape.status === "none" || newShape.status === "editing") {
       newShape = {
         status: "editing",
         viewRef,
