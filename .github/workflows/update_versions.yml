@@ -29,6 +29,7 @@ jobs:
           sed -i 's/"version": "[^"]*"/"version": "'${VERSION}'"/' ui/apps/pixano/package.json
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git pull
           git add .
           git commit -m "Update version to ${VERSION}"
           git push origin HEAD:${{ github.head_ref }}
