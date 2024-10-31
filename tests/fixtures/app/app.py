@@ -19,7 +19,7 @@ from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 
 
 LIBRARY_DIR = ASSETS_DIRECTORY / "library"
-MEDIA_DIR = ASSETS_DIRECTORY / "media"
+MEDIA_DIR = ASSETS_DIRECTORY / "sample_data"
 
 
 @pytest.fixture(scope="session")
@@ -48,7 +48,7 @@ def app_and_settings_copy(
     dataset_image_bboxes_keypoint_copy: Dataset, dataset_multi_view_tracking_and_image_copy: Dataset
 ) -> tuple[FastAPI, Settings]:
     library_dir = Path(tempfile.mkdtemp())
-    settings = Settings(library_dir=str(library_dir))
+    settings = Settings(library_dir=str(library_dir), media_dir=str(MEDIA_DIR))
 
     for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy]:
         dataset.info.id = dataset.info.name

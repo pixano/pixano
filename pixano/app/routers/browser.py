@@ -42,7 +42,7 @@ async def get_browser(
         Dataset explorer page.
     """
     # Load dataset
-    dataset = get_dataset(id, settings.library_dir, settings.media_dir)
+    dataset = get_dataset(id, settings.library_dir, None)
 
     semantic_search = False
     if query != "" or table != "":
