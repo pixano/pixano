@@ -19,7 +19,7 @@ from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 
 
 LIBRARY_DIR = ASSETS_DIRECTORY / "library"
-MEDIA_DIR = ASSETS_DIRECTORY / "media"
+MEDIA_DIR = ASSETS_DIRECTORY / "sample_data"
 
 
 @pytest.fixture(scope="session")
@@ -48,7 +48,7 @@ def app_and_settings_copy(
     dataset_image_bboxes_keypoint_copy: Dataset, dataset_multi_view_tracking_and_image_copy: Dataset
 ) -> tuple[FastAPI, Settings]:
     library_dir = Path(tempfile.mkdtemp())
-    settings = Settings(library_dir=str(library_dir))
+    settings = Settings(library_dir=str(library_dir), media_dir=str(MEDIA_DIR), models_dir=str(library_dir))
 
     for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy]:
         dataset.info.id = dataset.info.name
@@ -73,7 +73,7 @@ def app_and_settings_with_client_copy(app_and_settings_copy):
 @pytest.fixture()
 def empty_app_and_settings() -> tuple[FastAPI, Settings]:
     temp_dir = Path(tempfile.mkdtemp())
-    settings = Settings(library_dir=str(temp_dir), media_dir=str(temp_dir))
+    settings = Settings(library_dir=str(temp_dir), media_dir=str(temp_dir), models_dir=str(temp_dir))
 
     @lru_cache
     def get_settings_override():

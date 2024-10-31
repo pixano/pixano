@@ -42,8 +42,8 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     )
 
     # Mount folders
-    if isinstance(settings.library_dir, S3Path):
-        # If S3, mount models parent folder
+    if isinstance(settings.media_dir, S3Path):
+        # If S3, mount models folder
         # Check if folder exists
         if settings.models_dir is None:
             raise FileNotFoundError("Local model directory not provided")
@@ -51,23 +51,30 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise FileNotFoundError(f"Local model directory '{settings.models_dir.absolute()}' not found")
         # Mount
         app.mount(
-            "/data",
-            StaticFiles(directory=settings.models_dir.parent),
-            name="data",
+            "/models",
+            StaticFiles(directory=settings.models_dir),
+            name="models",
         )
     else:
-        # If local, mount datasets folder with models subfolder
+        # If local, mount media folder and models folder
         # Check if folder exists
-        if not settings.library_dir.exists():
-            raise FileNotFoundError(f"Dataset library '{settings.library_dir.absolute()}' not found")
-        # Create models subfolder in case it doesn't exist yet
-        if settings.models_dir is not None and not settings.models_dir.exists():
+        if not settings.media_dir.exists():
+            raise FileNotFoundError(f"Media directory '{settings.media_dir.absolute()}' not found")
+        if settings.models_dir is None:
+            raise FileNotFoundError("Model directory not provided")
+        # Create models folder in case it doesn't exist yet
+        if not settings.models_dir.exists():
             settings.models_dir.mkdir(exist_ok=True)
         # Mount
         app.mount(
-            "/data",
-            StaticFiles(directory=settings.library_dir),
-            name="data",
+            "/media",
+            StaticFiles(directory=settings.media_dir),
+            name="media",
+        )
+        app.mount(
+            "/models",
+            StaticFiles(directory=settings.models_dir),
+            name="models",
         )
 
     # Include routers
