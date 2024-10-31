@@ -62,8 +62,9 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise FileNotFoundError(f"Media directory '{settings.media_dir.absolute()}' not found")
         if settings.models_dir is None:
             raise FileNotFoundError("Model directory not provided")
-        elif not settings.models_dir.exists():
-            raise FileNotFoundError(f"Model directory '{settings.models_dir.absolute()}' not found")
+        # Create models folder in case it doesn't exist yet
+        if not settings.models_dir.exists():
+            settings.models_dir.mkdir(exist_ok=True)
         # Mount
         app.mount(
             "/media",
