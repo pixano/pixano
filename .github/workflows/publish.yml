@@ -100,7 +100,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - run: VERSION=$(cat VERSION)
+      - name: Set VERSION environment variable
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
