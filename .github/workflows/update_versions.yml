@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.head_ref }}
       - run: |
           VERSION=$(cat VERSION)
           echo "# =====================================" > pixano/__version__.py
@@ -29,7 +29,6 @@ jobs:
           sed -i 's/"version": "[^"]*"/"version": "'${VERSION}'"/' ui/apps/pixano/package.json
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git checkout ${{ github.head_ref }}
           git add .
           git commit -m "Update version to ${VERSION}"
           git push origin HEAD:${{ github.head_ref }}
