@@ -166,10 +166,6 @@ class DatasetBuilder(ABC):
                 if table_name not in tables:
                     raise KeyError(f"Table {table_name} not found in tables")
 
-                for it in item_value if isinstance(item_value, list) else [item_value]:
-                    if " " in it.id:
-                        raise ValueError(f"ids should not contain spaces (table: {table_name}, " f"id:{it.id})")
-
                 accumulate_data_tables[table_name].extend(item_value if isinstance(item_value, list) else [item_value])
 
                 # make transaction every n iterations per table
