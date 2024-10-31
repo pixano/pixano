@@ -98,6 +98,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - run: VERSION=$(cat VERSION)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
