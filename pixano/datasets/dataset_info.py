@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Literal, overload
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from pixano.features import Image
 
@@ -31,6 +31,13 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+
+    @field_validator("id", mode="after")
+    @classmethod
+    def _id_validator(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("id must not contain spaces")
+        return v
 
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.

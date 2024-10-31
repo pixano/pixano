@@ -7,7 +7,7 @@
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing_extensions import Self
 
 from pixano.features import BaseSchema
@@ -35,6 +35,13 @@ class BaseSchemaModel(BaseModel, Generic[T]):
     updated_at: datetime
     table_info: TableInfo
     data: dict[str, Any]
+
+    @field_validator("id", mode="after")
+    @classmethod
+    def _id_validator(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("id must not contain spaces")
+        return v
 
     def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
         """Create a new model by parsing and validating input data from keyword arguments.

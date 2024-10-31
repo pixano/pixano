@@ -11,7 +11,7 @@ from types import GenericAlias
 from typing import TYPE_CHECKING, Any, overload
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
-from pydantic import ConfigDict, PrivateAttr, create_model
+from pydantic import ConfigDict, PrivateAttr, create_model, field_validator
 
 from pixano.utils import get_super_type_from_dict, issubclass_strict
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
@@ -59,6 +59,13 @@ class BaseSchema(LanceModel):
     updated_at: datetime
     _dataset: Dataset | None = PrivateAttr(None)
     _table_name: str = PrivateAttr("")
+
+    @field_validator("id", mode="after")
+    @classmethod
+    def _id_validator(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("id must not contain spaces")
+        return v
 
     def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
         """Create a new model by parsing and validating input data from keyword arguments.
