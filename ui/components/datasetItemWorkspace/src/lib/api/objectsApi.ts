@@ -524,17 +524,20 @@ export const defineCreatedObject = (
   return newObject;
 };
 
-//switch current highlight state (always switch to highlighted if highlight_only)
-export const highlightAnnotation = (currentObject: Annotation, highlight_only: boolean = false) => {
-  if (
-    highlight_only ||
-    !currentObject.ui.highlighted ||
-    currentObject.ui.highlighted === "none" ||
-    currentObject.ui.highlighted === "all"
-  ) {
-    currentObject.ui.highlighted = "self";
+//switch current highlight state (always switch according to hvalue if hvalue is set)
+export const highlightAnnotation = (currentObject: Annotation, hvalue: boolean = undefined) => {
+  if (hvalue === undefined) {
+    if (
+      !currentObject.ui.highlighted ||
+      currentObject.ui.highlighted === "none" ||
+      currentObject.ui.highlighted === "all"
+    ) {
+      currentObject.ui.highlighted = "self";
+    } else {
+      currentObject.ui.highlighted = "all";
+    }
   } else {
-    currentObject.ui.highlighted = "all";
+    currentObject.ui.highlighted = hvalue?"self":"all";
   }
   return currentObject;
 };

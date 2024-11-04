@@ -137,10 +137,9 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const entity_childs_ids = entity.ui.childs?.map((ann) => ann.id);
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (entity_childs_ids?.includes(ann.id)) return highlightAnnotation(ann);
+        if (getTopEntity(ann, $entities).id === entity.id) return highlightAnnotation(ann, !isHighlighted);
         else return unhighlightAnnotation(ann, isHighlighted?isHighlighted:false);
       }),
     );
