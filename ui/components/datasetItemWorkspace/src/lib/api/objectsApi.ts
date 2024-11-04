@@ -261,6 +261,8 @@ export const sortObjectsByModel = (anns: Annotation[]) =>
   );
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
+  if (!objects.find((ann) => ann.id === newShape.shapeId) && newShape.highlighted === "self")
+    return objects;
   return objects.map((ann) => {
     if (newShape?.status !== "editing") return ann;
     if (newShape.highlighted === "all") {
@@ -537,7 +539,7 @@ export const highlightAnnotation = (currentObject: Annotation, hvalue: boolean =
       currentObject.ui.highlighted = "all";
     }
   } else {
-    currentObject.ui.highlighted = hvalue?"self":"all";
+    currentObject.ui.highlighted = hvalue ? "self" : "all";
   }
   return currentObject;
 };
