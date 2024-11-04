@@ -28,11 +28,7 @@ License: CECILL-C
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
-  import {
-    highlightAnnotation,
-    addOrUpdateSaveItem,
-    unhighlightAnnotation,
-  } from "../../lib/api/objectsApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
   export let track: Track;
   export let views: MView;
@@ -63,11 +59,11 @@ License: CECILL-C
     if (tracklet) {
       const tracklet_childs_ids = tracklet.ui.childs.map((ann) => ann.id);
       annotations.update((oldObjects) =>
-        oldObjects.map((ann) =>
-          ann.id === tracklet.id || tracklet_childs_ids.includes(ann.id)
-            ? highlightAnnotation(ann, true)
-            : unhighlightAnnotation(ann, false),
-        ),
+        oldObjects.map((ann) => {
+          ann.ui.highlighted =
+            ann.id === tracklet.id || tracklet_childs_ids.includes(ann.id) ? "self" : "none";
+          return ann;
+        }),
       );
     }
     moveCursorToPosition(event.clientX);

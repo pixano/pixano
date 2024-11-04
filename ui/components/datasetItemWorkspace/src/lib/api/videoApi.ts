@@ -70,7 +70,7 @@ export const boxLinearInterpolation = (
   interpolatedBox.id = nanoid(10);
   interpolatedBox.ui.frame_index = imageIndex;
   interpolatedBox.ui.displayControl = {
-    hidden: startBox.ui.displayControl.hidden,
+    hidden: startBox.ui.displayControl?.hidden,
     editing: false,
   };
   //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
@@ -124,14 +124,14 @@ export const keypointsLinearInterpolation = (
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.ui!.frame_index = imageIndex;
-    interpolatedKpt.ui.displayControl = {
-      hidden: startKpt.ui.displayControl.hidden,
+    interpolatedKpt.ui!.displayControl = {
+      hidden: startKpt.ui!.displayControl?.hidden,
       editing: false,
     };
     //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-    interpolatedKpt.ui.highlighted = startKpt.ui.displayControl?.editing
+    interpolatedKpt.ui!.highlighted = startKpt.ui!.displayControl?.editing
       ? "none"
-      : startKpt.ui.highlighted;
+      : startKpt.ui!.highlighted;
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;

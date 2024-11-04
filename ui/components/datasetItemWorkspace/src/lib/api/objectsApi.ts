@@ -261,7 +261,11 @@ export const sortObjectsByModel = (anns: Annotation[]) =>
   );
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
-  if (!objects.find((ann) => ann.id === newShape.shapeId) && newShape.highlighted === "self")
+  if (
+    newShape.status === "editing" &&
+    !objects.find((ann) => ann.id === newShape.shapeId) &&
+    newShape.highlighted === "self"
+  )
     return objects;
   return objects.map((ann) => {
     if (newShape?.status !== "editing") return ann;
@@ -524,33 +528,6 @@ export const defineCreatedObject = (
   newObject.ui.datasetItemType = isVideo ? "video" : "image";
   if (isVideo && shape.type !== "tracklet") newObject.ui.frame_index = currentFrameIndex;
   return newObject;
-};
-
-//switch current highlight state (always switch according to hvalue if hvalue is set)
-export const highlightAnnotation = (currentObject: Annotation, hvalue: boolean = undefined) => {
-  if (hvalue === undefined) {
-    if (
-      !currentObject.ui.highlighted ||
-      currentObject.ui.highlighted === "none" ||
-      currentObject.ui.highlighted === "all"
-    ) {
-      currentObject.ui.highlighted = "self";
-    } else {
-      currentObject.ui.highlighted = "all";
-    }
-  } else {
-    currentObject.ui.highlighted = hvalue ? "self" : "all";
-  }
-  return currentObject;
-};
-
-//called on other annotations (not the switched one) to adapt it state
-export const unhighlightAnnotation = (
-  currentObject: Annotation,
-  other_was_highlighted: boolean,
-) => {
-  currentObject.ui.highlighted = other_was_highlighted ? "all" : "none";
-  return currentObject;
 };
 
 export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: Annotation) => {

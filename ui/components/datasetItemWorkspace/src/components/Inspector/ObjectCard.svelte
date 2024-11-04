@@ -33,8 +33,6 @@ License: CECILL-C
     getTopEntity,
     createObjectCardId,
     toggleObjectDisplayControl,
-    highlightAnnotation,
-    unhighlightAnnotation,
     defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
@@ -50,7 +48,7 @@ License: CECILL-C
   let showIcons: boolean = false;
 
   $: features = createFeature<EntityType>(entity, $datasetSchema);
-  $: isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === 'self');
+  $: isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self");
   $: isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
   $: isVisible =
     entity.ui.childs?.find((ann) => getTopEntity(ann, $entities).id === entity.id)?.ui
@@ -139,8 +137,12 @@ License: CECILL-C
   const onColoredDotClick = () => {
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (getTopEntity(ann, $entities).id === entity.id) return highlightAnnotation(ann, !isHighlighted);
-        else return unhighlightAnnotation(ann, isHighlighted?isHighlighted:false);
+        ann.ui.highlighted = isHighlighted
+          ? "all"
+          : getTopEntity(ann, $entities).id === entity.id
+            ? "self"
+            : "none";
+        return ann;
       }),
     );
   };
@@ -163,9 +165,7 @@ License: CECILL-C
 >
   <div
     class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
-    style="border-color:{isHighlighted
-      ? color
-      : 'transparent'}"
+    style="border-color:{isHighlighted ? color : 'transparent'}"
   >
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton
