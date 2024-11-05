@@ -6,10 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { afterUpdate, onDestroy, tick } from "svelte";
+  import { onDestroy, tick } from "svelte";
   import Konva from "konva";
   import { Rect, Group } from "svelte-konva";
-  import type { BBox, SelectionTool, Shape, Reference } from "@pixano/core";
+  import type { BBox, SelectionTool, Shape } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
@@ -24,25 +24,22 @@ License: CECILL-C
   export let bbox: BBox;
   export let colorScale: (id: string) => string;
   export let zoomFactor: number;
-  export let viewRef: Reference;
   export let newShape: Shape;
   export let selectedTool: SelectionTool;
 
-  let currentRect: Konva.Rect = stage.findOne(`#rect${bbox.id}`);
-
   const updateDimensions = (rect: Konva.Rect) => {
-    const coords = getNewRectangleDimensions(rect, stage, viewRef);
+    const coords = getNewRectangleDimensions(rect, stage, bbox.data.view_ref);
     newShape = {
       status: "editing",
       type: "bbox",
       shapeId: bbox.id,
-      viewRef,
+      viewRef: bbox.data.view_ref,
       coords,
     };
   };
 
-  const resizeStroke = () => {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+  const resizeStroke = (currentRect: Konva.Rect) => {
+    const viewLayer: Konva.Layer = stage.findOne(`#${bbox.data.view_ref.name}`);
     const correctedRect = currentRect.getClientRect({
       skipTransform: false,
       skipShadow: true,
@@ -66,7 +63,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: bbox.id,
-      viewRef,
+      viewRef: bbox.data.view_ref,
       highlighted: "self",
       type: "none",
     };
@@ -77,7 +74,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: bbox.id,
-        viewRef,
+        viewRef: bbox.data.view_ref,
         highlighted: "all",
         type: "none",
       };
@@ -91,19 +88,29 @@ License: CECILL-C
     }
   });
 
-  afterUpdate(async () => {
+  const handleEditing = async () => {
+    //await tick: required to allow redraw of frame when right click "Edit Item" on a different frame
+    //not a very elegant solution thought...
     await tick();
     toggleIsEditingBBox(bbox.ui.displayControl.editing ? "on" : "off", stage, bbox.id);
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
-    currentRect = viewLayer.findOne(`#rect${bbox.id}`);
-    if (currentRect) {
-      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewRef, currentRect, bbox.id));
-      currentRect.on("transform", () => resizeStroke());
-      currentRect.on("transformend dragend", () => {
-        updateDimensions(currentRect);
-      });
+    if (bbox.ui.displayControl.editing) {
+      const viewLayer: Konva.Layer = stage.findOne(`#${bbox.data.view_ref.name}`);
+      if (viewLayer) {
+        const currentRect: Konva.Rect = viewLayer.findOne(`#rect${bbox.id}`);
+        if (currentRect) {
+          currentRect.on("dragmove", (e) =>
+            onDragMove(e, stage, bbox.data.view_ref, currentRect, bbox.id),
+          );
+          currentRect.on("transform", () => resizeStroke(currentRect));
+          currentRect.on("transformend dragend", () => {
+            updateDimensions(currentRect);
+          });
+        }
+      }
     }
-  });
+  };
+
+  $: bbox.ui.displayControl.editing, void handleEditing();
 </script>
 
 <Group

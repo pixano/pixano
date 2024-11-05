@@ -7,6 +7,7 @@ License: CECILL-C
 import { BBox, Tracklet } from "@pixano/core";
 import type { KeypointsTemplate, SaveItem, Annotation } from "@pixano/core";
 import { nanoid } from "nanoid";
+import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
 
 import { addOrUpdateSaveItem } from "./objectsApi";
 import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -68,8 +69,20 @@ export const boxLinearInterpolation = (
   interpolatedBox.ui = ui;
   interpolatedBox.id = nanoid(10);
   interpolatedBox.ui.frame_index = imageIndex;
-  interpolatedBox.ui.displayControl = { ...interpolatedBox.ui.displayControl, editing: false };
+  interpolatedBox.ui.displayControl = {
+    hidden: startBox.ui.displayControl?.hidden,
+    editing: false,
+  };
+  //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
+  interpolatedBox.ui.highlighted = startBox.ui.displayControl?.editing
+    ? "none"
+    : startBox.ui.highlighted;
   interpolatedBox.data.view_ref.id = view_id;
+  //we also need to adapt opacity & strokeFactor accordingly
+  interpolatedBox.ui.opacity =
+    interpolatedBox.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0;
+  interpolatedBox.ui.strokeFactor =
+    interpolatedBox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1;
   // for convenience, we store ref to start boxes
   interpolatedBox.ui.startRef = startBox;
   // top_entity (if exist) lost class with structuredClone: remove it
@@ -111,6 +124,14 @@ export const keypointsLinearInterpolation = (
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.ui!.frame_index = imageIndex;
+    interpolatedKpt.ui!.displayControl = {
+      hidden: startKpt.ui!.displayControl?.hidden,
+      editing: false,
+    };
+    //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
+    interpolatedKpt.ui!.highlighted = startKpt.ui!.displayControl?.editing
+      ? "none"
+      : startKpt.ui!.highlighted;
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;
