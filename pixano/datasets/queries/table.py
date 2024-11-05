@@ -29,7 +29,21 @@ class _PixanoEmptyQueryBuilder(LanceEmptyQueryBuilder):
 
 
 class TableQueryBuilder:
-    """Builder for LanceQueryBuilder that handles offset and order_by."""
+    """Builder class for querying LanceTables.
+
+    It supports the select, where, limit, offset, and order_by clauses:
+    - The select clause can be used to select specific columns from the table. If not provided, all columns
+        are selected.
+    - The where clause can be used to filter the rows of the table.
+    - The limit clause can be used to limit the number of rows returned.
+    - The offset clause can be used to skip the first n rows.
+    - The order_by clause can be used to sort the rows of the table.
+
+    The query is built and executed when calling to_pandas(), to_list(), to_pydantic(), or to_polars().
+
+    Attributes:
+        table: The LanceTable to query.
+    """
 
     def __init__(self, table: LanceTable):
         """Initializes the TableQueryBuilder.
@@ -63,7 +77,7 @@ class TableQueryBuilder:
             raise ValueError("build() has already been called.")
         self._function_called[fn_name] = True
 
-    def select(self, columns: list[str] | dict[str, str]) -> Self:
+    def select(self, columns: str | list[str] | dict[str, str]) -> Self:
         """Selects columns to include in the query.
 
         Note:
@@ -71,9 +85,11 @@ class TableQueryBuilder:
 
         Args:
             columns: The columns to include in the query. If a list, the columns are selected in the order they are
-            provided. If a dictionary, the keys are the column names and the values are the aliases.
+                provided. If a dictionary, the keys are the column names and the values are the aliases.
         """
         self._check_called("select")
+        if isinstance(columns, str):
+            self._columns = [columns]
         if isinstance(columns, list) or isinstance(columns, dict):
             if isinstance(columns, list) and not all(isinstance(x, str) for x in columns):
                 raise ValueError("columns must be a list of strings.")
@@ -87,11 +103,18 @@ class TableQueryBuilder:
                 columns["id"] = "id"
             self._columns = columns
         else:
-            raise ValueError("columns must be a list or a dictionary.")
+            raise ValueError("columns must be a string, a list of string or a string mapping dictionary.")
         return self
 
     def where(self, where: str) -> Self:
-        """Sets the where clause for the query."""
+        """Sets the where clause for the query.
+
+        Args:
+            where: The condition to filter the rows.
+
+        Returns:
+            The TableQueryBuilder instance.
+        """
         self._check_called("where")
         if not isinstance(where, str):
             raise ValueError("where must be a string.")
@@ -99,7 +122,14 @@ class TableQueryBuilder:
         return self
 
     def limit(self, limit: int | None) -> Self:
-        """Sets the limit for the query."""
+        """Sets the limit for the query.
+
+        Args:
+            limit: The number of rows to return.
+
+        Returns:
+            The TableQueryBuilder instance.
+        """
         self._check_called("limit")
         if limit is not None:
             if not isinstance(limit, int) or limit < 0:
@@ -108,7 +138,14 @@ class TableQueryBuilder:
         return self
 
     def offset(self, offset: int | None) -> Self:
-        """Sets the offset for the query."""
+        """Sets the offset for the query.
+
+        Args:
+            offset: The number of rows to skip.
+
+        Returns:
+            The TableQueryBuilder instance.
+        """
         self._check_called("offset")
         if offset is not None:
             if not isinstance(offset, int) or offset < 0:
@@ -122,6 +159,9 @@ class TableQueryBuilder:
         Args:
             order_by: The column(s) to sort by.
             descending: Whether to sort in descending order.
+
+        Returns:
+            The TableQueryBuilder instance.
         """
         self._check_called("order_by")
         if isinstance(order_by, str):
@@ -198,9 +238,6 @@ class TableQueryBuilder:
     def to_list(self) -> list[dict[str, Any]]:
         """Builds the query and returns the result as a list of dictionaries.
 
-        Note:
-            Keeps the order of the rows if order_by or offset is set but has to keep 'id' in the select clause.
-
         Returns:
             The result as a list of dictionaries.
         """
@@ -208,9 +245,6 @@ class TableQueryBuilder:
 
     def to_pydantic(self, model: type[T]) -> list[T]:
         """Builds the query and returns the result as a list of Pydantic models.
-
-        Note:
-            Keeps the order of the rows if order_by or offset is set but has to keep 'id' in the select clause.
 
         Returns:
             The result as a list of Pydantic models.

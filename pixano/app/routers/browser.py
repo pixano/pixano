@@ -26,17 +26,17 @@ async def get_browser(
     limit: int = 50,
     skip: int = 0,
     query: str = "",
-    table: str = "",
+    embedding_table_name: str = "",
 ) -> DatasetBrowser:  # type: ignore
-    """Load dataset items for Explorer page.
+    """Load dataset items for the explorer page.
 
     Args:
-        id: Dataset ID.
+        id: Dataset ID containing the items.
         settings: App settings.
         limit: Limit number of items.
         skip: Skip number of items.
         query: Text query for semantic search.
-        table: Table name for embeddings.
+        embedding_table_name: Table name for embeddings.
 
     Returns:
         Dataset explorer page.
@@ -45,25 +45,25 @@ async def get_browser(
     dataset = get_dataset(id, settings.library_dir, settings.media_dir)
 
     semantic_search = False
-    if query != "" or table != "":
-        if query == "" or table == "":
+    if query != "" or embedding_table_name != "":
+        if query == "" or embedding_table_name == "":
             raise HTTPException(
                 status_code=400,
                 detail="Both query and model_name should be provided for semantic search.",
             )
-    if table != "":
+    if embedding_table_name != "":
         semantic_search = True
-        if table not in dataset.schema.schemas:
+        if embedding_table_name not in dataset.schema.schemas:
             raise HTTPException(
                 status_code=400,
-                detail=f"Table {table} not found in dataset {id}.",
+                detail=f"Table {embedding_table_name} not found in dataset {id}.",
             )
-        elif not is_view_embedding(dataset.schema.schemas[table]):
+        elif not is_view_embedding(dataset.schema.schemas[embedding_table_name]):
             raise HTTPException(
                 status_code=400,
-                detail=f"Table {table} is not a view embedding table.",
+                detail=f"Table {embedding_table_name} is not a view embedding table.",
             )
-        embedding_table = dataset.open_table(table)
+        embedding_table = dataset.open_table(embedding_table_name)
 
     # Get page parameters
     total = dataset.num_rows

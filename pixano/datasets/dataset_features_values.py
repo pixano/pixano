@@ -11,13 +11,13 @@ from pydantic import BaseModel
 
 
 class DatasetFeaturesValues(BaseModel):
-    """DatasetFeaturesValues.
+    """Constraints for the dataset features values.
 
     Attributes:
-        items: Dataset tables
-        views: Dataset views
-        entities: Dataset entities
-        annotations: Dataset annotations
+        items: Constraints for the dataset item table.
+        views: Constraints for the dataset view tables.
+        entities: Constraints for the dataset entity tables.
+        annotations: Constraints for the dataset annotation tables.
     """
 
     items: dict[str, list] = {}

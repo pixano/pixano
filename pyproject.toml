@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-documentation = [
+docs = [
   "mkdocs-material >= 9.4.0",
   "mkdocstrings-python >= 1.7.0",
   "mkdocs-gen-files >= 0.5.0",

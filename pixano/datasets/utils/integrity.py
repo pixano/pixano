@@ -63,7 +63,7 @@ def get_integry_checks_from_schemas(
     """Get the integrity checks to perform on a table.
 
     Args:
-        schemas: List of schemas.
+        schemas: List of schemas to check.
         table_name: Table name.
 
     Returns:
@@ -71,9 +71,9 @@ def get_integry_checks_from_schemas(
         - check_id: Check id (unique identifier for the checks). It is used to avoid checking subsequent checks with
             the same id when an error is found.
         - table: Table name.
-        - schema_id: Schema id (id field).
-        - field_name: Field name.
-        - field: Field value.
+        - schema_id: Schema id which is the id field value from the schema.
+        - field_name: Field name to check.
+        - field: Field value to check.
     """
     checks: list[list[tuple[str, str, str, str, Any]]] = [[] for _ in IntegrityCheck]
     for schema in schemas:
@@ -112,19 +112,20 @@ def check_table_integrity(
 
     Args:
         table_name: Table name.
-        dataset: Dataset.
+        dataset: Dataset that contains the table.
         schemas: List of schemas to insert in table. If None, the table is checked, otherwise the schemas are checked
             against the table.
-        updating: If True, the table is being updated.
+        updating: If True, the table is being updated. It is used to avoid checking the id uniqueness when updating
+            schemas.
         ignore_checks: List of integrity checks to ignore.
 
     Returns:
         List of errors as tuples with the following values:
         - check_type: Check type.
         - table: Table name.
-        - field_name: Field name.
-        - schema_id: Schema id.
-        - field: Field value.
+        - field_name: Field name that caused the error.
+        - schema_id: Schema id that raised the error.
+        - field: Field value that caused the error.
     """
     table = dataset.open_table(table_name)
 
@@ -254,15 +255,15 @@ def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, st
     """Check the integrity of a dataset.
 
     Args:
-        dataset: Dataset.
+        dataset: Dataset to check.
 
     Returns:
         List of errors as tuples with the following values:
         - check_type: Check type.
         - table: Table name.
-        - field_name: Field name.
-        - schema_id: Schema id.
-        - field: Field value.
+        - field_name: Field name that caused the error.
+        - schema_id: Schema id that raised the error.
+        - field: Field value that caused the error.
     """
     check_errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
     for table_name in dataset.schema.schemas.keys():
@@ -273,7 +274,7 @@ def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, st
 def handle_integrity_errors(
     check_errors: list[tuple[IntegrityCheck, str, str, str, Any]],
     raise_or_warn: Literal["raise", "warn"] = "raise",
-):
+) -> None:
     """Handle integrity check errors.
 
     Args:

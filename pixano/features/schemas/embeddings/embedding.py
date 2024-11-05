@@ -50,7 +50,7 @@ class Embedding(BaseSchema, ABC):
 
     @property
     def item(self) -> "Item":
-        """Get the item."""
+        """Get the embedding's item."""
         return self.resolve_ref(self.item_ref)
 
     @classmethod
@@ -91,7 +91,7 @@ class ViewEmbedding(Embedding, ABC):
 
     @property
     def view(self) -> "View":
-        """Get the item."""
+        """Get the embedding's view."""
         return self.resolve_ref(self.view_ref)
 
     @staticmethod
@@ -166,23 +166,25 @@ class ViewEmbedding(Embedding, ABC):
 
 
 def is_embedding(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an Embedding or subclass of Embedding."""
+    """Check if a class is an `Embedding` or subclass of `Embedding`."""
     return issubclass_strict(cls, Embedding, strict)
 
 
 def is_view_embedding(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an ViewEmbedding or subclass of ViewEmbedding."""
+    """Check if a class is an `ViewEmbedding` or subclass of `ViewEmbedding`."""
     return issubclass_strict(cls, ViewEmbedding, strict)
 
 
 def create_view_embedding_function(
     type_embedding_function: type[EmbeddingFunction], name: str, dataset: "Dataset"
 ) -> type[EmbeddingFunction]:
-    """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
+    """Create a `ViewEmbeddingFunction` based on an
+    [EmbeddingFunction][lancedb.embedding_function.EmbeddingFunction].
+    """
 
     @register(name)
     class ViewEmbeddingFunction(type_embedding_function):
-        """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
+        """A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embedding_function.EmbeddingFunction]."""
 
         def compute_source_embeddings(self, view_refs: pa.Table, *args, **kwargs) -> list:
             """Compute the embeddings for the source column in the database."""

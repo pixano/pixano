@@ -20,16 +20,16 @@ class Settings(BaseSettings):
     """Pixano app settings.
 
     Attributes:
-        library_dir: Local or S3 path to dataset library. If not provided, it is set to './library/'.
-        media_dir: Local or S3 path to media library. If not provided, it is set to './media/'.
+        library_dir: Local or S3 path to dataset library. If not provided, it is set to `'./library/'`.
+        media_dir: Local or S3 path to media library. If not provided, it is set to `'./media/'`.
         models_dir: Models directory as Path. Must be provided if library_dir is an S3 path else it is set to
-            library_dir/models
+            `'library_dir/models'`
         aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
-            Used if library_dir is an S3 path
+            Used if library_dir is an S3 path.
         aws_region: S3 region name, not always required for private storages.
-            Used if library_dir is an S3 path
-        aws_access_key: S3 AWS access key. Used if library_dir is an S3 path
-        aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path
+            Used if library_dir is an S3 path.
+        aws_access_key: S3 AWS access key. Used if library_dir is an S3 path.
+        aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path.
     """
 
     library_dir: Path | S3Path = Path.cwd() / "library"
@@ -110,6 +110,6 @@ def get_settings() -> Settings:
     """Get app settings.
 
     Returns:
-        Settings: App settings
+        App settings.
     """
     return Settings()

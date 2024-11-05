@@ -23,13 +23,13 @@ from pixano.app.settings import Settings
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
-    """Run Pixano app.
+    """Create and configure the Pixano app.
 
     Args:
         settings: App settings.
 
     Returns:
-        Pixano app.
+        The Pixano app.
     """
     # Create app
     app = FastAPI()

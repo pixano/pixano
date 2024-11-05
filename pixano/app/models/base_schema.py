@@ -23,10 +23,15 @@ SUB_T = TypeVar("SUB_T", bound=BaseSchema)
 class BaseSchemaModel(BaseModel, Generic[T]):
     """Base schema model.
 
+    This class is a base class for all schema models. It provides methods to convert a row to a model and vice
+    versa.
+
     Attributes:
-        id: Identifier.
-        table_info: Table information.
-        data: Data from the pydantic backend schema except the id.
+        id: Unique identifier of the row.
+        created_at: The creation date of the row.
+        updated_at: The last modification date of the row.
+        table_info: Information about the table to which the row belongs.
+        data: Dumped data from the Pixano backend row except the id.
     """
 
     model_config = ConfigDict(validate_assignment=True)
@@ -60,7 +65,7 @@ class BaseSchemaModel(BaseModel, Generic[T]):
         data.update({"created_at": created_at, "updated_at": updated_at})
         super().__init__(**data)
 
-    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
         Args:
@@ -79,7 +84,15 @@ class BaseSchemaModel(BaseModel, Generic[T]):
 
     @classmethod
     def from_row(cls, row: T, table_info: TableInfo) -> Self:
-        """Create a model from a schema."""
+        """Create a model from a row.
+
+        Args:
+            row: The row to create the model from.
+            table_info: The table info of the row.
+
+        Returns:
+            The created model.
+        """
         model_dict = {}
         data = {}
         for key, value in row.model_dump().items():
@@ -94,13 +107,28 @@ class BaseSchemaModel(BaseModel, Generic[T]):
 
     @classmethod
     def from_rows(cls, rows: list[T], table_info: TableInfo) -> list[Self]:
-        """Create a list of models from a list of schemas."""
+        """Create a list of models from a list of schemas.
+
+        Args:
+            rows: The rows to create the models from.
+            table_info: The table info of the rows.
+
+        Returns:
+            The list of created models.
+        """
         return [cls.from_row(row, table_info) for row in rows]
 
-    def to_row(self, schema_type: type[SUB_T]) -> SUB_T:
-        """Create a schema from a model."""
+    def to_row(self, schema: type[SUB_T]) -> SUB_T:
+        """Create a row from the model.
+
+        Args:
+            schema: The schema type of the row.
+
+        Returns:
+            The created row.
+        """
         schema_dict = self.model_dump()
-        return schema_type.model_validate(
+        return schema.model_validate(
             {
                 "id": schema_dict["id"],
                 "created_at": schema_dict["created_at"],
@@ -110,6 +138,14 @@ class BaseSchemaModel(BaseModel, Generic[T]):
         )
 
     @staticmethod
-    def to_rows(schemas: list["BaseSchemaModel"], schema_type: type[SUB_T]) -> list[SUB_T]:
-        """Create a list of schemas from a list of models."""
-        return [schema.to_row(schema_type) for schema in schemas]
+    def to_rows(models: list["BaseSchemaModel"], schema: type[SUB_T]) -> list[SUB_T]:
+        """Create a list of rows from a list of models.
+
+        Args:
+            models: The models to create the rows from.
+            schema: The schema type of the rows.
+
+        Returns:
+            The list of created rows.
+        """
+        return [model.to_row(schema) for model in models]

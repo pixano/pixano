@@ -43,7 +43,6 @@ async def get_items_info(
         settings: App settings.
         where: Where clause for the item table.
         ids: IDs.
-        item_ids: Item IDs.
         limit: Limit number of items.
         skip: Skip number of items.
 

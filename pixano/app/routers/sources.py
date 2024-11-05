@@ -36,12 +36,14 @@ async def get_sources(
     skip: int = 0,
     where: str | None = None,
 ) -> list[SourceModel]:
-    """Get sources.
+    """Get sources from the `'source'` table of a dataset.
+
+    They can be filtered by IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         settings: App settings.
-        ids: IDs.
+        ids: IDs of the sources.
         limit: Limit number of sources.
         skip: Skip number of sources.
         where: Where clause.
@@ -64,11 +66,11 @@ async def get_sources(
 
 @router.get("/{dataset_id}/{id}", response_model=SourceModel)
 async def get_source(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> SourceModel:
-    """Get a source.
+    """Get a source from the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the source.
         settings: App settings.
 
     Returns:
@@ -83,15 +85,15 @@ async def create_sources(
     sources: list[SourceModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[SourceModel]:
-    """Create sources.
+    """Add sources in the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        sources: Sources.
+        dataset_id: Dataset ID containing the table.
+        sources: Sources to add.
         settings: App settings.
 
     Returns:
-        List of sources.
+        List of sources added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, sources, settings)
 
@@ -103,16 +105,16 @@ async def create_source(
     source: SourceModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> SourceModel:
-    """Create a source.
+    """Add a source in the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
-        source: Source.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the source.
+        source: Source to add.
         settings: App settings.
 
     Returns:
-        The source.
+        The source added.
     """
     return await create_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, source, settings)
 
@@ -124,16 +126,16 @@ async def update_source(
     source: SourceModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> SourceModel:
-    """Update a source.
+    """Update a source in the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
-        source: Source.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the source.
+        source: Source to update.
         settings: App settings.
 
     Returns:
-        The source.
+        The source updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, source, settings)
 
@@ -144,26 +146,26 @@ async def update_sources(
     sources: list[SourceModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[SourceModel]:
-    """Update sources.
+    """Update sources in the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        sources: Sources.
+        dataset_id: Dataset ID containing the table.
+        sources: Sources to update.
         settings: App settings.
 
     Returns:
-        List of sources.
+        List of sources updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, sources, settings)
 
 
 @router.delete("/{dataset_id}/{id}")
 async def delete_source(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
-    """Delete a source.
+    """Delete a source from the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the source to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
@@ -175,11 +177,11 @@ async def delete_sources(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete sources.
+    """Delete sources from the `'source'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        ids: IDs.
+        dataset_id: Dataset ID containing the table.
+        ids: IDs of the sources to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, ids, settings)

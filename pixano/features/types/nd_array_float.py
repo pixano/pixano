@@ -37,8 +37,8 @@ class NDArrayFloat(BaseType):
 
     @classmethod
     def none(cls) -> "NDArrayFloat":
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" `NDArrayFloat`.

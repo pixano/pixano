@@ -8,6 +8,7 @@
 from typing import Any
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from pixano.datasets import DatasetItem, DatasetSchema
 from pixano.features import Annotation, Entity, Item, View
@@ -25,7 +26,19 @@ from .views import ViewModel
 
 
 class DatasetItemModel(BaseModel):
-    """DatasetItem model."""
+    """[DatasetItem][pixano.datasets.DatasetItem] model.
+
+    It represents a dataset item with its associated entities, annotations and views.
+
+    The mappings consist of the table name as key and the corresponding model or list of models as value.
+
+    Attributes:
+        id: The dataset item id.
+        item: The item model.
+        entities: The entities models mapping.
+        annotations: The annotations models mapping.
+        views: The views models mapping.
+    """
 
     id: str
     item: ItemModel
@@ -33,7 +46,7 @@ class DatasetItemModel(BaseModel):
     annotations: dict[str, list[AnnotationModel] | AnnotationModel | None] = {}
     views: dict[str, list[ViewModel] | ViewModel | None] = {}
 
-    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
         Args:
@@ -62,8 +75,16 @@ class DatasetItemModel(BaseModel):
         return model_dump
 
     @classmethod
-    def from_dataset_item(cls, dataset_item: DatasetItem, dataset_schema: DatasetSchema) -> "DatasetItemModel":
-        """Create a model from a dataset item."""
+    def from_dataset_item(cls, dataset_item: DatasetItem, dataset_schema: DatasetSchema) -> Self:
+        """Create a model from a [DatasetItem][pixano.datasets.DatasetItem].
+
+        Args:
+            dataset_item: The dataset item to create the model from.
+            dataset_schema: The schema of the dataset containing the dataset item.
+
+        Returns:
+            The created model.
+        """
 
         def _row_or_rows_to_model_or_models(
             row_or_rows: BaseSchema | list[BaseSchema], name: str, group: SchemaGroup, model: type[BaseSchemaModel]
@@ -112,14 +133,27 @@ class DatasetItemModel(BaseModel):
         return cls.model_validate(model_dict)
 
     @classmethod
-    def from_dataset_items(
-        cls, dataset_items: list[DatasetItem], dataset_schema: DatasetSchema
-    ) -> list["DatasetItemModel"]:
-        """Create a list of models from a list of dataset items."""
+    def from_dataset_items(cls, dataset_items: list[DatasetItem], dataset_schema: DatasetSchema) -> list[Self]:
+        """Create a list of models from a list of [DatasetItem][pixano.datasets.DatasetItem]s.
+
+        Args:
+            dataset_items: The dataset items to create the models from.
+            dataset_schema: The schema of the dataset containing the dataset item.
+
+        Returns:
+            The list of created models.
+        """
         return [cls.from_dataset_item(dataset_item, dataset_schema) for dataset_item in dataset_items]
 
     def to_dataset_item(self, dataset_schema: DatasetSchema) -> DatasetItem:
-        """Create a dataset item from a model."""
+        """Create a [DatasetItem][pixano.datasets.DatasetItem] from a model.
+
+        Args:
+            dataset_schema: The schema of the dataset containing the dataset item.
+
+        Returns:
+            The created dataset item.
+        """
         schema_dict = {}
 
         item = self.item
@@ -139,5 +173,13 @@ class DatasetItemModel(BaseModel):
 
     @staticmethod
     def to_dataset_items(models: list["DatasetItemModel"], dataset_schema: DatasetSchema) -> list[DatasetItem]:
-        """Create a list of dataset items from a list of models."""
+        """Create a list of [DatasetItem][pixano.datasets.DatasetItem]s from a list of models.
+
+        Args:
+            models: The models to create the dataset items from.
+            dataset_schema: The schema of the dataset containing the dataset items.
+
+        Returns:
+            The list of created dataset items.
+        """
         return [model.to_dataset_item(dataset_schema) for model in models]

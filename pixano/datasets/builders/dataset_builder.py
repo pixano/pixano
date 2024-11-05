@@ -21,39 +21,37 @@ from pixano.features.schemas.source import Source, SourceKind
 
 
 class DatasetBuilder(ABC):
-    """Abstract base class for Dataset builders.
+    """Abstract base class for dataset builders.
 
-    To build a dataset, the easiest is to launch the `build` method which requires to inherit from this class and
-    implement `generate_data`.
+    To build a dataset, inherit from this class, implement the `generate_data` method and launch the `build` method.
 
     Attributes:
         target_dir: The target directory for the dataset.
         previews_path: The path to the previews directory.
-        info: Dataset informations (name, description, ...).
-        dataset_schema: The dataset schema for the dataset.
-        schemas: The schemas for the dataset tables infered from the dataset schema.
-        db: The `lancedb.Database` instance for the dataset.
+        info: Dataset information (name, description, ...).
+        dataset_schema: The schema of the dataset.
+        schemas: The schemas of the dataset tables.
+        db: The connection to the `LanceDB` database of the dataset.
     """
 
     def __init__(
         self,
         target_dir: Path | str,
-        schemas: type[DatasetItem],
+        dataset_item: type[DatasetItem],
         info: DatasetInfo,
     ):
-        """Initialize the BaseDatasetBuilder instance.
+        """Initialize a DatasetBuilder instance.
 
         Args:
             target_dir: The target directory for the dataset.
-            schemas: The schemas for the dataset tables.
-            info: Dataset informations (name, description, ...)
-                for the dataset.
+            dataset_item: The dataset item class to build the dataset schema.
+            info: Dataset information (name, description, ...).
         """
         self.target_dir: Path = Path(target_dir)
         self.previews_path: Path = self.target_dir / Dataset._PREVIEWS_PATH
 
         self.info: DatasetInfo = info
-        self.dataset_schema: DatasetSchema = schemas.to_dataset_schema()
+        self.dataset_schema: DatasetSchema = dataset_item.to_dataset_schema()
         self.schemas: dict[str, type[BaseSchema]] = self.dataset_schema.schemas
 
         self.db: lancedb.DBConnection = lancedb.connect(self.target_dir / Dataset._DB_PATH)
@@ -80,7 +78,7 @@ class DatasetBuilder(ABC):
         Args:
             name: Name of the source.
             kind: Kind of source.
-            metadata: Metadata of the source.
+            metadata: Metadata of the source. If a dict is provided, it is converted to a JSON string.
             id: The id of the source. If not provided, a random id is generated.
 
         Returns:
@@ -97,7 +95,7 @@ class DatasetBuilder(ABC):
         """Add a ground truth source to the dataset.
 
         Args:
-            metadata: Metadata of the source.
+            metadata: Metadata of the ground truth source.
 
         Returns:
             The id of the ground truth source.
@@ -120,12 +118,12 @@ class DatasetBuilder(ABC):
         Args:
             mode: The mode for creating the tables in the database.
                 The mode can be "create", "overwrite" or "add":
-                    - "create": Create the tables in the database.
+                    - "create": Create the tables in the database. If the tables already exist, an error is raised.
                     - "overwrite": Overwrite the tables in the database.
                     - "add": Append to the tables in the database.
-            flush_every_n_samples: The number of samples accumulated from :meth:`generate_data` before
-                flush in tables. If None, data are inserted at each iteration.
-            compact_every_n_transactions: The number of transactions before compacting the dataset.
+            flush_every_n_samples: The number of samples accumulated from `generate_data` before they are
+                flushed in tables. The counter is per table. If None, data are inserted at each iteration.
+            compact_every_n_transactions: The number of transactions before compacting each table.
                 If None, the dataset is compacted only at the end.
             check_integrity: The integrity check to perform after building the dataset. It can be "raise",
                 "warn" or "none":
@@ -218,7 +216,7 @@ class DatasetBuilder(ABC):
         return dataset
 
     def compact_table(self, table_name: str) -> None:
-        """Compact a table in the database by cleaning up old versions and compacting files.
+        """Compact a table by cleaning up old versions and compacting files.
 
         Args:
             table_name: The name of the table to compact.
@@ -230,7 +228,7 @@ class DatasetBuilder(ABC):
         table.cleanup_old_versions(older_than=timedelta(days=0), delete_unverified=True)
 
     def compact_dataset(self) -> None:
-        """Compact the dataset by calling :meth:`compact_table` for each table in the database."""
+        """Compact the dataset by calling `compact_table` for each table in the database."""
         for table_name in self.schemas.keys():
             self.compact_table(table_name)
 
@@ -238,8 +236,12 @@ class DatasetBuilder(ABC):
     def generate_data(self) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
         """Generate data from the source directory.
 
+        It should yield a dictionary with keys corresponding to the table names and values corresponding to the data.
+
+        It must be implemented in the subclass.
+
         Returns:
-            An iterator over the data following data schema.
+            An iterator over the data following the dataset schemas.
         """
         raise NotImplementedError
 
@@ -263,7 +265,7 @@ class DatasetBuilder(ABC):
         return tables
 
     def open_tables(self) -> dict[str, Table]:
-        """Open tables in the database.
+        """Open the tables in the database.
 
         Returns:
             The tables in the database.

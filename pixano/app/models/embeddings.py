@@ -18,7 +18,7 @@ T = TypeVar("T", bound=Embedding)
 
 
 class EmbeddingModel(BaseSchemaModel[Embedding]):
-    """Embedding model."""
+    """Model for the [Embedding][pixano.features.Embedding] schema."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -39,14 +39,14 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
 
     @field_validator("table_info")
     @classmethod
-    def validate_table_info(cls, value: TableInfo) -> TableInfo:
+    def _validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
         if value.group != SchemaGroup.EMBEDDING.value:
             raise ValueError(f"Table info group must be {SchemaGroup.EMBEDDING.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:
-        """Create an embedding from a model."""
+        """Create an [Embedding][pixano.features.Embedding] from the model."""
         if not issubclass(schema_type, Embedding):
             raise ValueError(f"Schema type must be a subclass of {Embedding.__name__}.")
         return super().to_row(schema_type)

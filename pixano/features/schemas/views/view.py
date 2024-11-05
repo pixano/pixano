@@ -19,22 +19,30 @@ if TYPE_CHECKING:
 
 @_register_schema_internal
 class View(BaseSchema):
-    """View Lance Model."""
+    """View base class.
+
+    Views are used to define a view in a dataset such as an image, a point cloud, a text. It can refer to an item and
+    a parent view.
+
+    Attributes:
+        item_ref: Reference to the view's item.
+        parent_ref: Reference to the view's parent view.
+    """
 
     item_ref: ItemRef = ItemRef.none()
     parent_ref: ViewRef = ViewRef.none()
 
     @property
     def item(self) -> "Item":
-        """Get the item."""
+        """Get the view's item."""
         return self.resolve_ref(self.item_ref)
 
     @property
     def parent(self) -> "View":
-        """Get the parent."""
+        """Get the view's parent view."""
         return self.resolve_ref(self.parent_ref)
 
 
 def is_view(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an View or subclass of View."""
+    """Check if a class is a `View` or subclass of `View`."""
     return issubclass_strict(cls, View, strict)

@@ -17,7 +17,17 @@ from .view import View
 
 @_register_schema_internal
 class Video(View):
-    """Video Lance Model."""
+    """Video view.
+
+    Attributes:
+        url: The video URL.
+        num_frames: The number of frames in the video.
+        fps: The frames per second of the video.
+        width: The video width.
+        height: The video height.
+        format: The video format.
+        duration: The video duration.
+    """
 
     url: str
     num_frames: int
@@ -29,7 +39,7 @@ class Video(View):
 
 
 def is_video(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a Video or a subclass of Video."""
+    """Check if the given class is a `Video` or a subclass of `Video`."""
     return issubclass_strict(cls, Video, strict)
 
 

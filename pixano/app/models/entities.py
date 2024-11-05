@@ -18,7 +18,7 @@ T = TypeVar("T", bound=Entity)
 
 
 class EntityModel(BaseSchemaModel[Entity]):
-    """Entity model."""
+    """Model for the [Entity][pixano.features.Entity] schema."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -40,14 +40,14 @@ class EntityModel(BaseSchemaModel[Entity]):
 
     @field_validator("table_info")
     @classmethod
-    def validate_table_info(cls, value: TableInfo) -> TableInfo:
+    def _validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
         if value.group != SchemaGroup.ENTITY.value:
             raise ValueError(f"Table info group must be {SchemaGroup.ENTITY.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:
-        """Create an entity from a model."""
+        """Create an [Entity][pixano.features.Entity] from the model."""
         if not issubclass(schema_type, Entity):
             raise ValueError(f"Schema type must be a subclass of {Entity.__name__}.")
         return super().to_row(schema_type)

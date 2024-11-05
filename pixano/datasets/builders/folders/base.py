@@ -59,7 +59,7 @@ class FolderBaseBuilder(DatasetBuilder):
     ```
 
     Note:
-        Only one view is supported in folder builders.
+        Only one view and one entity are supported in folder builders.
 
     Attributes:
         source_dir: The source directory for the dataset.
@@ -128,7 +128,7 @@ class FolderBaseBuilder(DatasetBuilder):
         """Generate data from the source directory.
 
         Returns:
-            An iterator over the data following data schema.
+            An iterator over the data following the dataset schemas.
         """
         source_id = None
         for split in self.source_dir.glob("*"):

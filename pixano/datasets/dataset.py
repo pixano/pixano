@@ -27,7 +27,7 @@ from pixano.utils.python import to_sql_list
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from .dataset_stat import DatasetStat
+from .dataset_stat import DatasetStatistic
 
 
 if TYPE_CHECKING:
@@ -82,22 +82,25 @@ def _validate_raise_or_warn(raise_or_warn: Literal["raise", "warn", "none"]):
 
 
 class Dataset:
-    """A dataset.
+    """The Pixano Dataset.
 
     It is a collection of tables that can be queried and manipulated with LanceDB.
 
-    The tables are defined by the dataset schema which allows the dataset to return the data in the form of pydantic
-    models.
+    The tables are defined by the [DatasetSchema][pixano.datasets.DatasetSchema] which allows the dataset to return
+    the data in the form of [LanceModel][lancedb.pydantic.LanceModel] instances.
 
     Attributes:
-        path: Dataset path.
+        path: Path to the dataset.
         info: Dataset info.
         schema: Dataset schema.
         features_values: Dataset features values.
-        stats: Dataset stats.
+        stats: Dataset statistics.
         thumbnail: Dataset thumbnail base 64 URL.
-        media_dir: Dataset media directory.
+        media_dir: Path to the media directory.
     """
+
+    # Allow arbitrary types because of S3 Path
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     _DB_PATH: str = "db"
     _PREVIEWS_PATH: str = "previews"
@@ -111,18 +114,16 @@ class Dataset:
     info: DatasetInfo
     schema: DatasetSchema
     features_values: DatasetFeaturesValues = DatasetFeaturesValues()
-    stats: list[DatasetStat] = []
+    stats: list[DatasetStatistic] = []
     thumbnail: Path
-    # Allow arbitrary types because of S3 Path
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     media_dir: Path
 
     def __init__(self, path: Path, media_dir: Path | None = None):
-        """Initialize dataset.
+        """Initialize the dataset.
 
         Args:
-            path: Dataset path.
-            media_dir: Dataset media directory.
+            path: Path to the dataset.
+            media_dir: Path to the media directory.
         """
         self.path = path
 
@@ -135,7 +136,7 @@ class Dataset:
 
         self.info = DatasetInfo.from_json(self._info_file)
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
-        self.stats = DatasetStat.from_json(self._stat_file) if self._stat_file.is_file() else []
+        self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.media_dir = media_dir or self.path / "media"
         self.thumbnail = self._thumb_file
         self.previews_path = self.path / self._PREVIEWS_PATH
@@ -186,12 +187,12 @@ class Dataset:
 
     @property
     def id(self) -> str:
-        """Return dataset ID."""
+        """Return the dataset ID."""
         return self.info.id
 
     @property
     def num_rows(self) -> int:
-        """Return number of rows in dataset.
+        """Return the number of rows in the dataset.
 
         Returns:
             Number of rows.
@@ -229,20 +230,20 @@ class Dataset:
         on_bad_vectors: str = "error",
         fill_value: float = 0.0,
     ) -> LanceTable:
-        """Add table to dataset.
+        """Add a table to the dataset.
 
         Args:
             name: Table name.
             schema: Table schema.
-            relation_item: Relation with item table (table to item).
+            relation_item: Relation with the `'item'` table (table to item).
             data: Table data.
-            mode: Table mode.
-            exist_ok: Table exist ok.
-            on_bad_vectors: Table on bad vectors.
-            fill_value: Table fill value.
+            mode: Table mode ('create', 'overwrite'd).
+            exist_ok: If True, do not raise an error if the table already exists.
+            on_bad_vectors: Raise an error, drop or fill bad vectors ("error", "drop", "fill").
+            fill_value: Value to fill bad vectors.
 
         Returns:
-            The table.
+            The table created.
         """
         table = self._db_connection.create_table(
             name=name,
@@ -260,7 +261,7 @@ class Dataset:
         return table
 
     def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
-        """Open dataset tables with LanceDB.
+        """Open the dataset tables with LanceDB.
 
         Args:
             names: Table names to open. If None, open all tables.
@@ -279,7 +280,10 @@ class Dataset:
         return tables
 
     def open_table(self, name) -> LanceTable:
-        """Open dataset table with LanceDB.
+        """Open a dataset table with LanceDB.
+
+        Args:
+            name: Name of the table to open.
 
         Returns:
             Dataset table.
@@ -317,7 +321,16 @@ class Dataset:
     def resolve_ref(
         self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef | SourceRef
     ) -> BaseSchema | Item | View | Embedding | Entity | Annotation | Source:
-        """Resolve a reference."""
+        """Resolve a [SchemaRef][pixano.datasets.SchemaRef].
+
+        It fetches the data from the table referenced.
+
+        Args:
+            ref: Reference to resolve.
+
+        Returns:
+            The resolved reference.
+        """
         if ref.id == "" or ref.name == "":
             raise DatasetAccessError("Reference should have a name and an id.")
         return self.get_data(ref.name, ids=[ref.id])[0]
@@ -353,6 +366,8 @@ class Dataset:
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
+
+        Data can be filtered by ids, item ids, where clause, or limit and skip.
 
         Args:
             table_name: Table name.
@@ -425,6 +440,8 @@ class Dataset:
     ) -> list[DatasetItem] | DatasetItem | None:
         """Read dataset items.
 
+        Filter dataset items by ids, or limit and skip.
+
         Args:
             ids: Item ids to read.
             limit: Amount of items to read.
@@ -472,14 +489,14 @@ class Dataset:
         return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
     def find_ids_in_table(self, table_name: str, ids: set[str]) -> dict[str, bool]:
-        """Find ids in a table.
+        """Search ids in a table.
 
         Args:
             table_name: Table name.
             ids: Ids to find.
 
         Returns:
-            Dictionary of ids found. Keys are the ids and values are True if the id is found, False otherwise.
+            Dictionary of ids found. Keys are the ids and values are `True` if the id is found, `False` otherwise.
         """
         if len(ids) == 0:
             return {}
@@ -490,18 +507,19 @@ class Dataset:
         return {id: id in ids_found for id in ids}
 
     def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
-        """Get all ids from a table.
+        """Get all the ids from a table.
 
         Args:
             table_name: table to look for ids.
 
         Returns:
-            list of ids.
+            list of the ids.
         """
         return [row["id"] for row in TableQueryBuilder(self.open_table(table_name)).select(["id"]).to_list()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
-        """Compute view embeddings.
+        """Compute the [view embeddings][pixano.features.ViewEmbedding] via the
+            [Embedding Function][from lancedb.embeddings import EmbeddingFunction] stored in the table metadata.
 
         Args:
             table_name: Table name containing the view embeddings.
@@ -560,7 +578,7 @@ class Dataset:
     @overload
     def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]: ...
     def add_dataset_items(self, dataset_items: list[DatasetItem] | DatasetItem) -> list[DatasetItem] | DatasetItem:
-        """Add dataset items.
+        """Add dataset items to the dataset.
 
         Warn:
             Does not test for integrity of the data.
@@ -606,6 +624,9 @@ class Dataset:
         Args:
             table_name: Table name.
             ids: Ids to delete.
+
+        Returns:
+            The list of ids not found.
         """
         if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
             raise DatasetAccessError("ids must be a list of strings")
@@ -629,6 +650,9 @@ class Dataset:
 
         Args:
             ids: Ids to delete.
+
+        Returns:
+            The list of ids not found.
         """
         sql_ids = to_sql_list(ids)
 
@@ -688,7 +712,8 @@ class Dataset:
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
-            Updated data.
+            If `return_separately` is `True`, returns a tuple of updated and added data. Otherwise, returns the updated
+            data.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
@@ -758,10 +783,10 @@ class Dataset:
         Args:
             dataset_items: Dataset items to update.
             return_separately: Whether to return separately added and updated dataset items.
-            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
-            Updated dataset items.
+            If `return_separately` is `True`, returns a tuple of updated and added dataset items. Otherwise, returns
+            the updated dataset items.
         """
         fields = self.dataset_item_model.model_fields.keys()
         if not all(
@@ -813,10 +838,10 @@ class Dataset:
         directory: Path,
         media_dir: Path | None = None,
     ) -> "Dataset":
-        """Find Dataset in directory.
+        """Find a Dataset in a directory.
 
         Args:
-            id: Dataset ID.
+            id: Dataset ID to find.
             directory: Directory to search in.
             media_dir: Media directory.
 
@@ -833,7 +858,7 @@ class Dataset:
 
     @staticmethod
     def list(directory: Path) -> list[DatasetInfo]:
-        """List datasets information in directory.
+        """List the datasets information in directory.
 
         Args:
             directory: Directory to search in.

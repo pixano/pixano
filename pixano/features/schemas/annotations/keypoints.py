@@ -20,7 +20,7 @@ class KeyPoints(Annotation):
     """A set of keypoints.
 
     Attributes:
-        template_id: id of keypoint template.
+        template_id: Id of the keypoint template.
         coords: List of 2D coordinates of the keypoints.
         states: Status for each keypoint. ("visible", "invisible", "hidden").
     """
@@ -43,8 +43,8 @@ class KeyPoints(Annotation):
 
     @classmethod
     def none(cls) -> "KeyPoints":
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" KeyPoints.
@@ -63,7 +63,7 @@ class KeyPoints(Annotation):
         """Utility function to map back format for KeyPoint to front vertices format.
 
         Raises:
-            ValueError: if keypoints is ill-formed.
+            ValueError: If keypoints is ill-formed.
 
         Returns:
             keypoint list for vertices front format.
@@ -115,8 +115,8 @@ class KeyPoints3D(Annotation):
 
     @classmethod
     def none(cls) -> "KeyPoints3D":
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" KeyPoints3D.
@@ -141,12 +141,12 @@ class KeyPoints3D(Annotation):
 
 
 def is_keypoints(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a KeyPoints or subclass of KeyPoints."""
+    """Check if a class is a `KeyPoints` or subclass of `KeyPoints`."""
     return issubclass_strict(cls, KeyPoints, strict)
 
 
 def is_keypoints3d(cls: type, strict: bool = False) -> bool:
-    """Check if a class is Keypoints3D or a subclass of Keypoints3D."""
+    """Check if a class is `Keypoints3D` or a subclass of `Keypoints3D`."""
     return issubclass_strict(cls, KeyPoints3D, strict)
 
 
@@ -160,7 +160,7 @@ def create_keypoints(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> KeyPoints:
-    """Create a KeyPoints instance.
+    """Create a `KeyPoints` instance.
 
     Args:
         template_id: id of keypoint template.

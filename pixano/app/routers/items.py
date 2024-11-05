@@ -36,18 +36,20 @@ async def get_items(
     skip: int = 0,
     where: str | None = None,
 ) -> list[ItemModel]:
-    """Get items.
+    """Get sources from the `'item'` table of a dataset.
+
+    They can be filtered by IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         settings: App settings.
-        ids: IDs.
-        limit: Limit number of items.
-        skip: Skip number of items.
+        ids: IDs of the sources.
+        limit: Limit number of sources.
+        skip: Skip number of sources.
         where: Where clause.
 
     Returns:
-        List of items.
+        List of sources.
     """
     return await get_rows_handler(
         dataset_id=dataset_id,
@@ -64,11 +66,11 @@ async def get_items(
 
 @router.get("/{dataset_id}/{id}", response_model=ItemModel)
 async def get_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemModel:
-    """Get an item.
+    """Get an item from the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the item.
         settings: App settings.
 
     Returns:
@@ -83,15 +85,15 @@ async def create_items(
     items: list[ItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[ItemModel]:
-    """Create items.
+    """Add items in the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        items: Items.
+        dataset_id: Dataset ID containing the table.
+        items: Items to add.
         settings: App settings.
 
     Returns:
-        List of items.
+        List of items added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, items, settings)
 
@@ -103,16 +105,17 @@ async def create_item(
     item: ItemModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ItemModel:
-    """Create an item.
+    """Add an item in the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
-        item: Item.
+        dataset_id: Dataset ID containing the table.
+        table: Table name.
+        id: ID of the item.
+        item: Item to add.
         settings: App settings.
 
     Returns:
-        The item.
+        The item added.
     """
     return await create_row_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, id, item, settings)
 
@@ -124,16 +127,17 @@ async def update_item(
     item: ItemModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ItemModel:
-    """Update an item.
+    """Update an item in the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
-        item: Item.
+        dataset_id: Dataset ID containing the table.
+        table: Table name.
+        id: ID of the item.
+        item: Item to update.
         settings: App settings.
 
     Returns:
-        The item.
+        The item updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, id, item, settings)
 
@@ -144,26 +148,26 @@ async def update_items(
     items: list[ItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[ItemModel]:
-    """Update items.
+    """Update items in the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        items: Items.
+        dataset_id: Dataset ID containing the table.
+        items: Items to update.
         settings: App settings.
 
     Returns:
-        List of items.
+        List of items updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, items, settings)
 
 
 @router.delete("/{dataset_id}/{id}")
 async def delete_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
-    """Delete an item.
+    """Delete an item from the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
+        dataset_id: Dataset ID containing the table.
+        id: ID of the item to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, id, settings)
@@ -175,11 +179,11 @@ async def delete_items(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete items.
+    """Delete items from the `'item'` table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        ids: IDs.
+        dataset_id: Dataset ID containing the table.
+        ids: IDs of the items to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.ITEM, SchemaGroup.ITEM.value, ids, settings)

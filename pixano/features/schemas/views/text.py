@@ -13,13 +13,17 @@ from .view import View
 
 @_register_schema_internal
 class Text(View):
-    """Text Lance Model."""
+    """Text view.
+
+    Attributes:
+        content: The text content.
+    """
 
     content: str
 
 
 def is_text(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is Text or a subclass of Text."""
+    """Check if the given class is `Text` or a subclass of `Text`."""
     return issubclass_strict(cls, Text, strict)
 
 
@@ -29,7 +33,7 @@ def create_text(
     item_ref: ItemRef = ItemRef.none(),
     parent_ref: ViewRef = ViewRef.none(),
 ) -> Text:
-    """Create an `Text` instance.
+    """Create a `Text` instance.
 
     Args:
         content: The text content.

@@ -10,7 +10,15 @@ from .items import ItemModel
 
 
 class ItemInfoModel(ItemModel):
-    """Item info."""
+    """Item information.
+
+    It contains all the information contained in an [ItemModel][pixano.app.models.ItemModel] and additional
+    information about the dataset item such as the number of annotations, embeddings, entities and views.
+
+    Attributes:
+        infos: Information about the dataset item. Structure:
+            {info_name: {sub_info_name: {"count": int, ...}, ...}, ...}
+    """
 
     model_config = ConfigDict(
         validate_assignment=True,

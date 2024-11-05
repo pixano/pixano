@@ -34,17 +34,17 @@ class Annotation(BaseSchema):
 
     @property
     def item(self) -> Item:
-        """Get the item."""
+        """Get the annotation's item."""
         return self.resolve_ref(self.item_ref)
 
     @property
     def view(self) -> View:
-        """Get the view."""
+        """Get the annotation's view."""
         return self.resolve_ref(self.view_ref)
 
     @property
     def entity(self) -> Entity:
-        """Get the entity."""
+        """Get the annotation's entity."""
         return self.resolve_ref(self.entity_ref)
 
 
