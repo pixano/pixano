@@ -461,7 +461,7 @@ License: CECILL-C
 
     let images = stage.find(
       (node: { attrs: { id: string } }): boolean =>
-        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
+        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any type, which provokes linting errors
     );
 
     if (!images) return;
@@ -1263,7 +1263,7 @@ License: CECILL-C
         config={{ id: view_name, imageSmoothingEnabled: imageSmoothing }}
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, view_name)}
       >
-        {#each images as image}
+        {#each images as image, i}
           {@const viewRef = { id: image.id, name: view_name }}
           <KonvaImage
             config={{
@@ -1275,63 +1275,70 @@ License: CECILL-C
             on:pointerup={() => handlePointerUpOnImage(viewRef)}
             on:dblclick={() => handleDoubleClickOnImage(view_name)}
           />
-          <Group config={{ id: `bboxes-${view_name}` }}>
-            {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
-              <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} />
-            {/if}
-            {#each bboxes as bbox}
-              {#if bbox.data.view_ref.name === view_name}
-                <Rectangle
-                  {bbox}
-                  {colorScale}
+          <!-- Note: prevent drawing shapes on the "cached" image -->
+          {#if i === images.length - 1}
+            <Group config={{ id: `bboxes-${view_name}` }}>
+              {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
+                <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} />
+              {/if}
+              {#each bboxes as bbox}
+                {#if bbox.data.view_ref.name === view_name}
+                  <Rectangle
+                    {bbox}
+                    {colorScale}
+                    zoomFactor={zoomFactor[view_name]}
+                    {stage}
+                    bind:newShape
+                    {selectedTool}
+                  />
+                {/if}
+              {/each}
+            </Group>
+            <Group config={{ id: `masks-${view_name}` }}>
+              <CreatePolygon
+                {viewRef}
+                {stage}
+                currentImage={getCurrentImage(view_name)}
+                {zoomFactor}
+                {selectedItemId}
+                bind:newShape
+              />
+              {#each masks as mask (mask.id)}
+                {#if mask.data.view_ref.name === view_name}
+                  <PolygonGroup
+                    {viewRef}
+                    bind:newShape
+                    {stage}
+                    currentImage={getCurrentImage(view_name)}
+                    {zoomFactor}
+                    {mask}
+                    color={colorScale(
+                      mask.ui.top_entity ? mask.ui.top_entity.id : mask.data.entity_ref.id,
+                    )}
+                    {selectedTool}
+                  />
+                {/if}
+              {/each}
+            </Group>
+            <Group config={{ id: `keypoints-${view_name}` }}>
+              {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
+                <CreateKeypoint
                   zoomFactor={zoomFactor[view_name]}
-                  {stage}
-                  {viewRef}
-                  bind:newShape
-                  {selectedTool}
-                />
-              {/if}
-            {/each}
-          </Group>
-          <Group config={{ id: `masks-${view_name}` }}>
-            <CreatePolygon
-              {viewRef}
-              {stage}
-              currentImage={getCurrentImage(view_name)}
-              {zoomFactor}
-              {selectedItemId}
-              bind:newShape
-            />
-            {#each masks as mask (mask.id)}
-              {#if mask.data.view_ref.name === view_name}
-                <PolygonGroup
-                  {viewRef}
                   bind:newShape
                   {stage}
-                  currentImage={getCurrentImage(view_name)}
-                  {zoomFactor}
-                  {mask}
-                  color={colorScale(
-                    mask.ui.top_entity ? mask.ui.top_entity.id : mask.data.entity_ref.id,
-                  )}
-                  {selectedTool}
+                  {viewRef}
                 />
               {/if}
-            {/each}
-          </Group>
-          <Group config={{ id: `keypoints-${view_name}` }}>
-            {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
-              <CreateKeypoint zoomFactor={zoomFactor[view_name]} bind:newShape {stage} {viewRef} />
-            {/if}
-            <ShowKeypoints
-              {colorScale}
-              {stage}
-              {viewRef}
-              {keypoints}
-              zoomFactor={zoomFactor[view_name]}
-              bind:newShape
-            />
-          </Group>
+              <ShowKeypoints
+                {colorScale}
+                {stage}
+                {viewRef}
+                {keypoints}
+                zoomFactor={zoomFactor[view_name]}
+                bind:newShape
+              />
+            </Group>
+          {/if}
         {/each}
         <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "input" }} />

@@ -15,9 +15,10 @@ export const toggleIsEditingBBox = (
 ) => {
   const rect: Konva.Rect = stage.findOne(`#rect${bboxId}`);
   const transformer: Konva.Transformer = stage.findOne("#transformer");
-  if (rect) {
-    const nodes = transformer?.nodes();
-    transformer?.nodes(
+  if (rect && transformer) {
+    transformer.moveToTop();
+    const nodes = transformer.nodes();
+    transformer.nodes(
       value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())],
     );
   } else {
