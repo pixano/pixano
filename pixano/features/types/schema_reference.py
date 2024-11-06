@@ -26,7 +26,7 @@ class SchemaRef(BaseType, Generic[T]):
     """A schema reference.
 
     A schema reference is used to reference a schema in a dataset. If an id is provided, the reference points to a
-    specific element stored in the dataset.
+    specific element stored in the table associated to the schema.
 
     Attributes:
         name: The name of the schema.
@@ -106,37 +106,37 @@ class SourceRef(SchemaRef["Source"]):
 
 
 def is_schema_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a SchemaRef or subclass of SchemaRef."""
+    """Check if a class is a `SchemaRef` or subclass of `SchemaRef`."""
     return issubclass_strict(cls, SchemaRef, strict)
 
 
 def is_item_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an ItemRef or subclass of ItemRef."""
+    """Check if a class is an `ItemRef` or subclass of `ItemRef`."""
     return issubclass_strict(cls, ItemRef, strict)
 
 
 def is_view_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a ViewRef or subclass of ViewRef."""
+    """Check if a class is a `ViewRef` or subclass of `ViewRef`."""
     return issubclass_strict(cls, ViewRef, strict)
 
 
 def is_entity_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an EntityRef or subclass of EntityRef."""
+    """Check if a class is an `EntityRef` or subclass of `EntityRef`."""
     return issubclass_strict(cls, EntityRef, strict)
 
 
 def is_annotation_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an AnnotationRef or subclass of AnnotationRef."""
+    """Check if a class is an `AnnotationRef` or subclass of `AnnotationRef`."""
     return issubclass_strict(cls, AnnotationRef, strict)
 
 
 def is_embedding_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an EmbeddingRef or subclass of EmbeddingRef."""
+    """Check if a class is an `EmbeddingRef` or subclass of `EmbeddingRef`."""
     return issubclass_strict(cls, EmbeddingRef, strict)
 
 
 def is_source_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a SourceRef or subclass of SourceRef."""
+    """Check if a class is a `SourceRef` or subclass of `SourceRef`."""
     return issubclass_strict(cls, SourceRef, strict)
 
 

@@ -208,7 +208,7 @@ class BaseSchema(LanceModel):
 
     @staticmethod
     def deserialize(dataset_schema_json: dict[str, str | dict[str, Any]]) -> type["BaseSchema"]:
-        """Dserialize the dataset schema.
+        """Deserialize the dataset schema.
 
         Args:
             dataset_schema_json: Serialized dataset schema.

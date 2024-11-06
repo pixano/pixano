@@ -39,7 +39,7 @@ If you are in a Jupyter or Google Colab notebook, you can start the app by runni
 
 ```python
 from pixano.app import App
-app = App("your_dataset_directory/")
+app = App("your_library_directory/", "your_media_directory")
 ```
 
 You can then use the apps directly from the notebook in another cell with:
