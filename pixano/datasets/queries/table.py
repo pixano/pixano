@@ -89,7 +89,8 @@ class TableQueryBuilder:
         """
         self._check_called("select")
         if isinstance(columns, str):
-            self._columns = [columns]
+            columns = [columns]
+
         if isinstance(columns, list) or isinstance(columns, dict):
             if isinstance(columns, list) and not all(isinstance(x, str) for x in columns):
                 raise ValueError("columns must be a list of strings.")

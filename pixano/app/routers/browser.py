@@ -26,7 +26,7 @@ async def get_browser(
     limit: int = 50,
     skip: int = 0,
     query: str = "",
-    embedding_table_name: str = "",
+    embedding_table: str = "",
 ) -> DatasetBrowser:  # type: ignore
     """Load dataset items for the explorer page.
 
@@ -36,7 +36,7 @@ async def get_browser(
         limit: Limit number of items.
         skip: Skip number of items.
         query: Text query for semantic search.
-        embedding_table_name: Table name for embeddings.
+        embedding_table: Table name for embeddings.
 
     Returns:
         Dataset explorer page.
@@ -45,25 +45,25 @@ async def get_browser(
     dataset = get_dataset(id, settings.library_dir, settings.media_dir)
 
     semantic_search = False
-    if query != "" or embedding_table_name != "":
-        if query == "" or embedding_table_name == "":
+    if query != "" or embedding_table != "":
+        if query == "" or embedding_table == "":
             raise HTTPException(
                 status_code=400,
                 detail="Both query and model_name should be provided for semantic search.",
             )
-    if embedding_table_name != "":
+    if embedding_table != "":
         semantic_search = True
-        if embedding_table_name not in dataset.schema.schemas:
+        if embedding_table not in dataset.schema.schemas:
             raise HTTPException(
                 status_code=400,
-                detail=f"Table {embedding_table_name} not found in dataset {id}.",
+                detail=f"Table {embedding_table} not found in dataset {id}.",
             )
-        elif not is_view_embedding(dataset.schema.schemas[embedding_table_name]):
+        elif not is_view_embedding(dataset.schema.schemas[embedding_table]):
             raise HTTPException(
                 status_code=400,
-                detail=f"Table {embedding_table_name} is not a view embedding table.",
+                detail=f"Table {embedding_table} is not a view embedding table.",
             )
-        embedding_table = dataset.open_table(embedding_table_name)
+        lance_embedding_table = dataset.open_table(embedding_table)
 
     # Get page parameters
     total = dataset.num_rows
@@ -77,7 +77,7 @@ async def get_browser(
     # get data (items and views)
     if semantic_search:
         semantic_results: pl.DataFrame = (
-            embedding_table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+            lance_embedding_table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
         )  # TODO: change high limit if lancedb supports it
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
         item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]

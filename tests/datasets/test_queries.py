@@ -45,12 +45,13 @@ class TestTableQueryBuilder:
         assert builder._columns == ["id", "column1", "column2"]
         assert builder._function_called["select"] is True
 
+        builder = TableQueryBuilder(image_table)
+        builder.select("column1")
+        assert builder._columns == ["id", "column1"]
+        assert builder._function_called["select"] is True
+
         with pytest.raises(ValueError, match=r"select\(\) can only be called once."):
             builder.select(["column1", "column2"])
-
-        with pytest.raises(ValueError, match="columns must be a list or a dictionary."):
-            builder = TableQueryBuilder(image_table)
-            builder.select("not_a_list")
 
         with pytest.raises(ValueError, match="columns must be a dictionary with string keys and values."):
             builder = TableQueryBuilder(image_table)

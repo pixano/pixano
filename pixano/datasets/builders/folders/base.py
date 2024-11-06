@@ -78,29 +78,27 @@ class FolderBaseBuilder(DatasetBuilder):
         self,
         source_dir: Path | str,
         target_dir: Path | str,
-        schemas: type[DatasetItem],
+        dataset_item: type[DatasetItem],
         info: DatasetInfo,
-        urls_relative_path: Path | str | None = None,
+        url_prefix: Path | str | None = None,
     ) -> None:
-        """Initialize the FolderBaseBuilder.
+        """Initialize the `FolderBaseBuilder`.
 
         Args:
             source_dir: The source directory for the dataset.
             target_dir: The target directory for the dataset.
-            schemas: The schemas for the dataset tables.
+            dataset_item: The dataset item schema.
             info: User informations (name, description, ...) for the dataset.
-            urls_relative_path: The path to build relative URLs for the views. Should be source_dir or one of
-                its parents. Useful to build dataset libraries by using the parent of the source_dir.
+            url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
+                relative path from the media directory.
         """
-        super().__init__(target_dir, schemas, info)
+        super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
         self.source_dir = Path(source_dir)
-        if urls_relative_path is None:
-            urls_relative_path = self.source_dir
+        if url_prefix is None:
+            url_prefix = Path(".")
         else:
-            urls_relative_path = Path(urls_relative_path)
-        if urls_relative_path not in list(self.source_dir.parents) + [self.source_dir]:
-            raise ValueError("url_relative_path must be a parent of source_dir.")
-        self.urls_relative_path = urls_relative_path
+            url_prefix = Path(url_prefix)
+        self.url_prefix = url_prefix
 
         view_name = None
         entity_name = None
@@ -190,13 +188,15 @@ class FolderBaseBuilder(DatasetBuilder):
                 f"View schema {view_schema} is not supported. You should implement your own _create_view method."
             )
 
-        return create_instance_of_schema(
+        view = create_instance_of_schema(
             view_schema,
             id=shortuuid.uuid(),
             item_ref=ItemRef(id=item.id),
             url=view_file,
-            url_relative_path=self.urls_relative_path,
+            url_relative_path=self.source_dir,
         )
+        view.url = str(self.url_prefix / view.url)
+        return view
 
     def _create_entities(
         self, item: Item, view: View, entities_data: dict[str, Any], source_id: str

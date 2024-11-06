@@ -44,7 +44,7 @@ class DatasetBuilder(ABC):
 
         Args:
             target_dir: The target directory for the dataset.
-            dataset_item: The dataset item class to build the dataset schema.
+            dataset_item: The dataset item schema.
             info: Dataset information (name, description, ...).
         """
         self.target_dir: Path = Path(target_dir)
