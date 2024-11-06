@@ -131,7 +131,9 @@ License: CECILL-C
         return 1;
       else return 0;
     });
-    for (const savedItem of data) {
+
+    const no_delete_data = data.filter((d) => d.change_type !== "delete");
+    for (const savedItem of no_delete_data) {
       let no_table = false;
       let route = savedItem.object.table_info.group;
       if (route === "item") {
@@ -141,14 +143,40 @@ License: CECILL-C
       //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
       // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
       const { ui, ...bodyObj } = savedItem.object; // eslint-disable-line @typescript-eslint/no-unused-vars
-      if (savedItem.change_type === "delete") {
-        await api.deleteSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
-      }
       if (savedItem.change_type === "add") {
         await api.addSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
       if (savedItem.change_type === "update") {
         await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
+      }
+    }
+    //gather deletes by group and table
+    //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
+    const delete_data = data.filter((d) => d.change_type === "delete");
+    const delete_ids_by_group_and_table = delete_data.reduce(
+      (acc, item) => {
+        const group = item.object.table_info.group;
+        const table = item.object.table_info.name;
+        if (!acc[group]) {
+          acc[group] = {};
+        }
+        if (!acc[group][table]) {
+          acc[group][table] = [];
+        }
+        acc[group][table].push(item.object.id);
+        return acc;
+      },
+      {} as Record<string, Record<string, string[]>>,
+    );
+    for (const group in delete_ids_by_group_and_table) {
+      for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
+        let no_table = false;
+        let route = group;
+        if (route === "item") {
+          route = "items";
+          no_table = true;
+        }
+        await api.deleteSchemasByIds(route, selectedDataset.id, ids, table, no_table);
       }
     }
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
