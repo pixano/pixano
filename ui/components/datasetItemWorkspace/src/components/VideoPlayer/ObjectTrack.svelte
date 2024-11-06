@@ -28,7 +28,7 @@ License: CECILL-C
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import { addOrUpdateSaveItem, getTopEntity } from "../../lib/api/objectsApi";
 
   export let track: Track;
   export let views: MView;
@@ -76,7 +76,7 @@ License: CECILL-C
       objects.map((ann) => {
         const to_highlight =
           (!ann.is_tracklet &&
-            ann.data.entity_ref.id === track.id &&
+            getTopEntity(ann, $entities).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
           (ann.is_tracklet && ann.id === track.id);
         ann.ui.highlighted = to_highlight ? "self" : "none";

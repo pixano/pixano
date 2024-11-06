@@ -102,6 +102,15 @@ License: CECILL-C
       object: entity,
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    //delete eventual sub entities
+    const subentities = $entities.filter((ent) => ent.data.parent_ref.id === entity.id);
+    for (const subent of subentities) {
+      const save_item: SaveItem = {
+        change_type: "delete",
+        object: subent,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    }
     for (const ann of entity.ui.childs || []) {
       const save_item: SaveItem = {
         change_type: "delete",
@@ -109,10 +118,16 @@ License: CECILL-C
       };
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
     }
+    const subent_ids = subentities.map((subent) => subent.id);
     annotations.update((oldObjects) =>
-      oldObjects.filter((ann) => ann.data.entity_ref.id !== entity.id),
+      oldObjects.filter(
+        (ann) =>
+          ann.data.entity_ref.id !== entity.id && !subent_ids.includes(ann.data.entity_ref.id),
+      ),
     );
-    entities.update((oldObjects) => oldObjects.filter((ent) => ent.id !== entity.id));
+    entities.update((oldObjects) =>
+      oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
+    );
   };
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
