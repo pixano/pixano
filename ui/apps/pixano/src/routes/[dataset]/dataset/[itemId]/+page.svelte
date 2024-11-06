@@ -154,7 +154,7 @@ License: CECILL-C
     //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
     const delete_data = data.filter((d) => d.change_type === "delete");
     const delete_ids_by_group_and_table = delete_data.reduce(
-      (acc, item, index) => {
+      (acc, item) => {
         const group = item.object.table_info.group;
         const table = item.object.table_info.name;
         if (!acc[group]) {
