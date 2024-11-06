@@ -10,8 +10,8 @@ pixano your_library_directory/ your_media_directory/
 
 You will then be provided with a URL to open in your browser to use the app.
 
-
 ## From a terminal: S3 (Experimental)
+
 Note that you can also connect to an S3 compatible storage by providing an S3 path instead of a local path to your library of datasets.
 
 The following arguments have to be passed:
@@ -53,6 +53,7 @@ app.display()
 To launch the app you have to mount a library directory, a media directory and a model directory (if you want to use a model).
 
 Here is an example:
+
 ```bash
 docker run -d \
     --name pixano \

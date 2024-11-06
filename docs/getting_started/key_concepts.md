@@ -5,12 +5,12 @@
 Pixano is a data-centric tool that provides multiple functionalities:
 
 1. **Dataset management** in a fast, columnar data format based on the [Lance](https://lancedb.github.io/lance/) format and the [LanceDB](https://lancedb.github.io/lancedb/) vector database. The dataset is split into various Lance tables to separate features of each dataset item:
-    - metadata
-    - views
-    - entities
-    - annotations
-    - embeddings
-    - sources
+   - metadata
+   - views
+   - entities
+   - annotations
+   - embeddings
+   - sources
 2. **An annotation web platform** powered by AI.
 
 ## Pixano Layers
@@ -125,12 +125,14 @@ Currently, it is not possible to register new types for the app. If you need a n
 #### Defining Your Dataset
 
 A dataset is a collection of tables from different `SchemaGroup`s. To generate this collection, you provide a `DatasetItem`, which is essentially a [BaseModel](https://docs.pydantic.dev/latest/api/base_model/). The attributes of this DatasetItem must be [features](#features) and are organized as follows:
+
 - **Schemas** are stored in their respective tables.
 - **Types** are stored in the `'item'` table.
 
 Features can be a single element or a list.
 
 Example:
+
 ```python
 from pixano.features import BBox, Classification, Entity, Image, Text
 from pixano.datasets import DatasetItem
