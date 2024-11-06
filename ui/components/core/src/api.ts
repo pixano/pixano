@@ -228,33 +228,17 @@ export async function getItemEmbeddings(
   return item;
 }
 
-// export async function postDatasetItem(datasetId: string, item: DatasetItemSave) {
-//   try {
-//     const response = await fetch(`/datasets/${datasetId}/items/${item.id}`, {
-//       headers: {
-//         Accept: "application/json",
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(item),
-//       method: "POST",
-//     });
-//     if (response.ok) {
-//       console.log(
-//         "api.postDatasetItem -",
-//         response.status,
-//         response.statusText,
-//         await response.text(),
-//       );
-//     }
-//   } catch (e) {
-//     console.log("api.postDatasetItem -", e);
-//   }
-// }
-
-export async function deleteSchema(route: string, ds_id: string, sch: Schema, no_table: boolean) {
+export async function deleteSchemasByIds(
+  route: string,
+  ds_id: string,
+  sch_ids: string[],
+  table_name: string,
+  no_table: boolean,
+) {
+  const ids_query = sch_ids.join("&ids=");
   const url = no_table
-    ? `/${route}/${ds_id}/${sch.id}`
-    : `/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`;
+    ? `/${route}/${ds_id}/?ids=${ids_query}`
+    : `/${route}/${ds_id}/${table_name}/?ids=${ids_query}`;
   try {
     const response = await fetch(url, {
       method: "DELETE",
