@@ -95,7 +95,7 @@ export async function getBrowser(
 
   let query_qparams = "";
   if (query && query.model !== "" && query.search !== "") {
-    query_qparams = `&query=${query.search}&table=${query.model}`;
+    query_qparams = `&query=${query.search}&embedding_table=${query.model}`;
   }
   try {
     const response = await fetch(

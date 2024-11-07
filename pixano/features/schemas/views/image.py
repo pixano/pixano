@@ -77,6 +77,8 @@ class Image(View):
                 # URI prefix is incomplete
                 if parsed_uri.scheme == "":
                     raise ValueError("URI prefix is incomplete, " "no scheme provided (http://, file://, ...)")
+                if url.startswith("/"):
+                    url = url[1:]
                 combined_path = Path(parsed_uri.path) / url
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
                 api_url = parsed_uri.geturl()
