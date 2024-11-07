@@ -106,9 +106,8 @@ License: CECILL-C
       });
     });
     if (Object.keys(subEntitiesChilds).length > 0) {
-      console.log("TRE", subEntitiesChilds);
       newEntities = newEntities.map((entity) => {
-        if (entity.is_track) {
+        if (entity.is_track && entity.id in subEntitiesChilds) {
           entity.ui.childs = [...entity.ui.childs!, ...subEntitiesChilds[entity.id]];
         }
         return entity;
