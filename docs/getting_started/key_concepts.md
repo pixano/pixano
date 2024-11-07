@@ -157,7 +157,7 @@ class MyDatasetItem(DatasetItem):
 
 To build the dataset, Pixano provides a generic class `DatasetBuilder` and specific classes detailed in the [api reference](../api_reference/index.md).
 
-To construct a dataset builder, derive from `DatasetBuilder` to properly handle your data and implement the `generate_data` method to return an iterator of dictionnary whose keys are table_names and values one `BaseSchema` or a list of `BaseSchema` to insert into that table.
+To construct a dataset builder, derive from `DatasetBuilder` to properly handle your data and implement the `generate_data` method. This method returns an iterator of dictionnary whose keys are table_names and values one `BaseSchema` or a list of `BaseSchema` to insert into that table.
 
 ```python
 from pixano.datasets.builders import DatasetBuilder
