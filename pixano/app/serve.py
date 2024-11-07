@@ -5,6 +5,7 @@
 # =====================================
 
 import asyncio
+import warnings
 from functools import lru_cache
 
 import click
@@ -128,7 +129,14 @@ class App:
         async def item_page(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        try:
+            self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        # TODO: properly define environment variable for production to raise a RuntimeError accordingly
+        except RuntimeError:
+            warnings.warn(
+                "Pixano app assets not found. If it is a production environment, this is not expected, "
+                "check if you have built the assets for the UI."
+            )
         self.config = uvicorn.Config(self.app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 
