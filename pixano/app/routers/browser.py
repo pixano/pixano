@@ -26,17 +26,17 @@ async def get_browser(
     limit: int = 50,
     skip: int = 0,
     query: str = "",
-    table: str = "",
+    embedding_table: str = "",
 ) -> DatasetBrowser:  # type: ignore
-    """Load dataset items for Explorer page.
+    """Load dataset items for the explorer page.
 
     Args:
-        id: Dataset ID.
+        id: Dataset ID containing the items.
         settings: App settings.
         limit: Limit number of items.
         skip: Skip number of items.
         query: Text query for semantic search.
-        table: Table name for embeddings.
+        embedding_table: Table name for embeddings.
 
     Returns:
         Dataset explorer page.
@@ -44,9 +44,9 @@ async def get_browser(
     # Load dataset
     dataset = get_dataset(id, settings.library_dir, settings.media_dir)
 
-    semantic_search = table != ""
-    if query != "" or table != "":
-        if query == "" or table == "":
+    semantic_search = embedding_table != ""
+    if query != "" or embedding_table != "":
+        if query == "" or embedding_table == "":
             raise HTTPException(
                 status_code=400,
                 detail="Both query and model_name should be provided for semantic search.",
@@ -64,7 +64,7 @@ async def get_browser(
     # get data (items and views)
     if semantic_search:
         try:
-            item_rows, distances = dataset.semantic_search(query, table, limit, skip)
+            item_rows, distances = dataset.semantic_search(query, embedding_table, limit, skip)
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:

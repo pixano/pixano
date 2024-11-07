@@ -4,11 +4,11 @@
 # License: CECILL-C
 # =====================================
 
-from os import PathLike
+from pathlib import Path
 from typing import Iterable
 
 
-def create_video_preview(path: PathLike, frame_urls: Iterable[str], fps: int = 25, scale: float = 0.5):
+def create_video_preview(path: Path, frame_urls: Iterable[str], fps: int = 25, scale: float = 0.5):
     """Create a video preview by writing a sequence of frames to a video file.
 
     Args:

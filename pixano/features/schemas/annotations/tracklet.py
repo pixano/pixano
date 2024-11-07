@@ -16,7 +16,7 @@ from .annotation import Annotation
 
 @_register_schema_internal
 class Tracklet(Annotation):
-    """A Tracklet is a temporal segment of a video sequence.
+    """A `Tracklet` is a temporal segment of a video sequence.
 
     Attributes:
         start_timestep: The start timestep of the tracklet.
@@ -66,7 +66,7 @@ class Tracklet(Annotation):
 
 
 def is_tracklet(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a subclass of Tracklet."""
+    """Check if the given class is a subclass of `Tracklet`."""
     return issubclass_strict(cls, Tracklet, strict)
 
 

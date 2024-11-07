@@ -124,10 +124,10 @@ class CamCalibration(Annotation):
     """Camera calibration.
 
     Attributes:
-        type: type of camera.
-        base_intrinsics: base intrinsics.
-        extrinsics: extrinsics.
-        intrinsics : intrinsics.
+        type: Type of camera.
+        base_intrinsics: Base intrinsics values.
+        extrinsics: Extrinsics values.
+        intrinsics: Intrinsics values.
     """
 
     type: str
@@ -137,8 +137,8 @@ class CamCalibration(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" `CamCalibration`.
@@ -174,7 +174,7 @@ class CamCalibration(Annotation):
 
 
 def is_cam_calibration(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a CamCalibration or subclass of CamCalibration."""
+    """Check if a class is a `CamCalibration` or subclass of `CamCalibration`."""
     return issubclass_strict(cls, CamCalibration, strict)
 
 
@@ -205,7 +205,7 @@ def create_cam_calibration(
     source_ref: SourceRef = SourceRef.none(),
     validate: bool = True,
 ) -> CamCalibration:
-    """Create a CamCalibration instance.
+    """Create a `CamCalibration` instance.
 
     Args:
         type: The type of camera.
@@ -227,7 +227,7 @@ def create_cam_calibration(
         c3: c3.
         c4: c4.
         pixel_aspect_ratio: pixel_aspect_ratio.
-        id: CamCalibration ID.
+        id: `CamCalibration` ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.

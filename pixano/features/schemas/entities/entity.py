@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @_register_schema_internal
 class Entity(BaseSchema):
-    """Entity base class.
+    """`Entity` base class.
 
     Entities are used to define an entity in a dataset such as an object, a track. It can refer to an item, a view,
     and a parent entity.
@@ -36,17 +36,17 @@ class Entity(BaseSchema):
 
     @property
     def item(self) -> "Item":
-        """Get the item."""
+        """Get the entity's item."""
         return self.resolve_ref(self.item_ref)
 
     @property
     def view(self) -> "View":
-        """Get the view."""
+        """Get the entity's view."""
         return self.resolve_ref(self.view_ref)
 
     @property
     def parent(self) -> "Entity":
-        """Get the parent."""
+        """Get the entity's parent entity."""
         return self.resolve_ref(self.parent_ref)
 
 

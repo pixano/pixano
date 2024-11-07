@@ -25,5 +25,5 @@ class Item(BaseSchema):
 
 
 def is_item(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an Item or subclass of Item."""
+    """Check if a class is an `Item` or subclass of `Item`."""
     return issubclass_strict(cls, Item, strict)

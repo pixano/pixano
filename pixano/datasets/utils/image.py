@@ -15,7 +15,7 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     """Generate image thumbnail.
 
     Args:
-        image: Image as binary or as Pillow.
+        image: Image as binary or as a Pillow Image.
 
     Returns:
         Image thumbnail as binary.

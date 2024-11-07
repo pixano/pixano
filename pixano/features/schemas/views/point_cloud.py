@@ -13,13 +13,17 @@ from .view import View
 
 @_register_schema_internal
 class PointCloud(View):
-    """Point Cloud Lance Model."""
+    """Point Cloud view.
+
+    Attributes:
+        url: The point cloud URL.
+    """
 
     url: str
 
 
 def is_point_cloud(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a subclass of PointCloud."""
+    """Check if the given class is a subclass of `PointCloud`."""
     return issubclass_strict(cls, PointCloud, strict)
 
 

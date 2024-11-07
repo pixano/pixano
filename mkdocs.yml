@@ -64,13 +64,15 @@ plugins:
         python:
           paths: ["pixano"]
           import:
-            - https://docs.python.org/3.10/objects.inv
+            - https://docs.python.org/3.12/objects.inv
             - https://numpy.org/doc/1.23/objects.inv
             - https://pandas.pydata.org/pandas-docs/version/1.5/objects.inv
             - https://pillow.readthedocs.io/en/stable/objects.inv
             - https://arrow.apache.org/docs/objects.inv
             - https://docs.pydantic.dev/2.4/objects.inv
             - https://ipython.readthedocs.io/en/8.13.2/objects.inv
+            - https://lancedb.github.io/lance/objects.inv
+            - https://lancedb.github.io/lancedb/objects.inv
           options:
             docstring_style: google
             docstring_options:
@@ -86,6 +88,15 @@ plugins:
             preload_modules:
               - pydantic
 
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
 nav:
   - "Home": https://pixano.github.io/
 
@@ -93,6 +104,11 @@ nav:
       - "Getting started":
           - getting_started/index.md
           - "Installing Pixano": getting_started/installing_pixano.md
+          - "Key Concepts": getting_started/key_concepts.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
+      - "Tutorials":
+          - tutorials/index.md
+          - "Create your first library": tutorials/create_your_first_library.md
+          - "Semantic search": tutorials/semantic_search.md
       - "API reference": api_reference/

@@ -21,8 +21,8 @@ class NamedEntity(Annotation):
     """Observation of a named-entity in a text.
 
     Attributes:
-        concept_id: id of named-entity type.
-        mention: named-entity observed mention.
+        concept_id: Id of the named-entity type.
+        mention: Named-entity observed mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
     """
@@ -46,8 +46,8 @@ class NamedEntity(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" NamedEntity.
@@ -90,8 +90,8 @@ class Relation(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" Relation.
@@ -108,12 +108,12 @@ class Relation(Annotation):
 
 
 def is_named_entity(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a NamedEntity or subclass of NamedEntity."""
+    """Check if a class is a `NamedEntity` or subclass of `NamedEntity`."""
     return issubclass_strict(cls, NamedEntity, strict)
 
 
 def is_relation(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a Relation or subclass of Relation."""
+    """Check if a class is a `Relation` or subclass of `Relation`."""
     return issubclass_strict(cls, Relation, strict)
 
 
@@ -128,14 +128,14 @@ def create_named_entity(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> NamedEntity:
-    """Create a NamedEntity instance.
+    """Create a `NamedEntity` instance.
 
     Args:
-        concept_id: id of named-entity type.
-        mention: named-entity observed mention.
+        concept_id: Id of named-entity type.
+        mention: Named-entity observed mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
-        id: NamedEntity ID.
+        id: `NamedEntity` ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
@@ -167,13 +167,13 @@ def create_relation(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> Relation:
-    """Create a Relation instance.
+    """Create a `Relation` instance.
 
     Args:
-        predicate_id: id of relation type.
-        subject_id: annotation_id of the subject named-entity
-        object_id: annotation_id of the object named-entity
-        id: Relation ID.
+        predicate_id: Id of relation type.
+        subject_id: Annotation_id of the subject named-entity
+        object_id: Annotation_id of the object named-entity
+        id: `Relation` ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.

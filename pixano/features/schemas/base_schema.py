@@ -40,9 +40,9 @@ if TYPE_CHECKING:
 
 
 class BaseSchema(LanceModel):
-    """Base class for all tables.
+    """Base class for all schemas.
 
-    All tables should inherit from this class and therefore all elements in the dataset contains an id.
+    All schemas should inherit from this class and therefore all elements in the dataset contains an id.
 
     Attributes:
         id: the id of the manipulated object.
@@ -108,7 +108,7 @@ class BaseSchema(LanceModel):
         """Set the table name."""
         self._table_name = table_name
 
-    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
         Args:
@@ -142,7 +142,14 @@ class BaseSchema(LanceModel):
     def resolve_ref(
         self, ref: "SchemaRef" | "ItemRef" | "ViewRef" | "EmbeddingRef" | "EntityRef" | "AnnotationRef" | "SourceRef"
     ) -> "BaseSchema" | "Item" | "View" | "Embedding" | "Entity" | "Annotation" | "Source":
-        """Resolve a reference."""
+        """Resolve a reference to a schema object in the dataset.
+
+        Args:
+            ref: The reference to resolve.
+
+        Returns:
+            The resolved schema object.
+        """
         return self.dataset.resolve_ref(ref)
 
     @classmethod
@@ -201,10 +208,10 @@ class BaseSchema(LanceModel):
 
     @staticmethod
     def deserialize(dataset_schema_json: dict[str, str | dict[str, Any]]) -> type["BaseSchema"]:
-        """Unserialize the dataset schema.
+        """Deserialize the dataset schema.
 
         Args:
-            dataset_schema_json: Serialized dataset schema
+            dataset_schema_json: Serialized dataset schema.
 
         Returns:
             The dataset schema.
@@ -246,5 +253,5 @@ class BaseSchema(LanceModel):
 
 
 def is_base_schema(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an BaseSchema or subclass of BaseSchema."""
+    """Check if a class is a `BaseSchema` or subclass of `BaseSchema`."""
     return issubclass_strict(cls, BaseSchema, strict)

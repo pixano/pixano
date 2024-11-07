@@ -24,7 +24,14 @@ from .view import View
 
 @_register_schema_internal
 class Image(View):
-    """Image Lance Model."""
+    """Image view.
+
+    Attributes:
+        url: The image URL. Can be relative or absolute or a data URL.
+        width: The image width.
+        height: The image height.
+        format: The image format.
+    """
 
     url: str
     width: int
@@ -36,11 +43,11 @@ class Image(View):
     @overload
     def open(self, media_dir: Path, output_type: Literal["image"]) -> PILImage.Image: ...
     def open(self, media_dir: Path, output_type: Literal["base64", "image"] = "base64") -> str | PILImage.Image:
-        """Open image.
+        """Open the image.
 
         Args:
             media_dir: Path to the media directory. If the URL is relative, it is relative to this directory.
-            output_type: output type.
+            output_type: The output type. Can be "base64" or "image" (PIL.Image).
 
         Returns:
             opened image.
@@ -51,16 +58,12 @@ class Image(View):
     def open_url(
         url: str, media_dir: Path, output_type: Literal["base64", "image"] = "base64"
     ) -> str | PILImage.Image:
-        """Open URL image.
+        """Open an image from a URL.
 
         Args:
             url: image url relative to media_dir or absolute.
             media_dir: path to the media directory.
             output_type: output type.
-
-        Raises:
-            ValueError: No scheme provided
-            ValueError: Incomplete URI
 
         Returns:
             The opened image.
@@ -74,6 +77,8 @@ class Image(View):
                 # URI prefix is incomplete
                 if parsed_uri.scheme == "":
                     raise ValueError("URI prefix is incomplete, " "no scheme provided (http://, file://, ...)")
+                if url.startswith("/"):
+                    url = url[1:]
                 combined_path = Path(parsed_uri.path) / url
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
                 api_url = parsed_uri.geturl()
@@ -104,7 +109,7 @@ class Image(View):
 
 
 def is_image(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is Image or a subclass of Image."""
+    """Check if the given class is `Image` or a subclass of `Image`."""
     return issubclass_strict(cls, Image, strict)
 
 

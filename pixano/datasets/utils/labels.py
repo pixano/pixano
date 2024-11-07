@@ -5,11 +5,11 @@
 # =====================================
 
 
-def coco_ids_80to91(cat_id: int) -> int:
+def coco_ids_80to91(category_id: int) -> int:
     """Return COCO category ID (80 to 91 classes).
 
     Args:
-        cat_id: Category ID (80 classes).
+        category_id: Category ID (80 classes).
 
     Returns:
         Category ID (91 classes).
@@ -97,14 +97,14 @@ def coco_ids_80to91(cat_id: int) -> int:
         80: 90,
     }
 
-    return coco_dict[int(cat_id)]
+    return coco_dict[int(category_id)]
 
 
-def coco_names_80(cat_id: int) -> str:
+def coco_names_80(category_id: int) -> str:
     """Return COCO category name (80 classes).
 
     Args:
-        cat_id: Category ID.
+        category_id: Category ID.
 
     Returns:
         Category name.
@@ -192,7 +192,7 @@ def coco_names_80(cat_id: int) -> str:
         80: "toothbrush",
     }
 
-    return coco_dict[int(cat_id)]
+    return coco_dict[int(category_id)]
 
 
 def coco_names_91(cat_id: int) -> str:
@@ -334,11 +334,11 @@ def dota_ids(name: str) -> int:
     return dota_dict[str(name).replace("-", " ")]
 
 
-def voc_names(cat_id: int) -> str:
+def voc_names(category_id: int) -> str:
     """Return VOC category name (20 classes).
 
     Args:
-        cat_id: Category ID.
+        category_id: Category ID.
 
     Returns:
         Category name.
@@ -366,4 +366,4 @@ def voc_names(cat_id: int) -> str:
         20: "tv / monitor",
     }
 
-    return voc_dict[int(cat_id)]
+    return voc_dict[int(category_id)]

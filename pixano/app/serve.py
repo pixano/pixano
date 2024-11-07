@@ -5,6 +5,7 @@
 # =====================================
 
 import asyncio
+import warnings
 from functools import lru_cache
 
 import click
@@ -49,12 +50,12 @@ display_functions = {
 
 
 class App:
-    """Pixano app.
+    """The Pixano app.
 
     Attributes:
-        app: FastAPI App
-        config: App config
-        server: App server
+        app: FastAPI App.
+        config: App config.
+        server: App server.
     """
 
     app: fastapi.FastAPI
@@ -73,7 +74,7 @@ class App:
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
-        """Initialize and run Pixano app.
+        """Initialize and serve the Pixano app.
 
         Args:
             library_dir: Local or S3 path to dataset library
@@ -128,7 +129,14 @@ class App:
         async def item_page(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        try:
+            self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        # TODO: properly define environment variable for production to raise a RuntimeError accordingly
+        except RuntimeError:
+            warnings.warn(
+                "Pixano app assets not found. If it is a production environment, this is not expected, "
+                "check if you have built the assets for the UI."
+            )
         self.config = uvicorn.Config(self.app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 
@@ -136,7 +144,7 @@ class App:
         task_functions[self.get_env()](self.server.serve())  # type: ignore[operator]
 
     def display(self, height: int = 1000) -> None:
-        """Display Pixano app.
+        """Display the Pixano app.
 
         Args:
             height: Frame height.
@@ -235,10 +243,21 @@ def main(
     aws_secret_key: str,
     host: str,
     port: int,
-):
+) -> None:
     """Launch Pixano App in LIBRARY_DIR.
 
-    LIBRARY_DIR is the local or S3 path to your dataset library
+    Args:
+        library_dir: Local or S3 path to dataset library.
+        media_dir: Local or S3 path to media library.
+        models_dir: Path to your models. If not provided, and
+            library_dir is not a S3 path, it is set to
+            library_dir/models.
+        aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
+        aws_region: S3 region name, not always required for private storages.
+        aws_access_key: S3 AWS access key.
+        aws_secret_key: S3 AWS secret key.
+        host: App host.
+        port: App port.
     """
     App(
         library_dir,

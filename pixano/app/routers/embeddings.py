@@ -38,13 +38,15 @@ async def get_embeddings(
     where: str | None = None,
     item_ids: list[str] | None = Query(None),
 ) -> list[EmbeddingModel]:
-    """Get embeddings.
+    """Get embeddings from a table of a dataset.
+
+    They can be filtered by IDs, item IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
         settings: App settings.
-        ids: IDs.
+        ids: IDs of the embeddings.
         limit: Limit number of embeddings.
         skip: Skip number of embeddings.
         where: Where clause.
@@ -70,12 +72,12 @@ async def get_embeddings(
 async def get_embedding(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> EmbeddingModel:
-    """Get an embedding.
+    """Get an embedding from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the embedding.
         settings: App settings.
 
     Returns:
@@ -91,16 +93,16 @@ async def create_embeddings(
     embeddings: list[EmbeddingModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[EmbeddingModel]:
-    """Create embeddings.
+    """Add embeddings in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        embeddings: Embeddings.
+        embeddings: Embeddings to add.
         settings: App settings.
 
     Returns:
-        List of embeddings.
+        List of embeddings added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
@@ -113,17 +115,17 @@ async def create_embedding(
     embedding: EmbeddingModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EmbeddingModel:
-    """Create an embedding.
+    """Update an embedding in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        embedding: Embedding.
+        id: ID of the embedding.
+        embedding: Embedding to update.
         settings: App settings.
 
     Returns:
-        The embedding.
+        The embedding updated.
     """
     return await create_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
@@ -136,17 +138,17 @@ async def update_embedding(
     embedding: EmbeddingModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EmbeddingModel:
-    """Update an embedding.
+    """Update an embedding in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        embedding: Embedding.
+        id: ID of the embedding.
+        embedding: Embedding to update.
         settings: App settings.
 
     Returns:
-        The embedding.
+        The embedding updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
@@ -158,16 +160,16 @@ async def update_embeddings(
     embeddings: list[EmbeddingModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[EmbeddingModel]:
-    """Update embeddings.
+    """Update embeddings in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        embeddings: Embeddings.
+        embeddings: Embeddings to update.
         settings: App settings.
 
     Returns:
-        List of embeddings.
+        List of embeddings updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
@@ -176,12 +178,12 @@ async def update_embeddings(
 async def delete_embedding(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
-    """Delete an embedding.
+    """Delete an embedding from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the embedding to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
@@ -194,12 +196,12 @@ async def delete_embeddings(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete embeddings.
+    """Delete embeddings from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        ids: IDs.
+        ids: IDs of the embeddings to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, ids, settings)

@@ -19,11 +19,11 @@ class DatasetInfo(BaseModel):
     """Information of a dataset.
 
     Attributes:
-        id: Dataset ID
-        name: Dataset name
-        description: Dataset description
-        estimated_size: Dataset estimated size
-        preview: Path to a preview thumbnail
+        id: Dataset ID. Must be unique.
+        name: Dataset name.
+        description: Dataset description.
+        estimated_size: Dataset estimated size.
+        preview: Path to a preview thumbnail.
     """
 
     id: str = ""
@@ -89,7 +89,7 @@ class DatasetInfo(BaseModel):
             return_path: Return the paths of the datasets.
 
         Returns:
-            the list of DatasetInfo and the paths of the datasets.
+            The list of DatasetInfo and the paths of the datasets.
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
@@ -118,15 +118,15 @@ class DatasetInfo(BaseModel):
     def load_id(id: str, directory: Path, return_path: Literal[True] = True) -> tuple["DatasetInfo", Path]: ...
     @staticmethod
     def load_id(id: str, directory: Path, return_path: bool = False) -> tuple["DatasetInfo", Path] | "DatasetInfo":
-        """Load a DatasetInfo from directory.
+        """Load a specific DatasetInfo from directory.
 
         Args:
-            id: Dataset ID.
+            id: The ID of the dataset to load.
             directory: Directory to load.
             return_path: Return the path of the dataset.
 
         Returns:
-            the DatasetInfo.
+            The DatasetInfo.
         """
         for json_fp in directory.glob("*/info.json"):
             info = DatasetInfo.from_json(json_fp)

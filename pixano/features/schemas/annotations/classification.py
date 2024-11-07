@@ -33,8 +33,8 @@ class Classification(Annotation):
 
     @classmethod
     def none(cls) -> "Classification":
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" Classification.
@@ -55,7 +55,7 @@ class Classification(Annotation):
 
 
 def is_classification(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a Classification or subclass of Classification."""
+    """Check if a class is a `Classification` or subclass of `Classification`."""
     return issubclass_strict(cls, Classification, strict)
 
 
@@ -68,12 +68,12 @@ def create_classification(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> Classification:
-    """Create a Classification instance.
+    """Create a `Classification` instance.
 
     Args:
         labels: List of class names.
         confidences: List of prediction confidences.
-        id: Relation ID.
+        id: `Classification` ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.

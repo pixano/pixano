@@ -15,7 +15,14 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 
 class DatasetInfoModel(DatasetInfo):
-    """Dataset info."""
+    """Dataset info model.
+
+    It contains all the information as a [DatasetInfo][pixano.datasets.dataset_info.DatasetInfo] and the number of
+    items in the dataset.
+
+    Attributes:
+        num_items: Number of items in the dataset.
+    """
 
     model_config = ConfigDict(
         validate_assignment=True,

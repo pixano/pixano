@@ -46,9 +46,9 @@ class TestFolderBaseBuilder:
         assert video_folder_builder.entity_name == "entities"
         assert image_folder_builder.entity_schema == entity_category
         assert video_folder_builder.entity_schema == entity_category
-        assert image_folder_builder.urls_relative_path == image_folder_builder.source_dir
+        assert image_folder_builder.url_prefix == Path(".")
 
-    def test_urls_relative_path_init(self, dataset_item_bboxes_metadata):
+    def test_url_prefix_init(self, dataset_item_bboxes_metadata):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
         urls_relative_path = source_dir.parent.parent
@@ -58,16 +58,7 @@ class TestFolderBaseBuilder:
             target_dir,
             dataset_item_bboxes_metadata,
             DatasetInfo(name="test", description="test"),
-            urls_relative_path=urls_relative_path,
-        )
-
-        urls_relative_path = source_dir
-        ImageFolderBuilder(
-            source_dir,
-            target_dir,
-            dataset_item_bboxes_metadata,
-            DatasetInfo(name="test", description="test"),
-            urls_relative_path=urls_relative_path,
+            url_prefix=urls_relative_path,
         )
 
     def test_error_init(self, entity_category) -> None:
@@ -113,15 +104,6 @@ class TestFolderBaseBuilder:
 
         with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
             ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
-
-        with pytest.raises(ValueError, match="url_relative_path must be a parent of source_dir."):
-            ImageFolderBuilder(
-                source_dir,
-                target_dir,
-                Schema,
-                DatasetInfo(name="test", description="test"),
-                urls_relative_path="wrong_path",
-            )
 
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(

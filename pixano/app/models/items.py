@@ -18,7 +18,7 @@ T = TypeVar("T", bound=Item)
 
 
 class ItemModel(BaseSchemaModel[Item]):
-    """Item model."""
+    """Model for the [Item][pixano.features.Item] schema."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -35,14 +35,14 @@ class ItemModel(BaseSchemaModel[Item]):
 
     @field_validator("table_info")
     @classmethod
-    def validate_table_info(cls, value: TableInfo) -> TableInfo:
+    def _validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
         if value.group != SchemaGroup.ITEM.value:
             raise ValueError(f"Table info group must be {SchemaGroup.ITEM.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:
-        """Create an item from a model."""
+        """Create an [Item][pixano.features.Item] from the model."""
         if not issubclass(schema_type, Item):
             raise ValueError(f"Schema type must be a subclass of {Item.__name__}.")
         return super().to_row(schema_type)
