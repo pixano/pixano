@@ -1264,6 +1264,7 @@ License: CECILL-C
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, view_name)}
       >
         {#each images as image, i}
+          <!-- images contain the current image and previous one, to prevent flashing (should exist better way...) -->
           {@const viewRef = { id: image.id, name: view_name }}
           <KonvaImage
             config={{

@@ -9,7 +9,6 @@ import {
   type Dataset,
   DatasetInfo,
   type DatasetInfoType,
-  //type DatasetItems,
   DatasetItem,
   Item,
   type Schema,
@@ -17,6 +16,7 @@ import {
   DatasetBrowser,
   type DatasetBrowserType,
 } from "./lib/types/datasetTypes";
+import { splitWithLimit } from "./utils";
 
 // Exports
 export async function getDatasetsInfo(): Promise<Array<DatasetInfo>> {
@@ -46,25 +46,6 @@ export async function getDatasetsInfo(): Promise<Array<DatasetInfo>> {
 
   return datasets;
 }
-
-// UNUSED
-// export async function getDatasetInfo(datasetId: string): Promise<DatasetInfo> {
-//   let dataset: DatasetInfo;
-
-//   try {
-//     const response = await fetch(`/datasets/info/${datasetId}`);
-//     if (response.ok) {
-//       dataset = (await response.json()) as DatasetInfo;
-//     } else {
-//       dataset = {} as DatasetInfo;
-//       console.log("api.getDatasetInfo -", response.status, response.statusText, await response.text());
-//     }
-//   } catch (e) {
-//     dataset = {} as DatasetInfo;
-//     console.log("api.getDatasetInfo -", e);
-//   }
-//   return dataset;
-// }
 
 export async function getDataset(datasetId: string): Promise<Dataset> {
   let dataset;
@@ -146,34 +127,6 @@ export async function getDatasetItemsIds(datasetId: string): Promise<Array<strin
   return datasetItemsIds;
 }
 
-//UNUSED
-// export async function searchDatasetItems(
-//   datasetId: string,
-//   query: Record<string, string>,
-//   page: number = 1,
-//   size: number = 100,
-// ): Promise<DatasetItems> {
-//   let datasetItems: DatasetItems | undefined;
-//   try {
-//     const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
-//       headers: {
-//         Accept: "application/json",
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(query),
-//       method: "POST",
-//     });
-//     if (response.ok) {
-//       datasetItems = (await response.json()) as DatasetItems;
-//     } else {
-//       throw new Error("api.searchDatasetItems");
-//     }
-//   } catch (e) {
-//     throw new Error("api.searchDatasetItems");
-//   }
-//   return datasetItems;
-// }
-
 export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
   let item_raw: DatasetItemType | undefined;
   let item: DatasetItem | undefined;
@@ -235,25 +188,32 @@ export async function deleteSchemasByIds(
   table_name: string,
   no_table: boolean,
 ) {
-  const ids_query = sch_ids.join("&ids=");
-  const url = no_table
-    ? `/${route}/${ds_id}/?ids=${ids_query}`
-    : `/${route}/${ds_id}/${table_name}/?ids=${ids_query}`;
-  try {
-    const response = await fetch(url, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      console.log(
-        "api.deleteSchema -",
-        response.status,
-        response.statusText,
-        await response.text(),
-      );
-    }
-  } catch (e) {
-    console.log("api.deleteSchema -", e);
-  }
+  //split sch_ids to avoid "431 Request Header Fields Too Large" if too long
+  const url_chunks = splitWithLimit(sch_ids, "&ids=", 8000);
+  //const results =
+  await Promise.all(
+    url_chunks.map(async (ids_query) => {
+      const url = no_table
+        ? `/${route}/${ds_id}/?ids=${ids_query}`
+        : `/${route}/${ds_id}/${table_name}/?ids=${ids_query}`;
+      try {
+        const response = await fetch(url, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          console.log(
+            "api.deleteSchema -",
+            response.status,
+            response.statusText,
+            await response.text(),
+          );
+        }
+      } catch (e) {
+        console.log("api.deleteSchema -", e);
+      }
+    }),
+  );
+  //return results.flat();
 }
 
 export async function addSchema(route: string, ds_id: string, sch: Schema, no_table: boolean) {

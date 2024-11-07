@@ -66,49 +66,6 @@ License: CECILL-C
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
   };
 
-  // UNUSED ??
-  // const getBrowser = async (
-  //   datasetId: string,
-  //   page?: number,
-  //   size?: number,
-  //   query?: DatasetTableStore["query"],
-  // ) => {
-  //   let datasetItems: DatasetBrowser = {
-  //     id: "",
-  //     name: "",
-  //     table_data: { cols: [], rows: [] },
-  //     pagination: { total: 0, current: 0, size: 0 },
-  //     sem_search: [],
-  //   };
-  //   let isErrored = false;
-  //   if (query?.search) {
-  //     // try {
-  //     //   datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
-  //     // } catch (err) {
-  //     //   isErrored = true;
-  //     // }
-  //   } else {
-  //     try {
-  //       datasetItems = await api.getBrowser(datasetId, page, size);
-  //       //datasetWithFeats = await api.getDataset(datasetId);
-  //     } catch (err) {
-  //       isErrored = true;
-  //     }
-  //   }
-  //   datasetsStore.update((value = []) =>
-  //     value.map((dataset) =>
-  //       dataset.id === datasetId
-  //         ? {
-  //             ...datasetItems,
-  //             //features_values: datasetWithFeats.features_values,
-  //             //page: datasetItems,
-  //             isErrored,
-  //           }
-  //         : dataset,
-  //     ),
-  //   );
-  // };
-
   $: page.subscribe((value) => {
     pageId = value.route.id;
     currentDatasetId = value.params.dataset;
@@ -129,23 +86,6 @@ License: CECILL-C
       }
     });
   }
-
-  // NOTE: this doesn't really seems usefull, or redundant. For now it works without this...
-
-  // datasetTableStore.subscribe((value) => {
-  //   if (datasets && currentDatasetId) {
-  //     const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
-  //     if (currentDataset && value) {
-  //       console.log("found!");
-  //       currentDatasetStore.set(currentDataset);
-  //       getBrowser(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
-  //         (err) => console.error(err),
-  //       );
-  //     } else {
-  //       console.log("REFRESH?");
-  //     }
-  //   }
-  // });
 </script>
 
 <svelte:head>
