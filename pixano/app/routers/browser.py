@@ -6,11 +6,11 @@
 
 from typing import Annotated
 
-import polars as pl
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
+from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import SchemaGroup, is_view_embedding
 
 from .utils import get_dataset, get_rows
@@ -44,26 +44,13 @@ async def get_browser(
     # Load dataset
     dataset = get_dataset(id, settings.library_dir, settings.media_dir)
 
-    semantic_search = False
+    semantic_search = table != ""
     if query != "" or table != "":
         if query == "" or table == "":
             raise HTTPException(
                 status_code=400,
                 detail="Both query and model_name should be provided for semantic search.",
             )
-    if table != "":
-        semantic_search = True
-        if table not in dataset.schema.schemas:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Table {table} not found in dataset {id}.",
-            )
-        elif not is_view_embedding(dataset.schema.schemas[table]):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Table {table} is not a view embedding table.",
-            )
-        embedding_table = dataset.open_table(table)
 
     # Get page parameters
     total = dataset.num_rows
@@ -76,14 +63,10 @@ async def get_browser(
 
     # get data (items and views)
     if semantic_search:
-        semantic_results: pl.DataFrame = (
-            embedding_table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
-        )  # TODO: change high limit if lancedb supports it
-        item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
-        item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
-
-        item_rows = get_rows(dataset=dataset, table=table_item, ids=item_ids)
-        item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
+        try:
+            item_rows, distances = dataset.semantic_search(query, table, limit, skip)
+        except DatasetAccessError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     else:
         item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip)
 
@@ -115,7 +98,7 @@ async def get_browser(
 
     # build rows
     rows = []
-    for item in item_rows:
+    for i, item in enumerate(item_rows):
         row = {}
         # VIEWS -> thumbnails previews
         for view in tables_view:
@@ -126,9 +109,7 @@ async def get_browser(
             row[feat] = getattr(item, feat)
         # DISTANCE
         if semantic_search:
-            row["distance"] = item_results.row(by_predicate=(pl.col("item_ref.id") == item.id), named=True)[
-                "_distance"
-            ]
+            row["distance"] = distances[i]
 
         rows.append(row)
 
