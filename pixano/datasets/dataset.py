@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import lancedb
+import polars as pl
 import pyarrow as pa
 from lancedb.common import DATA
 from lancedb.table import LanceTable
@@ -22,6 +23,7 @@ from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_integrity_errors
 from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
+from pixano.features.schemas.base_schema import BaseSchema
 from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import DatasetFeaturesValues
@@ -855,6 +857,52 @@ class Dataset:
                 # Return dataset
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
+
+    def semantic_search(
+        self, query: str, table_name: str, limit: int, skip: int = 0
+    ) -> tuple[list[BaseSchema], list[float]]:
+        """Perform a semantic search.
+
+        It searches for the closest items to the query in the table embeddings.
+
+        Args:
+            query: Text query for semantic search.
+            table_name: Table name for embeddings.
+            limit: Limit number of items.
+            skip: Skip number of items
+
+        Returns:
+            Tuple of items and distances.
+        """
+        if not isinstance(query, str):
+            raise DatasetAccessError("query must be a string.")
+        elif not isinstance(table_name, str):
+            raise DatasetAccessError("table_name must be a string.")
+        elif not isinstance(limit, int) or limit < 1:
+            raise DatasetAccessError("limit must be a strictly positive integer.")
+        elif not isinstance(skip, int) or skip < 0:
+            raise DatasetAccessError("skip must be a positive integer.")
+        elif table_name not in self.schema.schemas:
+            raise DatasetAccessError(f"Table {table_name} not found in dataset {self.id}.")
+        elif table_name not in self.schema.groups[SchemaGroup.EMBEDDING] or not is_view_embedding(
+            self.schema.schemas[table_name]
+        ):
+            raise DatasetAccessError(f"Table {table_name} is not a view embedding table.")
+
+        table = self.open_table(table_name)
+        semantic_results: pl.DataFrame = (
+            table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+        )  # TODO: change high limit if lancedb supports it
+        item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
+        item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
+
+        item_rows = self.get_data("item", ids=item_ids)
+        item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
+        distances = [
+            item_results.row(by_predicate=(pl.col("item_ref.id") == item.id), named=True)["_distance"]
+            for item in item_rows
+        ]
+        return item_rows, distances
 
     @staticmethod
     def list(directory: Path) -> list[DatasetInfo]:

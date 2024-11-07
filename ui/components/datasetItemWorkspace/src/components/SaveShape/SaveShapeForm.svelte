@@ -64,7 +64,7 @@ License: CECILL-C
       );
       if (!newObject) return;
       newObject.ui.highlighted = "self";
-      newObject.ui.displayControl = { editing: true };
+      newObject.ui.displayControl = { editing: false };
       newEntity.ui.childs.push(newObject);
       if (newObject) {
         if (newObject.ui.datasetItemType === "video") {

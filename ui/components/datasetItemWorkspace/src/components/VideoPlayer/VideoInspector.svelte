@@ -27,7 +27,6 @@ License: CECILL-C
   export let keypoints: KeypointsTemplate[];
 
   onMount(() => {
-    updateView($currentFrameIndex);
     videoControls.update((old) => ({ ...old, isLoaded: true }));
   });
 

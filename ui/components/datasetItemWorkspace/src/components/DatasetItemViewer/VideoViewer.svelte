@@ -310,7 +310,7 @@ License: CECILL-C
   role="tab"
   tabindex="0"
 >
-  {#if isLoaded && $current_itemBBoxes}
+  {#if isLoaded && $current_itemBBoxes && $current_itemKeypoints && $itemMasks}
     <div class="overflow-hidden grow">
       <Canvas2D
         selectedItemId={selectedItem.item.id}
