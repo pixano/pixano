@@ -2,9 +2,9 @@
 
 ## Context
 
-In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the [assets/health_images/](./assets/health_images/) folder with a unique subfolder [all/](./assets/health_images/all/) which will later be considered as a split.
+In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the `./assets/health_images/` folder with a unique subfolder `all/` which will later be considered as a split.
 
-It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A [metadata.jsonl](./assets/health_images/all/metadata.jsonl) also provides annotations, bounding boxes and keypoints, associated to these images.
+It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images.
 
 ## Build the Dataset
 

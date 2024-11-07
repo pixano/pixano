@@ -1,4 +1,4 @@
-# Embeddings for Semantic Search
+# Semantic Search
 
 ## Context
 
@@ -48,7 +48,7 @@ dataset.create_table( # Create the table
     mode="create"
 )
 
->>> LanceTable(connection=LanceDBConnection(.../pixano/docs/tutorial/pixano_library/health_images/db), name="emb_open-clip")
+>>> LanceTable(connection=LanceDBConnection(.../pixano/docs/tutorials/pixano_library/health_images/db), name="emb_open-clip")
 ```
 
 The `pixano.features.ViewEmbedding`'s method `create_schema` create a schema that contains a LanceDB embedding function compatible with Pixano.

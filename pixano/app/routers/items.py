@@ -109,7 +109,6 @@ async def create_item(
 
     Args:
         dataset_id: Dataset ID containing the table.
-        table: Table name.
         id: ID of the item.
         item: Item to add.
         settings: App settings.
@@ -131,7 +130,6 @@ async def update_item(
 
     Args:
         dataset_id: Dataset ID containing the table.
-        table: Table name.
         id: ID of the item.
         item: Item to update.
         settings: App settings.

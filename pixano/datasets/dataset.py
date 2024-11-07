@@ -281,7 +281,7 @@ class Dataset:
 
         return tables
 
-    def open_table(self, name) -> LanceTable:
+    def open_table(self, name: str) -> LanceTable:
         """Open a dataset table with LanceDB.
 
         Args:
@@ -323,7 +323,7 @@ class Dataset:
     def resolve_ref(
         self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef | SourceRef
     ) -> BaseSchema | Item | View | Embedding | Entity | Annotation | Source:
-        """Resolve a [SchemaRef][pixano.datasets.SchemaRef].
+        """Resolve a [SchemaRef][pixano.features.SchemaRef].
 
         It fetches the data from the table referenced.
 
@@ -521,7 +521,7 @@ class Dataset:
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the [view embeddings][pixano.features.ViewEmbedding] via the
-            [Embedding Function][from lancedb.embeddings import EmbeddingFunction] stored in the table metadata.
+            [Embedding Function][lancedb.embeddings.base.EmbeddingFunction] stored in the table metadata.
 
         Args:
             table_name: Table name containing the view embeddings.

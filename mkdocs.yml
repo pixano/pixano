@@ -88,6 +88,15 @@ plugins:
             preload_modules:
               - pydantic
 
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
 nav:
   - "Home": https://pixano.github.io/
 
@@ -98,4 +107,8 @@ nav:
           - "Key Concepts": getting_started/key_concepts.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
+      - "Tutorials":
+          - tutorials/index.md
+          - "Create your first library": tutorials/create_your_first_library.md
+          - "Semantic search": tutorials/semantic_search.md
       - "API reference": api_reference/

@@ -293,7 +293,7 @@ class DatasetSchema(BaseModel):
 
     @staticmethod
     def from_dataset_item(dataset_item: type["DatasetItem"]) -> "DatasetSchema":
-        """Create a dataset schema from a [DatasetItem][pixano.datasets.dataset_item.DatasetItem].
+        """Create a dataset schema from a [DatasetItem][pixano.datasets.DatasetItem].
 
         Args:
             dataset_item: The dataset item.

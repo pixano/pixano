@@ -179,12 +179,12 @@ def create_view_embedding_function(
     type_embedding_function: type[EmbeddingFunction], name: str, dataset: "Dataset"
 ) -> type[EmbeddingFunction]:
     """Create a `ViewEmbeddingFunction` based on an
-    [EmbeddingFunction][lancedb.embedding_function.EmbeddingFunction].
+    [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction].
     """
 
     @register(name)
     class ViewEmbeddingFunction(type_embedding_function):
-        """A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embedding_function.EmbeddingFunction]."""
+        """A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction]."""
 
         def compute_source_embeddings(self, view_refs: pa.Table, *args, **kwargs) -> list:
             """Compute the embeddings for the source column in the database."""
