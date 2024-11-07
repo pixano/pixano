@@ -34,7 +34,7 @@ lancedb_embedding_fn = "open-clip"
 table_name = "emb_open-clip"
 
 dataset = Dataset( # Load the dataset
-    Path("./pixano_library/health_images"), media_dir=Path("./assets/")
+    Path("./pixano_library/health_dataset"), media_dir=Path("./assets/")
 )
 embedding_schema = ViewEmbedding.create_schema( # Create the ViewEmbeddingSchema
     embedding_fn=lancedb_embedding_fn, # For LanceDB
@@ -48,7 +48,7 @@ dataset.create_table( # Create the table
     mode="create"
 )
 
->>> LanceTable(connection=LanceDBConnection(.../pixano/docs/tutorials/pixano_library/health_images/db), name="emb_open-clip")
+>>> LanceTable(connection=LanceDBConnection(.../pixano/docs/tutorials/pixano_library/health_dataset/db), name="emb_open-clip")
 ```
 
 The `pixano.features.ViewEmbedding`'s method `create_schema` create a schema that contains a LanceDB embedding function compatible with Pixano.

@@ -73,7 +73,7 @@ from pixano.datasets.builders import ImageFolderBuilder
 
 builder = ImageFolderBuilder(
     source_dir=Path("./assets/health_images"),
-    target_dir=Path("./pixano_library/health_images"),
+    target_dir=Path("./pixano_library/health_dataset"),
     dataset_item=HealthDatasetItem,
     info=DatasetInfo(
         id="health_images",
@@ -166,7 +166,7 @@ class ImageFolderBuilder(DatasetBuilder):
 
 builder = ImageFolderBuilder(
     source_dir=Path("./assets/health_images"),
-    target_dir=Path("./pixano_library/health_images"),
+    target_dir=Path("./pixano_library/health_dataset"),
     dataset_item=HealthDatasetItem,
     info=DatasetInfo(
         id="health_images",
