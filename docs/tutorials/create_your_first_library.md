@@ -201,7 +201,13 @@ To interact with your dataset you can use CRUD (create, read, update, and delete
 Here is an example to read the first two image views:
 
 ```python
-dataset.get_data("image", limit=2, skip=0)
+from pixano.datasets import Dataset
+
+dataset = Dataset( # Load the dataset
+    Path("./pixano_library/health_dataset"), media_dir=Path("./assets/")
+)
+
+dataset.get_data("image", limit=2, skip=0) # Fetch images
 
 >>> [Image(id='QmmM6LhwB4uMMCRUjgXejY', created_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 364059), updated_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 364059), item_ref=ItemRef(name='item', id='iyA4tHmGeHPP4N6diSuUXi'), parent_ref=ViewRef(name='', id=''), url='/health_images/all/microcope-red_blood_cells.jpg', width=2560, height=1920, format='JPEG'), Image(id='SNgW9Zk68g7mBW2CuHQQKZ', created_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 367359), updated_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 367359), item_ref=ItemRef(name='item', id='VkBcn4bhgt2RRJNWWjvDN5'), parent_ref=ViewRef(name='', id=''), url='/health_images/all/microscope-peau.jpg', width=896, height=550, format='JPEG')]
 ```
