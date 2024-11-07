@@ -183,7 +183,7 @@ dataset = builder.build(mode="create")
 
 We recommend that you take a look at the implementation of the class `pixano.datasets.builders.FolderBaseBuilder` for the complete code to understand how to construct your own builder.
 
-Notice that the output of the `generate_data` consists in a dictionary whose keys are the names of the tables to fill and the values one example or a list of `pixano.features.BaseSchema` to fill these tables.
+Notice that the `generate_data` is a generator of dictionaries whose keys are the names of the tables to fill and the values one example or a list of `pixano.features.BaseSchema` to fill these tables. The builder flushes data by chunks of a size configured for every table with the argument `flush_every_n_samples` in the `build` method. This offers a trade-off between speed and memory footprint.
 
 ## Query your dataset
 
