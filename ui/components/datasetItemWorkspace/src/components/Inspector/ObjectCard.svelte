@@ -69,10 +69,18 @@ License: CECILL-C
         //there is a subentity, find it
         const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
         if (subentity) {
-          feats[subentity.id] = createFeature<EntityType>(subentity, $datasetSchema);
+          feats[subentity.id] = createFeature<EntityType>(
+            subentity,
+            $datasetSchema,
+            subentity.table_info.name,
+          );
         }
       }
-      feats[ann.id] = createFeature<AnnotationType>(ann, $datasetSchema);
+      feats[ann.id] = createFeature<AnnotationType>(
+        ann,
+        $datasetSchema,
+        ann.table_info.name + "." + ann.data.view_ref.name,
+      );
     }
     feats[entity.id] = createFeature<EntityType>(entity, $datasetSchema);
 

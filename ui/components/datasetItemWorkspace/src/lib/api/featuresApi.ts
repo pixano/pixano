@@ -26,6 +26,7 @@ import type {
 export function createFeature<T extends object>(
   obj: BaseData<T>,
   dataset_schema: DatasetSchema,
+  additional_info: string = "", //TMP
 ): Feature[] {
   const extraFields = obj.getDynamicFields();
   const extraFieldsType = extraFields.reduce(
@@ -44,12 +45,13 @@ export function createFeature<T extends object>(
         value: (obj.data as Record<string, unknown>)[field],
       } as ItemFeature);
   }
+  const display_info = additional_info !== "" ? "[" + additional_info + "] " : "";
   const parsedFeatures = createObjectInputsSchema.parse(
     Object.values(features).map((feature) => ({
       ...feature,
       type: feature.dtype as Feature["type"],
       required: false,
-      label: "[" + obj.table_info.name + "] " + feature.name, //TMP //TODO WIP -- group display by table_info.name (&view?)
+      label: `${display_info}${feature.name}`, //TMP //TODO WIP -- group display by table_info.name (&view?)
     })),
   );
   return parsedFeatures.map((feature) => {
