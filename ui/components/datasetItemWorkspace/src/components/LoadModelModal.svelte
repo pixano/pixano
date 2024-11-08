@@ -6,8 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
-
   import { SelectModal, WarningModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
   import { loadViewEmbeddings as loadViewEmbeddingsAPI } from "../lib/api/modelsApi";
@@ -16,9 +14,7 @@ License: CECILL-C
     modelsStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
-  import {
-    datasetSchema
-  } from "../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import type { Embeddings, ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
   import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
@@ -37,7 +33,7 @@ License: CECILL-C
   });
 
   const loadViewEmbeddings = () => {
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "none"}));
+    modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     if (
       !selectedItemId ||
       !selectedTableName ||
@@ -59,7 +55,11 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "none", selectedModelName: selectedModelName }));
+    modelsStore.update((store) => ({
+      ...store,
+      currentModalOpen: "none",
+      selectedModelName: selectedModelName,
+    }));
     await sam.init("/app_models/" + selectedModelName + ".onnx");
     interactiveSegmenterModel.set(sam);
     modelsStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));

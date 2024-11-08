@@ -38,7 +38,7 @@ License: CECILL-C
     api
       .getModels()
       .then((models) => modelsStore.set(models))
-      .catch((err) => modelsStore.set([]));
+      .catch(() => modelsStore.set([]));
   }
 
   async function handleGetDatasets() {

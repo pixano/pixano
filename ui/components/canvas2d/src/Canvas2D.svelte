@@ -534,25 +534,18 @@ License: CECILL-C
           input_box: box,
           validated: false,
         };
-        const now = new Date(Date.now()).toISOString();
-        //TODO: need to think about this...
-        const currentMask: Mask = new Mask({
-          id: currentAnn.id,
-          created_at: now,
-          updated_at: now,
-          table_info: { name: "mask???", group: "annotations", base_schema: "CompressedRLE" }, //TODO name
-          data: {
-            //TODO entity_ref, item_ref
-            view_ref: viewRef,
-            counts: currentAnn.output.rle.counts,
-            size: currentAnn.output.rle.size,
-          },
-        });
-        currentMask.ui.svg = currentAnn.output.masksImageSVG;
-        currentMask.ui.displayControl.hidden = false;
-        currentMask.ui.opacity = 1.0;
-
-        addMask(currentMask, "#008000", currentMaskGroup, image, viewRef.name, stage, zoomFactor);
+        addMask(
+          currentAnn.id,
+          currentAnn.output.masksImageSVG,
+          true,
+          1.0,
+          "#008000",
+          currentMaskGroup,
+          image,
+          viewRef.name,
+          stage,
+          zoomFactor,
+        );
       }
     }
   }

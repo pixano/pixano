@@ -8,7 +8,6 @@ import * as ort from "onnxruntime-web";
 
 import type { DatasetInfo } from "@pixano/core";
 import { api } from "@pixano/core/src";
-import { npy } from "@pixano/models/src";
 
 export async function loadViewEmbeddings(
   itemId: string,
@@ -28,7 +27,7 @@ export async function loadViewEmbeddings(
           embeddings[view_embedding.data["view_ref"].name] = new ort.Tensor(
             "float32",
             view_embedding.data.vector.values,
-            shape
+            shape,
           );
         } catch (e) {
           console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);
