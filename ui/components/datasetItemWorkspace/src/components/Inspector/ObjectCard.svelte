@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { derived } from "svelte/store";
   import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
@@ -14,6 +15,7 @@ License: CECILL-C
     type DisplayControl,
     Annotation,
     Entity,
+    type AnnotationType,
     type EntityType,
     type ObjectThumbnail,
     type SaveItem,
@@ -36,6 +38,8 @@ License: CECILL-C
     defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
+  import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
+
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -47,7 +51,43 @@ License: CECILL-C
   let open: boolean = false;
   let showIcons: boolean = false;
 
-  $: features = createFeature<EntityType>(entity, $datasetSchema);
+  const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
+    //get all features from Top entity (obj) to evental sub entities and annotations
+
+    //let anns_features: Record<string, Feature[]> = {};
+    let feats: Record<string, Feature[]> = {};
+    let child_anns: Annotation[] = [];
+    if ($currentFrameIndex !== null) {
+      child_anns = entity.ui.childs!.filter(
+        (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
+      );
+    } else {
+      child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
+    }
+    for (const ann of child_anns) {
+      if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
+        //there is a subentity, find it
+        const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
+        if (subentity) {
+          feats[subentity.id] = createFeature<EntityType>(
+            subentity,
+            $datasetSchema,
+            subentity.table_info.name,
+          );
+        }
+      }
+      feats[ann.id] = createFeature<AnnotationType>(
+        ann,
+        $datasetSchema,
+        ann.table_info.name + "." + ann.data.view_ref.name,
+      );
+    }
+    feats[entity.id] = createFeature<EntityType>(entity, $datasetSchema);
+
+    return Object.values(feats).flat();
+  });
+
+  $: console.log("FFF", entity, $features);
   $: isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self");
   $: isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
   $: isVisible =
@@ -266,7 +306,12 @@ License: CECILL-C
               </div>
             </div>
           {/if}
-          <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
+          <UpdateFeatureInputs
+            featureClass="objects"
+            features={$features}
+            {isEditing}
+            {saveInputChange}
+          />
           {#if thumbnail}
             <Thumbnail
               imageDimension={thumbnail.baseImageDimensions}
