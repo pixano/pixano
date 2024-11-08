@@ -15,6 +15,7 @@ import {
   type DatasetItemType,
   DatasetBrowser,
   type DatasetBrowserType,
+  ViewEmbedding,
 } from "./lib/types/datasetTypes";
 import { splitWithLimit } from "./utils";
 
@@ -154,31 +155,33 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   return item;
 }
 
-export async function getItemEmbeddings(
+export async function getViewEmbeddings(
   datasetId: string,
   itemId: string,
-  modelId: string,
-): Promise<DatasetItem> {
-  let item: DatasetItem | undefined;
+  tableName: string,
+): Promise<Array<ViewEmbedding>> {
+  let viewEmbeddings: Array<ViewEmbedding> | undefined;
 
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings/${modelId}`);
+    const response = await fetch(
+      `/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}`,
+    );
     if (response.ok) {
-      item = (await response.json()) as DatasetItem;
+      viewEmbeddings = (await response.json()) as Array<ViewEmbedding>;
     } else {
-      item = {} as DatasetItem;
+      viewEmbeddings = [];
       console.log(
-        "api.getItemEmbeddings -",
+        "api.getViewEmbeddings -",
         response.status,
         response.statusText,
         await response.text(),
       );
     }
   } catch (e) {
-    item = {} as DatasetItem;
-    console.log("api.getItemEmbeddings -", e);
+    viewEmbeddings = [];
+    console.log("api.getViewEmbeddings -", e);
   }
-  return item;
+  return viewEmbeddings;
 }
 
 export async function deleteSchemasByIds(

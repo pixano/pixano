@@ -10,12 +10,15 @@ License: CECILL-C
 
   import { SelectModal, WarningModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
+  import { loadViewEmbeddings as loadViewEmbeddingsAPI } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
     modelsStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
+  import {
+    datasetSchema
+  } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import type { Embeddings, ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
   import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
@@ -26,22 +29,24 @@ License: CECILL-C
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
   let selectedModelName: ModelSelection["selectedModelName"];
+  let selectedTableName: string;
 
   modelsStore.subscribe((store) => {
     currentModalOpen = store.currentModalOpen;
     selectedModelName = store.selectedModelName;
   });
 
-  const loadEmbeddings = () => {
+  const loadViewEmbeddings = () => {
+    modelsStore.update((store) => ({ ...store, currentModalOpen: "none"}));
     if (
       !selectedItemId ||
-      !selectedModelName ||
+      !selectedTableName ||
       !currentDatasetId ||
       selectedModelName === "none"
     ) {
       return;
     }
-    loadEmbeddingsApi(selectedItemId, selectedModelName, currentDatasetId)
+    loadViewEmbeddingsAPI(selectedItemId, selectedTableName, currentDatasetId)
       .then((results) => {
         embeddings = results;
       })
@@ -54,27 +59,11 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
-    await sam.init("/data/models/" + selectedModelName);
+    modelsStore.update((store) => ({ ...store, currentModalOpen: "none", selectedModelName: selectedModelName }));
+    await sam.init("/app_models/" + selectedModelName + ".onnx");
     interactiveSegmenterModel.set(sam);
-    loadEmbeddings();
+    modelsStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
   }
-
-  $: {
-    if (selectedItemId) {
-      loadEmbeddings();
-    }
-  }
-
-  onMount(async () => {
-    if (models.length > 0) {
-      let samModels = models.filter((m) => m.includes("sam"));
-      if (samModels.length == 1) {
-        modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
-        await loadModel();
-      }
-    }
-  });
 
   $: {
     if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
@@ -82,15 +71,6 @@ License: CECILL-C
     }
     if ($selectedTool?.isSmart && models.length == 0) {
       modelsStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
-    }
-  }
-
-  $: {
-    if (selectedModelName) {
-      modelsStore.update((store) => ({
-        ...store,
-        selectedModelName,
-      }));
     }
   }
 </script>
@@ -102,6 +82,15 @@ License: CECILL-C
     ifNoChoices={""}
     bind:selected={selectedModelName}
     on:confirm={loadModel}
+  />
+{/if}
+{#if currentModalOpen === "selectEmbeddingsTable"}
+  <SelectModal
+    message="Please select the embeddings table for the model."
+    choices={$datasetSchema.groups.embeddings}
+    ifNoChoices={""}
+    bind:selected={selectedTableName}
+    on:confirm={loadViewEmbeddings}
   />
 {/if}
 {#if currentModalOpen === "noModel"}

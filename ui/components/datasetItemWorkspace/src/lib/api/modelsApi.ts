@@ -10,26 +10,25 @@ import type { DatasetInfo } from "@pixano/core";
 import { api } from "@pixano/core/src";
 import { npy } from "@pixano/models/src";
 
-//TODO SAM is deactivated for now, and currently not compatible with data model
-export async function loadEmbeddings(
+export async function loadViewEmbeddings(
   itemId: string,
-  selectedModelName: string,
+  selectedTableName: string,
   datasetId: DatasetInfo["id"],
 ): Promise<Record<string, ort.Tensor>> {
   const embeddings: Record<string, ort.Tensor> = {};
-  if (selectedModelName) {
-    const item = await api.getItemEmbeddings(datasetId, itemId, selectedModelName);
-    // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
-    if (item.embeddings) {
-      // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
-      for (const [view_name, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+  if (selectedTableName) {
+    const view_embeddings = await api.getViewEmbeddings(datasetId, itemId, selectedTableName);
+    if (view_embeddings.length > 0) {
+      for (const view_embedding of view_embeddings) {
         try {
-          // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
-          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
-          embeddings[view_name] = new ort.Tensor(
+          let shape = view_embedding.data.vector.shape;
+          if (shape.length === 3) {
+            shape = [1, shape[0], shape[1], shape[2]];
+          }
+          embeddings[view_embedding.data["view_ref"].name] = new ort.Tensor(
             "float32",
-            viewEmbeddingArray.data,
-            viewEmbeddingArray.shape,
+            view_embedding.data.vector.values,
+            shape
           );
         } catch (e) {
           console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);

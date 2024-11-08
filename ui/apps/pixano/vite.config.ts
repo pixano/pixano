@@ -50,16 +50,21 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      "/data": {
-        target: "http://127.0.0.1:8000",
-        changeOrigin: true,
-        secure: false,
-      },
       "/media": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
         secure: false,
       },
+      "/models": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/app_models": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
+      }
     },
   },
 });

@@ -35,10 +35,10 @@ License: CECILL-C
     //TMP for lint
     await new Promise((resolve) => setTimeout(resolve, 1));
     modelsStore.set([]);
-    // api
-    //   .getModels()
-    //   .then((models) => modelsStore.set(models))
-    //   .catch((err) => modelsStore.set([]));
+    api
+      .getModels()
+      .then((models) => modelsStore.set(models))
+      .catch((err) => modelsStore.set([]));
   }
 
   async function handleGetDatasets() {
