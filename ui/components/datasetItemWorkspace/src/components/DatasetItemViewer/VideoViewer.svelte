@@ -125,8 +125,9 @@ License: CECILL-C
   let expanding = false;
 
   let imagesPerView: ImagesPerView = {};
+  const imagesPerViewBuffer: Record<string, { id: string; element: HTMLImageElement }[]> = {};
 
-  let imagesFilesUrls: Record<string, Record<string, string>[]> = Object.entries(
+  let imagesFilesUrls: Record<string, { id: string; url: string }[]> = Object.entries(
     selectedItem.views,
   ).reduce(
     (acc, [key, value]) => {
@@ -135,10 +136,40 @@ License: CECILL-C
       });
       return acc;
     },
-    {} as Record<string, Record<string, string>[]>,
+    {} as Record<string, { id: string; url: string }[]>,
   );
 
   let isLoaded = false;
+
+  async function preloadImagesProgressively(
+    imagesFilesUrls: Record<string, { id: string; url: string }[]>,
+  ) {
+    // Initialize the buffer structure for each view
+    for (const viewKey of Object.keys(imagesFilesUrls)) {
+      imagesPerViewBuffer[viewKey] = [];
+    }
+    // Create an array of promises for all images
+    const loadPromises = Object.entries(imagesFilesUrls).flatMap(([viewKey, urls]) =>
+      urls.map(
+        ({ id, url }) =>
+          new Promise<void>((resolve, reject) => {
+            const img = new Image();
+            img.src = `/${url}`;
+            img.onload = () => {
+              imagesPerViewBuffer[viewKey].push({ id, element: img });
+              //console.log(`Image ${id} for ${viewKey} loaded and added to buffer.`);
+              resolve();
+            };
+            img.onerror = () => {
+              console.warn(`Failed to load image: ${url}`);
+              reject(new Error(`Failed to load image: ${url}`));
+            };
+          }),
+      ),
+    );
+    // Await all images to finish loading, without holding up the buffer population
+    await Promise.allSettled(loadPromises);
+  }
 
   onMount(() => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
@@ -156,21 +187,41 @@ License: CECILL-C
       0,
     );
     lastFrameIndex.set(longestView - 1);
+
+    //preload buffer
+    preloadImagesProgressively(imagesFilesUrls)
+      .then(() => {
+        console.log("Progressive loading complete.");
+      })
+      .catch((error) => {
+        console.error("Error during progressive loading:", error);
+      });
   });
 
   const updateView = (imageIndex: number) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
-      const image = new Image();
-      const src = `/${urls[imageIndex].url}`;
-      if (!src) return;
-      image.src = src;
-      //NOTE double image, this allows caching (but weird...)
-      imagesPerView = {
-        ...imagesPerView,
-        [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
-          -2,
-        ),
-      };
+      if (
+        key in imagesPerViewBuffer &&
+        imagesPerViewBuffer[key][imageIndex] &&
+        imagesPerViewBuffer[key][imageIndex].element.complete
+      ) {
+        imagesPerView = {
+          ...imagesPerView,
+          [key]: [...(imagesPerView[key] || []), imagesPerViewBuffer[key][imageIndex]].slice(-2),
+        };
+      } else {
+        const image = new Image();
+        const src = `/${urls[imageIndex].url}`;
+        if (!src) return;
+        image.src = src;
+        //NOTE double image, avoid flashing by "swapping" with previous image
+        imagesPerView = {
+          ...imagesPerView,
+          [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
+            -2,
+          ),
+        };
+      }
     });
   };
 
