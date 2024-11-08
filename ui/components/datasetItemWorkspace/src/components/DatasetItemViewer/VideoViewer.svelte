@@ -18,6 +18,7 @@ License: CECILL-C
     type EditShape,
     type KeypointsTemplate,
     type ImagesPerView,
+    type HTMLImage,
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -125,7 +126,7 @@ License: CECILL-C
   let expanding = false;
 
   let imagesPerView: ImagesPerView = {};
-  const imagesPerViewBuffer: Record<string, { id: string; element: HTMLImageElement }[]> = {};
+  const imagesPerViewBuffer: Record<string, HTMLImage[]> = {};
 
   let imagesFilesUrls: Record<string, { id: string; url: string }[]> = Object.entries(
     selectedItem.views,
@@ -144,20 +145,20 @@ License: CECILL-C
   async function preloadImagesProgressively(
     imagesFilesUrls: Record<string, { id: string; url: string }[]>,
   ) {
-    // Initialize the buffer structure for each view
-    for (const viewKey of Object.keys(imagesFilesUrls)) {
-      imagesPerViewBuffer[viewKey] = [];
+    // Initialize the buffer structure with arrays for each view
+    for (const [viewKey, frames] of Object.entries(imagesFilesUrls)) {
+      imagesPerViewBuffer[viewKey] = new Array<HTMLImage>(frames.length);
     }
-    // Create an array of promises for all images
-    const loadPromises = Object.entries(imagesFilesUrls).flatMap(([viewKey, urls]) =>
-      urls.map(
-        ({ id, url }) =>
+    // Create an array of promises for loading images
+    const loadPromises = Object.entries(imagesFilesUrls).flatMap(([viewKey, frames]) =>
+      frames.map(
+        ({ id, url }, index) =>
           new Promise<void>((resolve, reject) => {
             const img = new Image();
             img.src = `/${url}`;
             img.onload = () => {
-              imagesPerViewBuffer[viewKey].push({ id, element: img });
-              //console.log(`Image ${id} for ${viewKey} loaded and added to buffer.`);
+              imagesPerViewBuffer[viewKey][index] = { id, element: img } as HTMLImage;
+              //console.log(`Image ${id} for ${viewKey} loaded and added to buffer at index ${index}.`);
               resolve();
             };
             img.onerror = () => {
