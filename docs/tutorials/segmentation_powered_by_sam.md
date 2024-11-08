@@ -15,6 +15,7 @@ This tutorial will help you unlock this feature.
 1. Pip dependencies
 
 Install the official SAM repo, `onnx` to export the model and `transformers` to get the image embeddings.
+
 ```bash
 pip install git+https://github.com/facebookresearch/segment-anything.git
 pip install onnx transformers
@@ -39,7 +40,6 @@ cp sam_h.onnx /path/to/pixano/models/
 ```
 
 ### Create the embeddings
-
 
 The following suppose the [library tutorial](./create_your_first_library.md) has been followed previously to initialize the library containing the `health_dataset`.
 
