@@ -163,9 +163,7 @@ export async function getViewEmbeddings(
   let viewEmbeddings: Array<ViewEmbedding> | undefined;
 
   try {
-    const response = await fetch(
-      `/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}`,
-    );
+    const response = await fetch(`/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}`);
     if (response.ok) {
       viewEmbeddings = (await response.json()) as Array<ViewEmbedding>;
     } else {
