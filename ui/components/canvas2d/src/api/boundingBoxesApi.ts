@@ -4,14 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Mask, SelectionTool } from "@pixano/core";
+import type { MaskSVG, SelectionTool } from "@pixano/core";
 
 import Konva from "konva";
 
 import { MASK_STROKEWIDTH } from "../lib/constants";
 
 export function addMask(
-  mask: Mask,
+  mask_id: string,
+  mask_svg: MaskSVG,
+  visible: boolean,
+  opacity: number,
   color: string,
   maskGroup: Konva.Group,
   image: Konva.Image,
@@ -47,7 +50,7 @@ export function addMask(
     return res;
   }
   const maskKonva = new Konva.Shape({
-    id: mask.id,
+    id: mask_id,
     x: x,
     y: y,
     width: stage.width(),
@@ -56,15 +59,15 @@ export function addMask(
     stroke: style.color,
     strokeWidth: MASK_STROKEWIDTH / zoomFactor[view_name],
     scale,
-    visible: !mask.ui.displayControl.hidden,
-    opacity: mask.ui.opacity,
+    visible,
+    opacity,
     listening: false,
     sceneFunc: (ctx, shape) => {
       ctx.beginPath();
-      for (let i = 0; i < mask.ui.svg.length; ++i) {
-        const start = m_part(mask.ui.svg[i]);
+      for (let i = 0; i < mask_svg.length; ++i) {
+        const start = m_part(mask_svg[i]);
         ctx.moveTo(start.x, start.y);
-        const l_pts = l_part(mask.ui.svg[i]);
+        const l_pts = l_part(mask_svg[i]);
         for (const pt of l_pts) {
           ctx.lineTo(pt.x, pt.y);
         }

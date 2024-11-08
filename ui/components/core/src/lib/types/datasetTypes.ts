@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { z } from "zod";
 
+////////// TYPES /////////////
 const referenceSchema = z
   .object({
     id: z.string(),
@@ -13,6 +14,14 @@ const referenceSchema = z
   })
   .strict();
 export type Reference = z.infer<typeof referenceSchema>;
+
+const ndArrayFloatSchema = z
+  .object({
+    values: z.array(z.number()),
+    shape: z.array(z.number()),
+  })
+  .strict();
+export type NDArrayFloat = z.infer<typeof ndArrayFloatSchema>;
 
 const tableInfoSchema = z
   .object({
@@ -73,6 +82,23 @@ export class BaseData<T extends object> {
     return instanceKeys.filter(
       (key) => !(this.constructor as typeof BaseData).nonFeaturesFields().includes(key),
     );
+  }
+}
+
+////////// EMBEDDINGS /////////////
+const viewEmbeddingSchema = z
+  .object({
+    item_ref: referenceSchema,
+    view_ref: referenceSchema,
+    vector: ndArrayFloatSchema,
+  })
+  .passthrough();
+type viewEmbeddingType = z.infer<typeof viewEmbeddingSchema>;
+
+export class ViewEmbedding extends BaseData<viewEmbeddingType> {
+  constructor(obj: BaseDataFields<viewEmbeddingType>) {
+    viewEmbeddingSchema.parse(obj.data);
+    super(obj);
   }
 }
 

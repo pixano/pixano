@@ -56,11 +56,6 @@ License: CECILL-C
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {
             let item_type: "image" | "video" | "3d" = "image";
-            // Append /data/<dataset_path>/media url to all urls
-            //NOTE: slice(-2) is not very safe, it suppose users respect the ""<dataset_path>/media" rule
-            //but as ds.media_dir is an absolute path, we need to make this assumption...
-            //Note2: we will need to revert this when/if we POST/PUT views
-            //const media_dir = "media/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
             const media_dir = "media/";
             Object.values(item.views).map((view) => {
               if (Array.isArray(view)) {
