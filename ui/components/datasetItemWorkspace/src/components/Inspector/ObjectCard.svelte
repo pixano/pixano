@@ -64,7 +64,6 @@ License: CECILL-C
     } else {
       child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
     }
-    let sub_features: Record<string, Feature[]> = {};
     for (const ann of child_anns) {
       if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
         //there is a subentity, find it
