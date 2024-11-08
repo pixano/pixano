@@ -256,7 +256,7 @@ const annotationSchema = z
     source_ref: referenceSchema,
   })
   .passthrough();
-type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
+export type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 
 type AnnotationUIFields = {
   datasetItemType: string;
@@ -356,7 +356,7 @@ export class BBox extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["confidence", "coords", "format", "is_normalized"]);
+    return super.nonFeaturesFields().concat(["coords", "format", "is_normalized"]); //"confidence",  TMP TEST
   }
 }
 

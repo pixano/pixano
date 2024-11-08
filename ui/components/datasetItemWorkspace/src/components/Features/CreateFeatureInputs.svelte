@@ -35,6 +35,8 @@ License: CECILL-C
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
+    //TODO: need to take schema relation into account (when schema relation available)
+    //required when there is several differents tracks / entities / subentities for different purpose
     let featuresArray: InputFeatures = [];
     Object.values(schema.schemas).forEach((sch) => {
       let nonFeatsFields: string[] = [];

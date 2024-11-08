@@ -49,7 +49,7 @@ export function createFeature<T extends object>(
       ...feature,
       type: feature.dtype as Feature["type"],
       required: false,
-      label: feature.name,
+      label: "[" + obj.table_info.name + "] " + feature.name,  //TMP //TODO WIP -- group display by table_info.name (&view?)
     })),
   );
   return parsedFeatures.map((feature) => {
