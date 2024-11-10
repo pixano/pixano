@@ -1,4 +1,5 @@
 site_name: Pixano Documentation
+site_url: https://pixano.github.io/pixano/
 theme:
   name: material
   logo: assets/pixano_white.png
@@ -45,6 +46,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/pixano/pixano
       name: Pixano on GitHub
+  version:
+    default: latest
+    provider: mike
 extra_css:
   - assets/extra.css
 plugins:

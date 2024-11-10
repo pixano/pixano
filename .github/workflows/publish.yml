@@ -66,6 +66,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set VERSION environment variable
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Configure git credentials
         run: |
@@ -90,10 +95,10 @@ jobs:
             mkdocs-material-
 
       - name: Install dependencies
-        run: pip install .[documentation]
+        run: pip install .[docs]
 
       - name: Publish documentation website
-        run: mkdocs gh-deploy --force
+        run: mike deploy --push --update-aliases ${{ env.VERSION }} stable
 
   docker:
     runs-on: ubuntu-latest
@@ -116,5 +121,5 @@ jobs:
         with:
           push: true
           tags: |
-            pixano/pixano:${VERSION}
+            pixano/pixano:${{ env.VERSION }}
             ${{ github.event.release.prerelease == false && 'pixano/pixano:stable' || '' }}
