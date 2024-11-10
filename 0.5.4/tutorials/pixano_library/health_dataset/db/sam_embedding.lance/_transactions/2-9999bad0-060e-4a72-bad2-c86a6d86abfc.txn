@@ -1,4 +1,0 @@
-$9999bad0-060e-4a72-bad2-c86a6d86abfc²„id ÿÿÿÿÿÿÿÿÿ*string8+
-created_at ÿÿÿÿÿÿÿÿÿ*timestamp:us:-8+
-updated_at ÿÿÿÿÿÿÿÿÿ*timestamp:us:-8item_ref ÿÿÿÿÿÿÿÿÿ*structname *string8id *string8vector ÿÿÿÿÿÿÿÿÿ*structvalues *list8item *double08shape	 *list8item
- 	*int6408view_ref ÿÿÿÿÿÿÿÿÿ*structname *string8id *string8
