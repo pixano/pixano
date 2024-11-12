@@ -37,6 +37,7 @@ dependencies = [
   "pandas >= 1.5.0, < 3.0.0",
   "Pillow >= 9.4.0, < 11.0.0",
   "polars > 1.7.0, < 2.0.0",
+  "pycocotools >= 2.0.0, < 3.0.0",
   "pydantic >= 2.9.0, < 3.0.0",
   "pydantic-settings >= 2.0.0, < 3.0.0",
   "s3path >= 0.5.0, < 1.0.0",
