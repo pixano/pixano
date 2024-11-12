@@ -26,6 +26,7 @@ classifiers = [
 ]
 dependencies = [
   "duckdb >= 1.0.0, < 2.0.0",
+  "httpx >= 0.25.0, < 1.0.0",
   "fastapi >= 0.103.0, < 1.0.0",
   "importlib-resources >= 5.12.0, < 6.0.0",
   "ipywidgets >= 8.0.0, < 9.0.0",
