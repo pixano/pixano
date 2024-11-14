@@ -26,7 +26,7 @@ License: CECILL-C
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
 
-  const allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
+  let allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
   let sourceStruct: Record<string, Record<string, Source | undefined>> = {};
   let selectedModelId: string | undefined = undefined;
   let thumbnail: ObjectThumbnail | null = null;
@@ -34,6 +34,8 @@ License: CECILL-C
   $: $annotations, $entities, handleAnnotationSortedByModel();
 
   const handleAnnotationSortedByModel = () => {
+    allEntitiesSortedBySource = {};
+    sourceStruct = {};
     //console.log("ObjectInspector refresh fired", $annotations, $entities);
     $annotations.forEach((ann) => {
       let kind: string = "other";
@@ -65,8 +67,6 @@ License: CECILL-C
     if ("model" in allEntitiesSortedBySource) {
       selectedModelId = Object.keys(allEntitiesSortedBySource["model"])[0];
     }
-    //svelte hack
-    sourceStruct = sourceStruct;
 
     //scroll and set thumbnail to highlighted object if any
     const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");

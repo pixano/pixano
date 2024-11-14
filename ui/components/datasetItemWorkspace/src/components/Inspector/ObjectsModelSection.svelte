@@ -11,7 +11,7 @@ License: CECILL-C
   import { IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { OTHER } from "../../lib/constants";
+  import { GROUND_TRUTH, OTHER } from "../../lib/constants";
   import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
@@ -29,9 +29,10 @@ License: CECILL-C
   );
 
   onMount(() => {
-    if (source && !["human", "ground_truth"].includes(source.data.kind.toLowerCase())) {
+    if (source) {
       modelName = source.data.name;
-      sectionTitle = source.data.kind + " - " + source.data.name;
+      if (source.data.kind === "ground_truth") sectionTitle = GROUND_TRUTH;
+      else sectionTitle = source.data.kind + " - " + source.data.name;
     }
   });
 
