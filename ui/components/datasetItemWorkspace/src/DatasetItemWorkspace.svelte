@@ -7,14 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
-  import {
-    Annotation,
-    Mask,
-    Tracklet,
-    Entity,
-    DatasetItem,
-    type SaveItem,
-  } from "@pixano/core";
+  import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
