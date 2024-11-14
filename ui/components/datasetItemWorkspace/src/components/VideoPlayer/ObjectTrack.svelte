@@ -25,10 +25,11 @@ License: CECILL-C
     currentFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { addOrUpdateSaveItem, getTopEntity } from "../../lib/api/objectsApi";
+  import { addOrUpdateSaveItem, getTopEntity, getPixanoSource } from "../../lib/api/objectsApi";
 
   export let track: Track;
   export let views: MView;
@@ -97,6 +98,7 @@ License: CECILL-C
     } else {
       let newItemBBox: BBox | undefined = undefined;
       let newItemKpt: Keypoints | undefined = undefined;
+      const pix_source = getPixanoSource(sourcesStore);
       //an interpolated obj should exist: use it
       const interpolatedBox = bboxes.find(
         (box) =>
@@ -119,6 +121,7 @@ License: CECILL-C
           w / current_sf.data.width,
           h / current_sf.data.height,
         ];
+        newItemBBox.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
         const save_new_item: SaveItem = {
           change_type: "add",
           object: newItemBBox,
@@ -164,7 +167,7 @@ License: CECILL-C
           }
           newItemKpt.data.coords = coords;
           newItemKpt.data.states = states;
-
+          newItemKpt.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
           const save_new_item: SaveItem = {
             change_type: "add",
             object: newItemKpt,

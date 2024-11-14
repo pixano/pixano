@@ -21,6 +21,7 @@ License: CECILL-C
     datasetSchema,
     isLoadingNewItemStore,
     modelsStore,
+    sourcesStore,
     saveCurrentItemStore,
   } from "../../../../lib/stores/datasetStores";
   import { goto } from "$app/navigation";
@@ -97,6 +98,10 @@ License: CECILL-C
     const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     if (foundDataset) {
       selectedDataset = foundDataset;
+      api
+        .getSources(selectedDataset.id)
+        .then((sources) => sourcesStore.set(sources))
+        .catch((err) => console.error("ERROR: Unable to get sources", err));
     }
   });
 
@@ -133,6 +138,10 @@ License: CECILL-C
       let route = savedItem.object.table_info.group;
       if (route === "item") {
         route = "items";
+        no_table = true;
+      }
+      if (route === "source") {
+        route = "sources";
         no_table = true;
       }
       //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)

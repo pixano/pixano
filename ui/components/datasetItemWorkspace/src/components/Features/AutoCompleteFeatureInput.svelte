@@ -6,21 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  // import { Check } from "lucide-svelte";
-  // import { Command, cn, Popover } from "@pixano/core/src";
-
-  // export let featureList: { value: string; label: string }[] = [];
-
-  // export let isFixed: boolean = false;
-
-  // let open = false;
-
-  // const onSelect = (currentValue: string) => {
-  //   value = currentValue;
-  //   onTextInputChange(value);
-  //   open = false;
-  // };
-
   import { Check } from "lucide-svelte";
   import { tick } from "svelte";
   import { Command, cn, Popover } from "@pixano/core/src";
@@ -37,7 +22,10 @@ License: CECILL-C
   let selectedValue = value || placeholder;
   let inputValue: string = value;
 
-  $: selectedValue = featureList.find((f) => f.value === value)?.label ?? placeholder;
+  $: selectedValue =
+    featureList.find((f) => f.value === value)?.label ??
+    (value === "" ? null : value) ??
+    placeholder;
 
   // We want to refocus the trigger button when the user selects
   // an item from the list so users can continue navigating the
@@ -53,6 +41,10 @@ License: CECILL-C
 
   const onSelect = (currentValue: string, trigger: string) => {
     value = currentValue;
+    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
+    if (!existingValue && inputValue) {
+      featureList = [...featureList, { value: inputValue, label: inputValue }];
+    }
     onTextInputChange(value);
     closeAndFocusTrigger(trigger);
   };
@@ -82,12 +74,7 @@ License: CECILL-C
   <Popover.Content class="p-0 " tabindex={-1}>
     <Command.Root>
       {#if isInputEnabled}
-        <Command.Input
-          {placeholder}
-          on:change={() => console.log("changed")}
-          bind:value={inputValue}
-          on:input={onSearchInput}
-        />
+        <Command.Input {placeholder} bind:value={inputValue} on:input={onSearchInput} />
       {/if}
       <Command.List>
         {#each featureList as feature}

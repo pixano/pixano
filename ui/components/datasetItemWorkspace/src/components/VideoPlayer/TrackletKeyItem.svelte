@@ -14,9 +14,10 @@ License: CECILL-C
     saveData,
     entities,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
 
   export let trackId: string;
 
@@ -95,6 +96,8 @@ License: CECILL-C
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
     if (changed_tracklet) {
+      const pix_source = getPixanoSource(sourcesStore);
+      tracklet.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
       const save_upd_tracklet: SaveItem = {
         change_type: "update",
         object: tracklet,

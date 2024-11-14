@@ -85,6 +85,23 @@ export class BaseData<T extends object> {
   }
 }
 
+////////// SOURCES ////////////
+const sourceSchema = z
+  .object({
+    name: z.string(),
+    kind: z.string(),
+    metadata: z.string(),
+  })
+  .strict();
+type sourceType = z.infer<typeof sourceSchema>;
+
+export class Source extends BaseData<sourceType> {
+  constructor(obj: BaseDataFields<sourceType>) {
+    sourceSchema.parse(obj.data);
+    super(obj);
+  }
+}
+
 ////////// EMBEDDINGS /////////////
 const viewEmbeddingSchema = z
   .object({
@@ -382,7 +399,7 @@ export class BBox extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["coords", "format", "is_normalized"]); //"confidence",  TMP TEST
+    return super.nonFeaturesFields().concat(["coords", "format", "is_normalized", "confidence"]);
   }
 }
 
@@ -745,7 +762,7 @@ export type Schema = Annotation | Entity | Item | View;
 
 export type SaveItem = {
   change_type: "add" | "update" | "delete";
-  object: Annotation | Entity | Item;
+  object: Annotation | Entity | Item | Source;
 };
 
 // ITEM EMBEDDING

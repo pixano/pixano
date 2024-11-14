@@ -7,7 +7,14 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
-  import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
+  import {
+    Annotation,
+    Mask,
+    Tracklet,
+    Entity,
+    DatasetItem,
+    type SaveItem,
+  } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
@@ -28,8 +35,6 @@ License: CECILL-C
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
-  import { GROUND_TRUTH } from "./lib/constants";
-
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -44,10 +49,6 @@ License: CECILL-C
   let embeddings: Embeddings = {};
 
   const back2front = (ann: Annotation): Annotation => {
-    //TMP: my dataset doesn't have source name yet...
-    if (ann.data.source_ref.name == "" || ann.data.source_ref.name == "source")
-      ann.data.source_ref.name = GROUND_TRUTH; //TMP
-
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
     if (selectedItem.ui.type === "image") {
@@ -116,9 +117,6 @@ License: CECILL-C
     entities.set(newEntities);
 
     //add tracklets childs
-
-    //WIP//TODO :: Something wrong here (incorrect childs (only tracklets) when there is subentities) !!
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
     annotations.update((anns) =>
       anns.map((ann) => {
         if (ann.is_tracklet) {
@@ -134,7 +132,6 @@ License: CECILL-C
                   child.data.view_ref.name === tracklet.data.view_ref.name,
               ) || [];
             tracklet.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
-            //console.log("ZAZAR", track_entity, tracklet);
           }
         }
         return ann;
@@ -159,24 +156,22 @@ License: CECILL-C
     loadData();
   }
 
-  export const front2back = (objs: SaveItem[]): SaveItem[] => {
+  const front2back = (objs: SaveItem[]): SaveItem[] => {
     const backObjs: SaveItem[] = [];
     for (const obj of objs) {
-      const schema = structuredClone(obj.object);
-      //source_ref
-      schema.data.source_ref = { name: "source", id: "" };
       //mask: URLE to CompressedRLE
       if (
         (obj.change_type === "add" || obj.change_type === "update") &&
-        schema.table_info.group === "annotations" &&
-        schema.table_info.base_schema === "CompressedRLE" &&
-        Array.isArray((schema as Mask).data.counts)
+        obj.object.table_info.group === "annotations" &&
+        obj.object.table_info.base_schema === "CompressedRLE" &&
+        Array.isArray((obj.object as Mask).data.counts)
       ) {
-        const mask = schema as Mask;
+        const mask = structuredClone(obj.object) as Mask;
         mask.data.counts = rleToString(mask.data.counts as number[]);
+        backObjs.push({ ...obj, object: mask });
+      } else {
+        backObjs.push({ ...obj });
       }
-
-      backObjs.push({ ...obj, object: schema });
     }
     return backObjs;
   };

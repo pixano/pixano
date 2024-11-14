@@ -38,11 +38,16 @@ License: CECILL-C
     imageSmoothing,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import {
+    updateExistingObject,
+    addOrUpdateSaveItem,
+    getPixanoSource,
+  } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
@@ -257,6 +262,8 @@ License: CECILL-C
           `ERROR: mismatching types ${shape.type} & ${update_ann.table_info.base_schema}`,
         );
       }
+      const pix_source = getPixanoSource(sourcesStore);
+      update_ann.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
       //update
       updated_annotations = annotations.map((ann) => (ann.id === update_ann.id ? update_ann : ann));
       saveData = {
@@ -266,7 +273,7 @@ License: CECILL-C
     } else {
       //updated an interpolated annotation: create it
       //use start ann of interpolated as base for new ann
-      let new_ann: Annotation;
+      let new_ann: Annotation | undefined = undefined;
       if (shape.type === "bbox") {
         const interpolated_box = $current_itemBBoxes.find((box) => box.id === shape.shapeId);
         if (interpolated_box && "startRef" in interpolated_box) {
@@ -306,8 +313,13 @@ License: CECILL-C
         console.log("TODO! mask");
         //mask not implemented yet in video
       }
+      if (!new_ann) {
+        //TODO - remove this when mask managed (used mainly to avoid lint warnings)
+        throw new Error("Masks are not managed yet in video!");
+      }
       //update
-      //TODO note: lint warnings because KPT and mask not covered yet. (new_ann not set in these cases))
+      const pix_source = getPixanoSource(sourcesStore);
+      new_ann.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
       updated_annotations = [...annotations, new_ann];
       saveData = {
         change_type: "add",

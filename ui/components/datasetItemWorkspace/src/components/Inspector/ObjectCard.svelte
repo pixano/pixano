@@ -50,10 +50,18 @@ License: CECILL-C
 
   let open: boolean = false;
   let showIcons: boolean = false;
+  let isHighlighted: boolean = false;
+  let isEditing: boolean = false;
+  let isVisible: boolean = true;
+  let boxIsVisible: boolean = true;
+  let maskIsVisible: boolean = true;
+  let keypointsIsVisible: boolean = true;
+  let display_name: string = `${entity.data.name ? (entity.data.name as string) + " - " : ""}${entity.id}`;
+
+  $: color = $colorScale[1](entity.id);
 
   const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
     //get all features from Top entity (obj) to evental sub entities and annotations
-
     //let anns_features: Record<string, Feature[]> = {};
     let feats: Record<string, Feature[]> = {};
     let child_anns: Annotation[] = [];
@@ -87,33 +95,28 @@ License: CECILL-C
     return Object.values(feats).flat();
   });
 
-  $: console.log("FFF", entity, $features);
-  $: isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self");
-  $: isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
-  $: isVisible =
-    entity.ui.childs?.find((ann) => getTopEntity(ann, $entities).id === entity.id)?.ui
-      .displayControl?.hidden === false || false;
-  $: boxIsVisible =
-    entity.ui.childs?.some(
-      (ann) => ann.ui.datasetItemType === "image" && ann.is_bbox && !ann.ui.displayControl?.hidden,
-    ) || false;
-  $: maskIsVisible =
-    entity.ui.childs?.some(
-      (ann) => ann.ui.datasetItemType === "image" && ann.is_mask && !ann.ui.displayControl?.hidden,
-    ) || false;
-  $: keypointsIsVisible =
-    entity.ui.childs?.some(
-      (ann) =>
-        ann.ui.datasetItemType === "image" && ann.is_keypoints && !ann.ui.displayControl?.hidden,
-    ) || false;
+  annotations.subscribe(() => {
+    isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
+    isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
+    isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl?.hidden) || false;
+    boxIsVisible =
+      entity.ui.childs?.some(
+        (ann) =>
+          ann.ui.datasetItemType === "image" && ann.is_bbox && !ann.ui.displayControl?.hidden,
+      ) || false;
+    maskIsVisible =
+      entity.ui.childs?.some(
+        (ann) =>
+          ann.ui.datasetItemType === "image" && ann.is_mask && !ann.ui.displayControl?.hidden,
+      ) || false;
+    keypointsIsVisible =
+      entity.ui.childs?.some(
+        (ann) =>
+          ann.ui.datasetItemType === "image" && ann.is_keypoints && !ann.ui.displayControl?.hidden,
+      ) || false;
+  });
 
-  $: color = $colorScale[1](entity.id);
-
-  const handleIconClick = (
-    displayControlProperty: keyof DisplayControl,
-    value: boolean,
-    properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
-  ) => {
+  const handleIconClick = (displayControlProperty: keyof DisplayControl, value: boolean) => {
     annotations.update((anns) =>
       anns.map((ann) => {
         if (displayControlProperty === "editing") {
@@ -129,7 +132,7 @@ License: CECILL-C
           };
         }
         if (getTopEntity(ann, $entities).id === entity.id) {
-          ann = toggleObjectDisplayControl(ann, displayControlProperty, properties, value);
+          ann = toggleObjectDisplayControl(ann, displayControlProperty, value);
         }
         return ann;
       }),
@@ -239,7 +242,7 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{entity.id}</span>
+      <span class="truncate w-max flex-auto">{display_name}</span>
     </div>
     <div class="flex items-center">
       {#if showIcons || isEditing}
@@ -273,7 +276,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                      handleClick={() => handleIconClick("hidden", boxIsVisible)}
                       bind:checked={boxIsVisible}
                       title={boxIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -284,7 +287,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                      handleClick={() => handleIconClick("hidden", maskIsVisible)}
                       bind:checked={maskIsVisible}
                       title={maskIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -295,8 +298,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
-                      handleClick={() =>
-                        handleIconClick("hidden", keypointsIsVisible, ["keypoints"])}
+                      handleClick={() => handleIconClick("hidden", keypointsIsVisible)}
                       bind:checked={keypointsIsVisible}
                       title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"

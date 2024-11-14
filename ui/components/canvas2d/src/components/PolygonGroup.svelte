@@ -39,7 +39,7 @@ License: CECILL-C
     ),
   };
 
-  $: canEdit = mask.ui.displayControl.editing;
+  $: canEdit = mask.ui.displayControl?.editing;
 
   $: {
     polygonShape.simplifiedPoints = mask.ui.svg.reduce(
@@ -122,7 +122,7 @@ License: CECILL-C
   config={{
     id: `polygon-${mask.id}`,
     draggable: canEdit,
-    visible: !mask.ui.displayControl.hidden,
+    visible: !mask.ui.displayControl?.hidden,
     opacity: mask.ui.opacity,
     listening: selectedTool.type === "PAN",
   }}

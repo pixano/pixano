@@ -8,68 +8,45 @@ License: CECILL-C
   // Imports
   import { Eye, EyeOff } from "lucide-svelte";
 
-  import { IconButton } from "@pixano/core/src";
+  import { IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { EXISTING_SOURCE_IDS, GROUND_TRUTH } from "../../lib/constants";
+  import { OTHER } from "../../lib/constants";
   import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { onMount } from "svelte";
+  import { derived } from "svelte/store";
 
-  export let sectionTitle: string;
-  export let modelName: string;
+  export let source: Source | undefined;
   export let numberOfItem: number;
+  let modelName: string = OTHER;
+  let sectionTitle: string = OTHER + " - unknown";
+  let visibilityStatus = derived([annotations], ([$annotations]) =>
+    $annotations
+      .filter((ann) => ann.data.source_ref.id === source?.id)
+      .every((ann) => ann.ui.displayControl?.hidden)
+      ? "hidden"
+      : "shown",
+  );
 
-  let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
+  onMount(() => {
+    if (source && !["human", "ground_truth"].includes(source.data.kind.toLowerCase())) {
+      modelName = source.data.name;
+      sectionTitle = source.data.kind + " - " + source.data.name;
+    }
+  });
+
   $: tooltipContent =
-    visibilityStatus === "hidden" ? `Show ${modelName} objects` : `Hide ${modelName} objects`;
-
-  annotations.subscribe((items) => {
-    if (!items.length) return;
-    const allObjectsOfCurrentModel = items.filter(
-      (item) => item.data.source_ref.name === modelName,
-    );
-    const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
-      (item) => item.ui.displayControl?.hidden,
-    );
-    if (allObjectsOfCurrentModelAreHidden) {
-      visibilityStatus = "hidden";
-    }
-    const allObjectsOfCurrentModelAreShown = allObjectsOfCurrentModel.every(
-      (item) => !item.ui.displayControl?.hidden,
-    );
-    if (allObjectsOfCurrentModelAreShown) {
-      visibilityStatus = "shown";
-    }
-  });
-
-  $: annotations.update((objects) => {
-    return objects.map((object) => {
-      const isHidden = visibilityStatus === "hidden";
-      if (modelName === GROUND_TRUTH) {
-        if (object.data.source_ref.name === modelName) {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
-        } else {
-          return object;
-        }
-      }
-      if (!EXISTING_SOURCE_IDS.includes(object.data.source_ref.name)) {
-        if (object.data.source_ref.name === modelName) {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
-        } else {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], true);
-        }
-      }
-      return object;
-    });
-  });
+    $visibilityStatus === "hidden" ? `Show ${modelName} objects` : `Hide ${modelName} objects`;
 
   const handleVisibilityIconClick = () => {
-    if (visibilityStatus === "hidden") {
-      visibilityStatus = "shown";
-    } else if (visibilityStatus === "shown") {
-      visibilityStatus = "hidden";
-    } else {
-      visibilityStatus = "hidden";
-    }
+    const isHidden = $visibilityStatus === "hidden";
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        return ann.data.source_ref.id === source?.id
+          ? toggleObjectDisplayControl(ann, "hidden", !isHidden)
+          : ann;
+      }),
+    );
   };
 </script>
 
@@ -77,7 +54,7 @@ License: CECILL-C
   <div class="flex items-center justify-between text-slate-800">
     <div class="flex items-center gap-3 w-full">
       <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
-        {#if visibilityStatus === "hidden"}
+        {#if $visibilityStatus === "hidden"}
           <EyeOff class="h-4" />
         {:else}
           <Eye class="h-4" />

@@ -23,7 +23,8 @@ License: CECILL-C
     selectedTool,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
 
   import { panTool } from "../../lib/settings/selectionTools";
 
@@ -119,11 +120,14 @@ License: CECILL-C
         return ann;
       }),
     );
+    const pix_source = getPixanoSource(sourcesStore);
+    tracklet.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
     const save_tracklet_resized: SaveItem = {
       change_type: "update",
       object: tracklet,
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_tracklet_resized));
+    movedAnn.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
     const save_ann_moved: SaveItem = {
       change_type: "update",
       object: movedAnn,

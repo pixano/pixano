@@ -92,8 +92,8 @@ License: CECILL-C
     //await tick: required to allow redraw of frame when right click "Edit Item" on a different frame
     //not a very elegant solution thought...
     await tick();
-    toggleIsEditingBBox(bbox.ui.displayControl.editing ? "on" : "off", stage, bbox.id);
-    if (bbox.ui.displayControl.editing) {
+    toggleIsEditingBBox(bbox.ui.displayControl?.editing ? "on" : "off", stage, bbox.id);
+    if (bbox.ui.displayControl?.editing) {
       const viewLayer: Konva.Layer = stage.findOne(`#${bbox.data.view_ref.name}`);
       if (viewLayer) {
         const currentRect: Konva.Rect = viewLayer.findOne(`#rect${bbox.id}`);
@@ -110,7 +110,7 @@ License: CECILL-C
     }
   };
 
-  $: bbox.ui.displayControl.editing, void handleEditing();
+  $: bbox.ui.displayControl?.editing, void handleEditing();
 </script>
 
 <Group
@@ -128,15 +128,15 @@ License: CECILL-C
       stroke: colorScale(bbox.ui.top_entity ? bbox.ui.top_entity.id : bbox.data.entity_ref.id),
       strokeWidth: bbox.ui.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.ui.opacity,
-      visible: !bbox.ui.displayControl.hidden,
-      draggable: bbox.ui.displayControl.editing,
+      visible: !bbox.ui.displayControl?.hidden,
+      draggable: bbox.ui.displayControl?.editing,
     }}
   />
   <LabelTag
     id={bbox.id}
     x={bbox.data.coords[0]}
     y={bbox.data.coords[1]}
-    visible={!bbox.ui.displayControl.hidden}
+    visible={!bbox.ui.displayControl?.hidden}
     {zoomFactor}
     opacity={bbox.ui.opacity}
     tooltip={bbox.ui.tooltip}
