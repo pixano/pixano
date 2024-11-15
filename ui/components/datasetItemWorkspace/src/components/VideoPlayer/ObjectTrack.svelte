@@ -98,7 +98,7 @@ License: CECILL-C
     } else {
       let newItemBBox: BBox | undefined = undefined;
       let newItemKpt: Keypoints | undefined = undefined;
-      const pix_source = getPixanoSource(sourcesStore);
+      const pixSource = getPixanoSource(sourcesStore);
       //an interpolated obj should exist: use it
       const interpolatedBox = bboxes.find(
         (box) =>
@@ -121,7 +121,7 @@ License: CECILL-C
           w / current_sf.data.width,
           h / current_sf.data.height,
         ];
-        newItemBBox.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+        newItemBBox.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
         const save_new_item: SaveItem = {
           change_type: "add",
           object: newItemBBox,
@@ -167,7 +167,7 @@ License: CECILL-C
           }
           newItemKpt.data.coords = coords;
           newItemKpt.data.states = states;
-          newItemKpt.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+          newItemKpt.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
           const save_new_item: SaveItem = {
             change_type: "add",
             object: newItemKpt,

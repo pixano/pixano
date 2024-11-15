@@ -96,8 +96,8 @@ License: CECILL-C
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
     if (changed_tracklet) {
-      const pix_source = getPixanoSource(sourcesStore);
-      tracklet.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+      const pixSource = getPixanoSource(sourcesStore);
+      tracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
       const save_upd_tracklet: SaveItem = {
         change_type: "update",
         object: tracklet,

@@ -336,8 +336,8 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
         changed = true;
       }
       if (changed) {
-        const pix_source = getPixanoSource(sourcesStore);
-        ann.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+        const pixSource = getPixanoSource(sourcesStore);
+        ann.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
         const save_item: SaveItem = {
           change_type: "update",
           object: ann,
@@ -472,12 +472,12 @@ export const defineCreatedObject = (
     created_at: now,
     updated_at: now,
   };
-  const pix_source = getPixanoSource(sourcesStore);
+  const pixSource = getPixanoSource(sourcesStore);
   const baseData = {
     item_ref: entity.data.item_ref,
     view_ref: viewRef,
     entity_ref: { name: entity.table_info.name, id: entity.id },
-    source_ref: { name: pix_source.table_info.name, id: pix_source.id },
+    source_ref: { name: pixSource.table_info.name, id: pixSource.id },
   };
   let newObject: Annotation | undefined = undefined;
   if (shape.type === "bbox") {

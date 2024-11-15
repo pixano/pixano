@@ -49,9 +49,9 @@ License: CECILL-C
         } else {
           srcId = ann.data.source_ref.id;
         }
-      } else {
-        console.warn("No associated source !!", ann.data.source_ref);
-      }
+      } //else {
+      //console.warn("No associated source !!", ann.data.source_ref);
+      //}
       if (!(kind in allEntitiesSortedBySource)) {
         allEntitiesSortedBySource[kind] = {};
         sourceStruct[kind] = {};

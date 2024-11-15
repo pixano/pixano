@@ -109,15 +109,15 @@ License: CECILL-C
     }
     entities.set(newEntities);
 
-    //add tracklets childs
+    //add tracklets childs & all annotations top_entity
     annotations.update((anns) =>
       anns.map((ann) => {
+        const top_entity = getTopEntity(ann, $entities);
         if (ann.is_tracklet) {
           const tracklet = ann as Tracklet;
-          const track_entity = getTopEntity(tracklet, $entities);
-          if (track_entity) {
+          if (top_entity) {
             tracklet.ui.childs =
-              track_entity.ui.childs?.filter(
+              top_entity.ui.childs?.filter(
                 (child) =>
                   child.ui.frame_index !== undefined &&
                   child.ui.frame_index <= tracklet.data.end_timestep &&

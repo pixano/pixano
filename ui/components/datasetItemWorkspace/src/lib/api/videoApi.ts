@@ -161,14 +161,14 @@ export const splitTrackletInTwo = (
   tracklet2split.data.end_timestep = prev;
   tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
 
-  const pix_source = getPixanoSource(sourcesStore);
-  tracklet2split.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+  const pixSource = getPixanoSource(sourcesStore);
+  tracklet2split.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
   const save_item_left: SaveItem = {
     change_type: "update",
     object: tracklet2split,
   };
   saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_left));
-  rightTracklet.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+  rightTracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
   const save_item_right: SaveItem = {
     change_type: "add",
     object: rightTracklet,

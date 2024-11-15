@@ -120,14 +120,14 @@ License: CECILL-C
         return ann;
       }),
     );
-    const pix_source = getPixanoSource(sourcesStore);
-    tracklet.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+    const pixSource = getPixanoSource(sourcesStore);
+    tracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
     const save_tracklet_resized: SaveItem = {
       change_type: "update",
       object: tracklet,
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_tracklet_resized));
-    movedAnn.data.source_ref = { id: pix_source.id, name: pix_source.table_info.name };
+    movedAnn.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
     const save_ann_moved: SaveItem = {
       change_type: "update",
       object: movedAnn,

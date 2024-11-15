@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Eye, EyeOff } from "lucide-svelte";
 
-  import { IconButton, Source } from "@pixano/core/src";
+  import { Annotation, IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, OTHER } from "../../lib/constants";
@@ -20,10 +20,15 @@ License: CECILL-C
   export let numberOfItem: number;
   let modelName: string = OTHER;
   let sectionTitle: string = OTHER + " - unknown";
+
+  const isAnnFromSource = (ann: Annotation): boolean => {
+    //if we have no source info at all (it shouldn't happens), we have source_ref.id === "";
+    //note it's different from no corresponding source in source table
+    return source ? ann.data.source_ref.id === source.id : ann.data.source_ref.id === "";
+  };
+
   let visibilityStatus = derived([annotations], ([$annotations]) =>
-    $annotations
-      .filter((ann) => ann.data.source_ref.id === source?.id)
-      .every((ann) => ann.ui.displayControl?.hidden)
+    $annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl?.hidden)
       ? "hidden"
       : "shown",
   );
@@ -43,9 +48,7 @@ License: CECILL-C
     const isHidden = $visibilityStatus === "hidden";
     annotations.update((anns) =>
       anns.map((ann) => {
-        return ann.data.source_ref.id === source?.id
-          ? toggleObjectDisplayControl(ann, "hidden", !isHidden)
-          : ann;
+        return isAnnFromSource(ann) ? toggleObjectDisplayControl(ann, "hidden", !isHidden) : ann;
       }),
     );
   };

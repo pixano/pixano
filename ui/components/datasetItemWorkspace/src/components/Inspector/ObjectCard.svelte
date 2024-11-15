@@ -56,7 +56,7 @@ License: CECILL-C
   let boxIsVisible: boolean = true;
   let maskIsVisible: boolean = true;
   let keypointsIsVisible: boolean = true;
-  let display_name: string = `${entity.data.name ? (entity.data.name as string) + " - " : ""}${entity.id}`;
+  let displayName: string = `${entity.data.name ? (entity.data.name as string) + " - " : ""}${entity.id}`;
 
   $: color = $colorScale[1](entity.id);
 
@@ -242,7 +242,7 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{display_name}</span>
+      <span class="truncate w-max flex-auto">{displayName}</span>
     </div>
     <div class="flex items-center">
       {#if showIcons || isEditing}
