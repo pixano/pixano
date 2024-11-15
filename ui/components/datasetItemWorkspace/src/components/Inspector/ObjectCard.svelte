@@ -60,6 +60,12 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
+  //Note: as ObjectInspector recreate the whole Objects tab whenever
+  //there is a change in annotations or entities stores
+  //(bad design... don't find better way to keep it up-to-date)
+  //we link (one way) "open" to the "isEditing" state
+  $: if (isEditing) open = true;
+
   const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
     //get all features from Top entity (obj) to evental sub entities and annotations
     //let anns_features: Record<string, Feature[]> = {};
@@ -206,7 +212,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
-    handleIconClick("editing", !isEditing), (open = true);
+    handleIconClick("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };
 
