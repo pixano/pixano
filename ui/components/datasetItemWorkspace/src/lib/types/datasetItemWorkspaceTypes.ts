@@ -9,18 +9,11 @@ import * as ort from "onnxruntime-web";
 
 import { DatasetItem, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
-import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";
 import type {
   createObjectInputsSchema,
   listInputSchema,
   otherInputSchema,
 } from "../settings/objectValidationSchemas";
-
-export type ObjectsSortedByModelType<T> = {
-  [GROUND_TRUTH]: T[];
-  [PRE_ANNOTATION]: T[];
-  [key: string]: T[];
-};
 
 export type ListInput = z.infer<typeof listInputSchema>;
 

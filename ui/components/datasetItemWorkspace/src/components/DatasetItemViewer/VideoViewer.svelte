@@ -38,11 +38,16 @@ License: CECILL-C
     imageSmoothing,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import {
+    updateExistingObject,
+    addOrUpdateSaveItem,
+    getPixanoSource,
+  } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
@@ -257,6 +262,8 @@ License: CECILL-C
           `ERROR: mismatching types ${shape.type} & ${update_ann.table_info.base_schema}`,
         );
       }
+      const pixSource = getPixanoSource(sourcesStore);
+      update_ann.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
       //update
       updated_annotations = annotations.map((ann) => (ann.id === update_ann.id ? update_ann : ann));
       saveData = {
@@ -266,7 +273,7 @@ License: CECILL-C
     } else {
       //updated an interpolated annotation: create it
       //use start ann of interpolated as base for new ann
-      let new_ann: Annotation;
+      let newAnn: Annotation | undefined = undefined;
       if (shape.type === "bbox") {
         const interpolated_box = $current_itemBBoxes.find((box) => box.id === shape.shapeId);
         if (interpolated_box && "startRef" in interpolated_box) {
@@ -276,7 +283,7 @@ License: CECILL-C
           newBBox.data.view_ref = shape.viewRef;
           newBBox.ui.frame_index = currentFrame;
           newBBox.updated_at = new Date(Date.now()).toISOString();
-          new_ann = newBBox;
+          newAnn = newBBox;
         }
       } else if (shape.type === "keypoints") {
         const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
@@ -299,19 +306,24 @@ License: CECILL-C
             newKpt.data.view_ref = shape.viewRef;
             newKpt.ui.frame_index = currentFrame;
             newKpt.updated_at = new Date(Date.now()).toISOString();
-            new_ann = newKpt;
+            newAnn = newKpt;
           }
         }
       } else if (shape.type === "mask") {
         console.log("TODO! mask");
         //mask not implemented yet in video
       }
+      if (!newAnn) {
+        //TODO - remove this when mask managed (used mainly to avoid lint warnings)
+        throw new Error("Masks are not managed yet in video!");
+      }
       //update
-      //TODO note: lint warnings because KPT and mask not covered yet. (new_ann not set in these cases))
-      updated_annotations = [...annotations, new_ann];
+      const pixSource = getPixanoSource(sourcesStore);
+      newAnn.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+      updated_annotations = [...annotations, newAnn];
       saveData = {
         change_type: "add",
-        object: new_ann,
+        object: newAnn,
       };
     }
     return {

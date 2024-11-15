@@ -15,6 +15,7 @@ import {
   Track,
   Image,
   SequenceFrame,
+  Source,
 } from "@pixano/core";
 import type {
   Reference,
@@ -35,19 +36,16 @@ import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
 
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
-  GROUND_TRUTH,
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
   HIGHLIGHTED_MASK_STROKE_FACTOR,
 } from "../constants";
-import type {
-  ItemsMeta,
-  ObjectProperties,
-  ObjectsSortedByModelType,
-} from "../types/datasetItemWorkspaceTypes";
+import type { ItemsMeta, ObjectProperties } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
 import { templates } from "../settings/keyPointsTemplates";
+import { get, type Writable } from "svelte/store";
+import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
   return entities.find((entity) => entity.id === ann.data.entity_ref.id);
@@ -71,15 +69,44 @@ export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
   return entity as Entity;
 };
 
-export const getObjectsEntities = (anns: Annotation[], entities: Entity[]): Entity[] => {
-  return Array.from(new Set(anns.map((ann) => getTopEntity(ann, entities))));
+export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
+  //manage source: add if we need it
+  //TMP (TODO) - currently, all add/update from Pixano App are under a same unique source
+  const sources = get<Source[]>(srcStore);
+  let pixanoSource = sources.find((src) => src.data.name === "Pixano" && src.data.kind === "other");
+  if (!pixanoSource) {
+    const now = new Date(Date.now()).toISOString();
+    pixanoSource = new Source({
+      id: "pixano_source",
+      created_at: now,
+      updated_at: now,
+      table_info: { name: "source", group: "source", base_schema: "Source" },
+      data: { name: "Pixano", kind: "other", metadata: "{}" },
+    });
+    srcStore.update((sources) => {
+      sources.push(pixanoSource!);
+      return sources;
+    });
+    //save it
+    const save_item: SaveItem = {
+      change_type: "add",
+      object: pixanoSource,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+  }
+  return pixanoSource;
 };
 
 const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   if (!(bbox && bbox.is_bbox)) return null;
 
+  const source = get<Source[]>(sourcesStore).find((src) => src.id === bbox.data.source_ref.id);
+
   const confidence =
-    bbox.data.confidence !== 0.0 && bbox.data.source_ref.name !== GROUND_TRUTH
+    bbox.data.confidence !== 0.0 &&
+    source &&
+    source.data.kind !== "ground_truth" &&
+    source.data.name !== "Pixano"
       ? " " + bbox.data.confidence.toFixed(2)
       : "";
 
@@ -215,7 +242,6 @@ export const mapObjectToKeypoints = (
 export const toggleObjectDisplayControl = (
   object: Annotation,
   displayControlProperty: keyof DisplayControl,
-  properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
 ): Annotation => {
   object.ui.displayControl = {
@@ -246,19 +272,6 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
   objects.push(newObj);
   return objects;
 };
-
-export const sortObjectsByModel = (anns: Annotation[]) =>
-  anns.reduce(
-    (acc, ann) => {
-      if (ann.data.source_ref.name === PRE_ANNOTATION) {
-        if (!ann.ui.review_state) acc[PRE_ANNOTATION] = [...acc[PRE_ANNOTATION], ann];
-        return acc;
-      }
-      acc[ann.data.source_ref.name] = [...(acc[ann.data.source_ref.name] || []), ann];
-      return acc;
-    },
-    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType<Annotation>,
-  );
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
   if (
@@ -323,6 +336,8 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
         changed = true;
       }
       if (changed) {
+        const pixSource = getPixanoSource(sourcesStore);
+        ann.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
         const save_item: SaveItem = {
           change_type: "update",
           object: ann,
@@ -457,11 +472,12 @@ export const defineCreatedObject = (
     created_at: now,
     updated_at: now,
   };
+  const pixSource = getPixanoSource(sourcesStore);
   const baseData = {
     item_ref: entity.data.item_ref,
     view_ref: viewRef,
     entity_ref: { name: entity.table_info.name, id: entity.id },
-    source_ref: { name: GROUND_TRUTH, id: "" },
+    source_ref: { name: pixSource.table_info.name, id: pixSource.id },
   };
   let newObject: Annotation | undefined = undefined;
   if (shape.type === "bbox") {

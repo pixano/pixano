@@ -9,8 +9,9 @@ import type { KeypointsTemplate, SaveItem, Annotation } from "@pixano/core";
 import { nanoid } from "nanoid";
 import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
 
-import { addOrUpdateSaveItem } from "./objectsApi";
+import { addOrUpdateSaveItem, getPixanoSource } from "./objectsApi";
 import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
+import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -160,11 +161,14 @@ export const splitTrackletInTwo = (
   tracklet2split.data.end_timestep = prev;
   tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
 
+  const pixSource = getPixanoSource(sourcesStore);
+  tracklet2split.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
   const save_item_left: SaveItem = {
     change_type: "update",
     object: tracklet2split,
   };
   saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_left));
+  rightTracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
   const save_item_right: SaveItem = {
     change_type: "add",
     object: rightTracklet,

@@ -28,8 +28,6 @@ License: CECILL-C
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
-  import { GROUND_TRUTH } from "./lib/constants";
-
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -44,10 +42,6 @@ License: CECILL-C
   let embeddings: Embeddings = {};
 
   const back2front = (ann: Annotation): Annotation => {
-    //TMP: my dataset doesn't have source name yet...
-    if (ann.data.source_ref.name == "" || ann.data.source_ref.name == "source")
-      ann.data.source_ref.name = GROUND_TRUTH; //TMP
-
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
     if (selectedItem.ui.type === "image") {
@@ -115,18 +109,15 @@ License: CECILL-C
     }
     entities.set(newEntities);
 
-    //add tracklets childs
-
-    //WIP//TODO :: Something wrong here (incorrect childs (only tracklets) when there is subentities) !!
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //add tracklets childs & all annotations top_entity
     annotations.update((anns) =>
       anns.map((ann) => {
+        const top_entity = getTopEntity(ann, $entities);
         if (ann.is_tracklet) {
           const tracklet = ann as Tracklet;
-          const track_entity = getTopEntity(tracklet, $entities);
-          if (track_entity) {
+          if (top_entity) {
             tracklet.ui.childs =
-              track_entity.ui.childs?.filter(
+              top_entity.ui.childs?.filter(
                 (child) =>
                   child.ui.frame_index !== undefined &&
                   child.ui.frame_index <= tracklet.data.end_timestep &&
@@ -134,7 +125,6 @@ License: CECILL-C
                   child.data.view_ref.name === tracklet.data.view_ref.name,
               ) || [];
             tracklet.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
-            //console.log("ZAZAR", track_entity, tracklet);
           }
         }
         return ann;
@@ -159,24 +149,22 @@ License: CECILL-C
     loadData();
   }
 
-  export const front2back = (objs: SaveItem[]): SaveItem[] => {
+  const front2back = (objs: SaveItem[]): SaveItem[] => {
     const backObjs: SaveItem[] = [];
     for (const obj of objs) {
-      const schema = structuredClone(obj.object);
-      //source_ref
-      schema.data.source_ref = { name: "source", id: "" };
       //mask: URLE to CompressedRLE
       if (
         (obj.change_type === "add" || obj.change_type === "update") &&
-        schema.table_info.group === "annotations" &&
-        schema.table_info.base_schema === "CompressedRLE" &&
-        Array.isArray((schema as Mask).data.counts)
+        obj.object.table_info.group === "annotations" &&
+        obj.object.table_info.base_schema === "CompressedRLE" &&
+        Array.isArray((obj.object as Mask).data.counts)
       ) {
-        const mask = schema as Mask;
+        const mask = structuredClone(obj.object) as Mask;
         mask.data.counts = rleToString(mask.data.counts as number[]);
+        backObjs.push({ ...obj, object: mask });
+      } else {
+        backObjs.push({ ...obj });
       }
-
-      backObjs.push({ ...obj, object: schema });
     }
     return backObjs;
   };
