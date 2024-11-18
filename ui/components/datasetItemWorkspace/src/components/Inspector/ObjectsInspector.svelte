@@ -36,7 +36,7 @@ License: CECILL-C
   const handleAnnotationSortedByModel = () => {
     allEntitiesSortedBySource = {};
     sourceStruct = {};
-    //console.log("ObjectInspector refresh fired", $annotations, $entities);
+    console.log("ObjectInspector refresh fired", $annotations, $entities);
     $annotations.forEach((ann) => {
       let kind: string = "other";
       let srcId: string = "unknown";
@@ -102,40 +102,38 @@ License: CECILL-C
           />
         {/key}
       {/if}
-      {#key sourceStruct}
-        {#each Object.keys(sourceStruct) as kind}
-          {#if kind === "model" && selectedModelId}
+      {#each Object.keys(sourceStruct) as kind}
+        {#if kind === "model" && selectedModelId}
+          <ObjectsModelSection
+            source={sourceStruct[kind][selectedModelId]}
+            numberOfItem={allEntitiesSortedBySource[kind][selectedModelId].length}
+          >
+            <Combobox
+              slot="modelSelection"
+              bind:value={selectedModelId}
+              width="w-[150px]"
+              listItems={Object.keys(allEntitiesSortedBySource[kind]).map((sourceId) => ({
+                value: sourceId,
+                label: sourceId,
+              }))}
+            />
+            {#each allEntitiesSortedBySource[kind][selectedModelId] as entity}
+              <ObjectCard bind:entity />
+            {/each}
+          </ObjectsModelSection>
+        {:else}
+          {#each Object.keys(sourceStruct[kind]) as src_id}
             <ObjectsModelSection
-              source={sourceStruct[kind][selectedModelId]}
-              numberOfItem={allEntitiesSortedBySource[kind][selectedModelId].length}
+              source={sourceStruct[kind][src_id]}
+              numberOfItem={allEntitiesSortedBySource[kind][src_id].length}
             >
-              <Combobox
-                slot="modelSelection"
-                bind:value={selectedModelId}
-                width="w-[150px]"
-                listItems={Object.keys(allEntitiesSortedBySource[kind]).map((sourceId) => ({
-                  value: sourceId,
-                  label: sourceId,
-                }))}
-              />
-              {#each allEntitiesSortedBySource[kind][selectedModelId] as entity}
+              {#each allEntitiesSortedBySource[kind][src_id] as entity}
                 <ObjectCard bind:entity />
               {/each}
             </ObjectsModelSection>
-          {:else}
-            {#each Object.keys(sourceStruct[kind]) as src_id}
-              <ObjectsModelSection
-                source={sourceStruct[kind][src_id]}
-                numberOfItem={allEntitiesSortedBySource[kind][src_id].length}
-              >
-                {#each allEntitiesSortedBySource[kind][src_id] as entity}
-                  <ObjectCard bind:entity />
-                {/each}
-              </ObjectsModelSection>
-            {/each}
-          {/if}
-        {/each}
-      {/key}
+          {/each}
+        {/if}
+      {/each}
     </div>
   {/if}
 </div>

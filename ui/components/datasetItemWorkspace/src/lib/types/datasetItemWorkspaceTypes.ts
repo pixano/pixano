@@ -57,7 +57,13 @@ export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeatur
 export type Embeddings = Record<string, ort.Tensor>;
 
 export type ModelSelection = {
-  currentModalOpen: "selectModel" | "selectEmbeddingsTable" | "noModel" | "noEmbeddings" | "none";
+  currentModalOpen:
+    | "selectModel"
+    | "selectEmbeddingsTable"
+    | "noModel"
+    | "noEmbeddings"
+    | "loading"
+    | "none";
   selectedModelName: string;
 };
 

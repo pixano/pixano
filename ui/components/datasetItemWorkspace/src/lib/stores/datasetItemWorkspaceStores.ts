@@ -35,7 +35,7 @@ export const views = writable<Record<string, Image | SequenceFrame[]>>({});
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const preAnnotationIsActive = writable<boolean>(false);
-export const modelsStore = writable<ModelSelection>({
+export const modelsUiStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });

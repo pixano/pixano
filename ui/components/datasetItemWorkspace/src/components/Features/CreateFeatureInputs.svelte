@@ -31,7 +31,8 @@ License: CECILL-C
   export let objectProperties: { [key: string]: FeatureValues } = {};
   export let initialValues: Record<string, ItemFeature> = {};
   export let isAutofocusEnabled: boolean = true;
-
+  export let entitiesCombo: { id: string; name: string }[] = [{ id: "new", name: "New" }];
+  export let selectedEntity: { id: string; name: string } = entitiesCombo[0];
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
@@ -50,7 +51,7 @@ License: CECILL-C
         //TODO: custom fields from other types
         for (const feat in sch.fields) {
           if (!nonFeatsFields.includes(feat)) {
-            if (["int", "float", "str", "bool", "list"].includes(sch.fields[feat].type)) {
+            if (["int", "float", "str", "bool"].includes(sch.fields[feat].type)) {
               featuresArray.push({
                 name: feat,
                 required: false, //TODO (info not in datasetSchema (nowhere yet))
@@ -101,6 +102,21 @@ License: CECILL-C
     return "";
   };
 </script>
+
+{#if entitiesCombo.length > 0}
+  <span>Select attached Entity</span>
+  <select
+    class="py-1 px-2 border rounded focus:outline-none
+bg-slate-100 border-slate-300 focus:border-main"
+    bind:value={selectedEntity.id}
+  >
+    {#each entitiesCombo as { id, name }}
+      <option value={id}>
+        {name}
+      </option>
+    {/each}
+  </select>
+{/if}
 
 {#each formInputs as feature, i}
   {#if feature.type === "bool"}

@@ -30,7 +30,7 @@ License: CECILL-C
   import {
     interactiveSegmenterModel,
     newShape,
-    modelsStore,
+    modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
@@ -47,7 +47,7 @@ License: CECILL-C
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     } else selectTool(panTool);
     showSmartTools = !showSmartTools;
   };

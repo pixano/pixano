@@ -122,7 +122,11 @@ License: CECILL-C
       ) || false;
   });
 
-  const handleIconClick = (displayControlProperty: keyof DisplayControl, value: boolean) => {
+  const handleIconClick = (
+    displayControlProperty: keyof DisplayControl,
+    value: boolean,
+    kind: string | null = null,
+  ) => {
     annotations.update((anns) =>
       anns.map((ann) => {
         if (displayControlProperty === "editing") {
@@ -137,9 +141,11 @@ License: CECILL-C
             editing: false,
           };
         }
-        if (getTopEntity(ann, $entities).id === entity.id) {
+        if (
+          getTopEntity(ann, $entities).id === entity.id &&
+          (!kind || (kind && ann.table_info.base_schema === kind))
+        )
           ann = toggleObjectDisplayControl(ann, displayControlProperty, value);
-        }
         return ann;
       }),
     );
@@ -282,7 +288,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", boxIsVisible)}
+                      handleClick={() => handleIconClick("hidden", boxIsVisible, "BBox")}
                       bind:checked={boxIsVisible}
                       title={boxIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -293,7 +299,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", maskIsVisible)}
+                      handleClick={() => handleIconClick("hidden", maskIsVisible, "CompressedRLE")}
                       bind:checked={maskIsVisible}
                       title={maskIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -304,7 +310,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", keypointsIsVisible)}
+                      handleClick={() => handleIconClick("hidden", keypointsIsVisible, "Keypoints")}
                       bind:checked={keypointsIsVisible}
                       title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"

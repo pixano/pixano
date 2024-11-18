@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { derived } from "svelte/store";
   import { Button, SequenceFrame, type SaveShape, type SaveTrackletShape } from "@pixano/core/src";
 
   import { Annotation, Entity, Tracklet, type Shape, type SaveItem } from "@pixano/core";
@@ -40,6 +41,15 @@ License: CECILL-C
 
   let objectProperties: ObjectProperties = {};
 
+  let entitiesCombo = derived(entities, ($entities) => {
+    const res: { id: string; name: string }[] = [{ id: "new", name: "New" }];
+    $entities.forEach((entity) => {
+      res.push({ id: entity.id, name: (entity.data.name as string) + " - " + entity.id });
+    });
+    return res;
+  });
+  let selectedEntity = $entitiesCombo[0];
+
   newShape.subscribe((value) => {
     if (value) shape = value;
   });
@@ -52,8 +62,18 @@ License: CECILL-C
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     const isVideo = $itemMetas.type === "video";
     if (shape.status === "saving") {
-      newEntity = defineCreatedEntity(shape, features, $datasetSchema, isVideo);
-      newEntity.ui.childs = [];
+      if (selectedEntity.id === "new") {
+        newEntity = defineCreatedEntity(shape, features, $datasetSchema, isVideo);
+        newEntity.ui.childs = [];
+      } else {
+        newEntity = $entities.find((entity) => entity.id === selectedEntity.id);
+        if (!newEntity) {
+          newEntity = defineCreatedEntity(shape, features, $datasetSchema, isVideo);
+          newEntity.ui.childs = [];
+        }
+      }
+      //TODO: manage subentity for video: check if there is some subentity table(s)
+      //if so, choose the correct one, and is separate topEntity from subEntity ...
       newObject = defineCreatedObject(
         newEntity,
         shape,
@@ -188,7 +208,13 @@ License: CECILL-C
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
-      <CreateFeatureInputs bind:isFormValid bind:formInputs bind:objectProperties />
+      <CreateFeatureInputs
+        bind:isFormValid
+        bind:formInputs
+        bind:objectProperties
+        entitiesCombo={$entitiesCombo}
+        bind:selectedEntity
+      />
     </div>
     <div class="flex gap-4">
       <Button
