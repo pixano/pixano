@@ -69,7 +69,7 @@ export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
   }
   if (!entity) {
     //this should never happen
-    console.error(`ERROR: Unable to found top level Entity of annotation ${ann}`);
+    console.error("ERROR: Unable to found top level Entity of annotation", ann);
     throw new Error(`ERROR: Unable to found top level Entity of annotation (id=${ann.id})`);
   }
   //store top entity
