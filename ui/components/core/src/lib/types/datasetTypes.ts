@@ -308,7 +308,7 @@ type AnnotationUIFields = {
   highlighted?: "none" | "self" | "all";
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
-  top_entity?: Entity;
+  top_entities?: Entity[];
 };
 
 export class Annotation extends BaseData<AnnotationType> {

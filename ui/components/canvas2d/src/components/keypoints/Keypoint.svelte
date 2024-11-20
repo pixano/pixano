@@ -82,7 +82,7 @@ License: CECILL-C
       {opacity}
       {onPointDragMove}
       {findPointCoordinate}
-      draggable={keypointStructure.ui.displayControl.editing}
+      draggable={keypointStructure.ui.displayControl?.editing}
       {onPointStateChange}
     />
   {/each}

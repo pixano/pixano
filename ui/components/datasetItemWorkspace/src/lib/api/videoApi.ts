@@ -87,7 +87,7 @@ export const boxLinearInterpolation = (
   // for convenience, we store ref to start boxes
   interpolatedBox.ui.startRef = startBox;
   // top_entity (if exist) lost class with structuredClone: remove it
-  if (interpolatedBox.ui.top_entity) interpolatedBox.ui.top_entity = undefined;
+  if (interpolatedBox.ui.top_entities) delete interpolatedBox.ui.top_entities;
   interpolatedBox.data.coords = [x, y, width, height];
   return interpolatedBox;
 };
@@ -137,7 +137,7 @@ export const keypointsLinearInterpolation = (
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;
     // top_entity (if exist) lost class with structuredClone: remove it
-    if (interpolatedKpt.ui!.top_entity) interpolatedKpt.ui!.top_entity = undefined;
+    if (interpolatedKpt.ui!.top_entities) delete interpolatedKpt.ui!.top_entities;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }
@@ -156,7 +156,7 @@ export const splitTrackletInTwo = (
   rightTracklet.ui = ui;
   //note: get object links from original object, as structuredClone lose class specifics
   rightTracklet.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
-  rightTracklet.ui.top_entity = tracklet2split.ui.top_entity;
+  rightTracklet.ui.top_entities = tracklet2split.ui.top_entities;
   //tracklet2split become left tracklet
   tracklet2split.data.end_timestep = prev;
   tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);

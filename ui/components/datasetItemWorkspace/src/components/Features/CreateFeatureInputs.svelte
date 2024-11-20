@@ -32,7 +32,7 @@ License: CECILL-C
   export let initialValues: Record<string, ItemFeature> = {};
   export let isAutofocusEnabled: boolean = true;
   export let entitiesCombo: { id: string; name: string }[] = [{ id: "new", name: "New" }];
-  export let selectedEntity: { id: string; name: string } = entitiesCombo[0];
+  export let selectedEntityId: string = entitiesCombo[0].id;
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
@@ -108,7 +108,7 @@ License: CECILL-C
   <select
     class="py-1 px-2 border rounded focus:outline-none
 bg-slate-100 border-slate-300 focus:border-main"
-    bind:value={selectedEntity.id}
+    bind:value={selectedEntityId}
   >
     {#each entitiesCombo as { id, name }}
       <option value={id}>

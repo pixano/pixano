@@ -26,7 +26,7 @@ import type {
 export function createFeature<T extends object>(
   obj: BaseData<T>,
   dataset_schema: DatasetSchema,
-  additional_info: string = "", //TMP
+  additional_info: string = "",
 ): Feature[] {
   const extraFields = obj.getDynamicFields();
   const extraFieldsType = extraFields.reduce(

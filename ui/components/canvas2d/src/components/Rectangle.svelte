@@ -125,7 +125,11 @@ License: CECILL-C
       y: bbox.data.coords[1] || 0,
       width: bbox.data.coords[2] || 0,
       height: bbox.data.coords[3] || 0,
-      stroke: colorScale(bbox.ui.top_entity ? bbox.ui.top_entity.id : bbox.data.entity_ref.id),
+      stroke: colorScale(
+        bbox.ui.top_entities && bbox.ui.top_entities.length > 0
+          ? bbox.ui.top_entities[0].id
+          : bbox.data.entity_ref.id,
+      ),
       strokeWidth: bbox.ui.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.ui.opacity,
       visible: !bbox.ui.displayControl?.hidden,
@@ -140,6 +144,10 @@ License: CECILL-C
     {zoomFactor}
     opacity={bbox.ui.opacity}
     tooltip={bbox.ui.tooltip}
-    color={colorScale(bbox.ui.top_entity ? bbox.ui.top_entity.id : bbox.data.entity_ref.id)}
+    color={colorScale(
+      bbox.ui.top_entities && bbox.ui.top_entities.length > 0
+        ? bbox.ui.top_entities[0].id
+        : bbox.data.entity_ref.id,
+    )}
   />
 </Group>

@@ -6,7 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Combobox, cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
+  //import { Combobox, cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
+  import { cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
   import ObjectCard from "./ObjectCard.svelte";
@@ -18,7 +19,7 @@ License: CECILL-C
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  //import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     createObjectCardId,
     defineObjectThumbnail,
@@ -26,47 +27,66 @@ License: CECILL-C
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
 
-  let allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
-  let sourceStruct: Record<string, Record<string, Source | undefined>> = {};
-  let selectedModelId: string | undefined = undefined;
+  let allTopEntities: Set<Entity>;
+  // let allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
+  // let sourceStruct: Record<string, Record<string, Source | undefined>> = {};
+  // let selectedModelId: string | undefined = undefined;
   let thumbnail: ObjectThumbnail | null = null;
+
+  //Note: Previously Entities where grouped by source
+  //Now they're all displayed regardless of source
+  //But as this may change in future, we fake a global source
+  //rather than removing/changing all the code
+  const now = new Date(Date.now()).toISOString();
+  const globalSource = new Source({
+    id: "pixano_source",
+    created_at: now,
+    updated_at: now,
+    table_info: { name: "source", group: "source", base_schema: "Source" },
+    data: { name: "All", kind: "Global", metadata: "{}" },
+  });
 
   $: $annotations, $entities, handleAnnotationSortedByModel();
 
   const handleAnnotationSortedByModel = () => {
-    allEntitiesSortedBySource = {};
-    sourceStruct = {};
-    console.log("ObjectInspector refresh fired", $annotations, $entities);
+    allTopEntities = new Set<Entity>();
     $annotations.forEach((ann) => {
-      let kind: string = "other";
-      let srcId: string = "unknown";
-      let source: Source | undefined = undefined;
-      if (ann.data.source_ref.id !== "") {
-        source = $sourcesStore.find((src) => src.id === ann.data.source_ref.id);
-        if (source) {
-          kind = source.data.kind;
-          srcId = source.id;
-        } else {
-          srcId = ann.data.source_ref.id;
-        }
-      } //else {
-      //console.warn("No associated source !!", ann.data.source_ref);
-      //}
-      if (!(kind in allEntitiesSortedBySource)) {
-        allEntitiesSortedBySource[kind] = {};
-        sourceStruct[kind] = {};
-      }
-      if (!(srcId in allEntitiesSortedBySource[kind])) {
-        allEntitiesSortedBySource[kind][srcId] = [];
-        sourceStruct[kind][srcId] = source;
-      }
-      const top_entity = getTopEntity(ann, $entities);
-      if (allEntitiesSortedBySource[kind][srcId].indexOf(top_entity) < 0)
-        allEntitiesSortedBySource[kind][srcId].push(top_entity);
+      allTopEntities.add(getTopEntity(ann, $entities));
     });
-    if ("model" in allEntitiesSortedBySource) {
-      selectedModelId = Object.keys(allEntitiesSortedBySource["model"])[0];
-    }
+
+    // allEntitiesSortedBySource = {};
+    // sourceStruct = {};
+    // //console.log("ObjectInspector refresh fired", $annotations, $entities);
+    // $annotations.forEach((ann) => {
+    //   let kind: string = "other";
+    //   let srcId: string = "unknown";
+    //   let source: Source | undefined = undefined;
+    //   if (ann.data.source_ref.id !== "") {
+    //     source = $sourcesStore.find((src) => src.id === ann.data.source_ref.id);
+    //     if (source) {
+    //       kind = source.data.kind;
+    //       srcId = source.id;
+    //     } else {
+    //       srcId = ann.data.source_ref.id;
+    //     }
+    //   } //else {
+    //   //console.warn("No associated source !!", ann.data.source_ref);
+    //   //}
+    //   if (!(kind in allEntitiesSortedBySource)) {
+    //     allEntitiesSortedBySource[kind] = {};
+    //     sourceStruct[kind] = {};
+    //   }
+    //   if (!(srcId in allEntitiesSortedBySource[kind])) {
+    //     allEntitiesSortedBySource[kind][srcId] = [];
+    //     sourceStruct[kind][srcId] = source;
+    //   }
+    //   const top_entity = getTopEntity(ann, $entities);
+    //   if (allEntitiesSortedBySource[kind][srcId].indexOf(top_entity) < 0)
+    //     allEntitiesSortedBySource[kind][srcId].push(top_entity);
+    // });
+    // if ("model" in allEntitiesSortedBySource) {
+    //   selectedModelId = Object.keys(allEntitiesSortedBySource["model"])[0];
+    // }
 
     //scroll and set thumbnail to highlighted object if any
     const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
@@ -102,6 +122,7 @@ License: CECILL-C
           />
         {/key}
       {/if}
+      <!-- TMP(?): Remove grouping by model
       {#each Object.keys(sourceStruct) as kind}
         {#if kind === "model" && selectedModelId}
           <ObjectsModelSection
@@ -134,6 +155,12 @@ License: CECILL-C
           {/each}
         {/if}
       {/each}
+      -->
+      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.size}>
+        {#each allTopEntities as entity}
+          <ObjectCard bind:entity />
+        {/each}
+      </ObjectsModelSection>
     </div>
   {/if}
 </div>

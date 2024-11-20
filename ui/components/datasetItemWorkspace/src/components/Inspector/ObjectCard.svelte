@@ -60,10 +60,6 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  //Note: as ObjectInspector recreate the whole Objects tab whenever
-  //there is a change in annotations or entities stores
-  //(bad design... don't find better way to keep it up-to-date)
-  //we link (one way) "open" to the "isEditing" state
   $: if (isEditing) open = true;
 
   const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
@@ -234,10 +230,12 @@ License: CECILL-C
   id={createObjectCardId(entity)}
 >
   <div
-    class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
+    class={cn(
+      "flex items-center mt-1 rounded justify-between text-slate-800 bg-white border-2 overflow-hidden",
+    )}
     style="border-color:{isHighlighted ? color : 'transparent'}"
   >
-    <div class="flex items-center flex-auto max-w-[50%]">
+    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
       <IconButton
         on:click={() => handleIconClick("hidden", isVisible)}
         tooltipContent={isVisible ? "Hide object" : "Show object"}
@@ -254,9 +252,17 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{displayName}</span>
+      <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap"
+        >{displayName}</span
+      >
     </div>
-    <div class="flex items-center">
+    <div
+      class={cn(
+        "flex-shrink-0 flex items-center justify-end",
+        showIcons || isEditing ? "basis-[120px]" : "basis-[40px]",
+      )}
+      style="min-width: 40px;"
+    >
       {#if showIcons || isEditing}
         <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
           ><Pencil class="h-4" /></IconButton
@@ -310,7 +316,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", keypointsIsVisible, "Keypoints")}
+                      handleClick={() => handleIconClick("hidden", keypointsIsVisible, "KeyPoints")}
                       bind:checked={keypointsIsVisible}
                       title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"
