@@ -13,6 +13,7 @@ License: CECILL-C
     type SaveItem,
     PrimaryButton,
     type Schema,
+    Entity,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
@@ -119,17 +120,17 @@ License: CECILL-C
   async function handleSaveItem(data: SaveItem[]) {
     //entities first to avoid database consistency checks issues
     data.sort((a, b) => {
-      if (
-        ["Entity", "Track"].includes(a.object.table_info.base_schema) &&
-        !["Entity", "Track"].includes(b.object.table_info.base_schema)
-      )
-        return -1;
-      else if (
-        !["Entity", "Track"].includes(a.object.table_info.base_schema) &&
-        ["Entity", "Track"].includes(b.object.table_info.base_schema)
-      )
-        return 1;
-      else return 0;
+      const priority = (object: Schema) => {
+        // Highest priority: Track
+        if (object.table_info.base_schema === "Track") return 0;
+        // Second priority : Entity as top entity
+        if (object.table_info.base_schema === "Entity") {
+          if ((object as Entity).data.parent_ref.id === "") return 1;
+          else return 2; //Third priority: Entity as sub entity
+        }
+        return 3; // Lowest priority
+      };
+      return priority(a.object) - priority(b.object);
     });
 
     const no_delete_data = data.filter((d) => d.change_type !== "delete");

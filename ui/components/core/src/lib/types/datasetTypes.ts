@@ -762,7 +762,7 @@ export type TrackletItem = {
   hidden?: boolean;
 };
 
-export type Schema = Annotation | Entity | Item | View;
+export type Schema = Annotation | Entity | Item | Source;
 
 export type SaveItem = {
   change_type: "add" | "update" | "delete";

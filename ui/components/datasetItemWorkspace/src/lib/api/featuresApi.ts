@@ -31,7 +31,7 @@ export function createFeature<T extends object>(
   const extraFields = obj.getDynamicFields();
   const extraFieldsType = extraFields.reduce(
     (acc, key) => {
-      acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key].type;
+      acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key]?.type || "str";
       return acc;
     },
     {} as Record<string, string>,
