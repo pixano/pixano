@@ -7,10 +7,11 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { derived } from "svelte/store";
-  import { Button } from "@pixano/core/src";
+  import { Button, type DS_NamedSchema } from "@pixano/core/src";
   import {
     Annotation,
     Entity,
+    Track,
     Tracklet,
     SequenceFrame,
     type SaveItem,
@@ -54,14 +55,17 @@ License: CECILL-C
   };
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
-    return !entity.ui.childs?.some(
-      (ann) =>
-        (ann.data.view_ref.id === shape.viewRef.id &&
-          mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema) ||
-        (ann.is_tracklet &&
-          (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
-          (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
-          (ann as Tracklet).data.end_timestep > $currentFrameIndex),
+    return (
+      entity.data.parent_ref.id === "" &&
+      !entity.ui.childs?.some(
+        (ann) =>
+          (ann.data.view_ref.id === shape.viewRef.id &&
+            mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema) ||
+          (ann.is_tracklet &&
+            (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
+            (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
+            (ann as Tracklet).data.end_timestep > $currentFrameIndex),
+      )
     );
   };
 
@@ -77,44 +81,147 @@ License: CECILL-C
     return res;
   });
 
-  const handleFormSubmit = () => {
-    let newObject: Annotation | undefined = undefined;
-    let newObject2: Annotation | undefined = undefined;
-    let newTracklet: Annotation | undefined = undefined;
-    let topEntity: Entity | undefined = undefined;
+  const findOrCreateSubAndTopEntities = (
+    shape: SaveShape,
+    endView: SequenceFrame | undefined,
+  ): {
+    topEntity: Entity | Track;
+    subEntity: Entity | undefined;
+    secondSubEntity: Entity | undefined;
+  } => {
+    //Manage sub-entity: check if there is some subentity table(s)
+    //For video (if endView is set), we also find/create the 2nd sub-entity
+    //if so, choose the correct one, and separate topEntity from subEntity ...
+    //TMP: we should rely on "table relations" from $datasetSchema, but it's not available yet
+    //TMP: so, we will make the assumption that the only case with subentity is : 1 Track + 1 Entity (sub)
+    //TMP: -> we take trackSchemas[0] and entitySchemas[0]
+    let topEntity: Entity | Track | undefined = undefined;
+    let subEntity: Entity | undefined = undefined;
+    let secondSubEntity: Entity | undefined = undefined;
+    let topEntitySchema: DS_NamedSchema | undefined = undefined;
+    let subEntitySchema: DS_NamedSchema | undefined = undefined;
+    let trackSchemas: DS_NamedSchema[] = [];
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
-    const isVideo = $itemMetas.type === "video";
-    if ($newShape.status === "saving") {
-      if (selectedEntityId === "new") {
-        topEntity = defineCreatedEntity($newShape, features, $datasetSchema, isVideo);
-        topEntity.ui.childs = [];
-      } else {
-        topEntity = $entities.find((entity) => entity.id === selectedEntityId);
-        if (!topEntity) {
-          topEntity = defineCreatedEntity($newShape, features, $datasetSchema, isVideo);
-          topEntity.ui.childs = [];
+    Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
+      if (sch.base_schema === "Track") {
+        trackSchemas.push({ ...sch, name });
+      }
+    });
+    let entitySchemas: DS_NamedSchema[] = [];
+    Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
+      if (sch.base_schema === "Entity") entitySchemas.push({ ...sch, name });
+    });
+    if (trackSchemas.length > 0) {
+      topEntitySchema = trackSchemas[0];
+      if (entitySchemas.length > 0) {
+        subEntitySchema = entitySchemas[0];
+      }
+    } else if (entitySchemas.length > 0) {
+      topEntitySchema = entitySchemas[0];
+    } else {
+      console.error("ERROR: No available schema Entity", $datasetSchema.schemas);
+      throw new Error("ERROR: No available schema Entity");
+    }
+
+    if (selectedEntityId === "new") {
+      topEntity = defineCreatedEntity(shape, features, $datasetSchema, topEntitySchema);
+      topEntity.ui.childs = [];
+      if (subEntitySchema) {
+        subEntity = defineCreatedEntity(shape, features, $datasetSchema, subEntitySchema, {
+          id: topEntity.id,
+          name: topEntity.table_info.name,
+        });
+        subEntity.ui.childs = [];
+        if (endView) {
+          secondSubEntity = defineCreatedEntity(
+            shape,
+            features,
+            $datasetSchema,
+            subEntitySchema,
+            {
+              id: topEntity.id,
+              name: topEntity.table_info.name,
+            },
+            { id: endView.id, name: shape.viewRef.name },
+          );
+          secondSubEntity.ui.childs = [];
         }
       }
-      //TODO: manage subentity for video: check if there is some subentity table(s)
-      //if so, choose the correct one, and separate topEntity from subEntity ...
-      newObject = defineCreatedObject(
-        topEntity,
-        $newShape,
-        $newShape.viewRef,
-        $datasetSchema,
-        isVideo,
-        $currentFrameIndex,
-      );
-      if (!newObject) return;
-      newObject.ui.highlighted = "self";
-      newObject.ui.displayControl = { editing: false };
-      topEntity.ui.childs?.push(newObject);
-      if (newObject.ui.datasetItemType === "video") {
-        // for video, there is 2 anns, 1 track, 1 tracklet: add obj2 and tracklet
-        let endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
-        //get view at endFrameIndex. If doesn't exist, get last possible one (range 5 down to 0)
+    } else {
+      topEntity = $entities.find((entity) => entity.id === selectedEntityId);
+      if (!topEntity) {
+        topEntity = defineCreatedEntity(shape, features, $datasetSchema, topEntitySchema);
+        topEntity.ui.childs = [];
+      }
+      if (subEntitySchema) {
+        //need to find entity with corresponding parent_ref.id and table_info.name, and view name
+        subEntity = $entities.find(
+          (entity) =>
+            //need to find entity with corresponding parent_ref.id and table_info.name, and view name
+            entity.table_info.name === subEntitySchema.name &&
+            entity.table_info.base_schema === subEntitySchema.base_schema &&
+            entity.data.parent_ref.id === topEntity!.id &&
+            //badly, *sub*entity.data.view_ref (id, or at least name) is not always set (it should!)
+            (entity.data.view_ref.id !== ""
+              ? entity.data.view_ref.id === shape.viewRef.id
+              : entity.data.view_ref.name !== ""
+                ? entity.data.view_ref.name === shape.viewRef.name
+                : entity.ui.childs?.every((ann) => ann.data.view_ref.name === shape.viewRef.name)),
+        );
+        if (!subEntity) {
+          subEntity = defineCreatedEntity(shape, features, $datasetSchema, subEntitySchema, {
+            id: topEntity.id,
+            name: topEntity.table_info.name,
+          });
+          subEntity.ui.childs = [];
+        }
+        if (endView) {
+          secondSubEntity = $entities.find(
+            (entity) =>
+              //need to find entity with corresponding parent_ref.id and table_info.name, and view name
+              entity.table_info.name === subEntitySchema.name &&
+              entity.table_info.base_schema === subEntitySchema.base_schema &&
+              entity.data.parent_ref.id === topEntity!.id &&
+              //badly, *sub*entity.data.view_ref (id, or at least name) is not always set (it should!)
+              (entity.data.view_ref.id !== ""
+                ? entity.data.view_ref.id === endView.id
+                : entity.data.view_ref.name !== ""
+                  ? entity.data.view_ref.name === shape.viewRef.name
+                  : entity.ui.childs?.every(
+                      (ann) => ann.data.view_ref.name === shape.viewRef.name,
+                    )),
+          );
+          if (!secondSubEntity) {
+            secondSubEntity = defineCreatedEntity(
+              shape,
+              features,
+              $datasetSchema,
+              subEntitySchema,
+              {
+                id: topEntity.id,
+                name: topEntity.table_info.name,
+              },
+              { id: endView.id, name: shape.viewRef.name },
+            );
+            secondSubEntity.ui.childs = [];
+          }
+        }
+      }
+    }
+    return { topEntity, subEntity, secondSubEntity };
+  };
+
+  const handleFormSubmit = () => {
+    if ($newShape.status === "saving") {
+      let newObject: Annotation | undefined = undefined;
+      let newObject2: Annotation | undefined = undefined;
+      let newTracklet: Annotation | undefined = undefined;
+      const isVideo = $itemMetas.type === "video";
+      let endView: SequenceFrame | undefined = undefined;
+      let endFrameIndex: number = -1;
+      if (isVideo) {
+        endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
         const seqs = $views[$newShape.viewRef.name];
-        let endView: SequenceFrame | undefined = undefined;
         if (Array.isArray(seqs)) {
           while (!endView) {
             endFrameIndex = endFrameIndex - 1;
@@ -125,8 +232,28 @@ License: CECILL-C
             );
           }
         }
+      }
+      const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
+        $newShape,
+        endView,
+      );
+      newObject = defineCreatedObject(
+        subEntity ? subEntity : topEntity,
+        $newShape,
+        $newShape.viewRef,
+        $datasetSchema,
+        isVideo,
+        $currentFrameIndex,
+      );
+      if (!newObject) return;
+      newObject.ui.highlighted = "self";
+      newObject.ui.displayControl = { editing: false };
+      topEntity.ui.childs?.push(newObject);
+      if (isVideo) {
+        // for video, there is 2 anns, 1 track (may have 1 sub entity per obj), 1 tracklet
+        // -> add obj2 (+ eventual 2nd sub entity) and tracklet
         newObject2 = defineCreatedObject(
-          topEntity,
+          secondSubEntity ? secondSubEntity : topEntity,
           $newShape,
           { id: endView!.id, name: $newShape.viewRef.name },
           $datasetSchema,
@@ -164,6 +291,13 @@ License: CECILL-C
         newTracklet.ui.displayControl = { editing: false };
         (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
 
+        if (secondSubEntity && !$entities.includes(secondSubEntity)) {
+          const save_2ndSubEntity: SaveItem = {
+            change_type: "add",
+            object: secondSubEntity,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
+        }
         const save_item2: SaveItem = {
           change_type: "add",
           object: newObject2,
@@ -185,14 +319,23 @@ License: CECILL-C
         };
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
       }
+      if (subEntity && !$entities.includes(subEntity)) {
+        const save_subEntity: SaveItem = {
+          change_type: "add",
+          object: subEntity,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_subEntity));
+      }
       const save_item: SaveItem = {
         change_type: "add",
         object: newObject,
       };
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      // push new entity
+      // push new entity & sub(s)
       entities.update((ents) => {
         if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
+        if (subEntity && !ents.includes(subEntity)) ents.push(subEntity);
+        if (secondSubEntity && !ents.includes(secondSubEntity)) ents.push(secondSubEntity);
         return ents;
       });
       //push new annotations

@@ -691,6 +691,10 @@ export interface DS_Schema {
   fields: Record<string, FieldInfo>;
   schema: string;
 }
+
+export type DS_NamedSchema = DS_Schema & {
+  name: string;
+};
 export interface DatasetSchema {
   relations: Record<string, string[]>;
   schemas: Record<string, DS_Schema>;
