@@ -554,8 +554,10 @@ class Dataset:
             ignore_integrity_checks: List of integrity checks to ignore.
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+        if not all((isinstance(item, type(data[0])) for item in data)) or not type(data[0]).model_json_schema() == (
+            self.schema.schemas[table_name].model_json_schema()
+            if table_name != SchemaGroup.SOURCE.value
+            else Source.model_json_schema()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
@@ -717,8 +719,10 @@ class Dataset:
             If `return_separately` is `True`, returns a tuple of updated and added data. Otherwise, returns the updated
             data.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+        if not all((isinstance(item, type(data[0])) for item in data)) or not type(data[0]).model_json_schema() == (
+            self.schema.schemas[table_name].model_json_schema()
+            if table_name != SchemaGroup.SOURCE.value
+            else Source.model_json_schema()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
