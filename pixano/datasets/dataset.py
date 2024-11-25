@@ -559,14 +559,6 @@ class Dataset:
             if table_name != SchemaGroup.SOURCE.value
             else Source.model_fields.keys()
         ):
-            print(type(data[0]).model_json_schema())
-            print(
-                (
-                    self.schema.schemas[table_name].model_json_schema()
-                    if table_name != SchemaGroup.SOURCE.value
-                    else Source.model_json_schema()
-                )
-            )
             raise DatasetAccessError(
                 "All data must be instances of the table type "
                 f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
