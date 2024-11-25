@@ -503,9 +503,7 @@ class Dataset:
         if len(ids) == 0:
             return {}
         table = self.open_table(table_name)
-        ids_found = [
-            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
-        ]
+        ids_found = list(TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
         return {id: id in ids_found for id in ids}
 
     def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
@@ -554,11 +552,21 @@ class Dataset:
             ignore_integrity_checks: List of integrity checks to ignore.
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
-        if not all((isinstance(item, type(data[0])) for item in data)) or not type(data[0]).model_json_schema() == (
-            self.schema.schemas[table_name].model_json_schema()
+        if not all((isinstance(item, type(data[0])) for item in data)) or not set(
+            type(data[0]).model_fields.keys()
+        ) == set(
+            self.schema.schemas[table_name].model_fields.keys()
             if table_name != SchemaGroup.SOURCE.value
-            else Source.model_json_schema()
+            else Source.model_fields.keys()
         ):
+            print(type(data[0]).model_json_schema())
+            print(
+                (
+                    self.schema.schemas[table_name].model_json_schema()
+                    if table_name != SchemaGroup.SOURCE.value
+                    else Source.model_json_schema()
+                )
+            )
             raise DatasetAccessError(
                 "All data must be instances of the table type "
                 f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
@@ -719,10 +727,12 @@ class Dataset:
             If `return_separately` is `True`, returns a tuple of updated and added data. Otherwise, returns the updated
             data.
         """
-        if not all((isinstance(item, type(data[0])) for item in data)) or not type(data[0]).model_json_schema() == (
-            self.schema.schemas[table_name].model_json_schema()
+        if not all((isinstance(item, type(data[0])) for item in data)) or not set(
+            type(data[0]).model_fields.keys()
+        ) == set(
+            self.schema.schemas[table_name].model_fields.keys()
             if table_name != SchemaGroup.SOURCE.value
-            else Source.model_json_schema()
+            else Source.model_fields.keys()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
