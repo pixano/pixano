@@ -126,13 +126,24 @@ License: CECILL-C
     }
 
     if (selectedEntityId === "new") {
-      topEntity = defineCreatedEntity(shape, features[topEntitySchema.name], $datasetSchema, topEntitySchema);
+      topEntity = defineCreatedEntity(
+        shape,
+        features[topEntitySchema.name],
+        $datasetSchema,
+        topEntitySchema,
+      );
       topEntity.ui.childs = [];
       if (subEntitySchema) {
-        subEntity = defineCreatedEntity(shape, features[subEntitySchema.name], $datasetSchema, subEntitySchema, {
-          id: topEntity.id,
-          name: topEntity.table_info.name,
-        });
+        subEntity = defineCreatedEntity(
+          shape,
+          features[subEntitySchema.name],
+          $datasetSchema,
+          subEntitySchema,
+          {
+            id: topEntity.id,
+            name: topEntity.table_info.name,
+          },
+        );
         subEntity.ui.childs = [];
         if (endView) {
           secondSubEntity = defineCreatedEntity(
@@ -152,7 +163,12 @@ License: CECILL-C
     } else {
       topEntity = $entities.find((entity) => entity.id === selectedEntityId);
       if (!topEntity) {
-        topEntity = defineCreatedEntity(shape, features[topEntitySchema.name], $datasetSchema, topEntitySchema);
+        topEntity = defineCreatedEntity(
+          shape,
+          features[topEntitySchema.name],
+          $datasetSchema,
+          topEntitySchema,
+        );
         topEntity.ui.childs = [];
       }
       if (subEntitySchema) {
@@ -171,10 +187,16 @@ License: CECILL-C
                 : entity.ui.childs?.every((ann) => ann.data.view_ref.name === shape.viewRef.name)),
         );
         if (!subEntity) {
-          subEntity = defineCreatedEntity(shape, features[subEntitySchema.name], $datasetSchema, subEntitySchema, {
-            id: topEntity.id,
-            name: topEntity.table_info.name,
-          });
+          subEntity = defineCreatedEntity(
+            shape,
+            features[subEntitySchema.name],
+            $datasetSchema,
+            subEntitySchema,
+            {
+              id: topEntity.id,
+              name: topEntity.table_info.name,
+            },
+          );
           subEntity.ui.childs = [];
         }
         if (endView) {
