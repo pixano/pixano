@@ -11,7 +11,7 @@ License: CECILL-C
   // Internal library imports
   import { Pencil } from "lucide-svelte";
   import { IconButton, Switch } from "@pixano/core/src";
-  import { Image, SequenceFrame, type ItemType, type SaveItem } from "@pixano/core";
+  import { Image, SequenceFrame, type SaveItem } from "@pixano/core";
 
   // Local imports
   import {
@@ -60,7 +60,7 @@ License: CECILL-C
         id: image.id,
       };
     });
-    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
+    features = createFeature($itemMetas.item, $datasetSchema);
   });
 
   /**
@@ -87,7 +87,7 @@ License: CECILL-C
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       return newMetas;
     });
-    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
+    features = createFeature($itemMetas.item, $datasetSchema);
   };
 </script>
 

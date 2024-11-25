@@ -27,7 +27,7 @@ License: CECILL-C
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
 
-  let allTopEntities: Set<Entity>;
+  let allTopEntities: Entity[];
   // let allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
   // let sourceStruct: Record<string, Record<string, Source | undefined>> = {};
   // let selectedModelId: string | undefined = undefined;
@@ -49,11 +49,13 @@ License: CECILL-C
   $: $annotations, $entities, handleAnnotationSortedByModel();
 
   const handleAnnotationSortedByModel = () => {
-    allTopEntities = new Set<Entity>();
+    //svelte hack: use a temp Set to set the whole set once
+    const allTopEntitiesSet = new Set<Entity>();
     $annotations.forEach((ann) => {
-      allTopEntities.add(getTopEntity(ann, $entities));
+      allTopEntitiesSet.add(getTopEntity(ann, $entities));
     });
-
+    allTopEntities = Array.from(allTopEntitiesSet);
+    //console.log("ObjectInspector refresh fired", $annotations, $entities, allTopEntities);
     // allEntitiesSortedBySource = {};
     // sourceStruct = {};
     // //console.log("ObjectInspector refresh fired", $annotations, $entities);
@@ -156,7 +158,7 @@ License: CECILL-C
         {/if}
       {/each}
       -->
-      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.size}>
+      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
         {#each allTopEntities as entity}
           <ObjectCard bind:entity />
         {/each}

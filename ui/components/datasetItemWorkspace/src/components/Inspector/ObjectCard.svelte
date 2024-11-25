@@ -15,8 +15,7 @@ License: CECILL-C
     type DisplayControl,
     Annotation,
     Entity,
-    type AnnotationType,
-    type EntityType,
+    Item,
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
@@ -56,46 +55,61 @@ License: CECILL-C
   let boxIsVisible: boolean = true;
   let maskIsVisible: boolean = true;
   let keypointsIsVisible: boolean = true;
-  let displayName: string = `${entity.data.name ? (entity.data.name as string) + " - " : ""}${entity.id}`;
+
+  $: displayName =
+    (entity.data.name
+      ? (entity.data.name as string) + " "
+      : entity.data.category
+        ? (entity.data.category as string) + " "
+        : "") +
+    "(" +
+    entity.id +
+    ")";
 
   $: color = $colorScale[1](entity.id);
 
   $: if (isEditing) open = true;
 
-  const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
-    //get all features from Top entity (obj) to evental sub entities and annotations
-    //let anns_features: Record<string, Feature[]> = {};
-    let feats: Record<string, Feature[]> = {};
-    let child_anns: Annotation[] = [];
-    if ($currentFrameIndex !== null) {
-      child_anns = entity.ui.childs!.filter(
-        (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
-      );
-    } else {
-      child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
-    }
-    for (const ann of child_anns) {
-      if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
-        //there is a subentity, find it
-        const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
-        if (subentity) {
-          feats[subentity.id] = createFeature<EntityType>(
-            subentity,
-            $datasetSchema,
-            subentity.table_info.name,
-          );
-        }
+  const features = derived(
+    [currentFrameIndex, entities, annotations],
+    ([$currentFrameIndex, $entities, $annotations]) => {
+      //features may depends on an annotation change, but we access them with entity.ui.childs instead of $annotations
+      //to prevent lint unused-vars
+      $annotations;
+      //get all features from Top entity (obj) to evental sub entities and annotations
+      //let anns_features: Record<string, Feature[]> = {};
+      let feats: Record<string, Feature[]> = {};
+      let child_anns: Annotation[] = [];
+      if ($currentFrameIndex !== null) {
+        child_anns = entity.ui.childs!.filter(
+          (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
+        );
+      } else {
+        child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
       }
-      feats[ann.id] = createFeature<AnnotationType>(
-        ann,
-        $datasetSchema,
-        ann.table_info.name + "." + ann.data.view_ref.name,
-      );
-    }
-    feats[entity.id] = createFeature<EntityType>(entity, $datasetSchema);
+      for (const ann of child_anns) {
+        if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
+          //there is a subentity, find it
+          const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
+          if (subentity) {
+            feats[subentity.id] = createFeature(
+              subentity,
+              $datasetSchema,
+              subentity.table_info.name,
+            );
+          }
+        }
+        feats[ann.id] = createFeature(
+          ann,
+          $datasetSchema,
+          ann.table_info.name + "." + ann.data.view_ref.name,
+        );
+      }
+      feats[entity.id] = createFeature(entity, $datasetSchema);
 
-    return Object.values(feats).flat();
-  });
+      return Object.values(feats).flat();
+    },
+  );
 
   annotations.subscribe(() => {
     isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
@@ -171,33 +185,57 @@ License: CECILL-C
     }
     const subent_ids = subentities.map((subent) => subent.id);
     annotations.update((oldObjects) =>
-      oldObjects.filter(
-        (ann) =>
-          ann.data.entity_ref.id !== entity.id && !subent_ids.includes(ann.data.entity_ref.id),
-      ),
+      oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_ref.id)),
     );
     entities.update((oldObjects) =>
       oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
     );
   };
 
-  const saveInputChange = (value: string | boolean | number, propertyName: string) => {
-    entities.update((oldObjects) =>
-      oldObjects.map((object) => {
-        if (object.id === entity.id) {
-          object.data = {
-            ...object.data,
-            [propertyName]: value,
-          };
-          const save_item: SaveItem = {
-            change_type: "update",
-            object,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-        }
-        return object;
-      }),
-    );
+  const saveInputChange = (
+    value: string | boolean | number,
+    propertyName: string,
+    obj: Item | Entity | Annotation,
+  ) => {
+    if (["Track", "Entity"].includes(obj.table_info.base_schema)) {
+      entities.update((oldObjects) =>
+        oldObjects.map((object) => {
+          if (object === obj) {
+            object.data = {
+              ...object.data,
+              [propertyName]: value,
+            };
+            const save_item: SaveItem = {
+              change_type: "update",
+              object,
+            };
+            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          }
+          return object;
+        }),
+      );
+    } else if (obj.table_info.base_schema === "Item") {
+      //??
+      console.warn("This should not happen, no ?");
+    } else {
+      //Annotation
+      annotations.update((oldObjects) =>
+        oldObjects.map((object) => {
+          if (object === obj) {
+            object.data = {
+              ...object.data,
+              [propertyName]: value,
+            };
+            const save_item: SaveItem = {
+              change_type: "update",
+              object,
+            };
+            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          }
+          return object;
+        }),
+      );
+    }
   };
 
   const onColoredDotClick = () => {

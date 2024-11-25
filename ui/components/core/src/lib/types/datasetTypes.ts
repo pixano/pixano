@@ -23,7 +23,7 @@ const ndArrayFloatSchema = z
   .strict();
 export type NDArrayFloat = z.infer<typeof ndArrayFloatSchema>;
 
-const tableInfoSchema = z
+export const tableInfoSchema = z
   .object({
     name: z.string(),
     group: z.string(),
@@ -218,14 +218,14 @@ export class SequenceFrame extends Image {
 
 ////////// ENTITIES /////////////
 
-const entitySchema = z
+export const entitySchema = z
   .object({
     item_ref: referenceSchema,
     view_ref: referenceSchema,
     parent_ref: referenceSchema,
   })
   .passthrough();
-export type EntityType = z.infer<typeof entitySchema>; //export if needed
+type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
@@ -291,7 +291,7 @@ export class Track extends Entity {
 
 ////////// ANNOTATIONS /////////////
 
-const annotationSchema = z
+export const annotationSchema = z
   .object({
     item_ref: referenceSchema,
     view_ref: referenceSchema,
@@ -299,7 +299,7 @@ const annotationSchema = z
     source_ref: referenceSchema,
   })
   .passthrough();
-export type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
+type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 
 type AnnotationUIFields = {
   datasetItemType: string;
@@ -493,8 +493,8 @@ export class Tracklet extends Annotation {
 
 ////////// ITEM /////////////
 
-const itemSchema = z.object({}).passthrough();
-export type ItemType = z.infer<typeof itemSchema>;
+export const itemSchema = z.object({}).passthrough();
+type ItemType = z.infer<typeof itemSchema>;
 
 export class Item extends BaseData<ItemType> {
   constructor(obj: BaseDataFields<ItemType>) {

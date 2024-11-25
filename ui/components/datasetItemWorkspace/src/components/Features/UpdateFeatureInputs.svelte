@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Item, Entity, Annotation } from "@pixano/core";
   import { Checkbox, type FeaturesValues } from "@pixano/core/src";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
 
@@ -16,7 +17,11 @@ License: CECILL-C
   export let featureClass: keyof FeaturesValues;
 
   export let isEditing: boolean;
-  export let saveInputChange: (value: string | boolean | number, propertyName: string) => void;
+  export let saveInputChange: (
+    value: string | boolean | number,
+    propertyName: string,
+    obj: Item | Entity | Annotation,
+  ) => void;
 </script>
 
 {#each features as feature}
@@ -31,13 +36,13 @@ License: CECILL-C
       <Checkbox
         checked={!!feature.value}
         disabled={!isEditing}
-        handleClick={(checked) => saveInputChange(checked, feature.name)}
+        handleClick={(checked) => saveInputChange(checked, feature.name, feature.obj)}
       />
     {/if}
     {#if feature.type === "list"}
       <ListFeature
         {isEditing}
-        handleInputChange={(value, name) => saveInputChange(value, name)}
+        handleInputChange={(value, name) => saveInputChange(value, name, feature.obj)}
         listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
       />
     {/if}

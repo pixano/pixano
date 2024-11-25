@@ -6,8 +6,9 @@ License: CECILL-C
 
 import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
 import {
-  BaseData,
-  type FeatureValues,
+  Item,
+  Entity,
+  Annotation,
   type ItemFeature,
   type FeaturesValues,
   type FeatureList,
@@ -21,10 +22,11 @@ import type {
   IntFeature,
   FloatFeature,
   TextFeature,
+  ObjectProperties,
 } from "../types/datasetItemWorkspaceTypes";
 
-export function createFeature<T extends object>(
-  obj: BaseData<T>,
+export function createFeature(
+  obj: Item | Entity | Annotation,
   dataset_schema: DatasetSchema,
   additional_info: string = "",
 ): Feature[] {
@@ -49,34 +51,40 @@ export function createFeature<T extends object>(
   const parsedFeatures = createObjectInputsSchema.parse(
     Object.values(features).map((feature) => ({
       ...feature,
-      type: feature.dtype as Feature["type"],
+      type: feature.dtype,
       required: false,
+      sch: { name: "", group: "", base_schema: "" }, //not used here, we will pass obj below
       label: `${display_info}${feature.name}`, //TMP //TODO WIP -- group display by table_info.name (&view?)
     })),
   );
   return parsedFeatures.map((feature) => {
     const value = (obj.data as Record<string, unknown>)[feature.name] as string; //TODO? type (feature.type to type)
     if (feature.type === "list")
-      return { ...feature, options: feature.options, value } as ListFeature;
-    return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
+      return { ...feature, options: feature.options, value, obj } as ListFeature;
+    return { ...feature, value, obj } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
   });
 }
 
 export const mapShapeInputsToFeatures = (
-  shapeInputs: { [key: string]: FeatureValues },
+  shapeInputs: ObjectProperties,
   formInputs: CreateObjectInputs,
-) =>
-  Object.entries(shapeInputs).reduce(
-    (acc, [key, value]) => {
-      acc[key] = {
-        name: key,
-        dtype: formInputs.find((o) => o.name === key)?.type as ItemFeature["dtype"],
-        value,
-      };
-      return acc;
-    },
-    {} as Record<string, ItemFeature>,
-  );
+) => {
+  const features: Record<string, Record<string, ItemFeature>> = {};
+  Object.entries(shapeInputs).forEach(([tname, feats]) => {
+    features[tname] = Object.entries(feats).reduce(
+      (acc, [key, value]) => {
+        acc[key] = {
+          name: key,
+          dtype: formInputs.find((o) => o.name === key)?.type as ItemFeature["dtype"],
+          value,
+        };
+        return acc;
+      },
+      {} as Record<string, ItemFeature>,
+    );
+  });
+  return features;
+};
 
 export const addNewInput = (
   store: FeaturesValues | undefined,

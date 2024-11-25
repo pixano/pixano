@@ -56,10 +56,12 @@ License: CECILL-C
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
     return (
-      entity.data.parent_ref.id === "" &&
+      entity.data.parent_ref.id === "" && //not a sub entity
+      //TODO WIP: something wrong in this logic !!!
       !entity.ui.childs?.some(
         (ann) =>
-          (ann.data.view_ref.id === shape.viewRef.id &&
+          (!ann.is_tracklet &&
+            ann.data.view_ref.id === shape.viewRef.id &&
             mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema) ||
           (ann.is_tracklet &&
             (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
@@ -124,10 +126,10 @@ License: CECILL-C
     }
 
     if (selectedEntityId === "new") {
-      topEntity = defineCreatedEntity(shape, features, $datasetSchema, topEntitySchema);
+      topEntity = defineCreatedEntity(shape, features[topEntitySchema.name], $datasetSchema, topEntitySchema);
       topEntity.ui.childs = [];
       if (subEntitySchema) {
-        subEntity = defineCreatedEntity(shape, features, $datasetSchema, subEntitySchema, {
+        subEntity = defineCreatedEntity(shape, features[subEntitySchema.name], $datasetSchema, subEntitySchema, {
           id: topEntity.id,
           name: topEntity.table_info.name,
         });
@@ -135,7 +137,7 @@ License: CECILL-C
         if (endView) {
           secondSubEntity = defineCreatedEntity(
             shape,
-            features,
+            features[subEntitySchema.name],
             $datasetSchema,
             subEntitySchema,
             {
@@ -150,7 +152,7 @@ License: CECILL-C
     } else {
       topEntity = $entities.find((entity) => entity.id === selectedEntityId);
       if (!topEntity) {
-        topEntity = defineCreatedEntity(shape, features, $datasetSchema, topEntitySchema);
+        topEntity = defineCreatedEntity(shape, features[topEntitySchema.name], $datasetSchema, topEntitySchema);
         topEntity.ui.childs = [];
       }
       if (subEntitySchema) {
@@ -169,7 +171,7 @@ License: CECILL-C
                 : entity.ui.childs?.every((ann) => ann.data.view_ref.name === shape.viewRef.name)),
         );
         if (!subEntity) {
-          subEntity = defineCreatedEntity(shape, features, $datasetSchema, subEntitySchema, {
+          subEntity = defineCreatedEntity(shape, features[subEntitySchema.name], $datasetSchema, subEntitySchema, {
             id: topEntity.id,
             name: topEntity.table_info.name,
           });
@@ -194,7 +196,7 @@ License: CECILL-C
           if (!secondSubEntity) {
             secondSubEntity = defineCreatedEntity(
               shape,
-              features,
+              features[subEntitySchema.name],
               $datasetSchema,
               subEntitySchema,
               {
@@ -353,6 +355,7 @@ License: CECILL-C
         ];
       });
       $annotations.sort((a, b) => sortByFrameIndex(a, b));
+      //TODO change in objectProperties type !!
       for (let feat in objectProperties) {
         if (typeof objectProperties[feat] === "string") {
           addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);

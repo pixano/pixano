@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { z } from "zod";
 import type { CreateObjectSchemaDefinition } from "../types/datasetItemWorkspaceTypes";
+import { tableInfoSchema } from "@pixano/core";
 
 export const listInputSchema = z.object({
   name: z.string(),
@@ -13,6 +14,7 @@ export const listInputSchema = z.object({
   type: z.literal("list"),
   required: z.boolean().optional(),
   options: z.array(z.object({ value: z.string(), label: z.string() })),
+  sch: tableInfoSchema,
 });
 
 export const otherInputSchema = z.object({
@@ -20,6 +22,7 @@ export const otherInputSchema = z.object({
   label: z.string(),
   type: z.enum(["int", "float", "bool", "str"]),
   required: z.boolean().optional(),
+  sch: tableInfoSchema,
 });
 
 export const createObjectInputsSchema = z.array(z.union([listInputSchema, otherInputSchema]));

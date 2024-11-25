@@ -453,8 +453,10 @@ export const defineCreatedEntity = (
       parent_ref: parentOfSub ? parentOfSub : { name: "", id: "" },
     },
   };
-  for (const feat of Object.values(features)) {
-    entity.data = { ...entity.data, [feat.name]: feat.value };
+  if (features) {
+    for (const feat of Object.values(features)) {
+      entity.data = { ...entity.data, [feat.name]: feat.value };
+    }
   }
   if (entitySchema.base_schema === "Track") {
     //already done just before, but lint require entity.data.name, and can't know it's done...
