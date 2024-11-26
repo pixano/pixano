@@ -12,6 +12,7 @@ License: CECILL-C
     Combobox,
     Entity,
     Track,
+    Tracklet,
     BBox,
     Keypoints,
     Mask,
@@ -68,6 +69,8 @@ License: CECILL-C
             nonFeatsFields = nonFeatsFields.concat(Keypoints.nonFeaturesFields());
           if (shapeType === "CompressedRLE")
             nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
+          if (shapeType === "Tracklet")
+            nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
         }
         //TODO: custom fields from other types
         for (const feat in sch.fields) {
