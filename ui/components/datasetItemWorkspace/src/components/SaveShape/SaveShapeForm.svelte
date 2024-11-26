@@ -57,7 +57,6 @@ License: CECILL-C
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
     return (
       entity.data.parent_ref.id === "" && //not a sub entity
-      //TODO WIP: something wrong in this logic !!!
       (!entity.ui.childs
         ?.filter((ann) => !ann.is_tracklet)
         .some(
