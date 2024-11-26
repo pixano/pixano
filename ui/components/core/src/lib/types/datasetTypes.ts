@@ -30,7 +30,7 @@ export const tableInfoSchema = z
     base_schema: z.string(),
   })
   .strict();
-export type TableInfo = z.infer<typeof tableInfoSchema>;
+type TableInfo = z.infer<typeof tableInfoSchema>;
 
 //note: this one is needed only to parse in BaseData<T> constructor
 //because I can't find a way to parse with the generic typed version
@@ -724,14 +724,6 @@ export interface DatasetItems {
 }
 
 // ITEM DATA
-
-export interface Base {
-  id: string;
-  table_info: TableInfo;
-  created_at: string;
-  updated_at: string;
-  data: object;
-}
 
 export type HTMLImage = {
   id: string;

@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  //import { Combobox, cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
   import { cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
@@ -19,7 +18,6 @@ License: CECILL-C
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  //import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     createObjectCardId,
     defineObjectThumbnail,
@@ -28,15 +26,11 @@ License: CECILL-C
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
 
   let allTopEntities: Entity[];
-  // let allEntitiesSortedBySource: Record<string, Record<string, Entity[]>> = {};
-  // let sourceStruct: Record<string, Record<string, Source | undefined>> = {};
-  // let selectedModelId: string | undefined = undefined;
   let thumbnail: ObjectThumbnail | null = null;
 
   //Note: Previously Entities where grouped by source
   //Now they're all displayed regardless of source
-  //But as this may change in future, we fake a global source
-  //rather than removing/changing all the code
+  //so we fake a global source for ObjectsModelSection (may be rewritten later)
   const now = new Date(Date.now()).toISOString();
   const globalSource = new Source({
     id: "pixano_source",
@@ -49,46 +43,13 @@ License: CECILL-C
   $: $annotations, $entities, handleAnnotationSortedByModel();
 
   const handleAnnotationSortedByModel = () => {
-    //svelte hack: use a temp Set to set the whole set once
+    //svelte hack: use a temp Set to set the whole list once
     const allTopEntitiesSet = new Set<Entity>();
     $annotations.forEach((ann) => {
       allTopEntitiesSet.add(getTopEntity(ann, $entities));
     });
     allTopEntities = Array.from(allTopEntitiesSet);
     //console.log("ObjectInspector refresh fired", $annotations, $entities, allTopEntities);
-    // allEntitiesSortedBySource = {};
-    // sourceStruct = {};
-    // //console.log("ObjectInspector refresh fired", $annotations, $entities);
-    // $annotations.forEach((ann) => {
-    //   let kind: string = "other";
-    //   let srcId: string = "unknown";
-    //   let source: Source | undefined = undefined;
-    //   if (ann.data.source_ref.id !== "") {
-    //     source = $sourcesStore.find((src) => src.id === ann.data.source_ref.id);
-    //     if (source) {
-    //       kind = source.data.kind;
-    //       srcId = source.id;
-    //     } else {
-    //       srcId = ann.data.source_ref.id;
-    //     }
-    //   } //else {
-    //   //console.warn("No associated source !!", ann.data.source_ref);
-    //   //}
-    //   if (!(kind in allEntitiesSortedBySource)) {
-    //     allEntitiesSortedBySource[kind] = {};
-    //     sourceStruct[kind] = {};
-    //   }
-    //   if (!(srcId in allEntitiesSortedBySource[kind])) {
-    //     allEntitiesSortedBySource[kind][srcId] = [];
-    //     sourceStruct[kind][srcId] = source;
-    //   }
-    //   const top_entity = getTopEntity(ann, $entities);
-    //   if (allEntitiesSortedBySource[kind][srcId].indexOf(top_entity) < 0)
-    //     allEntitiesSortedBySource[kind][srcId].push(top_entity);
-    // });
-    // if ("model" in allEntitiesSortedBySource) {
-    //   selectedModelId = Object.keys(allEntitiesSortedBySource["model"])[0];
-    // }
 
     //scroll and set thumbnail to highlighted object if any
     const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
@@ -124,40 +85,6 @@ License: CECILL-C
           />
         {/key}
       {/if}
-      <!-- TMP(?): Remove grouping by model
-      {#each Object.keys(sourceStruct) as kind}
-        {#if kind === "model" && selectedModelId}
-          <ObjectsModelSection
-            source={sourceStruct[kind][selectedModelId]}
-            numberOfItem={allEntitiesSortedBySource[kind][selectedModelId].length}
-          >
-            <Combobox
-              slot="modelSelection"
-              bind:value={selectedModelId}
-              width="w-[150px]"
-              listItems={Object.keys(allEntitiesSortedBySource[kind]).map((sourceId) => ({
-                value: sourceId,
-                label: sourceId,
-              }))}
-            />
-            {#each allEntitiesSortedBySource[kind][selectedModelId] as entity}
-              <ObjectCard bind:entity />
-            {/each}
-          </ObjectsModelSection>
-        {:else}
-          {#each Object.keys(sourceStruct[kind]) as src_id}
-            <ObjectsModelSection
-              source={sourceStruct[kind][src_id]}
-              numberOfItem={allEntitiesSortedBySource[kind][src_id].length}
-            >
-              {#each allEntitiesSortedBySource[kind][src_id] as entity}
-                <ObjectCard bind:entity />
-              {/each}
-            </ObjectsModelSection>
-          {/each}
-        {/if}
-      {/each}
-      -->
       <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
         {#each allTopEntities as entity}
           <ObjectCard bind:entity />

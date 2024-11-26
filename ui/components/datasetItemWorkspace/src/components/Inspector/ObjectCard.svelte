@@ -215,8 +215,7 @@ License: CECILL-C
         }),
       );
     } else if (obj.table_info.base_schema === "Item") {
-      //??
-      console.warn("This should not happen, no ?");
+      console.warn("This should never happen, we don't have 'item' features in Objects Inspector.");
     } else {
       //Annotation
       annotations.update((oldObjects) =>

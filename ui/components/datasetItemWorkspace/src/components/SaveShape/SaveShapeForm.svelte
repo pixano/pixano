@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { derived } from "svelte/store";
-  import { Button, type DS_NamedSchema } from "@pixano/core/src";
+  import { Button, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
   import {
     Annotation,
     Entity,
@@ -90,6 +90,7 @@ License: CECILL-C
   const findOrCreateSubAndTopEntities = (
     shape: SaveShape,
     endView: SequenceFrame | undefined,
+    features: Record<string, Record<string, ItemFeature>>,
   ): {
     topEntity: Entity | Track;
     subEntity: Entity | undefined;
@@ -107,7 +108,6 @@ License: CECILL-C
     let topEntitySchema: DS_NamedSchema | undefined = undefined;
     let subEntitySchema: DS_NamedSchema | undefined = undefined;
     let trackSchemas: DS_NamedSchema[] = [];
-    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
       if (sch.base_schema === "Track") {
         trackSchemas.push({ ...sch, name });
@@ -261,12 +261,15 @@ License: CECILL-C
           }
         }
       }
+      const features = mapShapeInputsToFeatures(objectProperties, formInputs);
       const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
         $newShape,
         endView,
+        features,
       );
       newObject = defineCreatedObject(
         subEntity ? subEntity : topEntity,
+        features,
         $newShape,
         $newShape.viewRef,
         $datasetSchema,
@@ -283,6 +286,7 @@ License: CECILL-C
         // -> add obj2 (+ eventual 2nd sub entity) and tracklet
         newObject2 = defineCreatedObject(
           secondSubEntity ? secondSubEntity : topEntity,
+          features,
           $newShape,
           { id: endView!.id, name: $newShape.viewRef.name },
           $datasetSchema,
@@ -313,6 +317,7 @@ License: CECILL-C
         };
         newTracklet = defineCreatedObject(
           topEntity,
+          features,
           trackletShape,
           trackletShape.viewRef,
           $datasetSchema,
@@ -389,10 +394,11 @@ License: CECILL-C
         ];
       });
       $annotations.sort((a, b) => sortByFrameIndex(a, b));
-      //TODO change in objectProperties type !!
-      for (let feat in objectProperties) {
-        if (typeof objectProperties[feat] === "string") {
-          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
+      for (const tname in objectProperties) {
+        for (const feat in objectProperties[tname]) {
+          if (typeof objectProperties[feat] === "string") {
+            addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
+          }
         }
       }
       newShape.set({ status: "none", shouldReset: true });
