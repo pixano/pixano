@@ -470,6 +470,7 @@ export const defineCreatedEntity = (
 
 export const defineCreatedObject = (
   entity: Entity,
+  features: Record<string, Record<string, ItemFeature>>,
   shape: SaveShape,
   viewRef: Reference,
   dataset_schema: DatasetSchema,
@@ -553,6 +554,14 @@ export const defineCreatedObject = (
   //need to put UI fields after creation, else zod rejects
   newObject.ui.datasetItemType = isVideo ? "video" : "image";
   if (isVideo && shape.type !== "tracklet") newObject.ui.frame_index = currentFrameIndex;
+
+  //add extra features if any
+  if (newObject.table_info.name in features) {
+    for (const feat of Object.values(features[newObject.table_info.name])) {
+      newObject.data = { ...newObject.data, [feat.name]: feat.value };
+    }
+  }
+
   return newObject;
 };
 
