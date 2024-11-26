@@ -18,7 +18,7 @@ export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
     const [, , x, y] = match;
     result.push({ x: parseFloat(x), y: parseFloat(y) });
   }
-  result = simplify(result, 4, true);
+  result = simplify(result, 0, true);
   return result.map((r, i) => ({ ...r, id: i }));
 };
 

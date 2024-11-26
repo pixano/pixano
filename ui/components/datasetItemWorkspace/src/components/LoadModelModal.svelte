@@ -6,12 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { SelectModal, WarningModal, DatasetInfo } from "@pixano/core";
+  import { derived } from "svelte/store";
+  import { SelectModal, WarningModal, LoadingModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
   import { loadViewEmbeddings as loadViewEmbeddingsAPI } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
-    modelsStore,
+    modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
@@ -24,16 +25,22 @@ License: CECILL-C
   export let embeddings: Embeddings;
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
-  let selectedModelName: ModelSelection["selectedModelName"];
+  let selectedModelName: ModelSelection["selectedModelName"] = models ? models[0] : "";
   let selectedTableName: string;
+  let sortedTablesChoices = derived(datasetSchema, ($datasetSchema) => {
+    const withSam = $datasetSchema.groups.embeddings.filter((t) => t.includes("sam"));
+    const withoutSam = $datasetSchema.groups.embeddings.filter((t) => !t.includes("sam"));
+    return [...withSam, ...withoutSam];
+  });
 
-  modelsStore.subscribe((store) => {
+  modelsUiStore.subscribe((store) => {
     currentModalOpen = store.currentModalOpen;
-    selectedModelName = store.selectedModelName;
+    selectedModelName =
+      store.selectedModelName !== "" ? store.selectedModelName : selectedModelName;
   });
 
   const loadViewEmbeddings = () => {
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     if (
       !selectedItemId ||
       !selectedTableName ||
@@ -47,7 +54,7 @@ License: CECILL-C
         embeddings = results;
       })
       .catch((err) => {
-        modelsStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
+        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
         console.error("cannot load Embeddings", err);
       });
   };
@@ -55,22 +62,22 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    modelsStore.update((store) => ({
+    modelsUiStore.update((store) => ({
       ...store,
-      currentModalOpen: "none",
+      currentModalOpen: "loading",
       selectedModelName: selectedModelName,
     }));
     await sam.init("/app_models/" + selectedModelName + ".onnx");
     interactiveSegmenterModel.set(sam);
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
   }
 
   $: {
     if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     }
     if ($selectedTool?.isSmart && models.length == 0) {
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
     }
   }
 </script>
@@ -84,10 +91,13 @@ License: CECILL-C
     on:confirm={loadModel}
   />
 {/if}
+{#if currentModalOpen === "loading"}
+  <LoadingModal />
+{/if}
 {#if currentModalOpen === "selectEmbeddingsTable"}
   <SelectModal
     message="Please select the embeddings table for the model."
-    choices={$datasetSchema.groups.embeddings}
+    choices={$sortedTablesChoices}
     ifNoChoices={""}
     bind:selected={selectedTableName}
     on:confirm={loadViewEmbeddings}
@@ -97,7 +107,7 @@ License: CECILL-C
   <WarningModal
     message="It looks like there is no model for interactive segmentation in your dataset library."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
+    on:confirm={() => modelsUiStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
   />
 {/if}
 {#if currentModalOpen === "noEmbeddings"}
@@ -105,9 +115,9 @@ License: CECILL-C
     message="No embeddings found for model {selectedModelName}."
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
     on:confirm={() =>
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
     on:cancel={() =>
-      modelsStore.update((store) => ({
+      modelsUiStore.update((store) => ({
         ...store,
         currentModalOpen: "none",
         selectedModelName: "none",

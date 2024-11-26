@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Eye, EyeOff } from "lucide-svelte";
 
-  import { Annotation, IconButton, Source } from "@pixano/core/src";
+  import { IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, OTHER } from "../../lib/constants";
@@ -21,16 +21,16 @@ License: CECILL-C
   let modelName: string = OTHER;
   let sectionTitle: string = OTHER + " - unknown";
 
-  const isAnnFromSource = (ann: Annotation): boolean => {
-    //if we have no source info at all (it shouldn't happens), we have source_ref.id === "";
-    //note it's different from no corresponding source in source table
-    return source ? ann.data.source_ref.id === source.id : ann.data.source_ref.id === "";
-  };
+  // const isAnnFromSource = (ann: Annotation): boolean => {
+  //   //if we have no source info at all (it shouldn't happens), we have source_ref.id === "";
+  //   //note it's different from no corresponding source in source table
+  //   return source ? ann.data.source_ref.id === source.id : ann.data.source_ref.id === "";
+  // };
 
   let visibilityStatus = derived([annotations], ([$annotations]) =>
-    $annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl?.hidden)
-      ? "hidden"
-      : "shown",
+    //Note: as we removed grouping by model, we don't filter by source anymore
+    //$annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl?.hidden)
+    $annotations.every((ann) => ann.ui.displayControl?.hidden) ? "hidden" : "shown",
   );
 
   onMount(() => {
@@ -48,7 +48,9 @@ License: CECILL-C
     const isHidden = $visibilityStatus === "hidden";
     annotations.update((anns) =>
       anns.map((ann) => {
-        return isAnnFromSource(ann) ? toggleObjectDisplayControl(ann, "hidden", !isHidden) : ann;
+        //return isAnnFromSource(ann) ? toggleObjectDisplayControl(ann, "hidden", !isHidden) : ann;
+        //TMP(?) now that there is only a global source group, we change vis for all
+        return toggleObjectDisplayControl(ann, "hidden", !isHidden);
       }),
     );
   };

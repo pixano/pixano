@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Input, Checkbox, Combobox, Entity, Track } from "@pixano/core/src";
-  import type { FeatureValues, ItemFeature } from "@pixano/core";
+  import type { ItemFeature, TableInfo } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
@@ -20,6 +20,7 @@ License: CECILL-C
   import type {
     CreateObjectInputs,
     CreateObjectSchema,
+    ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
@@ -28,17 +29,18 @@ License: CECILL-C
 
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
-  export let objectProperties: { [key: string]: FeatureValues } = {};
-  export let initialValues: Record<string, ItemFeature> = {};
+  export let objectProperties: ObjectProperties = {};
+  export let initialValues: Record<string, Record<string, ItemFeature>> = {};
   export let isAutofocusEnabled: boolean = true;
-
+  export let entitiesCombo: { id: string; name: string }[] = [{ id: "new", name: "New" }];
+  export let selectedEntityId: string = entitiesCombo[0].id;
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
     //TODO: need to take schema relation into account (when schema relation available)
     //required when there is several differents tracks / entities / subentities for different purpose
     let featuresArray: InputFeatures = [];
-    Object.values(schema.schemas).forEach((sch) => {
+    Object.entries(schema.schemas).forEach(([tname, sch]) => {
       let nonFeatsFields: string[] = [];
       if (["Entity", "Track"].includes(sch.base_schema)) {
         if ("Entity" === sch.base_schema) {
@@ -50,12 +52,13 @@ License: CECILL-C
         //TODO: custom fields from other types
         for (const feat in sch.fields) {
           if (!nonFeatsFields.includes(feat)) {
-            if (["int", "float", "str", "bool", "list"].includes(sch.fields[feat].type)) {
+            if (["int", "float", "str", "bool"].includes(sch.fields[feat].type)) {
               featuresArray.push({
                 name: feat,
                 required: false, //TODO (info not in datasetSchema (nowhere yet))
                 label: feat,
                 type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
+                sch: { name: tname, group: "entities", base_schema: sch.base_schema },
               });
             }
             if ("list" === sch.fields[feat].type) {
@@ -65,6 +68,7 @@ License: CECILL-C
                 label: feat,
                 type: "list",
                 options: [], //TODO for list type (not covered yet)
+                sch: { name: tname, group: "entities", base_schema: sch.base_schema },
               });
             }
           }
@@ -75,16 +79,36 @@ License: CECILL-C
     formInputs = createObjectInputsSchema.parse(featuresArray);
   });
 
-  const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
-    objectProperties[propertyLabel] = value;
+  const handleInputChange = (
+    value: string | number | boolean,
+    propertyLabel: string,
+    tinfo: TableInfo,
+  ) => {
+    if (!(tinfo.name in objectProperties)) objectProperties[tinfo.name] = {};
+    objectProperties[tinfo.name][propertyLabel] = value;
   };
 
   $: {
-    Object.values(initialValues).forEach((feature) => {
-      if (typeof feature.value !== "object") {
-        objectProperties[feature.name] = feature.value;
+    for (const feat of formInputs) {
+      if (feat.sch.name in initialValues && feat.name in initialValues[feat.sch.name]) {
+        if (typeof initialValues[feat.sch.name][feat.name].value !== "object") {
+          if (!(feat.sch.name in objectProperties)) objectProperties[feat.sch.name] = {};
+          if (!(feat.name in objectProperties[feat.sch.name])) {
+            objectProperties[feat.sch.name][feat.name] = initialValues[feat.sch.name][feat.name]
+              .value as string | number | boolean;
+          }
+        }
+      } else {
+        if (!(feat.sch.name in objectProperties)) objectProperties[feat.sch.name] = {};
+        if (!(feat.name in objectProperties[feat.sch.name])) {
+          if (feat.type === "bool") objectProperties[feat.sch.name][feat.name] = false;
+          if (feat.type === "str") objectProperties[feat.sch.name][feat.name] = "";
+          if (feat.type === "int" || feat.type === "float")
+            objectProperties[feat.sch.name][feat.name] = 0;
+          if (feat.type === "list") objectProperties[feat.sch.name][feat.name] = ""; //TODO list case... ??
+        }
       }
-    });
+    }
   }
 
   $: {
@@ -102,12 +126,29 @@ License: CECILL-C
   };
 </script>
 
+{#if entitiesCombo.length > 0}
+  <span>Select attached Entity</span>
+  <select
+    class="py-1 px-2 border rounded focus:outline-none
+bg-slate-100 border-slate-300 focus:border-main"
+    bind:value={selectedEntityId}
+  >
+    {#each entitiesCombo as { id, name }}
+      <option value={id}>
+        {name}
+      </option>
+    {/each}
+  </select>
+{/if}
+
 {#each formInputs as feature, i}
   {#if feature.type === "bool"}
     <div class="flex gap-4 items-center">
       <Checkbox
-        handleClick={(checked) => handleInputChange(checked, feature.name)}
-        checked={initialValues[feature.name]?.value === 1}
+        handleClick={(checked) => handleInputChange(checked, feature.name, feature.sch)}
+        checked={feature.sch.name in initialValues
+          ? initialValues[feature.sch.name][feature.name]?.value === 1
+          : false}
       />
       <span
         >{feature.label}
@@ -121,7 +162,7 @@ License: CECILL-C
     <Combobox
       placeholder={`Select a ${feature.label}`}
       listItems={feature.options}
-      saveValue={(value) => handleInputChange(value, feature.name)}
+      saveValue={(value) => handleInputChange(value, feature.name, feature.sch)}
     />
   {/if}
   {#if ["int", "float", "str"].includes(feature.type)}
@@ -135,7 +176,7 @@ License: CECILL-C
       {#if feature.type === "str"}
         <AutocompleteTextFeature
           value={findStringValue(feature.name)}
-          onTextInputChange={(value) => handleInputChange(value, feature.name)}
+          onTextInputChange={(value) => handleInputChange(value, feature.name, feature.sch)}
           featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
           autofocus={i === 0 && isAutofocusEnabled}
           isInputEnabled={!$itemMetas.featuresList?.objects[feature.name]?.restricted}
@@ -144,10 +185,13 @@ License: CECILL-C
         <Input
           type="number"
           step={feature.type === "int" ? "1" : "any"}
-          value={initialValues[feature.name]?.value || ""}
+          value={feature.sch.name in initialValues
+            ? initialValues[feature.sch.name][feature.name]?.value || ""
+            : ""}
           autofocus={i === 0}
           on:keyup={(e) => e.stopPropagation()}
-          on:input={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+          on:input={(e) =>
+            handleInputChange(Number(e.currentTarget.value), feature.name, feature.sch)}
         />
       {/if}
     </div>

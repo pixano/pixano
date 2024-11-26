@@ -29,6 +29,7 @@ import type {
   SaveItem,
   DatasetSchema,
   ItemFeature,
+  DS_NamedSchema,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -52,21 +53,29 @@ export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | u
 };
 
 export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
-  if (ann.ui.top_entity) {
-    return ann.ui.top_entity;
+  if (ann.ui.top_entities && ann.ui.top_entities.length > 0) {
+    return ann.ui.top_entities[0];
   }
+  //if there is no top_entities, we build a list of the parents entities
+  //first will be the top level entity, followed by sub entities in descending order
+  //(last one is the direct annotation parent entity)
+  ann.ui.top_entities = [];
   let entity = entities.find((entity) => entity.id === ann.data.entity_ref.id);
   while (entity && entity.data.parent_ref.id !== "") {
+    //store entity
+    ann.ui.top_entities.unshift(entity);
     entity = entities.find(
       (parent_entity) => entity && parent_entity.id === entity.data.parent_ref.id,
     );
   }
   if (!entity) {
+    //this should never happen
     console.error("ERROR: Unable to found top level Entity of annotation", ann);
+    throw new Error(`ERROR: Unable to found top level Entity of annotation (id=${ann.id})`);
   }
-  //store top_entity to avoid computing each time
-  ann.ui.top_entity = entity;
-  return entity as Entity;
+  //store top entity
+  ann.ui.top_entities.unshift(entity);
+  return entity;
 };
 
 export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
@@ -226,16 +235,10 @@ export const mapObjectToKeypoints = (
     entityRef: keypoints.data.entity_ref,
     vertices,
     edges: template.edges,
-    ui: {
-      displayControl: {
-        editing: keypoints.ui.displayControl?.editing,
-        visible: !keypoints.ui.displayControl?.hidden,
-      },
-      highlighted: keypoints.ui.highlighted,
-    },
+    ui: keypoints.ui,
   } as KeypointsTemplate;
   if ("frame_index" in keypoints.ui) kptTemplate.ui!.frame_index = keypoints.ui.frame_index;
-  if ("top_entity" in keypoints.ui) kptTemplate.ui!.top_entity = keypoints.ui.top_entity;
+  if ("top_entities" in keypoints.ui) kptTemplate.ui!.top_entities = keypoints.ui.top_entities;
   return kptTemplate;
 };
 
@@ -433,27 +436,34 @@ export const defineCreatedEntity = (
   shape: SaveShape,
   features: Record<string, ItemFeature>,
   dataset_schema: DatasetSchema,
-  isVideo: boolean,
+  entitySchema: DS_NamedSchema,
+  parentOfSub: { id: string; name: string } | undefined = undefined,
+  alternateViewRef: { id: string; name: string } | undefined = undefined,
 ): Entity | Track => {
-  const table = getTable(dataset_schema, "entities", isVideo ? "Track" : "Entity");
+  const table = entitySchema.name;
   const now = new Date(Date.now()).toISOString();
   const entity = {
     id: nanoid(10),
     created_at: now,
     updated_at: now,
-    table_info: { name: table, group: "entities", base_schema: isVideo ? "Track" : "Entity" },
+    table_info: { name: table, group: "entities", base_schema: entitySchema.base_schema },
     data: {
       item_ref: { name: "item", id: shape.itemId },
-      view_ref: shape.viewRef,
-      parent_ref: { name: "", id: "" }, //TODO intermediate entity ??
+      view_ref: alternateViewRef ? alternateViewRef : shape.viewRef,
+      parent_ref: parentOfSub ? parentOfSub : { name: "", id: "" },
     },
   };
-  for (const feat of Object.values(features)) {
-    entity.data = { ...entity.data, [feat.name]: feat.value };
+  if (features) {
+    for (const feat of Object.values(features)) {
+      entity.data = { ...entity.data, [feat.name]: feat.value };
+    }
   }
-  if (isVideo) {
+  if (entitySchema.base_schema === "Track") {
     //already done just before, but lint require entity.data.name, and can't know it's done...
-    const track = { ...entity, data: { ...entity.data, name: features["name"].value as string } };
+    const track = {
+      ...entity,
+      data: { ...entity.data, name: "name" in features ? (features["name"].value as string) : "" },
+    };
     return new Track(track);
   } else return new Entity(entity);
 };

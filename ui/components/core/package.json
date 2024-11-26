@@ -35,7 +35,7 @@
     "d3": "^7.8.5",
     "d3-color": "^3.1.0",
     "d3-scale-chromatic": "^3.0.0",
-    "konva": "^8.4.3",
+    "konva": "^9.3.16",
     "lucide-svelte": "^0.292.0",
     "onnxruntime-web": "~1.16.3",
     "svelte-chartjs": "^3.1.5",

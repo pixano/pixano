@@ -89,7 +89,7 @@ export type KeypointsTemplate = {
     displayControl?: DisplayControl;
     highlighted?: "all" | "self" | "none";
     startRef?: KeypointsTemplate;
-    top_entity?: Entity;
+    top_entities?: Entity[];
   };
 };
 

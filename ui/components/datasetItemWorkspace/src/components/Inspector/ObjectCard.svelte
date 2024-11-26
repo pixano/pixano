@@ -15,8 +15,7 @@ License: CECILL-C
     type DisplayControl,
     Annotation,
     Entity,
-    type AnnotationType,
-    type EntityType,
+    Item,
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
@@ -56,50 +55,61 @@ License: CECILL-C
   let boxIsVisible: boolean = true;
   let maskIsVisible: boolean = true;
   let keypointsIsVisible: boolean = true;
-  let displayName: string = `${entity.data.name ? (entity.data.name as string) + " - " : ""}${entity.id}`;
+
+  $: displayName =
+    (entity.data.name
+      ? (entity.data.name as string) + " "
+      : entity.data.category
+        ? (entity.data.category as string) + " "
+        : "") +
+    "(" +
+    entity.id +
+    ")";
 
   $: color = $colorScale[1](entity.id);
 
-  //Note: as ObjectInspector recreate the whole Objects tab whenever
-  //there is a change in annotations or entities stores
-  //(bad design... don't find better way to keep it up-to-date)
-  //we link (one way) "open" to the "isEditing" state
   $: if (isEditing) open = true;
 
-  const features = derived([currentFrameIndex], ([$currentFrameIndex]) => {
-    //get all features from Top entity (obj) to evental sub entities and annotations
-    //let anns_features: Record<string, Feature[]> = {};
-    let feats: Record<string, Feature[]> = {};
-    let child_anns: Annotation[] = [];
-    if ($currentFrameIndex !== null) {
-      child_anns = entity.ui.childs!.filter(
-        (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
-      );
-    } else {
-      child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
-    }
-    for (const ann of child_anns) {
-      if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
-        //there is a subentity, find it
-        const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
-        if (subentity) {
-          feats[subentity.id] = createFeature<EntityType>(
-            subentity,
-            $datasetSchema,
-            subentity.table_info.name,
-          );
-        }
+  const features = derived(
+    [currentFrameIndex, entities, annotations],
+    ([$currentFrameIndex, $entities, $annotations]) => {
+      //features may depends on an annotation change, but we access them with entity.ui.childs instead of $annotations
+      //to prevent lint unused-vars
+      $annotations;
+      //get all features from Top entity (obj) to evental sub entities and annotations
+      //let anns_features: Record<string, Feature[]> = {};
+      let feats: Record<string, Feature[]> = {};
+      let child_anns: Annotation[] = [];
+      if ($currentFrameIndex !== null) {
+        child_anns = entity.ui.childs!.filter(
+          (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
+        );
+      } else {
+        child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
       }
-      feats[ann.id] = createFeature<AnnotationType>(
-        ann,
-        $datasetSchema,
-        ann.table_info.name + "." + ann.data.view_ref.name,
-      );
-    }
-    feats[entity.id] = createFeature<EntityType>(entity, $datasetSchema);
+      for (const ann of child_anns) {
+        if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
+          //there is a subentity, find it
+          const subentity = $entities.find((ent) => ent.id === ann.data.entity_ref.id);
+          if (subentity) {
+            feats[subentity.id] = createFeature(
+              subentity,
+              $datasetSchema,
+              subentity.table_info.name,
+            );
+          }
+        }
+        feats[ann.id] = createFeature(
+          ann,
+          $datasetSchema,
+          ann.table_info.name + "." + ann.data.view_ref.name,
+        );
+      }
+      feats[entity.id] = createFeature(entity, $datasetSchema);
 
-    return Object.values(feats).flat();
-  });
+      return Object.values(feats).flat();
+    },
+  );
 
   annotations.subscribe(() => {
     isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
@@ -122,7 +132,11 @@ License: CECILL-C
       ) || false;
   });
 
-  const handleIconClick = (displayControlProperty: keyof DisplayControl, value: boolean) => {
+  const handleIconClick = (
+    displayControlProperty: keyof DisplayControl,
+    value: boolean,
+    kind: string | null = null,
+  ) => {
     annotations.update((anns) =>
       anns.map((ann) => {
         if (displayControlProperty === "editing") {
@@ -137,9 +151,11 @@ License: CECILL-C
             editing: false,
           };
         }
-        if (getTopEntity(ann, $entities).id === entity.id) {
+        if (
+          getTopEntity(ann, $entities).id === entity.id &&
+          (!kind || (kind && ann.table_info.base_schema === kind))
+        )
           ann = toggleObjectDisplayControl(ann, displayControlProperty, value);
-        }
         return ann;
       }),
     );
@@ -169,33 +185,57 @@ License: CECILL-C
     }
     const subent_ids = subentities.map((subent) => subent.id);
     annotations.update((oldObjects) =>
-      oldObjects.filter(
-        (ann) =>
-          ann.data.entity_ref.id !== entity.id && !subent_ids.includes(ann.data.entity_ref.id),
-      ),
+      oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_ref.id)),
     );
     entities.update((oldObjects) =>
       oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
     );
   };
 
-  const saveInputChange = (value: string | boolean | number, propertyName: string) => {
-    entities.update((oldObjects) =>
-      oldObjects.map((object) => {
-        if (object.id === entity.id) {
-          object.data = {
-            ...object.data,
-            [propertyName]: value,
-          };
-          const save_item: SaveItem = {
-            change_type: "update",
-            object,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-        }
-        return object;
-      }),
-    );
+  const saveInputChange = (
+    value: string | boolean | number,
+    propertyName: string,
+    obj: Item | Entity | Annotation,
+  ) => {
+    if (["Track", "Entity"].includes(obj.table_info.base_schema)) {
+      entities.update((oldObjects) =>
+        oldObjects.map((object) => {
+          if (object === obj) {
+            object.data = {
+              ...object.data,
+              [propertyName]: value,
+            };
+            const save_item: SaveItem = {
+              change_type: "update",
+              object,
+            };
+            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          }
+          return object;
+        }),
+      );
+    } else if (obj.table_info.base_schema === "Item") {
+      //??
+      console.warn("This should not happen, no ?");
+    } else {
+      //Annotation
+      annotations.update((oldObjects) =>
+        oldObjects.map((object) => {
+          if (object === obj) {
+            object.data = {
+              ...object.data,
+              [propertyName]: value,
+            };
+            const save_item: SaveItem = {
+              change_type: "update",
+              object,
+            };
+            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          }
+          return object;
+        }),
+      );
+    }
   };
 
   const onColoredDotClick = () => {
@@ -228,10 +268,12 @@ License: CECILL-C
   id={createObjectCardId(entity)}
 >
   <div
-    class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
+    class={cn(
+      "flex items-center mt-1 rounded justify-between text-slate-800 bg-white border-2 overflow-hidden",
+    )}
     style="border-color:{isHighlighted ? color : 'transparent'}"
   >
-    <div class="flex items-center flex-auto max-w-[50%]">
+    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
       <IconButton
         on:click={() => handleIconClick("hidden", isVisible)}
         tooltipContent={isVisible ? "Hide object" : "Show object"}
@@ -248,9 +290,17 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{displayName}</span>
+      <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap"
+        >{displayName}</span
+      >
     </div>
-    <div class="flex items-center">
+    <div
+      class={cn(
+        "flex-shrink-0 flex items-center justify-end",
+        showIcons || isEditing ? "basis-[120px]" : "basis-[40px]",
+      )}
+      style="min-width: 40px;"
+    >
       {#if showIcons || isEditing}
         <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
           ><Pencil class="h-4" /></IconButton
@@ -282,7 +332,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", boxIsVisible)}
+                      handleClick={() => handleIconClick("hidden", boxIsVisible, "BBox")}
                       bind:checked={boxIsVisible}
                       title={boxIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -293,7 +343,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", maskIsVisible)}
+                      handleClick={() => handleIconClick("hidden", maskIsVisible, "CompressedRLE")}
                       bind:checked={maskIsVisible}
                       title={maskIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -304,7 +354,7 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
-                      handleClick={() => handleIconClick("hidden", keypointsIsVisible)}
+                      handleClick={() => handleIconClick("hidden", keypointsIsVisible, "KeyPoints")}
                       bind:checked={keypointsIsVisible}
                       title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"

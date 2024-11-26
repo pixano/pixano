@@ -1307,7 +1307,9 @@ License: CECILL-C
                     {zoomFactor}
                     {mask}
                     color={colorScale(
-                      mask.ui.top_entity ? mask.ui.top_entity.id : mask.data.entity_ref.id,
+                      mask.ui.top_entities && mask.ui.top_entities.length > 0
+                        ? mask.ui.top_entities[0].id
+                        : mask.data.entity_ref.id,
                     )}
                     {selectedTool}
                   />
