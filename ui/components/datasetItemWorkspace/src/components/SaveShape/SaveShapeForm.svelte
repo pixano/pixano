@@ -58,16 +58,21 @@ License: CECILL-C
     return (
       entity.data.parent_ref.id === "" && //not a sub entity
       //TODO WIP: something wrong in this logic !!!
-      !entity.ui.childs?.some(
-        (ann) =>
-          (!ann.is_tracklet &&
+      (!entity.ui.childs
+        ?.filter((ann) => !ann.is_tracklet)
+        .some(
+          (ann) =>
             ann.data.view_ref.id === shape.viewRef.id &&
-            mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema) ||
-          (ann.is_tracklet &&
-            (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
-            (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
-            (ann as Tracklet).data.end_timestep > $currentFrameIndex),
-      )
+            mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
+        ) ||
+        !entity.ui.childs
+          ?.filter((ann) => ann.is_tracklet)
+          .some(
+            (ann) =>
+              (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
+              (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
+              (ann as Tracklet).data.end_timestep > $currentFrameIndex,
+          ))
     );
   };
 
@@ -273,6 +278,7 @@ License: CECILL-C
       newObject.ui.highlighted = "self";
       newObject.ui.displayControl = { editing: false };
       topEntity.ui.childs?.push(newObject);
+      if (subEntity) subEntity.ui.childs?.push(newObject);
       if (isVideo) {
         // for video, there is 2 anns, 1 track (may have 1 sub entity per obj), 1 tracklet
         // -> add obj2 (+ eventual 2nd sub entity) and tracklet
@@ -287,6 +293,10 @@ License: CECILL-C
         if (!newObject2) return;
         newObject2.ui.highlighted = "self";
         newObject2.ui.displayControl = { editing: false };
+        //TODO: It is possible that a tracklet already exist (used for a different kind of shape)
+        //For now, it always create a tracklet...
+        //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
+        //--> It would be far more easy to create 1 frame tracklet, and allow other means of tracklet edition
         const trackletShape: SaveTrackletShape = {
           type: "tracklet",
           status: $newShape.status,
@@ -315,12 +325,15 @@ License: CECILL-C
         newTracklet.ui.displayControl = { editing: false };
         (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
 
-        if (secondSubEntity && !$entities.includes(secondSubEntity)) {
-          const save_2ndSubEntity: SaveItem = {
-            change_type: "add",
-            object: secondSubEntity,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
+        if (secondSubEntity) {
+          secondSubEntity.ui.childs?.push(newObject2);
+          if (!$entities.includes(secondSubEntity)) {
+            const save_2ndSubEntity: SaveItem = {
+              change_type: "add",
+              object: secondSubEntity,
+            };
+            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
+          }
         }
         const save_item2: SaveItem = {
           change_type: "add",
