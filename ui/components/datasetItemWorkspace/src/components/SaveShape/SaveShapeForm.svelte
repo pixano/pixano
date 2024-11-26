@@ -423,6 +423,7 @@ License: CECILL-C
         bind:objectProperties
         entitiesCombo={$entitiesCombo}
         bind:selectedEntityId
+        shapeType={mapShapeType2BaseSchema[$newShape.type]}
       />
     </div>
     <div class="flex gap-4">

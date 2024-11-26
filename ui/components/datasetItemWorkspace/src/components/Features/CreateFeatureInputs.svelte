@@ -6,7 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Input, Checkbox, Combobox, Entity, Track } from "@pixano/core/src";
+  import {
+    Input,
+    Checkbox,
+    Combobox,
+    Entity,
+    Track,
+    BBox,
+    Keypoints,
+    Mask,
+  } from "@pixano/core/src";
   import type { ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -34,6 +43,7 @@ License: CECILL-C
   export let isAutofocusEnabled: boolean = true;
   export let entitiesCombo: { id: string; name: string }[] = [{ id: "new", name: "New" }];
   export let selectedEntityId: string = entitiesCombo[0].id;
+  export let shapeType: string;
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
@@ -42,12 +52,22 @@ License: CECILL-C
     let featuresArray: InputFeatures = [];
     Object.entries(schema.schemas).forEach(([tname, sch]) => {
       let nonFeatsFields: string[] = [];
-      if (["Entity", "Track"].includes(sch.base_schema)) {
+      let group = "entities";
+      if (["Entity", "Track", shapeType].includes(sch.base_schema)) {
         if ("Entity" === sch.base_schema) {
           nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
         }
         if ("Track" === sch.base_schema) {
           nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
+        }
+        if (shapeType === sch.base_schema) {
+          group = "annotations";
+          if (shapeType === "BBox")
+            nonFeatsFields = nonFeatsFields.concat(BBox.nonFeaturesFields());
+          if (shapeType === "KeyPoints")
+            nonFeatsFields = nonFeatsFields.concat(Keypoints.nonFeaturesFields());
+          if (shapeType === "CompressedRLE")
+            nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
         }
         //TODO: custom fields from other types
         for (const feat in sch.fields) {
@@ -58,7 +78,7 @@ License: CECILL-C
                 required: false, //TODO (info not in datasetSchema (nowhere yet))
                 label: feat,
                 type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
-                sch: { name: tname, group: "entities", base_schema: sch.base_schema },
+                sch: { name: tname, group, base_schema: sch.base_schema },
               });
             }
             if ("list" === sch.fields[feat].type) {
@@ -68,7 +88,7 @@ License: CECILL-C
                 label: feat,
                 type: "list",
                 options: [], //TODO for list type (not covered yet)
-                sch: { name: tname, group: "entities", base_schema: sch.base_schema },
+                sch: { name: tname, group, base_schema: sch.base_schema },
               });
             }
           }
