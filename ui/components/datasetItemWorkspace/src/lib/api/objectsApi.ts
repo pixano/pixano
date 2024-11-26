@@ -123,28 +123,26 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
   if (bbox.ui.datasetItemType === "video" && bbox.ui.displayControl?.hidden) return;
   if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.highlighted !== "self") return;
   if (!bbox.data.view_ref.name) return;
-  let bbox_denorm_coords = bbox.data.coords;
+  let bbox_ui_coords = bbox.data.coords;
+  if (bbox.data.format === "xyxy") {
+    bbox_ui_coords = [
+      bbox_ui_coords[0],
+      bbox_ui_coords[1],
+      bbox_ui_coords[2] - bbox_ui_coords[0],
+      bbox_ui_coords[3] - bbox_ui_coords[1],
+    ];
+  }
   if (bbox.data.is_normalized) {
     const view = views[bbox.data.view_ref.name];
     const image = Array.isArray(view) ? view[0] : view;
     const imageHeight = image.data.height || 1;
     const imageWidth = image.data.width || 1;
     //TODO: manage correctly format -- here we will change user format if save
-    let reformated_coords = bbox.data.coords;
-    if (bbox.data.format === "xyxy") {
-      reformated_coords = [
-        bbox.data.coords[0],
-        bbox.data.coords[1],
-        bbox.data.coords[2] - bbox.data.coords[0],
-        bbox.data.coords[3] - bbox.data.coords[1],
-      ];
-    }
-    const [x, y, width, height] = reformated_coords;
-    bbox_denorm_coords = [
-      x * imageWidth,
-      y * imageHeight,
-      width * imageWidth,
-      height * imageHeight,
+    bbox_ui_coords = [
+      bbox_ui_coords[0] * imageWidth,
+      bbox_ui_coords[1] * imageHeight,
+      bbox_ui_coords[2] * imageWidth,
+      bbox_ui_coords[3] * imageHeight,
     ];
   }
   const entity = getTopEntity(bbox, entities);
@@ -154,7 +152,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
     ...bbox,
     data: {
       ...bbox.data,
-      coords: bbox_denorm_coords,
+      coords: bbox_ui_coords,
       format: "xywh",
     },
     ui: {
