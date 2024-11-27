@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-import pytest
 from PIL import Image as PILImage
 
 from pixano.features import Image, create_image, is_image
