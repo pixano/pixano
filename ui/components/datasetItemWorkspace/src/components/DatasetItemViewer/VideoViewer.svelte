@@ -55,8 +55,6 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  const IMAGE_BUFFER_SIZE = 10;
-
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
