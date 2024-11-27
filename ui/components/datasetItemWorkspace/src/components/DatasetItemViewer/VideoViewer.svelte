@@ -137,10 +137,10 @@ License: CECILL-C
 
   let isLoaded = false;
 
-  async function preloadViewsImage(index: number) {
+  function preloadViewsImage(index: number) {
     Object.entries(imagesFilesUrlsByFrame[index]).map(([viewKey, im_ref]) => {
       if (im_ref && !imagesPerViewBuffer[viewKey][index]) {
-        new Promise<void>((resolve, reject) => {
+        void new Promise<void>((resolve, reject) => {
           const img = new Image();
           img.src = `/${im_ref.url}`;
           img.onload = () => {
@@ -162,7 +162,7 @@ License: CECILL-C
     });
   }
 
-  async function preloadImagesProgressively(currentIndex: number = 0) {
+  function preloadImagesProgressively(currentIndex: number = 0) {
     const previous: number[] = [];
     const next: number[] = [];
 
