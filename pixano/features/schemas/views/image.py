@@ -109,11 +109,7 @@ class Image(View):
             print(f"Error: image not found ({api_url})")
             return ""
 
-        try:
-            pil_image = PILImage.open(io.BytesIO(im_bytes))
-        except Exception as e:
-            print(f"Error: Failed to open image - {e}")
-            return ""
+        pil_image = PILImage.open(io.BytesIO(im_bytes))
 
         # Generate thumbnail if requested
         if thumbnail_size:
