@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import pytest
 from PIL import Image as PILImage
 
 from pixano.features import Image, create_image, is_image
@@ -28,6 +29,9 @@ class TestImage:
 
         pil = image.open(ASSETS_DIRECTORY, output_type="image")
         assert pil.format == "JPEG"
+
+        wrong_output = image.open(ASSETS_DIRECTORY, output_type="wrong_type")
+        assert wrong_output == ""
 
     def test_open_url(self):
         image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
