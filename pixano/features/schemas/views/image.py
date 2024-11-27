@@ -39,24 +39,35 @@ class Image(View):
     format: str
 
     @overload
-    def open(self, media_dir: Path, output_type: Literal["base64"]) -> str: ...
+    def open(self, media_dir: Path, output_type: Literal["base64"], thumbnail_size: tuple[int, int] | None) -> str: ...
     @overload
-    def open(self, media_dir: Path, output_type: Literal["image"]) -> PILImage.Image: ...
-    def open(self, media_dir: Path, output_type: Literal["base64", "image"] = "base64") -> str | PILImage.Image:
+    def open(
+        self, media_dir: Path, output_type: Literal["image"], thumbnail_size: tuple[int, int] | None
+    ) -> PILImage.Image: ...
+    def open(
+        self,
+        media_dir: Path,
+        output_type: Literal["base64", "image"] = "base64",
+        thumbnail_size: tuple[int, int] | None = None,
+    ) -> str | PILImage.Image:
         """Open the image.
 
         Args:
             media_dir: Path to the media directory. If the URL is relative, it is relative to this directory.
             output_type: The output type. Can be "base64" or "image" (PIL.Image).
+            thumbnail_size: size for thumbnail if thumbnail requested, else None.
 
         Returns:
             opened image.
         """
-        return Image.open_url(self.url, media_dir, output_type)
+        return Image.open_url(self.url, media_dir, output_type, thumbnail_size)
 
     @staticmethod
     def open_url(
-        url: str, media_dir: Path, output_type: Literal["base64", "image"] = "base64"
+        url: str,
+        media_dir: Path,
+        output_type: Literal["base64", "image"] = "base64",
+        thumbnail_size: tuple[int, int] | None = None,
     ) -> str | PILImage.Image:
         """Open an image from a URL.
 
@@ -64,6 +75,7 @@ class Image(View):
             url: image url relative to media_dir or absolute.
             media_dir: path to the media directory.
             output_type: output type.
+            thumbnail_size: size for thumbnail if thumbnail requested, else None.
 
         Returns:
             The opened image.
@@ -97,15 +109,27 @@ class Image(View):
             print(f"Error: image not found ({api_url})")
             return ""
 
-        if im_bytes is not None:
-            if output_type == "base64":
-                encoded = base64.b64encode(im_bytes).decode("utf-8")
-                return f"data:image;base64,{encoded}"
-            elif output_type == "image":
-                return PILImage.open(io.BytesIO(im_bytes))
-        # TODO: raise error
-        print("Error: Image not found")
-        return ""
+        try:
+            pil_image = PILImage.open(io.BytesIO(im_bytes))
+        except Exception as e:
+            print(f"Error: Failed to open image - {e}")
+            return ""
+
+        # Generate thumbnail if requested
+        if thumbnail_size:
+            pil_image.thumbnail(thumbnail_size)
+
+        # Handle output types
+        if output_type == "base64":
+            buffered = io.BytesIO()
+            pil_image.save(buffered, format=pil_image.format)
+            encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            return f"data:image/{pil_image.format.lower()};base64,{encoded}"
+        elif output_type == "image":
+            return pil_image
+        else:
+            print("Error: Invalid output type")
+            return ""
 
 
 def is_image(cls: type, strict: bool = False) -> bool:
