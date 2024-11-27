@@ -55,6 +55,13 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  // buffer
+  const ratioOfBackwardBuffer = 0.1;
+  const buffer_size = 200;
+  let previousCount: number = 0;
+  let nextCount: number = 0;
+  let timerId: ReturnType<typeof setTimeout>;
+
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
@@ -166,8 +173,6 @@ License: CECILL-C
     const previous: number[] = [];
     const next: number[] = [];
 
-    const previousCount = 5;
-    const nextCount = 50;
     const num_frames = $lastFrameIndex + 1;
     // previous (inverted and circular)
     for (let i = 1; i <= previousCount; i++) {
@@ -177,17 +182,22 @@ License: CECILL-C
     for (let i = 0; i < nextCount; i++) {
       next.push((currentIndex + i) % num_frames);
     }
-    for (const i of next) {
-      preloadViewsImage(i);
-    }
-    for (const i of previous) {
-      preloadViewsImage(i);
-    }
-    //delete buffered images out of currentIndex window (currentIndex -10 : currentIndex + 30)
     const includedIndices = new Set([...previous, ...next]);
     const excludedIndices = Array.from({ length: num_frames }, (_, i) => i).filter(
       (index) => !includedIndices.has(index),
     );
+
+    clearTimeout(timerId); // reinit timer on each update
+    timerId = setTimeout(() => {
+      for (const i of next) {
+        preloadViewsImage(i);
+      }
+      for (const i of previous) {
+        preloadViewsImage(i);
+      }
+    }, 20); // timeout to spare bandwith (cancel outdated updates)
+
+    //delete buffered images out of currentIndex window (currentIndex -10 : currentIndex + 30)
     Object.keys(imagesPerViewBuffer).forEach((viewKey) => {
       for (const i of excludedIndices) {
         if (i in imagesPerViewBuffer[viewKey]) {
@@ -218,6 +228,10 @@ License: CECILL-C
     for (const viewKey in selectedItem.views) {
       imagesPerViewBuffer[viewKey] = [];
     }
+
+    const n_view = Object.keys(imagesPerViewBuffer).length;
+    previousCount = Math.round((ratioOfBackwardBuffer * buffer_size) / n_view);
+    nextCount = Math.round(((1 - ratioOfBackwardBuffer) * buffer_size) / n_view);
 
     isLoaded = true;
 
