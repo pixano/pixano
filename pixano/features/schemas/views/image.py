@@ -111,7 +111,6 @@ class Image(View):
 
         try:
             pil_image = PILImage.open(io.BytesIO(im_bytes))
-            print(type(pil_image))
         except Exception as e:
             print(f"Error: Failed to open image - {e}")
             return ""
