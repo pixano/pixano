@@ -4,8 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-from PIL import Image as PILImage
-
 from pixano.features import Image, create_image, is_image
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
