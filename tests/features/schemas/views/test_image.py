@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from PIL import Image as PILImage
+
 from pixano.features import Image, create_image, is_image
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
@@ -19,6 +21,13 @@ class TestImage:
 
         io = image.open(ASSETS_DIRECTORY)
         assert isinstance(io, str)
+
+        io_thumbnail = image.open(ASSETS_DIRECTORY, thumbnail_size=(100, 100))
+        assert isinstance(io_thumbnail, str)
+        assert len(io) > len(io_thumbnail)
+
+        pil = image.open(ASSETS_DIRECTORY, output_type="image")
+        assert pil.format == "JPEG"
 
     def test_open_url(self):
         image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
