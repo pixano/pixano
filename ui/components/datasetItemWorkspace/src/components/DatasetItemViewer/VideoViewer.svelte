@@ -57,7 +57,7 @@ License: CECILL-C
 
   // buffer
   const ratioOfBackwardBuffer = 0.1;
-  const buffer_size = 200;
+  const bufferSize = 200;
   let previousCount: number = 0;
   let nextCount: number = 0;
   let timerId: ReturnType<typeof setTimeout>;
@@ -230,8 +230,8 @@ License: CECILL-C
     }
 
     const n_view = Object.keys(imagesPerViewBuffer).length;
-    previousCount = Math.round((ratioOfBackwardBuffer * buffer_size) / n_view);
-    nextCount = Math.round(((1 - ratioOfBackwardBuffer) * buffer_size) / n_view);
+    previousCount = Math.round((ratioOfBackwardBuffer * bufferSize) / n_view);
+    nextCount = Math.round(((1 - ratioOfBackwardBuffer) * bufferSize) / n_view);
 
     isLoaded = true;
 
