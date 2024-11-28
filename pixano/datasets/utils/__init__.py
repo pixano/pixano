@@ -5,7 +5,6 @@
 # =====================================
 
 from .errors import DatasetAccessError, DatasetPaginationError, DatasetWriteError
-from .image import image_to_thumbnail
 from .integrity import (
     check_dataset_integrity,
     check_table_integrity,
@@ -29,6 +28,5 @@ __all__ = [
     "dota_ids",
     "get_integry_checks_from_schemas",
     "handle_integrity_errors",
-    "image_to_thumbnail",
     "voc_names",
 ]
