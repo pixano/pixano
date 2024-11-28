@@ -14,10 +14,11 @@ import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
-  const currentTimestamp = imageIndex * videoSpeed;
-  const minutes = Math.floor(currentTimestamp / 60000);
-  const seconds = ((currentTimestamp % 60000) / 1000).toFixed(0);
-  return `${minutes}:${Number(seconds) < 10 ? "0" : ""}${seconds}`;
+  const date = new Date(imageIndex * videoSpeed);
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+  return `${minutes}:${seconds}:${milliseconds}`;
 };
 
 export const getImageIndexFromMouseMove = (
