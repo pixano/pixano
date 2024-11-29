@@ -96,10 +96,13 @@ class DatasetInfo(BaseModel):
         # Browse directory
         for json_fp in sorted(directory.glob("*/info.json")):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
-            info.preview = Image.open_url(
-                str(json_fp.parent / "previews/dataset_preview.jpg"),
-                Path("/"),
-            )  # TODO choose correct preview name / path / extension
+            try:
+                info.preview = Image.open_url(
+                    str(json_fp.parent / "previews/dataset_preview.jpg"),
+                    Path("/"),
+                )  # TODO choose correct preview name / path / extension
+            except Exception:  # TODO: specify exception URL and Value
+                info.preview = ""
             if return_path:
                 library.append((info, json_fp.parent))  #  type: ignore[arg-type]
             else:
@@ -131,9 +134,12 @@ class DatasetInfo(BaseModel):
         for json_fp in directory.glob("*/info.json"):
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
-                info.preview = Image.open_url(
-                    str(json_fp.parent / "previews/dataset_preview.jpg"),
-                    json_fp.parent / "media",
-                )  # TODO choose correct preview name / path / extension
+                try:
+                    info.preview = Image.open_url(
+                        str(json_fp.parent / "previews/dataset_preview.jpg"),
+                        json_fp.parent / "media",
+                    )  # TODO choose correct preview name / path / extension
+                except ValueError:
+                    info.preview = ""
                 return (info, json_fp.parent) if return_path else info
         raise FileNotFoundError(f"No dataset found with ID {id}")

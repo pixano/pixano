@@ -21,7 +21,7 @@ from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetIntegrityError
 from pixano.features import BBox, Image, Item
-from pixano.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.features.schemas.embeddings.embedding import ViewEmbedding, _to_pixano_name
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 
 
@@ -77,6 +77,17 @@ class TestDataset:
             "test_compute_embeddings_view_embedding",
             dataset_image_bboxes_keypoint_copy,
         )
+        pix_name = _to_pixano_name(
+            dataset_image_bboxes_keypoint_copy,
+            "test_compute_embeddings_view_embedding",
+            "test_compute_embeddings_dumb_embedding_function",
+        )
+        assert pix_name in registry._functions
+
+        def _open_views(self, views):
+            return ["" for _ in views]
+
+        registry._functions[pix_name]._open_views = _open_views
         dataset_image_bboxes_keypoint_copy.create_table(
             "test_compute_embeddings_view_embedding", embeddings_schema, SchemaRelation.ONE_TO_MANY
         )
@@ -87,6 +98,8 @@ class TestDataset:
             data.append(
                 {
                     "id": f"embedding_{i}",
+                    "created_at": datetime(2021, 1, 1, 0, 0),
+                    "updated_at": datetime(2021, 1, 1, 0, 0),
                     "item_ref": {
                         "id": view.item_ref.id,
                         "name": view.item_ref.name,

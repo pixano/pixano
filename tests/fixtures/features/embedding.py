@@ -16,10 +16,10 @@ from tests.utils.schema import register_schema
 def dumb_embedding_function(vector_size: int = 8):
     class DumbEmbeddingFunction(EmbeddingFunction):
         def compute_query_embeddings(self, queries, *args, **kwargs):
-            return [[1, 2, 3, 4, 5, 6, 7, 8]] * len(queries)
+            return [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]] * len(queries)
 
         def compute_source_embeddings(self, sources, *args, **kwargs) -> list:
-            return [[1, 2, 3, 4, 5, 6, 7, 8]] * len(sources)
+            return [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]] * len(sources)
 
         def ndims(self):
             return vector_size
