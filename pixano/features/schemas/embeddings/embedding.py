@@ -186,15 +186,17 @@ def create_view_embedding_function(
     class ViewEmbeddingFunction(type_embedding_function):
         """A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction]."""
 
+        def _open_views(self, views: list[Any]) -> list[Any]:
+            """Open the views in the dataset."""
+            return [view.open(dataset.media_dir, "image") for view in views]
+
         def compute_source_embeddings(self, view_refs: pa.Table, *args, **kwargs) -> list:
             """Compute the embeddings for the source column in the database."""
             views = [dataset.resolve_ref(ViewRef(**view_ref)) for view_ref in view_refs.to_pylist()]
             view_type = type(views[0])
             if is_image(view_type) or is_sequence_frame(view_type):
                 views = cast(list[Image], views)
-                return super().compute_source_embeddings(
-                    [view.open(dataset.media_dir, "image") for view in views], *args, **kwargs
-                )
+                return super().compute_source_embeddings(self._open_views(views=views), *args, **kwargs)
             else:
                 raise ValueError(f"View type {view_type} not supported for embedding.")
 

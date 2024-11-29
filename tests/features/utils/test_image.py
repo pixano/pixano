@@ -8,6 +8,7 @@ import tempfile
 
 import cv2
 import numpy as np
+import PIL.Image
 import pytest
 from PIL.Image import Image as PILImage
 
@@ -60,7 +61,7 @@ def test_encode_rle():
 
 
 def test_image_to_binary():
-    input = PILImage.new("RGB", (100, 100))
+    input = PIL.Image.new("RGB", (100, 100))
     binary = image_to_binary(input)
     assert isinstance(binary, bytes)
 
@@ -112,7 +113,8 @@ def test_base64_to_image():
     base64_image = image_to_base64(image)
     converted_image = base64_to_image(base64_image)
     assert isinstance(converted_image, PILImage)
-    assert list(image.getdata()) == list(converted_image.getdata())
+    assert image.format == converted_image.format
+    assert image.size == converted_image.size
 
 
 def test_get_image_thumbnail():

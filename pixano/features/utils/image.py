@@ -265,7 +265,7 @@ def image_to_base64(image: Image.Image) -> str:
         Image as base64.
     """
     buffered = io.BytesIO()
-    image.save(buffered, format=image.format)
+    image.save(buffered, format=image.format, quality=100, subsampling=0)
     encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/{image.format.lower()};base64,{encoded}"
 
@@ -281,7 +281,7 @@ def base64_to_image(base64_image: str) -> Image.Image:
     Returns:
         Pillow image.
     """
-    image_data = base64.b64decode(base64_image.split(",")[1])
+    image_data = base64.b64decode(base64_image.split(",", maxsplit=1)[1].encode("utf-8"))
     return Image.open(io.BytesIO(image_data))
 
 
