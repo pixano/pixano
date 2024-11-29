@@ -55,6 +55,13 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  // buffer
+  const ratioOfBackwardBuffer = 0.1;
+  const bufferSize = 200;
+  let previousCount: number = 0;
+  let nextCount: number = 0;
+  let timerId: ReturnType<typeof setTimeout>;
+
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
@@ -133,79 +140,108 @@ License: CECILL-C
   let imagesPerView: ImagesPerView = {};
   const imagesPerViewBuffer: Record<string, HTMLImage[]> = {};
 
-  let imagesFilesUrls: Record<string, { id: string; url: string }[]> = Object.entries(
-    selectedItem.views,
-  ).reduce(
-    (acc, [key, value]) => {
-      acc[key] = (value as SequenceFrame[]).map((view) => {
-        return { id: view.id, url: view.data.url };
-      });
-      return acc;
-    },
-    {} as Record<string, { id: string; url: string }[]>,
-  );
+  let imagesFilesUrlsByFrame: Record<string, { id: string; url: string } | undefined>[] = [];
 
   let isLoaded = false;
 
-  async function preloadImagesProgressively(
-    imagesFilesUrls: Record<string, { id: string; url: string }[]>,
-  ) {
-    // Initialize the buffer structure with arrays for each view
-    for (const [viewKey, frames] of Object.entries(imagesFilesUrls)) {
-      imagesPerViewBuffer[viewKey] = new Array<HTMLImage>(frames.length);
+  function preloadViewsImage(index: number) {
+    Object.entries(imagesFilesUrlsByFrame[index]).map(([viewKey, im_ref]) => {
+      if (im_ref && !imagesPerViewBuffer[viewKey][index]) {
+        void new Promise<void>((resolve, reject) => {
+          const img = new Image();
+          img.src = `/${im_ref.url}`;
+          img.onload = () => {
+            imagesPerViewBuffer[viewKey][index] = {
+              id: im_ref.id,
+              element: img,
+            } as HTMLImage;
+            // console.log(
+            //   `Image ${im_ref.id} for ${viewKey} loaded and added to buffer at index ${index}.`,
+            // );
+            resolve();
+          };
+          img.onerror = () => {
+            console.warn(`Failed to load image: ${im_ref.url}`);
+            reject(new Error(`Failed to load image: ${im_ref.url}`));
+          };
+        });
+      }
+    });
+  }
+
+  function preloadImagesProgressively(currentIndex: number = 0) {
+    const previous: number[] = [];
+    const next: number[] = [];
+
+    const num_frames = $lastFrameIndex + 1;
+    // previous (inverted and circular)
+    for (let i = 1; i <= previousCount; i++) {
+      previous.push((currentIndex - i + num_frames) % num_frames);
     }
-    // Create an array of promises for loading images
-    const loadPromises = Object.entries(imagesFilesUrls).flatMap(([viewKey, frames]) =>
-      frames.map(
-        ({ id, url }, index) =>
-          new Promise<void>((resolve, reject) => {
-            const img = new Image();
-            img.src = `/${url}`;
-            img.onload = () => {
-              imagesPerViewBuffer[viewKey][index] = { id, element: img } as HTMLImage;
-              //console.log(`Image ${id} for ${viewKey} loaded and added to buffer at index ${index}.`);
-              resolve();
-            };
-            img.onerror = () => {
-              console.warn(`Failed to load image: ${url}`);
-              reject(new Error(`Failed to load image: ${url}`));
-            };
-          }),
-      ),
+    // next (inculing current, circular)
+    for (let i = 0; i < nextCount; i++) {
+      next.push((currentIndex + i) % num_frames);
+    }
+    const includedIndices = new Set([...previous, ...next]);
+    const excludedIndices = Array.from({ length: num_frames }, (_, i) => i).filter(
+      (index) => !includedIndices.has(index),
     );
-    // Await all images to finish loading, without holding up the buffer population
-    await Promise.allSettled(loadPromises);
+
+    clearTimeout(timerId); // reinit timer on each update
+    timerId = setTimeout(() => {
+      for (const i of next) {
+        preloadViewsImage(i);
+      }
+      for (const i of previous) {
+        preloadViewsImage(i);
+      }
+    }, 20); // timeout to spare bandwith (cancel outdated updates)
+
+    //delete buffered images out of currentIndex window (currentIndex -10 : currentIndex + 30)
+    Object.keys(imagesPerViewBuffer).forEach((viewKey) => {
+      for (const i of excludedIndices) {
+        if (i in imagesPerViewBuffer[viewKey]) {
+          delete imagesPerViewBuffer[viewKey][i];
+        }
+      }
+    });
   }
 
   onMount(() => {
-    Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
-      const image = new Image();
-      image.src = `/${urls[0].url}`;
-      imagesPerView = {
-        ...imagesPerView,
-        [key]: [{ id: urls[0].id, element: image }],
-      };
+    const longestView = Math.max(
+      ...Object.values(selectedItem.views).map((view) => (view as SequenceFrame[]).length),
+    );
+    //build imagesFilesUrlByFrame
+    imagesFilesUrlsByFrame = Array.from({ length: longestView }).map((_, i) => {
+      return Object.entries(selectedItem.views).reduce(
+        (acc, [key, value]) => {
+          const viewFrames = value as SequenceFrame[];
+          acc[key] = viewFrames[i]
+            ? { id: viewFrames[i].id, url: viewFrames[i].data.url }
+            : undefined;
+          return acc;
+        },
+        {} as Record<string, { id: string; url: string } | undefined>,
+      );
     });
+    // Initialize the buffer structure with arrays for each view
+    for (const viewKey in selectedItem.views) {
+      imagesPerViewBuffer[viewKey] = [];
+    }
+
+    const n_view = Object.keys(imagesPerViewBuffer).length;
+    previousCount = Math.round((ratioOfBackwardBuffer * bufferSize) / n_view);
+    nextCount = Math.round(((1 - ratioOfBackwardBuffer) * bufferSize) / n_view);
 
     isLoaded = true;
-    const longestView = Object.values(imagesFilesUrls).reduce(
-      (acc, urls) => (urls.length > acc ? urls.length : acc),
-      0,
-    );
-    lastFrameIndex.set(longestView - 1);
 
-    //preload buffer
-    preloadImagesProgressively(imagesFilesUrls)
-      .then(() => {
-        console.log("Progressive loading complete.");
-      })
-      .catch((error) => {
-        console.error("Error during progressive loading:", error);
-      });
+    lastFrameIndex.set(longestView - 1);
+    updateView(0);
   });
 
   const updateView = (imageIndex: number) => {
-    Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
+    preloadImagesProgressively(imageIndex);
+    Object.entries(imagesFilesUrlsByFrame[imageIndex]).forEach(([key, im_ref]) => {
       if (
         key in imagesPerViewBuffer &&
         imagesPerViewBuffer[key][imageIndex] &&
@@ -216,17 +252,19 @@ License: CECILL-C
           [key]: [...(imagesPerView[key] || []), imagesPerViewBuffer[key][imageIndex]].slice(-2),
         };
       } else {
-        const image = new Image();
-        const src = `/${urls[imageIndex].url}`;
-        if (!src) return;
-        image.src = src;
-        //NOTE double image, avoid flashing by "swapping" with previous image
-        imagesPerView = {
-          ...imagesPerView,
-          [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
-            -2,
-          ),
-        };
+        if (im_ref) {
+          const image = new Image();
+          const src = `/${im_ref.url}`;
+          if (!src) return;
+          image.src = src;
+          //NOTE double image, avoid flashing by "swapping" with previous image
+          imagesPerView = {
+            ...imagesPerView,
+            [key]: [...(imagesPerView[key] || []), { id: im_ref.id, element: image }].slice(-2),
+          };
+        } else {
+          //console.warn("Media not present")
+        }
       }
     });
   };
