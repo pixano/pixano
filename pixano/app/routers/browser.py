@@ -106,10 +106,11 @@ async def get_browser(
             if item_first_media[view][item.id] is not None:
                 try:
                     row_view = item_first_media[view][item.id].open(settings.media_dir, output_type="image")
-                except ValueError as e:
-                    raise HTTPException(status_code=400, detail=str(e))
-                row_view = get_image_thumbnail(row_view, (128, 128))
-                row_view_base64 = image_to_base64(row_view)
+                    row_view = get_image_thumbnail(row_view, (128, 128))
+                    row_view_base64 = image_to_base64(row_view)
+                except ValueError:
+                    row_view_base64 = ""
+
                 row[view] = row_view_base64
 
         # ITEM features
