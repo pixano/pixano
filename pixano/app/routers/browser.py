@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -12,6 +12,7 @@ from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import SchemaGroup, is_view_embedding
+from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 
 from .utils import get_dataset, get_rows
 
@@ -97,13 +98,20 @@ async def get_browser(
         cols.append(PaginationColumn(name="distance", type="float"))
 
     # build rows
-    rows = []
+    rows: list[dict[str, Any]] = []
     for i, item in enumerate(item_rows):
-        row = {}
+        row: dict[str, Any] = {}
         # VIEWS -> thumbnails previews
         for view in tables_view:
             if item_first_media[view][item.id] is not None:
-                row[view] = item_first_media[view][item.id].open(settings.media_dir, thumbnail_size=(128, 128))
+                try:
+                    row_view = item_first_media[view][item.id].open(settings.media_dir, output_type="image")
+                except ValueError as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+                row_view = get_image_thumbnail(row_view, (128, 128))
+                row_view_base64 = image_to_base64(row_view)
+                row[view] = row_view_base64
+
         # ITEM features
         for feat in vars(item).keys():
             row[feat] = getattr(item, feat)

@@ -9,13 +9,17 @@ import tempfile
 import cv2
 import numpy as np
 import pytest
-from PIL import Image
+from PIL.Image import Image as PILImage
 
+from pixano.features.schemas.views.image import Image
 from pixano.features.utils.image import (
+    base64_to_image,
     binary_to_url,
     depth_array_to_gray,
     depth_file_to_binary,
     encode_rle,
+    get_image_thumbnail,
+    image_to_base64,
     image_to_binary,
     mask_to_polygons,
     mask_to_rle,
@@ -25,6 +29,7 @@ from pixano.features.utils.image import (
     rle_to_urle,
     urle_to_rle,
 )
+from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 
 
 def test_binary_to_url():
@@ -55,7 +60,7 @@ def test_encode_rle():
 
 
 def test_image_to_binary():
-    input = Image.new("RGB", (100, 100))
+    input = PILImage.new("RGB", (100, 100))
     binary = image_to_binary(input)
     assert isinstance(binary, bytes)
 
@@ -93,3 +98,30 @@ def test_rle_to_urle():
 @pytest.mark.skip("Not implemented")
 def test_urle_to_rle():
     pass
+
+
+def test_image_to_base64():
+    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    base64_image = image_to_base64(image)
+    assert isinstance(base64_image, str)
+    assert base64_image.startswith("data:image/jpeg;base64,")
+
+
+def test_base64_to_image():
+    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    base64_image = image_to_base64(image)
+    converted_image = base64_to_image(base64_image)
+    assert isinstance(converted_image, PILImage)
+    assert list(image.getdata()) == list(converted_image.getdata())
+
+
+def test_get_image_thumbnail():
+    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    image_thumbnail = get_image_thumbnail(image, (100, 100))
+    assert isinstance(image_thumbnail, PILImage)
+    assert image_thumbnail.size == (92, 100)
+
+    for size in [(0, 0), (100, 0), (0, 100), "yolo", (0.1, 2)]:
+        match_regex = "Invalid thumbnail size: " + str(size)
+        with pytest.raises(ValueError, match=r"".format(match_regex)):  # noqa: F523
+            get_image_thumbnail(image, size)

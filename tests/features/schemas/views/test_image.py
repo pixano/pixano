@@ -4,6 +4,9 @@
 # License: CECILL-C
 # =====================================
 
+import pytest
+from PIL.Image import Image as PILImage
+
 from pixano.features import Image, create_image, is_image
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
@@ -17,22 +20,24 @@ class TestImage:
             url_relative_path=ASSETS_DIRECTORY,
         )
 
-        io = image.open(ASSETS_DIRECTORY)
-        assert isinstance(io, str)
-
-        io_thumbnail = image.open(ASSETS_DIRECTORY, thumbnail_size=(100, 100))
-        assert isinstance(io_thumbnail, str)
-        assert len(io) > len(io_thumbnail)
+        base64_image = image.open(ASSETS_DIRECTORY)
+        assert isinstance(base64_image, str)
+        assert base64_image.startswith("data:image/jpeg;base64,")
 
         pil = image.open(ASSETS_DIRECTORY, output_type="image")
         assert pil.format == "JPEG"
 
-        wrong_output = image.open(ASSETS_DIRECTORY, output_type="wrong_type")
-        assert wrong_output == ""
-
     def test_open_url(self):
-        image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
-        assert isinstance(image, str)
+        image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+        assert isinstance(image, PILImage)
+        assert image.format == "JPEG"
+
+        base64_image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
+        assert isinstance(base64_image, str)
+        assert base64_image.startswith("data:image/jpeg;base64,")
+
+        with pytest.raises(ValueError, match=r"Invalid output type: wrong_type"):
+            Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, output_type="wrong_type")
 
 
 def test_is_image():
