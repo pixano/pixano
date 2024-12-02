@@ -116,6 +116,16 @@ def test_base64_to_image():
     assert image.format == converted_image.format
     assert image.size == converted_image.size
 
+    image.format = None
+    base64_image = image_to_base64(image, "PNG")
+    converted_image = base64_to_image(base64_image)
+    assert isinstance(converted_image, PILImage)
+    assert converted_image.format == "PNG"
+    assert image.size == converted_image.size
+
+    with pytest.raises(ValueError, match="Image format is not defined"):
+        base64_image = image_to_base64(image, None)
+
 
 def test_get_image_thumbnail():
     image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")

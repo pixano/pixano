@@ -252,7 +252,7 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     return urle
 
 
-def image_to_base64(image: Image.Image) -> str:
+def image_to_base64(image: Image.Image, format: str | None = None) -> str:
     """Encode image from Pillow to base64.
 
     The image is returned as a base64 string formatted as
@@ -260,14 +260,22 @@ def image_to_base64(image: Image.Image) -> str:
 
     Args:
         image: Pillow image.
+        format: Image format.
 
     Returns:
         Image as base64.
     """
+    if image.format is None and format is None:
+        raise ValueError("Image format is not defined")
+
     buffered = io.BytesIO()
-    image.save(buffered, format=image.format, quality=100, subsampling=0)
+    out_format = format or image.format
+
+    image.save(buffered, format=out_format)
+
     encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return f"data:image/{image.format.lower()};base64,{encoded}"
+
+    return f"data:image/{out_format.lower()};base64,{encoded}"
 
 
 def base64_to_image(base64_image: str) -> Image.Image:
