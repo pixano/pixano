@@ -103,11 +103,12 @@ async def get_browser(
         row: dict[str, Any] = {}
         # VIEWS -> thumbnails previews
         for view in tables_view:
-            if item_first_media[view][item.id] is not None:
+            curr_view = item_first_media[view][item.id]
+            if curr_view is not None:
                 try:
-                    row_view = item_first_media[view][item.id].open(settings.media_dir, output_type="image")
+                    row_view = curr_view.open(settings.media_dir, output_type="image")
                     row_view = get_image_thumbnail(row_view, (128, 128))
-                    row_view_base64 = image_to_base64(row_view)
+                    row_view_base64 = image_to_base64(row_view, curr_view.format)
                 except ValueError:
                     row_view_base64 = ""
 
