@@ -107,6 +107,10 @@ def test_image_to_base64():
     assert isinstance(base64_image, str)
     assert base64_image.startswith("data:image/jpeg;base64,")
 
+    image.format = "Unknown"
+    base64_image = image_to_base64(image)
+    assert isinstance(base64_image, str)
+
 
 def test_base64_to_image():
     image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
