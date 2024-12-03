@@ -270,7 +270,8 @@ def image_to_base64(image: Image.Image, format: str | None = None) -> str:
 
     buffered = io.BytesIO()
     out_format = format or image.format
-
+    if out_format.upper() == "UNKNOWN":
+        out_format = "JPEG"
     image.save(buffered, format=out_format)
 
     encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
