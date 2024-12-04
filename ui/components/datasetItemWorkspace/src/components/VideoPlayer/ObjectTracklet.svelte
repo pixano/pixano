@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
   import {
-    Track,
     Tracklet,
     SequenceFrame,
     type TrackletItem,
