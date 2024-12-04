@@ -4,9 +4,18 @@
 # License: CECILL-C
 # =====================================
 
+from pathlib import Path
+
 import pytest
 
-from pixano.utils.python import get_super_type_from_dict, natural_key, unique_list
+from pixano.utils.python import (
+    estimate_folder_size,
+    fn_sort_dict,
+    get_super_type_from_dict,
+    natural_key,
+    to_sql_list,
+    unique_list,
+)
 
 
 def test_natural_key():
@@ -17,9 +26,13 @@ def test_natural_key():
     assert output == ["", 231, "yolo", 1, ""]
 
 
-@pytest.mark.skip("Not implemented")
-def test_estimate_folder_size():
-    pass
+def test_estimate_folder_size(tmp_path: Path):
+    for i in range(4):
+        tmp_subfolder = tmp_path / f"folder_{i}"
+        tmp_subfolder.mkdir()
+        with open(tmp_subfolder / "file", "wb") as f:
+            f.truncate(8192 * i)
+    assert estimate_folder_size(tmp_path) == "48 KB"
 
 
 def test_get_super_type_from_dict():
@@ -45,6 +58,31 @@ def test_get_super_type_from_dict():
     assert get_super_type_from_dict(TypeC, dict_types) == TypeB
     assert get_super_type_from_dict(TypeD, dict_types) == TypeD
     assert get_super_type_from_dict(int, dict_types) is None
+
+
+def test_to_sql_list():
+    assert to_sql_list("id1") == "('id1')"
+    assert to_sql_list(["id1"]) == "('id1')"
+    assert to_sql_list(["id1", "id2"]) == "('id1', 'id2')"
+
+    with pytest.raises(ValueError, match="IDs must not be empty."):
+        to_sql_list([])
+
+    with pytest.raises(ValueError, match="IDs must be strings."):
+        to_sql_list([0, 8])
+
+
+def test_fn_sort_dict():
+    dict_to_sort = {"a": 1, "b": "v", "c": False, "d": None, "e": 6}
+    sorted_dict = fn_sort_dict(dict_to_sort, ["e", "d", "c", "b", "a"], [False, True, True, True, True])
+    assert sorted_dict == (6, None, 0, "\x89", -1)
+
+    with pytest.raises(
+        ValueError,
+        match="Cannot sort by <class 'list'> in descending order. "
+        "Please use open an issue if you need this feature.",
+    ):
+        fn_sort_dict({"a": [0, 1]}, ["a"], [True])
 
 
 def test_unique_list():

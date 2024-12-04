@@ -13,6 +13,7 @@ from typing import Literal, overload
 from pydantic import BaseModel, field_validator
 
 from pixano.features import Image
+from pixano.utils.python import estimate_folder_size
 
 
 class DatasetInfo(BaseModel):
@@ -22,7 +23,7 @@ class DatasetInfo(BaseModel):
         id: Dataset ID. Must be unique.
         name: Dataset name.
         description: Dataset description.
-        estimated_size: Dataset estimated size.
+        size: Dataset estimated size.
         preview: Path to a preview thumbnail.
     """
 
@@ -96,6 +97,7 @@ class DatasetInfo(BaseModel):
         # Browse directory
         for json_fp in sorted(directory.glob("*/info.json")):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
+            info.size = estimate_folder_size(json_fp.parent)
             try:
                 info.preview = Image.open_url(
                     str(json_fp.parent / "previews/dataset_preview.jpg"),
@@ -134,6 +136,7 @@ class DatasetInfo(BaseModel):
         for json_fp in directory.glob("*/info.json"):
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
+                info.size = estimate_folder_size(json_fp.parent)
                 try:
                     info.preview = Image.open_url(
                         str(json_fp.parent / "previews/dataset_preview.jpg"),
