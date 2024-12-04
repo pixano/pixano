@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
-  import { Canvas2D } from "@pixano/text-canvas2d";
+  import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import { Image as ImageJS } from "image-js";
