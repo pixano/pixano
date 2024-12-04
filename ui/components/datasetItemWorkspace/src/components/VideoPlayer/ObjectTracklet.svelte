@@ -28,7 +28,7 @@ License: CECILL-C
 
   import { panTool } from "../../lib/settings/selectionTools";
 
-  export let track: Track;
+  export let trackId: string;
   export let tracklet: Tracklet;
   export let views: MView;
   export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
@@ -36,7 +36,7 @@ License: CECILL-C
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
-  export let findNeighborItems: (frameIndex: number) => [number, number];
+  export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) =>
@@ -63,34 +63,33 @@ License: CECILL-C
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width /
     (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
-  $: color = $colorScale[1](track.id);
+  $: color = $colorScale[1](trackId);
 
   $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
     if (
-      newFrameIndex !== draggedFrameIndex &&
-      (newFrameIndex < prevFrameIndex + 1 || newFrameIndex > nextFrameIndex - 1)
+      (prevFrameIndex !== 0 && newFrameIndex < prevFrameIndex + 1) ||
+      (nextFrameIndex !== $lastFrameIndex && newFrameIndex > nextFrameIndex - 1)
     )
       return false;
     const isStart = draggedFrameIndex === tracklet.data.start_timestep;
     const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
     if (!(isStart || isEnd)) return false;
     if (isStart) {
+      if (newFrameIndex >= tracklet.data.end_timestep) return false;
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
       width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
     }
     if (isEnd) {
+      if (newFrameIndex <= tracklet.data.start_timestep) return false;
       width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
     }
     return true;
   };
 
   const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
-    if (newFrameIndex <= prevFrameIndex) newFrameIndex = prevFrameIndex + 1;
-    if (newFrameIndex >= nextFrameIndex) newFrameIndex = nextFrameIndex - 1;
     const isStart = draggedFrameIndex === tracklet.data.start_timestep;
     const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
     const newViewId = (views[tracklet.data.view_ref.name] as SequenceFrame[])[newFrameIndex].id;
@@ -144,7 +143,7 @@ License: CECILL-C
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("absolute border-y border-white", {
+    class={cn("absolute scale-y-90", {
       "opacity-100": tracklet.ui.highlighted === "self",
       "opacity-30": tracklet.ui.highlighted === "none",
     })}
@@ -152,7 +151,7 @@ License: CECILL-C
   >
     <button
       on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
-      class="h-full w-full"
+      class="absolute h-full w-full"
       bind:this={trackletElement}
       on:click={(e) => onClick(e.clientX)}
     />
@@ -175,7 +174,7 @@ License: CECILL-C
     {oneFrameInPixel}
     {onEditKeyItemClick}
     {onClick}
-    trackId={track.id}
+    {trackId}
     {canContinueDragging}
     {updateTrackletWidth}
   />

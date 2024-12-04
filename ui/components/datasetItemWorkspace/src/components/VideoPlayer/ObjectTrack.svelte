@@ -90,123 +90,117 @@ License: CECILL-C
     );
   };
 
-  const onAddKeyItemClick = (tracklet: Tracklet | MouseEvent) => {
-    if (tracklet instanceof MouseEvent) {
-      //MouseEvent, need to determine view_id
-      //TODO
-      confirm("Adding a key point outside of a tracklet is forbidden for now");
-    } else {
-      let newItemBBox: BBox | undefined = undefined;
-      let newItemKpt: Keypoints | undefined = undefined;
-      const pixSource = getPixanoSource(sourcesStore);
-      //an interpolated obj should exist: use it
-      const interpolatedBox = bboxes.find(
-        (box) =>
-          box.ui.frame_index === rightClickFrameIndex &&
-          tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
-      );
-      if (interpolatedBox) {
-        const newItemOrig = structuredClone(interpolatedBox);
+  const onAddKeyItemClick = (tracklet: Tracklet) => {
+    let newItemBBox: BBox | undefined = undefined;
+    let newItemKpt: Keypoints | undefined = undefined;
+    const pixSource = getPixanoSource(sourcesStore);
+    //an interpolated obj should exist: use it
+    const interpolatedBox = bboxes.find(
+      (box) =>
+        box.ui.frame_index === rightClickFrameIndex &&
+        tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
+    );
+    if (interpolatedBox) {
+      const newItemOrig = structuredClone(interpolatedBox);
+      const { ui, ...noUIfieldsBBox } = newItemOrig;
+      newItemBBox = new BBox(noUIfieldsBBox);
+      newItemBBox.ui = ui;
+      //coords are denormalized: normalize them
+      const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
+        newItemBBox.ui.frame_index!
+      ];
+      const [x, y, w, h] = newItemBBox.data.coords;
+      newItemBBox.data.coords = [
+        x / current_sf.data.width,
+        y / current_sf.data.height,
+        w / current_sf.data.width,
+        h / current_sf.data.height,
+      ];
+      newItemBBox.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+      const save_new_item: SaveItem = {
+        change_type: "add",
+        object: newItemBBox,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
+    }
+    const interpolatedKpt = keypoints.find(
+      (kpt) =>
+        kpt.ui!.frame_index === rightClickFrameIndex &&
+        tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
+    );
+    if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
+      const keypointsRef = $annotations.find(
+        (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_keypoints,
+      ) as Keypoints;
+      if (keypointsRef) {
+        const newItemOrig = structuredClone(keypointsRef);
         const { ui, ...noUIfieldsBBox } = newItemOrig;
-        newItemBBox = new BBox(noUIfieldsBBox);
-        newItemBBox.ui = ui;
-        //coords are denormalized: normalize them
-        const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
-          newItemBBox.ui.frame_index!
+        newItemKpt = new Keypoints(noUIfieldsBBox);
+        newItemKpt.ui = ui;
+        if (interpolatedKpt.ui!.displayControl)
+          newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
+        if (interpolatedKpt.ui!.highlighted)
+          newItemKpt.ui.highlighted = interpolatedKpt.ui!.highlighted;
+        if (interpolatedKpt.ui!.displayControl)
+          newItemKpt.ui.displayControl = {
+            hidden: interpolatedKpt.ui!.displayControl.hidden,
+            editing: interpolatedKpt.ui!.displayControl.editing, //TODO maybe we should just set it to true ?
+          };
+        newItemKpt.id = interpolatedKpt.id;
+        newItemKpt.ui.frame_index = interpolatedKpt.ui!.frame_index;
+        newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
+        //coords are denormalized: normalize them (??is that so ? to check)
+        const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
+          interpolatedKpt.ui!.frame_index!
         ];
-        const [x, y, w, h] = newItemBBox.data.coords;
-        newItemBBox.data.coords = [
-          x / current_sf.data.width,
-          y / current_sf.data.height,
-          w / current_sf.data.width,
-          h / current_sf.data.height,
-        ];
-        newItemBBox.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+        const coords = [];
+        const states = [];
+        for (const vertex of interpolatedKpt.vertices) {
+          coords.push(vertex.x / current_sf.data.width);
+          coords.push(vertex.y / current_sf.data.height);
+          states.push(vertex.features.state ? vertex.features.state : "visible");
+        }
+        newItemKpt.data.coords = coords;
+        newItemKpt.data.states = states;
+        newItemKpt.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
         const save_new_item: SaveItem = {
           change_type: "add",
-          object: newItemBBox,
+          object: newItemKpt,
         };
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
       }
-      const interpolatedKpt = keypoints.find(
-        (kpt) =>
-          kpt.ui!.frame_index === rightClickFrameIndex &&
-          tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
-      );
-      if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
-        const keypointsRef = $annotations.find(
-          (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_keypoints,
-        ) as Keypoints;
-        if (keypointsRef) {
-          const newItemOrig = structuredClone(keypointsRef);
-          const { ui, ...noUIfieldsBBox } = newItemOrig;
-          newItemKpt = new Keypoints(noUIfieldsBBox);
-          newItemKpt.ui = ui;
-          if (interpolatedKpt.ui!.displayControl)
-            newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
-          if (interpolatedKpt.ui!.highlighted)
-            newItemKpt.ui.highlighted = interpolatedKpt.ui!.highlighted;
-          if (interpolatedKpt.ui!.displayControl)
-            newItemKpt.ui.displayControl = {
-              hidden: interpolatedKpt.ui!.displayControl.hidden,
-              editing: interpolatedKpt.ui!.displayControl.editing, //TODO maybe we should just set it to true ?
-            };
-          newItemKpt.id = interpolatedKpt.id;
-          newItemKpt.ui.frame_index = interpolatedKpt.ui!.frame_index;
-          newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
-          //coords are denormalized: normalize them (??is that so ? to check)
-          const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
-            interpolatedKpt.ui!.frame_index!
-          ];
-          const coords = [];
-          const states = [];
-          for (const vertex of interpolatedKpt.vertices) {
-            coords.push(vertex.x / current_sf.data.width);
-            coords.push(vertex.y / current_sf.data.height);
-            states.push(vertex.features.state ? vertex.features.state : "visible");
-          }
-          newItemKpt.data.coords = coords;
-          newItemKpt.data.states = states;
-          newItemKpt.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
-          const save_new_item: SaveItem = {
-            change_type: "add",
-            object: newItemKpt,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
-        }
-      }
-      //TODO no interpolated Mask yet
-
-      if (newItemBBox || newItemKpt) {
-        annotations.update((objects) => {
-          objects.map((obj) => {
-            if (obj.is_tracklet && obj.id === tracklet.id) {
-              const obj_tracket = obj as Tracklet;
-              // add item in childs
-              if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];
-              if (newItemKpt) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemKpt];
-              obj_tracket.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
-            }
-            return obj;
-          });
-          if (newItemBBox) objects.push(newItemBBox);
-          if (newItemKpt) objects.push(newItemKpt);
-          objects.sort((a, b) => sortByFrameIndex(a, b));
-          return objects;
-        });
-        entities.update((objects) =>
-          objects.map((entity) => {
-            if (entity.id === tracklet.data.entity_ref.id) {
-              if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
-              if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
-              entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
-            }
-            return entity;
-          }),
-        );
-      }
-      onEditKeyItemClick(rightClickFrameIndex);
     }
+    //TODO no interpolated Mask yet
+
+    if (newItemBBox || newItemKpt) {
+      annotations.update((objects) => {
+        objects.map((obj) => {
+          if (obj.is_tracklet && obj.id === tracklet.id) {
+            const obj_tracket = obj as Tracklet;
+            // add item in childs
+            if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];
+            if (newItemKpt) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemKpt];
+            obj_tracket.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+          }
+          return obj;
+        });
+        if (newItemBBox) objects.push(newItemBBox);
+        if (newItemKpt) objects.push(newItemKpt);
+        objects.sort((a, b) => sortByFrameIndex(a, b));
+        return objects;
+      });
+      entities.update((objects) =>
+        objects.map((entity) => {
+          if (entity.id === tracklet.data.entity_ref.id) {
+            if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
+            if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
+            entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+          }
+          return entity;
+        }),
+      );
+    }
+    onEditKeyItemClick(rightClickFrameIndex);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
@@ -288,19 +282,16 @@ License: CECILL-C
     }
   };
 
-  const findNeighborItems = (frameIndex: number): [number, number] => {
+  const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
     let previous: number = 0;
-    let nextChild: Annotation | undefined = undefined;
     let next: number = $lastFrameIndex;
-
     for (const subtracklet of tracklets) {
-      for (const child of subtracklet.ui.childs) {
-        if (child.ui.frame_index! < frameIndex) {
-          previous = child.ui.frame_index!;
-        } else if (child.ui.frame_index! > frameIndex) {
-          if (!nextChild || child.ui.frame_index! < nextChild.ui.frame_index!) {
-            nextChild = child;
-            next = nextChild.ui.frame_index!;
+      if (subtracklet.data.view_ref.name === tracklet.data.view_ref.name) {
+        for (const child of subtracklet.ui.childs) {
+          if (child.ui.frame_index! < frameIndex && child.ui.frame_index! > previous) {
+            previous = child.ui.frame_index!;
+          } else if (child.ui.frame_index! > frameIndex && child.ui.frame_index! < next) {
+            next = child.ui.frame_index!;
           }
         }
       }
@@ -335,7 +326,7 @@ License: CECILL-C
     {#each tracklets as tracklet (tracklet)}
       <ObjectTracklet
         {tracklet}
-        {track}
+        trackId={track.id}
         {views}
         onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
         {onContextMenu}

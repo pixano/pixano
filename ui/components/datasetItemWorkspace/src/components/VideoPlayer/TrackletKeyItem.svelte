@@ -133,25 +133,39 @@ License: CECILL-C
       startFrameIndex = itemFrameIndex;
       startOneFrameInPixel = oneFrameInPixel;
       selectedTool.set(panTool);
-    });
+      const dragController = new AbortController();
 
-    window.addEventListener("mousemove", (event) => {
-      if (moving) {
-        const distance = event.clientX - startPosition;
-        const raise = distance / startOneFrameInPixel;
-        newFrameIndex = Math.round(startFrameIndex + raise);
-        if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
-        const canContinue = canContinueDragging(newFrameIndex, itemFrameIndex);
-        if (canContinue) {
-          left = getKeyItemLeftPosition(newFrameIndex);
-        }
-      }
-    });
+      window.addEventListener(
+        "mousemove",
+        (event) => {
+          if (moving) {
+            const distance = event.clientX - startPosition;
+            const raise = distance / startOneFrameInPixel;
+            newFrameIndex = Math.round(startFrameIndex + raise);
+            if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
+            const canContinue = canContinueDragging(newFrameIndex, itemFrameIndex);
+            if (canContinue) {
+              left = getKeyItemLeftPosition(newFrameIndex);
+            }
+          }
+        },
+        { signal: dragController.signal },
+      );
 
-    window.addEventListener("mouseup", () => {
-      moving = false;
-      if (newFrameIndex !== undefined) updateTrackletWidth(newFrameIndex, itemFrameIndex);
-      newFrameIndex = undefined;
+      window.addEventListener(
+        "mouseup",
+        () => {
+          moving = false;
+          if (newFrameIndex !== undefined) {
+            if (newFrameIndex < 0) newFrameIndex = 0;
+            if (newFrameIndex > $lastFrameIndex) newFrameIndex = $lastFrameIndex;
+            updateTrackletWidth(newFrameIndex, itemFrameIndex);
+          }
+          newFrameIndex = undefined;
+          dragController.abort();
+        },
+        { signal: dragController.signal },
+      );
     });
   };
 </script>
@@ -165,7 +179,12 @@ License: CECILL-C
     )}
     style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color}`}
   >
-    <button class="h-full w-full" use:dragMe on:click={(e) => onClick(e.clientX)} />
+    <button
+      class="w-full h-full rounded-full absolute"
+      style={`background-color: ${color}`}
+      use:dragMe
+      on:click={(e) => onClick(e.clientX)}
+    />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.ui.childs?.length > 2}
