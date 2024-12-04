@@ -4,9 +4,9 @@
 # License: CECILL-C
 # =====================================
 
-import pytest
+from pathlib import Path
 
-from pixano.utils.python import get_super_type_from_dict, natural_key, unique_list
+from pixano.utils.python import estimate_folder_size, get_super_type_from_dict, natural_key, unique_list
 
 
 def test_natural_key():
@@ -17,9 +17,13 @@ def test_natural_key():
     assert output == ["", 231, "yolo", 1, ""]
 
 
-@pytest.mark.skip("Not implemented")
-def test_estimate_folder_size():
-    pass
+def test_estimate_folder_size(tmp_path: Path):
+    for i in range(4):
+        tmp_subfolder = tmp_path / f"folder_{i}"
+        tmp_subfolder.mkdir()
+        with open(tmp_subfolder / "file", "wb") as f:
+            f.truncate(8192 * i)
+    assert estimate_folder_size(tmp_path) == "48 KB"
 
 
 def test_get_super_type_from_dict():
