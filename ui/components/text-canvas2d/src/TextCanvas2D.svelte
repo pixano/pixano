@@ -37,14 +37,7 @@ License: CECILL-C
     Rectangle,
     ShowKeypoint,
   } from "./components/canvas";
-  import {
-    INPUTPOINT_RADIUS,
-    INPUTPOINT_STROKEWIDTH,
-    // INPUTRECT_STROKEWIDTH,
-    // BBOX_STROKEWIDTH,
-    // MASK_STROKEWIDTH,
-    POINT_SELECTION,
-  } from "./lib/constants";
+  import { INPUTPOINT_RADIUS, INPUTPOINT_STROKEWIDTH, POINT_SELECTION } from "./lib/constants";
 
   // Exports
   export let selectedItemId: string;

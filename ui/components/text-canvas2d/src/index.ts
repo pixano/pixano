@@ -5,7 +5,5 @@ License: CECILL-C
 -------------------------------------*/
 
 // Exports
-export * as tools from "./tools";
-
 export { default as Thumbnail } from "./components/canvas/Thumbnail.svelte";
 export { default as TextCanvas2D } from "./TextCanvas2D.svelte";
