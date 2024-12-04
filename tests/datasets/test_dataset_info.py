@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from pixano.datasets.dataset_info import DatasetInfo
+from pixano.utils.python import estimate_folder_size
 
 
 class TestDatasetInfo:
@@ -67,7 +68,6 @@ class TestDatasetInfo:
                 id=f"id_{i}",
                 name=f"pascal_{i}",
                 description=f"PASCAL VOC 2007_{i}",
-                size="8GB",
                 preview="/preview",
             )
             info.to_json(info_dir / "info.json")
@@ -80,7 +80,7 @@ class TestDatasetInfo:
                 id=f"id_{i}",
                 name=f"pascal_{i}",
                 description=f"PASCAL VOC 2007_{i}",
-                size="8GB",
+                size=estimate_folder_size(temp_dir / f"info_{i}"),
                 preview=info.preview,  # TODO: remove hard coded value
             )
 
@@ -92,7 +92,7 @@ class TestDatasetInfo:
                 id=f"id_{i}",
                 name=f"pascal_{i}",
                 description=f"PASCAL VOC 2007_{i}",
-                size="8GB",
+                size=estimate_folder_size(temp_dir / f"info_{i}"),
                 preview=info.preview,  # TODO: remove hard coded value
             )
             assert path == temp_dir / f"info_{i}"
@@ -120,7 +120,7 @@ class TestDatasetInfo:
             id="id",
             name="pascal",
             description="PASCAL VOC 2007",
-            size="8GB",
+            size=estimate_folder_size(info_dir),
             preview=loaded_info.preview,  # TODO: remove hard coded value
         )
 
@@ -130,7 +130,7 @@ class TestDatasetInfo:
             id="id",
             name="pascal",
             description="PASCAL VOC 2007",
-            size="8GB",
+            size=estimate_folder_size(info_dir),
             preview=loaded_info.preview,  # TODO: remove hard coded value
         )
         assert path == temp_dir / "info"

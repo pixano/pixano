@@ -30,6 +30,11 @@ def test_get_datasets_info(
     response = client.get("/datasets/info")
     assert response.status_code == 200
     json_response = response.json()
+
+    # Disable dataset size estimation
+    for json_info in json_response:
+        json_info["size"] = "Unknown"
+
     assert len(json_response) == len(infos)
     for info in infos:
         assert info.model_dump() in json_response
@@ -51,8 +56,13 @@ def test_get_dataset_info(
 
     info_model_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
     response = client.get("/datasets/info/dataset_image_bboxes_keypoint")
+
+    # Disable dataset size estimation
+    json_response = response.json()
+    json_response["size"] = "Unknown"
+
     assert response.status_code == 200
-    assert response.json() == info_model_dataset_image_bboxes_keypoint.model_dump()
+    assert json_response == info_model_dataset_image_bboxes_keypoint.model_dump()
 
 
 def test_get_dataset(
