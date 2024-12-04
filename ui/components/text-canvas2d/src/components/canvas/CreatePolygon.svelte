@@ -10,9 +10,9 @@ License: CECILL-C
   import { Group, Line } from "svelte-konva";
 
   import type { Shape, Reference } from "@pixano/core";
-  import type { PolygonGroupPoint } from "../lib/types/textCanvas2dTypes";
-  import { runLengthEncode, convertPointToSvg } from "../api/maskApi";
-  import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
+  import type { PolygonGroupPoint } from "../../lib/types/textCanvas2dTypes";
+  import { runLengthEncode, convertPointToSvg } from "../../api/maskApi";
+  import { INPUTRECT_STROKEWIDTH } from "../../lib/constants";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports

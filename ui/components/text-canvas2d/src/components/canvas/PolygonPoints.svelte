@@ -6,10 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import type { Reference } from "@pixano/core";
   import Konva from "konva";
   import { Circle } from "svelte-konva";
-  import type { Reference } from "@pixano/core";
-  import type { PolygonGroupPoint } from "../lib/types/textCanvas2dTypes";
+  import type { PolygonGroupPoint } from "../../lib/types/textCanvas2dTypes";
 
   // Exports
   export let viewRef: Reference;

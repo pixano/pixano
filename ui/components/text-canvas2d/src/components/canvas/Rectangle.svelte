@@ -6,18 +6,18 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onDestroy, tick } from "svelte";
-  import Konva from "konva";
-  import { Rect, Group } from "svelte-konva";
   import type { BBox, SelectionTool, Shape } from "@pixano/core";
+  import Konva from "konva";
+  import { onDestroy, tick } from "svelte";
+  import { Group, Rect } from "svelte-konva";
 
-  import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
     getNewRectangleDimensions,
     onDragMove,
     stickLabelsToRectangle,
     toggleIsEditingBBox,
-  } from "../api/rectangleApi";
+  } from "../../api/rectangleApi";
+  import { BBOX_STROKEWIDTH } from "../../lib/constants";
   import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;

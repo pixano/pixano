@@ -6,27 +6,37 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import * as ort from "onnxruntime-web";
+  import { WarningModal, type ImagesPerView } from "@pixano/core";
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onMount, onDestroy } from "svelte";
+  import * as ort from "onnxruntime-web";
+  import { afterUpdate, onDestroy, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
-  import { WarningModal, type ImagesPerView } from "@pixano/core";
 
-  import { cn } from "@pixano/core/src";
-  import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import {
-    Mask,
     BBox,
-    type SelectionTool,
-    type LabeledPointTool,
-    type Shape,
+    Mask,
     type KeypointsTemplate,
-    type Vertex,
+    type LabeledPointTool,
     type Reference,
+    type SelectionTool,
+    type Shape,
+    type Vertex,
   } from "@pixano/core";
+  import { cn } from "@pixano/core/src";
+  import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
 
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
+  import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import {
+    CreateKeypoints,
+    CreatePolygon,
+    CreateRectangle,
+    PolygonGroup,
+    Rectangle,
+    ShowKeypoint,
+  } from "./components/canvas";
   import {
     INPUTPOINT_RADIUS,
     INPUTPOINT_STROKEWIDTH,
@@ -35,14 +45,6 @@ License: CECILL-C
     // MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
-  import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
-  import PolygonGroup from "./components/PolygonGroup.svelte";
-  import CreatePolygon from "./components/CreatePolygon.svelte";
-  import Rectangle from "./components/Rectangle.svelte";
-  import CreateRectangle from "./components/CreateRectangle.svelte";
-  import CreateKeypoint from "./components/CreateKeypoints.svelte";
-  import ShowKeypoints from "./components/ShowKeypoint.svelte";
-  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
 
   // Exports
   export let selectedItemId: string;
@@ -1242,14 +1244,14 @@ License: CECILL-C
             </Group>
             <Group config={{ id: `keypoints-${view_name}` }}>
               {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
-                <CreateKeypoint
+                <CreateKeypoints
                   zoomFactor={zoomFactor[view_name]}
                   bind:newShape
                   {stage}
                   {viewRef}
                 />
               {/if}
-              <ShowKeypoints
+              <ShowKeypoint
                 {colorScale}
                 {stage}
                 {viewRef}

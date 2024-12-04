@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import type { KeypointsTemplate, Reference, Shape } from "@pixano/core";
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
-  import type { KeypointsTemplate, Shape, Reference } from "@pixano/core";
 
+  import { findRectBoundaries } from "../../api/keypointsApi";
   import KeyPoints from "./keypoints/Keypoint.svelte";
-  import { findRectBoundaries } from "../api/keypointsApi";
 
   export let stage: Konva.Stage;
   export let keypoints: KeypointsTemplate[] = [];

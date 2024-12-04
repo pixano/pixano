@@ -10,7 +10,7 @@ License: CECILL-C
   import { Line } from "svelte-konva";
 
   import type { KeypointsTemplate, VertexStates } from "@pixano/core";
-  import { videoControls } from "../../../../datasetItemWorkspace/src/lib/stores/videoViewerStores";
+  import { videoControls } from "../../../../../datasetItemWorkspace/src/lib/stores/videoViewerStores";
 
   import KeyPointCircle from "./KeypointsCircle.svelte";
 

@@ -9,15 +9,15 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, SelectionTool, Shape, Reference } from "@pixano/core";
-  import type { PolygonGroupPoint, PolygonShape } from "../lib/types/textCanvas2dTypes";
+  import type { Mask, Reference, SelectionTool, Shape } from "@pixano/core";
   import {
-    sceneFunc,
-    hexToRGBA,
     convertPointToSvg,
+    hexToRGBA,
     parseSvgPath,
     runLengthEncode,
-  } from "../api/maskApi";
+    sceneFunc,
+  } from "../../api/maskApi";
+  import type { PolygonGroupPoint, PolygonShape } from "../../lib/types/textCanvas2dTypes";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports

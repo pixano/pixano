@@ -10,14 +10,14 @@ License: CECILL-C
   import { Group, Rect } from "svelte-konva";
 
   import type {
-    CreateKeypointShape,
-    KeypointsTemplate,
-    SaveKeyBoxShape,
-    Reference,
+      CreateKeypointShape,
+      KeypointsTemplate,
+      Reference,
+      SaveKeyBoxShape,
   } from "@pixano/core";
 
+  import { findRectBoundaries } from "../../api/keypointsApi";
   import Keypoints from "./keypoints/Keypoint.svelte";
-  import { findRectBoundaries } from "../api/keypointsApi";
 
   export let zoomFactor: number;
   export let newShape: CreateKeypointShape | SaveKeyBoxShape;
