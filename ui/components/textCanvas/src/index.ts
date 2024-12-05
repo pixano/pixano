@@ -5,4 +5,4 @@ License: CECILL-C
 -------------------------------------*/
 
 // Exports
-export { default as TaggableTextArea } from "./TaggableTextArea.svelte";
+export { default as NamedEntityArea } from "./TaggableTextArea.svelte";

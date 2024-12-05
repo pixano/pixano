@@ -5,32 +5,32 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, TaggedText } from "@pixano/core";
-  import { getNewTaggedText } from "./getNewTaggedText";
+  import { cn, NamedEntity } from "@pixano/core";
+  import { getNewNamedEntity } from "./getNewNamedEntity";
   import { getSelectedText } from "./getSelectedText";
   import { getSelection } from "./getSelection";
   import { tagSelectedText } from "./htmlTextTagger";
 
-  let taggedTexts: TaggedText[] = [];
+  let namedEntities: NamedEntity[] = [];
 
   // To avoid importing nanoid package
   // TODO: update objectsApi
-  let taggedTextId = 0;
+  let namedEntityId = 0;
 
   const handleClick = () => {
     const { selection, range } = getSelection();
     const selectedText = getSelectedText(selection);
 
-    const newTaggedText = getNewTaggedText(taggedTextId.toString(), selectedText);
-    ++taggedTextId;
+    const newNamedEntity = getNewNamedEntity(namedEntityId.toString(), selectedText);
+    ++namedEntityId;
 
-    taggedTexts = [...taggedTexts, newTaggedText];
+    namedEntities = [...namedEntities, newNamedEntity];
 
-    newTaggedText.ui.bgColor = "black";
+    newNamedEntity.ui.bgColor = "black";
 
     const metadata = {
-      id: newTaggedText.id,
-      bgColor: newTaggedText.ui.bgColor,
+      id: newNamedEntity.id,
+      bgColor: newNamedEntity.ui.bgColor,
     };
 
     tagSelectedText({
@@ -39,14 +39,14 @@ License: CECILL-C
       selectedText,
       tagName: "span",
       metadata,
-      className: `text-white rounded-md p-1 bg-${newTaggedText.ui.bgColor}`,
+      className: `text-white rounded-md p-1 bg-${newNamedEntity.ui.bgColor}`,
     });
   };
 </script>
 
 <div class={cn("bg-white p-2 flex flex-col gap-2")}>
   <button
-    class={cn("bg-slate-800 text-white p-2 rounded-md w-fit")}
+    class={cn("bg-red-800 text-white p-2 rounded-md w-fit")}
     on:click={handleClick}
     id="tagButton">Tag Selected Text</button
   >
