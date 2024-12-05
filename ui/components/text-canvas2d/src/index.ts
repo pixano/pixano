@@ -7,3 +7,4 @@ License: CECILL-C
 // Exports
 export { default as Thumbnail } from "./components/canvas/Thumbnail.svelte";
 export { default as TextCanvas2D } from "./TextCanvas2D.svelte";
+export { default as TaggableTextArea } from "./TaggableTextArea.svelte";
