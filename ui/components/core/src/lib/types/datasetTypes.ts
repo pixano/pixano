@@ -55,7 +55,7 @@ const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
     .strict();
 };
 type BaseDataFieldsType<T extends z.ZodType> = ReturnType<typeof baseDataFieldsSchema<T>>;
-type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
+export type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
 
 export class BaseData<T extends object> {
   id: string;
@@ -299,9 +299,9 @@ export const annotationSchema = z
     source_ref: referenceSchema,
   })
   .passthrough();
-type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
+export type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 
-type AnnotationUIFields = {
+export type AnnotationUIFields = {
   datasetItemType: string;
   //features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
