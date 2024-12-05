@@ -297,9 +297,9 @@ importers:
       '@pixano/models':
         specifier: workspace:^
         version: link:../models
-      '@pixano/text-canvas2d':
+      '@pixano/text-canvas':
         specifier: workspace:^
-        version: link:../text-canvas2d
+        version: link:../text-canvas
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -442,7 +442,7 @@ importers:
         specifier: ^5.1.3
         version: 5.4.11
 
-  components/text-canvas2d:
+  components/text-canvas:
     dependencies:
       '@pixano/core':
         specifier: workspace:^
