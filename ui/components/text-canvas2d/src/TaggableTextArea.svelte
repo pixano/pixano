@@ -5,12 +5,42 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn } from "@pixano/core";
+  import { cn, TaggedText } from "@pixano/core";
+  import { getNewTaggedText } from "./getNewTaggedText";
+  import { getSelectedText } from "./getSelectedText";
+  import { getSelection } from "./getSelection";
   import { tagSelectedText } from "./htmlTextTagger";
 
+  let taggedTexts: TaggedText[] = [];
+
+  // To avoid importing nanoid package
+  // TODO: update objectsApi
+  let taggedTextId = 0;
+
   const handleClick = () => {
-    const metadata = {};
-    tagSelectedText({ tagName: "span", metadata, className: cn("text-red-500") });
+    const { selection, range } = getSelection();
+    const selectedText = getSelectedText(selection);
+
+    const newTaggedText = getNewTaggedText(taggedTextId.toString(), selectedText);
+    ++taggedTextId;
+
+    taggedTexts = [...taggedTexts, newTaggedText];
+
+    newTaggedText.ui.bgColor = "black";
+
+    const metadata = {
+      id: newTaggedText.id,
+      bgColor: newTaggedText.ui.bgColor,
+    };
+
+    tagSelectedText({
+      selection,
+      range,
+      selectedText,
+      tagName: "span",
+      metadata,
+      className: `text-white rounded-md p-1 bg-${newTaggedText.ui.bgColor}`,
+    });
   };
 </script>
 

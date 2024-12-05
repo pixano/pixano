@@ -4,29 +4,20 @@
  *
  */
 export function tagSelectedText({
+  selection,
+  range,
+  selectedText,
   tagName = "span",
   metadata = {},
   className = undefined,
 }: {
+  selection: Selection;
+  range: Range;
+  selectedText: string;
   tagName?: string;
   metadata?: Record<string, string>;
   className?: string;
 }) {
-  const selection = window.getSelection();
-
-  if (selection.rangeCount === 0) {
-    alert("Please select some text to tag.");
-    return;
-  }
-
-  const range = selection.getRangeAt(0); // Get selected range
-  const selectedText = selection.toString();
-
-  if (!selectedText) {
-    alert("Please select some text to tag.");
-    return;
-  }
-
   // Create a custom element with metadata
   const customTag = document.createElement(tagName);
   Object.keys(metadata).forEach((key) => {
@@ -34,7 +25,8 @@ export function tagSelectedText({
   });
 
   if (className) {
-    customTag.classList.add(className);
+    const classList = className.split(" ");
+    customTag.classList.add(...classList);
   }
 
   // Wrap the selected text in the custom tag
