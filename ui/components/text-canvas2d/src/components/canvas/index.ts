@@ -1,9 +1,0 @@
-export { default as CreateKeypoints } from "./CreateKeypoints.svelte";
-export { default as CreatePolygon } from "./CreatePolygon.svelte";
-export { default as CreateRectangle } from "./CreateRectangle.svelte";
-export { default as LabelTag } from "./LabelTag.svelte";
-export { default as PolygonGroup } from "./PolygonGroup.svelte";
-export { default as PolygonPoints } from "./PolygonPoints.svelte";
-export { default as Rectangle } from "./Rectangle.svelte";
-export { default as ShowKeypoint } from "./ShowKeypoint.svelte";
-export { default as Thumbnail } from "./Thumbnail.svelte";
