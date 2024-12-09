@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { svg_search } from "@pixano/core/src/icons";
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
+  import { svg_search } from "@pixano/core/src/icons";
 
-  import type { DatasetInfo } from "@pixano/core/src/lib/types/datasetTypes";
   import { datasetsStore } from "$lib/stores/datasetStores";
+  import type { DatasetInfo } from "@pixano/core";
 
   export let datasets: Array<DatasetInfo>;
 

@@ -9,7 +9,7 @@ import { Tensor } from "onnxruntime-web";
 
 export type { Tensor };
 
-import type { MaskSVG, Reference, MaskType } from "@pixano/core/src/lib/types/datasetTypes";
+import type { MaskSVG, MaskType, Reference } from "@pixano/core/src/lib/types/dataset";
 
 // Exports
 export interface LabeledClick {
