@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { z } from "zod";
 import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";

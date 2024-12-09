@@ -1,9 +1,15 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { z } from "zod";
-import { baseDataFieldsSchema, type BaseDataFields } from "./datasetTypes";
 import { Annotation, annotationSchema } from "./annotations";
+import { baseDataFieldsSchema, type BaseDataFields } from "./datasetTypes";
 import { Entity, entitySchema } from "./entities";
 import { Item, itemSchema } from "./items";
-import { View, viewSchema, type ImageType, type MView, type SequenceFrameType } from "./views";
+import { View, viewSchema, type ImageType, type SequenceFrameType } from "./views";
 
 const datasetItemSchema = z.object({
   item: baseDataFieldsSchema(itemSchema),
@@ -20,7 +26,7 @@ export class DatasetItem implements DatasetItemType {
   item: Item;
   entities: Record<string, Entity[]>;
   annotations: Record<string, Annotation[]>;
-  views: MView;
+  views: Record<string, View | View[]>;
 
   //UI only fields
   ui: {

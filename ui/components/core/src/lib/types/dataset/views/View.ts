@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { z } from "zod";
 import { createTypedView } from "../../../utils/views";
 import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";

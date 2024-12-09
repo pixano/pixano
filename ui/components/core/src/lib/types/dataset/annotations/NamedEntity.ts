@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
