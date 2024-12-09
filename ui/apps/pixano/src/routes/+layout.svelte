@@ -49,7 +49,7 @@ License: CECILL-C
   }
 
   onMount(async () => {
-    handleGetModels()
+    handleGetModels();
     await handleGetDatasets();
   });
 

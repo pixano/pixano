@@ -196,7 +196,7 @@ export async function getViewEmbeddings(
     const response = await fetch(`/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}`);
     if (response.ok) {
       viewEmbeddings = (await response.json()) as Array<ViewEmbedding>;
-      console.log("api.getViewEmbeddings - Embeddings loaded.")
+      console.log("api.getViewEmbeddings - Embeddings loaded.");
     } else {
       viewEmbeddings = [];
       console.log(
