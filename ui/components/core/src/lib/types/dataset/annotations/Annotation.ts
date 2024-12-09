@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createTypedAnnotation } from "../../../utils/annotations";
 import {
   BaseData,
   referenceSchema,
@@ -6,10 +7,6 @@ import {
   type DisplayControl,
 } from "../datasetTypes";
 import type { Entity } from "../entities";
-import { BBox, type BBoxType } from "./Bbox";
-import { Keypoints, type KeypointsType } from "./Keypoint";
-import { Mask, type MaskType } from "./Mask";
-import { Tracklet, type TrackletType } from "./Tracklet";
 
 export const annotationSchema = z
   .object({
@@ -31,7 +28,7 @@ export type AnnotationUIFields = {
   top_entities?: Entity[];
 };
 
-export class Annotation extends BaseData<AnnotationType> {
+export abstract class Annotation extends BaseData<AnnotationType> {
   //UI only fields
   ui: AnnotationUIFields = { datasetItemType: "" };
 
@@ -44,18 +41,6 @@ export class Annotation extends BaseData<AnnotationType> {
     return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref"]);
   }
 
-  static createInstance(obj: BaseDataFields<AnnotationType>) {
-    if (obj.table_info.base_schema === "BBox")
-      return new BBox(obj as unknown as BaseDataFields<BBoxType>);
-    if (obj.table_info.base_schema === "KeyPoints")
-      return new Keypoints(obj as unknown as BaseDataFields<KeypointsType>);
-    if (obj.table_info.base_schema === "CompressedRLE")
-      return new Mask(obj as unknown as BaseDataFields<MaskType>);
-    if (obj.table_info.base_schema === "Tracklet")
-      return new Tracklet(obj as unknown as BaseDataFields<TrackletType>);
-    return new Annotation(obj);
-  }
-
   static deepCreateInstanceArray(
     objs: Record<string, BaseDataFields<AnnotationType>[]>,
   ): Record<string, Annotation[]> {
@@ -63,7 +48,10 @@ export class Annotation extends BaseData<AnnotationType> {
     for (const [k, vs] of Object.entries(objs)) {
       newObj[k] = [];
       for (const v of vs) {
-        newObj[k].push(Annotation.createInstance(v));
+        const typedAnnotation = createTypedAnnotation(v as Annotation);
+        if (typedAnnotation) {
+          newObj[k].push(typedAnnotation);
+        }
       }
     }
     return newObj;
