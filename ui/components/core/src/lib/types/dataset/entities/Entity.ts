@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";
 import { BaseData, type BaseDataFields, referenceSchema } from "../datasetTypes";
-import { Track, type TrackType } from "./Track";
 
 export const entitySchema = z
   .object({
@@ -28,12 +28,6 @@ export class Entity extends BaseData<EntityType> {
     return super.nonFeaturesFields().concat(["item_ref", "view_ref", "parent_ref"]);
   }
 
-  static createInstance(obj: BaseDataFields<EntityType>) {
-    if (obj.table_info.base_schema === "Track")
-      return new Track(obj as unknown as BaseDataFields<TrackType>);
-    return new Entity(obj);
-  }
-
   static deepCreateInstanceArray(
     objs: Record<string, BaseDataFields<EntityType>[]>,
   ): Record<string, Entity[]> {
@@ -41,7 +35,7 @@ export class Entity extends BaseData<EntityType> {
     for (const [k, vs] of Object.entries(objs)) {
       newObj[k] = [];
       for (const v of vs) {
-        newObj[k].push(Entity.createInstance(v));
+        newObj[k].push(createTypedEntity(v));
       }
     }
     return newObj;
