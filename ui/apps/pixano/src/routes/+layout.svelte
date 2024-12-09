@@ -31,10 +31,7 @@ License: CECILL-C
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
-  async function handleGetModels() {
-    //TMP for lint
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    modelsStore.set([]);
+  function handleGetModels() {
     api
       .getModels()
       .then((models) => modelsStore.set(models))
@@ -53,8 +50,6 @@ License: CECILL-C
 
   onMount(async () => {
     handleGetModels()
-      .then(() => console.log(`Found ${$modelsStore.length} model(s):`, $modelsStore))
-      .catch((err) => console.error("ERROR: Can't get model", err));
     await handleGetDatasets();
   });
 

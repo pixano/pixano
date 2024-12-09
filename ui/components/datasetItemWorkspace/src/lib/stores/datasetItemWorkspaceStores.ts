@@ -38,6 +38,7 @@ export const preAnnotationIsActive = writable<boolean>(false);
 export const modelsUiStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
+  selectedTableName: "",
 });
 export const filters = writable<Filters>({
   brightness: 0,

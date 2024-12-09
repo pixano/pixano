@@ -9,7 +9,7 @@ License: CECILL-C
   import { derived } from "svelte/store";
   import { SelectModal, WarningModal, LoadingModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import { loadViewEmbeddings as loadViewEmbeddingsAPI } from "../lib/api/modelsApi";
+  import { loadViewEmbeddings } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
     modelsUiStore,
@@ -26,7 +26,7 @@ License: CECILL-C
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
   let selectedModelName: ModelSelection["selectedModelName"] = models ? models[0] : "";
-  let selectedTableName: string;
+  let selectedTableName: ModelSelection["selectedTableName"];
   let sortedTablesChoices = derived(datasetSchema, ($datasetSchema) => {
     const withSam = $datasetSchema.groups.embeddings.filter((t) => t.includes("sam"));
     const withoutSam = $datasetSchema.groups.embeddings.filter((t) => !t.includes("sam"));
@@ -37,10 +37,12 @@ License: CECILL-C
     currentModalOpen = store.currentModalOpen;
     selectedModelName =
       store.selectedModelName !== "" ? store.selectedModelName : selectedModelName;
+    selectedTableName =
+      store.selectedTableName !== "" ? store.selectedTableName : selectedTableName;
   });
 
-  const loadViewEmbeddings = () => {
-    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "none" }));
+  const getViewEmbeddings = () => {
+    modelsUiStore.update((store) => ({ ...store, selectedTableName, currentModalOpen: "none" }));
     if (
       !selectedItemId ||
       !selectedTableName ||
@@ -49,7 +51,7 @@ License: CECILL-C
     ) {
       return;
     }
-    loadViewEmbeddingsAPI(selectedItemId, selectedTableName, currentDatasetId)
+    loadViewEmbeddings(selectedItemId, selectedTableName, currentDatasetId)
       .then((results) => {
         embeddings = results;
       })
@@ -65,7 +67,7 @@ License: CECILL-C
     modelsUiStore.update((store) => ({
       ...store,
       currentModalOpen: "loading",
-      selectedModelName: selectedModelName,
+      selectedModelName,
     }));
     await sam.init("/app_models/" + selectedModelName + ".onnx");
     interactiveSegmenterModel.set(sam);
@@ -100,7 +102,7 @@ License: CECILL-C
     choices={$sortedTablesChoices}
     ifNoChoices={""}
     bind:selected={selectedTableName}
-    on:confirm={loadViewEmbeddings}
+    on:confirm={getViewEmbeddings}
   />
 {/if}
 {#if currentModalOpen === "noModel"}
