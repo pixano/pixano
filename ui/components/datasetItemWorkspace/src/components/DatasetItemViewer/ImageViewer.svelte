@@ -27,7 +27,9 @@ License: CECILL-C
     itemMetas,
     selectedKeypointsTemplate,
     imageSmoothing,
+    modelsUiStore,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
@@ -35,6 +37,27 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+
+  $: if (selectedItem) {
+    if ($modelsUiStore.selectedModelName !== "" && $modelsUiStore.selectedTableName !== "") {
+      loadViewEmbeddings(
+        selectedItem.item.id,
+        $modelsUiStore.selectedTableName,
+        selectedItem.ui.datasetId,
+      )
+        .then((results) => {
+          embeddings = results;
+        })
+        .catch((err) => {
+          modelsUiStore.update((store) => ({
+            ...store,
+            selectedTableName: "",
+            currentModalOpen: "noEmbeddings",
+          }));
+          console.error("cannot load Embeddings", err);
+        });
+    }
+  }
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};

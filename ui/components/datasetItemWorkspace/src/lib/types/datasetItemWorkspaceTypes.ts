@@ -70,6 +70,7 @@ export type ModelSelection = {
     | "loading"
     | "none";
   selectedModelName: string;
+  selectedTableName: string;
 };
 
 export type ItemsMeta = {
