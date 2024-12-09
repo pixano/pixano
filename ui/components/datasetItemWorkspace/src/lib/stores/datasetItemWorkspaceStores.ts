@@ -5,23 +5,24 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
-import { writable, derived } from "svelte/store";
 import {
-  type Shape,
   type InteractiveImageSegmenter,
-  type SelectionTool,
-  utils,
   type KeypointsTemplate,
   type SaveItem,
+  type SelectionTool,
+  type Shape,
   Annotation,
+  BBox,
   Entity,
   Image,
+  Keypoints,
+  Mask,
+  NamedEntity,
   SequenceFrame,
   Tracklet,
-  BBox,
-  Mask,
-  Keypoints,
+  utils,
 } from "@pixano/core";
+import { derived, writable } from "svelte/store";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
 import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
@@ -110,4 +111,8 @@ export const itemKeypoints = derived([annotations, views], ([$annotations, $view
 
 export const tracklets = derived(annotations, ($annotations) => {
   return $annotations.filter((annotation) => annotation.is_tracklet) as Tracklet[];
+});
+
+export const namedEntities = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_named_entity) as NamedEntity[];
 });
