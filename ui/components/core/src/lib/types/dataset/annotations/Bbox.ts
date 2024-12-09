@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
+import { AnnotationBaseSchema } from "./AnnotationBaseSchema";
 
 const bboxSchema = z
   .object({
@@ -10,7 +11,7 @@ const bboxSchema = z
     is_normalized: z.boolean(),
   })
   .passthrough();
-  
+
 export type BBoxType = z.infer<typeof bboxSchema>;
 
 export class BBox extends Annotation {
@@ -25,7 +26,8 @@ export class BBox extends Annotation {
   } = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<BBoxType>) {
-    if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    if (obj.table_info.base_schema !== AnnotationBaseSchema.BBox) throw new Error("Not a BBox");
     bboxSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);
     this.data = obj.data as BBoxType & AnnotationType;

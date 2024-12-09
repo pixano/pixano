@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
+import { AnnotationBaseSchema } from "./AnnotationBaseSchema";
 
 const keypointsSchema = z
   .object({
@@ -19,7 +20,9 @@ export class Keypoints extends Annotation {
   ui: AnnotationUIFields = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
-    if (obj.table_info.base_schema !== "KeyPoints") throw new Error("Not a Keypoints");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    if (obj.table_info.base_schema !== AnnotationBaseSchema.Keypoints)
+      throw new Error("Not a Keypoints");
     keypointsSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);
     this.data = obj.data as KeypointsType & AnnotationType;
