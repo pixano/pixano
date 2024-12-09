@@ -46,7 +46,7 @@ License: CECILL-C
 
 <div class={cn("bg-white p-2 flex flex-col gap-2")}>
   <button
-    class={cn("bg-red-800 text-white p-2 rounded-md w-fit")}
+    class={cn("bg-red-500 text-white p-2 rounded-md w-fit")}
     on:click={handleClick}
     id="tagButton">Tag Selected Text</button
   >
