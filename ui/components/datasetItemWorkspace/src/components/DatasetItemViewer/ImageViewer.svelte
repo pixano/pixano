@@ -12,7 +12,6 @@ License: CECILL-C
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import { Image as ImageJS } from "image-js";
-  import LoadModelModal from "../../components/LoadModelModal.svelte";
 
   // Import stores and API functions
   import {
@@ -30,7 +29,6 @@ License: CECILL-C
     imageSmoothing,
     modelsUiStore,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { modelsStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -40,13 +38,8 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  let models: Array<string>;
-  modelsStore.subscribe((value) => {
-    models = value;
-  });
-
   $: if (selectedItem) {
-    if ($modelsUiStore.selectedModelName && $modelsUiStore.selectedTableName) {
+    if ($modelsUiStore.selectedModelName !== "" && $modelsUiStore.selectedTableName !== "") {
       loadViewEmbeddings(
         selectedItem.item.id,
         $modelsUiStore.selectedTableName,
@@ -56,7 +49,11 @@ License: CECILL-C
           embeddings = results;
         })
         .catch((err) => {
-          modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
+          modelsUiStore.update((store) => ({
+            ...store,
+            selectedTableName: "",
+            currentModalOpen: "noEmbeddings",
+          }));
           console.error("cannot load Embeddings", err);
         });
     }
@@ -176,12 +173,6 @@ License: CECILL-C
     bind:selectedTool={$selectedTool}
     bind:currentAnn
     bind:newShape={$newShape}
-  />
-  <LoadModelModal
-    {models}
-    currentDatasetId={selectedItem.ui.datasetId}
-    selectedItemId={selectedItem.item.id}
-    bind:embeddings
   />
 {:else}
   <div class="w-full h-full flex items-center justify-center">

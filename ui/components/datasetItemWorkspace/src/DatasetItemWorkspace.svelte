@@ -197,10 +197,5 @@ License: CECILL-C
   <Toolbar />
   <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
-  <LoadModelModal
-    {models}
-    currentDatasetId={selectedItem.ui.datasetId}
-    selectedItemId={selectedItem.item.id}
-    bind:embeddings
-  />
+  <LoadModelModal {models} />
 </div>

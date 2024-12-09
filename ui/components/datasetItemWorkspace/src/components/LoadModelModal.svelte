@@ -7,22 +7,18 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { derived } from "svelte/store";
-  import { SelectModal, WarningModal, LoadingModal, DatasetInfo } from "@pixano/core";
+  import { SelectModal, WarningModal, LoadingModal } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import { loadViewEmbeddings } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
     modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
-  import type { Embeddings, ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
+  import type { ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
   import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
   export let models: Array<string>;
-  export let currentDatasetId: DatasetInfo["id"];
-  export let selectedItemId: string;
-  export let embeddings: Embeddings;
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
   let selectedModelName: ModelSelection["selectedModelName"] = models ? models[0] : "";
@@ -43,22 +39,6 @@ License: CECILL-C
 
   const getViewEmbeddings = () => {
     modelsUiStore.update((store) => ({ ...store, selectedTableName, currentModalOpen: "none" }));
-    if (
-      !selectedItemId ||
-      !selectedTableName ||
-      !currentDatasetId ||
-      selectedModelName === "none"
-    ) {
-      return;
-    }
-    loadViewEmbeddings(selectedItemId, selectedTableName, currentDatasetId)
-      .then((results) => {
-        embeddings = results;
-      })
-      .catch((err) => {
-        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
-        console.error("cannot load Embeddings", err);
-      });
   };
 
   const sam = new SAM();
