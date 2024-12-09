@@ -17,7 +17,7 @@ import {
   DatasetBrowser,
   type DatasetBrowserType,
   ViewEmbedding,
-} from "./lib/types/datasetTypes";
+} from "./lib/types/dataset";
 import { splitWithLimit } from "./utils";
 
 // Exports

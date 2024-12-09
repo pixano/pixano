@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  Annotation,
-  type AnnotationType,
-  type AnnotationUIFields,
-  type BaseDataFields,
-} from "../datasetTypes";
+import type { BaseDataFields } from "../datasetTypes";
+import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
 const NamedEntitySchema = z
   .object({
