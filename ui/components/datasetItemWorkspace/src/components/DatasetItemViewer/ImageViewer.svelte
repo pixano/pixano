@@ -32,14 +32,26 @@ License: CECILL-C
   import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
+  import { afterUpdate } from "svelte";
 
   // Attributes
   export let selectedItem: DatasetItem;
-  export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  $: if (selectedItem) {
-    if ($modelsUiStore.selectedModelName !== "" && $modelsUiStore.selectedTableName !== "") {
+  // Images per view type
+  let imagesPerView: ImagesPerView = {};
+  let loaded: boolean = false; // Loading status of images per view
+
+  let embeddings: Record<string, ort.Tensor> = {};
+
+  afterUpdate(() => {
+    if (
+      selectedItem &&
+      $modelsUiStore.yetToLoadEmbedding &&
+      $modelsUiStore.selectedModelName !== "" &&
+      $modelsUiStore.selectedTableName !== ""
+    ) {
+      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: false }));
       loadViewEmbeddings(
         selectedItem.item.id,
         $modelsUiStore.selectedTableName,
@@ -55,13 +67,10 @@ License: CECILL-C
             currentModalOpen: "noEmbeddings",
           }));
           console.error("cannot load Embeddings", err);
+          embeddings = {};
         });
     }
-  }
-
-  // Images per view type
-  let imagesPerView: ImagesPerView = {};
-  let loaded: boolean = false; // Loading status of images per view
+  });
 
   /**
    * Normalize the pixel values of an image to a specified range.
@@ -129,6 +138,8 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      embeddings = {};
+      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }

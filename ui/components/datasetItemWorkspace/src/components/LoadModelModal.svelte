@@ -38,7 +38,12 @@ License: CECILL-C
   });
 
   const getViewEmbeddings = () => {
-    modelsUiStore.update((store) => ({ ...store, selectedTableName, currentModalOpen: "none" }));
+    modelsUiStore.update((store) => ({
+      ...store,
+      selectedTableName,
+      yetToLoadEmbedding: true,
+      currentModalOpen: "none",
+    }));
   };
 
   const sam = new SAM();

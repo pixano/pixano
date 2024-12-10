@@ -71,6 +71,7 @@ export type ModelSelection = {
     | "none";
   selectedModelName: string;
   selectedTableName: string;
+  yetToLoadEmbedding: boolean;
 };
 
 export type ItemsMeta = {

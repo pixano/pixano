@@ -39,6 +39,7 @@ export const modelsUiStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
   selectedTableName: "",
+  yetToLoadEmbedding: true,
 });
 export const filters = writable<Filters>({
   brightness: 0,

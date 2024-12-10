@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import * as ort from "onnxruntime-web";
   import { Loader2Icon } from "lucide-svelte";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -17,7 +16,6 @@ License: CECILL-C
   import ThreeDimensionsViewer from "./3DViewer.svelte";
 
   export let selectedItem: DatasetItem;
-  export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
   export let headerHeight: number;
@@ -29,9 +27,9 @@ License: CECILL-C
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.ui.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
+    <VideoViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
+    <ImageViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}
