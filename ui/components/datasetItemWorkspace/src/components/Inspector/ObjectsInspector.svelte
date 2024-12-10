@@ -69,7 +69,7 @@ License: CECILL-C
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
     <div
-      class={cn("", {
+      class={cn({
         block: !thumbnail,
         "grid-rows-[150px_80%]": thumbnail,
       })}

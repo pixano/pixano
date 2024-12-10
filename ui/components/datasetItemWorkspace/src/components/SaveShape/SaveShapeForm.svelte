@@ -242,170 +242,190 @@ License: CECILL-C
   };
 
   const handleFormSubmit = () => {
-    if ($newShape.status === "saving") {
-      let newObject: Annotation | undefined = undefined;
-      let newObject2: Annotation | undefined = undefined;
-      let newTracklet: Annotation | undefined = undefined;
-      const isVideo = $itemMetas.type === "video";
-      let endView: SequenceFrame | undefined = undefined;
-      let endFrameIndex: number = -1;
-      if (isVideo) {
-        endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
-        const seqs = $views[$newShape.viewRef.name];
-        if (Array.isArray(seqs)) {
-          while (!endView) {
-            endFrameIndex = endFrameIndex - 1;
-            endView = (seqs as SequenceFrame[]).find(
-              (view) =>
-                view.data.frame_index === endFrameIndex &&
-                view.table_info.name === ($newShape as SaveShape).viewRef.name,
-            );
-          }
+    currentTab = "objects";
+    
+    if ($newShape.status !== "saving") {
+      return;
+    }
+
+    let newObject: Annotation | undefined = undefined;
+    let newObject2: Annotation | undefined = undefined;
+    let newTracklet: Annotation | undefined = undefined;
+
+    const isVideo = $itemMetas.type === "video";
+
+    let endView: SequenceFrame | undefined = undefined;
+    let endFrameIndex: number = -1;
+
+    if (isVideo) {
+      endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
+      const seqs = $views[$newShape.viewRef.name];
+      if (Array.isArray(seqs)) {
+        while (!endView) {
+          endFrameIndex = endFrameIndex - 1;
+          endView = (seqs as SequenceFrame[]).find(
+            (view) =>
+              view.data.frame_index === endFrameIndex &&
+              view.table_info.name === ($newShape as SaveShape).viewRef.name,
+          );
         }
       }
-      const features = mapShapeInputsToFeatures(objectProperties, formInputs);
-      const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
-        $newShape,
-        endView,
+    }
+    
+    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
+
+    const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
+      $newShape,
+      endView,
+      features,
+    );
+
+    newObject = defineCreatedObject(
+      subEntity ?? topEntity,
+      features,
+      $newShape,
+      $newShape.viewRef,
+      $datasetSchema,
+      isVideo,
+      $currentFrameIndex,
+    );
+
+    if (!newObject) return;
+
+    newObject.ui.highlighted = "self";
+    newObject.ui.displayControl = { editing: false };
+    topEntity.ui.childs?.push(newObject);
+
+    if (subEntity) subEntity.ui.childs?.push(newObject);
+
+    if (isVideo) {
+      // for video, there is 2 anns, 1 track (may have 1 sub entity per obj), 1 tracklet
+      // -> add obj2 (+ eventual 2nd sub entity) and tracklet
+      newObject2 = defineCreatedObject(
+        secondSubEntity ? secondSubEntity : topEntity,
         features,
+        $newShape,
+        { id: endView!.id, name: $newShape.viewRef.name },
+        $datasetSchema,
+        isVideo,
+        endFrameIndex,
       );
-      newObject = defineCreatedObject(
-        subEntity ? subEntity : topEntity,
+      if (!newObject2) return;
+      newObject2.ui.highlighted = "self";
+      newObject2.ui.displayControl = { editing: false };
+      //TODO: It is possible that a tracklet already exist (used for a different kind of shape)
+      //For now, it always create a tracklet...
+      //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
+      //--> It would be far more easy to create 1 frame tracklet, and allow other means of tracklet edition
+      const trackletShape: SaveTrackletShape = {
+        type: SaveShapeType.tracklet,
+        status: $newShape.status,
+        itemId: "", //unused from SaveShapeBase
+        imageWidth: 0, //unused from SaveShapeBase
+        imageHeight: 0, //unused from SaveShapeBase
+        viewRef: { id: "", name: $newShape.viewRef.name },
+        attrs: {
+          start_timestep: $currentFrameIndex,
+          end_timestep: endFrameIndex,
+          //TODO timestamp management...
+          start_timestamp: $currentFrameIndex,
+          end_timestamp: endFrameIndex,
+        },
+      };
+      newTracklet = defineCreatedObject(
+        topEntity,
         features,
-        $newShape,
-        $newShape.viewRef,
+        trackletShape,
+        trackletShape.viewRef,
         $datasetSchema,
         isVideo,
         $currentFrameIndex,
       );
-      if (!newObject) return;
-      newObject.ui.highlighted = "self";
-      newObject.ui.displayControl = { editing: false };
-      topEntity.ui.childs?.push(newObject);
-      if (subEntity) subEntity.ui.childs?.push(newObject);
-      if (isVideo) {
-        // for video, there is 2 anns, 1 track (may have 1 sub entity per obj), 1 tracklet
-        // -> add obj2 (+ eventual 2nd sub entity) and tracklet
-        newObject2 = defineCreatedObject(
-          secondSubEntity ? secondSubEntity : topEntity,
-          features,
-          $newShape,
-          { id: endView!.id, name: $newShape.viewRef.name },
-          $datasetSchema,
-          isVideo,
-          endFrameIndex,
-        );
-        if (!newObject2) return;
-        newObject2.ui.highlighted = "self";
-        newObject2.ui.displayControl = { editing: false };
-        //TODO: It is possible that a tracklet already exist (used for a different kind of shape)
-        //For now, it always create a tracklet...
-        //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
-        //--> It would be far more easy to create 1 frame tracklet, and allow other means of tracklet edition
-        const trackletShape: SaveTrackletShape = {
-          type: SaveShapeType.tracklet,
-          status: $newShape.status,
-          itemId: "", //unused from SaveShapeBase
-          imageWidth: 0, //unused from SaveShapeBase
-          imageHeight: 0, //unused from SaveShapeBase
-          viewRef: { id: "", name: $newShape.viewRef.name },
-          attrs: {
-            start_timestep: $currentFrameIndex,
-            end_timestep: endFrameIndex,
-            //TODO timestamp management...
-            start_timestamp: $currentFrameIndex,
-            end_timestamp: endFrameIndex,
-          },
-        };
-        newTracklet = defineCreatedObject(
-          topEntity,
-          features,
-          trackletShape,
-          trackletShape.viewRef,
-          $datasetSchema,
-          isVideo,
-          $currentFrameIndex,
-        );
-        if (!newTracklet) return;
-        newTracklet.ui.highlighted = "none";
-        newTracklet.ui.displayControl = { editing: false };
-        (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
+      if (!newTracklet) return;
+      newTracklet.ui.highlighted = "none";
+      newTracklet.ui.displayControl = { editing: false };
+      (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
 
-        if (secondSubEntity) {
-          secondSubEntity.ui.childs?.push(newObject2);
-          if (!$entities.includes(secondSubEntity)) {
-            const save_2ndSubEntity: SaveItem = {
-              change_type: "add",
-              object: secondSubEntity,
-            };
-            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
-          }
+      if (secondSubEntity) {
+        secondSubEntity.ui.childs?.push(newObject2);
+        if (!$entities.includes(secondSubEntity)) {
+          const save_2ndSubEntity: SaveItem = {
+            change_type: "add",
+            object: secondSubEntity,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
         }
-        const save_item2: SaveItem = {
-          change_type: "add",
-          object: newObject2,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
-        const save_item_tracklet: SaveItem = {
-          change_type: "add",
-          object: newTracklet,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
-        //TODO Note: we may have to manage "spatial object" entity too...
-        topEntity.ui.childs?.push(newObject2);
-        topEntity.ui.childs?.push(newTracklet);
       }
-      if (!$entities.includes(topEntity)) {
-        const save_item_entity: SaveItem = {
-          change_type: "add",
-          object: topEntity,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
-      }
-      if (subEntity && !$entities.includes(subEntity)) {
-        const save_subEntity: SaveItem = {
-          change_type: "add",
-          object: subEntity,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_subEntity));
-      }
-      const save_item: SaveItem = {
+      const save_item2: SaveItem = {
         change_type: "add",
-        object: newObject,
+        object: newObject2,
       };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      // push new entity & sub(s)
-      entities.update((ents) => {
-        if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
-        if (subEntity && !ents.includes(subEntity)) ents.push(subEntity);
-        if (secondSubEntity && !ents.includes(secondSubEntity)) ents.push(secondSubEntity);
-        return ents;
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
+      const save_item_tracklet: SaveItem = {
+        change_type: "add",
+        object: newTracklet,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
+      //TODO Note: we may have to manage "spatial object" entity too...
+      topEntity.ui.childs?.push(newObject2);
+      topEntity.ui.childs?.push(newTracklet);
+    }
+    
+    if (!$entities.includes(topEntity)) {
+      const save_item_entity: SaveItem = {
+        change_type: "add",
+        object: topEntity,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
+    }
+
+    if (subEntity && !$entities.includes(subEntity)) {
+      const save_subEntity: SaveItem = {
+        change_type: "add",
+        object: subEntity,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_subEntity));
+    }
+
+    const save_item: SaveItem = {
+      change_type: "add",
+      object: newObject,
+    };
+
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    // push new entity & sub(s)
+    entities.update((ents) => {
+      if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
+      if (subEntity && !ents.includes(subEntity)) ents.push(subEntity);
+      if (secondSubEntity && !ents.includes(secondSubEntity)) ents.push(secondSubEntity);
+      return ents;
+    });
+
+    //push new annotations
+    annotations.update((oldObjects) => {
+      const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
+        object.ui.highlighted = "none";
+        object.ui.displayControl = { ...object.ui.displayControl, editing: false };
+        return object;
       });
-      //push new annotations
-      annotations.update((oldObjects) => {
-        const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
-          object.ui.highlighted = "none";
-          object.ui.displayControl = { ...object.ui.displayControl, editing: false };
-          return object;
-        });
-        return [
-          ...objectsWithoutHighlighted,
-          ...(newObject ? [newObject] : []),
-          ...(newObject2 ? [newObject2] : []),
-          ...(newTracklet ? [newTracklet] : []),
-        ];
-      });
-      $annotations.sort((a, b) => sortByFrameIndex(a, b));
-      for (const tname in objectProperties) {
-        for (const feat in objectProperties[tname]) {
-          if (typeof objectProperties[feat] === "string") {
-            addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
-          }
+      return [
+        ...objectsWithoutHighlighted,
+        ...(newObject ? [newObject] : []),
+        ...(newObject2 ? [newObject2] : []),
+        ...(newTracklet ? [newTracklet] : []),
+      ];
+    });
+
+    $annotations.sort((a, b) => sortByFrameIndex(a, b));
+    for (const tname in objectProperties) {
+      for (const feat in objectProperties[tname]) {
+        if (typeof objectProperties[feat] === "string") {
+          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
         }
       }
-      newShape.set({ status: "none", shouldReset: true });
     }
-    currentTab = "objects";
+
+    newShape.set({ status: "none", shouldReset: true });
   };
 
   function handleKeyDown(event: KeyboardEvent) {

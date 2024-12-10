@@ -6,10 +6,12 @@ License: CECILL-C
 
 import {
   Annotation,
+  BaseSchema,
   BBox,
   Entity,
   Keypoints,
   Mask,
+  NamedEntity,
   SaveShapeType,
   Tracklet,
   type BBoxType,
@@ -19,7 +21,6 @@ import {
   type Reference,
   type SaveShape,
 } from "@pixano/core";
-import { BaseSchema } from "@pixano/core/src/lib/types/dataset";
 import { nanoid } from "nanoid";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { getPixanoSource } from "./getPixanoSource";
@@ -48,6 +49,7 @@ export const defineCreatedObject = (
     source_ref: { name: pixSource.table_info.name, id: pixSource.id },
   };
   let newObject: Annotation | undefined = undefined;
+
   if (shape.type === SaveShapeType.bbox) {
     const { x, y, width, height } = shape.attrs;
     const coords = [
@@ -56,12 +58,14 @@ export const defineCreatedObject = (
       width / shape.imageWidth,
       height / shape.imageHeight,
     ];
+
     const bbox: BBoxType = {
       coords,
       format: "xywh",
       is_normalized: true,
       confidence: 1,
     };
+
     const table = getTable(dataset_schema, "annotations", BaseSchema.BBox);
     newObject = new BBox({
       ...baseAnn,
@@ -73,6 +77,7 @@ export const defineCreatedObject = (
       counts: shape.rle.counts,
       size: shape.rle.size,
     };
+
     const table = getTable(dataset_schema, "annotations", BaseSchema.Mask);
     newObject = new Mask({
       ...baseAnn,
@@ -82,17 +87,21 @@ export const defineCreatedObject = (
   } else if (shape.type === SaveShapeType.keypoints) {
     const coords = [];
     const states = [];
+
     for (const vertex of shape.keypoints.vertices) {
       coords.push(vertex.x / shape.imageWidth);
       coords.push(vertex.y / shape.imageHeight);
       states.push(vertex.features.state ? vertex.features.state : "visible");
     }
+
     const keypoints = {
       template_id: shape.keypoints.template_id,
       coords,
       states,
     };
+
     const table = getTable(dataset_schema, "annotations", BaseSchema.Keypoints);
+
     newObject = new Keypoints({
       ...baseAnn,
       table_info: {
@@ -104,16 +113,29 @@ export const defineCreatedObject = (
     });
   } else if (shape.type === SaveShapeType.tracklet) {
     const table = getTable(dataset_schema, "annotations", BaseSchema.Tracklet);
+
     newObject = new Tracklet({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
       data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
     });
-  } else {
-    return undefined;
-  }
+  } else if (shape.type === SaveShapeType.namedEntity) {
+    const table = getTable(dataset_schema, "annotations", BaseSchema.NamedEntity);
+
+    newObject = new NamedEntity({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.NamedEntity },
+      data: { ...baseData, ...shape.attrs },
+    });
+  } else return undefined;
+
   //need to put UI fields after creation, else zod rejects
-  newObject.ui.datasetItemType = isVideo ? "video" : "image";
+  newObject.ui.datasetItemType = isVideo
+    ? "video"
+    : shape.type === SaveShapeType.namedEntity
+      ? "text"
+      : "image";
+      
   if (isVideo && shape.type !== SaveShapeType.tracklet)
     newObject.ui.frame_index = currentFrameIndex;
 
