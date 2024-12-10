@@ -37,8 +37,8 @@ class NDArrayFloat(BaseType):
 
     @classmethod
     def none(cls) -> "NDArrayFloat":
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" `NDArrayFloat`.
@@ -53,19 +53,18 @@ class NDArrayFloat(BaseType):
             arr: The NumPy array to convert.
 
         Returns:
-            An instance of the class with values and shape derived from
-                the input array.
+            An instance of the class with values and shape derived from the input array.
         """
         return NDArrayFloat(values=arr.reshape(-1).tolist(), shape=list(arr.shape))
 
 
 def is_ndarray_float(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an NDArrayFloat or a subclass of NDArrayFloat."""
+    """Check if a class is a `NDArrayFloat` or a subclass of `NDArrayFloat`."""
     return issubclass_strict(cls, NDArrayFloat, strict)
 
 
 def create_ndarray_float(values: list[float], shape: list[int]) -> NDArrayFloat:
-    """Create an `NDArrayFloat` instance.
+    """Create a `NDArrayFloat` instance.
 
     Args:
         values: The list of floating-point values in the array.

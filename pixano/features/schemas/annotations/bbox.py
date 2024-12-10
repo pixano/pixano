@@ -21,12 +21,12 @@ from .compressed_rle import CompressedRLE
 
 @_register_schema_internal
 class BBox(Annotation):
-    """Bounding box type using coordinates in xyxy or xywh format.
+    """Bounding box using coordinates in xyxy or xywh format.
 
     Attributes:
-        coords: List of coordinates in given format
-        format: Coordinates format, 'xyxy' or 'xywh'
-        is_normalized: True if coordinates are normalized to image size
+        coords: List of coordinates in given format.
+        format: Coordinates format, 'xyxy' or 'xywh'.
+        is_normalized: True if coordinates are normalized to image size.
         confidence: Bounding box confidence if predicted. -1 if not predicted.
     """
 
@@ -36,7 +36,7 @@ class BBox(Annotation):
     confidence: float = -1.0
 
     @model_validator(mode="after")
-    def _validate_fields(self):
+    def _validate_fields(self) -> Self:
         if len(self.coords) != 4:
             raise ValueError("Bounding box coordinates must have 4 elements.")
         elif not all(coord >= 0 for coord in self.coords):
@@ -51,8 +51,8 @@ class BBox(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" `BBox`.
@@ -70,7 +70,7 @@ class BBox(Annotation):
 
     @property
     def xyxy_coords(self) -> list[float]:
-        """Return bounding box xyxy coordinates.
+        """Return the bounding box xyxy coordinates.
 
         Returns:
             Coordinates in xyxy format.
@@ -79,15 +79,15 @@ class BBox(Annotation):
 
     @property
     def xywh_coords(self) -> list[float]:
-        """Return bounding box xywh coordinates.
+        """Return the bounding box xywh coordinates.
 
         Returns:
             Coordinates in xywh format.
         """
         return self.coords if self.format == "xywh" else bbox_utils.xyxy_to_xywh(self.coords)
 
-    def to_xyxy(self) -> "BBox":
-        """Return bounding box in xyxy format.
+    def to_xyxy(self) -> Self:
+        """Return the bounding box in xyxy format.
 
         Returns:
             Bounding box in xyxy format.
@@ -99,8 +99,8 @@ class BBox(Annotation):
             confidence=self.confidence,
         )
 
-    def to_xywh(self) -> "BBox":
-        """Return bounding box in xywh format.
+    def to_xywh(self) -> Self:
+        """Return the bounding box in xywh format.
 
         Returns:
             Bounding box in xyxy format.
@@ -112,15 +112,15 @@ class BBox(Annotation):
             confidence=self.confidence,
         )
 
-    def normalize(self, height: int, width: int) -> "BBox":
-        """Return bounding box with coordinates normalized to image size.
+    def normalize(self, height: int, width: int) -> Self:
+        """Return the bounding box with coordinates normalized relatively to the image size.
 
         Args:
             height: Image height.
             width: Image width.
 
         Returns:
-            Bounding box with coordinates normalized to image size.
+            Bounding box with coordinates normalized relatively to the image size.
         """
         return BBox(
             coords=bbox_utils.normalize_coords(self.coords, height, width),
@@ -129,15 +129,15 @@ class BBox(Annotation):
             confidence=self.confidence,
         )
 
-    def denormalize(self, height: int, width: int) -> "BBox":
-        """Return bounding box with coordinates denormalized from image size.
+    def denormalize(self, height: int, width: int) -> Self:
+        """Return the bounding box with coordinates denormalized relatively to the image size.
 
         Args:
             height: Image height.
             width: Image width.
 
         Returns:
-            Bounding box with coordinates denormalized from image size.
+            Bounding box with coordinates denormalized relatively to the image size.
         """
         return BBox(
             coords=bbox_utils.denormalize_coords(self.coords, height, width),
@@ -151,14 +151,14 @@ class BBox(Annotation):
         xyxy: list[float],
         **kwargs: Any,
     ) -> "BBox":
-        """Create bounding box using normalized xyxy coordinates.
+        """Create a bounding box using normalized xyxy coordinates.
 
         Args:
             xyxy: List of coordinates in xyxy format.
             kwargs: Additional arguments.
 
         Returns:
-            Bounding box.
+            The bounding box.
         """
         return BBox(
             coords=xyxy,
@@ -171,14 +171,14 @@ class BBox(Annotation):
         xywh: list[float],
         **kwargs: Any,
     ) -> "BBox":
-        """Create bounding box using normalized xywh coordinates.
+        """Create a bounding box using normalized xywh coordinates.
 
         Args:
             xywh: List of coordinates in xywh format.
             kwargs: Additional arguments.
 
         Returns:
-            Bounding box.
+            The bounding box.
         """
         return BBox(
             coords=xywh,
@@ -188,14 +188,14 @@ class BBox(Annotation):
 
     @staticmethod
     def from_mask(mask: np.ndarray, **kwargs: Any) -> "BBox":
-        """Create bounding box using a NumPy array mask.
+        """Create a bounding box using a NumPy array mask.
 
         Args:
             mask: NumPy array mask.
             kwargs: Additional arguments.
 
         Returns:
-            Bounding box.
+            The bounding box.
         """
         return BBox.from_xywh(
             xywh=bbox_utils.mask_to_bbox(mask),
@@ -208,14 +208,14 @@ class BBox(Annotation):
         rle: CompressedRLE,
         **kwargs: Any,
     ) -> "BBox":
-        """Create bounding box using a RLE mask.
+        """Create a bounding box using a RLE mask.
 
         Args:
             rle: RLE mask.
             kwargs: Additional arguments.
 
         Returns:
-            Bounding box.
+            The bounding box.
         """
         return BBox.from_mask(mask=rle.to_mask(), **kwargs)
 
@@ -254,8 +254,8 @@ class BBox3D(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" BBox3D.
@@ -274,12 +274,12 @@ class BBox3D(Annotation):
 
 
 def is_bbox(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a BBox or  a subclass of BBox."""
+    """Check if a class is a `BBox` or a subclass of `BBox`."""
     return issubclass_strict(cls, BBox, strict)
 
 
 def is_bbox3d(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a BBox3D or subclass of BBox3D."""
+    """Check if a class is a `BBox3D` or subclass of `BBox3D`."""
     return issubclass_strict(cls, BBox3D, strict)
 
 
@@ -294,7 +294,7 @@ def create_bbox(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> BBox:
-    """Create a BBox instance.
+    """Create a `BBox` instance.
 
     Args:
         coords: List of coordinates in given format.
@@ -308,7 +308,7 @@ def create_bbox(
         source_ref: Source reference.
 
     Returns:
-        The created BBox instance.
+        The created `BBox` instance.
     """
     return BBox(
         id=id,
@@ -335,7 +335,7 @@ def create_bbox3d(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> BBox3D:
-    """Create a BBox3D instance.
+    """Create a `BBox3D` instance.
 
     Args:
         coords: The 3D position coordinates.
@@ -350,7 +350,7 @@ def create_bbox3d(
         source_ref: Source reference.
 
     Returns:
-        The created BBox3D instance.
+        The created `BBox3D` instance.
     """
     return BBox3D(
         id=id,

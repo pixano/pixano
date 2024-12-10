@@ -17,7 +17,14 @@ from .registry import _register_schema_internal
 
 
 class SourceKind(Enum):
-    """Kind of source."""
+    """Kind of source that produced the annotation.
+
+    Attributes:
+        MODEL: Source produced by a model.
+        HUMAN: Source produced by a human.
+        GROUND_TRUTH: The source is a ground truth.
+        OTHER: Source produced by other means.
+    """
 
     MODEL = "model"
     HUMAN = "human"

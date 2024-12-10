@@ -31,7 +31,7 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_valid_init(self, image_folder_builder, video_folder_builder, entity_category):
+    def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
@@ -46,6 +46,20 @@ class TestFolderBaseBuilder:
         assert video_folder_builder.entity_name == "entities"
         assert image_folder_builder.entity_schema == entity_category
         assert video_folder_builder.entity_schema == entity_category
+        assert image_folder_builder.url_prefix == Path(".")
+
+    def test_url_prefix_init(self, dataset_item_bboxes_metadata):
+        source_dir = Path(tempfile.mkdtemp())
+        target_dir = Path(tempfile.mkdtemp())
+        urls_relative_path = source_dir.parent.parent
+
+        ImageFolderBuilder(
+            source_dir,
+            target_dir,
+            dataset_item_bboxes_metadata,
+            DatasetInfo(name="test", description="test"),
+            url_prefix=urls_relative_path,
+        )
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())

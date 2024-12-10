@@ -18,7 +18,7 @@ export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
     const [, , x, y] = match;
     result.push({ x: parseFloat(x), y: parseFloat(y) });
   }
-  result = simplify(result, 4, true);
+  result = simplify(result, 0, true);
   return result.map((r, i) => ({ ...r, id: i }));
 };
 
@@ -73,6 +73,63 @@ export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[])
   }
   ctx.fillStrokeShape(shape);
 };
+
+// Fonction de conversion RLE vers chaîne de caractères
+export function rleToString(cnts: number[]): string {
+  let result = "";
+  for (let i = 0; i < cnts.length; i++) {
+    let x = cnts[i];
+    // Si c'est au-delà du deuxième élément, on applique la différence avec cnts[i-2]
+    if (i > 2) {
+      x -= cnts[i - 2];
+    }
+    let more = true;
+    // Encodage en utilisant 6 bits par caractère
+    while (more) {
+      let c = x & 0x1f; // Extraire les 5 bits de poids faible
+      x >>= 5; // Décaler les bits de 5 positions vers la droite
+
+      // Déterminer s'il y a plus de chiffres à traiter
+      more = c & 0x10 ? x !== -1 : x !== 0;
+      if (more) {
+        c |= 0x20; // Ajouter un indicateur de continuation
+      }
+      // Convertir en caractère ASCII (48-111)
+      result += String.fromCharCode(c + 48);
+    }
+  }
+  return result;
+}
+
+//translation of pycocotools rleFrString from python to Typescript
+export function rleFrString(s: string): number[] {
+  let p = 0; // Pointer to traverse string
+  const cnts: number[] = [];
+
+  // Step 1: Decode the string s
+  while (p < s.length) {
+    let x = 0;
+    let k = 0;
+    let more = true;
+
+    while (more) {
+      const c = s.charCodeAt(p) - 48; // Decode character to integer
+      x |= (c & 0x1f) << (5 * k); // Take the first 5 bits of c
+      more = (c & 0x20) !== 0; // Check if there is more to decode
+      p++;
+      k++;
+      if (!more && c & 0x10) {
+        x |= -1 << (5 * k); // If negative, handle sign extension
+      }
+    }
+    // Step 2: Handle cumulative addition
+    if (cnts.length > 2) {
+      x += cnts[cnts.length - 2]; // Apply shift for previous counts
+    }
+    cnts.push(x); // Add decoded value to cnts array
+  }
+  return cnts;
+}
 
 // Function to parse SVG path (as provided in the previous response)
 function svgPathToBitmap(svgPath, width: number, height: number): number[] {

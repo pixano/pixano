@@ -11,7 +11,7 @@ License: CECILL-C
 
   import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
   import { Table } from "@pixano/table";
-  import type { ExplorerData } from "@pixano/core/src";
+  import type { DatasetBrowser } from "@pixano/core/src";
 
   import {
     svg_clear,
@@ -29,7 +29,7 @@ License: CECILL-C
   } from "$lib/constants/pixanoConstants";
 
   // Exports
-  export let selectedDataset: ExplorerData;
+  export let selectedDataset: DatasetBrowser;
   let isLoadingTableItems = false;
 
   // Page navigation
@@ -54,8 +54,8 @@ License: CECILL-C
   let searchInput: string = "";
   let selectedSearchModel: string | undefined;
   const searchModels: string[] = [];
-  if (selectedDataset.sem_search.length > 0) {
-    for (const model of selectedDataset.sem_search) {
+  if (selectedDataset.semantic_search.length > 0) {
+    for (const model of selectedDataset.semantic_search) {
       // Initialize selected search model
       if (!selectedSearchModel) {
         selectedSearchModel = model;
@@ -98,7 +98,7 @@ License: CECILL-C
   }
 
   function handleGoToNextPage() {
-    if (selectedDataset.pagination.total > currentPage * pageSize) {
+    if (selectedDataset.pagination.total_size > currentPage * pageSize) {
       isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
@@ -109,12 +109,12 @@ License: CECILL-C
   }
 
   function handleGoToLastPage() {
-    if (selectedDataset.pagination.total > currentPage * pageSize) {
+    if (selectedDataset.pagination.total_size > currentPage * pageSize) {
       isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
-        currentPage: Math.ceil((selectedDataset.pagination.total || 1) / pageSize),
+        currentPage: Math.ceil((selectedDataset.pagination.total_size || 1) / pageSize),
       }));
     }
   }
@@ -138,7 +138,7 @@ License: CECILL-C
   //   tableItem.push({ name: "id", dtype: "int", value: item.id });
   //   tableItem.push({ name: "split", dtype: "str", value: item.split });
 
-  //   Object.values(item.views).forEach((view: ItemView) => {
+  //   Object.values(item.views).forEach((view: View) => {
   //     tableItem.push({
   //       name: view.id,
   //       dtype: "image",
@@ -228,7 +228,7 @@ License: CECILL-C
 
     {#if !selectedDataset.isErrored}
       <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
-        {#if selectedDataset.pagination.total > pageSize}
+        {#if selectedDataset.pagination.total_size > pageSize}
           <button on:click={handleGoToFirstPage}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -257,12 +257,12 @@ License: CECILL-C
         <span class="mx-4">
           {1 + pageSize * (currentPage - 1)} - {Math.min(
             pageSize * currentPage,
-            selectedDataset.pagination.total,
+            selectedDataset.pagination.total_size,
           )} of
-          {selectedDataset.pagination.total}
+          {selectedDataset.pagination.total_size}
         </span>
 
-        {#if selectedDataset.pagination.total > pageSize}
+        {#if selectedDataset.pagination.total_size > pageSize}
           <button on:click={handleGoToNextPage}>
             <svg
               xmlns="http://www.w3.org/2000/svg"

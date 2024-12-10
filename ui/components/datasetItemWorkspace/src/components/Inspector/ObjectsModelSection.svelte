@@ -8,66 +8,51 @@ License: CECILL-C
   // Imports
   import { Eye, EyeOff } from "lucide-svelte";
 
-  import { IconButton } from "@pixano/core/src";
+  import { IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { EXISTING_SOURCE_IDS, GROUND_TRUTH } from "../../lib/constants";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { GROUND_TRUTH, OTHER } from "../../lib/constants";
+  import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { onMount } from "svelte";
+  import { derived } from "svelte/store";
 
-  export let sectionTitle: string;
-  export let modelName: string;
+  export let source: Source | undefined;
   export let numberOfItem: number;
+  let modelName: string = OTHER;
+  let sectionTitle: string = OTHER + " - unknown";
 
-  let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
+  // const isAnnFromSource = (ann: Annotation): boolean => {
+  //   //if we have no source info at all (it shouldn't happens), we have source_ref.id === "";
+  //   //note it's different from no corresponding source in source table
+  //   return source ? ann.data.source_ref.id === source.id : ann.data.source_ref.id === "";
+  // };
+
+  let visibilityStatus = derived([annotations], ([$annotations]) =>
+    //Note: as we removed grouping by model, we don't filter by source anymore
+    //$annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl?.hidden)
+    $annotations.every((ann) => ann.ui.displayControl?.hidden) ? "hidden" : "shown",
+  );
+
+  onMount(() => {
+    if (source) {
+      modelName = source.data.name;
+      if (source.data.kind === "ground_truth") sectionTitle = GROUND_TRUTH;
+      else sectionTitle = source.data.kind + " - " + source.data.name;
+    }
+  });
+
   $: tooltipContent =
-    visibilityStatus === "hidden" ? `Show ${modelName} objects` : `Hide ${modelName} objects`;
-
-  itemObjects.subscribe((items) => {
-    if (!items.length) return;
-    const allObjectsOfCurrentModel = items.filter((item) => item.source_id === modelName);
-    const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
-      (item) => item.displayControl?.hidden,
-    );
-    if (allObjectsOfCurrentModelAreHidden) {
-      visibilityStatus = "hidden";
-    }
-    const allObjectsOfCurrentModelAreShown = allObjectsOfCurrentModel.every(
-      (item) => !item.displayControl?.hidden,
-    );
-    if (allObjectsOfCurrentModelAreShown) {
-      visibilityStatus = "shown";
-    }
-  });
-
-  $: itemObjects.update((objects) => {
-    return objects.map((object) => {
-      const isHidden = visibilityStatus === "hidden";
-      if (modelName === GROUND_TRUTH) {
-        if (object.source_id === modelName) {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
-        } else {
-          return object;
-        }
-      }
-      if (!EXISTING_SOURCE_IDS.includes(object.source_id)) {
-        if (object.source_id === modelName) {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
-        } else {
-          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], true);
-        }
-      }
-      return object;
-    });
-  });
+    $visibilityStatus === "hidden" ? `Show ${modelName} objects` : `Hide ${modelName} objects`;
 
   const handleVisibilityIconClick = () => {
-    if (visibilityStatus === "hidden") {
-      visibilityStatus = "shown";
-    } else if (visibilityStatus === "shown") {
-      visibilityStatus = "hidden";
-    } else {
-      visibilityStatus = "hidden";
-    }
+    const isHidden = $visibilityStatus === "hidden";
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        //return isAnnFromSource(ann) ? toggleObjectDisplayControl(ann, "hidden", !isHidden) : ann;
+        //TMP(?) now that there is only a global source group, we change vis for all
+        return toggleObjectDisplayControl(ann, "hidden", !isHidden);
+      }),
+    );
   };
 </script>
 
@@ -75,7 +60,7 @@ License: CECILL-C
   <div class="flex items-center justify-between text-slate-800">
     <div class="flex items-center gap-3 w-full">
       <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
-        {#if visibilityStatus === "hidden"}
+        {#if $visibilityStatus === "hidden"}
           <EyeOff class="h-4" />
         {:else}
           <Eye class="h-4" />

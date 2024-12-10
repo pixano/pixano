@@ -30,11 +30,10 @@ def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset
         name="dataset_image_bboxes_keypoint",
         description="Description dataset_image_bboxes_keypoint.",
     )
-    schemas = dataset_item_image_bboxes_keypoint
     dataset_builder_image_bboxes_keypoint = DatasetBuilderImageBboxesKeypoint(
         info=info_dataset_image_bboxes_keypoint,
         target_dir=LIBRARY_DIR / "dataset_image_bboxes_keypoint",
-        schemas=schemas,
+        dataset_item=dataset_item_image_bboxes_keypoint,
     )
     dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
         dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
@@ -49,12 +48,11 @@ def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_i
         name="dataset_multi_view_tracking_and_image",
         description="Description dataset_multi_view_tracking_and_image.",
     )
-    schemas = dataset_item_multi_view_tracking_and_image
 
     dataset_builder_multi_view_tracking_and_image = DatasetBuilderMultiViewTrackingAndImage(
         info=info,
         target_dir=LIBRARY_DIR / "dataset_multi_view_tracking_and_image",
-        schemas=schemas,
+        dataset_item=dataset_item_multi_view_tracking_and_image,
     )
     return dataset_builder_multi_view_tracking_and_image.build(mode="overwrite", check_integrity="none")
 

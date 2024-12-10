@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { CheckCheckIcon } from "lucide-svelte";
 
+  import { Item, Entity, Annotation } from "@pixano/core";
   import { Input, type FeaturesValues } from "@pixano/core/src";
 
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
@@ -17,12 +18,20 @@ License: CECILL-C
 
   export let feature: TextFeature | NumberFeature;
   export let isEditing: boolean;
-  export let saveInputChange: (value: string | number, propertyName: string) => void;
+  export let saveInputChange: (
+    value: string | number,
+    propertyName: string,
+    obj: Item | Entity | Annotation,
+  ) => void;
   export let featureClass: keyof FeaturesValues;
 
   let isSaved = false;
 
-  const onTextInputChange = (value: string, propertyName: string) => {
+  const onTextInputChange = (
+    value: string,
+    propertyName: string,
+    obj: Item | Entity | Annotation,
+  ) => {
     let formattedValue: string | number = value;
     if (feature.type === "int") {
       formattedValue = Math.round(Number(value));
@@ -33,7 +42,7 @@ License: CECILL-C
     if (typeof formattedValue === "string") {
       addNewInput($itemMetas.featuresList, featureClass, propertyName, formattedValue);
     }
-    saveInputChange(formattedValue, propertyName);
+    saveInputChange(formattedValue, propertyName, obj);
     isSaved = true;
   };
 </script>
@@ -43,7 +52,7 @@ License: CECILL-C
     {#if feature.type === "str"}
       <AutocompleteTextFeature
         value={feature.value}
-        onTextInputChange={(value) => onTextInputChange(value, feature.name)}
+        onTextInputChange={(value) => onTextInputChange(value, feature.name, feature.obj)}
         featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
         isInputEnabled={!$itemMetas.featuresList?.[featureClass][feature.name]?.restricted}
       />
@@ -52,7 +61,7 @@ License: CECILL-C
         value={feature.value}
         type="number"
         step={feature.type === "int" ? "1" : "any"}
-        on:change={(e) => onTextInputChange(e.currentTarget.value, feature.name)}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, feature.name, feature.obj)}
         on:input={() => (isSaved = false)}
         on:keyup={(e) => e.stopPropagation()}
       />

@@ -22,6 +22,11 @@ class TestDatasetInfo:
 
         assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview"}
 
+        with pytest.raises(ValueError, match="id must not contain spaces"):
+            DatasetInfo(
+                id="id with space", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview"
+            )
+
     def test_to_json(self):
         info = DatasetInfo(id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview")
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)

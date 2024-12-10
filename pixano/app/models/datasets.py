@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from pixano.app.models.dataset_info import DatasetInfoModel
 from pixano.datasets import DatasetFeaturesValues, DatasetInfo, DatasetSchema
@@ -16,7 +17,18 @@ from pixano.datasets.dataset import Dataset
 
 
 class DatasetModel(BaseModel):
-    """Dataset model."""
+    """The model of a dataset.
+
+    Attributes:
+        id: Dataset ID.
+        path: Path to the dataset.
+        previews_path: Path to the previews.
+        media_dir: Path to the media directory.
+        thumbnail: Path to the thumbnail.
+        dataset_schema: The dataset schema.
+        feature_values: The feature values of the dataset.
+        info: The dataset info.
+    """
 
     id: str
     path: Path
@@ -28,14 +40,14 @@ class DatasetModel(BaseModel):
     info: DatasetInfoModel
 
     @classmethod
-    def from_dataset(cls, dataset: Dataset) -> "DatasetModel":
+    def from_dataset(cls, dataset: Dataset) -> Self:
         """Create a dataset model from a dataset.
 
         Args:
-            dataset: Dataset.
+            dataset: The dataset.
 
         Returns:
-            Dataset model.
+            The dataset model.
         """
         info = DatasetInfoModel.from_dataset_info(dataset.info, dataset.path)
         return cls(
@@ -50,7 +62,7 @@ class DatasetModel(BaseModel):
         )
 
     @classmethod
-    def from_json(cls, data: dict[str, Any]) -> "DatasetModel":
+    def from_json(cls, data: dict[str, Any]) -> Self:
         """Create a dataset model from a JSON object.
 
         Args:

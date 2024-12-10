@@ -66,6 +66,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set VERSION environment variable
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Configure git credentials
         run: |
@@ -90,7 +95,31 @@ jobs:
             mkdocs-material-
 
       - name: Install dependencies
-        run: pip install .[documentation]
+        run: pip install .[docs]
 
       - name: Publish documentation website
-        run: mkdocs gh-deploy --force
+        run: mike deploy --push --update-aliases ${{ env.VERSION }} stable
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set VERSION environment variable
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: |
+            pixano/pixano:${{ env.VERSION }}
+            ${{ github.event.release.prerelease == false && 'pixano/pixano:stable' || '' }}

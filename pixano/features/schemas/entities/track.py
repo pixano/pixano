@@ -13,7 +13,7 @@ from .entity import Entity
 
 @_register_schema_internal
 class Track(Entity):
-    """A Track entity.
+    """A `Track` entity.
 
     A track represents an entity that is shared among multiple view across time.
 
@@ -25,7 +25,7 @@ class Track(Entity):
 
 
 def is_track(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a Track or a subclass of Track."""
+    """Check if the given class is a `Track` or a subclass of `Track`."""
     return issubclass_strict(cls, Track, strict)
 
 
@@ -36,7 +36,7 @@ def create_track(
     view_ref: ViewRef = ViewRef.none(),
     parent_ref: EntityRef = EntityRef.none(),
 ) -> Track:
-    """Create a `TrackObject` instance.
+    """Create a `Track` instance.
 
     Args:
         name: The name of the track.
@@ -46,7 +46,7 @@ def create_track(
         parent_ref: Entity reference.
 
     Returns:
-        The created `TrackObject` instance.
+        The created `Track` instance.
     """
     return Track(
         id=id,

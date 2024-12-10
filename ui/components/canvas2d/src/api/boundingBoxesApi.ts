@@ -4,18 +4,21 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Mask, SelectionTool } from "@pixano/core";
+import type { MaskSVG, SelectionTool } from "@pixano/core";
 
 import Konva from "konva";
 
 import { MASK_STROKEWIDTH } from "../lib/constants";
 
 export function addMask(
-  mask: Mask,
+  mask_id: string,
+  mask_svg: MaskSVG,
+  visible: boolean,
+  opacity: number,
   color: string,
   maskGroup: Konva.Group,
   image: Konva.Image,
-  viewId: string,
+  view_name: string,
   stage: Konva.Stage,
   zoomFactor: Record<string, number>,
 ) {
@@ -47,24 +50,24 @@ export function addMask(
     return res;
   }
   const maskKonva = new Konva.Shape({
-    id: mask.id,
+    id: mask_id,
     x: x,
     y: y,
     width: stage.width(),
     height: stage.height(),
     fill: `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`,
     stroke: style.color,
-    strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
+    strokeWidth: MASK_STROKEWIDTH / zoomFactor[view_name],
     scale,
-    visible: mask.visible,
-    opacity: mask.opacity,
+    visible,
+    opacity,
     listening: false,
     sceneFunc: (ctx, shape) => {
       ctx.beginPath();
-      for (let i = 0; i < mask.svg.length; ++i) {
-        const start = m_part(mask.svg[i]);
+      for (let i = 0; i < mask_svg.length; ++i) {
+        const start = m_part(mask_svg[i]);
         ctx.moveTo(start.x, start.y);
-        const l_pts = l_part(mask.svg[i]);
+        const l_pts = l_part(mask_svg[i]);
         for (const pt of l_pts) {
           ctx.lineTo(pt.x, pt.y);
         }
@@ -85,8 +88,8 @@ export function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: K
   for (const obj of objectsToDestroy) obj.destroy();
 }
 
-export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Konva.Group {
-  const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+export function findOrCreateCurrentMask(view_name: string, stage: Konva.Stage): Konva.Group {
+  const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
 
   const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
 
@@ -102,8 +105,12 @@ export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Kon
   return currentMaskGroup;
 }
 
-export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool: SelectionTool) {
-  const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+export function clearCurrentAnn(
+  view_name: string,
+  stage: Konva.Stage,
+  selectedTool: SelectionTool,
+) {
+  const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
   if (viewLayer) {
     const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
     const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");

@@ -39,7 +39,7 @@ def test_create_video():
     # Test 2: read url with custom id and other path and custom references
     video = create_video(
         url=VIDEO_MP4_ASSET_URL,
-        other_path=ASSETS_DIRECTORY,
+        url_relative_path=ASSETS_DIRECTORY,
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),

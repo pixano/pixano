@@ -40,7 +40,7 @@ def test_get_datasets_info_not_found(empty_app_and_settings_with_client: tuple[F
 
     response = client.get("/datasets/info")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"No datasets found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"No datasets found in {str(settings.library_dir)}."}
 
 
 def test_get_dataset_info(
@@ -71,14 +71,16 @@ def test_get_dataset(
     assert dataset_model.dataset_schema.model_dump() == dataset_schema_image_bboxes_keypoint.model_dump()
     assert dataset_model.info == info_model_dataset_image_bboxes_keypoint
     assert dataset_model.feature_values == DatasetFeaturesValues()
-    assert dataset_model.path == settings.data_dir / "dataset_image_bboxes_keypoint"
-    assert dataset_model.previews_path == settings.data_dir / "dataset_image_bboxes_keypoint" / Dataset._PREVIEWS_PATH
-    assert dataset_model.media_dir == settings.data_dir / "dataset_image_bboxes_keypoint" / "media"
-    assert dataset_model.thumbnail == settings.data_dir / "dataset_image_bboxes_keypoint" / Dataset._THUMB_FILE
+    assert dataset_model.path == settings.library_dir / "dataset_image_bboxes_keypoint"
+    assert (
+        dataset_model.previews_path == settings.library_dir / "dataset_image_bboxes_keypoint" / Dataset._PREVIEWS_PATH
+    )
+    assert dataset_model.media_dir == settings.media_dir
+    assert dataset_model.thumbnail == settings.library_dir / "dataset_image_bboxes_keypoint" / Dataset._THUMB_FILE
 
     response = client.get("/datasets/wrong_dataset")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
 
 def test_get_table_count(
@@ -96,7 +98,7 @@ def test_get_table_count(
 
     response = client.get("/datasets/wrong_dataset/item/count")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
     response = client.get("/datasets/dataset_image_bboxes_keypoint/wrong_table/count")
     assert response.status_code == 404

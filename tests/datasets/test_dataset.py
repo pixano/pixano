@@ -8,7 +8,9 @@
 import re
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
+import polars as pl
 import pytest
 from lancedb.embeddings import get_registry
 from lancedb.table import LanceTable
@@ -17,9 +19,9 @@ from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from pixano.datasets.utils.errors import DatasetIntegrityError
+from pixano.datasets.utils.errors import DatasetAccessError, DatasetIntegrityError
 from pixano.features import BBox, Image, Item
-from pixano.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.features.schemas.embeddings.embedding import ViewEmbedding, _to_pixano_name
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 
 
@@ -75,6 +77,17 @@ class TestDataset:
             "test_compute_embeddings_view_embedding",
             dataset_image_bboxes_keypoint_copy,
         )
+        pix_name = _to_pixano_name(
+            dataset_image_bboxes_keypoint_copy,
+            "test_compute_embeddings_view_embedding",
+            "test_compute_embeddings_dumb_embedding_function",
+        )
+        assert pix_name in registry._functions
+
+        def _open_views(self, views):
+            return ["" for _ in views]
+
+        registry._functions[pix_name]._open_views = _open_views
         dataset_image_bboxes_keypoint_copy.create_table(
             "test_compute_embeddings_view_embedding", embeddings_schema, SchemaRelation.ONE_TO_MANY
         )
@@ -85,6 +98,8 @@ class TestDataset:
             data.append(
                 {
                     "id": f"embedding_{i}",
+                    "created_at": datetime(2021, 1, 1, 0, 0),
+                    "updated_at": datetime(2021, 1, 1, 0, 0),
                     "item_ref": {
                         "id": view.item_ref.id,
                         "name": view.item_ref.name,
@@ -117,11 +132,12 @@ class TestDataset:
         assert set(tables.keys()) == set(dataset_image_bboxes_keypoint.schema.schemas.keys())
 
     @pytest.mark.parametrize(
-        "table_name,type,ids,item_ids,limit,skip,expected_output",
+        "table_name,type,where,ids,item_ids,limit,skip,expected_output",
         [
             (
                 "item",
                 Item,
+                None,
                 None,
                 None,
                 3,
@@ -153,6 +169,25 @@ class TestDataset:
             (
                 "item",
                 Item,
+                "metadata='metadata_0'",
+                None,
+                None,
+                3,
+                0,
+                [
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    }
+                ],
+            ),
+            (
+                "item",
+                Item,
+                None,
                 None,
                 None,
                 3,
@@ -184,6 +219,7 @@ class TestDataset:
             (
                 "item",
                 Item,
+                None,
                 ["0", "1"],
                 None,
                 None,
@@ -208,6 +244,25 @@ class TestDataset:
             (
                 "item",
                 Item,
+                "metadata='metadata_0'",
+                ["0", "1"],
+                None,
+                None,
+                0,
+                [
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                ],
+            ),
+            (
+                "item",
+                Item,
+                None,
                 None,
                 ["0", "1"],
                 None,
@@ -232,6 +287,7 @@ class TestDataset:
             (
                 "image",
                 Image,
+                None,
                 ["image_0", "image_1"],
                 None,
                 None,
@@ -265,6 +321,7 @@ class TestDataset:
                 "image",
                 Image,
                 None,
+                None,
                 ["0", "1"],
                 None,
                 0,
@@ -293,13 +350,44 @@ class TestDataset:
                     },
                 ],
             ),
+            (
+                "image",
+                Image,
+                "url='image_0.jpg'",
+                None,
+                ["0", "1"],
+                None,
+                0,
+                [
+                    {
+                        "id": "image_0",
+                        "item_ref": {"id": "0", "name": "item"},
+                        "parent_ref": {"id": "", "name": ""},
+                        "url": "image_0.jpg",
+                        "width": 100,
+                        "height": 100,
+                        "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                ],
+            ),
         ],
     )
     def test_get_data(
-        self, table_name, type, ids, item_ids, limit, skip, expected_output, dataset_image_bboxes_keypoint: Dataset
+        self,
+        table_name,
+        type,
+        where,
+        ids,
+        item_ids,
+        limit,
+        skip,
+        expected_output,
+        dataset_image_bboxes_keypoint: Dataset,
     ):
         data = dataset_image_bboxes_keypoint.get_data(
-            table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+            table_name=table_name, where=where, ids=ids, limit=limit, skip=skip, item_ids=item_ids
         )
         assert isinstance(data, list) and all(isinstance(d, type) for d in data)
         for d, e in zip(data, expected_output, strict=True):
@@ -1036,3 +1124,33 @@ class TestDataset:
         wrong_item_ref = ItemRef(id="", name="item")
         with pytest.raises(ValueError, match="Reference should have a name and an id."):
             dataset_image_bboxes_keypoint.resolve_ref(wrong_item_ref)
+
+    def test_semantic_search(
+        self,
+        dataset_multi_view_tracking_and_image: Dataset,
+        df_semantic_search: pl.DataFrame,
+    ):
+        def _mock_to_polars(self):
+            return df_semantic_search
+
+        with patch("lancedb.query.LanceQueryBuilder.to_polars", _mock_to_polars):
+            items, distances = dataset_multi_view_tracking_and_image.semantic_search(
+                "some_text", "image_embedding", limit=50, skip=0
+            )
+
+        sorted_df = df_semantic_search.sort("_distance", descending=False)
+
+        for i, (item, distance) in enumerate(zip(items, distances)):
+            assert isinstance(item, Item)
+            assert isinstance(distance, float)
+            assert item.id == sorted_df["item_ref.id"][i]
+            assert distance == sorted_df["_distance"][i]
+
+        with pytest.raises(DatasetAccessError, match="query must be a string"):
+            dataset_multi_view_tracking_and_image.semantic_search(0, "image_embedding", limit=50, skip=0)
+        with pytest.raises(DatasetAccessError, match="table_name must be a string"):
+            dataset_multi_view_tracking_and_image.semantic_search("some_text", 0, limit=50, skip=0)
+        with pytest.raises(DatasetAccessError, match="limit must be a strictly positive integer"):
+            dataset_multi_view_tracking_and_image.semantic_search("some_text", "image_embedding", limit=0, skip=0)
+        with pytest.raises(DatasetAccessError, match="skip must be a positive integer"):
+            dataset_multi_view_tracking_and_image.semantic_search("some_text", "image_embedding", limit=50, skip=-1)

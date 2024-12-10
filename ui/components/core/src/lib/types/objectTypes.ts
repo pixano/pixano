@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { SegmentationResult } from ".";
-import type { BBox, DisplayControl, Mask } from "./datasetTypes";
+import type { BBox, DisplayControl, Mask, Entity, Reference } from "./datasetTypes";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -15,7 +15,7 @@ export type TextFeature = {
 };
 
 export type SaveShapeBase = {
-  viewId: string;
+  viewRef: Reference;
   itemId: string;
   imageWidth: number;
   imageHeight: number;
@@ -42,7 +42,17 @@ type SaveMaskShape = SegmentationResult &
     type: "mask";
   };
 
-export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape;
+export type SaveTrackletShape = SaveShapeBase & {
+  type: "tracklet";
+  attrs: {
+    start_timestep: number;
+    end_timestep: number;
+    start_timestamp?: number;
+    end_timestamp?: number;
+  };
+};
+
+export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape | SaveTrackletShape;
 
 export type noShape = {
   status: "none";
@@ -67,29 +77,26 @@ export type Vertex = {
   };
 };
 
-export type Keypoints = {
-  id: string;
-  view_id?: string;
-  template_id: string;
-  vertices: Vertex[];
-  displayControl?: DisplayControl;
-};
-
 export type KeypointsTemplate = {
   id: string;
-  view_id?: string;
+  template_id: string;
+  viewRef?: Reference;
+  entityRef?: Reference;
   edges: [number, number][];
   vertices: Required<Vertex>[];
-  editing?: boolean;
-  visible?: boolean;
-  displayControl?: DisplayControl;
-  highlighted?: "all" | "self" | "none";
+  ui?: {
+    frame_index?: number;
+    displayControl?: DisplayControl;
+    highlighted?: "all" | "self" | "none";
+    startRef?: KeypointsTemplate;
+    top_entities?: Entity[];
+  };
 };
 
 export type CreateKeypointShape = {
   status: "creating";
   type: "keypoints";
-  viewId: string;
+  viewRef: Reference;
   x: number;
   y: number;
   width: number;
@@ -101,7 +108,7 @@ export type CreateMaskShape = {
   status: "creating";
   type: "mask";
   points: PolygonGroupPoint[];
-  viewId: string;
+  viewRef: Reference;
 };
 
 export type CreateRectangleShape = {
@@ -111,7 +118,7 @@ export type CreateRectangleShape = {
   y: number;
   width: number;
   height: number;
-  viewId: string;
+  viewRef: Reference;
 };
 
 export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeypointShape;
@@ -134,7 +141,7 @@ export type EditKeypointsShape = {
 export type EditShape = {
   status: "editing";
   shapeId: string;
-  viewId: string;
+  viewRef: Reference;
   highlighted?: "all" | "self" | "none";
 } & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 

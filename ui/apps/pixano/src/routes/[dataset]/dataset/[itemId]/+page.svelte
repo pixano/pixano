@@ -10,15 +10,19 @@ License: CECILL-C
   import {
     type DatasetItem,
     type DatasetInfo,
-    type DatasetItemSave,
+    type SaveItem,
     PrimaryButton,
+    type Schema,
+    Entity,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
   import {
     datasetsStore,
+    datasetSchema,
     isLoadingNewItemStore,
     modelsStore,
+    sourcesStore,
     saveCurrentItemStore,
   } from "../../../../lib/stores/datasetStores";
   import { goto } from "$app/navigation";
@@ -47,16 +51,42 @@ License: CECILL-C
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
     api
-      .getDatasetItem(dataset.id, encodeURIComponent(id))
-      .then((item) => {
-        selectedItem = item;
-        if (Object.keys(item).length === 0) {
-          noItemFound = true;
-        } else {
-          noItemFound = false;
-        }
+      .getDataset(dataset.id)
+      .then((ds) => {
+        datasetSchema.set(ds.dataset_schema);
+        api
+          .getDatasetItem(dataset.id, encodeURIComponent(id))
+          .then((item) => {
+            let item_type: "image" | "video" | "3d" = "image";
+            const media_dir = "media/";
+            Object.values(item.views).map((view) => {
+              if (Array.isArray(view)) {
+                const video = view;
+                item_type = "video";
+                video.forEach((sf) => {
+                  sf.data.type = "video";
+                  sf.data.url = media_dir + sf.data.url;
+                });
+                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+              } else {
+                const image = view;
+                image.data.type = "image";
+                image.data.url = media_dir + image.data.url;
+              }
+              return view;
+            });
+            selectedItem = item;
+            selectedItem.ui = { type: item_type, datasetId: dataset.id };
+            if (Object.keys(item).length === 0) {
+              noItemFound = true;
+            } else {
+              noItemFound = false;
+            }
+            console.log("XXX handleSelectIem - selectedItem:", selectedItem);
+          })
+          .then(() => isLoadingNewItemStore.set(false))
+          .catch((err) => console.error(err));
       })
-      .then(() => isLoadingNewItemStore.set(false))
       .catch((err) => console.error(err));
   };
 
@@ -69,11 +99,15 @@ License: CECILL-C
     const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     if (foundDataset) {
       selectedDataset = foundDataset;
+      api
+        .getSources(selectedDataset.id)
+        .then((sources) => sourcesStore.set(sources))
+        .catch((err) => console.error("ERROR: Unable to get sources", err));
     }
   });
 
   $: {
-    if (currentItemId !== selectedItem?.id) {
+    if (currentItemId !== selectedItem?.item.id) {
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
@@ -83,9 +117,73 @@ License: CECILL-C
     isLoadingNewItem = value;
   });
 
-  async function handleSaveItem(savedItem: DatasetItemSave) {
-    await api.postDatasetItem(selectedDataset.id, savedItem);
-    handleSelectItem(selectedDataset, currentItemId);
+  async function handleSaveItem(data: SaveItem[]) {
+    //entities first to avoid database consistency checks issues
+    data.sort((a, b) => {
+      const priority = (object: Schema) => {
+        // Highest priority: Track
+        if (object.table_info.base_schema === "Track") return 0;
+        // Second priority : Entity as top entity
+        if (object.table_info.base_schema === "Entity") {
+          if ((object as Entity).data.parent_ref.id === "") return 1;
+          else return 2; //Third priority: Entity as sub entity
+        }
+        return 3; // Lowest priority
+      };
+      return priority(a.object) - priority(b.object);
+    });
+
+    const no_delete_data = data.filter((d) => d.change_type !== "delete");
+    for (const savedItem of no_delete_data) {
+      let no_table = false;
+      let route = savedItem.object.table_info.group;
+      if (route === "item") {
+        route = "items";
+        no_table = true;
+      }
+      if (route === "source") {
+        route = "sources";
+        no_table = true;
+      }
+      //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
+      // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
+      const { ui, ...bodyObj } = savedItem.object; // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (savedItem.change_type === "add") {
+        await api.addSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
+      }
+      if (savedItem.change_type === "update") {
+        await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
+      }
+    }
+    //gather deletes by group and table
+    //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
+    const delete_data = data.filter((d) => d.change_type === "delete");
+    const delete_ids_by_group_and_table = delete_data.reduce(
+      (acc, item) => {
+        const group = item.object.table_info.group;
+        const table = item.object.table_info.name;
+        if (!acc[group]) {
+          acc[group] = {};
+        }
+        if (!acc[group][table]) {
+          acc[group][table] = [];
+        }
+        acc[group][table].push(item.object.id);
+        return acc;
+      },
+      {} as Record<string, Record<string, string[]>>,
+    );
+    for (const group in delete_ids_by_group_and_table) {
+      for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
+        let no_table = false;
+        let route = group;
+        if (route === "item") {
+          route = "items";
+          no_table = true;
+        }
+        await api.deleteSchemasByIds(route, selectedDataset.id, ids, table, no_table);
+      }
+    }
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

@@ -9,7 +9,7 @@ import { Tensor } from "onnxruntime-web";
 
 export type { Tensor };
 
-import type { MaskSVG, ItemRLE } from "@pixano/core/src/lib/types/datasetTypes";
+import type { MaskSVG, Reference, MaskType } from "@pixano/core/src/lib/types/datasetTypes";
 
 // Exports
 export interface LabeledClick {
@@ -40,7 +40,7 @@ export interface InteractiveImageSegmenterInput {
 
 export interface SegmentationResult {
   masksImageSVG: MaskSVG;
-  rle: ItemRLE;
+  rle: MaskType;
   masks?: Tensor;
 }
 
@@ -51,9 +51,8 @@ export interface InteractiveImageSegmenter {
 
 export interface InteractiveImageSegmenterOutput {
   id: string;
-  viewId: string;
+  viewRef: Reference;
   label: string;
-  catId: number;
   output: SegmentationResult; //??? or already transformed polygon ????
   input_points: Array<LabeledClick>;
   input_box: Box;

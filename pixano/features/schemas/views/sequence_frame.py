@@ -16,14 +16,19 @@ from .image import Image, create_image
 
 @_register_schema_internal
 class SequenceFrame(Image):
-    """Sequence Frame Lance Model."""
+    """Sequence Frame view.
+
+    Attributes:
+        timestamp: The timestamp of the frame.
+        frame_index: The index of the frame in the sequence.
+    """
 
     timestamp: float
     frame_index: int
 
 
 def is_sequence_frame(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a subclass of Sequence."""
+    """Check if the given class is a subclass of `SequenceFrame`."""
     return issubclass_strict(cls, SequenceFrame, strict)
 
 
@@ -37,7 +42,7 @@ def create_sequence_frame(
     width: int | None = None,
     height: int | None = None,
     format: str | None = None,
-    other_path: Path | None = None,
+    url_relative_path: Path | None = None,
 ) -> SequenceFrame:
     """Create a `SequenceFrame` instance.
 
@@ -51,12 +56,12 @@ def create_sequence_frame(
         width: The frame width. If None, the width is extracted from the frame file.
         height: The frame height. If None, the height is extracted from the frame file.
         format: The frame format. If None, the format is extracted from the frame file.
-        other_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path.
 
     Returns:
         The created `SequenceFrame` instance.
     """
-    image = create_image(url, id, item_ref, parent_ref, width, height, format, other_path)
+    image = create_image(url, id, item_ref, parent_ref, width, height, format, url_relative_path)
     return SequenceFrame(
         id=id,
         item_ref=item_ref,

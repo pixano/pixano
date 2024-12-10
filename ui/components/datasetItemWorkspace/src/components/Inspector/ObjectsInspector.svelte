@@ -6,66 +6,71 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Combobox, cn, type ObjectThumbnail } from "@pixano/core";
+  import { cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import {
-    itemObjects,
+    annotations,
+    entities,
+    views,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { GROUND_TRUTH, PRE_ANNOTATION } from "../../lib/constants";
   import {
     createObjectCardId,
     defineObjectThumbnail,
-    sortObjectsByModel,
+    getTopEntity,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
-  import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allItemsSortedByModel: ObjectsSortedByModelType = {
-    [GROUND_TRUTH]: [],
-    [PRE_ANNOTATION]: [],
-  };
-
+  let allTopEntities: Entity[];
   let thumbnail: ObjectThumbnail | null = null;
 
-  itemObjects.subscribe((objects) => {
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
+  //Note: Previously Entities where grouped by source
+  //Now they're all displayed regardless of source
+  //so we fake a global source for ObjectsModelSection (may be rewritten later)
+  const now = new Date(Date.now()).toISOString();
+  const globalSource = new Source({
+    id: "pixano_source",
+    created_at: now,
+    updated_at: now,
+    table_info: { name: "source", group: "source", base_schema: "Source" },
+    data: { name: "All", kind: "Global", metadata: "{}" },
+  });
+
+  $: $annotations, $entities, handleAnnotationSortedByModel();
+
+  const handleAnnotationSortedByModel = () => {
+    //svelte hack: use a temp Set to set the whole list once
+    const allTopEntitiesSet = new Set<Entity>();
+    $annotations.forEach((ann) => {
+      allTopEntitiesSet.add(getTopEntity(ann, $entities));
+    });
+    allTopEntities = Array.from(allTopEntitiesSet);
+    //console.log("ObjectInspector refresh fired", $annotations, $entities, allTopEntities);
+
+    //scroll and set thumbnail to highlighted object if any
+    const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
     if (highlightedObject) {
-      thumbnail = defineObjectThumbnail($itemMetas, highlightedObject);
+      thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
+      const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } else {
       thumbnail = null;
     }
-  });
-
-  itemObjects.subscribe((objects) => {
-    allItemsSortedByModel = sortObjectsByModel(objects);
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
-
-  let allModels = Object.keys(allItemsSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  );
-
-  let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  )[0];
+  };
 </script>
 
-<div class="p-2 flex flex-col h-[calc(100vh-200px)]">
+<div class="p-2 h-[calc(100vh-200px)]">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
     <div
-      class={cn("gap-4 grow grid grid-cols-1 grid-rows-2 h-full", {
-        block: !thumbnail && !selectedModel,
+      class={cn("", {
+        block: !thumbnail,
         "grid-rows-[150px_80%]": thumbnail,
       })}
     >
@@ -80,35 +85,11 @@ License: CECILL-C
           />
         {/key}
       {/if}
-      <ObjectsModelSection
-        sectionTitle="Ground truth"
-        modelName={GROUND_TRUTH}
-        numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
-      >
-        {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-          <ObjectCard bind:itemObject />
+      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
+        {#each allTopEntities as entity}
+          <ObjectCard bind:entity />
         {/each}
       </ObjectsModelSection>
-      {#if selectedModel}
-        <ObjectsModelSection
-          sectionTitle="Model run"
-          modelName={selectedModel}
-          numberOfItem={allItemsSortedByModel[selectedModel]?.length || 0}
-        >
-          <Combobox
-            slot="modelSelection"
-            bind:value={selectedModel}
-            width="w-[150px]"
-            listItems={allModels.map((model) => ({
-              value: model,
-              label: model,
-            }))}
-          />
-          {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-            <ObjectCard bind:itemObject />
-          {/each}
-        </ObjectsModelSection>
-      {/if}
     </div>
   {/if}
 </div>

@@ -6,6 +6,7 @@
 
 import os
 import re
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -23,7 +24,7 @@ def natural_key(string: str) -> list:
 
 
 def estimate_folder_size(folder_path: Path) -> str:
-    """Estimate folder size and return it as a human-readable string.
+    """Estimate a folder size and return it as a human-readable string.
 
     Args:
         folder_path: Folder path.
@@ -53,7 +54,15 @@ def estimate_folder_size(folder_path: Path) -> str:
 
 
 def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> type | None:
-    """Get the first super type in a dictionary of types for the given type."""
+    """Get the first super type in a dictionary of types for the given type.
+
+    Args:
+        sub_type: Sub type to find the super type for.
+        dict_types: Dictionary of types.
+
+    Returns:
+        Super type if found, None otherwise.
+    """
     if sub_type in dict_types.values():
         return sub_type
 
@@ -102,7 +111,13 @@ def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
 
 
 def fn_sort_dict(dict_: dict[str, Any], order_by: list[str], descending: list[bool]) -> tuple[Any, ...]:
-    """Function to sort a dictionary by multiple keys in different orders."""
+    """Function to sort a dictionary by multiple keys in different orders.
+
+    Args:
+        dict_: Dictionary to sort.
+        order_by: List of keys to sort by.
+        descending: List of booleans indicating the order for each key.
+    """
     key: list[Any] = []
     for col, desc in zip(order_by, descending, strict=True):
         value = dict_.get(col)
@@ -125,8 +140,13 @@ def fn_sort_dict(dict_: dict[str, Any], order_by: list[str], descending: list[bo
     return tuple(key)
 
 
-def unique_list(sequence: Sequence) -> Sequence:
-    """Select unique elements in a list while keeping order."""
-    seen: list = []
-    seen_add = seen.append
-    return [x for x in sequence if not (x in seen or seen_add(x))]
+def unique_list(sequence: Sequence[Any]) -> list[Any]:
+    """Select unique elements in a list while keeping order.
+
+    Args:
+        sequence: Input sequence.
+
+    Returns:
+        List of unique elements.
+    """
+    return list(OrderedDict.fromkeys(sequence))

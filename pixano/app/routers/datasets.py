@@ -25,29 +25,29 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 async def get_datasets_info(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetInfoModel]:
-    """Load dataset list.
+    """Load a list of dataset information.
 
     Args:
-        settings: App settings
+        settings: App settings.
 
     Returns:
-        List of dataset infos.
+        List of dataset info.
     """
     try:
         infos_and_paths: list[tuple[DatasetInfo, Path]] = DatasetInfo.load_directory(
-            directory=settings.data_dir, return_path=True
+            directory=settings.library_dir, return_path=True
         )
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
-            detail=f"No datasets found in {settings.data_dir.absolute()}.",
+            detail=f"No datasets found in {settings.library_dir.absolute()}.",
         )
 
     if len(infos_and_paths) > 0:
         return [DatasetInfoModel.from_dataset_info(info, path) for info, path in infos_and_paths]
     raise HTTPException(
         status_code=404,
-        detail=f"No datasets found in {settings.data_dir.absolute()}.",
+        detail=f"No datasets found in {settings.library_dir.absolute()}.",
     )
 
 
@@ -55,22 +55,22 @@ async def get_datasets_info(
 async def get_dataset_info(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> list[DatasetInfoModel]:
-    """Load dataset list.
+) -> DatasetInfoModel:
+    """Load a single dataset information.
 
     Args:
-        id: Dataset ID
-        settings: App settings
+        id: Dataset ID to load info from.
+        settings: App settings.
 
     Returns:
-        List of dataset infos.
+        The dataset info.
     """
     try:
-        info, path = DatasetInfo.load_id(id, settings.data_dir, return_path=True)
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {id} not found in {settings.data_dir.absolute()}.",
+            detail=f"Dataset {id} not found in {settings.library_dir.absolute()}.",
         )
 
     return DatasetInfoModel.from_dataset_info(info, path)
@@ -81,16 +81,16 @@ async def get_dataset(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetModel:
-    """Load dataset.
+    """Load dataset from ID.
 
     Args:
-        id: Dataset ID
-        settings: App settings
+        id: Dataset ID to load.
+        settings: App settings.
 
     Returns:
-        Dataset.
+        Dataset model.
     """
-    return DatasetModel.from_dataset(get_dataset_utils(id, settings.data_dir, None))
+    return DatasetModel.from_dataset(get_dataset_utils(id, settings.library_dir, settings.media_dir))
 
 
 @router.get("/{id}/{table}/count", response_model=int)
@@ -99,17 +99,17 @@ async def get_table_count(
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> int:
-    """Get number of rows in a table.
+    """Get the number of rows in a table.
 
     Args:
-        id: Dataset ID
-        table: Table name
-        settings: App settings
+        id: Dataset ID containing the table.
+        table: Table name.
+        settings: App settings.
 
     Returns:
         The number of rows in the table.
     """
-    dataset = get_dataset_utils(id, settings.data_dir, None)
+    dataset = get_dataset_utils(id, settings.library_dir, settings.media_dir)
     try:
         db_table = dataset.open_table(table)
     except DatasetAccessError as e:

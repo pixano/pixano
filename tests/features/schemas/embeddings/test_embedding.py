@@ -141,11 +141,15 @@ class TestViewEmbeddingFunction:
     def test_compute_source_embeddings(
         self, dumb_embedding_function: type[EmbeddingFunction], dataset_image_bboxes_keypoint_copy: Dataset
     ):
-        view_embedding_fn = create_view_embedding_function(
+        view_embedding_fn_type = create_view_embedding_function(
             dumb_embedding_function, "test_view_embedding_fn", dataset_image_bboxes_keypoint_copy
-        )()
+        )
+        view_embedding_fn = view_embedding_fn_type.create()
 
         views = dataset_image_bboxes_keypoint_copy.get_data("image", limit=2)
+        for view in views:
+            view.url = "file://" + str(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
+        dataset_image_bboxes_keypoint_copy.update_data("image", views)
         view_refs = pa.Table.from_pylist([ViewRef(id=view.id, name=view.table_name).model_dump() for view in views])
         embeddings = view_embedding_fn.compute_source_embeddings(view_refs)
         assert embeddings == [[1, 2, 3, 4, 5, 6, 7, 8]] * 2

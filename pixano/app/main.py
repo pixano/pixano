@@ -17,19 +17,20 @@ from pixano.app.routers.embeddings import router as embeddings_router
 from pixano.app.routers.entities import router as entities_router
 from pixano.app.routers.items import router as items_router
 from pixano.app.routers.items_info import router as items_info_router
+from pixano.app.routers.models import router as models_router
 from pixano.app.routers.sources import router as sources_router
 from pixano.app.routers.views import router as views_router
 from pixano.app.settings import Settings
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
-    """Run Pixano app.
+    """Create and configure the Pixano app.
 
     Args:
         settings: App settings.
 
     Returns:
-        Pixano app.
+        The Pixano app.
     """
     # Create app
     app = FastAPI()
@@ -42,29 +43,39 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     )
 
     # Mount folders
-    if isinstance(settings.data_dir, S3Path):
-        # If S3, mount models parent folder
+    if isinstance(settings.media_dir, S3Path):
+        # If S3, mount models folder
         # Check if folder exists
-        if not settings.model_dir.exists():
-            raise FileNotFoundError(f"Local model directory '{settings.model_dir.absolute()}' not found")
+        if settings.models_dir is None:
+            raise FileNotFoundError("Local model directory not provided")
+        elif not settings.models_dir.exists():
+            raise FileNotFoundError(f"Local model directory '{settings.models_dir.absolute()}' not found")
         # Mount
         app.mount(
-            "/data",
-            StaticFiles(directory=settings.model_dir.parent),
-            name="data",
+            "/models",
+            StaticFiles(directory=settings.models_dir),
+            name="models",
         )
     else:
-        # If local, mount datasets folder with models subfolder
+        # If local, mount media folder and models folder
         # Check if folder exists
-        if not settings.data_dir.exists():
-            raise FileNotFoundError(f"Dataset library '{settings.data_dir.absolute()}' not found")
-        # Create models subfolder in case it doesn't exist yet
-        settings.model_dir.mkdir(exist_ok=True)
+        if not settings.media_dir.exists():
+            raise FileNotFoundError(f"Media directory '{settings.media_dir.absolute()}' not found")
+        if settings.models_dir is None:
+            raise FileNotFoundError("Model directory not provided")
+        # Create models folder in case it doesn't exist yet
+        if not settings.models_dir.exists():
+            settings.models_dir.mkdir(exist_ok=True)
         # Mount
         app.mount(
-            "/data",
-            StaticFiles(directory=settings.data_dir),
-            name="data",
+            "/media",
+            StaticFiles(directory=settings.media_dir),
+            name="media",
+        )
+        app.mount(
+            "/app_models",
+            StaticFiles(directory=settings.models_dir),
+            name="models",
         )
 
     # Include routers
@@ -78,5 +89,6 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(items_info_router)
     app.include_router(sources_router)
     app.include_router(views_router)
+    app.include_router(models_router)
 
     return app

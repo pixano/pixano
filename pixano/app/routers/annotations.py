@@ -33,37 +33,51 @@ async def get_annotations(
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
-    item_ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
+    item_ids: list[str] | None = Query(None),
 ) -> list[AnnotationModel]:
-    """Get annotations.
+    """Get annotations from a table of a dataset.
+
+    They can be filtered by IDs, item IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
         settings: App settings.
-        ids: IDs.
-        item_ids: Item IDs.
+        ids: IDs of the annotations.
         limit: Limit number of annotations.
         skip: Skip number of annotations.
+        where: Where clause.
+        item_ids: Item IDs.
 
     Returns:
         List of annotations.
     """
-    return await get_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, settings, ids, item_ids, limit, skip)
+    return await get_rows_handler(
+        dataset_id=dataset_id,
+        group=SchemaGroup.ANNOTATION,
+        table=table,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=item_ids,
+        limit=limit,
+        skip=skip,
+    )
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
 async def get_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> AnnotationModel:
-    """Get an annotation.
+    """Get an annotation from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the annotation.
         settings: App settings.
 
     Returns:
@@ -79,16 +93,16 @@ async def create_annotations(
     annotations: list[AnnotationModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[AnnotationModel]:
-    """Create annotations.
+    """Add annotations in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        annotations: Annotations.
+        annotations: Annotations to add.
         settings: App settings.
 
     Returns:
-        List of annotations.
+        List of annotations added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
@@ -101,17 +115,17 @@ async def create_annotation(
     annotation: AnnotationModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AnnotationModel:
-    """Create an annotation.
+    """Add an annotation in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        annotation: Annotation.
+        id: ID of the annotation.
+        annotation: Annotation to add.
         settings: App settings.
 
     Returns:
-        The annotation.
+        The annotation added.
     """
     return await create_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
@@ -124,17 +138,17 @@ async def update_annotation(
     annotation: AnnotationModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AnnotationModel:
-    """Update an annotation.
+    """Update an annotation in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        annotation: Annotation.
+        id: ID of the annotation.
+        annotation: Annotation to update.
         settings: App settings.
 
     Returns:
-        The annotation.
+        The annotation updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
@@ -146,16 +160,16 @@ async def update_annotations(
     annotations: list[AnnotationModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[AnnotationModel]:
-    """Update annotations.
+    """Update annotations in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        annotations: Annotations.
+        annotations: Annotations to update.
         settings: App settings.
 
     Returns:
-        List of annotations.
+        List of annotations updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
@@ -164,12 +178,12 @@ async def update_annotations(
 async def delete_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
-    """Delete an annotation.
+    """Delete an annotation from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the annotation to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
@@ -182,12 +196,12 @@ async def delete_annotations(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete annotations.
+    """Delete annotations from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        ids: IDs.
+        ids: IDs of the annotations to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, ids, settings)

@@ -50,7 +50,7 @@ class Embedding(BaseSchema, ABC):
 
     @property
     def item(self) -> "Item":
-        """Get the item."""
+        """Get the embedding's item."""
         return self.resolve_ref(self.item_ref)
 
     @classmethod
@@ -91,7 +91,7 @@ class ViewEmbedding(Embedding, ABC):
 
     @property
     def view(self) -> "View":
-        """Get the item."""
+        """Get the embedding's view."""
         return self.resolve_ref(self.view_ref)
 
     @staticmethod
@@ -166,23 +166,29 @@ class ViewEmbedding(Embedding, ABC):
 
 
 def is_embedding(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an Embedding or subclass of Embedding."""
+    """Check if a class is an `Embedding` or subclass of `Embedding`."""
     return issubclass_strict(cls, Embedding, strict)
 
 
 def is_view_embedding(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an ViewEmbedding or subclass of ViewEmbedding."""
+    """Check if a class is an `ViewEmbedding` or subclass of `ViewEmbedding`."""
     return issubclass_strict(cls, ViewEmbedding, strict)
 
 
 def create_view_embedding_function(
     type_embedding_function: type[EmbeddingFunction], name: str, dataset: "Dataset"
 ) -> type[EmbeddingFunction]:
-    """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
+    """Create a `ViewEmbeddingFunction` based on an
+    [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction].
+    """
 
     @register(name)
     class ViewEmbeddingFunction(type_embedding_function):
-        """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
+        """A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction]."""
+
+        def _open_views(self, views: list[Any]) -> list[Any]:
+            """Open the views in the dataset."""
+            return [view.open(dataset.media_dir, "image") for view in views]
 
         def compute_source_embeddings(self, view_refs: pa.Table, *args, **kwargs) -> list:
             """Compute the embeddings for the source column in the database."""
@@ -190,9 +196,7 @@ def create_view_embedding_function(
             view_type = type(views[0])
             if is_image(view_type) or is_sequence_frame(view_type):
                 views = cast(list[Image], views)
-                return super().compute_source_embeddings(
-                    [view.open(dataset.media_dir, "image") for view in views], *args, **kwargs
-                )
+                return super().compute_source_embeddings(self._open_views(views=views), *args, **kwargs)
             else:
                 raise ValueError(f"View type {view_type} not supported for embedding.")
 

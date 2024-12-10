@@ -45,8 +45,8 @@ class TextSpan(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" TextSpan.
@@ -89,8 +89,8 @@ class Relation(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" Relation.
@@ -112,7 +112,7 @@ def is_text_span(cls: type, strict: bool = False) -> bool:
 
 
 def is_relation(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a Relation or subclass of Relation."""
+    """Check if a class is a `Relation` or subclass of `Relation`."""
     return issubclass_strict(cls, Relation, strict)
 
 
@@ -163,7 +163,7 @@ def create_relation(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> Relation:
-    """Create a Relation instance.
+    """Create a `Relation` instance.
 
     Args:
         predicate: type of relation

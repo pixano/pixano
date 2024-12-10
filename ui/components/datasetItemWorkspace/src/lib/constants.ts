@@ -6,6 +6,8 @@ License: CECILL-C
 
 // source ids
 export const GROUND_TRUTH = "Ground Truth";
+export const HUMAN = "User";
+export const OTHER = "Unqualified";
 export const MODEL_RUN = "Model Run";
 export const PRE_ANNOTATION = "Pre-annotation";
 

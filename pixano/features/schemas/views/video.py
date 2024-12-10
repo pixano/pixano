@@ -17,7 +17,17 @@ from .view import View
 
 @_register_schema_internal
 class Video(View):
-    """Video Lance Model."""
+    """Video view.
+
+    Attributes:
+        url: The video URL.
+        num_frames: The number of frames in the video.
+        fps: The frames per second of the video.
+        width: The video width.
+        height: The video height.
+        format: The video format.
+        duration: The video duration.
+    """
 
     url: str
     num_frames: int
@@ -29,7 +39,7 @@ class Video(View):
 
 
 def is_video(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a Video or a subclass of Video."""
+    """Check if the given class is a `Video` or a subclass of `Video`."""
     return issubclass_strict(cls, Video, strict)
 
 
@@ -44,7 +54,7 @@ def create_video(
     height: int | None = None,
     format: str | None = None,
     duration: float | None = None,
-    other_path: Path | None = None,
+    url_relative_path: Path | None = None,
 ) -> Video:
     """Create a `Video` instance.
 
@@ -61,7 +71,7 @@ def create_video(
         height: The video height. If None, the height is extracted from the video file.
         format: The video format. If None, the format is extracted from the video file.
         duration: The video duration. If None, the duration is extracted from the video file.
-        other_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path.
 
     Returns:
         The created `Video` instance.
@@ -108,9 +118,9 @@ def create_video(
         format = url.suffix[1:]
         duration = float(metadata["duration"])
 
-    if other_path is not None:
-        other_path = Path(other_path)
-        url = url.relative_to(other_path)
+    if url_relative_path is not None:
+        url_relative_path = Path(url_relative_path)
+        url = url.relative_to(url_relative_path)
 
     return Video(
         id=id,

@@ -4,6 +4,9 @@
 # License: CECILL-C
 # =====================================
 
+import pytest
+from PIL.Image import Image as PILImage
+
 from pixano.features import Image, create_image, is_image
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
@@ -14,15 +17,27 @@ class TestImage:
     def test_open(self):
         image = create_image(
             url=IMAGE_JPG_ASSET_URL,
-            other_path=ASSETS_DIRECTORY,
+            url_relative_path=ASSETS_DIRECTORY,
         )
 
-        io = image.open(ASSETS_DIRECTORY)
-        assert isinstance(io, str)
+        base64_image = image.open(ASSETS_DIRECTORY)
+        assert isinstance(base64_image, str)
+        assert base64_image.startswith("data:image/jpeg;base64,")
+
+        pil = image.open(ASSETS_DIRECTORY, output_type="image")
+        assert pil.format == "JPEG"
 
     def test_open_url(self):
-        image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
-        assert isinstance(image, str)
+        image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+        assert isinstance(image, PILImage)
+        assert image.format == "JPEG"
+
+        base64_image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY)
+        assert isinstance(base64_image, str)
+        assert base64_image.startswith("data:image/jpeg;base64,")
+
+        with pytest.raises(ValueError, match=r"Invalid output type: wrong_type"):
+            Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, output_type="wrong_type")
 
 
 def test_is_image():
@@ -48,7 +63,7 @@ def test_create_image():
     # Test 2: read url with custom id and other path and custom references
     image = create_image(
         url=IMAGE_JPG_ASSET_URL,
-        other_path=ASSETS_DIRECTORY,
+        url_relative_path=ASSETS_DIRECTORY,
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),

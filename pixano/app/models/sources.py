@@ -18,7 +18,7 @@ T = TypeVar("T", bound=Source)
 
 
 class SourceModel(BaseSchemaModel[Source]):
-    """Annotation model."""
+    """Model for the [Source][pixano.features.Source] schema."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -39,14 +39,14 @@ class SourceModel(BaseSchemaModel[Source]):
 
     @field_validator("table_info")
     @classmethod
-    def validate_table_info(cls, value: TableInfo) -> TableInfo:
+    def _validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
         if value.group != SchemaGroup.SOURCE.value:
             raise ValueError(f"Table info group must be {SchemaGroup.SOURCE.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:
-        """Create an annotation from a model."""
+        """Create a [Source][pixano.features.Source] from the model."""
         if not issubclass(schema_type, Source):
             raise ValueError(f"Schema type must be a subclass of {Source.__name__}.")
         return super().to_row(schema_type)

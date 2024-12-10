@@ -10,14 +10,14 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
-class DatasetStat(BaseModel):
-    """DatasetStat.
+class DatasetStatistic(BaseModel):
+    """A statistic of a dataset.
 
     Attributes:
-        name: Stats name.
-        type: Stats type ('numerical' or 'categorical').
-        histogram: Stats histogram data.
-        range: Stats range.
+        name: The name of the statistic.
+        type: The type ('numerical' or 'categorical') of the statistic.
+        histogram: The histogram of the statistic.
+        range: The range of the statistic.
     """
 
     name: str
@@ -26,8 +26,8 @@ class DatasetStat(BaseModel):
     range: list[int | float] | None = None
 
     @staticmethod
-    def from_json(json_fp: Path) -> list["DatasetStat"]:
-        """Read list of `DatasetStats` from JSON file.
+    def from_json(json_fp: Path) -> list["DatasetStatistic"]:
+        """Read list of `DatasetStatistic` from a JSON file.
 
         Args:
             json_fp: JSON file path.
@@ -37,12 +37,12 @@ class DatasetStat(BaseModel):
         """
         stats_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
-        return [DatasetStat.model_validate(stat) for stat in stats_json]
+        return [DatasetStatistic.model_validate(stat) for stat in stats_json]
 
-    def to_json(self, json_fp: Path):
-        """Save DatasetStats to json file.
+    def to_json(self, json_fp: Path) -> None:
+        """Save `DatasetStatistic` to a json file.
 
-        Replace existing histogram with same name in json_fp.
+        Replace the existing histogram in `json_fp`.
 
         Args:
             json_fp: Save directory.

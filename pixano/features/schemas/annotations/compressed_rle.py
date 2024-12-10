@@ -55,8 +55,8 @@ class CompressedRLE(Annotation):
 
     @classmethod
     def none(cls) -> Self:
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value.
+        """Utility function to get a `None` equivalent.
+        Should be removed as soon as Lance manages `None` value.
 
         Returns:
             "None" `CompressedRLE`.
@@ -73,10 +73,10 @@ class CompressedRLE(Annotation):
         )
 
     def to_mask(self) -> np.ndarray:
-        """Convert compressed RLE mask to NumPy array.
+        """Convert the compressed RLE mask to a NumPy array.
 
         Returns:
-            Mask as NumPy array.
+            The mask as a NumPy array.
         """
         return image_utils.rle_to_mask({"size": self.size, "counts": self.counts})
 
@@ -84,42 +84,42 @@ class CompressedRLE(Annotation):
         """Convert compressed RLE mask to uncompressed RLE.
 
         Returns:
-            Mask as uncompressed RLE.
+            The mask as an uncompressed RLE.
         """
         return image_utils.rle_to_urle(self.model_dump())
 
     def to_polygons(self) -> list[list]:
-        """Convert compressed RLE mask to poylgons.
+        """Convert the compressed RLE mask to poylgons.
 
         Returns:
-            Mask as polygons.
+            The mask as polygons.
         """
         return image_utils.rle_to_polygons(self.model_dump())
 
     @staticmethod
     def from_mask(mask: pil_image.Image | np.ndarray, **kwargs: Any) -> "CompressedRLE":
-        """Create compressed RLE mask from NumPy array.
+        """Create a compressed RLE mask from a NumPy array.
 
         Args:
-            mask: Mask as NumPy array.
+            mask: The mask as a NumPy array.
             kwargs: Additional arguments.
 
         Returns:
-            Compressed RLE mask.
+            The compressed RLE mask.
         """
         rle = image_utils.mask_to_rle(mask)
         return CompressedRLE(size=rle["size"], counts=rle["counts"], **kwargs)
 
     @staticmethod
     def from_urle(urle: dict[str, list[int]], **kwargs: Any) -> "CompressedRLE":
-        """Create compressed RLE mask from uncompressed RLE.
+        """Create a compressed RLE mask from an uncompressed RLE.
 
         Args:
-            urle: Mask as uncompressed RLE.
+            urle: The mask as an uncompressed RLE.
             kwargs: Additional arguments.
 
         Returns:
-            Compressed RLE mask.
+            The compressed RLE mask.
         """
         return CompressedRLE(**image_utils.urle_to_rle(urle), **kwargs)  #  type: ignore[arg-type]
 
@@ -130,22 +130,22 @@ class CompressedRLE(Annotation):
         width: int,
         **kwargs: Any,
     ) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons.
+        """Create a compressed RLE mask from polygons.
 
         Args:
-            polygons: Mask as polygons.
+            polygons: The mask as polygons.
             height: Image height.
             width: Image width.
             kwargs: Additional arguments.
 
         Returns:
-            Compressed RLE mask.
+            The compressed RLE mask.
         """
         return CompressedRLE(**image_utils.polygons_to_rle(polygons, height, width), **kwargs)
 
     @staticmethod
     def encode(mask: list[list] | dict[str, list[int]], height: int, width: int, **kwargs: Any) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
+        """Create a compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
 
         Args:
             mask: Mask as polygons / uncompressed RLE / compressed RLE.
@@ -154,13 +154,13 @@ class CompressedRLE(Annotation):
             kwargs: Additional arguments.
 
         Returns:
-            Compressed RLE mask.
+            The compressed RLE mask.
         """
         return CompressedRLE(**image_utils.encode_rle(mask, height, width), **kwargs)
 
 
 def is_compressed_rle(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a subclass of CompressedRLE."""
+    """Check if the given class is a subclass of `CompressedRLE`."""
     return issubclass_strict(cls, CompressedRLE, strict)
 
 
@@ -173,19 +173,19 @@ def create_compressed_rle(
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
 ) -> CompressedRLE:
-    """Create a CompressedRLE instance.
+    """Create a `CompressedRLE` instance.
 
     Args:
         size: Mask size.
         counts: Mask RLE encoding.
-        id: CompressedRLE ID.
+        id: `CompressedRLE` ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
         source_ref: Source reference.
 
     Returns:
-        Compressed RLE instance.
+        The compressed RLE instance.
     """
     return CompressedRLE(
         size=size,

@@ -11,7 +11,7 @@ on:
     paths:
       - "pixano/**"
       - "tests/**"
-      - ".github/workflows/**"
+      - ".github/workflows/test_back.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
@@ -20,7 +20,7 @@ on:
     paths:
       - "pixano/**"
       - "tests/**"
-      - ".github/workflows/**"
+      - ".github/workflows/test_back.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:

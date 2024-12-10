@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import lancedb
+import polars as pl
 import pyarrow as pa
 from lancedb.common import DATA
 from lancedb.table import LanceTable
@@ -22,12 +23,13 @@ from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_integrity_errors
 from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
+from pixano.features.schemas.base_schema import BaseSchema
 from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from .dataset_stat import DatasetStat
+from .dataset_stat import DatasetStatistic
 
 
 if TYPE_CHECKING:
@@ -82,22 +84,25 @@ def _validate_raise_or_warn(raise_or_warn: Literal["raise", "warn", "none"]):
 
 
 class Dataset:
-    """A dataset.
+    """The Pixano Dataset.
 
     It is a collection of tables that can be queried and manipulated with LanceDB.
 
-    The tables are defined by the dataset schema which allows the dataset to return the data in the form of pydantic
-    models.
+    The tables are defined by the [DatasetSchema][pixano.datasets.DatasetSchema] which allows the dataset to return
+    the data in the form of [LanceModel][lancedb.pydantic.LanceModel] instances.
 
     Attributes:
-        path: Dataset path.
+        path: Path to the dataset.
         info: Dataset info.
         schema: Dataset schema.
         features_values: Dataset features values.
-        stats: Dataset stats.
+        stats: Dataset statistics.
         thumbnail: Dataset thumbnail base 64 URL.
-        media_dir: Dataset media directory.
+        media_dir: Path to the media directory.
     """
+
+    # Allow arbitrary types because of S3 Path
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     _DB_PATH: str = "db"
     _PREVIEWS_PATH: str = "previews"
@@ -111,18 +116,16 @@ class Dataset:
     info: DatasetInfo
     schema: DatasetSchema
     features_values: DatasetFeaturesValues = DatasetFeaturesValues()
-    stats: list[DatasetStat] = []
+    stats: list[DatasetStatistic] = []
     thumbnail: Path
-    # Allow arbitrary types because of S3 Path
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     media_dir: Path
 
     def __init__(self, path: Path, media_dir: Path | None = None):
-        """Initialize dataset.
+        """Initialize the dataset.
 
         Args:
-            path: Dataset path.
-            media_dir: Dataset media directory.
+            path: Path to the dataset.
+            media_dir: Path to the media directory.
         """
         self.path = path
 
@@ -135,7 +138,7 @@ class Dataset:
 
         self.info = DatasetInfo.from_json(self._info_file)
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
-        self.stats = DatasetStat.from_json(self._stat_file) if self._stat_file.is_file() else []
+        self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.media_dir = media_dir or self.path / "media"
         self.thumbnail = self._thumb_file
         self.previews_path = self.path / self._PREVIEWS_PATH
@@ -186,12 +189,12 @@ class Dataset:
 
     @property
     def id(self) -> str:
-        """Return dataset ID."""
+        """Return the dataset ID."""
         return self.info.id
 
     @property
     def num_rows(self) -> int:
-        """Return number of rows in dataset.
+        """Return the number of rows in the dataset.
 
         Returns:
             Number of rows.
@@ -229,20 +232,20 @@ class Dataset:
         on_bad_vectors: str = "error",
         fill_value: float = 0.0,
     ) -> LanceTable:
-        """Add table to dataset.
+        """Add a table to the dataset.
 
         Args:
             name: Table name.
             schema: Table schema.
-            relation_item: Relation with item table (table to item).
+            relation_item: Relation with the `'item'` table (table to item).
             data: Table data.
-            mode: Table mode.
-            exist_ok: Table exist ok.
-            on_bad_vectors: Table on bad vectors.
-            fill_value: Table fill value.
+            mode: Table mode ('create', 'overwrite'd).
+            exist_ok: If True, do not raise an error if the table already exists.
+            on_bad_vectors: Raise an error, drop or fill bad vectors ("error", "drop", "fill").
+            fill_value: Value to fill bad vectors.
 
         Returns:
-            The table.
+            The table created.
         """
         table = self._db_connection.create_table(
             name=name,
@@ -260,7 +263,7 @@ class Dataset:
         return table
 
     def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
-        """Open dataset tables with LanceDB.
+        """Open the dataset tables with LanceDB.
 
         Args:
             names: Table names to open. If None, open all tables.
@@ -278,8 +281,11 @@ class Dataset:
 
         return tables
 
-    def open_table(self, name) -> LanceTable:
-        """Open dataset table with LanceDB.
+    def open_table(self, name: str) -> LanceTable:
+        """Open a dataset table with LanceDB.
+
+        Args:
+            name: Name of the table to open.
 
         Returns:
             Dataset table.
@@ -317,7 +323,16 @@ class Dataset:
     def resolve_ref(
         self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef | SourceRef
     ) -> BaseSchema | Item | View | Embedding | Entity | Annotation | Source:
-        """Resolve a reference."""
+        """Resolve a [SchemaRef][pixano.features.SchemaRef].
+
+        It fetches the data from the table referenced.
+
+        Args:
+            ref: Reference to resolve.
+
+        Returns:
+            The resolved reference.
+        """
         if ref.id == "" or ref.name == "":
             raise DatasetAccessError("Reference should have a name and an id.")
         return self.get_data(ref.name, ids=[ref.id])[0]
@@ -329,11 +344,18 @@ class Dataset:
         ids: list[str] | None = None,
         limit: int | None = None,
         skip: int = 0,
+        where: str | None = None,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
-        self, table_name: str, ids: str, limit: int | None = None, skip: int = 0, item_ids: None = None
+        self,
+        table_name: str,
+        ids: str,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        item_ids: None = None,
     ) -> BaseSchema | None: ...
 
     def get_data(
@@ -342,12 +364,16 @@ class Dataset:
         ids: list[str] | str | None = None,
         limit: int | None = None,
         skip: int = 0,
+        where: str | None = None,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
 
+        Data can be filtered by ids, item ids, where clause, or limit and skip.
+
         Args:
             table_name: Table name.
+            where: Where clause.
             ids: ids to read.
             limit: Amount of items to read.
             skip: The number of data to skip.
@@ -374,13 +400,24 @@ class Dataset:
         table = self.open_table(table_name)
         if ids is None:
             if item_ids is None:
-                query = TableQueryBuilder(table).limit(limit).offset(skip)
+                if where is not None:
+                    query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+                else:
+                    query = TableQueryBuilder(table).limit(limit).offset(skip)
             else:
                 sql_item_ids = to_sql_list(item_ids)
-                query = TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip)
+                if where is not None:
+                    where += f" AND item_ref.id IN {sql_item_ids}"
+                else:
+                    where = f"item_ref.id IN {sql_item_ids}"
+                query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
         else:
             sql_ids = to_sql_list(ids)
-            query = TableQueryBuilder(table).where(f"id in {sql_ids}")
+            if where is not None:
+                where += f" AND id IN {sql_ids}"
+            else:
+                where = f"id IN {sql_ids}"
+            query = TableQueryBuilder(table).where(where)
 
         schema = self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
 
@@ -405,6 +442,8 @@ class Dataset:
     ) -> list[DatasetItem] | DatasetItem | None:
         """Read dataset items.
 
+        Filter dataset items by ids, or limit and skip.
+
         Args:
             ids: Item ids to read.
             limit: Amount of items to read.
@@ -418,7 +457,7 @@ class Dataset:
 
         _validate_ids_and_limit_and_skip(ids, limit, skip)
 
-        items = self.get_data(SchemaGroup.ITEM.value, ids, limit, skip)
+        items = self.get_data(table_name=SchemaGroup.ITEM.value, where=None, ids=ids, limit=limit, skip=skip)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
@@ -452,36 +491,35 @@ class Dataset:
         return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
     def find_ids_in_table(self, table_name: str, ids: set[str]) -> dict[str, bool]:
-        """Find ids in a table.
+        """Search ids in a table.
 
         Args:
             table_name: Table name.
             ids: Ids to find.
 
         Returns:
-            Dictionary of ids found. Keys are the ids and values are True if the id is found, False otherwise.
+            Dictionary of ids found. Keys are the ids and values are `True` if the id is found, `False` otherwise.
         """
         if len(ids) == 0:
             return {}
         table = self.open_table(table_name)
-        ids_found = [
-            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
-        ]
+        ids_found = list(TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
         return {id: id in ids_found for id in ids}
 
     def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
-        """Get all ids from a table.
+        """Get all the ids from a table.
 
         Args:
             table_name: table to look for ids.
 
         Returns:
-            list of ids.
+            list of the ids.
         """
         return [row["id"] for row in TableQueryBuilder(self.open_table(table_name)).select(["id"]).to_list()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
-        """Compute view embeddings.
+        """Compute the [view embeddings][pixano.features.ViewEmbedding] via the
+            [Embedding Function][lancedb.embeddings.base.EmbeddingFunction] stored in the table metadata.
 
         Args:
             table_name: Table name containing the view embeddings.
@@ -514,8 +552,12 @@ class Dataset:
             ignore_integrity_checks: List of integrity checks to ignore.
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+        if not all((isinstance(item, type(data[0])) for item in data)) or not set(
+            type(data[0]).model_fields.keys()
+        ) == set(
+            self.schema.schemas[table_name].model_fields.keys()
+            if table_name != SchemaGroup.SOURCE.value
+            else Source.model_fields.keys()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
@@ -540,7 +582,7 @@ class Dataset:
     @overload
     def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]: ...
     def add_dataset_items(self, dataset_items: list[DatasetItem] | DatasetItem) -> list[DatasetItem] | DatasetItem:
-        """Add dataset items.
+        """Add dataset items to the dataset.
 
         Warn:
             Does not test for integrity of the data.
@@ -586,6 +628,9 @@ class Dataset:
         Args:
             table_name: Table name.
             ids: Ids to delete.
+
+        Returns:
+            The list of ids not found.
         """
         if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
             raise DatasetAccessError("ids must be a list of strings")
@@ -609,6 +654,9 @@ class Dataset:
 
         Args:
             ids: Ids to delete.
+
+        Returns:
+            The list of ids not found.
         """
         sql_ids = to_sql_list(ids)
 
@@ -668,10 +716,15 @@ class Dataset:
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
-            Updated data.
+            If `return_separately` is `True`, returns a tuple of updated and added data. Otherwise, returns the updated
+            data.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+        if not all((isinstance(item, type(data[0])) for item in data)) or not set(
+            type(data[0]).model_fields.keys()
+        ) == set(
+            self.schema.schemas[table_name].model_fields.keys()
+            if table_name != SchemaGroup.SOURCE.value
+            else Source.model_fields.keys()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
@@ -738,10 +791,10 @@ class Dataset:
         Args:
             dataset_items: Dataset items to update.
             return_separately: Whether to return separately added and updated dataset items.
-            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
-            Updated dataset items.
+            If `return_separately` is `True`, returns a tuple of updated and added dataset items. Otherwise, returns
+            the updated dataset items.
         """
         fields = self.dataset_item_model.model_fields.keys()
         if not all(
@@ -793,10 +846,10 @@ class Dataset:
         directory: Path,
         media_dir: Path | None = None,
     ) -> "Dataset":
-        """Find Dataset in directory.
+        """Find a Dataset in a directory.
 
         Args:
-            id: Dataset ID.
+            id: Dataset ID to find.
             directory: Directory to search in.
             media_dir: Media directory.
 
@@ -811,9 +864,55 @@ class Dataset:
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
 
+    def semantic_search(
+        self, query: str, table_name: str, limit: int, skip: int = 0
+    ) -> tuple[list[BaseSchema], list[float]]:
+        """Perform a semantic search.
+
+        It searches for the closest items to the query in the table embeddings.
+
+        Args:
+            query: Text query for semantic search.
+            table_name: Table name for embeddings.
+            limit: Limit number of items.
+            skip: Skip number of items
+
+        Returns:
+            Tuple of items and distances.
+        """
+        if not isinstance(query, str):
+            raise DatasetAccessError("query must be a string.")
+        elif not isinstance(table_name, str):
+            raise DatasetAccessError("table_name must be a string.")
+        elif not isinstance(limit, int) or limit < 1:
+            raise DatasetAccessError("limit must be a strictly positive integer.")
+        elif not isinstance(skip, int) or skip < 0:
+            raise DatasetAccessError("skip must be a positive integer.")
+        elif table_name not in self.schema.schemas:
+            raise DatasetAccessError(f"Table {table_name} not found in dataset {self.id}.")
+        elif table_name not in self.schema.groups[SchemaGroup.EMBEDDING] or not is_view_embedding(
+            self.schema.schemas[table_name]
+        ):
+            raise DatasetAccessError(f"Table {table_name} is not a view embedding table.")
+
+        table = self.open_table(table_name)
+        semantic_results: pl.DataFrame = (
+            table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+        )  # TODO: change high limit if lancedb supports it
+        item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
+        item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
+
+        item_rows = self.get_data("item", ids=item_ids)
+        item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
+        distances = [
+            item_results.row(by_predicate=(pl.col("item_ref.id") == item.id), named=True)["_distance"]
+            for item in item_rows
+        ]
+        return item_rows, distances
+
     @staticmethod
     def list(directory: Path) -> list[DatasetInfo]:
-        """List datasets information in directory.
+        """List the datasets information in directory.
 
         Args:
             directory: Directory to search in.

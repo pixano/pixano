@@ -515,13 +515,13 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
   const paths: Array<Array<Array<number>>> = [];
   while (polySegments.size) {
     // Pick the outermost vertex from the remaining set (smallest (x, y))
-    let [point, targets]: [string, Set<string>] = polySegments.entries().next().value;
+    let [point, targets]: [string, Set<string>] = polySegments.entries().next().value!;
     const firstPoint = point;
     const path = [splitPointKey(firstPoint)];
     // Repeatedly pick the next adjacent vertex and add it to the path until the path is closed
     let nextPoint: string = "";
     while (nextPoint !== firstPoint) {
-      nextPoint = targets.values().next().value;
+      nextPoint = targets.values().next().value!;
       path.push(splitPointKey(nextPoint));
       // Remove used edges and delete the point from polySegments entirely if it has no more edges left
       targets.delete(nextPoint);

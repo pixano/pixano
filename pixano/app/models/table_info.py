@@ -11,12 +11,12 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 
 class TableInfo(BaseModel):
-    """Table info.
+    """The information of a table.
 
     Attributes:
         name: Table name.
-        group: Table group.
-        base_schema: Base pixano schema stored in the registry.
+        group: Group of the schema associated with the table.
+        base_schema: Base Pixano schema stored in the registry.
     """
 
     model_config = ConfigDict(validate_assignment=True)
@@ -26,7 +26,7 @@ class TableInfo(BaseModel):
 
     @field_validator("base_schema")
     @classmethod
-    def must_be_registered(cls, value: str) -> str:
+    def _must_be_registered(cls, value: str) -> str:
         """Check that the base schema is registered."""
         if value not in _PIXANO_SCHEMA_REGISTRY:
             raise ValueError(f"Schema {value} is not registered.")
@@ -34,7 +34,7 @@ class TableInfo(BaseModel):
 
     @field_validator("group")
     @classmethod
-    def must_be_group(cls, value: str) -> str:
+    def _must_be_group(cls, value: str) -> str:
         """Check that the group is valid."""
         if not any(value == group.value for group in SchemaGroup):
             raise ValueError(f"Group {value} is not valid.")

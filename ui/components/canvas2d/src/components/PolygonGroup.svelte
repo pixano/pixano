@@ -9,7 +9,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, SelectionTool, Shape } from "@pixano/core";
+  import type { Mask, SelectionTool, Shape, Reference } from "@pixano/core";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
@@ -21,7 +21,7 @@ License: CECILL-C
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
-  export let viewId: string;
+  export let viewRef: Reference;
   export let newShape: Shape;
   export let stage: Konva.Stage;
   export let currentImage: HTMLImageElement;
@@ -32,17 +32,17 @@ License: CECILL-C
 
   let canEdit = false;
   let polygonShape: PolygonShape = {
-    simplifiedSvg: mask.svg,
-    simplifiedPoints: mask.svg.reduce(
+    simplifiedSvg: mask.ui.svg,
+    simplifiedPoints: mask.ui.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     ),
   };
 
-  $: canEdit = mask.editing;
+  $: canEdit = mask.ui.displayControl?.editing;
 
   $: {
-    polygonShape.simplifiedPoints = mask.svg.reduce(
+    polygonShape.simplifiedPoints = mask.ui.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     );
@@ -69,10 +69,11 @@ License: CECILL-C
       currentImage.height,
     );
 
-    if (mask.editing) {
+    if (mask.ui.displayControl.editing) {
       newShape = {
         status: "editing",
         type: "mask",
+        viewRef,
         shapeId: mask.id,
         counts,
       };
@@ -97,18 +98,18 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: mask.id,
-      viewId,
+      viewRef,
       highlighted: "self",
       type: "none",
     };
   };
 
   const onClick = () => {
-    if (mask.highlighted !== "self") {
+    if (mask.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: mask.id,
-        viewId,
+        viewRef,
         highlighted: "all",
         type: "none",
       };
@@ -121,8 +122,8 @@ License: CECILL-C
   config={{
     id: `polygon-${mask.id}`,
     draggable: canEdit,
-    visible: mask.visible,
-    opacity: mask.opacity,
+    visible: !mask.ui.displayControl?.hidden,
+    opacity: mask.ui.opacity,
     listening: selectedTool.type === "PAN",
   }}
 >
@@ -131,13 +132,13 @@ License: CECILL-C
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
         stroke: color,
-        strokeWidth: 2 / zoomFactor[viewId],
+        strokeWidth: 2 / zoomFactor[viewRef.name],
         closed: true,
         fill: hexToRGBA(color, 0.5),
       }}
     />
     <PolygonPoints
-      {viewId}
+      {viewRef}
       {stage}
       {zoomFactor}
       polygonId={mask.id}
@@ -151,9 +152,9 @@ License: CECILL-C
       on:dblclick={onDoubleClick}
       on:click={onClick}
       config={{
-        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.svg),
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.ui.svg),
         stroke: color,
-        strokeWidth: mask.strokeFactor,
+        strokeWidth: mask.ui.strokeFactor,
         closed: true,
         fill: hexToRGBA(color, 0.5),
         id: mask.id,

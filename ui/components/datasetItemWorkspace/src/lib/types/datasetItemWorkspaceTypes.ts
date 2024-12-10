@@ -7,26 +7,13 @@ License: CECILL-C
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type {
-  DatasetItem,
-  FeaturesValues,
-  FeatureValues,
-  ItemFeature,
-  ItemObject,
-} from "@pixano/core";
+import { Item, Entity, Annotation, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
-import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";
 import type {
   createObjectInputsSchema,
   listInputSchema,
   otherInputSchema,
 } from "../settings/objectValidationSchemas";
-
-export type ObjectsSortedByModelType = {
-  [GROUND_TRUTH]: ItemObject[];
-  [PRE_ANNOTATION]: ItemObject[];
-  [key: string]: ItemObject[];
-};
 
 export type ListInput = z.infer<typeof listInputSchema>;
 
@@ -34,7 +21,7 @@ export type OtherInput = z.infer<typeof otherInputSchema>;
 
 export type CreateObjectInputs = z.infer<typeof createObjectInputsSchema>;
 
-export type ObjectProperties = { [key: string]: FeatureValues };
+export type ObjectProperties = { [tableName: string]: { [featName: string]: FeatureValues } };
 
 export type CreateObjectSchemaDefinition = Record<string, z.ZodTypeAny>;
 export type CreateObjectSchema = z.ZodObject<CreateObjectSchemaDefinition>;
@@ -42,11 +29,13 @@ export type CreateObjectSchema = z.ZodObject<CreateObjectSchemaDefinition>;
 export type CheckboxFeature = OtherInput & {
   type: "bool";
   value: boolean;
+  obj: Item | Entity | Annotation;
 };
 
 export type TextFeature = OtherInput & {
   type: "str";
   value: string;
+  obj: Item | Entity | Annotation;
 };
 
 export type NumberFeature = IntFeature | FloatFeature;
@@ -54,15 +43,18 @@ export type NumberFeature = IntFeature | FloatFeature;
 export type IntFeature = OtherInput & {
   type: "int";
   value: number;
+  obj: Item | Entity | Annotation;
 };
 
 export type FloatFeature = OtherInput & {
   type: "float";
   value: number;
+  obj: Item | Entity | Annotation;
 };
 
 export type ListFeature = ListInput & {
   value: string;
+  obj: Item | Entity | Annotation;
 };
 
 export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
@@ -70,17 +62,22 @@ export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeatur
 export type Embeddings = Record<string, ort.Tensor>;
 
 export type ModelSelection = {
-  currentModalOpen: "selectModel" | "noModel" | "noEmbeddings" | "none";
+  currentModalOpen:
+    | "selectModel"
+    | "selectEmbeddingsTable"
+    | "noModel"
+    | "noEmbeddings"
+    | "loading"
+    | "none";
   selectedModelName: string;
 };
 
 export type ItemsMeta = {
-  mainFeatures: DatasetItem["features"]; // feature;
-  objectFeatures: Record<string, ItemFeature>; // itemFeatures
+  //mainFeatures: DatasetItem["features"]; // feature;
+  //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
-  views: DatasetItem["views"];
-  id: DatasetItem["id"];
-  type: DatasetItem["type"];
+  item: Item;
+  type: string;
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";
 };

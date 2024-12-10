@@ -22,7 +22,7 @@ If you are looking to contribute to Pixano and develop new features, you will ne
 
 #### Backend
 
-You need a python environment with a supported version (currently 3.10 and 3.11). Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
+You need a python environment with a supported version. Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
 
 ```bash
 pip install . -e
@@ -46,7 +46,7 @@ pnpm i
 First, you will need to launch the backend server using this command:
 
 ```bash
-LIBRARY_DIR=your_datasets_directory/ uvicorn pixano.app:create_app --factory --reload
+LIBRARY_DIR=your_datasets_directory/ MEDIA_DIR=your_media_directiory/  uvicorn pixano.app:create_app --factory --reload
 ```
 
 Then, in another terminal, you can launch the frontend apps using:
@@ -116,7 +116,7 @@ You can also install the pre-commit hook if you want it to run automatically on 
 pre-commit install
 ```
 
-If this command fails and/or format some files, you need to `git add` the files that you manually fixied and/or were modified by `pre-commit` before trying to commit again.
+If this command fails and/or format some files, you need to `git add` the files that you manually fixed and/or were modified by `pre-commit` before trying to commit again.
 
 ### Frontend
 
@@ -181,13 +181,3 @@ cd ui/
 pnpm format
 pnpm lint
 ```
-
-## Formatting your commits
-
-We format our commit messages with **the <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary" target="_blank">Conventional Commits</a> guidelines.**
-
-## Updating the changelog
-
-When you want to create a pull request with the changes you have made, please update the CHANGELOG.md accordingly.
-
-We format our changelog with **the <a href="https://keepachangelog.com/en/1.1.0/#how" target="_blank">Keep a Changelog</a> guidelines.**

@@ -9,7 +9,12 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Rect } from "svelte-konva";
 
-  import type { CreateKeypointShape, KeypointsTemplate, SaveKeyBoxShape } from "@pixano/core";
+  import type {
+    CreateKeypointShape,
+    KeypointsTemplate,
+    SaveKeyBoxShape,
+    Reference,
+  } from "@pixano/core";
 
   import Keypoints from "./keypoints/Keypoint.svelte";
   import { findRectBoundaries } from "../api/keypointsApi";
@@ -17,9 +22,9 @@ License: CECILL-C
   export let zoomFactor: number;
   export let newShape: CreateKeypointShape | SaveKeyBoxShape;
   export let stage: Konva.Stage;
-  export let viewId: string;
+  export let viewRef: Reference;
 
-  let keypointsId = "keyPoints";
+  let keypointsId = ""; //filler value while we don't have the real values for id and template_id
 
   const findPointCoordinate = (point: number, type: "x" | "y") => {
     if (newShape.status === "creating") {
@@ -42,8 +47,11 @@ License: CECILL-C
     edges: newShape.keypoints.edges,
     vertices: newShape.keypoints.vertices,
     id: keypointsId,
-    view_id: newShape.viewId,
-    editing: true,
+    template_id: keypointsId,
+    viewRef: newShape.viewRef,
+    ui: {
+      displayControl: { editing: true },
+    },
   } as KeypointsTemplate;
 
   const findCreationRectangleDimensions = (shape: CreateKeypointShape) => {
@@ -57,7 +65,7 @@ License: CECILL-C
   };
 </script>
 
-{#if newShape.viewId === viewId}
+{#if newShape.viewRef.name === viewRef.name}
   <Group config={{ id: keypointsId, x: 0, y: 0 }}>
     <Keypoints {stage} {keypointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
       {#if newShape.status === "creating"}
@@ -70,7 +78,7 @@ License: CECILL-C
             fill: "rgba(135, 47, 100, 0.4)",
             stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
-            opacity: keypointStructure.editing ? 0.3 : 0,
+            opacity: keypointStructure.ui.displayControl.editing ? 0.3 : 0,
           }}
         />
       {/if}

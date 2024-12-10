@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Literal, overload
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from pixano.features import Image
 
@@ -19,11 +19,11 @@ class DatasetInfo(BaseModel):
     """Information of a dataset.
 
     Attributes:
-        id: Dataset ID
-        name: Dataset name
-        description: Dataset description
-        estimated_size: Dataset estimated size
-        preview: Path to a preview thumbnail
+        id: Dataset ID. Must be unique.
+        name: Dataset name.
+        description: Dataset description.
+        estimated_size: Dataset estimated size.
+        preview: Path to a preview thumbnail.
     """
 
     id: str = ""
@@ -31,6 +31,13 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+
+    @field_validator("id", mode="after")
+    @classmethod
+    def _id_validator(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("id must not contain spaces")
+        return v
 
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
@@ -82,17 +89,20 @@ class DatasetInfo(BaseModel):
             return_path: Return the paths of the datasets.
 
         Returns:
-            the list of DatasetInfo and the paths of the datasets.
+            The list of DatasetInfo and the paths of the datasets.
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
         # Browse directory
         for json_fp in sorted(directory.glob("*/info.json")):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
-            info.preview = Image.open_url(
-                str(json_fp.parent / "previews/dataset_preview.jpg"),
-                json_fp.parent / "media",
-            )  # TODO choose correct preview name / path / extension
+            try:
+                info.preview = Image.open_url(
+                    str(json_fp.parent / "previews/dataset_preview.jpg"),
+                    Path("/"),
+                )  # TODO choose correct preview name / path / extension
+            except Exception:  # TODO: specify exception URL and Value
+                info.preview = ""
             if return_path:
                 library.append((info, json_fp.parent))  #  type: ignore[arg-type]
             else:
@@ -111,22 +121,25 @@ class DatasetInfo(BaseModel):
     def load_id(id: str, directory: Path, return_path: Literal[True] = True) -> tuple["DatasetInfo", Path]: ...
     @staticmethod
     def load_id(id: str, directory: Path, return_path: bool = False) -> tuple["DatasetInfo", Path] | "DatasetInfo":
-        """Load a DatasetInfo from directory.
+        """Load a specific DatasetInfo from directory.
 
         Args:
-            id: Dataset ID.
+            id: The ID of the dataset to load.
             directory: Directory to load.
             return_path: Return the path of the dataset.
 
         Returns:
-            the DatasetInfo.
+            The DatasetInfo.
         """
         for json_fp in directory.glob("*/info.json"):
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
-                info.preview = Image.open_url(
-                    str(json_fp.parent / "previews/dataset_preview.jpg"),
-                    json_fp.parent / "media",
-                )  # TODO choose correct preview name / path / extension
+                try:
+                    info.preview = Image.open_url(
+                        str(json_fp.parent / "previews/dataset_preview.jpg"),
+                        json_fp.parent / "media",
+                    )  # TODO choose correct preview name / path / extension
+                except ValueError:
+                    info.preview = ""
                 return (info, json_fp.parent) if return_path else info
         raise FileNotFoundError(f"No dataset found with ID {id}")

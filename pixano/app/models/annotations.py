@@ -18,7 +18,7 @@ T = TypeVar("T", bound=Annotation)
 
 
 class AnnotationModel(BaseSchemaModel[Annotation]):
-    """Annotation model."""
+    """Model for the [Annotation][pixano.features.Annotation] schema."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -46,14 +46,14 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
 
     @field_validator("table_info")
     @classmethod
-    def validate_table_info(cls, value: TableInfo) -> TableInfo:
+    def _validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
         if value.group != SchemaGroup.ANNOTATION.value:
             raise ValueError(f"Table info group must be {SchemaGroup.ANNOTATION.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:
-        """Create an annotation from a model."""
+        """Create an [Annotation][pixano.features.Annotation] from the model."""
         if not issubclass(schema_type, Annotation):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
         return super().to_row(schema_type)

@@ -20,6 +20,9 @@ class TestBaseSchema:
         base_schema = BaseSchema()
         base_schema.id == ""
 
+        with pytest.raises(ValueError, match="id must not contain spaces"):
+            BaseSchema(id="id with space")
+
     def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):
         base_schema = BaseSchema()
 

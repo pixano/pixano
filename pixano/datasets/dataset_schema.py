@@ -21,7 +21,14 @@ from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
 
 class SchemaRelation(Enum):
-    """Relation between tables."""
+    """Relation between tables.
+
+    Attributes:
+        ONE_TO_MANY: One to many relation.
+        MANY_TO_ONE: Many to one relation.
+        ONE_TO_ONE: One to one relation.
+        MANY_TO_MANY: Many to many relation
+    """
 
     ONE_TO_MANY = "one_to_many"
     MANY_TO_ONE = "many_to_one"
@@ -33,22 +40,22 @@ class DatasetSchema(BaseModel):
     """A dataset schema that defines the tables and the relations between them.
 
     Attributes:
-        schemas: The tables.
+        schemas: The mapping between the table names and their schema.
         relations: The relations between the item table and the other tables.
-        groups: The groups of tables. Is filled on its own.
+        groups: The groups of tables. It is filled automatically based on the schemas.
     """
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
     groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup if key != SchemaGroup.SOURCE}
 
-    def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> "DatasetSchema":
+    def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> Self:
         """Add a schema to the dataset schema.
 
         Args:
-            table_name: Table name.
-            schema: Schema.
-            relation_item: Relation with the item schema.
+            table_name: Name of the table to add to the dataset schema.
+            schema: Schema of the table.
+            relation_item: Relationship with the item schema.
 
         Returns:
             The dataset schema.
@@ -159,6 +166,8 @@ class DatasetSchema(BaseModel):
     def format_table_name(table_name: str) -> str:
         """Format table name.
 
+        It converts the table name to lowercase and replaces spaces with underscores.
+
         Args:
             table_name: Table name.
 
@@ -227,8 +236,9 @@ class DatasetSchema(BaseModel):
             dataset_schema_json["schemas"][table_name] = schema.serialize()
         return dataset_schema_json
 
+    @staticmethod
     def deserialize(dataset_schema_json: dict[str, dict[str, Any]]) -> "DatasetSchema":
-        """Unserialize the dataset schema.
+        """Deserialize the dataset schema.
 
         Args:
             dataset_schema_json: Serialized dataset schema.
@@ -283,7 +293,7 @@ class DatasetSchema(BaseModel):
 
     @staticmethod
     def from_dataset_item(dataset_item: type["DatasetItem"]) -> "DatasetSchema":
-        """Create a dataset schema from a `DatasetItem`.
+        """Create a dataset schema from a [DatasetItem][pixano.datasets.DatasetItem].
 
         Args:
             dataset_item: The dataset item.
@@ -338,14 +348,23 @@ class DatasetSchema(BaseModel):
 
 
 class DatasetItem(BaseModel):
-    """Dataset Item."""
+    """Dataset Item.
+
+    It is a Pydantic model that represents an item in a dataset.
+
+    Attributes:
+        id: The unique identifier of the item.
+        split: The split of the item.
+        created_at: The creation date of the item.
+        updated_at: The last modification date of the item.
+    """
 
     id: str
     split: str = "default"
     created_at: datetime
     updated_at: datetime
 
-    def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
+    def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any) -> None:
         """Create a new model by parsing and validating input data from keyword arguments.
 
         Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be
@@ -381,7 +400,7 @@ class DatasetItem(BaseModel):
         schemas_data[SchemaGroup.ITEM.value] = dataset_schema.schemas[SchemaGroup.ITEM.value](**item_data)
         return schemas_data
 
-    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
         Args:
@@ -409,7 +428,7 @@ class DatasetItem(BaseModel):
 
     @classmethod
     def to_dataset_schema(cls) -> DatasetSchema:
-        """Convert DatasetItem to a DatasetSchema."""
+        """Convert a DatasetItem to a DatasetSchema."""
         return DatasetSchema.from_dataset_item(cls)
 
     @staticmethod
@@ -449,7 +468,7 @@ class DatasetItem(BaseModel):
         return CustomDatasetItem
 
     @classmethod
-    def get_sub_dataset_item(cls, selected_fields: list[str]) -> type["DatasetItem"]:
+    def get_sub_dataset_item(cls, selected_fields: list[str]) -> type[Self]:
         """Create a new dataset item based on the selected fields of the original dataset
         item.
 

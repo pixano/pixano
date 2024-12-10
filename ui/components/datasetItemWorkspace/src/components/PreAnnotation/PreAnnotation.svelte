@@ -7,18 +7,16 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
-  import { nanoid } from "nanoid";
 
   import { PrimaryButton, SliderWithValue, IconButton, Switch, cn } from "@pixano/core";
-  import type { ItemObject } from "@pixano/core";
+  import { Annotation } from "@pixano/core";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import {
-    canSave,
-    itemObjects,
+    annotations,
     preAnnotationIsActive,
     colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { GROUND_TRUTH } from "../../lib/constants";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import {
     getObjectsToPreAnnotate,
     mapObjectWithNewStatus,
@@ -27,8 +25,8 @@ License: CECILL-C
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let objectsToAnnotate: ItemObject[] = [];
-  let filteredObjectsToAnnotate: ItemObject[] = [];
+  let objectsToAnnotate: Annotation[] = [];
+  let filteredObjectsToAnnotate: Annotation[] = [];
   let isFormValid: boolean = false;
   let confidenceFilterValue = [0];
   let color: string;
@@ -37,20 +35,21 @@ License: CECILL-C
   $: objectToAnnotate = filteredObjectsToAnnotate[0];
   $: color = $colorScale[1](objectToAnnotate?.id || "");
 
-  itemObjects.subscribe((objects) => {
+  annotations.subscribe((objects) => {
     objectsToAnnotate = getObjectsToPreAnnotate(objects);
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
       confidenceFilterValue,
+      $currentFrameIndex,
     );
   });
 
   $: {
     if ($preAnnotationIsActive && objectsToAnnotate.length === 0) {
       preAnnotationIsActive.set(false);
-      itemObjects.update((objects) =>
+      annotations.update((objects) =>
         objects.map((object) => {
-          object.highlighted = "all";
+          object.ui.highlighted = "all";
           return object;
         }),
       );
@@ -58,38 +57,34 @@ License: CECILL-C
   }
 
   const onAcceptItem = () => {
-    itemObjects.update((objects) => [
+    objectToAnnotate.review_state = "accepted";
+    objectToAnnotate.ui.highlighted = "none";
+
+    annotations.update((objects) => [
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
-      {
-        ...objectToAnnotate,
-        review_state: "accepted",
-        source_id: GROUND_TRUTH,
-        id: nanoid(10),
-        highlighted: "none",
-      },
+      objectToAnnotate,
     ]);
-    canSave.set(true);
   };
 
   const onRejectItem = () => {
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "rejected"),
     );
-    canSave.set(true);
   };
 
   const onSwitchChange = (checked: boolean | undefined) => {
     $preAnnotationIsActive = checked || false;
-    itemObjects.update((objects) => {
+    annotations.update((objects) => {
       const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
       const tempObjects = sortAndFilterObjectsToAnnotate(
         objectsToPreAnnotate,
         confidenceFilterValue,
+        $currentFrameIndex,
       );
       return objects.map((object) => {
-        object.highlighted = $preAnnotationIsActive ? "none" : "all";
+        object.ui.highlighted = $preAnnotationIsActive ? "none" : "all";
         if (object.id === tempObjects[0]?.id && $preAnnotationIsActive) {
-          object.highlighted = "self";
+          object.ui.highlighted = "self";
         }
         return object;
       });
@@ -101,6 +96,7 @@ License: CECILL-C
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
       confidenceFilterValue,
+      $currentFrameIndex,
     );
     if (objectsToAnnotate.length === 0) {
       preAnnotationIsActive.set(false);

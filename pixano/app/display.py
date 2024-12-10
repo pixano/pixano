@@ -15,9 +15,9 @@ def display_colab(url: str, port: int, height: int):
     """Display a Pixano app inside a Google Colab.
 
     Args:
-        url: Pixano app URL
-        port: Pixano app port
-        height: Frame height
+        url: Pixano app URL.
+        port: Pixano app port.
+        height: Frame height.
     """
     # Define frame template
     shell = """
@@ -54,9 +54,9 @@ def display_ipython(url: str, port: int, height: int):
     """Display a Pixano app inside a Jupyter notebook.
 
     Args:
-        url: Pixano app URL
-        port: Pixano app port
-        height: Frame height
+        url: Pixano app URL.
+        port: Pixano app port.
+        height: Frame height.
     """
     # Define frame template
     shell = """
@@ -96,7 +96,7 @@ def display_cli(url: str, port: int):
     """Display a Pixano app inside a command line interface.
 
     Args:
-        url: Pixano app URL
-        port: Pixano app port
+        url: Pixano app URL.
+        port: Pixano app port.
     """
     print(f"Please visit {url}:{port} in a web browser.")

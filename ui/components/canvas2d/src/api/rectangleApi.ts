@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBox } from "@pixano/core";
+import { BBox, type Reference } from "@pixano/core";
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 
@@ -15,9 +15,10 @@ export const toggleIsEditingBBox = (
 ) => {
   const rect: Konva.Rect = stage.findOne(`#rect${bboxId}`);
   const transformer: Konva.Transformer = stage.findOne("#transformer");
-  if (rect) {
-    const nodes = transformer?.nodes();
-    transformer?.nodes(
+  if (rect && transformer) {
+    transformer.moveToTop();
+    const nodes = transformer.nodes();
+    transformer.nodes(
       value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())],
     );
   } else {
@@ -28,12 +29,12 @@ export const toggleIsEditingBBox = (
 export const onDragMove = (
   e: KonvaEventObject<"dragmove">,
   stage: Konva.Stage,
-  viewId: string,
+  viewRef: Reference,
   currentRect: Konva.Rect,
   bboxId: string,
 ) => {
-  const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-  const image = viewLayer.findOne(`#image-${viewId}`);
+  const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+  const image = viewLayer.findOne(`#image-${viewRef.name}`);
   if (!image) {
     return;
   }
@@ -55,9 +56,13 @@ export const onDragMove = (
   stickLabelsToRectangle(tooltip, currentRect);
 };
 
-export const getNewRectangleDimensions = (rect: Konva.Rect, stage: Konva.Stage, viewId: string) => {
-  const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-  const image = viewLayer.findOne(`#image-${viewId}`);
+export const getNewRectangleDimensions = (
+  rect: Konva.Rect,
+  stage: Konva.Stage,
+  viewRef: Reference,
+) => {
+  const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+  const image = viewLayer.findOne(`#image-${viewRef.name}`);
   const imageSize = image.getSize();
   const width = rect?.width();
   const height = rect?.height();

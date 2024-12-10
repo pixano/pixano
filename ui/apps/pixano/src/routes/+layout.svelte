@@ -27,19 +27,23 @@ License: CECILL-C
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
-  let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
-    models = await api.getModels();
-    modelsStore.set(models);
+    //TMP for lint
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    modelsStore.set([]);
+    api
+      .getModels()
+      .then((models) => modelsStore.set(models))
+      .catch(() => modelsStore.set([]));
   }
 
   async function handleGetDatasets() {
     try {
-      const loadedDatasets = await api.getDatasets();
+      const loadedDatasets = await api.getDatasetsInfo();
       datasets = loadedDatasets;
       datasetsStore.set(loadedDatasets);
     } catch (err) {
@@ -48,8 +52,10 @@ License: CECILL-C
   }
 
   onMount(async () => {
+    handleGetModels()
+      .then(() => console.log(`Found ${$modelsStore.length} model(s):`, $modelsStore))
+      .catch((err) => console.error("ERROR: Can't get model", err));
     await handleGetDatasets();
-    await handleGetModels();
   });
 
   // Get all the ids of the items of the selected dataset
@@ -59,49 +65,6 @@ License: CECILL-C
     if (datasetId === undefined) return;
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
   };
-
-  // UNUSED ??
-  // const getDatasetItems = async (
-  //   datasetId: string,
-  //   page?: number,
-  //   size?: number,
-  //   query?: DatasetTableStore["query"],
-  // ) => {
-  //   let datasetItems: ExplorerData = {
-  //     id: "",
-  //     name: "",
-  //     table_data: { cols: [], rows: [] },
-  //     pagination: { total: 0, current: 0, size: 0 },
-  //     sem_search: [],
-  //   };
-  //   let isErrored = false;
-  //   if (query?.search) {
-  //     // try {
-  //     //   datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
-  //     // } catch (err) {
-  //     //   isErrored = true;
-  //     // }
-  //   } else {
-  //     try {
-  //       datasetItems = await api.getDatasetItems(datasetId, page, size);
-  //       //datasetWithFeats = await api.getDataset(datasetId);
-  //     } catch (err) {
-  //       isErrored = true;
-  //     }
-  //   }
-  //   datasetsStore.update((value = []) =>
-  //     value.map((dataset) =>
-  //       dataset.id === datasetId
-  //         ? {
-  //             ...datasetItems,
-  //             //features_values: datasetWithFeats.features_values,
-  //             //page: datasetItems,
-  //             isErrored,
-  //           }
-  //         : dataset,
-  //     ),
-  //   );
-  // };
 
   $: page.subscribe((value) => {
     pageId = value.route.id;
@@ -123,23 +86,6 @@ License: CECILL-C
       }
     });
   }
-
-  // NOTE: this doesn't really seems usefull, or redundant. For now it works without this...
-
-  // datasetTableStore.subscribe((value) => {
-  //   if (datasets && currentDatasetId) {
-  //     const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
-  //     if (currentDataset && value) {
-  //       console.log("found!");
-  //       currentDatasetStore.set(currentDataset);
-  //       getDatasetItems(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
-  //         (err) => console.error(err),
-  //       );
-  //     } else {
-  //       console.log("REFRESH?");
-  //     }
-  //   }
-  // });
 </script>
 
 <svelte:head>

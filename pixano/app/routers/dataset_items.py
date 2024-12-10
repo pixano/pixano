@@ -26,19 +26,19 @@ async def get_dataset_items(
     limit: int | None = None,
     skip: int = 0,
 ) -> list[DatasetItemModel]:
-    """Get dataset items.
+    """Get dataset items from a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the items.
         settings: App settings.
-        ids: IDs.
+        ids: IDs of the dataset items.
         limit: Limit number of dataset items.
         skip: Skip number of dataset items.
 
     Returns:
         List of dataset items.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.get_dataset_items(ids, limit, skip)
@@ -56,7 +56,7 @@ async def get_dataset_items(
 async def get_dataset_item(
     dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> DatasetItemModel:
-    """Get dataset item.
+    """Get dataset item from a dataset.
 
     Args:
         dataset_id: Dataset ID.
@@ -64,7 +64,7 @@ async def get_dataset_item(
         settings: App settings.
 
     Returns:
-        Dataset item.
+        The dataset item.
     """
     return (await get_dataset_items(dataset_id, settings, ids=[id]))[0]
 
@@ -75,17 +75,17 @@ async def create_dataset_items(
     dataset_items: list[DatasetItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetItemModel]:
-    """Create dataset items.
+    """Add dataset items in a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        dataset_items: Dataset items.
+        dataset_id: Dataset ID to add the items.
+        dataset_items: Dataset items to add.
         settings: App settings.
 
     Returns:
-        List of dataset items.
+        List of dataset items added.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
@@ -101,16 +101,16 @@ async def create_dataset_item(
     dataset_item: DatasetItemModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetItemModel:
-    """Create dataset item.
+    """Add a dataset item.
 
     Args:
-        dataset_id: Dataset ID.
-        id: Dataset item ID.
+        dataset_id: Dataset ID to add the item.
+        id: Dataset item ID to add.
         dataset_item: Dataset item.
         settings: App settings.
 
     Returns:
-        The dataset item.
+        The dataset item added.
     """
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
@@ -124,17 +124,17 @@ async def update_dataset_items(
     dataset_items: list[DatasetItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetItemModel]:
-    """Update dataset items.
+    """Update dataset items in a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        dataset_items: Dataset items.
+        dataset_id: Dataset ID containing the items.
+        dataset_items: Dataset items to update.
         settings: App settings.
 
     Returns:
-        List of dataset items.
+        List of dataset items updated.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
         rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
@@ -150,16 +150,16 @@ async def update_dataset_item(
     dataset_item: DatasetItemModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetItemModel:
-    """Update dataset item.
+    """Update dataset item in a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: Dataset item ID.
+        dataset_id: Dataset ID containing the item.
+        id: Dataset item ID to update.
         dataset_item: Dataset item.
         settings: App settings.
 
     Returns:
-        The dataset item.
+        The dataset item updated.
     """
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
@@ -173,14 +173,14 @@ async def delete_dataset_items(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete dataset items.
+    """Delete dataset items from a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        ids: IDs.
+        dataset_id: Dataset ID containing the items.
+        ids: IDs of the dataset items to delete.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     dataset.delete_dataset_items(ids)
     return
@@ -188,11 +188,11 @@ async def delete_dataset_items(
 
 @router.delete("/{dataset_id}/{id}")
 async def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
-    """Delete a dataset item.
+    """Delete a dataset item from a dataset.
 
     Args:
-        dataset_id: Dataset ID.
-        id: ID.
+        dataset_id: Dataset ID containing the item.
+        id: ID of the dataset item to delete.
         settings: App settings.
     """
     return await delete_dataset_items(dataset_id, ids=[id], settings=settings)

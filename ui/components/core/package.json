@@ -35,7 +35,7 @@
     "d3": "^7.8.5",
     "d3-color": "^3.1.0",
     "d3-scale-chromatic": "^3.0.0",
-    "konva": "^8.4.3",
+    "konva": "^9.3.16",
     "lucide-svelte": "^0.292.0",
     "onnxruntime-web": "~1.16.3",
     "svelte-chartjs": "^3.1.5",
@@ -45,6 +45,7 @@
     "tailwind-variants": "^0.1.20",
     "vega": "^5.27.0",
     "vega-lite": "^5.16.3",
-    "vite-plugin-externals": "^0.6.2"
+    "vite-plugin-externals": "^0.6.2",
+    "zod": "^3.23.8"
   }
 }

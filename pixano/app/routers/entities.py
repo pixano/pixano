@@ -33,37 +33,51 @@ async def get_entities(
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
-    item_ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
+    item_ids: list[str] | None = Query(None),
 ) -> list[EntityModel]:
-    """Get entities.
+    """Get entities from a table of a dataset.
+
+    They can be filtered by IDs, item IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
         settings: App settings.
-        ids: IDs.
+        ids: IDs of the views.
+        limit: Limit number of views.
+        skip: Skip number of views.
+        where: Where clause.
         item_ids: Item IDs.
-        limit: Limit number of entities.
-        skip: Skip number of entities.
 
     Returns:
-        List of entities.
+        List of views.
     """
-    return await get_rows_handler(dataset_id, SchemaGroup.ENTITY, table, settings, ids, item_ids, limit, skip)
+    return await get_rows_handler(
+        dataset_id=dataset_id,
+        group=SchemaGroup.ENTITY,
+        table=table,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=item_ids,
+        limit=limit,
+        skip=skip,
+    )
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel)
 async def get_entity(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> EntityModel:
-    """Get an entity.
+    """Get an entity from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the entity.
         settings: App settings.
 
     Returns:
@@ -79,16 +93,16 @@ async def create_entities(
     entities: list[EntityModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[EntityModel]:
-    """Create entities.
+    """Add entities in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        entities: Entitys.
+        entities: Entities to add.
         settings: App settings.
 
     Returns:
-        List of entities.
+        List of entities added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
@@ -101,17 +115,17 @@ async def create_entity(
     entity: EntityModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EntityModel:
-    """Create an entity.
+    """Add an entity in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        entity: Entity.
+        id: ID of the entity.
+        entity: Entity to add.
         settings: App settings.
 
     Returns:
-        The entity.
+        The entity added.
     """
     return await create_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
@@ -124,17 +138,17 @@ async def update_entity(
     entity: EntityModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EntityModel:
-    """Update an entity.
+    """Update an entity in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        entity: Entity.
+        id: ID of the entity.
+        entity: Entity to update.
         settings: App settings.
 
     Returns:
-        The entity.
+        The entity updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
@@ -146,16 +160,16 @@ async def update_entities(
     entities: list[EntityModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[EntityModel]:
-    """Update entities.
+    """Update entities in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        entities: Entitys.
+        entities: Entities to update.
         settings: App settings.
 
     Returns:
-        List of entities.
+        List of entities updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
@@ -164,12 +178,12 @@ async def update_entities(
 async def delete_entity(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
-    """Delete an entity.
+    """Delete an entity from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the entity to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
@@ -182,12 +196,12 @@ async def delete_entities(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete entities.
+    """Delete entities from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        ids: IDs.
+        ids: IDs of the entities to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)

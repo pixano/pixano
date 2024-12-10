@@ -33,37 +33,51 @@ async def get_views(
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
-    item_ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
+    where: str | None = None,
+    item_ids: list[str] | None = Query(None),
 ) -> list[ViewModel]:
-    """Get views.
+    """Get views from a table of a dataset.
+
+    They can be filtered by IDs, item IDs, a where clause or paginated.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
         settings: App settings.
-        ids: IDs.
-        item_ids: Item IDs.
+        ids: IDs of the views.
         limit: Limit number of views.
         skip: Skip number of views.
+        where: Where clause.
+        item_ids: Item IDs.
 
     Returns:
         List of views.
     """
-    return await get_rows_handler(dataset_id, SchemaGroup.VIEW, table, settings, ids, item_ids, limit, skip)
+    return await get_rows_handler(
+        dataset_id=dataset_id,
+        group=SchemaGroup.VIEW,
+        table=table,
+        settings=settings,
+        where=where,
+        ids=ids,
+        item_ids=item_ids,
+        limit=limit,
+        skip=skip,
+    )
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel)
 async def get_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> ViewModel:
-    """Get a view.
+    """Get an view from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the view.
         settings: App settings.
 
     Returns:
@@ -79,16 +93,16 @@ async def create_views(
     views: list[ViewModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[ViewModel]:
-    """Create views.
+    """Add views in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        views: Views.
+        views: Views to add.
         settings: App settings.
 
     Returns:
-        List of views.
+        List of views added.
     """
     return await create_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
@@ -101,17 +115,17 @@ async def create_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Create a view.
+    """Add an view in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        view: View.
+        id: ID of the view.
+        view: View to add.
         settings: App settings.
 
     Returns:
-        The view.
+        The view added.
     """
     return await create_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
@@ -124,17 +138,17 @@ async def update_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Update a view.
+    """Update an view in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
-        view: View.
+        id: ID of the view.
+        view: View to update.
         settings: App settings.
 
     Returns:
-        The view.
+        The view updated.
     """
     return await update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
@@ -146,16 +160,16 @@ async def update_views(
     views: list[ViewModel],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[ViewModel]:
-    """Update views.
+    """Update views in a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        views: Views.
+        views: Views to update.
         settings: App settings.
 
     Returns:
-        List of views.
+        List of views updated.
     """
     return await update_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
@@ -164,12 +178,12 @@ async def update_views(
 async def delete_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
-    """Delete a view.
+    """Delete an view from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        id: ID.
+        id: ID of the view to delete.
         settings: App settings.
     """
     return await delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
@@ -182,12 +196,12 @@ async def delete_views(
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
-    """Delete views.
+    """Delete views from a table of a dataset.
 
     Args:
-        dataset_id: Dataset ID.
+        dataset_id: Dataset ID containing the table.
         table: Table name.
-        ids: IDs.
+        ids: IDs of the views to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)

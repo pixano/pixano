@@ -6,48 +6,55 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
-
-  import { SelectModal, WarningModal } from "@pixano/core";
+  import { derived } from "svelte/store";
+  import { SelectModal, WarningModal, LoadingModal, DatasetInfo } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import type { DatasetInfo, DatasetItem } from "@pixano/core";
-  import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
+  import { loadViewEmbeddings as loadViewEmbeddingsAPI } from "../lib/api/modelsApi";
   import {
     interactiveSegmenterModel,
-    modelsStore,
+    modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
+  import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import type { Embeddings, ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
   import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
   export let models: Array<string>;
   export let currentDatasetId: DatasetInfo["id"];
-  export let selectedItemId: DatasetItem["id"];
+  export let selectedItemId: string;
   export let embeddings: Embeddings;
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
-  let selectedModelName: ModelSelection["selectedModelName"];
-
-  modelsStore.subscribe((store) => {
-    currentModalOpen = store.currentModalOpen;
-    selectedModelName = store.selectedModelName;
+  let selectedModelName: ModelSelection["selectedModelName"] = models ? models[0] : "";
+  let selectedTableName: string;
+  let sortedTablesChoices = derived(datasetSchema, ($datasetSchema) => {
+    const withSam = $datasetSchema.groups.embeddings.filter((t) => t.includes("sam"));
+    const withoutSam = $datasetSchema.groups.embeddings.filter((t) => !t.includes("sam"));
+    return [...withSam, ...withoutSam];
   });
 
-  const loadEmbeddings = () => {
+  modelsUiStore.subscribe((store) => {
+    currentModalOpen = store.currentModalOpen;
+    selectedModelName =
+      store.selectedModelName !== "" ? store.selectedModelName : selectedModelName;
+  });
+
+  const loadViewEmbeddings = () => {
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     if (
       !selectedItemId ||
-      !selectedModelName ||
+      !selectedTableName ||
       !currentDatasetId ||
       selectedModelName === "none"
     ) {
       return;
     }
-    loadEmbeddingsApi(selectedItemId, selectedModelName, currentDatasetId)
+    loadViewEmbeddingsAPI(selectedItemId, selectedTableName, currentDatasetId)
       .then((results) => {
         embeddings = results;
       })
       .catch((err) => {
-        modelsStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
+        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
         console.error("cannot load Embeddings", err);
       });
   };
@@ -55,43 +62,22 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
-    await sam.init("/data/models/" + selectedModelName);
+    modelsUiStore.update((store) => ({
+      ...store,
+      currentModalOpen: "loading",
+      selectedModelName: selectedModelName,
+    }));
+    await sam.init("/app_models/" + selectedModelName + ".onnx");
     interactiveSegmenterModel.set(sam);
-    loadEmbeddings();
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
   }
-
-  $: {
-    if (selectedItemId) {
-      loadEmbeddings();
-    }
-  }
-
-  onMount(async () => {
-    if (models.length > 0) {
-      let samModels = models.filter((m) => m.includes("sam"));
-      if (samModels.length == 1) {
-        modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
-        await loadModel();
-      }
-    }
-  });
 
   $: {
     if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     }
     if ($selectedTool?.isSmart && models.length == 0) {
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
-    }
-  }
-
-  $: {
-    if (selectedModelName) {
-      modelsStore.update((store) => ({
-        ...store,
-        selectedModelName,
-      }));
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
     }
   }
 </script>
@@ -105,11 +91,23 @@ License: CECILL-C
     on:confirm={loadModel}
   />
 {/if}
+{#if currentModalOpen === "loading"}
+  <LoadingModal />
+{/if}
+{#if currentModalOpen === "selectEmbeddingsTable"}
+  <SelectModal
+    message="Please select the embeddings table for the model."
+    choices={$sortedTablesChoices}
+    ifNoChoices={""}
+    bind:selected={selectedTableName}
+    on:confirm={loadViewEmbeddings}
+  />
+{/if}
 {#if currentModalOpen === "noModel"}
   <WarningModal
     message="It looks like there is no model for interactive segmentation in your dataset library."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
+    on:confirm={() => modelsUiStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
   />
 {/if}
 {#if currentModalOpen === "noEmbeddings"}
@@ -117,9 +115,9 @@ License: CECILL-C
     message="No embeddings found for model {selectedModelName}."
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
     on:confirm={() =>
-      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
     on:cancel={() =>
-      modelsStore.update((store) => ({
+      modelsUiStore.update((store) => ({
         ...store,
         currentModalOpen: "none",
         selectedModelName: "none",

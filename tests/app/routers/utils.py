@@ -5,6 +5,7 @@
 # =====================================
 
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
@@ -28,6 +29,7 @@ def _test_get_rows_handler(
     dataset: Dataset,
     group: SchemaGroup,
     table: str,
+    where: str | None,
     ids: list[str] | None,
     item_ids: list[str] | None,
     limit: int | None,
@@ -48,13 +50,19 @@ def _test_get_rows_handler(
         url += "limit=" + str(limit)
     if skip is not None:
         url += "&skip=" + str(skip)
+    if where is not None:
+        if url[-1] not in ["&", "?"]:
+            url += "&"
+        url += "where=" + quote(where)
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
 
     expected_output = get_models_from_rows(
         table,
         model_type,
-        dataset.get_data(table, ids, limit, skip if skip is not None else 0, item_ids),
+        dataset.get_data(
+            table, ids=ids, limit=limit, skip=skip if skip is not None else 0, where=where, item_ids=item_ids
+        ),
     )
 
     response = client.get(url)
@@ -79,7 +87,7 @@ def _test_get_rows_handler_error(
     url = base_url(group, "wrong_dataset", table)
     response = client.get(url)
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -119,7 +127,7 @@ def _test_get_row_handler(
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
 
-    expected_output = get_model_from_row(table, model_type, dataset.get_data(table, id))
+    expected_output = get_model_from_row(table, model_type, dataset.get_data(table, ids=id))
 
     response = client.get(base_url(group, dataset.info.id, table, id))
     assert response.status_code == 200
@@ -140,7 +148,7 @@ def _test_get_row_handler_error(
     # Wrong dataset ID
     response = client.get(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -186,7 +194,7 @@ def _test_create_rows_handler(
     assert len(response.json()) == len(new_rows_models)
 
     # Check that the rows were added to the dataset
-    assert len(dataset.get_data(table, [new_row.id for new_row in new_rows])) == len(new_rows)
+    assert len(dataset.get_data(table, ids=[new_row.id for new_row in new_rows])) == len(new_rows)
 
 
 def _test_create_rows_handler_error(
@@ -209,7 +217,7 @@ def _test_create_rows_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -242,7 +250,7 @@ def _test_create_row_handler(
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
 
-    row = dataset.get_data(table, id)
+    row = dataset.get_data(table, ids=id)
     new_row = row.model_copy(deep=True)
     new_row.id = "new_" + new_row.id
 
@@ -258,7 +266,7 @@ def _test_create_row_handler(
     assert model.model_dump(exclude_timestamps=True) == new_row_model.model_dump(exclude_timestamps=True)
 
     # Check that the row was added to the dataset
-    assert dataset.get_data(table, new_row.id) is not None
+    assert dataset.get_data(table, ids=new_row.id) is not None
 
 
 def _test_create_row_handler_error(
@@ -276,7 +284,7 @@ def _test_create_row_handler_error(
     good_data = get_model_from_row(
         "bbox_image",
         model_type,
-        dataset.get_data(table, id),
+        dataset.get_data(table, ids=id),
     )  # actually it is not good because id already exists but we look for errors so it is fine
     json_data = jsonable_encoder(good_data)
 
@@ -286,7 +294,7 @@ def _test_create_row_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -342,7 +350,7 @@ def _test_update_rows_handler(
     assert len(response.json()) == len(updated_rows_models)
 
     # Check that the rows were updated in the dataset
-    dataset_updated_rows = dataset.get_data(table, [updated_row.id for updated_row in updated_rows_models])
+    dataset_updated_rows = dataset.get_data(table, ids=[updated_row.id for updated_row in updated_rows_models])
     assert len(dataset_updated_rows) == len(updated_rows)
     for dataset_updated_row in dataset_updated_rows:
         cur_row = None
@@ -379,7 +387,7 @@ def _test_update_rows_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -414,7 +422,7 @@ def _test_update_row_handler(
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
 
-    row = dataset.get_data(table, id)
+    row = dataset.get_data(table, ids=id)
     updated_row = row.model_copy(deep=True)
     setattr(updated_row, field_to_update, value)
 
@@ -430,7 +438,7 @@ def _test_update_row_handler(
     assert model.model_dump(exclude="updated_at") == updated_row_model.model_dump(exclude="updated_at")
 
     # Check that the row was updated in the dataset
-    dataset_updated_row = dataset.get_data(table, updated_row.id)
+    dataset_updated_row = dataset.get_data(table, ids=updated_row.id)
     assert dataset_updated_row is not None
     assert dataset_updated_row.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
@@ -450,7 +458,7 @@ def _test_update_row_handler_error(
     good_data = get_model_from_row(
         table,
         model_type,
-        dataset.get_data(table, id),
+        dataset.get_data(table, ids=id),
     )
     json_data = jsonable_encoder(good_data)
 
@@ -460,7 +468,7 @@ def _test_update_row_handler_error(
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -498,7 +506,7 @@ def _test_delete_rows_handler(
     assert response.status_code == 200
 
     # Check that the rows were deleted from the dataset
-    assert len(dataset.get_data(table, deleted_ids)) == 0
+    assert len(dataset.get_data(table, ids=deleted_ids)) == 0
 
 
 def _test_delete_rows_handler_error(
@@ -517,7 +525,7 @@ def _test_delete_rows_handler_error(
     # Wrong dataset ID
     response = client.delete(base_url(group, "wrong_dataset", table) + delete_ids_url)
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
@@ -535,7 +543,7 @@ def _test_delete_row_handler(
 ):
     app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
-    row = dataset.get_data(table, id)
+    row = dataset.get_data(table, ids=id)
     assert row is not None
 
     response = client.delete(base_url(group, dataset_id, table, id))
@@ -543,7 +551,7 @@ def _test_delete_row_handler(
     assert response.status_code == 200
 
     # Check that the row was deleted from the dataset
-    assert dataset.get_data(table, id) is None
+    assert dataset.get_data(table, ids=id) is None
 
 
 def _test_delete_row_handler_error(
@@ -557,7 +565,7 @@ def _test_delete_row_handler_error(
     # Wrong dataset ID
     response = client.delete(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.library_dir}."}
 
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:

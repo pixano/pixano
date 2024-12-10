@@ -41,7 +41,7 @@ def test_get_browser(
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
 
 def test_get_browser_semantic_search(
@@ -59,7 +59,7 @@ def test_get_browser_semantic_search(
 
     with patch("lancedb.query.LanceQueryBuilder.to_polars", _mock_to_polars):
         response = client.get(
-            f"/browser/{info_dataset_multi_view_tracking_and_image.id}?limit=50&skip=0&query=metadata_0&table=image_embedding"
+            f"/browser/{info_dataset_multi_view_tracking_and_image.id}?limit=50&skip=0&query=metadata_0&embedding_table=image_embedding"
         )
     assert response.status_code == 200
     browser = DatasetBrowser.model_validate(response.json())
@@ -70,24 +70,26 @@ def test_get_browser_semantic_search(
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
     response = client.get("/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=metadata_0")
     assert response.status_code == 400
     assert response.json() == {"detail": "Both query and model_name should be provided for semantic search."}
 
-    response = client.get("/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&table=wrong_table")
+    response = client.get("/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&embedding_table=wrong_table")
     assert response.status_code == 400
     assert response.json() == {"detail": "Both query and model_name should be provided for semantic search."}
 
     response = client.get(
-        "/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=text&table=wrong_table"
+        "/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=text&embedding_table=wrong_table"
     )
     assert response.status_code == 400
     assert response.json() == {
         "detail": "Table wrong_table not found in dataset dataset_multi_view_tracking_and_image."
     }
 
-    response = client.get("/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=text&table=image")
+    response = client.get(
+        "/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=text&embedding_table=image"
+    )
     assert response.status_code == 400
     assert response.json() == {"detail": "Table image is not a view embedding table."}

@@ -53,7 +53,12 @@ def validate_group(
     group: str | SchemaGroup,
     valid_groups: set[SchemaGroup] = set(SchemaGroup),
 ) -> SchemaGroup:
-    """Assert that a group is valid."""
+    """Assert that a group is valid.
+
+    Args:
+        group: Group.
+        valid_groups: The valid groups.
+    """
     try:
         group = SchemaGroup(group)
     except ValueError:
@@ -91,6 +96,7 @@ def assert_table_in_group(dataset: Dataset, table: str, group: SchemaGroup) -> N
 def get_rows(
     dataset: Dataset,
     table: str,
+    where: str | None = None,
     ids: list[str] | None = None,
     item_ids: list[str] | None = None,
     limit: int | None = None,
@@ -98,11 +104,14 @@ def get_rows(
 ) -> list[BaseSchema]:
     """Get rows from a table.
 
+    The rows can be filtered by a where clause, IDs, item IDs or a limit and a skip.
+
     Args:
-        dataset: Dataset.
+        dataset: Dataset containing the table.
         table: Table name.
-        ids: IDs.
-        item_ids: Item IDs.
+        where: Where clause.
+        ids: IDs of the rows.
+        item_ids: Item IDs of the rows.
         limit: Limit number of rows.
         skip: Skip number of rows.
 
@@ -110,7 +119,7 @@ def get_rows(
         List of rows.
     """
     try:
-        rows = dataset.get_data(table, ids, limit, skip, item_ids)
+        rows = dataset.get_data(table_name=table, where=where, ids=ids, limit=limit, skip=skip, item_ids=item_ids)
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:
@@ -128,9 +137,8 @@ def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
     """Get a model from a row.
 
     Args:
-        group: Group.
-        table: Table name.
-        model_type: Model type.
+        table: Table name containing the row.
+        model_type: Model type to create.
         row: Row.
 
     Returns:
@@ -180,8 +188,8 @@ def get_models_from_rows(
     """Get models from rows.
 
     Args:
-        table: Table name.
-        model_type: Model type.
+        table: Table name containing the rows.
+        model_type: Model type to create.
         rows: Rows.
 
     Returns:
@@ -198,9 +206,9 @@ def delete_rows(
     """Delete rows from a table.
 
     Args:
-        dataset: Dataset.
+        dataset: Dataset containing the table.
         table: Table name.
-        ids: IDs.
+        ids: IDs of the rows to delete.
 
     Returns:
         IDs not found.
@@ -223,9 +231,9 @@ def update_rows(
     """Update rows in a table.
 
     Args:
-        dataset: Dataset.
+        dataset: Dataset containing the table.
         table: Table name.
-        models: Models.
+        models: Models of the rows to update.
 
     Returns:
         The updated rows.
@@ -262,9 +270,9 @@ def create_rows(
     """Add rows to a table.
 
     Args:
-        dataset: Dataset.
+        dataset: Dataset containing the table.
         table: Table name.
-        models: Models.
+        models: Models of the rows to add.
 
     Returns:
         The added rows.
@@ -296,6 +304,7 @@ async def get_rows_handler(
     group: SchemaGroup,
     table: str,
     settings: Settings,
+    where: str | None = None,
     ids: list[str] | None = None,
     item_ids: list[str] | None = None,
     limit: int | None = None,
@@ -303,13 +312,16 @@ async def get_rows_handler(
 ) -> list[BaseSchemaModel]:
     """Get row models.
 
+    Rows can be filtered by a where clause, IDs, item IDs or a limit and a skip.
+
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
         table: Table name.
         settings: App settings.
-        ids: IDs.
-        item_ids: Item IDs.
+        where: Where clause.
+        ids: IDs of the rows.
+        item_ids: Item IDs of the rows.
         limit: Limit number of rows.
         skip: Skip number of rows.
 
@@ -317,9 +329,9 @@ async def get_rows_handler(
         List of models.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
-    rows = get_rows(dataset, table, ids, item_ids, limit, skip)
+    rows = get_rows(dataset=dataset, table=table, where=where, ids=ids, item_ids=item_ids, limit=limit, skip=skip)
     models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows)
     return models
 
@@ -330,10 +342,10 @@ async def get_row_handler(
     """Get a row model.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
         table: Table name.
-        id: ID.
+        id: ID of the row.
         settings: App settings.
 
     Returns:
@@ -349,20 +361,20 @@ async def create_rows_handler(
     rows: list[BaseSchemaModel],
     settings: Settings,
 ) -> list[BaseSchemaModel]:
-    """Create rows.
+    """Add rows to a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
-        table: Table name.
-        rows: Annotations.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
+        table: Table name containing the rows.
+        rows: Rows to add.
         settings: App settings.
 
     Returns:
-        List of rows.
+        List of updated rows.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     rows_rows = create_rows(dataset, table, rows)
     rows_models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows_rows)
@@ -377,18 +389,18 @@ async def create_row_handler(
     row: BaseSchemaModel,
     settings: Settings,
 ) -> BaseSchemaModel:
-    """Create an row.
+    """Add a row to a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
         table: Table name.
-        id: ID.
-        row: Annotation.
+        id: ID of the row.
+        row: Row to add.
         settings: App settings.
 
     Returns:
-        The row.
+        The added row.
     """
     if id != row.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
@@ -405,18 +417,18 @@ async def update_row_handler(
     row: BaseSchemaModel,
     settings: Settings,
 ) -> BaseSchemaModel:
-    """Update an row.
+    """Update a row in a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
-        table: Table name.
-        id: ID.
-        row: Row.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
+        table: Table name containing the row.
+        id: ID of the row.
+        row: Row to update.
         settings: App settings.
 
     Returns:
-        The row.
+        The updated row.
     """
     if id != row.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
@@ -432,20 +444,20 @@ async def update_rows_handler(
     rows: list[BaseSchemaModel],
     settings: Settings,
 ) -> list[BaseSchemaModel]:
-    """Update rows.
+    """Update rows in a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
-        table: Table name.
-        rows: Rows.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
+        table: Table name containing the rows.
+        rows: Rows to update.
         settings: App settings.
 
     Returns:
-        List of rows.
+        List of updated rows.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     row_rows = update_rows(dataset, table, rows)
     row_models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], row_rows)
@@ -453,13 +465,13 @@ async def update_rows_handler(
 
 
 async def delete_row_handler(dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings) -> None:
-    """Delete an row.
+    """Delete a row from a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
-        table: Table name.
-        id: ID.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
+        table: Table name containing the row.
+        id: ID of the row to delete.
         settings: App settings.
     """
     return await delete_rows_handler(dataset_id, group, table, ids=[id], settings=settings)
@@ -472,17 +484,17 @@ async def delete_rows_handler(
     ids: list[str],
     settings: Settings,
 ) -> None:
-    """Delete rows.
+    """Delete rows from a table.
 
     Args:
-        dataset_id: Dataset ID.
-        group: Schema group.
-        table: Table name.
-        ids: IDs.
+        dataset_id: Dataset ID containing the table.
+        group: Schema group of the schema of the table.
+        table: Table name containing the rows.
+        ids: IDs of the rows to delete.
         settings: App settings.
     """
     group = validate_group(group)
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
     delete_rows(dataset, table, ids)
     return None

@@ -5,6 +5,7 @@
 # =====================================
 
 import base64
+import io
 from io import BytesIO
 from itertools import groupby
 
@@ -249,3 +250,69 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
         urle["counts"].append(0 if i == 0 and value == 1 else len(list(elements)))
 
     return urle
+
+
+def image_to_base64(image: Image.Image, format: str | None = None) -> str:
+    """Encode image from Pillow to base64.
+
+    The image is returned as a base64 string formatted as
+    "data:image/{image_format};base64,{base64}".
+
+    Args:
+        image: Pillow image.
+        format: Image format.
+
+    Returns:
+        Image as base64.
+    """
+    if image.format is None and format is None:
+        raise ValueError("Image format is not defined")
+
+    buffered = io.BytesIO()
+    out_format = format or image.format
+    if out_format.upper() == "UNKNOWN":
+        out_format = "JPEG"
+    image.save(buffered, format=out_format)
+
+    encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    return f"data:image/{out_format.lower()};base64,{encoded}"
+
+
+def base64_to_image(base64_image: str) -> Image.Image:
+    """Decode image from base64 to Pillow.
+
+    Expect the image to be formatted as "data:image/{image_format};base64,{base64}".
+
+    Args:
+        base64_image: Image as base64.
+
+    Returns:
+        Pillow image.
+    """
+    image_data = base64.b64decode(base64_image.split(",", maxsplit=1)[1].encode("utf-8"))
+    return Image.open(io.BytesIO(image_data))
+
+
+def get_image_thumbnail(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+    """Get image thumbnail.
+
+    Args:
+        image: Pillow Image.
+        size: Thumbnail size.
+
+    Returns:
+        Image thumbnail as Pillow.
+    """
+    if (
+        not isinstance(size, tuple)
+        or len(size) != 2
+        or not isinstance(size[0], int)
+        or not isinstance(size[1], int)
+        or size[0] <= 0
+        or size[1] <= 0
+    ):
+        raise ValueError(f"Invalid thumbnail size: {size}")
+    thumbnail = image.copy()
+    thumbnail.thumbnail(size)
+    return thumbnail

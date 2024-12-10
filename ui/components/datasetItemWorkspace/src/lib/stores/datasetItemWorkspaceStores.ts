@@ -9,13 +9,18 @@ import { writable, derived } from "svelte/store";
 import {
   type Shape,
   type InteractiveImageSegmenter,
-  type ItemObject,
-  type Mask,
-  type BBox,
   type SelectionTool,
   utils,
   type KeypointsTemplate,
   type SaveItem,
+  Annotation,
+  Entity,
+  Image,
+  SequenceFrame,
+  Tracklet,
+  BBox,
+  Mask,
+  Keypoints,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -24,12 +29,13 @@ import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWor
 // Exports
 export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
-export const itemObjects = writable<ItemObject[]>([]);
+export const annotations = writable<Annotation[]>([]);
+export const entities = writable<Entity[]>([]);
+export const views = writable<Record<string, Image | SequenceFrame[]>>({});
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
-export const canSave = writable<boolean>(false);
 export const preAnnotationIsActive = writable<boolean>(false);
-export const modelsStore = writable<ModelSelection>({
+export const modelsUiStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
@@ -43,19 +49,19 @@ export const filters = writable<Filters>({
   u16BitRange: [0, 65535],
 });
 export const imageSmoothing = writable<boolean>(true);
-export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
+export const selectedKeypointsTemplate = writable<KeypointsTemplate["template_id"] | null>(null);
 
 export const saveData = writable<SaveItem[]>([]);
-
+export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);
 type ColorScale = [Array<string>, (id: string) => string];
 
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
 
 export const colorScale = derived(
-  itemObjects,
-  ($itemObjects, _, update) => {
+  entities,
+  ($entities, _, update) => {
     update((old) => {
-      let allIds = $itemObjects.map((obj) => obj.id);
+      let allIds = $entities.map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
         allIds = [...new Set(allIds)];
@@ -66,30 +72,42 @@ export const colorScale = derived(
   initialColorScale,
 );
 
-export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
-  $itemObjects.reduce((acc, object) => {
-    const boxes = mapObjectToBBox(object, $itemMetas?.views);
-    for (const box of boxes) {
-      if (box) acc.push(box);
+export const itemBboxes = derived(
+  [annotations, views, entities],
+  ([$annotations, $views, $entities]) => {
+    const bboxes: BBox[] = [];
+    for (const ann of $annotations) {
+      if (ann.is_bbox) {
+        const box = mapObjectToBBox(ann as BBox, $views, $entities);
+        if (box) bboxes.push(box);
+      }
     }
-    return acc;
-  }, [] as BBox[]),
+    return bboxes;
+  },
 );
 
-export const itemMasks = derived(itemObjects, ($itemObjects) =>
-  $itemObjects.reduce((acc, object) => {
-    const mask = mapObjectToMasks(object);
-    if (mask) acc.push(mask);
-    return acc;
-  }, [] as Mask[]),
-);
-
-export const itemKeypoints = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) => {
-  return $itemObjects.reduce((acc, object) => {
-    const m_keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
-    for (const keypoints of m_keypoints) {
-      if (keypoints) acc.push(keypoints);
+export const itemMasks = derived(annotations, ($annotations) => {
+  const masks: Mask[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_mask) {
+      const mask = mapObjectToMasks(ann as Mask);
+      if (mask) masks.push(mask);
     }
-    return acc;
-  }, [] as KeypointsTemplate[]);
+  }
+  return masks;
+});
+
+export const itemKeypoints = derived([annotations, views], ([$annotations, $views]) => {
+  const m_keypoints: KeypointsTemplate[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_keypoints) {
+      const kpt = mapObjectToKeypoints(ann as Keypoints, $views);
+      if (kpt) m_keypoints.push(kpt);
+    }
+  }
+  return m_keypoints;
+});
+
+export const tracklets = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_tracklet) as Tracklet[];
 });

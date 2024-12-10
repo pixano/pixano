@@ -11,7 +11,7 @@ from types import GenericAlias
 from typing import TYPE_CHECKING, Any, overload
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
-from pydantic import ConfigDict, PrivateAttr, create_model
+from pydantic import ConfigDict, PrivateAttr, create_model, field_validator
 
 from pixano.utils import get_super_type_from_dict, issubclass_strict
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
@@ -40,9 +40,9 @@ if TYPE_CHECKING:
 
 
 class BaseSchema(LanceModel):
-    """Base class for all tables.
+    """Base class for all schemas.
 
-    All tables should inherit from this class and therefore all elements in the dataset contains an id.
+    All schemas should inherit from this class and therefore all elements in the dataset contains an id.
 
     Attributes:
         id: the id of the manipulated object.
@@ -59,6 +59,13 @@ class BaseSchema(LanceModel):
     updated_at: datetime
     _dataset: Dataset | None = PrivateAttr(None)
     _table_name: str = PrivateAttr("")
+
+    @field_validator("id", mode="after")
+    @classmethod
+    def _id_validator(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("id must not contain spaces")
+        return v
 
     def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
         """Create a new model by parsing and validating input data from keyword arguments.
@@ -101,7 +108,7 @@ class BaseSchema(LanceModel):
         """Set the table name."""
         self._table_name = table_name
 
-    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
         Args:
@@ -135,7 +142,14 @@ class BaseSchema(LanceModel):
     def resolve_ref(
         self, ref: "SchemaRef" | "ItemRef" | "ViewRef" | "EmbeddingRef" | "EntityRef" | "AnnotationRef" | "SourceRef"
     ) -> "BaseSchema" | "Item" | "View" | "Embedding" | "Entity" | "Annotation" | "Source":
-        """Resolve a reference."""
+        """Resolve a reference to a schema object in the dataset.
+
+        Args:
+            ref: The reference to resolve.
+
+        Returns:
+            The resolved schema object.
+        """
         return self.dataset.resolve_ref(ref)
 
     @classmethod
@@ -194,10 +208,10 @@ class BaseSchema(LanceModel):
 
     @staticmethod
     def deserialize(dataset_schema_json: dict[str, str | dict[str, Any]]) -> type["BaseSchema"]:
-        """Unserialize the dataset schema.
+        """Deserialize the dataset schema.
 
         Args:
-            dataset_schema_json: Serialized dataset schema
+            dataset_schema_json: Serialized dataset schema.
 
         Returns:
             The dataset schema.
@@ -239,5 +253,5 @@ class BaseSchema(LanceModel):
 
 
 def is_base_schema(cls: type, strict: bool = False) -> bool:
-    """Check if a class is an BaseSchema or subclass of BaseSchema."""
+    """Check if a class is a `BaseSchema` or subclass of `BaseSchema`."""
     return issubclass_strict(cls, BaseSchema, strict)

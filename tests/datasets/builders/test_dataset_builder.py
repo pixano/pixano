@@ -165,9 +165,6 @@ class TestDatasetBuilder:
             def generate_data(self):
                 yield {"wrong_schema": self.item_schema(id="id", metadata="metadata", split="train")}
 
-        with pytest.raises(ValueError, match="ids should not contain spaces"):
-            WrongIdBuilder(tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")).build()
-
         with pytest.raises(KeyError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
                 tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")

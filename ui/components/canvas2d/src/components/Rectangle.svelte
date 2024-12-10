@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { afterUpdate, onDestroy, tick } from "svelte";
+  import { onDestroy, tick } from "svelte";
   import Konva from "konva";
   import { Rect, Group } from "svelte-konva";
   import type { BBox, SelectionTool, Shape } from "@pixano/core";
@@ -24,25 +24,22 @@ License: CECILL-C
   export let bbox: BBox;
   export let colorScale: (id: string) => string;
   export let zoomFactor: number;
-  export let viewId: string;
   export let newShape: Shape;
   export let selectedTool: SelectionTool;
 
-  let currentRect: Konva.Rect = stage.findOne(`#rect${bbox.id}`);
-
   const updateDimensions = (rect: Konva.Rect) => {
-    const coords = getNewRectangleDimensions(rect, stage, viewId);
+    const coords = getNewRectangleDimensions(rect, stage, bbox.data.view_ref);
     newShape = {
       status: "editing",
       type: "bbox",
       shapeId: bbox.id,
-      viewId,
+      viewRef: bbox.data.view_ref,
       coords,
     };
   };
 
-  const resizeStroke = () => {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  const resizeStroke = (currentRect: Konva.Rect) => {
+    const viewLayer: Konva.Layer = stage.findOne(`#${bbox.data.view_ref.name}`);
     const correctedRect = currentRect.getClientRect({
       skipTransform: false,
       skipShadow: true,
@@ -66,18 +63,18 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: bbox.id,
-      viewId,
+      viewRef: bbox.data.view_ref,
       highlighted: "self",
       type: "none",
     };
   };
 
   const onClick = () => {
-    if (bbox.highlighted !== "self") {
+    if (bbox.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: bbox.id,
-        viewId,
+        viewRef: bbox.data.view_ref,
         highlighted: "all",
         type: "none",
       };
@@ -91,19 +88,29 @@ License: CECILL-C
     }
   });
 
-  afterUpdate(async () => {
+  const handleEditing = async () => {
+    //await tick: required to allow redraw of frame when right click "Edit Item" on a different frame
+    //not a very elegant solution thought...
     await tick();
-    toggleIsEditingBBox(bbox.editing ? "on" : "off", stage, bbox.id);
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    currentRect = viewLayer.findOne(`#rect${bbox.id}`);
-    if (currentRect) {
-      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewId, currentRect, bbox.id));
-      currentRect.on("transform", () => resizeStroke());
-      currentRect.on("transformend dragend", () => {
-        updateDimensions(currentRect);
-      });
+    toggleIsEditingBBox(bbox.ui.displayControl?.editing ? "on" : "off", stage, bbox.id);
+    if (bbox.ui.displayControl?.editing) {
+      const viewLayer: Konva.Layer = stage.findOne(`#${bbox.data.view_ref.name}`);
+      if (viewLayer) {
+        const currentRect: Konva.Rect = viewLayer.findOne(`#rect${bbox.id}`);
+        if (currentRect) {
+          currentRect.on("dragmove", (e) =>
+            onDragMove(e, stage, bbox.data.view_ref, currentRect, bbox.id),
+          );
+          currentRect.on("transform", () => resizeStroke(currentRect));
+          currentRect.on("transformend dragend", () => {
+            updateDimensions(currentRect);
+          });
+        }
+      }
     }
-  });
+  };
+
+  $: bbox.ui.displayControl?.editing, void handleEditing();
 </script>
 
 <Group
@@ -114,25 +121,33 @@ License: CECILL-C
   <Rect
     config={{
       id: `rect${bbox.id}`,
-      x: bbox.bbox[0] || 0,
-      y: bbox.bbox[1] || 0,
-      width: bbox.bbox[2] || 0,
-      height: bbox.bbox[3] || 0,
-      stroke: colorScale(bbox.id),
-      strokeWidth: bbox.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
-      opacity: bbox.opacity,
-      visible: bbox.visible,
-      draggable: bbox.editing,
+      x: bbox.data.coords[0] || 0,
+      y: bbox.data.coords[1] || 0,
+      width: bbox.data.coords[2] || 0,
+      height: bbox.data.coords[3] || 0,
+      stroke: colorScale(
+        bbox.ui.top_entities && bbox.ui.top_entities.length > 0
+          ? bbox.ui.top_entities[0].id
+          : bbox.data.entity_ref.id,
+      ),
+      strokeWidth: bbox.ui.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
+      opacity: bbox.ui.opacity,
+      visible: !bbox.ui.displayControl?.hidden,
+      draggable: bbox.ui.displayControl?.editing,
     }}
   />
   <LabelTag
     id={bbox.id}
-    x={bbox.bbox[0]}
-    y={bbox.bbox[1]}
-    visible={bbox.visible}
+    x={bbox.data.coords[0]}
+    y={bbox.data.coords[1]}
+    visible={!bbox.ui.displayControl?.hidden}
     {zoomFactor}
-    opacity={bbox.opacity}
-    tooltip={bbox.tooltip}
-    color={colorScale(bbox.id)}
+    opacity={bbox.ui.opacity}
+    tooltip={bbox.ui.tooltip}
+    color={colorScale(
+      bbox.ui.top_entities && bbox.ui.top_entities.length > 0
+        ? bbox.ui.top_entities[0].id
+        : bbox.data.entity_ref.id,
+    )}
   />
 </Group>
