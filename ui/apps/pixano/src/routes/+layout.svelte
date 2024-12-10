@@ -9,7 +9,6 @@ License: CECILL-C
   import { onMount } from "svelte";
   import { page } from "$app/stores";
 
-  import type { DatasetInfo } from "@pixano/core/src";
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";
@@ -25,8 +24,6 @@ License: CECILL-C
 
   import "./styles.css";
 
-  let datasets: Array<DatasetInfo>;
-  let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
@@ -37,9 +34,8 @@ License: CECILL-C
       .catch(() => modelsStore.set([]));
     api
       .getDatasetsInfo()
-      .then((lodedDatasetInfos) => {
-        datasets = lodedDatasetInfos;
-        datasetsStore.set(lodedDatasetInfos);
+      .then((loadedDatasetInfos) => {
+        datasetsStore.set(loadedDatasetInfos);
       })
       .catch((err) => {
         console.error(err);
@@ -55,12 +51,10 @@ License: CECILL-C
   };
 
   $: page.subscribe((value) => {
-    pageId = value.route.id;
     currentDatasetId = value.params.dataset;
-    // if currentDatasetStore is not set yet (happens from a refresh), set it now
-    // we could probably do better than that, or remove the other currentDatasetStore set ?
+    // if currentDatasetStore is not set yet (happens from a refresh on a datasetItem page), set it now
     if (currentDatasetId && $currentDatasetStore == null) {
-      const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
+      const currentDataset = $datasetsStore?.find((dataset) => dataset.id === currentDatasetId);
       if (currentDataset) {
         currentDatasetStore.set(currentDataset);
       }
@@ -83,10 +77,10 @@ License: CECILL-C
 </svelte:head>
 
 <div class="app">
-  {#if pageId === "/"}
-    <MainHeader {datasets} />
+  {#if $page.route.id === "/"}
+    <MainHeader datasets={$datasetsStore} />
   {:else}
-    <DatasetHeader {pageId} datasetItemsIds={currentDatasetItemsIds} />
+    <DatasetHeader pageId={$page.route.id} datasetItemsIds={currentDatasetItemsIds} />
   {/if}
   <main class="h-1 min-h-screen bg-slate-50">
     <slot />
