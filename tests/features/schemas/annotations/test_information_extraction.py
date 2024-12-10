@@ -65,11 +65,11 @@ class TestRelation:
         ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc", id="ne1")
         ne2 = TextSpan(spans_start=[128], spans_end=[131], mention="def", id="ne2")
         rel = Relation(
-            predicate="rdf:12354",
+            predicate="ad-hoc",
             subject_id=AnnotationRef(id=ne1.id, name="named_entities"),
             object_id=AnnotationRef(id=ne2.id, name="named_entities"),
         )
-
+        assert rel.predicate == "ad-hoc"
         assert isinstance(rel.subject_id, AnnotationRef)
         assert isinstance(rel.object_id, AnnotationRef)
         assert rel.subject_id.id == "ne1"
@@ -81,6 +81,7 @@ class TestRelation:
         none_rel = Relation.none()
 
         assert none_rel.id == ""
+        assert none_rel.predicate == ""
         assert none_rel.item_ref == ItemRef.none()
         assert none_rel.view_ref == ViewRef.none()
         assert none_rel.entity_ref == EntityRef.none()
@@ -129,11 +130,12 @@ def test_create_named_entiy():
 def test_create_relation():
     # Test 1: default references
     rel = create_relation(
-        predicate="rdf:12354",
+        predicate="ad-hoc",
         subject_id=AnnotationRef(id="ne1", name="named_entities"),
         object_id=AnnotationRef(id="ne2", name="named_entities"),
     )
     assert isinstance(rel, Relation)
+    assert rel.predicate == "ad-hoc"
     assert rel.subject_id == AnnotationRef(id="ne1", name="named_entities")
     assert rel.object_id == AnnotationRef(id="ne2", name="named_entities")
     assert rel.id == ""
@@ -143,7 +145,7 @@ def test_create_relation():
 
     # Test 2: with references
     rel = create_relation(
-        predicate="rdf:12354",
+        predicate="ad-hoc",
         subject_id=AnnotationRef(id="ne1", name="named_entities"),
         object_id=AnnotationRef(id="ne2", name="named_entities"),
         id="rel_1",
@@ -153,6 +155,7 @@ def test_create_relation():
     )
 
     assert isinstance(rel, Relation)
+    assert rel.predicate == "ad-hoc"
     assert rel.subject_id == AnnotationRef(id="ne1", name="named_entities")
     assert rel.object_id == AnnotationRef(id="ne2", name="named_entities")
     assert rel.id == "rel_1"
