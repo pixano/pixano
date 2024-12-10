@@ -22,13 +22,21 @@ export type SaveShapeBase = {
   status: "saving";
 };
 
+export enum SaveShapeType {
+  bbox = "bbox",
+  keypoints = "keypoints",
+  mask = "mask",
+  tracklet = "tracklet",
+  namedEntity = "namedEntity",
+}
+
 export type SaveKeyBoxShape = SaveShapeBase & {
-  type: "keypoints";
+  type: SaveShapeType.keypoints;
   keypoints: KeypointsTemplate;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
-  type: "bbox";
+  type: SaveShapeType.bbox;
   attrs: {
     x: number;
     y: number;
@@ -39,11 +47,11 @@ export type SaveRectangleShape = SaveShapeBase & {
 
 type SaveMaskShape = SegmentationResult &
   SaveShapeBase & {
-    type: "mask";
+    type: SaveShapeType.mask;
   };
 
 export type SaveTrackletShape = SaveShapeBase & {
-  type: "tracklet";
+  type: SaveShapeType.tracklet;
   attrs: {
     start_timestep: number;
     end_timestep: number;
@@ -52,7 +60,19 @@ export type SaveTrackletShape = SaveShapeBase & {
   };
 };
 
-export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape | SaveTrackletShape;
+export type NamedEntityShape = SaveShapeBase & {
+  type: SaveShapeType.namedEntity;
+  attrs: {
+    content: string;
+  };
+};
+
+export type SaveShape =
+  | SaveRectangleShape
+  | SaveMaskShape
+  | SaveKeyBoxShape
+  | SaveTrackletShape
+  | NamedEntityShape;
 
 export type noShape = {
   status: "none";
@@ -95,7 +115,7 @@ export type KeypointsTemplate = {
 
 export type CreateKeypointShape = {
   status: "creating";
-  type: "keypoints";
+  type: SaveShapeType.keypoints;
   viewRef: Reference;
   x: number;
   y: number;
@@ -106,14 +126,14 @@ export type CreateKeypointShape = {
 
 export type CreateMaskShape = {
   status: "creating";
-  type: "mask";
+  type: SaveShapeType.mask;
   points: PolygonGroupPoint[];
   viewRef: Reference;
 };
 
 export type CreateRectangleShape = {
   status: "creating";
-  type: "bbox";
+  type: SaveShapeType.bbox;
   x: number;
   y: number;
   width: number;
@@ -124,17 +144,17 @@ export type CreateRectangleShape = {
 export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeypointShape;
 
 export type EditMaskShape = {
-  type: "mask";
+  type: SaveShapeType.mask;
   counts: number[];
 };
 
 export type EditRectangleShape = {
-  type: "bbox";
+  type: SaveShapeType.bbox;
   coords: number[];
 };
 
 export type EditKeypointsShape = {
-  type: "keypoints";
+  type: SaveShapeType.keypoints;
   vertices: KeypointsTemplate["vertices"];
 };
 

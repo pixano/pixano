@@ -26,6 +26,7 @@ import {
   Image,
   Keypoints,
   Mask,
+  SaveShapeType,
   SequenceFrame,
   Source,
   Track,
@@ -318,15 +319,15 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     // Check if the object is an image Annotation
     if (ann.ui.datasetItemType === "image") {
       let changed = false;
-      if (newShape.type === "mask" && ann.is_mask) {
+      if (newShape.type === SaveShapeType.mask && ann.is_mask) {
         (ann as Mask).data.counts = newShape.counts;
         changed = true;
       }
-      if (newShape.type === "bbox" && ann.is_bbox) {
+      if (newShape.type === SaveShapeType.bbox && ann.is_bbox) {
         (ann as BBox).data.coords = newShape.coords;
         changed = true;
       }
-      if (newShape.type === "keypoints" && ann.is_keypoints) {
+      if (newShape.type === SaveShapeType.keypoints && ann.is_keypoints) {
         const coords = [];
         const states = [];
         for (const vertex of newShape.vertices) {
@@ -491,7 +492,7 @@ export const defineCreatedObject = (
     source_ref: { name: pixSource.table_info.name, id: pixSource.id },
   };
   let newObject: Annotation | undefined = undefined;
-  if (shape.type === "bbox") {
+  if (shape.type === SaveShapeType.bbox) {
     const { x, y, width, height } = shape.attrs;
     const coords = [
       x / shape.imageWidth,
@@ -511,7 +512,7 @@ export const defineCreatedObject = (
       table_info: { name: table, group: "annotations", base_schema: "BBox" },
       data: { ...baseData, ...bbox },
     });
-  } else if (shape.type === "mask") {
+  } else if (shape.type === SaveShapeType.mask) {
     const mask: MaskType = {
       counts: shape.rle.counts,
       size: shape.rle.size,
@@ -522,7 +523,7 @@ export const defineCreatedObject = (
       table_info: { name: table, group: "annotations", base_schema: "CompressedRLE" },
       data: { ...baseData, ...mask },
     });
-  } else if (shape.type === "keypoints") {
+  } else if (shape.type === SaveShapeType.keypoints) {
     const coords = [];
     const states = [];
     for (const vertex of shape.keypoints.vertices) {
@@ -541,7 +542,7 @@ export const defineCreatedObject = (
       table_info: { name: table, group: "annotations", base_schema: "KeyPoints" },
       data: { ...baseData, ...keypoints },
     });
-  } else if (shape.type === "tracklet") {
+  } else if (shape.type === SaveShapeType.tracklet) {
     const table = getTable(dataset_schema, "annotations", "Tracklet");
     newObject = new Tracklet({
       ...baseAnn,
@@ -553,7 +554,8 @@ export const defineCreatedObject = (
   }
   //need to put UI fields after creation, else zod rejects
   newObject.ui.datasetItemType = isVideo ? "video" : "image";
-  if (isVideo && shape.type !== "tracklet") newObject.ui.frame_index = currentFrameIndex;
+  if (isVideo && shape.type !== SaveShapeType.tracklet)
+    newObject.ui.frame_index = currentFrameIndex;
 
   //add extra features if any
   if (newObject.table_info.name in features) {
