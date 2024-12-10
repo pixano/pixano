@@ -47,7 +47,7 @@ License: CECILL-C
 
   let objectProperties: ObjectProperties = {};
   let selectedEntityId: string = "";
-  
+
   const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
     bbox: BaseSchema.BBox,
     keypoints: BaseSchema.Keypoints,
@@ -255,7 +255,7 @@ License: CECILL-C
         if (Array.isArray(seqs)) {
           while (!endView) {
             endFrameIndex = endFrameIndex - 1;
-            endView = seqs.find(
+            endView = (seqs as SequenceFrame[]).find(
               (view) =>
                 view.data.frame_index === endFrameIndex &&
                 view.table_info.name === ($newShape as SaveShape).viewRef.name,

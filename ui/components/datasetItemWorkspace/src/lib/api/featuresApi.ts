@@ -4,25 +4,26 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
 import {
-  Item,
-  Entity,
   Annotation,
-  type ItemFeature,
-  type FeaturesValues,
-  type FeatureList,
+  BaseSchema,
+  Entity,
+  Item,
   type DatasetSchema,
+  type FeatureList,
+  type FeaturesValues,
+  type ItemFeature,
 } from "@pixano/core";
+import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
 import type {
   CheckboxFeature,
   CreateObjectInputs,
   Feature,
-  ListFeature,
-  IntFeature,
   FloatFeature,
-  TextFeature,
+  IntFeature,
+  ListFeature,
   ObjectProperties,
+  TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
 export function createFeature(
@@ -53,7 +54,7 @@ export function createFeature(
       ...feature,
       type: feature.dtype,
       required: false,
-      sch: { name: "", group: "", base_schema: "" }, //not used here, we will pass obj below
+      sch: { name: "", group: "", base_schema: BaseSchema.Feature }, //not used here, we will pass obj below
       label: `${display_info}${feature.name}`, //TMP //TODO WIP -- group display by table_info.name (&view?)
     })),
   );

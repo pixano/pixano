@@ -14,4 +14,7 @@ export enum BaseSchema {
   Track = "Track",
   Source = "Source",
   Entity = "Entity",
+  Image = "Image",
+  SequenceFrame = "SequenceFrame",
+  Feature = "Feature"
 }

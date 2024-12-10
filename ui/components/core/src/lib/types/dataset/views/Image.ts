@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
 import { View, type ViewType } from "./View";
 
@@ -32,7 +33,7 @@ export class Image extends View {
 
   constructor(obj: BaseDataFields<ImageType>) {
     // an Image can be a SequenceFrame
-    if (!["Image", "SequenceFrame"].includes(obj.table_info.base_schema))
+    if (![BaseSchema.Image, BaseSchema.SequenceFrame].includes(obj.table_info.base_schema))
       throw new Error("Not an Image");
     imageSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<ViewType>);
@@ -49,7 +50,8 @@ export class SequenceFrame extends Image {
   declare data: SequenceFrameType & ImageType & ViewType;
 
   constructor(obj: BaseDataFields<SequenceFrameType>) {
-    if (obj.table_info.base_schema !== "SequenceFrame") throw new Error("Not a SequenceFrame");
+    if (obj.table_info.base_schema !== BaseSchema.SequenceFrame)
+      throw new Error("Not a SequenceFrame");
     sequenceFrameSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<ImageType>);
     this.data = obj.data as SequenceFrameType & ImageType & ViewType;
