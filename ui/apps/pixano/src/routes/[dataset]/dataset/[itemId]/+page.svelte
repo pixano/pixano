@@ -6,26 +6,29 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import {
-    type DatasetItem,
     type DatasetInfo,
+    type DatasetItem,
     type SaveItem,
-    PrimaryButton,
     type Schema,
+    api,
+    BaseSchema,
     Entity,
+    Image,
+    PrimaryButton,
+    SequenceFrame,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
-  import { api } from "@pixano/core/src";
   import {
-    datasetsStore,
     datasetSchema,
+    datasetsStore,
     isLoadingNewItemStore,
     modelsStore,
-    sourcesStore,
     saveCurrentItemStore,
+    sourcesStore,
   } from "../../../../lib/stores/datasetStores";
-  import { goto } from "$app/navigation";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -61,7 +64,7 @@ License: CECILL-C
             const media_dir = "media/";
             Object.values(item.views).map((view) => {
               if (Array.isArray(view)) {
-                const video = view;
+                const video = view as SequenceFrame[];
                 item_type = "video";
                 video.forEach((sf) => {
                   sf.data.type = "video";
@@ -69,7 +72,7 @@ License: CECILL-C
                 });
                 video.sort((a, b) => a.data.frame_index - b.data.frame_index);
               } else {
-                const image = view;
+                const image = view as Image;
                 image.data.type = "image";
                 image.data.url = media_dir + image.data.url;
               }
@@ -122,9 +125,9 @@ License: CECILL-C
     data.sort((a, b) => {
       const priority = (object: Schema) => {
         // Highest priority: Track
-        if (object.table_info.base_schema === "Track") return 0;
+        if (object.table_info.base_schema === BaseSchema.Track) return 0;
         // Second priority : Entity as top entity
-        if (object.table_info.base_schema === "Entity") {
+        if (object.table_info.base_schema === BaseSchema.Entity) {
           if ((object as Entity).data.parent_ref.id === "") return 1;
           else return 2; //Third priority: Entity as sub entity
         }

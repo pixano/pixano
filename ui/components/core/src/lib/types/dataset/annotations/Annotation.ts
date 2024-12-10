@@ -13,7 +13,7 @@ import {
   type DisplayControl,
 } from "../datasetTypes";
 import type { Entity } from "../entities";
-import { AnnotationBaseSchema } from "./AnnotationBaseSchema";
+import { BaseSchema } from "../BaseSchema";
 
 export const annotationSchema = z
   .object({
@@ -65,7 +65,7 @@ export abstract class Annotation extends BaseData<AnnotationType> {
     return newObj;
   }
 
-  is_type(type: AnnotationBaseSchema): boolean {
+  is_type(type: BaseSchema): boolean {
     if (!this) {
       console.error("ERROR: do not use 'is_*' on uninitialized object");
       return false;
@@ -75,18 +75,18 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   }
 
   get is_bbox(): boolean {
-    return this.is_type(AnnotationBaseSchema.BBox);
+    return this.is_type(BaseSchema.BBox);
   }
   get is_keypoints(): boolean {
-    return this.is_type(AnnotationBaseSchema.Keypoints);
+    return this.is_type(BaseSchema.Keypoints);
   }
   get is_mask(): boolean {
-    return this.is_type(AnnotationBaseSchema.Mask);
+    return this.is_type(BaseSchema.Mask);
   }
   get is_tracklet(): boolean {
-    return this.is_type(AnnotationBaseSchema.Tracklet);
+    return this.is_type(BaseSchema.Tracklet);
   }
   get is_named_entity(): boolean {
-    return this.is_type(AnnotationBaseSchema.NamedEntity);
+    return this.is_type(BaseSchema.NamedEntity);
   }
 }

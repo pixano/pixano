@@ -6,24 +6,24 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { cn, type ObjectThumbnail, Entity, Source } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
+  import { BaseSchema, cn, Entity, Source, type ObjectThumbnail } from "@pixano/core";
 
-  import ObjectCard from "./ObjectCard.svelte";
-  import ObjectsModelSection from "./ObjectsModelSection.svelte";
-  import {
-    annotations,
-    entities,
-    views,
-    preAnnotationIsActive,
-    itemMetas,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     createObjectCardId,
     defineObjectThumbnail,
     getTopEntity,
   } from "../../lib/api/objectsApi";
+  import {
+    annotations,
+    entities,
+    itemMetas,
+    preAnnotationIsActive,
+    views,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
+  import ObjectCard from "./ObjectCard.svelte";
+  import ObjectsModelSection from "./ObjectsModelSection.svelte";
 
   let allTopEntities: Entity[];
   let thumbnail: ObjectThumbnail | null = null;
@@ -36,7 +36,7 @@ License: CECILL-C
     id: "pixano_source",
     created_at: now,
     updated_at: now,
-    table_info: { name: "source", group: "source", base_schema: "Source" },
+    table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
     data: { name: "All", kind: "Global", metadata: "{}" },
   });
 

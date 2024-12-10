@@ -14,13 +14,12 @@ import {
   Annotation,
   BBox,
   Entity,
-  Image,
   Keypoints,
   Mask,
   NamedEntity,
-  SequenceFrame,
   Tracklet,
   utils,
+  View,
 } from "@pixano/core";
 import { derived, writable } from "svelte/store";
 
@@ -32,7 +31,7 @@ export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
 export const annotations = writable<Annotation[]>([]);
 export const entities = writable<Entity[]>([]);
-export const views = writable<Record<string, Image | SequenceFrame[]>>({});
+export const views = writable<Record<string, View | View[]>>({});
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const preAnnotationIsActive = writable<boolean>(false);

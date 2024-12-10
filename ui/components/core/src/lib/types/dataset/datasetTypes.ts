@@ -12,6 +12,7 @@ import type { Entity } from "./entities";
 import type { Item } from "./items";
 import type { Source } from "./sources";
 import type { View } from "./views";
+import { BaseSchema } from "./BaseSchema";
 
 ////////// TYPES /////////////
 export const referenceSchema = z
@@ -34,7 +35,7 @@ export const tableInfoSchema = z
   .object({
     name: z.string(),
     group: z.string(),
-    base_schema: z.string(),
+    base_schema: z.nativeEnum(BaseSchema),
   })
   .strict();
 type TableInfo = z.infer<typeof tableInfoSchema>;
@@ -196,7 +197,7 @@ export interface FieldInfo {
   collection: boolean;
 }
 export interface DS_Schema {
-  base_schema: string;
+  base_schema: BaseSchema;
   fields: Record<string, FieldInfo>;
   schema: string;
 }

@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { type KeypointsTemplate, type Reference, SaveShapeType, type Shape } from "@pixano/core";
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
-  import type { KeypointsTemplate, Shape, Reference } from "@pixano/core";
 
-  import KeyPoints from "./keypoints/Keypoint.svelte";
   import { findRectBoundaries } from "../api/keypointsApi";
+  import KeyPoints from "./keypoints/Keypoint.svelte";
 
   export let stage: Konva.Stage;
   export let keypoints: KeypointsTemplate[] = [];
@@ -40,7 +40,7 @@ License: CECILL-C
     }));
     newShape = {
       status: "editing",
-      type: "keypoints",
+      type: SaveShapeType.keypoints,
       vertices: normalizedVertices,
       shapeId: id,
       viewRef,

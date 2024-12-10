@@ -22,9 +22,12 @@ export * from "./mapObjectWithNewStatus";
 export * from "./toggleObjectDisplayControl";
 export * from "./getTopEntity";
 export * from "./defineCreatedEntity";
+export * from "./defineCreatedObject";
 export * from "./defineObjectThumbnail";
 export * from "./getPixanoSource";
 export * from "./mapObjectToBBox";
 export * from "./mapObjectToKeypoints";
 export * from "./mapObjectWithNewStatus";
 export * from "./toggleObjectDisplayControl";
+export * from "./updateExistingObject";
+export * from './mapObjectToMasks'

@@ -6,44 +6,44 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ChevronRight, Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
   import { derived } from "svelte/store";
-  import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
-  import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
   import {
-    type DisplayControl,
     Annotation,
     Entity,
     Item,
+    type DisplayControl,
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
+  import { BaseSchema, Checkbox, cn, IconButton } from "@pixano/core/src";
 
+  import { createFeature } from "../../lib/api/featuresApi";
   import {
-    saveData,
+    createObjectCardId,
+    defineObjectThumbnail,
+    getTopEntity,
+    toggleObjectDisplayControl,
+  } from "../../lib/api/objectsApi";
+  import {
     annotations,
-    entities,
-    views,
-    selectedTool,
     colorScale,
+    entities,
     itemMetas,
+    saveData,
+    selectedTool,
+    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
-  import {
-    getTopEntity,
-    createObjectCardId,
-    toggleObjectDisplayControl,
-    defineObjectThumbnail,
-  } from "../../lib/api/objectsApi";
-  import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
 
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import { panTool } from "../../lib/settings/selectionTools";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { panTool } from "../../lib/settings/selectionTools";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   export let entity: Entity;
 
@@ -197,7 +197,7 @@ License: CECILL-C
     propertyName: string,
     obj: Item | Entity | Annotation,
   ) => {
-    if (["Track", "Entity"].includes(obj.table_info.base_schema)) {
+    if ([BaseSchema.Track, BaseSchema.Entity].includes(obj.table_info.base_schema)) {
       entities.update((oldObjects) =>
         oldObjects.map((object) => {
           if (object === obj) {
@@ -214,7 +214,7 @@ License: CECILL-C
           return object;
         }),
       );
-    } else if (obj.table_info.base_schema === "Item") {
+    } else if (obj.table_info.base_schema === BaseSchema.Item) {
       console.warn("This should never happen, we don't have 'item' features in Objects Inspector.");
     } else {
       //Annotation

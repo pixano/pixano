@@ -6,52 +6,54 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { derived } from "svelte/store";
-  import { Button, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
   import {
     Annotation,
+    BaseSchema,
     Entity,
+    SequenceFrame,
     Track,
     Tracklet,
-    SequenceFrame,
     type SaveItem,
     type SaveShape,
     type SaveTrackletShape,
   } from "@pixano/core";
+  import { Button, SaveShapeType, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
+  import { derived } from "svelte/store";
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
-    newShape,
+    addOrUpdateSaveItem,
+    defineCreatedEntity,
+    defineCreatedObject,
+  } from "../../lib/api/objectsApi";
+  import { sortByFrameIndex } from "../../lib/api/videoApi";
+  import {
     annotations,
     entities,
-    views,
     itemMetas,
+    newShape,
     saveData,
+    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type {
     CreateObjectInputs,
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
-  import {
-    defineCreatedObject,
-    defineCreatedEntity,
-    addOrUpdateSaveItem,
-  } from "../../lib/api/objectsApi";
-  import { sortByFrameIndex } from "../../lib/api/videoApi";
-
   export let currentTab: "scene" | "objects";
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
 
   let objectProperties: ObjectProperties = {};
   let selectedEntityId: string = "";
-  const mapShapeType2BaseSchema = {
-    bbox: "BBox",
-    keypoints: "KeyPoints",
-    mask: "CompressedRLE",
-    tracklet: "Tracklet",
+  
+  const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
+    bbox: BaseSchema.BBox,
+    keypoints: BaseSchema.Keypoints,
+    mask: BaseSchema.Mask,
+    tracklet: BaseSchema.Tracklet,
+    namedEntity: BaseSchema.NamedEntity,
   };
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
@@ -109,13 +111,13 @@ License: CECILL-C
     let subEntitySchema: DS_NamedSchema | undefined = undefined;
     let trackSchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
-      if (sch.base_schema === "Track") {
+      if (sch.base_schema === BaseSchema.Track) {
         trackSchemas.push({ ...sch, name });
       }
     });
     let entitySchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
-      if (sch.base_schema === "Entity") entitySchemas.push({ ...sch, name });
+      if (sch.base_schema === BaseSchema.Entity) entitySchemas.push({ ...sch, name });
     });
     if (trackSchemas.length > 0) {
       topEntitySchema = trackSchemas[0];
@@ -301,7 +303,7 @@ License: CECILL-C
         //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
         //--> It would be far more easy to create 1 frame tracklet, and allow other means of tracklet edition
         const trackletShape: SaveTrackletShape = {
-          type: "tracklet",
+          type: SaveShapeType.tracklet,
           status: $newShape.status,
           itemId: "", //unused from SaveShapeBase
           imageWidth: 0, //unused from SaveShapeBase
@@ -423,7 +425,7 @@ License: CECILL-C
         bind:objectProperties
         entitiesCombo={$entitiesCombo}
         bind:selectedEntityId
-        shapeType={mapShapeType2BaseSchema[$newShape.type]}
+        baseSchema={mapShapeType2BaseSchema[$newShape.type]}
       />
     </div>
     <div class="flex gap-4">

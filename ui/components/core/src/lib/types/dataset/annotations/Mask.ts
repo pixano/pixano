@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
-import { AnnotationBaseSchema } from "./AnnotationBaseSchema";
+import { BaseSchema } from "../BaseSchema";
 
 const maskSchema = z
   .object({
@@ -30,7 +30,7 @@ export class Mask extends Annotation {
 
   constructor(obj: BaseDataFields<MaskType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    if (obj.table_info.base_schema !== AnnotationBaseSchema.Mask) throw new Error("Not a Mask");
+    if (obj.table_info.base_schema !== BaseSchema.Mask) throw new Error("Not a Mask");
     maskSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);
     this.data = obj.data as MaskType & AnnotationType;

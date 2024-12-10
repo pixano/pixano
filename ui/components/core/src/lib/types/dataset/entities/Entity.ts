@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";
 import { BaseData, type BaseDataFields, referenceSchema } from "../datasetTypes";
+import { BaseSchema } from "../BaseSchema";
 
 export const entitySchema = z
   .object({
@@ -52,6 +53,6 @@ export class Entity extends BaseData<EntityType> {
       console.error("ERROR: do not use 'is_track' on uninitialized object");
       return false;
     }
-    return this.table_info.base_schema === "Track";
+    return this.table_info.base_schema === BaseSchema.Track;
   }
 }

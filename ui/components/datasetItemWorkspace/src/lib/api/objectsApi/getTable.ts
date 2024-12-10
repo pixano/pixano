@@ -4,12 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { DatasetSchema } from "@pixano/core";
+import type { BaseSchema, DatasetSchema } from "@pixano/core";
 
 export const getTable = (
   dataset_schema: DatasetSchema,
   group: keyof DatasetSchema["groups"],
-  base_schema: string,
+  base_schema: BaseSchema,
 ): string => {
   for (const group_table of dataset_schema.groups[group]) {
     if (dataset_schema.schemas[group_table].base_schema === base_schema) {

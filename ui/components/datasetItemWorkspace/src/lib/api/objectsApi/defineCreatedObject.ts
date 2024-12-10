@@ -19,7 +19,7 @@ import {
   type Reference,
   type SaveShape,
 } from "@pixano/core";
-import { AnnotationBaseSchema } from "@pixano/core/src/lib/types/dataset/annotations/AnnotationBaseSchema";
+import { BaseSchema } from "@pixano/core/src/lib/types/dataset";
 import { nanoid } from "nanoid";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { getPixanoSource } from "./getPixanoSource";
@@ -62,10 +62,10 @@ export const defineCreatedObject = (
       is_normalized: true,
       confidence: 1,
     };
-    const table = getTable(dataset_schema, "annotations", AnnotationBaseSchema.BBox);
+    const table = getTable(dataset_schema, "annotations", BaseSchema.BBox);
     newObject = new BBox({
       ...baseAnn,
-      table_info: { name: table, group: "annotations", base_schema: AnnotationBaseSchema.BBox },
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.BBox },
       data: { ...baseData, ...bbox },
     });
   } else if (shape.type === SaveShapeType.mask) {
@@ -73,10 +73,10 @@ export const defineCreatedObject = (
       counts: shape.rle.counts,
       size: shape.rle.size,
     };
-    const table = getTable(dataset_schema, "annotations", AnnotationBaseSchema.Mask);
+    const table = getTable(dataset_schema, "annotations", BaseSchema.Mask);
     newObject = new Mask({
       ...baseAnn,
-      table_info: { name: table, group: "annotations", base_schema: AnnotationBaseSchema.Mask },
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.Mask },
       data: { ...baseData, ...mask },
     });
   } else if (shape.type === SaveShapeType.keypoints) {
@@ -92,21 +92,21 @@ export const defineCreatedObject = (
       coords,
       states,
     };
-    const table = getTable(dataset_schema, "annotations", AnnotationBaseSchema.Keypoints);
+    const table = getTable(dataset_schema, "annotations", BaseSchema.Keypoints);
     newObject = new Keypoints({
       ...baseAnn,
       table_info: {
         name: table,
         group: "annotations",
-        base_schema: AnnotationBaseSchema.Keypoints,
+        base_schema: BaseSchema.Keypoints,
       },
       data: { ...baseData, ...keypoints },
     });
   } else if (shape.type === SaveShapeType.tracklet) {
-    const table = getTable(dataset_schema, "annotations", AnnotationBaseSchema.Tracklet);
+    const table = getTable(dataset_schema, "annotations", BaseSchema.Tracklet);
     newObject = new Tracklet({
       ...baseAnn,
-      table_info: { name: table, group: "annotations", base_schema: AnnotationBaseSchema.Tracklet },
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
       data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
     });
   } else {

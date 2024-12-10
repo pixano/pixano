@@ -1,4 +1,4 @@
-import { NamedEntity, type AnnotationType } from "@pixano/core";
+import { BaseSchema, NamedEntity, type AnnotationType } from "@pixano/core";
 
 const DEFAULT_ANNOTATION: AnnotationType = {
   item_ref: { id: "", name: "" },
@@ -20,7 +20,7 @@ export const getNewNamedEntity = (id: string, content: string) => {
     created_at: now,
     updated_at: now,
     id,
-    table_info: { name: "NamedEntity", group: "annotations", base_schema: "NamedEntity" },
+    table_info: { name: "NamedEntity", group: "annotations", base_schema: BaseSchema.NamedEntity },
   });
 
   return newNamedEntity;

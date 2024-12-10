@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
-import { AnnotationBaseSchema } from "./AnnotationBaseSchema";
+import { BaseSchema } from "../BaseSchema";
 
 const NamedEntitySchema = z
   .object({
@@ -26,7 +26,7 @@ export class NamedEntity extends Annotation {
 
   constructor(obj: BaseDataFields<NamedEntityType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    if (obj.table_info.base_schema !== AnnotationBaseSchema.NamedEntity)
+    if (obj.table_info.base_schema !== BaseSchema.NamedEntity)
       throw new Error("Not a NamedEntity");
     NamedEntitySchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);

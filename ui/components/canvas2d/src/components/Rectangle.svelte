@@ -9,7 +9,7 @@ License: CECILL-C
   import { onDestroy, tick } from "svelte";
   import Konva from "konva";
   import { Rect, Group } from "svelte-konva";
-  import type { BBox, SelectionTool, Shape } from "@pixano/core";
+  import { SaveShapeType, type BBox, type SelectionTool, type Shape } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
@@ -31,7 +31,7 @@ License: CECILL-C
     const coords = getNewRectangleDimensions(rect, stage, bbox.data.view_ref);
     newShape = {
       status: "editing",
-      type: "bbox",
+      type: SaveShapeType.bbox,
       shapeId: bbox.id,
       viewRef: bbox.data.view_ref,
       coords,

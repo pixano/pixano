@@ -20,6 +20,7 @@ License: CECILL-C
     type ImagesPerView,
     type HTMLImage,
     type SaveItem,
+    SaveShapeType,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
@@ -50,6 +51,7 @@ License: CECILL-C
   } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
+  import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -279,9 +281,9 @@ License: CECILL-C
     //find corresponding annotation
     const update_ann = annotations.find((ann) => ann.id === shape.shapeId);
     if (update_ann) {
-      if (update_ann.is_bbox && shape.type === "bbox") {
+      if (update_ann.is_bbox && shape.type === SaveShapeType.bbox) {
         (update_ann as BBox).data.coords = shape.coords;
-      } else if (update_ann.is_keypoints && shape.type === "keypoints") {
+      } else if (update_ann.is_keypoints && shape.type === SaveShapeType.keypoints) {
         const coords = [];
         const states = [];
         for (const vertex of shape.vertices) {
@@ -312,7 +314,7 @@ License: CECILL-C
       //updated an interpolated annotation: create it
       //use start ann of interpolated as base for new ann
       let newAnn: Annotation | undefined = undefined;
-      if (shape.type === "bbox") {
+      if (shape.type === SaveShapeType.bbox) {
         const interpolated_box = $current_itemBBoxes.find((box) => box.id === shape.shapeId);
         if (interpolated_box && "startRef" in interpolated_box) {
           const newBBox = structuredClone(interpolated_box.startRef as BBox);
@@ -323,7 +325,7 @@ License: CECILL-C
           newBBox.updated_at = new Date(Date.now()).toISOString();
           newAnn = newBBox;
         }
-      } else if (shape.type === "keypoints") {
+      } else if (shape.type === SaveShapeType.keypoints) {
         const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
         if (interpolated_kpt && "startRef" in interpolated_kpt) {
           const keypointRef = annotations.find(
@@ -347,7 +349,7 @@ License: CECILL-C
             newAnn = newKpt;
           }
         }
-      } else if (shape.type === "mask") {
+      } else if (shape.type === SaveShapeType.mask) {
         console.log("TODO! mask");
         //mask not implemented yet in video
       }
@@ -371,7 +373,7 @@ License: CECILL-C
   };
 
   const updateOrCreateShape = (shape: EditShape) => {
-    if (shape.type === "bbox" || shape.type === "keypoints") {
+    if (shape.type === SaveShapeType.bbox || shape.type === SaveShapeType.keypoints) {
       let { objects, save_data } = editKeyItemInTracklet($annotations, shape, $currentFrameIndex);
       annotations.set(objects);
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));

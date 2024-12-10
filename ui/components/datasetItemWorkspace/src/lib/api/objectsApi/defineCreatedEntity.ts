@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
+  BaseSchema,
   type DatasetSchema,
   type DS_NamedSchema,
   Entity,
@@ -40,7 +41,7 @@ export const defineCreatedEntity = (
       entity.data = { ...entity.data, [feat.name]: feat.value };
     }
   }
-  if (entitySchema.base_schema === "Track") {
+  if (entitySchema.base_schema === BaseSchema.Track) {
     //already done just before, but lint require entity.data.name, and can't know it's done...
     const track = {
       ...entity,

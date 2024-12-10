@@ -7,7 +7,15 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
-  import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
+  import {
+    Annotation,
+    Mask,
+    Tracklet,
+    Entity,
+    DatasetItem,
+    type SaveItem,
+    BaseSchema,
+  } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
@@ -46,7 +54,7 @@ License: CECILL-C
     // adapt data model from back to front
     if (selectedItem.ui.type === "image") {
       ann.ui = { datasetItemType: "image" };
-      if (ann.table_info.base_schema === "CompressedRLE") {
+      if (ann.table_info.base_schema === BaseSchema.Mask) {
         //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
@@ -54,14 +62,14 @@ License: CECILL-C
     } else {
       ann.ui = { datasetItemType: "video" };
       //add frame_index to annotation
-      if (ann.table_info.base_schema !== "Tracklet") {
+      if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
         const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
       }
 
-      if (ann.table_info.base_schema === "CompressedRLE") {
+      if (ann.table_info.base_schema === BaseSchema.Mask) {
         //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
@@ -156,7 +164,7 @@ License: CECILL-C
       if (
         (obj.change_type === "add" || obj.change_type === "update") &&
         obj.object.table_info.group === "annotations" &&
-        obj.object.table_info.base_schema === "CompressedRLE" &&
+        obj.object.table_info.base_schema === BaseSchema.Mask &&
         Array.isArray((obj.object as Mask).data.counts)
       ) {
         const mask = structuredClone(obj.object) as Mask;
