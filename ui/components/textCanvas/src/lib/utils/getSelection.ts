@@ -6,7 +6,5 @@ export const getSelection = () => {
     return;
   }
 
-  const range = selection.getRangeAt(0);
-
-  return { selection, range };
+  return selection;
 };

@@ -64,6 +64,8 @@ export type NamedEntityShape = SaveShapeBase & {
   type: SaveShapeType.namedEntity;
   attrs: {
     content: string;
+    startIndex: number;
+    endIndex: number;
   };
 };
 

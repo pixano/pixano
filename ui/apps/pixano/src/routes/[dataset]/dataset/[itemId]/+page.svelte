@@ -137,6 +137,7 @@ License: CECILL-C
     });
 
     const no_delete_data = data.filter((d) => d.change_type !== "delete");
+
     for (const savedItem of no_delete_data) {
       let no_table = false;
       let route = savedItem.object.table_info.group;
@@ -158,6 +159,7 @@ License: CECILL-C
         await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
     }
+
     //gather deletes by group and table
     //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
     const delete_data = data.filter((d) => d.change_type === "delete");
@@ -176,6 +178,7 @@ License: CECILL-C
       },
       {} as Record<string, Record<string, string[]>>,
     );
+    
     for (const group in delete_ids_by_group_and_table) {
       for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
         let no_table = false;
@@ -187,6 +190,7 @@ License: CECILL-C
         await api.deleteSchemasByIds(route, selectedDataset.id, ids, table, no_table);
       }
     }
+
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

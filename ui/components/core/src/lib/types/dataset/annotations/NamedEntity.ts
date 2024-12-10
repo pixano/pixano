@@ -11,6 +11,8 @@ import { BaseSchema } from "../BaseSchema";
 
 const NamedEntitySchema = z
   .object({
+    startIndex: z.number(),
+    endIndex: z.number(),
     content: z.string(),
   })
   .passthrough();
@@ -26,8 +28,7 @@ export class NamedEntity extends Annotation {
 
   constructor(obj: BaseDataFields<NamedEntityType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    if (obj.table_info.base_schema !== BaseSchema.NamedEntity)
-      throw new Error("Not a NamedEntity");
+    if (obj.table_info.base_schema !== BaseSchema.NamedEntity) throw new Error("Not a NamedEntity");
     NamedEntitySchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);
     this.data = obj.data as NamedEntityType & AnnotationType;

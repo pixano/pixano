@@ -491,8 +491,9 @@ License: CECILL-C
   async function updateCurrentMask(viewRef: Reference) {
     const points = getInputPoints(viewRef.name);
     const box = getInputRect(viewRef.name);
+    const currentImage = getCurrentImage(viewRef.name);
     const input = {
-      image: getCurrentImage(viewRef.name),
+      image: currentImage,
       embedding: viewRef.name in embeddings ? embeddings[viewRef.name] : null,
       points: points,
       box: box,
@@ -513,8 +514,8 @@ License: CECILL-C
           type: SaveShapeType.mask,
           viewRef,
           itemId: selectedItemId,
-          imageWidth: getCurrentImage(viewRef.name).width,
-          imageHeight: getCurrentImage(viewRef.name).height,
+          imageWidth: currentImage.width,
+          imageHeight: currentImage.height,
           status: "saving",
         };
 
@@ -634,9 +635,13 @@ License: CECILL-C
 
       const pos = viewLayer.getRelativePointerPosition();
       const x =
-        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints ? newShape.x : pos.x;
+        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
+          ? newShape.x
+          : pos.x;
       const y =
-        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints ? newShape.y : pos.y;
+        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
+          ? newShape.y
+          : pos.y;
       const width = pos.x - x;
       const height = pos.y - y;
       newShape = {
