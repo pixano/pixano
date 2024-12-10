@@ -1,7 +1,7 @@
 export const createHtmlTag = ({
   metadata,
   bgColor,
-  tagName = "span",
+  tagName = "p",
 }: {
   metadata: Record<string, string>;
   bgColor: string;

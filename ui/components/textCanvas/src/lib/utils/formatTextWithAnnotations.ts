@@ -34,5 +34,7 @@ export const formatTextWithAnnotations = ({
     splittedText[endIndex] = splittedText[endIndex] + closeTag;
   }
 
-  return splittedText.join(" ");
+  return splittedText
+    .map((chunk, index) => `<span data-index="${index.toString()}">${chunk}</span>`)
+    .join(" ");
 };

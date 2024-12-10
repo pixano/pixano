@@ -5,13 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, NamedEntity, SaveShapeType, type ImagesPerView, type Shape } from "@pixano/core";
-  import {
-    formatTextWithAnnotations,
-    getNamedEntityIndexes,
-    getSelectedText,
-    getSelection,
-  } from "./lib/utils";
+  import { cn, NamedEntity, SaveShapeType, type Shape } from "@pixano/core";
+  import { onMount } from "svelte";
+  import { formatTextWithAnnotations, getSelectedText, getSelection } from "./lib/utils";
 
   // Exports
   export let selectedItemId: string;
@@ -20,6 +16,10 @@ License: CECILL-C
   export let namedEntities: NamedEntity[];
 
   let answer = "This is some editable text. Select any text and tag it with custom metadata!";
+
+  let startIndex: number | null = null;
+  let endIndex: number | null = null;
+
   $: formattedAnswer = formatTextWithAnnotations({
     text: answer,
     namedEntities,
@@ -28,11 +28,32 @@ License: CECILL-C
 
   let viewRef = { id: "", name: "text" };
 
+  onMount(() => {
+    const editableDiv = document.getElementById("content");
+
+    editableDiv.addEventListener("keyup", () => {
+      console.log(editableDiv.innerHTML);
+    });
+
+    editableDiv.addEventListener("mousedown", (event) => {
+      const target = event.target as HTMLElement;
+      if (target && target.dataset.index) {
+        startIndex = parseInt(target.dataset.index);
+      }
+    });
+    editableDiv.addEventListener("mouseup", (event) => {
+      const target = event.target as HTMLElement;
+      if (target && target.dataset.index) {
+        endIndex = parseInt(target.dataset.index);
+      }
+    });
+  });
+
   const handleClick = () => {
+    if (startIndex === null || endIndex === null) return;
+
     const selection = getSelection();
     const selectedText = getSelectedText(selection);
-
-    const { startIndex, endIndex } = getNamedEntityIndexes({ selection, text: answer });
 
     newShape = {
       viewRef,
@@ -47,6 +68,9 @@ License: CECILL-C
         content: selectedText,
       },
     };
+
+    startIndex = null;
+    endIndex = null;
   };
 </script>
 
@@ -56,8 +80,11 @@ License: CECILL-C
     on:click={handleClick}
     id="tagButton">Tag Selected Text</button
   >
-
-  <div id="content" contenteditable="true" class="h-full outline-none">
+  <div
+    id="content"
+    contenteditable="true"
+    class="max-h-full outline-none flex flex-row flex-wrap space-x-1 items-center"
+  >
     {@html formattedAnswer}
   </div>
 </div>
