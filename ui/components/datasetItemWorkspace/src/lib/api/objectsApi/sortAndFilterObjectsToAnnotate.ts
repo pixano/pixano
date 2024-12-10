@@ -5,12 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Annotation, BBox } from "@pixano/core";
-import { PRE_ANNOTATION } from "../../constants";
-
-export const getObjectsToPreAnnotate = (objects: Annotation[]): Annotation[] =>
-  objects.filter(
-    (object) => object.data.source_ref.name === PRE_ANNOTATION && !object.ui.review_state,
-  );
 
 //Need to check, but it seems this function applies only to BBox
 export const sortAndFilterObjectsToAnnotate = (

@@ -7,7 +7,7 @@ License: CECILL-C
 import { BaseSchema, Source, type SaveItem } from "@pixano/core";
 import { get, type Writable } from "svelte/store";
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
-import { addOrUpdateSaveItem } from "./toggleObjectDisplayControl";
+import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 
 export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
   //manage source: add if we need it

@@ -16,8 +16,8 @@ import {
 } from "@pixano/core";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
+import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 import { getPixanoSource } from "./getPixanoSource";
-import { addOrUpdateSaveItem } from "./toggleObjectDisplayControl";
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
   if (
