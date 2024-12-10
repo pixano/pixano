@@ -9,10 +9,10 @@ License: CECILL-C
   import { ContextMenu, Annotation, Entity, BBox, Keypoints, Track, Tracklet } from "@pixano/core";
   import type {
     TrackletItem,
-    MView,
     SaveItem,
     SequenceFrame,
     KeypointsTemplate,
+    View,
   } from "@pixano/core";
   import {
     annotations,
@@ -30,6 +30,8 @@ License: CECILL-C
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
   import { addOrUpdateSaveItem, getTopEntity, getPixanoSource } from "../../lib/api/objectsApi";
+
+  type MView = Record<string, View | View[]>;
 
   export let track: Track;
   export let views: MView;

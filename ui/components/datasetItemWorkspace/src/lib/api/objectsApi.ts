@@ -5,48 +5,50 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import type {
+  BBoxType,
+  DatasetSchema,
+  DisplayControl,
+  DS_NamedSchema,
+  ItemFeature,
+  KeypointsTemplate,
+  MaskType,
+  Reference,
+  SaveItem,
+  SaveShape,
+  Shape,
+  View,
+} from "@pixano/core";
 import {
   Annotation,
   BBox,
-  Mask,
-  Keypoints,
-  Tracklet,
   Entity,
-  Track,
   Image,
+  Keypoints,
+  Mask,
   SequenceFrame,
   Source,
-} from "@pixano/core";
-import type {
-  Reference,
-  MView,
-  DisplayControl,
-  Shape,
-  BBoxType,
-  MaskType,
-  SaveShape,
-  KeypointsTemplate,
-  SaveItem,
-  DatasetSchema,
-  ItemFeature,
-  DS_NamedSchema,
+  Track,
+  Tracklet,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
 import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
 
-import {
-  HIGHLIGHTED_BOX_STROKE_FACTOR,
-  NOT_ANNOTATION_ITEM_OPACITY,
-  PRE_ANNOTATION,
-  HIGHLIGHTED_MASK_STROKE_FACTOR,
-} from "../constants";
-import type { ItemsMeta, ObjectProperties } from "../types/datasetItemWorkspaceTypes";
-import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
-import { templates } from "../settings/keyPointsTemplates";
 import { get, type Writable } from "svelte/store";
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+import {
+  HIGHLIGHTED_BOX_STROKE_FACTOR,
+  HIGHLIGHTED_MASK_STROKE_FACTOR,
+  NOT_ANNOTATION_ITEM_OPACITY,
+  PRE_ANNOTATION,
+} from "../constants";
+import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
+import { templates } from "../settings/keyPointsTemplates";
+import type { ItemsMeta, ObjectProperties } from "../types/datasetItemWorkspaceTypes";
+
+type MView = Record<string, View | View[]>;
 
 export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
   return entities.find((entity) => entity.id === ann.data.entity_ref.id);
@@ -143,7 +145,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
   }
   if (bbox.data.is_normalized) {
     const view = views[bbox.data.view_ref.name];
-    const image = Array.isArray(view) ? view[0] : view;
+    const image = Array.isArray(view) ? (view[0] as SequenceFrame) : (view as Image);
     const imageHeight = image.data.height || 1;
     const imageWidth = image.data.width || 1;
     //TODO: manage correctly format -- here we will change user format if save
@@ -213,7 +215,7 @@ export const mapObjectToKeypoints = (
   if (!template) return;
 
   const view = views[keypoints.data.view_ref.name];
-  const image = Array.isArray(view) ? view[0] : view;
+  const image = Array.isArray(view) ? (view[0] as SequenceFrame) : (view as Image);
   const imageHeight = image.data.height || 1;
   const imageWidth = image.data.width || 1;
   const vertices = [];
