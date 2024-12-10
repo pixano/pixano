@@ -26,31 +26,24 @@ License: CECILL-C
   import "./styles.css";
 
   let datasets: Array<DatasetInfo>;
-  //let datasetWithFeats: DatasetInfo;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
-  function handleGetModels() {
+  onMount(() => {
     api
       .getModels()
       .then((models) => modelsStore.set(models))
       .catch(() => modelsStore.set([]));
-  }
-
-  async function handleGetDatasets() {
-    try {
-      const loadedDatasets = await api.getDatasetsInfo();
-      datasets = loadedDatasets;
-      datasetsStore.set(loadedDatasets);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  onMount(async () => {
-    handleGetModels();
-    await handleGetDatasets();
+    api
+      .getDatasetsInfo()
+      .then((lodedDatasetInfos) => {
+        datasets = lodedDatasetInfos;
+        datasetsStore.set(lodedDatasetInfos);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   });
 
   // Get all the ids of the items of the selected dataset
@@ -64,7 +57,7 @@ License: CECILL-C
   $: page.subscribe((value) => {
     pageId = value.route.id;
     currentDatasetId = value.params.dataset;
-    // is currentDatasetStore is not set yet (happens from a refresh), set it now
+    // if currentDatasetStore is not set yet (happens from a refresh), set it now
     // we could probably do better than that, or remove the other currentDatasetStore set ?
     if (currentDatasetId && $currentDatasetStore == null) {
       const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
