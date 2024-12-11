@@ -1,4 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+
 import {
   Annotation,
   BBox,
