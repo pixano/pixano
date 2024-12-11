@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { cn, NamedEntity, SaveShapeType, type Shape } from "@pixano/core";
   import { onMount } from "svelte";
-  import { formatTextWithAnnotations, getSelectedText, getSelection } from "./lib/utils";
+  import { formatTextWithAnnotations } from "./lib/utils";
 
   // Exports
   export let selectedItemId: string;
@@ -31,8 +31,8 @@ License: CECILL-C
   onMount(() => {
     const editableDiv = document.getElementById("content");
 
-    editableDiv.addEventListener("keyup", () => {
-      console.log(editableDiv.innerHTML);
+    editableDiv.addEventListener("focusout", () => {
+      answer = editableDiv.innerHTML.replace(/<[^>]*>/g, "");
     });
 
     editableDiv.addEventListener("mousedown", (event) => {
@@ -52,8 +52,10 @@ License: CECILL-C
   const handleClick = () => {
     if (startIndex === null || endIndex === null) return;
 
-    const selection = getSelection();
-    const selectedText = getSelectedText(selection);
+    const selectedText = answer
+      .split(" ")
+      .slice(startIndex, endIndex + 1)
+      .join(" ");
 
     newShape = {
       viewRef,
@@ -83,7 +85,7 @@ License: CECILL-C
   <div
     id="content"
     contenteditable="true"
-    class="max-h-full outline-none flex flex-row flex-wrap space-x-1 items-center"
+    class="outline-none flex flex-row flex-wrap space-x-1 items-center"
   >
     {@html formattedAnswer}
   </div>
