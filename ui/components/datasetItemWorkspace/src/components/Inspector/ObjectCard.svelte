@@ -44,6 +44,7 @@ License: CECILL-C
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { panTool } from "../../lib/settings/selectionTools";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import DisplayCheckbox from "./DisplayCheckbox.svelte";
 
   export let entity: Entity;
 
@@ -335,62 +336,30 @@ License: CECILL-C
             <div>
               <p class="font-medium first-letter:uppercase">display</p>
               <div class="flex gap-4">
-                {#if entity.ui.childs?.some((ann) => ann.is_bbox)}
-                  <div class="flex gap-2 mt-2 items-center">
-                    <p class="font-light first-letter:uppercase">Box</p>
-                    <Checkbox
-                      handleClick={() =>
-                        handleSetAnnotationDisplayControl("hidden", boxIsVisible, BaseSchema.BBox)}
-                      bind:checked={boxIsVisible}
-                      title={boxIsVisible ? "Hide" : "Show"}
-                      class="mx-1"
-                    />
-                  </div>
-                {/if}
-                {#if entity.ui.childs?.some((ann) => ann.is_mask)}
-                  <div class="flex gap-2 mt-2 items-center">
-                    <p class="font-light first-letter:uppercase">Mask</p>
-                    <Checkbox
-                      handleClick={() =>
-                        handleSetAnnotationDisplayControl("hidden", maskIsVisible, BaseSchema.Mask)}
-                      bind:checked={maskIsVisible}
-                      title={maskIsVisible ? "Hide" : "Show"}
-                      class="mx-1"
-                    />
-                  </div>
-                {/if}
-                {#if entity.ui.childs?.some((ann) => ann.is_keypoints)}
-                  <div class="flex gap-2 mt-2 items-center">
-                    <p class="font-light first-letter:uppercase">Key points</p>
-                    <Checkbox
-                      handleClick={() =>
-                        handleSetAnnotationDisplayControl(
-                          "hidden",
-                          keypointsIsVisible,
-                          BaseSchema.Keypoints,
-                        )}
-                      bind:checked={keypointsIsVisible}
-                      title={keypointsIsVisible ? "Hide" : "Show"}
-                      class="mx-1"
-                    />
-                  </div>
-                {/if}
-                {#if entity.ui.childs?.some((ann) => ann.is_named_entity)}
-                  <div class="flex gap-2 mt-2 items-center">
-                    <p class="font-light first-letter:uppercase">Named entity</p>
-                    <Checkbox
-                      handleClick={() =>
-                        handleSetAnnotationDisplayControl(
-                          "hidden",
-                          namedEntitiesIsVisible,
-                          BaseSchema.NamedEntity,
-                        )}
-                      bind:checked={namedEntitiesIsVisible}
-                      title={namedEntitiesIsVisible ? "Hide" : "Show"}
-                      class="mx-1"
-                    />
-                  </div>
-                {/if}
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_bbox)}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={boxIsVisible}
+                  annotationName="Box"
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_mask)}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={maskIsVisible}
+                  annotationName="Mask"
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_keypoints)}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={keypointsIsVisible}
+                  annotationName="Key points"
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_named_entity)}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={namedEntitiesIsVisible}
+                  annotationName="Named entity"
+                />
               </div>
             </div>
           {/if}
