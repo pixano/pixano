@@ -35,6 +35,6 @@ export class NamedEntity extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["content"]);
+    return super.nonFeaturesFields().concat(["content", "startIndex", "endIndex"]);
   }
 }
