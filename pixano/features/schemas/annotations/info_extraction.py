@@ -17,17 +17,16 @@ from .annotation import Annotation
 
 
 @_register_schema_internal
-class NamedEntity(Annotation):
-    """Observation of a named-entity in a text.
+class TextSpan(Annotation):
+    """Designation of a Text-Span in a text, especially in the
+       use-case on Named-Entity Recognition.
 
     Attributes:
-        concept_id: Id of the named-entity type.
-        mention: Named-entity observed mention.
+        mention: text-span assembled mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
     """
 
-    concept_id: str
     mention: str
     spans_start: list[int]
     spans_end: list[int]
@@ -37,7 +36,7 @@ class NamedEntity(Annotation):
         if len(self.spans_start) != len(self.spans_end):
             raise ValueError("Spans offset lists should have the same length")
         if len(self.spans_start) == 0:
-            warnings.warn("To ground a NamedEntity in a text, spans offsets should not be empty", category=UserWarning)
+            warnings.warn("To ground a TextSpan in a text, spans offsets should not be empty", category=UserWarning)
         if not all(span[0] >= 0 and span[1] >= 0 for span in zip(self.spans_start, self.spans_end)):
             raise ValueError("Spans offset must be positive")
         if not all(span[0] <= span[1] for span in zip(self.spans_start, self.spans_end)):
@@ -50,14 +49,13 @@ class NamedEntity(Annotation):
         Should be removed as soon as Lance manages `None` value.
 
         Returns:
-            "None" NamedEntity.
+            "None" TextSpan.
         """
         return cls(
             id="",
             item=ItemRef.none(),
             view=ViewRef.none(),
             entity=EntityRef.none(),
-            concept_id="",
             mention="",
             spans_start=[],
             spans_end=[],
@@ -76,15 +74,16 @@ class NamedEntity(Annotation):
 
 @_register_schema_internal
 class Relation(Annotation):
-    """Observation of a relation between two named entity in a text.
+    """Observation of a relation between two annotations,
+       for instance between text-spans in a text.
 
     Attributes:
-        predicate_id: id of relation type.
+        predicate: type of relation, as in semantic-web (OWL, RDF, etc)
         subject_id: annotation_id of the subject named-entity
         object_id: annotation_id of the object named-entity
     """
 
-    predicate_id: str
+    predicate: str
     subject_id: AnnotationRef
     object_id: AnnotationRef
 
@@ -98,18 +97,18 @@ class Relation(Annotation):
         """
         return cls(
             id="",
+            predicate="",
             item=ItemRef.none(),
             view=ViewRef.none(),
             entity=EntityRef.none(),
-            predicate_id="",
             subject_id=AnnotationRef.none(),
             object_id=AnnotationRef.none(),
         )
 
 
-def is_named_entity(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a `NamedEntity` or subclass of `NamedEntity`."""
-    return issubclass_strict(cls, NamedEntity, strict)
+def is_text_span(cls: type, strict: bool = False) -> bool:
+    """Check if a class is a TextSpan or subclass of TextSpan."""
+    return issubclass_strict(cls, TextSpan, strict)
 
 
 def is_relation(cls: type, strict: bool = False) -> bool:
@@ -117,8 +116,7 @@ def is_relation(cls: type, strict: bool = False) -> bool:
     return issubclass_strict(cls, Relation, strict)
 
 
-def create_named_entity(
-    concept_id: str,
+def create_text_span(
     mention: str,
     spans_start: list[int],
     spans_end: list[int],
@@ -127,25 +125,23 @@ def create_named_entity(
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
-) -> NamedEntity:
-    """Create a `NamedEntity` instance.
+) -> TextSpan:
+    """Create a TextSpan instance.
 
     Args:
-        concept_id: Id of named-entity type.
-        mention: Named-entity observed mention.
+        mention: text-span observed mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
-        id: `NamedEntity` ID.
+        id: TextSpan ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
         source_ref: Source reference.
 
     Returns:
-        The created `NamedEntity` instance.
+        The created `TextSpan` instance.
     """
-    return NamedEntity(
-        concept_id=concept_id,
+    return TextSpan(
         mention=mention,
         spans_start=spans_start,
         spans_end=spans_end,
@@ -158,7 +154,7 @@ def create_named_entity(
 
 
 def create_relation(
-    predicate_id: str,
+    predicate: str,
     subject_id: AnnotationRef = AnnotationRef.none(),
     object_id: AnnotationRef = AnnotationRef.none(),
     id: str = "",
@@ -170,10 +166,10 @@ def create_relation(
     """Create a `Relation` instance.
 
     Args:
-        predicate_id: Id of relation type.
-        subject_id: Annotation_id of the subject named-entity
-        object_id: Annotation_id of the object named-entity
-        id: `Relation` ID.
+        predicate: type of relation
+        subject_id: annotation_id of the subject named-entity
+        object_id: annotation_id of the object named-entity
+        id: Relation ID.
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
@@ -183,7 +179,7 @@ def create_relation(
         The created `Relation` instance.
     """
     return Relation(
-        predicate_id=predicate_id,
+        predicate=predicate,
         subject_id=subject_id,
         object_id=object_id,
         id=id,

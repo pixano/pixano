@@ -16,8 +16,8 @@ from .annotations import (
     Intrinsics,
     KeyPoints,
     KeyPoints3D,
-    NamedEntity,
     Relation,
+    TextSpan,
     Tracklet,
     create_bbox,
     create_bbox3d,
@@ -26,8 +26,8 @@ from .annotations import (
     create_compressed_rle,
     create_keypoints,
     create_keypoints3d,
-    create_named_entity,
     create_relation,
+    create_text_span,
     create_tracklet,
     is_annotation,
     is_bbox,
@@ -37,8 +37,8 @@ from .annotations import (
     is_compressed_rle,
     is_keypoints,
     is_keypoints3d,
-    is_named_entity,
     is_relation,
+    is_text_span,
     is_tracklet,
 )
 from .base_schema import BaseSchema, is_base_schema
@@ -59,7 +59,7 @@ from .entities import (
 from .items import Item, is_item
 from .registry import register_schema
 from .schema_group import SchemaGroup
-from .source import Source, create_source, is_source
+from .source import Source, SourceKind, create_source, is_source
 from .views import (
     Image,
     PointCloud,
@@ -99,12 +99,13 @@ __all__ = [
     "Item",
     "KeyPoints",
     "KeyPoints3D",
-    "NamedEntity",
+    "TextSpan",
     "PointCloud",
     "Relation",
     "SchemaGroup",
     "SequenceFrame",
     "Source",
+    "SourceKind",
     "Text",
     "Track",
     "Tracklet",
@@ -120,7 +121,7 @@ __all__ = [
     "create_image_object",
     "create_keypoints",
     "create_keypoints3d",
-    "create_named_entity",
+    "create_text_span",
     "create_point_cloud",
     "create_relation",
     "create_sequence_frame",
@@ -143,7 +144,7 @@ __all__ = [
     "is_item",
     "is_keypoints",
     "is_keypoints3d",
-    "is_named_entity",
+    "is_text_span",
     "is_point_cloud",
     "is_relation",
     "is_sequence_frame",

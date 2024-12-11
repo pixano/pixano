@@ -8,48 +8,46 @@ import numpy as np
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 
-from pixano.features import NamedEntity, Relation, create_named_entity, create_relation, is_named_entity, is_relation
+from pixano.features import Relation, TextSpan, create_relation, create_text_span, is_relation, is_text_span
 from pixano.features.types.schema_reference import AnnotationRef, EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
-class TestNamedEntity:
+class TestTextSpan:
     def test_constructor(self):
         with pytest.raises(ValidationError):
-            NamedEntity()
+            TextSpan()
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123", spans_start=[123, 128], spans_end=[126], mention="abc")
+            TextSpan(spans_start=[123, 128], spans_end=[126], mention="abc")
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123", spans_start=[123], spans_end=[-126], mention="abc")
+            TextSpan(spans_start=[123], spans_end=[-126], mention="abc")
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123", spans_start=[123], spans_end=[120], mention="abc")
-        ne = NamedEntity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
-        assert ne.concept_id == "123"
+            TextSpan(spans_start=[123], spans_end=[120], mention="abc")
+        ne = TextSpan(spans_start=[123], spans_end=[126], mention="abc")
         assert ne.mention == "abc"
 
     def test_spans_property(self):
-        ne1 = NamedEntity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
+        ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc")
         assert list(ne1.spans) == [(123, 126)]
 
     def test_spans_property_on_disjoint_entity(self):
-        ne2 = NamedEntity(concept_id="123", spans_start=[123, 131], spans_end=[126, 134], mention="abc def")
+        ne2 = TextSpan(spans_start=[123, 131], spans_end=[126, 134], mention="abc def")
         assert list(ne2.spans) == [(123, 126), (131, 134)]
         assert ne2.spans_start == [123, 131]
         assert ne2.spans_end == [126, 134]
         assert list(ne2.spans_length) == [3, 3]
 
     def test_spans_property_on_ungrounded_entity(self):
-        ne3 = NamedEntity(concept_id="123", spans_start=[], spans_end=[], mention="abc def")
+        ne3 = TextSpan(spans_start=[], spans_end=[], mention="abc def")
         assert list(ne3.spans) == []
         assert list(ne3.spans_length) == []
 
     def test_none(self):
-        none_ne = NamedEntity.none()
+        none_ne = TextSpan.none()
         assert none_ne.id == ""
         assert none_ne.item_ref == ItemRef.none()
         assert none_ne.view_ref == ViewRef.none()
         assert none_ne.entity_ref == EntityRef.none()
-        assert none_ne.concept_id == ""
         assert none_ne.mention == ""
         assert list(none_ne.spans) == []
 
@@ -59,22 +57,19 @@ class TestRelation:
         with pytest.raises(ValidationError):
             Relation()
         with pytest.raises(ValidationError):
-            Relation(predicate_id="123")
+            Relation(subject_id=AnnotationRef(id="456", name="named_entities"))
         with pytest.raises(ValidationError):
-            Relation(predicate_id="123", subject_id=AnnotationRef(id="456", name="named_entities"))
-        with pytest.raises(ValidationError):
-            Relation(predicate_id="123", object_id=AnnotationRef(id="789", name="named_entities"))
+            Relation(object_id=AnnotationRef(id="789", name="named_entities"))
 
     def test_references(self):
-        ne1 = NamedEntity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc", id="ne1")
-        ne2 = NamedEntity(concept_id="456", spans_start=[128], spans_end=[131], mention="def", id="ne2")
+        ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc", id="ne1")
+        ne2 = TextSpan(spans_start=[128], spans_end=[131], mention="def", id="ne2")
         rel = Relation(
-            predicate_id="ad-hoc",
+            predicate="ad-hoc",
             subject_id=AnnotationRef(id=ne1.id, name="named_entities"),
             object_id=AnnotationRef(id=ne2.id, name="named_entities"),
         )
-
-        assert rel.predicate_id == "ad-hoc"
+        assert rel.predicate == "ad-hoc"
         assert isinstance(rel.subject_id, AnnotationRef)
         assert isinstance(rel.object_id, AnnotationRef)
         assert rel.subject_id.id == "ne1"
@@ -86,16 +81,16 @@ class TestRelation:
         none_rel = Relation.none()
 
         assert none_rel.id == ""
+        assert none_rel.predicate == ""
         assert none_rel.item_ref == ItemRef.none()
         assert none_rel.view_ref == ViewRef.none()
         assert none_rel.entity_ref == EntityRef.none()
-        assert none_rel.predicate_id == ""
         assert none_rel.subject_id == AnnotationRef.none()
         assert none_rel.object_id == AnnotationRef.none()
 
 
 def test_is_named_entity():
-    make_tests_is_sublass_strict(is_named_entity, NamedEntity)
+    make_tests_is_sublass_strict(is_text_span, TextSpan)
 
 
 def test_is_relation():
@@ -104,9 +99,8 @@ def test_is_relation():
 
 def test_create_named_entiy():
     # Test 1: default references
-    ne = create_named_entity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
-    assert isinstance(ne, NamedEntity)
-    assert ne.concept_id == "123"
+    ne = create_text_span(spans_start=[123], spans_end=[126], mention="abc")
+    assert isinstance(ne, TextSpan)
     assert ne.mention == "abc"
     assert list(ne.spans) == [(123, 126)]
     assert ne.id == ""
@@ -115,8 +109,7 @@ def test_create_named_entiy():
     assert ne.entity_ref == EntityRef.none()
 
     # Test 2: with references
-    ne = create_named_entity(
-        concept_id="123",
+    ne = create_text_span(
         spans_start=[123],
         spans_end=[126],
         mention="abc",
@@ -125,8 +118,7 @@ def test_create_named_entiy():
         view_ref=ViewRef(id="view_1", name="text"),
         entity_ref=EntityRef(id="entity_1", name="entity"),
     )
-    assert isinstance(ne, NamedEntity)
-    assert ne.concept_id == "123"
+    assert isinstance(ne, TextSpan)
     assert ne.mention == "abc"
     assert list(ne.spans) == [(123, 126)]
     assert ne.id == "ne_1"
@@ -138,12 +130,12 @@ def test_create_named_entiy():
 def test_create_relation():
     # Test 1: default references
     rel = create_relation(
-        predicate_id="ad-hoc",
+        predicate="ad-hoc",
         subject_id=AnnotationRef(id="ne1", name="named_entities"),
         object_id=AnnotationRef(id="ne2", name="named_entities"),
     )
     assert isinstance(rel, Relation)
-    assert rel.predicate_id == "ad-hoc"
+    assert rel.predicate == "ad-hoc"
     assert rel.subject_id == AnnotationRef(id="ne1", name="named_entities")
     assert rel.object_id == AnnotationRef(id="ne2", name="named_entities")
     assert rel.id == ""
@@ -153,7 +145,7 @@ def test_create_relation():
 
     # Test 2: with references
     rel = create_relation(
-        predicate_id="ad-hoc",
+        predicate="ad-hoc",
         subject_id=AnnotationRef(id="ne1", name="named_entities"),
         object_id=AnnotationRef(id="ne2", name="named_entities"),
         id="rel_1",
@@ -163,7 +155,7 @@ def test_create_relation():
     )
 
     assert isinstance(rel, Relation)
-    assert rel.predicate_id == "ad-hoc"
+    assert rel.predicate == "ad-hoc"
     assert rel.subject_id == AnnotationRef(id="ne1", name="named_entities")
     assert rel.object_id == AnnotationRef(id="ne2", name="named_entities")
     assert rel.id == "rel_1"
