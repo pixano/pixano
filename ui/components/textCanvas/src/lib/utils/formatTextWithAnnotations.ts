@@ -28,7 +28,11 @@ export const formatTextWithAnnotations = ({
 
     const bgColor = colorScale(entity_ref.id);
 
-    const { openTag, closeTag } = createHtmlTag({ metadata, bgColor });
+    const { openTag, closeTag } = createHtmlTag({
+      metadata,
+      bgColor,
+      hidden: namedEntity.ui.displayControl?.hidden,
+    });
 
     splittedText[startIndex] = openTag + splittedText[startIndex];
     splittedText[endIndex] = splittedText[endIndex] + closeTag;

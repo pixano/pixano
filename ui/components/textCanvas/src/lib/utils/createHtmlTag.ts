@@ -1,10 +1,12 @@
 export const createHtmlTag = ({
   metadata,
   bgColor,
+  hidden,
   tagName = "p",
 }: {
   metadata: Record<string, string>;
   bgColor: string;
+  hidden: boolean;
   tagName?: string;
 }) => {
   let openTag = `<${tagName}`;
@@ -12,7 +14,12 @@ export const createHtmlTag = ({
   for (const [key, value] of Object.entries(metadata)) {
     openTag += ` data-${key}="${value}"`;
   }
-  openTag += ` class="text-white rounded-md p-1" style="background:${bgColor}">`;
+
+  if (!hidden) {
+    openTag += ` class="text-white rounded-md px-1 py-px" style="background:${hidden ? "transparent" : bgColor};"`;
+  }
+
+  openTag += `>`;
 
   const closeTag = `</${tagName}>`;
 

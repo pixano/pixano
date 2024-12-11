@@ -18,7 +18,7 @@ License: CECILL-C
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
-  import { BaseSchema, Checkbox, cn, IconButton } from "@pixano/core/src";
+  import { BaseSchema, cn, IconButton } from "@pixano/core/src";
 
   import { createFeature } from "../../lib/api/featuresApi";
   import {
@@ -153,8 +153,17 @@ License: CECILL-C
           if (ann.ui.datasetItemType === "video") {
             if (ann.ui.frame_index !== $currentFrameIndex) return ann;
           }
-          ann.ui.highlighted = getTopEntity(ann, $entities).id === entity.id ? "self" : "none";
-          ann.ui.highlighted = isVisible ? ann.ui.highlighted : "all";
+
+          if (getTopEntity(ann, $entities).id === entity.id) {
+            if (isVisible) {
+              ann.ui.highlighted = "self";
+            } else {
+              ann.ui.highlighted = "all";
+            }
+          } else {
+            ann.ui.highlighted = "none";
+          }
+
           ann.ui.displayControl = {
             ...ann.ui.displayControl,
             editing: false,
@@ -163,8 +172,9 @@ License: CECILL-C
         if (
           getTopEntity(ann, $entities).id === entity.id &&
           (!base_schema || (base_schema && ann.table_info.base_schema === base_schema))
-        )
+        ) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);
+        }
         return ann;
       }),
     );
@@ -341,24 +351,28 @@ License: CECILL-C
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={boxIsVisible}
                   annotationName="Box"
+                  base_schema={BaseSchema.BBox}
                 />
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_mask)}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={maskIsVisible}
                   annotationName="Mask"
+                  base_schema={BaseSchema.Mask}
                 />
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_keypoints)}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={keypointsIsVisible}
                   annotationName="Key points"
+                  base_schema={BaseSchema.Keypoints}
                 />
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_named_entity)}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={namedEntitiesIsVisible}
                   annotationName="Named entity"
+                  base_schema={BaseSchema.NamedEntity}
                 />
               </div>
             </div>

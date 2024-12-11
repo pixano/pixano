@@ -16,6 +16,7 @@ License: CECILL-C
 
   export let annotationIsVisible: boolean;
   export let annotationName: string;
+  export let base_schema: BaseSchema;
 </script>
 
 {#if !isAnnotationEmpty}
@@ -23,7 +24,7 @@ License: CECILL-C
     <p class="font-light first-letter:uppercase">{annotationName}</p>
     <Checkbox
       handleClick={() =>
-        handleSetAnnotationDisplayControl("hidden", annotationIsVisible, BaseSchema.BBox)}
+        handleSetAnnotationDisplayControl("hidden", annotationIsVisible, base_schema)}
       bind:checked={annotationIsVisible}
       title={annotationIsVisible ? "Hide" : "Show"}
       class="mx-1"
