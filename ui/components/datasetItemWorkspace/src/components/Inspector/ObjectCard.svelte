@@ -9,7 +9,7 @@ License: CECILL-C
   import { ChevronRight, Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
   import { derived } from "svelte/store";
 
-  import { Thumbnail } from "@pixano/canvas2d";
+  import { NamedEntitiesContent, Thumbnail } from "@pixano/canvas2d";
   import {
     Annotation,
     Entity,
@@ -339,7 +339,8 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
-                      handleClick={() => handleSetAnnotationDisplayControl("hidden", boxIsVisible, BaseSchema.BBox)}
+                      handleClick={() =>
+                        handleSetAnnotationDisplayControl("hidden", boxIsVisible, BaseSchema.BBox)}
                       bind:checked={boxIsVisible}
                       title={boxIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -350,7 +351,8 @@ License: CECILL-C
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
-                      handleClick={() => handleSetAnnotationDisplayControl("hidden", maskIsVisible, BaseSchema.Mask)}
+                      handleClick={() =>
+                        handleSetAnnotationDisplayControl("hidden", maskIsVisible, BaseSchema.Mask)}
                       bind:checked={maskIsVisible}
                       title={maskIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -362,7 +364,11 @@ License: CECILL-C
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
                       handleClick={() =>
-                        handleSetAnnotationDisplayControl("hidden", keypointsIsVisible, BaseSchema.Keypoints)}
+                        handleSetAnnotationDisplayControl(
+                          "hidden",
+                          keypointsIsVisible,
+                          BaseSchema.Keypoints,
+                        )}
                       bind:checked={keypointsIsVisible}
                       title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -374,7 +380,11 @@ License: CECILL-C
                     <p class="font-light first-letter:uppercase">Named entity</p>
                     <Checkbox
                       handleClick={() =>
-                        handleSetAnnotationDisplayControl("hidden", namedEntitiesIsVisible, BaseSchema.NamedEntity)}
+                        handleSetAnnotationDisplayControl(
+                          "hidden",
+                          namedEntitiesIsVisible,
+                          BaseSchema.NamedEntity,
+                        )}
                       bind:checked={namedEntitiesIsVisible}
                       title={namedEntitiesIsVisible ? "Hide" : "Show"}
                       class="mx-1"
@@ -399,6 +409,7 @@ License: CECILL-C
               maxWidth={300}
             />
           {/if}
+          <NamedEntitiesContent annotations={entity.ui.childs} />
         </div>
       </div>
     </div>
