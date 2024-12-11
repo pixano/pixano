@@ -9,7 +9,7 @@ License: CECILL-C
   import { ChevronRight, Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
   import { derived } from "svelte/store";
 
-  import { NamedEntitiesContent, Thumbnail } from "@pixano/canvas2d";
+  import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
   import {
     Annotation,
     Entity,
@@ -56,7 +56,7 @@ License: CECILL-C
   let boxIsVisible: boolean = true;
   let maskIsVisible: boolean = true;
   let keypointsIsVisible: boolean = true;
-  let namedEntitiesIsVisible: boolean = true;
+  let textSpansIsVisible: boolean = true;
 
   $: displayName =
     (entity.data.name
@@ -132,11 +132,11 @@ License: CECILL-C
         (ann) =>
           ann.ui.datasetItemType === "image" && ann.is_keypoints && !ann.ui.displayControl?.hidden,
       ) || false;
-    namedEntitiesIsVisible =
+    textSpansIsVisible =
       entity.ui.childs?.some(
         (ann) =>
           ann.ui.datasetItemType === "text" &&
-          ann.is_named_entity &&
+          ann.is_text_span &&
           !ann.ui.displayControl?.hidden,
       ) || false;
   });
@@ -368,11 +368,11 @@ License: CECILL-C
                   base_schema={BaseSchema.Keypoints}
                 />
                 <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_named_entity)}
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_text_span)}
                   {handleSetAnnotationDisplayControl}
-                  annotationIsVisible={namedEntitiesIsVisible}
-                  annotationName="Named entity"
-                  base_schema={BaseSchema.NamedEntity}
+                  annotationIsVisible={textSpansIsVisible}
+                  annotationName="Text span"
+                  base_schema={BaseSchema.TextSpan}
                 />
               </div>
             </div>
@@ -392,7 +392,7 @@ License: CECILL-C
               maxWidth={300}
             />
           {/if}
-          <NamedEntitiesContent annotations={entity.ui.childs} />
+          <TextSpansContent annotations={entity.ui.childs} />
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-export const getNamedEntityIndexes = ({
+export const getTextSpanIndexes = ({
   selection,
   text,
 }: {

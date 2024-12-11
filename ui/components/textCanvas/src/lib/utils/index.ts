@@ -1,2 +1,2 @@
 export * from "./formatTextWithAnnotations";
-export * from "./getNamedEntityIndexes";
+export * from "./getTextSpanIndexes";

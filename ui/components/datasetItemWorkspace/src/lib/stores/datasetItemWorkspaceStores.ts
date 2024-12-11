@@ -16,7 +16,7 @@ import {
   Entity,
   Keypoints,
   Mask,
-  NamedEntity,
+  TextSpan,
   Tracklet,
   utils,
   View,
@@ -112,6 +112,6 @@ export const tracklets = derived(annotations, ($annotations) => {
   return $annotations.filter((annotation) => annotation.is_tracklet) as Tracklet[];
 });
 
-export const namedEntities = derived(annotations, ($annotations) => {
-  return $annotations.filter((annotation) => annotation.is_named_entity) as NamedEntity[];
+export const textSpans = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_text_span) as TextSpan[];
 });

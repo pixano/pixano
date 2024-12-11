@@ -1,19 +1,19 @@
-import type { NamedEntity } from "@pixano/core";
+import type { TextSpan } from "@pixano/core";
 import { createHtmlTag } from "./createHtmlTag";
 
 export const formatTextWithAnnotations = ({
   text,
-  namedEntities,
+  textSpans,
   colorScale,
 }: {
   text: string;
-  namedEntities: NamedEntity[];
+  textSpans: TextSpan[];
   colorScale: (value: string) => string;
 }) => {
   const splittedText = text.split(" ");
 
-  for (const namedEntity of namedEntities) {
-    const { startIndex, endIndex, item_ref, view_ref, entity_ref, source_ref } = namedEntity.data;
+  for (const textSpan of textSpans) {
+    const { startIndex, endIndex, item_ref, view_ref, entity_ref, source_ref } = textSpan.data;
 
     const metadata = {
       "item-ref-id": item_ref.id,
@@ -31,7 +31,7 @@ export const formatTextWithAnnotations = ({
     const { openTag, closeTag } = createHtmlTag({
       metadata,
       bgColor,
-      hidden: namedEntity.ui.displayControl?.hidden,
+      hidden: textSpan.ui.displayControl?.hidden,
     });
 
     splittedText[startIndex] = openTag + splittedText[startIndex];

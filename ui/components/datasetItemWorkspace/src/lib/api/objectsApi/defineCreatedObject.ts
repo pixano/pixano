@@ -11,7 +11,7 @@ import {
   Entity,
   Keypoints,
   Mask,
-  NamedEntity,
+  TextSpan,
   SaveShapeType,
   Tracklet,
   type BBoxType,
@@ -119,12 +119,12 @@ export const defineCreatedObject = (
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
       data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
     });
-  } else if (shape.type === SaveShapeType.namedEntity) {
-    const table = getTable(dataset_schema, "annotations", BaseSchema.NamedEntity);
+  } else if (shape.type === SaveShapeType.textSpan) {
+    const table = getTable(dataset_schema, "annotations", BaseSchema.TextSpan);
 
-    newObject = new NamedEntity({
+    newObject = new TextSpan({
       ...baseAnn,
-      table_info: { name: table, group: "annotations", base_schema: BaseSchema.NamedEntity },
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.TextSpan },
       data: { ...baseData, ...shape.attrs },
     });
   } else return undefined;
@@ -132,7 +132,7 @@ export const defineCreatedObject = (
   //need to put UI fields after creation, else zod rejects
   newObject.ui.datasetItemType = isVideo
     ? "video"
-    : shape.type === SaveShapeType.namedEntity
+    : shape.type === SaveShapeType.textSpan
       ? "text"
       : "image";
       

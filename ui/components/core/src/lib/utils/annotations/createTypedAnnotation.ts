@@ -12,14 +12,14 @@ import {
   BBox,
   Keypoints,
   Mask,
-  NamedEntity,
+  BaseTextSpan,
   Tracklet,
   type AnnotationType,
   type BaseDataFields,
   type BBoxType,
   type KeypointsType,
   type MaskType,
-  type NamedEntityType,
+  type TextSpanType,
   type TrackletType,
 } from "../../types";
 import { BaseSchema } from "../../types/dataset/BaseSchema";
@@ -39,8 +39,8 @@ export const createTypedAnnotation = (
   if (annotation.table_info.base_schema === BaseSchema.Tracklet) {
     return new Tracklet(annotation as unknown as BaseDataFields<TrackletType>);
   }
-  if (annotation.table_info.base_schema === BaseSchema.NamedEntity) {
-    return new NamedEntity(annotation as unknown as BaseDataFields<NamedEntityType>);
+  if (annotation.table_info.base_schema === BaseSchema.TextSpan) {
+    return new BaseTextSpan(annotation as unknown as BaseDataFields<TextSpanType>);
   }
   console.error("createTypedAnnotation: No type found for annotation", annotation);
   return null;

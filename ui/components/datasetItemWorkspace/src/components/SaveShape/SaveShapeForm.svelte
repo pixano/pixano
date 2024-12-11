@@ -53,7 +53,7 @@ License: CECILL-C
     keypoints: BaseSchema.Keypoints,
     mask: BaseSchema.Mask,
     tracklet: BaseSchema.Tracklet,
-    namedEntity: BaseSchema.NamedEntity,
+    textSpan: BaseSchema.TextSpan,
   };
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {

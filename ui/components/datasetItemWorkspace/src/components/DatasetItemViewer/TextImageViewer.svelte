@@ -9,7 +9,7 @@ License: CECILL-C
   import { Canvas2D } from "@pixano/canvas2d";
   import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { NamedEntityArea } from "@pixano/text-canvas";
+  import { TextSpanArea } from "@pixano/text-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
@@ -29,7 +29,7 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedKeypointsTemplate,
     selectedTool,
-    namedEntities,
+    textSpans,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
@@ -153,11 +153,11 @@ License: CECILL-C
       bind:currentAnn
       bind:newShape={$newShape}
     />
-    <NamedEntityArea
+    <TextSpanArea
       selectedItemId={selectedItem.item.id}
       colorScale={$colorScale[1]}
       bind:newShape={$newShape}
-      namedEntities={$namedEntities}
+      textSpans={$textSpans}
     />
   </div>
 {:else}

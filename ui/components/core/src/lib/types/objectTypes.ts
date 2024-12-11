@@ -27,7 +27,7 @@ export enum SaveShapeType {
   keypoints = "keypoints",
   mask = "mask",
   tracklet = "tracklet",
-  namedEntity = "namedEntity",
+  textSpan = "textSpan",
 }
 
 export type SaveKeyBoxShape = SaveShapeBase & {
@@ -60,8 +60,8 @@ export type SaveTrackletShape = SaveShapeBase & {
   };
 };
 
-export type NamedEntityShape = SaveShapeBase & {
-  type: SaveShapeType.namedEntity;
+export type TextSpanShape = SaveShapeBase & {
+  type: SaveShapeType.textSpan;
   attrs: {
     content: string;
     startIndex: number;
@@ -74,7 +74,7 @@ export type SaveShape =
   | SaveMaskShape
   | SaveKeyBoxShape
   | SaveTrackletShape
-  | NamedEntityShape;
+  | TextSpanShape;
 
 export type noShape = {
   status: "none";

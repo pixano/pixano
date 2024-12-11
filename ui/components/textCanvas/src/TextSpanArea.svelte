@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, NamedEntity, SaveShapeType, type Shape } from "@pixano/core";
+  import { cn, TextSpan, SaveShapeType, type Shape } from "@pixano/core";
   import { onMount } from "svelte";
   import { formatTextWithAnnotations } from "./lib/utils";
 
@@ -13,7 +13,7 @@ License: CECILL-C
   export let selectedItemId: string;
   export let newShape: Shape;
   export let colorScale: (value: string) => string;
-  export let namedEntities: NamedEntity[];
+  export let textSpans: TextSpan[];
 
   let answer = "This is some editable text. Select any text and tag it with custom metadata!";
 
@@ -22,7 +22,7 @@ License: CECILL-C
 
   $: formattedAnswer = formatTextWithAnnotations({
     text: answer,
-    namedEntities,
+    textSpans,
     colorScale,
   });
 
@@ -63,7 +63,7 @@ License: CECILL-C
       imageWidth: 0,
       imageHeight: 0,
       status: "saving",
-      type: SaveShapeType.namedEntity,
+      type: SaveShapeType.textSpan,
       attrs: {
         startIndex,
         endIndex,

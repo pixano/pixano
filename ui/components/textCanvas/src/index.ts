@@ -5,4 +5,4 @@ License: CECILL-C
 -------------------------------------*/
 
 // Exports
-export { default as NamedEntityArea } from "./NamedEntityArea.svelte";
+export { default as TextSpanArea } from "./TextSpanArea.svelte";

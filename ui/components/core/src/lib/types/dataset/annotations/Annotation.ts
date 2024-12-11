@@ -86,7 +86,7 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   get is_tracklet(): boolean {
     return this.is_type(BaseSchema.Tracklet);
   }
-  get is_named_entity(): boolean {
-    return this.is_type(BaseSchema.NamedEntity);
+  get is_text_span(): boolean {
+    return this.is_type(BaseSchema.TextSpan);
   }
 }

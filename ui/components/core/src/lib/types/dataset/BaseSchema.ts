@@ -9,7 +9,7 @@ export enum BaseSchema {
   Mask = "CompressedRLE",
   Keypoints = "KeyPoints",
   Tracklet = "Tracklet",
-  NamedEntity = "NamedEntity",
+  TextSpan = "TextSpan",
   Item = "Item",
   Track = "Track",
   Source = "Source",
