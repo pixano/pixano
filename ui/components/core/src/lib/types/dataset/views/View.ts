@@ -7,7 +7,8 @@ License: CECILL-C
 import { z } from "zod";
 import { createTypedView } from "../../../utils/views";
 import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
-import type { ImageType, SequenceFrameType } from "./Image";
+import type { ImageType } from "./Image";
+import type { SequenceFrameType } from "./SequenceFrame";
 
 export const viewSchema = z
   .object({

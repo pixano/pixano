@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./Image";
-export * from "./SequenceFrame";
-export * from "./View";
-export * from "./ViewEmbedding";
+export * from "./Conversation";
+export * from "./Message";
+export * from "./VqaDatasetItem";

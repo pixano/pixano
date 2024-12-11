@@ -9,7 +9,7 @@ import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { BaseSchema } from "../BaseSchema";
 
-const bboxSchema = z
+export const bboxSchema = z
   .object({
     confidence: z.number(),
     coords: z.array(z.number()).length(4),

@@ -11,7 +11,7 @@ import { Entity, entitySchema } from "./entities";
 import { Item, itemSchema } from "./items";
 import { View, viewSchema, type ImageType, type SequenceFrameType } from "./views";
 
-const datasetItemSchema = z.object({
+export const datasetItemSchema = z.object({
   item: baseDataFieldsSchema(itemSchema),
   entities: z.record(z.string(), z.array(baseDataFieldsSchema(entitySchema))),
   annotations: z.record(z.string(), z.array(baseDataFieldsSchema(annotationSchema))),

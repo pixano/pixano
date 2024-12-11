@@ -9,7 +9,7 @@ import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { BaseSchema } from "../BaseSchema";
 
-const maskSchema = z
+export const maskSchema = z
   .object({
     size: z.array(z.number()).length(2),
     counts: z.array(z.number()).or(z.string()),
