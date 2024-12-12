@@ -5,17 +5,18 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
-import type { BaseDataFields } from "../datasetTypes";
-import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { BaseSchema } from "../BaseSchema";
+import { type BaseDataFields } from "../datasetTypes";
+import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
 export const textSpanSchema = z
   .object({
-    startIndex: z.number(),
-    endIndex: z.number(),
-    content: z.string(),
+    spans_start: z.number().array(),
+    spans_end: z.number().array(),
+    mention: z.string(),
   })
   .passthrough();
+
 export type TextSpanType = z.infer<typeof textSpanSchema>;
 
 export class TextSpan extends Annotation {
@@ -35,6 +36,6 @@ export class TextSpan extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["content", "startIndex", "endIndex"]);
+    return super.nonFeaturesFields().concat(["mention", "spans_start", "spans_end"]);
   }
 }

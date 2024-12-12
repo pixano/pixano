@@ -13,7 +13,7 @@ export const formatTextWithAnnotations = ({
   const splittedText = text.split(" ");
 
   for (const textSpan of textSpans) {
-    const { startIndex, endIndex, item_ref, view_ref, entity_ref, source_ref } = textSpan.data;
+    const { spans_start, spans_end, item_ref, view_ref, entity_ref, source_ref } = textSpan.data;
 
     const metadata = {
       "item-ref-id": item_ref.id,
@@ -34,8 +34,11 @@ export const formatTextWithAnnotations = ({
       hidden: textSpan.ui.displayControl?.hidden,
     });
 
-    splittedText[startIndex] = openTag + splittedText[startIndex];
-    splittedText[endIndex] = splittedText[endIndex] + closeTag;
+    const span_start = spans_start[0];
+    const span_end = spans_end[0];
+
+    splittedText[span_start] = openTag + splittedText[span_start];
+    splittedText[span_end] = splittedText[span_end] + closeTag;
   }
 
   return splittedText

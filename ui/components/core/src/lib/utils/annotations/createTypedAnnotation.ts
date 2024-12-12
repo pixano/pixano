@@ -6,13 +6,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-
 import {
   Annotation,
   BBox,
   Keypoints,
   Mask,
-  BaseTextSpan,
+  TextSpan,
   Tracklet,
   type AnnotationType,
   type BaseDataFields,
@@ -40,7 +39,7 @@ export const createTypedAnnotation = (
     return new Tracklet(annotation as unknown as BaseDataFields<TrackletType>);
   }
   if (annotation.table_info.base_schema === BaseSchema.TextSpan) {
-    return new BaseTextSpan(annotation as unknown as BaseDataFields<TextSpanType>);
+    return new TextSpan(annotation as unknown as BaseDataFields<TextSpanType>);
   }
   console.error("createTypedAnnotation: No type found for annotation", annotation);
   return null;

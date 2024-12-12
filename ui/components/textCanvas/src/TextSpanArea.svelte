@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, TextSpan, SaveShapeType, type Shape } from "@pixano/core";
+  import { cn, SaveShapeType, TextSpan, type Shape } from "@pixano/core";
   import { onMount } from "svelte";
   import { formatTextWithAnnotations } from "./lib/utils";
 
@@ -17,8 +17,8 @@ License: CECILL-C
 
   let answer = "This is some editable text. Select any text and tag it with custom metadata!";
 
-  let startIndex: number | null = null;
-  let endIndex: number | null = null;
+  let span_start: number | null = null;
+  let span_end: number | null = null;
 
   $: formattedAnswer = formatTextWithAnnotations({
     text: answer,
@@ -38,23 +38,23 @@ License: CECILL-C
     editableDiv.addEventListener("mousedown", (event) => {
       const target = event.target as HTMLElement;
       if (target && target.dataset.index) {
-        startIndex = parseInt(target.dataset.index);
+        span_start = parseInt(target.dataset.index);
       }
     });
     editableDiv.addEventListener("mouseup", (event) => {
       const target = event.target as HTMLElement;
       if (target && target.dataset.index) {
-        endIndex = parseInt(target.dataset.index);
+        span_end = parseInt(target.dataset.index);
       }
     });
   });
 
   const handleClick = () => {
-    if (startIndex === null || endIndex === null) return;
+    if (span_start === null || span_end === null) return;
 
     const selectedText = answer
       .split(" ")
-      .slice(startIndex, endIndex + 1)
+      .slice(span_start, span_end + 1)
       .join(" ");
 
     newShape = {
@@ -65,14 +65,14 @@ License: CECILL-C
       status: "saving",
       type: SaveShapeType.textSpan,
       attrs: {
-        startIndex,
-        endIndex,
-        content: selectedText,
+        spans_start: [span_start],
+        spans_end: [span_end],
+        mention: selectedText,
       },
     };
 
-    startIndex = null;
-    endIndex = null;
+    span_start = null;
+    span_end = null;
   };
 </script>
 

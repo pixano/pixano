@@ -63,9 +63,9 @@ export type SaveTrackletShape = SaveShapeBase & {
 export type TextSpanShape = SaveShapeBase & {
   type: SaveShapeType.textSpan;
   attrs: {
-    content: string;
-    startIndex: number;
-    endIndex: number;
+    mention: string;
+    spans_start: number[];
+    spans_end: number[];
   };
 };
 
