@@ -16,5 +16,8 @@ export enum BaseSchema {
   Entity = "Entity",
   Image = "Image",
   SequenceFrame = "SequenceFrame",
-  Feature = "Feature"
+  Feature = "Feature",
+  Classification = "Classification",
+  Conversation = "Conversation",
+  Message = "Annotation",
 }

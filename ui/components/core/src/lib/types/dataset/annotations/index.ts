@@ -6,7 +6,9 @@ License: CECILL-C
 
 export * from "./Annotation";
 export * from "./Bbox";
+export * from "./Classification";
 export * from "./Keypoint";
 export * from "./Mask";
+export * from "./Message";
 export * from "./TextSpan";
 export * from "./Tracklet";

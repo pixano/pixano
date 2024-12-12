@@ -48,11 +48,19 @@ export class Entity extends BaseData<EntityType> {
     return newObj;
   }
 
-  get is_track(): boolean {
+  is_type(type: BaseSchema): boolean {
     if (!this) {
-      console.error("ERROR: do not use 'is_track' on uninitialized object");
+      console.error("ERROR: do not use 'is_*' on uninitialized object");
       return false;
     }
-    return this.table_info.base_schema === BaseSchema.Track;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    return this.table_info.base_schema === type;
+  }
+
+  get is_track(): boolean {
+    return this.is_type(BaseSchema.Track);
+  }
+  get is_conversation(): boolean {
+    return this.is_type(BaseSchema.Conversation);
   }
 }

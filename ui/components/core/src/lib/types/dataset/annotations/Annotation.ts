@@ -89,4 +89,10 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   get is_text_span(): boolean {
     return this.is_type(BaseSchema.TextSpan);
   }
+  get is_message(): boolean {
+    return this.is_type(BaseSchema.Message);
+  }
+  get is_classification(): boolean {
+    return this.is_type(BaseSchema.Classification);
+  }
 }

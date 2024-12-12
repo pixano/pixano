@@ -13,7 +13,7 @@ import {
   type ViewType,
 } from "../../types";
 
-export const createTypedView = (view: BaseDataFields<ViewType>) => {
+export const createTypedView = (view: BaseDataFields<ViewType> | BaseDataFields<ViewType>[]) => {
   if (Array.isArray(view)) {
     const sequenceFrames: SequenceFrame[] = [];
     for (const v of view) {

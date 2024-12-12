@@ -34,7 +34,9 @@ export abstract class View extends BaseData<ViewType> {
   ): Record<string, View | View[]> {
     const newObj: Record<string, View | View[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
-      const view = createTypedView(vs as unknown as BaseDataFields<ViewType>);
+      const view = createTypedView(
+        vs as unknown as BaseDataFields<ViewType> | BaseDataFields<ViewType>[],
+      );
       newObj[k] = view;
     }
     return newObj;
