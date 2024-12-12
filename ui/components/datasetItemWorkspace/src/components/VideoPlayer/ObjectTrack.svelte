@@ -6,30 +6,39 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, Annotation, Entity, BBox, Keypoints, Track, Tracklet } from "@pixano/core";
   import type {
-    TrackletItem,
+    KeypointsTemplate,
     SaveItem,
     SequenceFrame,
-    KeypointsTemplate,
+    TrackletItem,
     View,
   } from "@pixano/core";
   import {
+    Annotation,
+    BaseSchema,
+    BBox,
+    ContextMenu,
+    Entity,
+    Keypoints,
+    Track,
+    Tracklet,
+  } from "@pixano/core";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
+  import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
+  import { panTool } from "../../lib/settings/selectionTools";
+  import {
     annotations,
     entities,
-    selectedTool,
     saveData,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
-    lastFrameIndex,
     currentFrameIndex,
+    lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import { addOrUpdateSaveItem, getTopEntity, getPixanoSource } from "../../lib/api/objectsApi";
 
   type MView = Record<string, View | View[]>;
 
@@ -47,7 +56,7 @@ License: CECILL-C
 
   $: if (track) {
     tracklets = $annotations.filter(
-      (ann) => ann.is_tracklet && ann.data.entity_ref.id === track.id,
+      (ann) => ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id,
     ) as Tracklet[];
   }
 
@@ -78,10 +87,10 @@ License: CECILL-C
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
-          (!ann.is_tracklet &&
+          (!ann.is_type(BaseSchema.Tracklet) &&
             getTopEntity(ann, $entities).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
-          (ann.is_tracklet && ann.id === track.id);
+          (ann.is_type(BaseSchema.Tracklet) && ann.id === track.id);
         ann.ui.highlighted = to_highlight ? "self" : "none";
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
@@ -132,7 +141,7 @@ License: CECILL-C
     );
     if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
       const keypointsRef = $annotations.find(
-        (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_keypoints,
+        (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_type(BaseSchema.Keypoints),
       ) as Keypoints;
       if (keypointsRef) {
         const newItemOrig = structuredClone(keypointsRef);
@@ -177,7 +186,7 @@ License: CECILL-C
     if (newItemBBox || newItemKpt) {
       annotations.update((objects) => {
         objects.map((obj) => {
-          if (obj.is_tracklet && obj.id === tracklet.id) {
+          if (obj.is_type(BaseSchema.Tracklet) && obj.id === tracklet.id) {
             const obj_tracket = obj as Tracklet;
             // add item in childs
             if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];

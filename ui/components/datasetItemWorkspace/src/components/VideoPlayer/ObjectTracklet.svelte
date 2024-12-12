@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import {
+    BaseSchema,
     ContextMenu,
     SequenceFrame,
     Tracklet,
@@ -106,7 +107,7 @@ License: CECILL-C
 
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (ann.is_tracklet && ann.id === tracklet.id) {
+        if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
           if (isStart) {
             (ann as Tracklet).data.start_timestep = newFrameIndex;
           }

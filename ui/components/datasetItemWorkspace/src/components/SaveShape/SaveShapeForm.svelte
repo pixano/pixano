@@ -60,14 +60,14 @@ License: CECILL-C
     return (
       entity.data.parent_ref.id === "" && //not a sub entity
       (!entity.ui.childs
-        ?.filter((ann) => !ann.is_tracklet)
+        ?.filter((ann) => !ann.is_type(BaseSchema.Tracklet))
         .some(
           (ann) =>
             ann.data.view_ref.id === shape.viewRef.id &&
             mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
         ) ||
         !entity.ui.childs
-          ?.filter((ann) => ann.is_tracklet)
+          ?.filter((ann) => ann.is_type(BaseSchema.Tracklet))
           .some(
             (ann) =>
               (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&

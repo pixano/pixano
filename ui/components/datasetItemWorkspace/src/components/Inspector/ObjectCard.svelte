@@ -84,10 +84,10 @@ License: CECILL-C
       let child_anns: Annotation[] = [];
       if ($currentFrameIndex !== null) {
         child_anns = entity.ui.childs!.filter(
-          (ann) => !ann.is_tracklet && ann.ui.frame_index! === $currentFrameIndex,
+          (ann) => !ann.is_type(BaseSchema.Tracklet) && ann.ui.frame_index! === $currentFrameIndex,
         );
       } else {
-        child_anns = entity.ui.childs!.filter((ann) => !ann.is_tracklet);
+        child_anns = entity.ui.childs!.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
       }
       for (const ann of child_anns) {
         if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
@@ -120,23 +120,29 @@ License: CECILL-C
     boxIsVisible =
       entity.ui.childs?.some(
         (ann) =>
-          ann.ui.datasetItemType === "image" && ann.is_bbox && !ann.ui.displayControl?.hidden,
+          ann.ui.datasetItemType === "image" &&
+          ann.is_type(BaseSchema.BBox) &&
+          !ann.ui.displayControl?.hidden,
       ) || false;
     maskIsVisible =
       entity.ui.childs?.some(
         (ann) =>
-          ann.ui.datasetItemType === "image" && ann.is_mask && !ann.ui.displayControl?.hidden,
+          ann.ui.datasetItemType === "image" &&
+          ann.is_type(BaseSchema.Mask) &&
+          !ann.ui.displayControl?.hidden,
       ) || false;
     keypointsIsVisible =
       entity.ui.childs?.some(
         (ann) =>
-          ann.ui.datasetItemType === "image" && ann.is_keypoints && !ann.ui.displayControl?.hidden,
+          ann.ui.datasetItemType === "image" &&
+          ann.is_type(BaseSchema.Keypoints) &&
+          !ann.ui.displayControl?.hidden,
       ) || false;
     textSpansIsVisible =
       entity.ui.childs?.some(
         (ann) =>
           ann.ui.datasetItemType === "text" &&
-          ann.is_text_span &&
+          ann.is_type(BaseSchema.TextSpan) &&
           !ann.ui.displayControl?.hidden,
       ) || false;
   });
@@ -274,7 +280,9 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumb_box: Annotation | undefined = entity.ui.childs?.find((ann) => ann.is_bbox);
+  const thumb_box: Annotation | undefined = entity.ui.childs?.find((ann) =>
+    ann.is_type(BaseSchema.BBox),
+  );
   const thumbnail: ObjectThumbnail | null = thumb_box
     ? defineObjectThumbnail($itemMetas, $views, thumb_box)
     : null;
@@ -347,28 +355,32 @@ License: CECILL-C
               <p class="font-medium first-letter:uppercase">display</p>
               <div class="flex gap-4">
                 <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_bbox)}
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={boxIsVisible}
                   annotationName="Box"
                   base_schema={BaseSchema.BBox}
                 />
                 <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_mask)}
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={maskIsVisible}
                   annotationName="Mask"
                   base_schema={BaseSchema.Mask}
                 />
                 <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_keypoints)}
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                    ann.is_type(BaseSchema.Keypoints),
+                  )}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={keypointsIsVisible}
                   annotationName="Key points"
                   base_schema={BaseSchema.Keypoints}
                 />
                 <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_text_span)}
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                    ann.is_type(BaseSchema.TextSpan),
+                  )}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={textSpansIsVisible}
                   annotationName="Text span"
