@@ -19,7 +19,7 @@ from .annotation import Annotation
 @_register_schema_internal
 class Message(Annotation):
     """Textual exchange in a question/answer conversation
-    for image or text description and inforation extraction.
+    for image or text description and information extraction.
 
     Attributes:
         number: message number to associate different ANSWER messages to a QUESTION.
