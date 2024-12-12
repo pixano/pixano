@@ -22,7 +22,7 @@ class Message(Annotation):
     for image or text description and inforation extraction.
 
     Attributes:
-        number: message number to associate diffrent ANSWER messages to a QUESTION.
+        number: message number to associate different ANSWER messages to a QUESTION.
         user: identify who is the author of the message (eg a human, a model, the ground truth, etc).
         content: actual text of the message.
         timestamp: creation date of the message.
