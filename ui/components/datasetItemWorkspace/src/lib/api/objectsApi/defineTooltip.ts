@@ -4,13 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBox, Entity, Source } from "@pixano/core";
+import { BaseSchema, type BBox, type Entity, type Source } from "@pixano/core";
 import { get } from "svelte/store";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { DEFAULT_FEATURE } from "../../settings/defaultFeatures";
 
 export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
-  if (!(bbox && bbox.is_bbox)) return null;
+  if (!(bbox && bbox.is_type(BaseSchema.BBox))) return null;
 
   const source = get<Source[]>(sourcesStore).find((src) => src.id === bbox.data.source_ref.id);
 

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import {
   Annotation,
+  BaseSchema,
   BBox,
   Keypoints,
   Mask,
@@ -40,7 +41,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
         ann.ui.highlighted = "self";
         ann.ui.displayControl = { ...ann.ui.displayControl, editing: true };
       } else {
-        if (ann.is_tracklet) {
+        if (ann.is_type(BaseSchema.Tracklet)) {
           //NOTE TODO: it works, but the states with 1 tracklet highlighted in a track with several tracklet leads to bug with icon click
           const tracklet_childs_ids = (ann as Tracklet).ui.childs.map((c_ann) => c_ann.id);
           if (tracklet_childs_ids.includes(newShape.shapeId)) {
@@ -61,15 +62,15 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     // Check if the object is an image Annotation
     if (ann.ui.datasetItemType === "image") {
       let changed = false;
-      if (newShape.type === SaveShapeType.mask && ann.is_mask) {
+      if (newShape.type === SaveShapeType.mask && ann.is_type(BaseSchema.Mask)) {
         (ann as Mask).data.counts = newShape.counts;
         changed = true;
       }
-      if (newShape.type === SaveShapeType.bbox && ann.is_bbox) {
+      if (newShape.type === SaveShapeType.bbox && ann.is_type(BaseSchema.BBox)) {
         (ann as BBox).data.coords = newShape.coords;
         changed = true;
       }
-      if (newShape.type === SaveShapeType.keypoints && ann.is_keypoints) {
+      if (newShape.type === SaveShapeType.keypoints && ann.is_type(BaseSchema.Keypoints)) {
         const coords = [];
         const states = [];
         for (const vertex of newShape.vertices) {

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { z } from "zod";
 import { createTypedAnnotation } from "../../../utils/annotations";
+import { BaseSchema } from "../BaseSchema";
 import {
   BaseData,
   referenceSchema,
@@ -13,7 +14,6 @@ import {
   type DisplayControl,
 } from "../datasetTypes";
 import type { Entity } from "../entities";
-import { BaseSchema } from "../BaseSchema";
 
 export const annotationSchema = z
   .object({
@@ -72,27 +72,5 @@ export abstract class Annotation extends BaseData<AnnotationType> {
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     return this.table_info.base_schema === type;
-  }
-
-  get is_bbox(): boolean {
-    return this.is_type(BaseSchema.BBox);
-  }
-  get is_keypoints(): boolean {
-    return this.is_type(BaseSchema.Keypoints);
-  }
-  get is_mask(): boolean {
-    return this.is_type(BaseSchema.Mask);
-  }
-  get is_tracklet(): boolean {
-    return this.is_type(BaseSchema.Tracklet);
-  }
-  get is_text_span(): boolean {
-    return this.is_type(BaseSchema.TextSpan);
-  }
-  get is_message(): boolean {
-    return this.is_type(BaseSchema.Message);
-  }
-  get is_classification(): boolean {
-    return this.is_type(BaseSchema.Classification);
   }
 }

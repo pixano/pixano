@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Mask } from "@pixano/core";
+import { BaseSchema, type Mask } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
 import {
   HIGHLIGHTED_MASK_STROKE_FACTOR,
@@ -14,7 +14,7 @@ import {
 
 export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
   if (
-    obj.is_mask &&
+    obj.is_type(BaseSchema.Mask) &&
     obj.data.view_ref.name &&
     !obj.ui.review_state &&
     !(obj.data.source_ref.name === PRE_ANNOTATION && obj.ui.review_state === "accepted")
