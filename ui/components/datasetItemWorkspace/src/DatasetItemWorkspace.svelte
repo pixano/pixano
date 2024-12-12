@@ -25,7 +25,6 @@ License: CECILL-C
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
-  import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
   export let featureValues: FeaturesValues;
@@ -38,8 +37,6 @@ License: CECILL-C
   export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
-
-  let embeddings: Embeddings = {};
 
   const back2front = (ann: Annotation): Annotation => {
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
@@ -195,12 +192,7 @@ License: CECILL-C
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {headerHeight} />
+  <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
-  <LoadModelModal
-    {models}
-    currentDatasetId={selectedItem.ui.datasetId}
-    selectedItemId={selectedItem.item.id}
-    bind:embeddings
-  />
+  <LoadModelModal {models} />
 </div>
