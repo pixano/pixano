@@ -19,17 +19,21 @@ from .annotation import Annotation
 @_register_schema_internal
 class TextSpan(Annotation):
     """Designation of a Text-Span in a text, especially in the
-       use-case on Named-Entity Recognition.
+       use-case of Named-Entity Recognition on a textual annotation
+       having a str 'content' attribute .
 
     Attributes:
         mention: text-span assembled mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
+        annotation_ref: Annotation reference toward an textual Annotation having a
+          str 'content' attribute
     """
 
     mention: str
     spans_start: list[int]
     spans_end: list[int]
+    annotation_ref: AnnotationRef
 
     @model_validator(mode="after")
     def _validate_fields(self) -> Self:
@@ -53,12 +57,13 @@ class TextSpan(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
+            item_ref=ItemRef.none(),
+            view_ref=ViewRef.none(),
+            entity_ref=EntityRef.none(),
             mention="",
             spans_start=[],
             spans_end=[],
+            annotation_ref=AnnotationRef.none(),
         )
 
     @property
@@ -79,13 +84,13 @@ class Relation(Annotation):
 
     Attributes:
         predicate: type of relation, as in semantic-web (OWL, RDF, etc)
-        subject_id: annotation_id of the subject named-entity
-        object_id: annotation_id of the object named-entity
+        subject_ref: annotation_ref to the subject Annotation (eg TextSpan)
+        object_ref: annotation_ref to the object Annotation (eg TextSpan)
     """
 
     predicate: str
-    subject_id: AnnotationRef
-    object_id: AnnotationRef
+    subject_ref: AnnotationRef
+    object_ref: AnnotationRef
 
     @classmethod
     def none(cls) -> Self:
@@ -98,11 +103,11 @@ class Relation(Annotation):
         return cls(
             id="",
             predicate="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
-            subject_id=AnnotationRef.none(),
-            object_id=AnnotationRef.none(),
+            item_ref=ItemRef.none(),
+            view_ref=ViewRef.none(),
+            entity_ref=EntityRef.none(),
+            subject_ref=AnnotationRef.none(),
+            object_ref=AnnotationRef.none(),
         )
 
 
@@ -125,6 +130,7 @@ def create_text_span(
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
+    annotation_ref: AnnotationRef = AnnotationRef.none(),
 ) -> TextSpan:
     """Create a TextSpan instance.
 
@@ -137,6 +143,8 @@ def create_text_span(
         view_ref: View reference.
         entity_ref: Entity reference.
         source_ref: Source reference.
+        annotation_ref: Annotation reference toward an textual Annotation having a
+          str 'content' attribute
 
     Returns:
         The created `TextSpan` instance.
@@ -145,6 +153,7 @@ def create_text_span(
         mention=mention,
         spans_start=spans_start,
         spans_end=spans_end,
+        annotation_ref=annotation_ref,
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
@@ -155,8 +164,8 @@ def create_text_span(
 
 def create_relation(
     predicate: str,
-    subject_id: AnnotationRef = AnnotationRef.none(),
-    object_id: AnnotationRef = AnnotationRef.none(),
+    subject_ref: AnnotationRef = AnnotationRef.none(),
+    object_ref: AnnotationRef = AnnotationRef.none(),
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
@@ -167,8 +176,8 @@ def create_relation(
 
     Args:
         predicate: type of relation
-        subject_id: annotation_id of the subject named-entity
-        object_id: annotation_id of the object named-entity
+        subject_ref: annotation_ref to the subject TextSpan
+        object_ref: annotation_ref to the object TextSpan
         id: Relation ID.
         item_ref: Item reference.
         view_ref: View reference.
@@ -180,8 +189,8 @@ def create_relation(
     """
     return Relation(
         predicate=predicate,
-        subject_id=subject_id,
-        object_id=object_id,
+        subject_ref=subject_ref,
+        object_ref=object_ref,
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
