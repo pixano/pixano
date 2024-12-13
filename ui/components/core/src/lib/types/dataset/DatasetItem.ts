@@ -9,7 +9,7 @@ import { Annotation, annotationSchema } from "./annotations";
 import { baseDataFieldsSchema, type BaseDataFields } from "./datasetTypes";
 import { Entity, entitySchema } from "./entities";
 import { Item, itemSchema } from "./items";
-import { View, viewSchema, type ImageType, type SequenceFrameType } from "./views";
+import { View, viewSchema } from "./views";
 
 export const datasetItemSchema = z.object({
   item: baseDataFieldsSchema(itemSchema),
@@ -41,10 +41,7 @@ export class DatasetItem implements DatasetItemType {
     this.entities = Entity.deepCreateInstanceArray(obj.entities);
     this.annotations = Annotation.deepCreateInstanceArray(obj.annotations);
     this.views = View.deepCreateInstanceArrayOrPlain(
-      obj.views as unknown as Record<
-        string,
-        BaseDataFields<ImageType> | BaseDataFields<SequenceFrameType>[]
-      >,
+      obj.views as unknown as Record<string, BaseDataFields<View> | BaseDataFields<View>[]>,
     );
   }
 }

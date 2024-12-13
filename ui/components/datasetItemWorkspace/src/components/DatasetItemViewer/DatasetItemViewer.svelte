@@ -6,15 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import * as ort from "onnxruntime-web";
   import { Loader2Icon } from "lucide-svelte";
+  import * as ort from "onnxruntime-web";
 
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { DatasetItem } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
-  import ImageViewer from "./ImageViewer.svelte";
-  import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
+  import ImageViewer from "./ImageViewer.svelte";
+  import TextImageViewer from "./TextImageViewer.svelte";
+  import VideoViewer from "./VideoViewer.svelte";
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -30,6 +31,8 @@ License: CECILL-C
     </div>
   {:else if selectedItem.ui.type === "video"}
     <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
+  {:else if selectedItem.ui.type === "vqa"}
+    <TextImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
     <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.ui.type === "3d"}

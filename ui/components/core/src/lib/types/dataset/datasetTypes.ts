@@ -6,13 +6,13 @@ License: CECILL-C
 
 import { z } from "zod";
 import type { Annotation } from "./annotations";
+import { BaseSchema } from "./BaseSchema";
 import type { DatasetInfo } from "./DatasetInfo";
 import type { DatasetItem } from "./DatasetItem";
 import type { Entity } from "./entities";
 import type { Item } from "./items";
 import type { Source } from "./sources";
 import type { View } from "./views";
-import { BaseSchema } from "./BaseSchema";
 
 ////////// TYPES /////////////
 export const referenceSchema = z

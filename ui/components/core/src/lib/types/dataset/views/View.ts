@@ -7,8 +7,6 @@ License: CECILL-C
 import { z } from "zod";
 import { createTypedView } from "../../../utils/views";
 import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
-import type { ImageType } from "./Image";
-import type { SequenceFrameType } from "./SequenceFrame";
 
 export const viewSchema = z
   .object({
@@ -30,7 +28,7 @@ export abstract class View extends BaseData<ViewType> {
   }
 
   static deepCreateInstanceArrayOrPlain(
-    objs: Record<string, BaseDataFields<ImageType> | BaseDataFields<SequenceFrameType>[]>,
+    objs: Record<string, BaseDataFields<View> | BaseDataFields<View>[]>,
   ): Record<string, View | View[]> {
     const newObj: Record<string, View | View[]> = {};
     for (const [k, vs] of Object.entries(objs)) {

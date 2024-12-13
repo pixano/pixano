@@ -14,9 +14,11 @@ import {
   Annotation,
   BaseSchema,
   BBox,
+  Conversation,
   Entity,
   Keypoints,
   Mask,
+  Message,
   TextSpan,
   Tracklet,
   utils,
@@ -115,4 +117,14 @@ export const tracklets = derived(annotations, ($annotations) => {
 
 export const textSpans = derived(annotations, ($annotations) => {
   return $annotations.filter((annotation) => annotation.is_type(BaseSchema.TextSpan)) as TextSpan[];
+});
+
+export const messages = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_type(BaseSchema.Message)) as Message[];
+});
+
+export const conversations = derived(entities, ($entities) => {
+  return $entities.filter((entities) =>
+    entities.is_type(BaseSchema.Conversation),
+  ) as Conversation[];
 });

@@ -19,5 +19,5 @@ export enum BaseSchema {
   Feature = "Feature",
   Classification = "Classification",
   Conversation = "Conversation",
-  Message = "Annotation",
+  Message = "Message",
 }

@@ -10,7 +10,7 @@ import type { BaseDataFields } from "../datasetTypes";
 import { type ImageType, Image } from "./Image";
 import { type ViewType } from "./View";
 
-const sequenceFrameSchema = z
+export const sequenceFrameSchema = z
   .object({
     timestamp: z.number(),
     frame_index: z.number(),

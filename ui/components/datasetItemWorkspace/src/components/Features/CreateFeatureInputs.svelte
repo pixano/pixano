@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { BaseSchema, type ItemFeature } from "@pixano/core";
+  import { BaseSchema, Message, TextSpan, type ItemFeature } from "@pixano/core";
   import {
     BBox,
     Checkbox,
@@ -70,6 +70,10 @@ License: CECILL-C
             nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
           if (baseSchema === BaseSchema.Tracklet)
             nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
+          if (baseSchema === BaseSchema.TextSpan)
+            nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
+          if (baseSchema === BaseSchema.Message)
+            nonFeatsFields = nonFeatsFields.concat(Message.nonFeaturesFields());
         }
         //TODO: custom fields from other types
         for (const feat in sch.fields) {

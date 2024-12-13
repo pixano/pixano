@@ -43,7 +43,7 @@ License: CECILL-C
           </div>
           <div>
             <span class="text-5xl font-bold">
-              {selectedDataset.num_elements}
+              {selectedDataset.num_items}
             </span>
             <span class="ml-2 text-xl"> items </span>
           </div>

@@ -19,6 +19,7 @@ License: CECILL-C
     Image,
     PrimaryButton,
     SequenceFrame,
+    sequenceFrameSchema,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import {
@@ -60,17 +61,25 @@ License: CECILL-C
         api
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {
-            let item_type: "image" | "video" | "3d" = "image";
+            let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
             Object.values(item.views).map((view) => {
               if (Array.isArray(view)) {
-                const video = view as SequenceFrame[];
-                item_type = "video";
-                video.forEach((sf) => {
-                  sf.data.type = "video";
-                  sf.data.url = media_dir + sf.data.url;
-                });
-                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+                const isVideo = sequenceFrameSchema
+                  .array()
+                  .safeParse(view.map((v) => v.data)).success;
+
+                if (isVideo) {
+                  const video = view as SequenceFrame[];
+                  item_type = "video";
+                  video.forEach((sf) => {
+                    sf.data.type = "video";
+                    sf.data.url = media_dir + sf.data.url;
+                  });
+                  video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+                } else {
+                  item_type = "vqa";
+                }
               } else {
                 const image = view as Image;
                 image.data.type = "image";
@@ -178,7 +187,7 @@ License: CECILL-C
       },
       {} as Record<string, Record<string, string[]>>,
     );
-    
+
     for (const group in delete_ids_by_group_and_table) {
       for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
         let no_table = false;

@@ -7,6 +7,7 @@ License: CECILL-C
 import {
   Image,
   SequenceFrame,
+  sequenceFrameSchema,
   type BaseDataFields,
   type ImageType,
   type SequenceFrameType,
@@ -15,11 +16,21 @@ import {
 
 export const createTypedView = (view: BaseDataFields<ViewType> | BaseDataFields<ViewType>[]) => {
   if (Array.isArray(view)) {
-    const sequenceFrames: SequenceFrame[] = [];
-    for (const v of view) {
-      sequenceFrames.push(new SequenceFrame(v as unknown as BaseDataFields<SequenceFrameType>));
+    const isSequenceFrame = sequenceFrameSchema.array().safeParse(view.map((v) => v.data)).success;
+
+    if (isSequenceFrame) {
+      const sequenceFrames: SequenceFrame[] = [];
+      for (const v of view) {
+        sequenceFrames.push(new SequenceFrame(v as unknown as BaseDataFields<SequenceFrameType>));
+      }
+      return sequenceFrames;
+    } else {
+      const images: Image[] = [];
+      for (const v of view) {
+        images.push(new Image(v as unknown as BaseDataFields<ImageType>));
+      }
+      return images;
     }
-    return sequenceFrames;
   }
 
   return new Image(view as unknown as BaseDataFields<ImageType>);
