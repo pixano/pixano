@@ -63,10 +63,7 @@ License: CECILL-C
       ? (entity.data.name as string) + " "
       : entity.data.category
         ? (entity.data.category as string) + " "
-        : "") +
-    "(" +
-    entity.id +
-    ")";
+        : "") + `(${entity.id})`;
 
   $: color = $colorScale[1](entity.id);
 
@@ -288,125 +285,131 @@ License: CECILL-C
     : null;
 </script>
 
-<article
-  on:mouseenter={() => (showIcons = true)}
-  on:mouseleave={() => (showIcons = open)}
-  id={createObjectCardId(entity)}
->
-  <div
-    class={cn(
-      "flex items-center mt-1 rounded justify-between text-slate-800 bg-white border-2 overflow-hidden",
-    )}
-    style="border-color:{isHighlighted ? color : 'transparent'}"
+{#if entity.table_info.name !== "conversations"}
+  <article
+    on:mouseenter={() => (showIcons = true)}
+    on:mouseleave={() => (showIcons = open)}
+    id={createObjectCardId(entity)}
   >
-    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
-      <IconButton
-        on:click={() => handleSetAnnotationDisplayControl("hidden", isVisible)}
-        tooltipContent={isVisible ? "Hide object" : "Show object"}
-      >
-        {#if isVisible}
-          <Eye class="h-4" />
-        {:else}
-          <EyeOff class="h-4" />
-        {/if}
-      </IconButton>
-      <button
-        class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
-        style="background:{color}"
-        title="Highlight object"
-        on:click={onColoredDotClick}
-      />
-      <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap"
-        >{displayName}</span
-      >
-    </div>
     <div
       class={cn(
-        "flex-shrink-0 flex items-center justify-end",
-        showIcons || isEditing ? "basis-[120px]" : "basis-[40px]",
+        "flex items-center mt-1 rounded justify-between text-slate-800 bg-white border-2 overflow-hidden",
       )}
-      style="min-width: 40px;"
+      style="border-color:{isHighlighted ? color : 'transparent'}"
     >
-      {#if showIcons || isEditing}
-        <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
-          ><Pencil class="h-4" /></IconButton
+      <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
+        <IconButton
+          on:click={() => handleSetAnnotationDisplayControl("hidden", isVisible)}
+          tooltipContent={isVisible ? "Hide object" : "Show object"}
         >
-        <IconButton tooltipContent="Delete object" on:click={deleteObject}
-          ><Trash2 class="h-4" /></IconButton
+          {#if isVisible}
+            <Eye class="h-4" />
+          {:else}
+            <EyeOff class="h-4" />
+          {/if}
+        </IconButton>
+        <button
+          class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
+          style="background:{color}"
+          title="Highlight object"
+          on:click={onColoredDotClick}
+        />
+        <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap"
+          >{displayName}</span
         >
-      {/if}
-      <IconButton
-        on:click={() => (open = !open)}
-        tooltipContent={open ? "Hide features" : "Show features"}
-      >
-        <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
-      </IconButton>
-    </div>
-  </div>
-  {#if open}
-    <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
+      </div>
       <div
-        class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
-        style="border-color:{color}"
+        class={cn(
+          "flex-shrink-0 flex items-center justify-end",
+          showIcons || isEditing ? "basis-[120px]" : "basis-[40px]",
+        )}
+        style="min-width: 40px;"
       >
-        <div class="flex flex-col gap-2">
-          {#if entity.ui.childs?.some((ann) => ["image", "text"].includes(ann.ui.datasetItemType))}
-            <div>
-              <p class="font-medium first-letter:uppercase">display</p>
-              <div class="flex gap-4">
-                <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
-                  {handleSetAnnotationDisplayControl}
-                  annotationIsVisible={boxIsVisible}
-                  annotationName="Box"
-                  base_schema={BaseSchema.BBox}
-                />
-                <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
-                  {handleSetAnnotationDisplayControl}
-                  annotationIsVisible={maskIsVisible}
-                  annotationName="Mask"
-                  base_schema={BaseSchema.Mask}
-                />
-                <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                    ann.is_type(BaseSchema.Keypoints),
-                  )}
-                  {handleSetAnnotationDisplayControl}
-                  annotationIsVisible={keypointsIsVisible}
-                  annotationName="Key points"
-                  base_schema={BaseSchema.Keypoints}
-                />
-                <DisplayCheckbox
-                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                    ann.is_type(BaseSchema.TextSpan),
-                  )}
-                  {handleSetAnnotationDisplayControl}
-                  annotationIsVisible={textSpansIsVisible}
-                  annotationName="Text span"
-                  base_schema={BaseSchema.TextSpan}
-                />
-              </div>
-            </div>
-          {/if}
-          <UpdateFeatureInputs
-            featureClass="objects"
-            features={$features}
-            {isEditing}
-            {saveInputChange}
-          />
-          {#if thumbnail}
-            <Thumbnail
-              imageDimension={thumbnail.baseImageDimensions}
-              coords={thumbnail.coords}
-              imageUrl={`/${thumbnail.uri}`}
-              minWidth={150}
-              maxWidth={300}
-            />
-          {/if}
-          <TextSpansContent annotations={entity.ui.childs} />
-        </div>
+        {#if showIcons || isEditing}
+          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
+            ><Pencil class="h-4" /></IconButton
+          >
+          <IconButton tooltipContent="Delete object" on:click={deleteObject}
+            ><Trash2 class="h-4" /></IconButton
+          >
+        {/if}
+        <IconButton
+          on:click={() => (open = !open)}
+          tooltipContent={open ? "Hide features" : "Show features"}
+        >
+          <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
+        </IconButton>
       </div>
     </div>
-  {/if}
-</article>
+    {#if open}
+      <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
+        <div
+          class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
+          style="border-color:{color}"
+        >
+          <div class="flex flex-col gap-2">
+            {#if entity.ui.childs?.some((ann) => ["image", "vqa"].includes(ann.ui.datasetItemType))}
+              <div>
+                <p class="font-medium first-letter:uppercase">display</p>
+                <div class="flex gap-4">
+                  <DisplayCheckbox
+                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                      ann.is_type(BaseSchema.BBox),
+                    )}
+                    {handleSetAnnotationDisplayControl}
+                    annotationIsVisible={boxIsVisible}
+                    annotationName="Box"
+                    base_schema={BaseSchema.BBox}
+                  />
+                  <DisplayCheckbox
+                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                      ann.is_type(BaseSchema.Mask),
+                    )}
+                    {handleSetAnnotationDisplayControl}
+                    annotationIsVisible={maskIsVisible}
+                    annotationName="Mask"
+                    base_schema={BaseSchema.Mask}
+                  />
+                  <DisplayCheckbox
+                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                      ann.is_type(BaseSchema.Keypoints),
+                    )}
+                    {handleSetAnnotationDisplayControl}
+                    annotationIsVisible={keypointsIsVisible}
+                    annotationName="Key points"
+                    base_schema={BaseSchema.Keypoints}
+                  />
+                  <DisplayCheckbox
+                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                      ann.is_type(BaseSchema.TextSpan),
+                    )}
+                    {handleSetAnnotationDisplayControl}
+                    annotationIsVisible={textSpansIsVisible}
+                    annotationName="Text span"
+                    base_schema={BaseSchema.TextSpan}
+                  />
+                </div>
+              </div>
+            {/if}
+            <UpdateFeatureInputs
+              featureClass="objects"
+              features={$features}
+              {isEditing}
+              {saveInputChange}
+            />
+            {#if thumbnail}
+              <Thumbnail
+                imageDimension={thumbnail.baseImageDimensions}
+                coords={thumbnail.coords}
+                imageUrl={`/${thumbnail.uri}`}
+                minWidth={150}
+                maxWidth={300}
+              />
+            {/if}
+            <TextSpansContent annotations={entity.ui.childs} />
+          </div>
+        </div>
+      </div>
+    {/if}
+  </article>
+{/if}
