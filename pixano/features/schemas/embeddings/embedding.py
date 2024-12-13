@@ -6,13 +6,15 @@
 
 import json
 from abc import ABC
+from math import prod
 from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry, register
 from lancedb.pydantic import Vector
-from pydantic import create_model
+from pydantic import create_model, model_validator
+from typing_extensions import Self
 
 from pixano.features.schemas.views.image import Image, is_image
 from pixano.features.schemas.views.sequence_frame import is_sequence_frame
@@ -47,6 +49,15 @@ class Embedding(BaseSchema, ABC):
 
     item_ref: ItemRef = ItemRef.none()
     vector: Any  # TODO: change to Vector exposed parametrized type when LanceDB is updated
+    shape: list[int] = []
+
+    @model_validator(mode="after")
+    def _validate_vector(self) -> Self:
+        if self.shape == []:
+            self.shape = [len(self.vector)]
+        if prod(self.shape) != len(self.vector):
+            raise ValueError("The vector shape does not match the specified shape.")
+        return self
 
     @property
     def item(self) -> "Item":

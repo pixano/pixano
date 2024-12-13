@@ -39,6 +39,7 @@ class TestEmbedding:
         assert embedding.id == ""
         assert embedding.item_ref == ItemRef.none()
         assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert embedding.shape == [8]
 
     def test_to_arrow_schema(self, embedding_8):
         with patch("lancedb.pydantic.LanceModel.to_arrow_schema", mock_super_to_arrow_schema):
@@ -114,6 +115,7 @@ class TestViewEmbedding:
         assert view_embedding.item_ref == ItemRef.none()
         assert view_embedding.view_ref == ViewRef.none()
         assert view_embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert view_embedding.shape == [2, 4]
 
 
 def test_is_embedding():
