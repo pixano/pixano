@@ -123,6 +123,7 @@ export async function getSources(datasetId: string): Promise<Source[]> {
       }
     } catch (e) {
       console.log("api.getSources -", e); // Handle other errors
+      break;
     }
   }
   return sources;
@@ -196,6 +197,7 @@ export async function getViewEmbeddings(
     const response = await fetch(`/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}`);
     if (response.ok) {
       viewEmbeddings = (await response.json()) as Array<ViewEmbedding>;
+      console.log("api.getViewEmbeddings - Embeddings loaded.");
     } else {
       viewEmbeddings = [];
       console.log(

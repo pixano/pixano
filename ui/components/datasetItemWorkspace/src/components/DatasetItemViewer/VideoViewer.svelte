@@ -52,8 +52,9 @@ License: CECILL-C
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectedItem: DatasetItem;
-  export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+
+  let embeddings: Record<string, ort.Tensor> = {};
 
   // buffer
   const ratioOfBackwardBuffer = 0.1;
