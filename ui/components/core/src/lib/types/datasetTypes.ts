@@ -107,7 +107,8 @@ const viewEmbeddingSchema = z
   .object({
     item_ref: referenceSchema,
     view_ref: referenceSchema,
-    vector: ndArrayFloatSchema,
+    vector: z.array(z.number()),
+    shape: z.array(z.number()),
   })
   .passthrough();
 type viewEmbeddingType = z.infer<typeof viewEmbeddingSchema>;
