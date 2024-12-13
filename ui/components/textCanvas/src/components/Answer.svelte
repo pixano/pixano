@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import type { Message, TextSpan } from "@pixano/core";
   import { onMount } from "svelte";
-  import { formatTextWithAnnotations } from "../lib/utils";
+  import { customJoiner, customSplitter, formatTextWithAnnotations } from "../lib/utils";
 
   export let message: Message;
   export let textSpans: TextSpan[];
@@ -37,17 +37,16 @@ License: CECILL-C
         console.log("span start", span_start);
       }
     });
-    
+
     editableDiv.addEventListener("mouseup", (event) => {
       const target = event.target as HTMLElement;
       if (target && target.dataset.index) {
         span_end = parseInt(target.dataset.index);
         console.log("span end", span_end);
 
-        selectedText = message.data.content
-          .split(" ")
-          .slice(span_start, span_end + 1)
-          .join(" ");
+        const splittedText = customSplitter(message.data.content);
+        const splittedSelectedText = splittedText.slice(span_start, span_end + 1);
+        selectedText = customJoiner(splittedSelectedText);
 
         messageId = message.id;
       }
@@ -59,7 +58,7 @@ License: CECILL-C
   <div
     id={message.id}
     contenteditable="true"
-    class="outline-none flex flex-row flex-wrap space-x-1 items-center"
+    class="outline-none flex flex-row flex-wrap items-center"
   >
     {@html formattedAnswer}
   </div>

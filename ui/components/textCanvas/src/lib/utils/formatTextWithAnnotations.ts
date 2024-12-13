@@ -1,5 +1,12 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { TextSpan } from "@pixano/core";
 import { createHtmlTag } from "./createHtmlTag";
+import { customJoiner, customSplitter } from "./customSplitter";
 
 export const formatTextWithAnnotations = ({
   text,
@@ -10,7 +17,7 @@ export const formatTextWithAnnotations = ({
   textSpans: TextSpan[];
   colorScale: (value: string) => string;
 }) => {
-  const splittedText = text.split(" ");
+  const splittedText = customSplitter(text);
 
   for (const textSpan of textSpans) {
     const { spans_start, spans_end, item_ref, view_ref, entity_ref, source_ref } = textSpan.data;
@@ -37,11 +44,20 @@ export const formatTextWithAnnotations = ({
     const span_start = spans_start[0];
     const span_end = spans_end[0];
 
-    splittedText[span_start] = openTag + splittedText[span_start];
-    splittedText[span_end] = splittedText[span_end] + closeTag;
+    if (splittedText[span_start]) {
+      splittedText[span_start] = openTag + splittedText[span_start];
+    }
+    if (splittedText[span_end]) {
+      splittedText[span_end] = splittedText[span_end] + closeTag;
+    }
   }
 
-  return splittedText
-    .map((chunk, index) => `<span data-index="${index.toString()}">${chunk}</span>`)
-    .join(" ");
+  const htmlFormattedText = splittedText.map(
+    (chunk, index) =>
+      `<span data-index="${index.toString()}" ${chunk === " " ? `class="mr-1"` : ""}">${chunk}</span>`,
+  );
+
+  console.log("XXX htmlFormattedText", htmlFormattedText);
+
+  return customJoiner(htmlFormattedText);
 };

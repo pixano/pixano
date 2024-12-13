@@ -82,7 +82,7 @@ License: CECILL-C
     {:else}
       <Answer
         {message}
-        textSpans={spansByMessage[message.id]}
+        textSpans={spansByMessage[message.id] ?? []}
         {colorScale}
         bind:span_start
         bind:span_end
