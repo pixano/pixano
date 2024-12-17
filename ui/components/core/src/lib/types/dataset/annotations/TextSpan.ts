@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { z } from "zod";
 import { BaseSchema } from "../BaseSchema";
-import { type BaseDataFields } from "../datasetTypes";
+import { referenceSchema, type BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
 export const textSpanSchema = z
@@ -14,6 +14,7 @@ export const textSpanSchema = z
     spans_start: z.number().array(),
     spans_end: z.number().array(),
     mention: z.string(),
+    annotation_ref: referenceSchema,
   })
   .passthrough();
 
