@@ -4,11 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export const createHtmlTag = ({
+export const createHtmlTags = ({
   metadata,
   bgColor,
   hidden,
-  tagName = "p",
+  tagName = "span",
 }: {
   metadata: Record<string, string>;
   bgColor: string;
@@ -22,7 +22,7 @@ export const createHtmlTag = ({
   }
 
   if (!hidden) {
-    openTag += ` class="text-white rounded-md px-1 py-px" style="background:${hidden ? "transparent" : bgColor};"`;
+    openTag += ` class="text-white rounded-md px-1 py-px mx-px" style="background:${hidden ? "transparent" : bgColor};"`;
   }
 
   openTag += `>`;
