@@ -138,7 +138,7 @@ export const keypointsLinearInterpolation = (
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;
     // top_entities (if exist) lost class with structuredClone: replace it
-    interpolatedKpt.ui.top_entities = startKpt.ui.top_entities;
+    interpolatedKpt.ui!.top_entities = startKpt.ui!.top_entities;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }
