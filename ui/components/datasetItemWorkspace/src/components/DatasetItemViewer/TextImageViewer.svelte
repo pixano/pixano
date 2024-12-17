@@ -25,6 +25,7 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     itemMetas,
+    messages,
     newShape,
     preAnnotationIsActive,
     selectedKeypointsTemplate,
@@ -80,10 +81,11 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
+  const loadImages = async (views: Record<string, Image | Image[]>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
-      const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
+      let imageObject = Array.isArray(value) ? value[0] : value;
+      const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
@@ -94,7 +96,7 @@ License: CECILL-C
 
       const image: HTMLImageElement = document.createElement("img");
       image.src = img.toDataURL();
-      images[key] = [{ id: value.id, element: image }];
+      images[key] = [{ id: imageObject.id, element: image }];
     });
 
     await Promise.all(promises);
@@ -158,6 +160,8 @@ License: CECILL-C
       colorScale={$colorScale[1]}
       bind:newShape={$newShape}
       textSpans={$textSpans}
+      messages={$messages}
+      {imagesPerView}
     />
   </div>
 {:else}

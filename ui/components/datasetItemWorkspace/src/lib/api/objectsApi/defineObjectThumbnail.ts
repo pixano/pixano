@@ -23,11 +23,16 @@ export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: An
   if (!box || !box.is_type(BaseSchema.BBox) || !view_name) return null;
   //prevent bug: if thumbnail is asked before data are fully loaded, we can have a error on a bad key
   if (!(view_name in views)) return null;
+
   const view =
     metas.type === "video"
       ? (views[view_name] as SequenceFrame[])[box.ui.frame_index!]
-      : (views[view_name] as Image);
+      : Array.isArray(views[view_name])
+        ? (views[view_name] as Image[])[0]
+        : (views[view_name] as Image);
+
   const coords = box.data.coords;
+
   return {
     baseImageDimensions: {
       width: view?.data.width,

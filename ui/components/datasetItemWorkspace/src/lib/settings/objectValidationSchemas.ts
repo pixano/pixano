@@ -20,7 +20,7 @@ export const listInputSchema = z.object({
 export const otherInputSchema = z.object({
   name: z.string(),
   label: z.string(),
-  type: z.enum(["int", "float", "bool", "str"]),
+  type: z.enum(["int", "float", "bool", "str", "SourceRef"]),
   required: z.boolean().optional(),
   sch: tableInfoSchema,
 });

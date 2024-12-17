@@ -6,6 +6,7 @@ License: CECILL-C
 
 import {
   BaseSchema,
+  Conversation,
   type DatasetSchema,
   type DS_NamedSchema,
   Entity,
@@ -48,5 +49,11 @@ export const defineCreatedEntity = (
       data: { ...entity.data, name: "name" in features ? (features["name"].value as string) : "" },
     };
     return new Track(track);
+  } else if (entitySchema.base_schema === BaseSchema.Conversation) {
+    const conversation = {
+      ...entity,
+      data: { ...entity.data, kind: "name", with_model: "model" },
+    };
+    return new Conversation(conversation);
   } else return new Entity(entity);
 };
