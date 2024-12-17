@@ -4,5 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./types";
-export * from "./utils";
+export type HTMLTextSpanDataAttributes = {
+  id: string;
+};

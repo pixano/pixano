@@ -6,16 +6,17 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-    cn,
-    Message,
-    MessageTypeEnum,
-    SaveShapeType,
-    TextSpan,
-    type ImagesPerView,
-    type Shape,
+      Message,
+      MessageTypeEnum,
+      SaveShapeType,
+      TextSpan,
+      type ImagesPerView,
+      type Shape,
+      type TextSpanType,
   } from "@pixano/core";
   import { Answer } from "./components";
   import Question from "./components/Question.svelte";
+  import { groupTextSpansByMessageId } from "./lib";
 
   // Exports
   export let selectedItemId: string;
@@ -25,30 +26,14 @@ License: CECILL-C
   export let messages: Message[];
   export let imagesPerView: ImagesPerView;
 
-  // console.log("XXX textSpanArea", textSpans);
-  // console.log("XXX messages", messages);
-  // console.log("XXX imagesPerView", imagesPerView);
-
   const viewRef = { id: imagesPerView.images[0].id, name: "images" };
 
-  let span_start: number | null = null;
-  let span_end: number | null = null;
-  let selectedText: string;
-  let messageId: string;
+  let textSpanAttributes: TextSpanType | null = null;
 
-  $: spansByMessage = textSpans.reduce(
-    (acc, span) => {
-      const messageId = span.data.annotation_ref.id;
-      if (!acc[messageId]) acc[messageId] = [];
-      acc[messageId].push(span);
-      return acc;
-    },
-    {} as Record<string, TextSpan[]>,
-  );
+  $: spansByMessage = groupTextSpansByMessageId(textSpans);
 
   const handleClick = () => {
-    console.log("XXX handleClick", span_start, span_end, selectedText, messageId);
-    if (span_start === null || span_end === null) return;
+    if (!textSpanAttributes) return;
 
     newShape = {
       viewRef,
@@ -57,24 +42,41 @@ License: CECILL-C
       imageHeight: 0,
       status: "saving",
       type: SaveShapeType.textSpan,
-      attrs: {
-        annotation_ref: { id: messageId, name: "messages" },
-        spans_start: [span_start],
-        spans_end: [span_end],
-        mention: selectedText,
-      },
+      attrs: textSpanAttributes,
+    };
+  };
+
+  const handleMessageContentChange = (event: CustomEvent) => {
+    event.preventDefault();
+
+    const { messageId, newTextSpans, newMessageContent } = event.detail as {
+      messageId: string;
+      newTextSpans: TextSpan[];
+      newMessageContent: string;
     };
 
-    span_start = null;
-    span_end = null;
+    const newSpansByMessage = { ...spansByMessage, [messageId]: newTextSpans };
+    textSpans = Object.values(newSpansByMessage).flat();
+
+    messages = messages.map((message) => {
+      if (message.id === messageId) {
+        const { ui, ...rest } = message;
+        return new Message({
+          ...rest,
+          data: {
+            ...message.data,
+            content: newMessageContent,
+          },
+        });
+      }
+      return message;
+    });
   };
 </script>
 
-<div class={cn("bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto")}>
-  <button
-    class={cn("bg-primary text-white p-2 rounded-md w-fit")}
-    on:click={handleClick}
-    id="tagButton">Tag Selected Text</button
+<div class="bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto">
+  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={handleClick} id="tagButton"
+    >Tag Selected Text</button
   >
   {#each messages.sort((a, b) => a.data.number - b.data.number) as message}
     {#if message.data.type === MessageTypeEnum.QUESTION}
@@ -82,12 +84,10 @@ License: CECILL-C
     {:else}
       <Answer
         {message}
-        textSpans={spansByMessage[message.id] ?? []}
         {colorScale}
-        bind:span_start
-        bind:span_end
-        bind:selectedText
-        bind:messageId
+        textSpans={spansByMessage[message.id]}
+        bind:textSpanAttributes
+        on:messageContentChange={handleMessageContentChange}
       />
     {/if}
   {/each}

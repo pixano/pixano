@@ -4,5 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./types";
-export * from "./utils";
+export * from "./HTMLTextSpanDataAttributes";
