@@ -530,6 +530,10 @@ class Dataset:
             raise DatasetAccessError(f"Table {table_name} is not a view embedding table")
         if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
             raise DatasetAccessError("Data must be a list of dictionaries")
+        # TODO: improve how to handle shape, this works but feels hacky
+        for item in data:
+            if "shape" not in item:
+                item["shape"] = []
         table = self.open_table(table_name)
         data = pa.Table.from_pylist(
             data, schema=table_schema.to_arrow_schema(remove_vector=True, remove_metadata=True)
