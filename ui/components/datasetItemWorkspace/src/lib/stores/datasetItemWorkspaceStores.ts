@@ -63,7 +63,7 @@ export const colorScale = derived(
   entities,
   ($entities, _, update) => {
     update((old) => {
-      let allIds = $entities.map((obj) => obj.id);
+      let allIds = $entities.filter((ent) => ent.data.parent_ref.id === "").map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
         allIds = [...new Set(allIds)];

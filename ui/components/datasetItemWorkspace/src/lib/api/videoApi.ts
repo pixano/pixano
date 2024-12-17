@@ -87,8 +87,8 @@ export const boxLinearInterpolation = (
     interpolatedBox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1;
   // for convenience, we store ref to start boxes
   interpolatedBox.ui.startRef = startBox;
-  // top_entity (if exist) lost class with structuredClone: remove it
-  if (interpolatedBox.ui.top_entities) delete interpolatedBox.ui.top_entities;
+  // top_entities (if exist) lost class with structuredClone: replace it
+  interpolatedBox.ui.top_entities = startBox.ui.top_entities;
   interpolatedBox.data.coords = [x, y, width, height];
   return interpolatedBox;
 };
@@ -137,8 +137,8 @@ export const keypointsLinearInterpolation = (
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;
-    // top_entity (if exist) lost class with structuredClone: remove it
-    if (interpolatedKpt.ui!.top_entities) delete interpolatedKpt.ui!.top_entities;
+    // top_entities (if exist) lost class with structuredClone: replace it
+    interpolatedKpt.ui.top_entities = startKpt.ui.top_entities;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }
