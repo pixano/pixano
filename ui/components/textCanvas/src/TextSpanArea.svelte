@@ -6,17 +6,17 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-      Message,
-      MessageTypeEnum,
-      SaveShapeType,
-      TextSpan,
-      type ImagesPerView,
-      type Shape,
-      type TextSpanType,
+    Message,
+    MessageTypeEnum,
+    SaveShapeType,
+    TextSpan,
+    type ImagesPerView,
+    type Shape,
+    type TextSpanType,
   } from "@pixano/core";
   import { Answer } from "./components";
   import Question from "./components/Question.svelte";
-  import { groupTextSpansByMessageId } from "./lib";
+  import { createUpdatedMessage, groupTextSpansByMessageId } from "./lib";
 
   // Exports
   export let selectedItemId: string;
@@ -58,19 +58,9 @@ License: CECILL-C
     const newSpansByMessage = { ...spansByMessage, [messageId]: newTextSpans };
     textSpans = Object.values(newSpansByMessage).flat();
 
-    messages = messages.map((message) => {
-      if (message.id === messageId) {
-        const { ui, ...rest } = message;
-        return new Message({
-          ...rest,
-          data: {
-            ...message.data,
-            content: newMessageContent,
-          },
-        });
-      }
-      return message;
-    });
+    messages = messages.map((message) =>
+      message.id === messageId ? createUpdatedMessage({ message, newMessageContent }) : message,
+    );
   };
 </script>
 

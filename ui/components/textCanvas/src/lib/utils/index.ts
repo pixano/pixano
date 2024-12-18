@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 export * from "./createHtmlTags";
+export * from "./createUpdatedMessage";
 export * from "./customSplitter";
 export * from "./formatTextWithAnnotations";
 export * from "./getAnnotationsFromHtml";
