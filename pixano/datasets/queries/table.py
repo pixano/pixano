@@ -239,14 +239,13 @@ class TableQueryBuilder:
             arrow_results = arrow_results.rename_columns(columns)  # rename columns to match the requested columns
             return arrow_results
         else:
-            return (
-                self.table.search(None)
-                .select(columns)
-                .where(self._where)
-                .limit(self._limit)
-                .offset(self._offset)
-                .to_arrow()
-            )
+            limit = self.table.count_rows() if self._limit is None else self._limit
+            query = self.table.search(None).select(columns).limit(limit)
+            if self._where is not None:
+                query = query.where(self._where)
+            if self._offset is not None:
+                query = query.offset(self._offset)
+            return query.to_arrow()
 
     def to_pandas(self) -> pd.DataFrame:
         """Builds the query and returns the result as a pandas DataFrame.
