@@ -193,40 +193,58 @@ class TableQueryBuilder:
         Returns:
             The LanceQueryBuilder instance if get_order is False, otherwise a tuple with the query and the ordered IDs.
         """
-        arrow_table = self.table.to_lance()  # noqa: F841
-
         if all(not self._function_called[fn_name] for fn_name in self._function_called):
             raise ValueError("At least one of select(), where(), limit(), offset(), or order_by() must be called.")
         self._check_called("build")
 
-        def duckdb_format_column(column):
-            if "." in column:
-                struct, property = column.split(".")
-                return f"{struct}['{property}']"
-            return column
+        if self._columns is None or self._columns == ["*"]:
+            # If no columns are selected, select all columns
+            # Can have better performance than *
+            columns = self.table.schema.names
 
-        formatted_columns = [
-            duckdb_format_column(col) for col in (self._columns if self._columns is not None else ["*"])
-        ]  # format columns to handle struct columns
-        SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
-        if self._where is not None:
-            SQL_QUERY += f" WHERE {self._where}"
+        # If order_by
+        #   build the query directly using DuckDB
+        # Else
+        #   build the query using Lance
+        # This is because Lance does not support order_by
+        # Also DuckDB is less memory efficient than Lance
         if self._order_by != []:
-            SQL_QUERY += " ORDER BY "
-            SQL_QUERY += ", ".join(
-                [f"{col} {'DESC' if desc else 'ASC'}" for col, desc in zip(self._order_by, self._descending)]
-            )
-        if self._limit is not None:
-            SQL_QUERY += f" LIMIT {self._limit}"
-        if self._offset is not None:
-            SQL_QUERY += f" OFFSET {self._offset}"
+            arrow_table = self.table.to_lance()  # noqa: F841
 
-        arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
-        if self._columns is not None and self._columns != ["*"]:
-            arrow_results = arrow_results.rename_columns(
-                self._columns
-            )  # rename columns to match the requested columns
-        return arrow_results
+            def duckdb_format_column(column):
+                if "." in column:
+                    struct, property = column.split(".")
+                    return f"{struct}['{property}']"
+                return column
+
+            formatted_columns = [
+                duckdb_format_column(col) for col in columns
+            ]  # format columns to handle struct columns
+            SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
+            if self._where is not None:
+                SQL_QUERY += f" WHERE {self._where}"
+            if self._order_by != []:
+                SQL_QUERY += " ORDER BY "
+                SQL_QUERY += ", ".join(
+                    [f"{col} {'DESC' if desc else 'ASC'}" for col, desc in zip(self._order_by, self._descending)]
+                )
+            if self._limit is not None:
+                SQL_QUERY += f" LIMIT {self._limit}"
+            if self._offset is not None:
+                SQL_QUERY += f" OFFSET {self._offset}"
+
+            arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
+            arrow_results = arrow_results.rename_columns(columns)  # rename columns to match the requested columns
+            return arrow_results
+        else:
+            return (
+                self.table.search(None)
+                .select(self._columns)
+                .where(self._where)
+                .limit(self._limit)
+                .offset(self._offset)
+                .to_arrow()
+            )
 
     def to_pandas(self) -> pd.DataFrame:
         """Builds the query and returns the result as a pandas DataFrame.
