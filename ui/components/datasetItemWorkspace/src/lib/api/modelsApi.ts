@@ -20,13 +20,13 @@ export async function loadViewEmbeddings(
     if (view_embeddings.length > 0) {
       for (const view_embedding of view_embeddings) {
         try {
-          let shape = view_embedding.data.vector.shape;
+          let shape = view_embedding.data.shape;
           if (shape.length === 3) {
             shape = [1, shape[0], shape[1], shape[2]];
           }
           embeddings[view_embedding.data["view_ref"].name] = new ort.Tensor(
             "float32",
-            view_embedding.data.vector.values,
+            view_embedding.data.vector,
             shape,
           );
         } catch (e) {

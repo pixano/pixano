@@ -114,6 +114,7 @@ class TestDataset:
         embeddings = dataset_image_bboxes_keypoint_copy.get_data("test_compute_embeddings_view_embedding", limit=2)
         for i, embedding in enumerate(embeddings):
             assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+            assert embedding.shape == [8]
             assert embedding.item_ref == ItemRef(id=views[i].item_ref.id, name=views[i].item_ref.name)
             assert embedding.view_ref == ViewRef(id=views[i].id, name="image")
             assert embedding.id == f"embedding_{i}"

@@ -39,19 +39,20 @@ class TestEmbedding:
         assert embedding.id == ""
         assert embedding.item_ref == ItemRef.none()
         assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert embedding.shape == [8]
 
     def test_to_arrow_schema(self, embedding_8):
         with patch("lancedb.pydantic.LanceModel.to_arrow_schema", mock_super_to_arrow_schema):
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "vector", "id", "created_at", "updated_at"}
+            assert set(arrow_schema.names) == {"item_ref", "vector", "id", "created_at", "updated_at", "shape"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=True, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "id", "created_at", "updated_at"}
+            assert set(arrow_schema.names) == {"item_ref", "id", "created_at", "updated_at", "shape"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=True)
-            assert set(arrow_schema.names) == {"vector", "id", "item_ref", "created_at", "updated_at"}
+            assert set(arrow_schema.names) == {"vector", "id", "item_ref", "created_at", "updated_at", "shape"}
             assert arrow_schema.metadata is None
 
     def test_create_shema(
@@ -85,7 +86,15 @@ class TestEmbedding:
         )
         assert issubclass(schema, ViewEmbedding)
 
-        assert set(schema.model_fields) == {"id", "item_ref", "vector", "view_ref", "created_at", "updated_at"}
+        assert set(schema.model_fields) == {
+            "id",
+            "item_ref",
+            "vector",
+            "view_ref",
+            "created_at",
+            "updated_at",
+            "shape",
+        }
         assert schema.model_fields["id"].annotation is str
         assert schema.model_fields["id"].default == ""
         assert schema.model_fields["item_ref"].annotation == ItemRef
@@ -114,6 +123,7 @@ class TestViewEmbedding:
         assert view_embedding.item_ref == ItemRef.none()
         assert view_embedding.view_ref == ViewRef.none()
         assert view_embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert view_embedding.shape == [2, 4]
 
 
 def test_is_embedding():
