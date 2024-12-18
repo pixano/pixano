@@ -201,6 +201,8 @@ class TableQueryBuilder:
             # If no columns are selected, select all columns
             # Can have better performance than *
             columns = self.table.schema.names
+        else:
+            columns = self._columns
 
         # If order_by
         #   build the query directly using DuckDB
@@ -239,7 +241,7 @@ class TableQueryBuilder:
         else:
             return (
                 self.table.search(None)
-                .select(self._columns)
+                .select(columns)
                 .where(self._where)
                 .limit(self._limit)
                 .offset(self._offset)
