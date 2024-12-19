@@ -459,7 +459,7 @@ class DatasetItem(BaseModel):
         Returns:
             New model instance.
         """
-        # Wrap the pydantic `model_copy` method to prevent copying the dataset.
+        # Actual copy done by each schema to call our own model_copy method
         data: dict[str, BaseSchema | list[BaseSchema] | None] = self.to_schemas_data(dataset.schema)
         copied_data: dict[str, BaseSchema | list[BaseSchema] | None] = {}
         for key, value in data.items():
