@@ -19,8 +19,10 @@ from pixano.datasets.queries import TableQueryBuilder
 from pixano.features.schemas.schema_group import SchemaGroup
 
 
-def _create_new_dataset_item_dataset_multi_view_tracking_and_image(dataset_item: DatasetItem) -> DatasetItem:
-    new_dataset_item = dataset_item.model_copy(deep=True)
+def _create_new_dataset_item_dataset_multi_view_tracking_and_image(
+    dataset_item: DatasetItem, dataset: Dataset
+) -> DatasetItem:
+    new_dataset_item = dataset_item.model_copy(dataset=dataset, deep=True)
     new_dataset_item.id = "new_" + new_dataset_item.id
     for new_video in new_dataset_item.video:
         new_video.id = "new_" + new_video.id
@@ -172,7 +174,10 @@ def test_create_dataset_items(
 
     dataset_items = dataset_multi_view_tracking_and_image.get_dataset_items(limit=2)
     new_dataset_items = [
-        _create_new_dataset_item_dataset_multi_view_tracking_and_image(dataset_item) for dataset_item in dataset_items
+        _create_new_dataset_item_dataset_multi_view_tracking_and_image(
+            dataset_item, dataset_multi_view_tracking_and_image
+        )
+        for dataset_item in dataset_items
     ]
 
     new_dataset_items_models = {
@@ -242,7 +247,9 @@ def test_create_dataset_item(
     )
 
     dataset_item = dataset_multi_view_tracking_and_image.get_dataset_items("0")
-    new_dataset_item = _create_new_dataset_item_dataset_multi_view_tracking_and_image(dataset_item)
+    new_dataset_item = _create_new_dataset_item_dataset_multi_view_tracking_and_image(
+        dataset_item, dataset_multi_view_tracking_and_image
+    )
 
     new_dataset_item_model = DatasetItemModel.from_dataset_item(
         new_dataset_item, dataset_multi_view_tracking_and_image.schema
@@ -301,7 +308,9 @@ def test_update_dataset_items(
     )
     dataset_items = dataset_multi_view_tracking_and_image.get_dataset_items(limit=2)
     updated_dataset_items = [
-        _create_new_dataset_item_dataset_multi_view_tracking_and_image(dataset_item=dataset_item)
+        _create_new_dataset_item_dataset_multi_view_tracking_and_image(
+            dataset_item=dataset_item, dataset=dataset_multi_view_tracking_and_image
+        )
         if i % 2
         else dataset_item
         for dataset_item in dataset_items

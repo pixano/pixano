@@ -12,12 +12,16 @@ from types import GenericAlias
 from typing import Any
 
 from pydantic import BaseModel, create_model, model_serializer, model_validator
-from typing_extensions import Self
+from typing_extensions import TYPE_CHECKING, Self
 
 from pixano.features import BaseSchema, Item
 from pixano.features.schemas.registry import _SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
+
+
+if TYPE_CHECKING:
+    from pixano.datasets.dataset import Dataset
 
 
 class SchemaRelation(Enum):
@@ -400,6 +404,25 @@ class DatasetItem(BaseModel):
         schemas_data[SchemaGroup.ITEM.value] = dataset_schema.schemas[SchemaGroup.ITEM.value](**item_data)
         return schemas_data
 
+    @staticmethod
+    def from_schemas_data(
+        cls: "DatasetItem", schemas_data: dict[str, BaseSchema | list[BaseSchema] | None]
+    ) -> "DatasetItem":
+        """Create a DatasetItem from schemas data.
+
+        Args:
+            cls: The DatasetItem class.
+            schemas_data: Schemas data.
+
+        Returns:
+            The created DatasetItem.
+        """
+        if SchemaGroup.ITEM.value not in schemas_data:
+            raise ValueError("Item schema data not found.")
+
+        schemas_data.update(schemas_data.pop(SchemaGroup.ITEM.value).model_dump())  # type: ignore[union-attr]
+        return cls(**schemas_data)
+
     def model_dump(self, exclude_timestamps: bool = False, **kwargs: Any) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
@@ -425,6 +448,29 @@ class DatasetItem(BaseModel):
                             item.pop("created_at", None)
                             item.pop("updated_at", None)
         return model_dump
+
+    def model_copy(self, *, dataset: "Dataset", deep=False) -> Self:
+        """Returns a copy of the model.
+
+        Args:
+            dataset: The dataset where the DatasetItem belongs.
+            deep: Set to `True` to make a deep copy of the model.
+
+        Returns:
+            New model instance.
+        """
+        # Actual copy done by each schema to call our own model_copy method
+        data: dict[str, BaseSchema | list[BaseSchema] | None] = self.to_schemas_data(dataset.schema)
+        copied_data: dict[str, BaseSchema | list[BaseSchema] | None] = {}
+        for key, value in data.items():
+            if isinstance(value, list):
+                copied_data[key] = [item.model_copy(deep=deep) for item in value]
+            elif value is not None:
+                copied_data[key] = value.model_copy(deep=deep)
+            else:
+                copied_data[key] = None
+        copy_item = self.from_schemas_data(self.__class__, copied_data)  # type: ignore[arg-type]
+        return copy_item
 
     @classmethod
     def to_dataset_schema(cls) -> DatasetSchema:
