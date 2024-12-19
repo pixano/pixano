@@ -126,7 +126,7 @@ class BaseSchema(LanceModel):
             model_dump.pop("updated_at", None)
         return model_dump
 
-    def model_copy(self, *, update=None, deep=False) -> Self:
+    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Self:
         """Returns a copy of the model.
 
         Args:
