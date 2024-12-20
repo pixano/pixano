@@ -63,7 +63,9 @@ License: CECILL-C
           .then((item) => {
             let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
-            Object.values(item.views).map((view) => {
+            //Object.values(item.views).map((view) => {
+            for (const viewname in item.views) {
+              let view = item.views[viewname];
               if (Array.isArray(view)) {
                 const isVideo = sequenceFrameSchema
                   .array()
@@ -79,14 +81,19 @@ License: CECILL-C
                   video.sort((a, b) => a.data.frame_index - b.data.frame_index);
                 } else {
                   item_type = "vqa";
+                  //TMP
+                  const image = view[0] as Image;
+                  image.data.type = "image";
+                  image.data.url = media_dir + image.data.url;
+                  item.views[viewname] = image;
                 }
               } else {
                 const image = view as Image;
                 image.data.type = "image";
                 image.data.url = media_dir + image.data.url;
               }
-              return view;
-            });
+              //return view;
+            }
             selectedItem = item;
             selectedItem.ui = { type: item_type, datasetId: dataset.id };
             if (Object.keys(item).length === 0) {

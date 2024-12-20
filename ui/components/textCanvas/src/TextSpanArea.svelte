@@ -25,9 +25,9 @@ License: CECILL-C
   export let messages: Message[];
   export let imagesPerView: ImagesPerView;
 
-  // console.log("XXX textSpanArea", textSpans);
-  // console.log("XXX messages", messages);
-  // console.log("XXX imagesPerView", imagesPerView);
+  console.log("XXX textSpanArea", textSpans);
+  console.log("XXX messages", messages);
+  console.log("XXX imagesPerView", imagesPerView);
 
   const viewRef = { id: imagesPerView.images[0].id, name: "images" };
 

@@ -4,15 +4,18 @@
 # License: CECILL-C
 # =====================================
 
+from .conversation import Conversation
 from .entity import Entity, is_entity
 from .track import Track, create_track, is_track
 
 
 __all__ = [
+    "Conversation",
     "Entity",
     "Track",
-    "Tracklet",
+    "create_conversation",
     "create_track",
+    "is_conversation",
     "is_entity",
     "is_track",
 ]

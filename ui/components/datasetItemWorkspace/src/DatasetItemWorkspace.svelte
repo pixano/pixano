@@ -52,13 +52,14 @@ License: CECILL-C
   const back2front = (ann: Annotation): Annotation => {
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
+    if (ann.table_info.base_schema === BaseSchema.Mask) {
+      //unpack Compressed RLE to uncompressed RLE
+      const mask: Mask = ann as Mask;
+      if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+    }
+
     if (selectedItem.ui.type === "image") {
       ann.ui = { datasetItemType: "image" };
-      if (ann.table_info.base_schema === BaseSchema.Mask) {
-        //unpack Compressed RLE to uncompressed RLE
-        const mask: Mask = ann as Mask;
-        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-      }
     } else if (selectedItem.ui.type === "video") {
       ann.ui = { datasetItemType: "video" };
       //add frame_index to annotation
@@ -67,12 +68,6 @@ License: CECILL-C
           (sf) => sf.id === ann.data.view_ref.id,
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
-      }
-
-      if (ann.table_info.base_schema === BaseSchema.Mask) {
-        //unpack Compressed RLE to uncompressed RLE
-        const mask: Mask = ann as Mask;
-        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
       }
     } else if (selectedItem.ui.type === "vqa") {
       ann.ui = { datasetItemType: "vqa" };
