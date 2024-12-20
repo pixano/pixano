@@ -86,8 +86,11 @@ License: CECILL-C
                   item.views[viewname] = image; //TMP
                 }
               } else {
+                //NOTE: in correct cases, here too we should choose between "image" & "vqa"
+                //Right now we can't really do this (or seek for some Text entities/annotation in datasetSchema maybe?)
+                //--admin user should give this info at build time
                 const image = view as Image;
-                image.data.type = "image";
+                image.data.type = "image"; //vqa case ??
                 image.data.url = media_dir + image.data.url;
               }
             }
