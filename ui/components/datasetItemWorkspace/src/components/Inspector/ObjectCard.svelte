@@ -116,31 +116,19 @@ License: CECILL-C
     isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl?.hidden) || false;
     boxIsVisible =
       entity.ui.childs?.some(
-        (ann) =>
-          ann.ui.datasetItemType === "image" &&
-          ann.is_type(BaseSchema.BBox) &&
-          !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.BBox) && !ann.ui.displayControl?.hidden,
       ) || false;
     maskIsVisible =
       entity.ui.childs?.some(
-        (ann) =>
-          ann.ui.datasetItemType === "image" &&
-          ann.is_type(BaseSchema.Mask) &&
-          !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.Mask) && !ann.ui.displayControl?.hidden,
       ) || false;
     keypointsIsVisible =
       entity.ui.childs?.some(
-        (ann) =>
-          ann.ui.datasetItemType === "image" &&
-          ann.is_type(BaseSchema.Keypoints) &&
-          !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.Keypoints) && !ann.ui.displayControl?.hidden,
       ) || false;
     textSpansIsVisible =
       entity.ui.childs?.some(
-        (ann) =>
-          ann.ui.datasetItemType === "text" &&
-          ann.is_type(BaseSchema.TextSpan) &&
-          !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.TextSpan) && !ann.ui.displayControl?.hidden,
       ) || false;
   });
 
@@ -348,49 +336,43 @@ License: CECILL-C
           style="border-color:{color}"
         >
           <div class="flex flex-col gap-2">
-            {#if entity.ui.childs?.some((ann) => ["image", "vqa"].includes(ann.ui.datasetItemType))}
-              <div>
-                <p class="font-medium first-letter:uppercase">display</p>
-                <div class="flex gap-4">
-                  <DisplayCheckbox
-                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                      ann.is_type(BaseSchema.BBox),
-                    )}
-                    {handleSetAnnotationDisplayControl}
-                    annotationIsVisible={boxIsVisible}
-                    annotationName="Box"
-                    base_schema={BaseSchema.BBox}
-                  />
-                  <DisplayCheckbox
-                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                      ann.is_type(BaseSchema.Mask),
-                    )}
-                    {handleSetAnnotationDisplayControl}
-                    annotationIsVisible={maskIsVisible}
-                    annotationName="Mask"
-                    base_schema={BaseSchema.Mask}
-                  />
-                  <DisplayCheckbox
-                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                      ann.is_type(BaseSchema.Keypoints),
-                    )}
-                    {handleSetAnnotationDisplayControl}
-                    annotationIsVisible={keypointsIsVisible}
-                    annotationName="Key points"
-                    base_schema={BaseSchema.Keypoints}
-                  />
-                  <DisplayCheckbox
-                    isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                      ann.is_type(BaseSchema.TextSpan),
-                    )}
-                    {handleSetAnnotationDisplayControl}
-                    annotationIsVisible={textSpansIsVisible}
-                    annotationName="Text span"
-                    base_schema={BaseSchema.TextSpan}
-                  />
-                </div>
+            <div>
+              <p class="font-medium first-letter:uppercase">display</p>
+              <div class="flex gap-4">
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={boxIsVisible}
+                  annotationName="Box"
+                  base_schema={BaseSchema.BBox}
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={maskIsVisible}
+                  annotationName="Mask"
+                  base_schema={BaseSchema.Mask}
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                    ann.is_type(BaseSchema.Keypoints),
+                  )}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={keypointsIsVisible}
+                  annotationName="Keypoints"
+                  base_schema={BaseSchema.Keypoints}
+                />
+                <DisplayCheckbox
+                  isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
+                    ann.is_type(BaseSchema.TextSpan),
+                  )}
+                  {handleSetAnnotationDisplayControl}
+                  annotationIsVisible={textSpansIsVisible}
+                  annotationName="Text span"
+                  base_schema={BaseSchema.TextSpan}
+                />
               </div>
-            {/if}
+            </div>
             <UpdateFeatureInputs
               featureClass="objects"
               features={$features}

@@ -11,7 +11,7 @@ License: CECILL-C
   // Internal library imports
   import { Pencil } from "lucide-svelte";
   import { IconButton, Switch } from "@pixano/core/src";
-  import { Image, SequenceFrame, type SaveItem } from "@pixano/core";
+  import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
 
   // Local imports
   import {
@@ -43,14 +43,14 @@ License: CECILL-C
   let viewMeta: ViewMeta[] = [];
 
   views.subscribe((views) => {
-    viewMeta = Object.values(views || {}).map((view: Image | SequenceFrame[]) => {
+    viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {
         itemType = "video";
-        image = view[0];
+        image = view[0] as SequenceFrame;
       } else {
         itemType = "image";
-        image = view;
+        image = view as Image;
       }
       return {
         fileName: image.data.url.split("/").at(-1),
