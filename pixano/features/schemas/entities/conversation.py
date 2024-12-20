@@ -19,7 +19,7 @@ class Conversation(Entity):
 
     Attributes:
         kind: QUESTION or ANSWER (??)
-        with_model: model source
+        with_model: model source reference
     """
 
     kind: str
@@ -43,7 +43,7 @@ def create_conversation(
 
     Args:
         kind: QUESTION or ANSWER.
-        with_model: Model source.
+        with_model: Model source reference.
         id: Conversation ID.
         item_ref: Item reference.
         view_ref: View reference.
