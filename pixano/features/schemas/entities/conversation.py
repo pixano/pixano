@@ -15,11 +15,11 @@ from .entity import Entity
 class Conversation(Entity):
     """A `Conversation` entity.
 
-    A conversation represents ??
+    A conversation is an object refered by Message annotations via the entity_ref
 
     Attributes:
-        kind: QUESTION or ANSWER (??)
-        with_model: model source reference
+        kind: agnostic metadata to store information of the conversation
+        with_model: model source reference, or may either refer the groundtruth source reference
     """
 
     kind: str
