@@ -12,7 +12,6 @@ import type { DatasetItem } from "./DatasetItem";
 import type { Entity } from "./entities";
 import type { Item } from "./items";
 import type { Source } from "./sources";
-import type { View } from "./views";
 
 ////////// TYPES /////////////
 export const referenceSchema = z
