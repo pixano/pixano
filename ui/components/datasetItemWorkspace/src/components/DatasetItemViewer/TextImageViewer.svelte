@@ -7,30 +7,30 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, type ImagesPerView, Message } from "@pixano/core";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
-  import * as ort from "onnxruntime-web";
   // Import stores and API functions
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
+  import * as ort from "onnxruntime-web";
   import {
-    annotations,
-    colorScale,
-    filters,
-    imageSmoothing,
-    itemBboxes,
-    itemKeypoints,
-    itemMasks,
-    itemMetas,
-    messages,
-    newShape,
-    preAnnotationIsActive,
-    selectedKeypointsTemplate,
-    selectedTool,
-    textSpans,
+      annotations,
+      colorScale,
+      filters,
+      imageSmoothing,
+      itemBboxes,
+      itemKeypoints,
+      itemMasks,
+      itemMetas,
+      messages,
+      newShape,
+      preAnnotationIsActive,
+      selectedKeypointsTemplate,
+      selectedTool,
+      textSpans,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
