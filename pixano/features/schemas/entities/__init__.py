@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from .conversation import Conversation
+from .conversation import Conversation, create_conversation, is_conversation
 from .entity import Entity, is_entity
 from .track import Track, create_track, is_track
 

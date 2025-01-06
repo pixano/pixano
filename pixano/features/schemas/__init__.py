@@ -46,7 +46,16 @@ from .annotations import (
 )
 from .base_schema import BaseSchema, is_base_schema
 from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function, is_embedding, is_view_embedding
-from .entities import Conversation, Entity, Track, create_track, is_entity, is_track
+from .entities import (
+    Conversation,
+    Entity,
+    Track,
+    create_conversation,
+    create_track,
+    is_conversation,
+    is_entity,
+    is_track,
+)
 from .items import Item, is_item
 from .registry import register_schema
 from .schema_group import SchemaGroup
