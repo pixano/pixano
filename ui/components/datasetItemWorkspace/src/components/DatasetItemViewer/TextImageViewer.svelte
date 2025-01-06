@@ -42,8 +42,6 @@ License: CECILL-C
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
 
-  let messages: Message[] = [];
-
   /**
    * Normalize the pixel values of an image to a specified range.
    * @param image The image to normalize.
@@ -111,11 +109,6 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      messages = $annotations.filter(
-        (ann) =>
-          ann.table_info.base_schema === BaseSchema.Message &&
-          ann.data.item_ref.id === selectedItem.item.id,
-      ) as Message[];
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }
@@ -163,8 +156,6 @@ License: CECILL-C
       bind:newShape={$newShape}
     />
     <TextSpanArea
-      {imagesPerView}
-      {messages}
       selectedItemId={selectedItem.item.id}
       colorScale={$colorScale[1]}
       bind:newShape={$newShape}
