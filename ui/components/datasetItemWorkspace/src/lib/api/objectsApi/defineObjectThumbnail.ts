@@ -27,12 +27,16 @@ export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: An
   const view =
     metas.type === "video"
       ? (views[view_name] as SequenceFrame[])[box.ui.frame_index!]
-      : Array.isArray(views[view_name])
-        ? (views[view_name] as Image[])[0]
-        : (views[view_name] as Image);
-
-  const coords = box.data.coords;
-
+      : (views[view_name] as Image);
+  let coords = box.data.coords;
+  if (view && !box.data.is_normalized) {
+    coords = [
+      coords[0] / view.data.width,
+      coords[1] / view.data.height,
+      coords[2] / view.data.width,
+      coords[3] / view.data.height,
+    ];
+  }
   return {
     baseImageDimensions: {
       width: view?.data.width,

@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { SaveItem } from "@pixano/core";
 
 export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {

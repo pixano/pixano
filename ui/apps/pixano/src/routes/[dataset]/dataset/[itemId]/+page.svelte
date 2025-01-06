@@ -63,7 +63,8 @@ License: CECILL-C
           .then((item) => {
             let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
-            Object.values(item.views).map((view) => {
+            for (const viewname in item.views) {
+              let view = item.views[viewname];
               if (Array.isArray(view)) {
                 const isVideo = sequenceFrameSchema
                   .array()
@@ -79,14 +80,20 @@ License: CECILL-C
                   video.sort((a, b) => a.data.frame_index - b.data.frame_index);
                 } else {
                   item_type = "vqa";
+                  const image = view[0] as Image; //TMP ??
+                  image.data.type = "image";
+                  image.data.url = media_dir + image.data.url;
+                  item.views[viewname] = image; //TMP
                 }
               } else {
+                //NOTE: in correct cases, here too we should choose between "image" & "vqa"
+                //Right now we can't really do this (or seek for some Text entities/annotation in datasetSchema maybe?)
+                //--admin user should give this info at build time
                 const image = view as Image;
-                image.data.type = "image";
+                image.data.type = "image"; //vqa case ??
                 image.data.url = media_dir + image.data.url;
               }
-              return view;
-            });
+            }
             selectedItem = item;
             selectedItem.ui = { type: item_type, datasetId: dataset.id };
             if (Object.keys(item).length === 0) {

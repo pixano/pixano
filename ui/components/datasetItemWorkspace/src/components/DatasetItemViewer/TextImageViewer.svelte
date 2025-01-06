@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import { BaseSchema, DatasetItem, Image, type ImagesPerView, Message } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
   import { Image as ImageJS } from "image-js";
@@ -41,6 +41,8 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
+
+  let messages: Message[] = [];
 
   /**
    * Normalize the pixel values of an image to a specified range.
@@ -109,6 +111,11 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      messages = $annotations.filter(
+        (ann) =>
+          ann.table_info.base_schema === BaseSchema.Message &&
+          ann.data.item_ref.id === selectedItem.item.id,
+      ) as Message[];
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }
@@ -156,6 +163,8 @@ License: CECILL-C
       bind:newShape={$newShape}
     />
     <TextSpanArea
+      {imagesPerView}
+      {messages}
       selectedItemId={selectedItem.item.id}
       colorScale={$colorScale[1]}
       bind:newShape={$newShape}

@@ -12,7 +12,6 @@ import type { DatasetItem } from "./DatasetItem";
 import type { Entity } from "./entities";
 import type { Item } from "./items";
 import type { Source } from "./sources";
-import type { View } from "./views";
 
 ////////// TYPES /////////////
 export const referenceSchema = z
@@ -166,29 +165,6 @@ export class DatasetBrowser implements DatasetBrowserType {
     this.isErrored = obj.isErrored;
   }
 }
-
-//-------------OLD & WIP
-
-//////////WIP
-
-export type ImageDatasetItem = DatasetItem & {
-  type: "image";
-  // annotations: Record<string, ImageObject[]>;
-  // entities: Record<string, ImageObject[]>;
-  views: Record<string, View>;
-};
-
-export type VideoDatasetItem = DatasetItem & {
-  type: "video";
-  // annotations: Record<string, VideoObject[]>;
-  // entities: Record<string, VideoObject[]>;
-  views: Record<string, View[]>;
-};
-
-export type ThreeDimensionsDatasetItem = DatasetItem & {
-  type: "3d";
-  views: Record<string, View[]>;
-};
 
 // DATASET
 
