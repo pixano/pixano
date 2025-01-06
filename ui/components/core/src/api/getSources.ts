@@ -30,6 +30,7 @@ export async function getSources(datasetId: string): Promise<Source[]> {
       }
     } catch (e) {
       console.log("api.getSources -", e); // Handle other errors
+      break;
     }
   }
   return sources;

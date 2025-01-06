@@ -5,18 +5,14 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
-import {
-  BaseData,
-  ndArrayFloatSchema,
-  referenceSchema,
-  type BaseDataFields,
-} from "../datasetTypes";
+import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
 
 const viewEmbeddingSchema = z
   .object({
     item_ref: referenceSchema,
     view_ref: referenceSchema,
-    vector: ndArrayFloatSchema,
+    vector: z.array(z.number()),
+    shape: z.array(z.number()),
   })
   .passthrough();
 type viewEmbeddingType = z.infer<typeof viewEmbeddingSchema>;
