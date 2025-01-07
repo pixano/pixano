@@ -6,7 +6,7 @@ License: CECILL-C
 
 import type { TextSpanType } from "@pixano/core";
 
-export const getTextSpanAttributes = ({
+export const editorSelectionToTextSpan = ({
   editableDiv,
   messageId,
 }: {

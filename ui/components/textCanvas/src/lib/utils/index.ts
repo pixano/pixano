@@ -7,8 +7,7 @@ License: CECILL-C
 export * from "./createHtmlTags";
 export * from "./createUpdatedMessage";
 export * from "./customSplitter";
-export * from "./formatTextWithAnnotations";
-export * from "./getAnnotationsFromHtml";
-export * from "./getTextSpanAttributes";
+export * from "./editorSelectionToTextSpan";
 export * from "./groupTextSpansByMessageId";
-export * from "./htmlToString";
+export * from "./htmlToTextSpans";
+export * from "./textSpansToHtml";
