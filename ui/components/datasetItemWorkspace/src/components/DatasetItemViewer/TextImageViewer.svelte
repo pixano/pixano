@@ -35,7 +35,6 @@ License: CECILL-C
 
   // Attributes
   export let selectedItem: DatasetItem;
-  export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   // Images per view type
@@ -148,7 +147,6 @@ License: CECILL-C
       masks={$itemMasks}
       keypoints={$itemKeypoints}
       selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-      {embeddings}
       {filters}
       imageSmoothing={$imageSmoothing}
       bind:selectedTool={$selectedTool}

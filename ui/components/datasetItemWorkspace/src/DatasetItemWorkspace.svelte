@@ -35,7 +35,7 @@ License: CECILL-C
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
-  import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
+  import "./index.css";
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -46,8 +46,6 @@ License: CECILL-C
   export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
-
-  let embeddings: Embeddings = {};
 
   const back2front = (ann: Annotation): Annotation => {
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
@@ -200,12 +198,7 @@ License: CECILL-C
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {headerHeight} />
+  <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
-  <LoadModelModal
-    {models}
-    currentDatasetId={selectedItem.ui.datasetId}
-    selectedItemId={selectedItem.item.id}
-    bind:embeddings
-  />
+  <LoadModelModal {models} />
 </div>

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, overload
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import ConfigDict, PrivateAttr, create_model, field_validator
+from typing_extensions import Self
 
 from pixano.utils import get_super_type_from_dict, issubclass_strict
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
@@ -124,6 +125,24 @@ class BaseSchema(LanceModel):
             model_dump.pop("created_at", None)
             model_dump.pop("updated_at", None)
         return model_dump
+
+    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Self:
+        """Returns a copy of the model.
+
+        Args:
+            update: Values to change/add in the new model.
+            deep: Set to `True` to make a deep copy of the model.
+
+        Returns:
+            New model instance.
+        """
+        # Wrap the pydantic `model_copy` method to prevent copying the dataset.
+        dataset = self._dataset
+        self._dataset = None
+
+        copy = super().model_copy(update=update, deep=deep)
+        copy.dataset = dataset
+        return copy
 
     @overload
     def resolve_ref(self, ref: "ItemRef") -> "Item": ...

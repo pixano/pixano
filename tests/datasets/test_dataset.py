@@ -114,6 +114,7 @@ class TestDataset:
         embeddings = dataset_image_bboxes_keypoint_copy.get_data("test_compute_embeddings_view_embedding", limit=2)
         for i, embedding in enumerate(embeddings):
             assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+            assert embedding.shape == [8]
             assert embedding.item_ref == ItemRef(id=views[i].item_ref.id, name=views[i].item_ref.name)
             assert embedding.view_ref == ViewRef(id=views[i].id, name="image")
             assert embedding.id == f"embedding_{i}"
@@ -932,7 +933,7 @@ class TestDataset:
 
     def test_add_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        new_item = item.model_copy()
+        new_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
         new_item.id = "new_item"
 
         for table_name in dataset_image_bboxes_keypoint_copy.schema.schemas.keys():
@@ -964,7 +965,7 @@ class TestDataset:
 
     def test_add_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        new_item = item.model_copy()
+        new_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
 
         data = [new_item, "0"]
         with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
@@ -1038,7 +1039,7 @@ class TestDataset:
 
     def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        updated_item = item.model_copy()
+        updated_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
         updated_item.metadata = "new_metadata"
         updated_item.image.width = 200
         updated_item.bboxes[0].coords = [1, 1, 25, 25]
@@ -1079,13 +1080,14 @@ class TestDataset:
         )
         assert updated_dataset_items[0].created_at == item.created_at
         assert updated_dataset_items[0].updated_at > item.updated_at
-        assert updated_dataset_items[0].image.updated_at == item.image.updated_at
+        assert updated_dataset_items[0].image.created_at == item.image.created_at
+        assert updated_dataset_items[0].image.updated_at > item.image.updated_at
         assert added_dataset_items[0].created_at > item.created_at
         assert added_dataset_items[0].updated_at == added_dataset_items[0].created_at
 
     def test_update_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        updated_item = item.model_copy()
+        updated_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
         updated_item.id = "0"
 
         data = [updated_item, "0"]

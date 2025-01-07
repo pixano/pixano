@@ -74,9 +74,10 @@ print(num_images)
 ```python
 from pixano.features import ViewEmbedding, NDArrayFloat
 from pixano.datasets.dataset_schema import SchemaRelation
+from lancedb.pydantic import Vector
 
 class SAMViewEmbedding(ViewEmbedding):
-    vector: NDArrayFloat
+    vector: Vector(1048576)
 
 sam_table = dataset.create_table(
     name="sam_embedding",
@@ -107,10 +108,8 @@ for i, image in enumerate(images):
         id=shortuuid.uuid(),
         item_ref=image.item_ref,
         view_ref=ViewRef(id=image.id, name=image.table_name),
-        vector=NDArrayFloat(
-            values=output.flatten().tolist(),
-            shape=output.squeeze().shape
-        ),
+        vector=output.flatten().tolist(),
+        shape=output.squeeze().shape,
     )
     embeddings.append(embedding)
 

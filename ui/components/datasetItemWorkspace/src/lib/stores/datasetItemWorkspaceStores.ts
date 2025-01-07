@@ -41,6 +41,8 @@ export const preAnnotationIsActive = writable<boolean>(false);
 export const modelsUiStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
+  selectedTableName: "",
+  yetToLoadEmbedding: true,
 });
 export const filters = writable<Filters>({
   brightness: 0,
@@ -64,7 +66,7 @@ export const colorScale = derived(
   entities,
   ($entities, _, update) => {
     update((old) => {
-      let allIds = $entities.map((obj) => obj.id);
+      let allIds = $entities.filter((ent) => ent.data.parent_ref.id === "").map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
         allIds = [...new Set(allIds)];

@@ -41,6 +41,7 @@ def embedding_8():
 def view_embedding_8():
     class ViewEmbedding8(ViewEmbedding):
         vector: Vector(8)  # type: ignore
+        shape: list[int] = [2, 4]
 
     register_schema(ViewEmbedding8)
 
