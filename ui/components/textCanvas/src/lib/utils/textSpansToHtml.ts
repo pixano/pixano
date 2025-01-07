@@ -63,7 +63,7 @@ const getHtmlFromTree = (tree: SpanTree): string => {
   const sortedChildren = [...tree.children].sort((a, b) => a.start - b.start);
   const treeContent = tree.html.slice(tree.spanStart, tree.spanEnd);
 
-  let html = tree.html.slice(0, tree.spanStart);
+  let html = tree.textSpan ? tree.html.slice(0, tree.spanStart) : "";
   let currentPosition = 0;
 
   for (const child of sortedChildren) {
@@ -78,7 +78,7 @@ const getHtmlFromTree = (tree: SpanTree): string => {
   const remainingContent =
     currentPosition < tree.end - tree.start ? treeContent.slice(currentPosition) : "";
 
-  return html + remainingContent + CLOSING_TAG;
+  return html + remainingContent + (tree.textSpan ? CLOSING_TAG : "");
 };
 
 const buildSpanTree = ({
@@ -153,5 +153,7 @@ export const textSpansToHtml = ({
 
   const spanTree = buildSpanTree({ text, textSpans: sortedTextSpans, colorScale });
 
-  return getHtmlFromTree(spanTree);
+  const html = getHtmlFromTree(spanTree);
+
+  return html;
 };

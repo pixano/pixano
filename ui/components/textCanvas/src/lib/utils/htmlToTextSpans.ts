@@ -47,36 +47,39 @@ const parseNodeTreeToAnnotations = (
   nodes: NodeTree[],
   startOffset: number = 0,
   prevTextSpans: TextSpan[],
-): { annotations: TextSpan[]; endOffset: number } => {
+): { annotations: TextSpan[]; endOffset: number; mention: string } => {
   const annotations: TextSpan[] = [];
   let currentOffset = startOffset;
+  let mention = "";
 
   for (const node of nodes) {
     if (node.type === "text") {
       currentOffset += node.content.length;
+      mention += node.content;
     } else {
-      const { annotations: childAnnotations, endOffset } = parseNodeTreeToAnnotations(
-        node.children,
-        currentOffset,
-        prevTextSpans,
-      );
+      const {
+        annotations: childAnnotations,
+        endOffset,
+        mention,
+      } = parseNodeTreeToAnnotations(node.children, currentOffset, prevTextSpans);
 
-      const prevTextSpan = prevTextSpans.find(
-        (ts) => ts.data.annotation_ref.id === node.annotationId,
-      );
+      const prevTextSpan = prevTextSpans.find((ts) => ts.id === node.annotationId);
 
       if (!prevTextSpan) {
         throw new Error(`Annotation ${node.annotationId} not found in prevTextSpans`);
       }
 
+      /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+      const { ui, ...rest } = prevTextSpan;
+
       annotations.push(
         new TextSpan({
-          ...prevTextSpan,
+          ...rest,
           data: {
-            ...prevTextSpan.data,
-            mention: prevTextSpan.data.mention,
+            ...rest.data,
+            mention,
             spans_start: [currentOffset],
-            spans_end: [endOffset],
+            spans_end: [endOffset - 1],
           },
         }),
       );
@@ -86,7 +89,7 @@ const parseNodeTreeToAnnotations = (
     }
   }
 
-  return { annotations, endOffset: currentOffset };
+  return { annotations, endOffset: currentOffset, mention };
 };
 
 export const htmlToTextSpans = ({
