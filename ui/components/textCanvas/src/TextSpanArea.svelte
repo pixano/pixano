@@ -30,11 +30,13 @@ License: CECILL-C
 
   let textSpanAttributes: TextSpanType | null = null;
 
-  $: spansByMessage = groupTextSpansByMessageId(textSpans);
+  $: spansByMessageId = groupTextSpansByMessageId(textSpans);
 
-  const handleClick = () => {
+  const onTagText = () => {
     if (!textSpanAttributes) return;
 
+    // Changing newShape opens the window for customizing and saving a new
+    // anotation in the object inspector
     newShape = {
       viewRef,
       itemId: selectedItemId,
@@ -55,8 +57,8 @@ License: CECILL-C
       newMessageContent: string;
     };
 
-    const newSpansByMessage = { ...spansByMessage, [messageId]: newTextSpans };
-    textSpans = Object.values(newSpansByMessage).flat();
+    const newSpansByMessageId = { ...spansByMessageId, [messageId]: newTextSpans };
+    textSpans = Object.values(newSpansByMessageId).flat();
 
     messages = messages.map((message) =>
       message.id === messageId ? createUpdatedMessage({ message, newMessageContent }) : message,
@@ -65,7 +67,7 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto">
-  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={handleClick} id="tagButton"
+  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton"
     >Tag Selected Text</button
   >
   {#each messages.sort((a, b) => a.data.number - b.data.number) as message}
@@ -75,7 +77,7 @@ License: CECILL-C
       <Answer
         {message}
         {colorScale}
-        textSpans={spansByMessage[message.id]}
+        textSpans={spansByMessageId[message.id]}
         bind:textSpanAttributes
         on:messageContentChange={handleMessageContentChange}
       />

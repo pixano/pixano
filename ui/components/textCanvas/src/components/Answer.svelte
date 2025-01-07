@@ -5,62 +5,54 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { Message, TextSpan, TextSpanType } from "@pixano/core";
-  import { createEventDispatcher, onDestroy, onMount } from "svelte";
-  import {
-    formatTextWithAnnotations,
-    getAnnotationsFromHtml,
-    getTextSpanAttributes,
-    htmlToString,
-  } from "../lib/utils";
+  /* eslint-disable svelte/no-at-html-tags */
 
-  export let message: Message;
+  import type { Message, TextSpan, TextSpanType } from "@pixano/core";
+  import { createEventDispatcher } from "svelte";
+  import { editorSelectionToTextSpan, htmlToTextSpans, textSpansToHtml } from "../lib";
+
   export let textSpans: TextSpan[] = [];
   export let colorScale: (value: string) => string;
   export let textSpanAttributes: TextSpanType | null = null;
+  export let message: Message;
 
-  const dispatch = createEventDispatcher();
   const messageId = message.id;
 
-  let editableDiv: HTMLElement | null = null;
+  const dispatch = createEventDispatcher();
 
-  $: formattedAnswer = formatTextWithAnnotations({
-    text: message.data.content,
-    textSpans,
-    colorScale,
-  });
+  $: richEditorContent = textSpansToHtml({ text: message.data.content, textSpans, colorScale });
 
-  const mouseupListener = () => {
-    if (!editableDiv) return;
-    textSpanAttributes = getTextSpanAttributes({ editableDiv, messageId });
+  const mouseupListener = (
+    e: MouseEvent & {
+      currentTarget: EventTarget & HTMLDivElement;
+    },
+  ) => {
+    textSpanAttributes = editorSelectionToTextSpan({ editableDiv: e.currentTarget, messageId });
   };
 
-  const keyupListener = () => {
-    if (!editableDiv) return;
+  const inputListener = (
+    e: Event & {
+      currentTarget: EventTarget & HTMLDivElement;
+    },
+  ) => {
+    const newTextSpans = htmlToTextSpans({
+      editableDiv: e.currentTarget,
+      prevTextSpans: textSpans,
+    });
 
-    const newTextSpans = getAnnotationsFromHtml({ editableDiv, textSpans });
-    const newMessageContent = htmlToString(editableDiv.innerHTML);
+    const newMessageContent = e.currentTarget.innerText;
 
     dispatch("messageContentChange", { messageId, newTextSpans, newMessageContent });
   };
-
-  onMount(() => {
-    editableDiv = document.getElementById(messageId);
-
-    editableDiv?.addEventListener("mouseup", mouseupListener);
-    editableDiv?.addEventListener("keyup", keyupListener);
-  });
-
-  onDestroy(() => {
-    editableDiv?.removeEventListener("mouseup", mouseupListener);
-    editableDiv?.removeEventListener("keyup", keyupListener);
-  });
 </script>
 
 <div
-  id={message.id}
+  on:mouseup={mouseupListener}
+  on:input={inputListener}
   contenteditable="true"
   class="outline-none flex flex-row flex-wrap items-center"
+  role="textbox"
+  tabindex="0"
 >
-  {@html formattedAnswer}
+  {@html richEditorContent}
 </div>
