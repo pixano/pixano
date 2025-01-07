@@ -9,7 +9,13 @@ License: CECILL-C
 
   import type { Message, TextSpan, TextSpanType } from "@pixano/core";
   import { createEventDispatcher } from "svelte";
-  import { editorSelectionToTextSpan, htmlToTextSpans, textSpansToHtml } from "../lib";
+  import {
+    editorSelectionToTextSpan,
+    htmlToTextSpans,
+    restoreCaretPosition,
+    saveCaretPosition,
+    textSpansToHtml,
+  } from "../lib";
 
   export let textSpans: TextSpan[] = [];
   export let colorScale: (value: string) => string;
@@ -35,14 +41,24 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLDivElement;
     },
   ) => {
+    const editableDiv = e.currentTarget;
+    const caretPosition = saveCaretPosition(editableDiv);
+
     const newTextSpans = htmlToTextSpans({
-      editableDiv: e.currentTarget,
+      editableDiv,
       prevTextSpans: textSpans,
     });
 
-    const newMessageContent = e.currentTarget.innerText;
+    const newMessageContent = editableDiv.innerText;
 
     dispatch("messageContentChange", { messageId, newTextSpans, newMessageContent });
+
+    if (caretPosition !== null) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        restoreCaretPosition({ element: editableDiv, position: caretPosition });
+      });
+    }
   };
 </script>
 
