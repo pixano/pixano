@@ -4,9 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-import pytest
-from pydantic import ValidationError
-
 from pixano.features import Track, create_track, is_track
 from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
