@@ -6,14 +6,15 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-      Message,
-      MessageTypeEnum,
-      SaveShapeType,
-      TextSpan,
-      type ImagesPerView,
-      type Shape,
-      type TextSpanType,
+    Message,
+    MessageTypeEnum,
+    SaveShapeType,
+    TextSpan,
+    type ImagesPerView,
+    type Shape,
+    type TextSpanType,
   } from "@pixano/core";
+  import { createEventDispatcher } from "svelte";
   import { Answer } from "./components";
   import Question from "./components/Question.svelte";
   import { createUpdatedMessage, groupTextSpansByMessageId } from "./lib";
@@ -33,6 +34,8 @@ License: CECILL-C
 
   $: spansByMessageId = groupTextSpansByMessageId(textSpans);
 
+  const dispatch = createEventDispatcher();
+
   const onTagText = () => {
     if (!textSpanAttributes) return;
 
@@ -49,21 +52,37 @@ License: CECILL-C
     };
   };
 
-  const handleMessageContentChange = (event: CustomEvent) => {
-    event.preventDefault();
-
-    const { messageId, newTextSpans, newMessageContent } = event.detail as {
+  const handleMessageContentChange = (
+    event: CustomEvent<{
       messageId: string;
       newTextSpans: TextSpan[];
       newMessageContent: string;
-    };
+    }>,
+  ) => {
+    event.preventDefault();
+
+    const { messageId, newTextSpans, newMessageContent } = event.detail;
 
     const newSpansByMessageId = { ...spansByMessageId, [messageId]: newTextSpans };
     textSpans = Object.values(newSpansByMessageId).flat();
 
-    messages = messages.map((message) =>
-      message.id === messageId ? createUpdatedMessage({ message, newMessageContent }) : message,
-    );
+    const prevMessage = messages.find((message) => message.id === messageId);
+
+    if (!prevMessage) {
+      return;
+    }
+
+    const updatedMessage = createUpdatedMessage({
+      message: prevMessage,
+      newMessageContent,
+    });
+
+    dispatch("messageContentChange", {
+      updatedMessage,
+      updatedTextSpans: newTextSpans,
+    });
+
+    messages = messages.map((message) => (message.id === messageId ? updatedMessage : message));
   };
 </script>
 
