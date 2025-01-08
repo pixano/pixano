@@ -15,11 +15,11 @@ from .entity import Entity
 class Conversation(Entity):
     """A `Conversation` entity.
 
-    A conversation is an object refered by Message annotations via the entity_ref
+    A conversation is an object refered by Message annotations via their `entity_ref` attribute.
 
     Attributes:
-        kind: agnostic metadata to store information of the conversation
-        with_model: model source reference, or may either refer the groundtruth source reference
+        kind: Agnostic metadata to store information of the conversation.
+        with_model: Model source reference, or may refer to the groundtruth source.
     """
 
     kind: str
@@ -42,15 +42,15 @@ def create_conversation(
     """Create a `Conversation` instance.
 
     Args:
-        kind: QUESTION or ANSWER.
-        with_model: Model source reference.
+        kind: Agnostic metadata to store information of the conversation.
+        with_model: Model source reference, or may refer to the groundtruth source.
         id: Conversation ID.
         item_ref: Item reference.
         view_ref: View reference.
         parent_ref: Entity reference.
 
     Returns:
-        The created `Track` instance.
+        The created `Conversation` instance.
     """
     return Conversation(
         id=id,
