@@ -11,8 +11,8 @@ import {
   Entity,
   Keypoints,
   Mask,
-  TextSpan,
   SaveShapeType,
+  TextSpan,
   Tracklet,
   type BBoxType,
   type DatasetSchema,
@@ -135,7 +135,7 @@ export const defineCreatedObject = (
     : shape.type === SaveShapeType.textSpan
       ? "text"
       : "image";
-      
+
   if (isVideo && shape.type !== SaveShapeType.tracklet)
     newObject.ui.frame_index = currentFrameIndex;
 

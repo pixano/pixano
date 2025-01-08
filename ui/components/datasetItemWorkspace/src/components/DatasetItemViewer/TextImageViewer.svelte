@@ -16,20 +16,20 @@ License: CECILL-C
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
-      annotations,
-      colorScale,
-      filters,
-      imageSmoothing,
-      itemBboxes,
-      itemKeypoints,
-      itemMasks,
-      itemMetas,
-      messages,
-      newShape,
-      preAnnotationIsActive,
-      selectedKeypointsTemplate,
-      selectedTool,
-      textSpans,
+    annotations,
+    colorScale,
+    filters,
+    imageSmoothing,
+    itemBboxes,
+    itemKeypoints,
+    itemMasks,
+    itemMetas,
+    messages,
+    newShape,
+    preAnnotationIsActive,
+    selectedKeypointsTemplate,
+    selectedTool,
+    textSpans,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes

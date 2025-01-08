@@ -6,4 +6,3 @@ License: CECILL-C
 
 export * from "./types";
 export * from "./utils";
-

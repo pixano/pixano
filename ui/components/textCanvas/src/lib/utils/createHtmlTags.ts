@@ -18,7 +18,7 @@ export const createHtmlTags = ({
   hidden: boolean;
 }) => {
   const element = document.createElement(TAG_NAME);
-  
+
   element.style.backgroundColor = bgColor;
   element.style.color = "white";
   element.style.padding = "1px 4px";

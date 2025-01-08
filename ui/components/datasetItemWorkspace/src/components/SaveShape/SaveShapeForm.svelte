@@ -243,7 +243,7 @@ License: CECILL-C
 
   const handleFormSubmit = () => {
     currentTab = "objects";
-    
+
     if ($newShape.status !== "saving") {
       return;
     }
@@ -271,7 +271,7 @@ License: CECILL-C
         }
       }
     }
-    
+
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
     const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
@@ -370,7 +370,7 @@ License: CECILL-C
       topEntity.ui.childs?.push(newObject2);
       topEntity.ui.childs?.push(newTracklet);
     }
-    
+
     if (!$entities.includes(topEntity)) {
       const save_item_entity: SaveItem = {
         change_type: "add",
