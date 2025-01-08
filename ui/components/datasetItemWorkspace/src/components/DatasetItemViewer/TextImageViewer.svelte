@@ -8,36 +8,36 @@ License: CECILL-C
   // Imports
   import { Canvas2D } from "@pixano/canvas2d";
   import {
-      DatasetItem,
-      Image,
-      type ImagesPerView,
-      Message,
-      type SaveItem,
-      TextSpan,
+    DatasetItem,
+    Image,
+    type ImagesPerView,
+    Message,
+    type SaveItem,
+    TextSpan,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
-// Import stores and API functions
+  // Import stores and API functions
   import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
-      annotations,
-      colorScale,
-      filters,
-      imageSmoothing,
-      itemBboxes,
-      itemKeypoints,
-      itemMasks,
-      itemMetas,
-      messages,
-      newShape,
-      preAnnotationIsActive,
-      saveData,
-      selectedKeypointsTemplate,
-      selectedTool,
-      textSpans,
+    annotations,
+    colorScale,
+    filters,
+    imageSmoothing,
+    itemBboxes,
+    itemKeypoints,
+    itemMasks,
+    itemMetas,
+    messages,
+    newShape,
+    preAnnotationIsActive,
+    saveData,
+    selectedKeypointsTemplate,
+    selectedTool,
+    textSpans,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
