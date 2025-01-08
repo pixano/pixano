@@ -5,23 +5,26 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
-import { writable, derived } from "svelte/store";
 import {
-  type Shape,
   type InteractiveImageSegmenter,
-  type SelectionTool,
-  utils,
   type KeypointsTemplate,
   type SaveItem,
+  type SelectionTool,
+  type Shape,
   Annotation,
-  Entity,
-  Image,
-  SequenceFrame,
-  Tracklet,
+  BaseSchema,
   BBox,
-  Mask,
+  Conversation,
+  Entity,
   Keypoints,
+  Mask,
+  Message,
+  TextSpan,
+  Tracklet,
+  utils,
+  View,
 } from "@pixano/core";
+import { derived, writable } from "svelte/store";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
 import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
@@ -31,7 +34,7 @@ export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
 export const annotations = writable<Annotation[]>([]);
 export const entities = writable<Entity[]>([]);
-export const views = writable<Record<string, Image | SequenceFrame[]>>({});
+export const views = writable<Record<string, View | View[]>>({});
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const preAnnotationIsActive = writable<boolean>(false);
@@ -79,7 +82,7 @@ export const itemBboxes = derived(
   ([$annotations, $views, $entities]) => {
     const bboxes: BBox[] = [];
     for (const ann of $annotations) {
-      if (ann.is_bbox) {
+      if (ann.is_type(BaseSchema.BBox)) {
         const box = mapObjectToBBox(ann as BBox, $views, $entities);
         if (box) bboxes.push(box);
       }
@@ -91,7 +94,7 @@ export const itemBboxes = derived(
 export const itemMasks = derived(annotations, ($annotations) => {
   const masks: Mask[] = [];
   for (const ann of $annotations) {
-    if (ann.is_mask) {
+    if (ann.is_type(BaseSchema.Mask)) {
       const mask = mapObjectToMasks(ann as Mask);
       if (mask) masks.push(mask);
     }
@@ -102,7 +105,7 @@ export const itemMasks = derived(annotations, ($annotations) => {
 export const itemKeypoints = derived([annotations, views], ([$annotations, $views]) => {
   const m_keypoints: KeypointsTemplate[] = [];
   for (const ann of $annotations) {
-    if (ann.is_keypoints) {
+    if (ann.is_type(BaseSchema.Keypoints)) {
       const kpt = mapObjectToKeypoints(ann as Keypoints, $views);
       if (kpt) m_keypoints.push(kpt);
     }
@@ -111,5 +114,19 @@ export const itemKeypoints = derived([annotations, views], ([$annotations, $view
 });
 
 export const tracklets = derived(annotations, ($annotations) => {
-  return $annotations.filter((annotation) => annotation.is_tracklet) as Tracklet[];
+  return $annotations.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Tracklet[];
+});
+
+export const textSpans = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_type(BaseSchema.TextSpan)) as TextSpan[];
+});
+
+export const messages = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_type(BaseSchema.Message)) as Message[];
+});
+
+export const conversations = derived(entities, ($entities) => {
+  return $entities.filter((entities) =>
+    entities.is_type(BaseSchema.Conversation),
+  ) as Conversation[];
 });

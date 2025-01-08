@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./datasetTypes";
+export * from "./dataset";
 export * from "./modelsTypes";
 export * from "./objectTypes";
 export * from "./toolsTypes";

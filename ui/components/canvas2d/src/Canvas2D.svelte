@@ -6,27 +6,35 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import * as ort from "onnxruntime-web";
+  import { SaveShapeType, WarningModal, type ImagesPerView } from "@pixano/core";
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onMount, onDestroy } from "svelte";
+  import * as ort from "onnxruntime-web";
+  import { afterUpdate, onDestroy, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
-  import { WarningModal, type ImagesPerView } from "@pixano/core";
 
-  import { cn } from "@pixano/core/src";
-  import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import {
-    Mask,
     BBox,
-    type SelectionTool,
-    type LabeledPointTool,
-    type Shape,
+    Mask,
     type KeypointsTemplate,
-    type Vertex,
+    type LabeledPointTool,
     type Reference,
+    type SelectionTool,
+    type Shape,
+    type Vertex,
   } from "@pixano/core";
+  import { cn } from "@pixano/core/src";
+  import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
 
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
+  import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import CreateKeypoint from "./components/CreateKeypoints.svelte";
+  import CreatePolygon from "./components/CreatePolygon.svelte";
+  import CreateRectangle from "./components/CreateRectangle.svelte";
+  import PolygonGroup from "./components/PolygonGroup.svelte";
+  import Rectangle from "./components/Rectangle.svelte";
+  import ShowKeypoints from "./components/ShowKeypoint.svelte";
   import {
     INPUTPOINT_RADIUS,
     INPUTPOINT_STROKEWIDTH,
@@ -35,14 +43,7 @@ License: CECILL-C
     // MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
-  import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
-  import PolygonGroup from "./components/PolygonGroup.svelte";
-  import CreatePolygon from "./components/CreatePolygon.svelte";
-  import Rectangle from "./components/Rectangle.svelte";
-  import CreateRectangle from "./components/CreateRectangle.svelte";
-  import CreateKeypoint from "./components/CreateKeypoints.svelte";
-  import ShowKeypoints from "./components/ShowKeypoint.svelte";
-  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
+  import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
 
   // Exports
   export let selectedItemId: string;
@@ -123,7 +124,7 @@ License: CECILL-C
 
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
-    width: 1024,
+    width: 512,
     height: 780,
     name: "konva",
     id: "stage",
@@ -376,56 +377,6 @@ License: CECILL-C
     });
   };
 
-  const EqualizeHistogram = (imageData: ImageData) => {
-    const { width, height, data } = imageData;
-    const nPixels = width * height;
-
-    // Create histograms for each channel
-    const histR: number[] = new Array(256).fill(0) as number[];
-    const histG: number[] = new Array(256).fill(0) as number[];
-    const histB: number[] = new Array(256).fill(0) as number[];
-
-    // Calculate histograms
-    for (let i = 0; i < nPixels * 4; i += 4) {
-      histR[data[i]]++;
-      histG[data[i + 1]]++;
-      histB[data[i + 2]]++;
-    }
-
-    // Calculate cumulative distribution function (CDF) for each channel
-    const cdfR: number[] = new Array(256).fill(0) as number[];
-    const cdfG: number[] = new Array(256).fill(0) as number[];
-    const cdfB: number[] = new Array(256).fill(0) as number[];
-
-    cdfR[0] = histR[0];
-    cdfG[0] = histG[0];
-    cdfB[0] = histB[0];
-
-    for (let i = 1; i < 256; i++) {
-      cdfR[i] = cdfR[i - 1] + histR[i];
-      cdfG[i] = cdfG[i - 1] + histG[i];
-      cdfB[i] = cdfB[i - 1] + histB[i];
-    }
-
-    // Normalize the CDF
-    const cdfRMin = cdfR.find((value) => value > 0);
-    const cdfGMin = cdfG.find((value) => value > 0);
-    const cdfBMin = cdfB.find((value) => value > 0);
-
-    for (let i = 0; i < 256; i++) {
-      cdfR[i] = ((cdfR[i] - cdfRMin) / (nPixels - cdfRMin)) * 255;
-      cdfG[i] = ((cdfG[i] - cdfGMin) / (nPixels - cdfGMin)) * 255;
-      cdfB[i] = ((cdfB[i] - cdfBMin) / (nPixels - cdfBMin)) * 255;
-    }
-
-    // Apply equalization to the image data
-    for (let i = 0; i < nPixels * 4; i += 4) {
-      data[i] = Math.round(cdfR[data[i]]);
-      data[i + 1] = Math.round(cdfG[data[i + 1]]);
-      data[i + 2] = Math.round(cdfB[data[i + 2]]);
-    }
-  };
-
   const AdjustChannels = (imageData: ImageData) => {
     const { data } = imageData;
 
@@ -468,7 +419,7 @@ License: CECILL-C
 
     images.forEach((image) => {
       let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
-      if ($filters.equalizeHistogram) filtersList.push(EqualizeHistogram);
+      if ($filters.equalizeHistogram) filtersList.push(equalizeHistogram);
 
       image.filters(filtersList);
       image.brightness($filters.brightness);
@@ -491,8 +442,9 @@ License: CECILL-C
   async function updateCurrentMask(viewRef: Reference) {
     const points = getInputPoints(viewRef.name);
     const box = getInputRect(viewRef.name);
+    const currentImage = getCurrentImage(viewRef.name);
     const input = {
-      image: getCurrentImage(viewRef.name),
+      image: currentImage,
       embedding: viewRef.name in embeddings ? embeddings[viewRef.name] : null,
       points: points,
       box: box,
@@ -510,11 +462,11 @@ License: CECILL-C
         newShape = {
           masksImageSVG: results.masksImageSVG,
           rle: results.rle,
-          type: "mask",
+          type: SaveShapeType.mask,
           viewRef,
           itemId: selectedItemId,
-          imageWidth: getCurrentImage(viewRef.name).width,
-          imageHeight: getCurrentImage(viewRef.name).height,
+          imageWidth: currentImage.width,
+          imageHeight: currentImage.height,
           status: "saving",
         };
 
@@ -617,10 +569,10 @@ License: CECILL-C
     const y = Math.round(cursorPositionOnImage.y);
 
     const oldPoints =
-      newShape.status === "creating" && newShape.type === "mask" ? newShape.points : [];
+      newShape.status === "creating" && newShape.type === SaveShapeType.mask ? newShape.points : [];
     newShape = {
       status: "creating",
-      type: "mask",
+      type: SaveShapeType.mask,
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
       viewRef,
     };
@@ -634,14 +586,18 @@ License: CECILL-C
 
       const pos = viewLayer.getRelativePointerPosition();
       const x =
-        newShape.status === "creating" && newShape.type === "keypoints" ? newShape.x : pos.x;
+        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
+          ? newShape.x
+          : pos.x;
       const y =
-        newShape.status === "creating" && newShape.type === "keypoints" ? newShape.y : pos.y;
+        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
+          ? newShape.y
+          : pos.y;
       const width = pos.x - x;
       const height = pos.y - y;
       newShape = {
         status: "creating",
-        type: "keypoints",
+        type: SaveShapeType.keypoints,
         x,
         y,
         width,
@@ -656,9 +612,9 @@ License: CECILL-C
     if (selectedTool?.type == "KEY_POINT") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
-      if (rect && newShape.status === "creating" && newShape.type === "keypoints") {
+      if (rect && newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) {
         const vertices = newShape.keypoints.vertices.map((vertex) => {
-          if (newShape.status === "creating" && newShape.type === "keypoints")
+          if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints)
             return {
               ...vertex,
               x: newShape.x + vertex.x * newShape.width,
@@ -667,7 +623,7 @@ License: CECILL-C
         });
         newShape = {
           status: "saving",
-          type: "keypoints",
+          type: SaveShapeType.keypoints,
           viewRef,
           itemId: selectedItemId,
           imageWidth: getCurrentImage(viewRef.name).width,
@@ -930,11 +886,13 @@ License: CECILL-C
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
-      const x = newShape.status === "creating" && newShape.type === "bbox" ? newShape.x : pos.x;
-      const y = newShape.status === "creating" && newShape.type === "bbox" ? newShape.y : pos.y;
+      const x =
+        newShape.status === "creating" && newShape.type === SaveShapeType.bbox ? newShape.x : pos.x;
+      const y =
+        newShape.status === "creating" && newShape.type === SaveShapeType.bbox ? newShape.y : pos.y;
       newShape = {
         status: "creating",
-        type: "bbox",
+        type: SaveShapeType.bbox,
         x,
         y,
         width: pos.x - x,
@@ -969,7 +927,7 @@ License: CECILL-C
                 width: correctedRect.width,
                 height: correctedRect.height,
               },
-              type: "bbox",
+              type: SaveShapeType.bbox,
               viewRef,
               itemId: selectedItemId,
               imageWidth: getCurrentImage(viewRef.name).width,
@@ -1272,7 +1230,7 @@ License: CECILL-C
           <!-- Note: prevent drawing shapes on the "cached" image -->
           {#if i === images.length - 1}
             <Group config={{ id: `bboxes-${view_name}` }}>
-              {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
+              {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
                 <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} />
               {/if}
               {#each bboxes as bbox}
@@ -1317,7 +1275,7 @@ License: CECILL-C
               {/each}
             </Group>
             <Group config={{ id: `keypoints-${view_name}` }}>
-              {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
+              {#if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) || (newShape.status === "saving" && newShape.type === SaveShapeType.keypoints)}
                 <CreateKeypoint
                   zoomFactor={zoomFactor[view_name]}
                   bind:newShape

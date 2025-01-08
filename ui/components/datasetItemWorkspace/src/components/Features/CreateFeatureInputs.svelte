@@ -6,21 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { BaseSchema, Message, TextSpan, type ItemFeature } from "@pixano/core";
   import {
-    Input,
+    BBox,
     Checkbox,
     Combobox,
     Entity,
-    Track,
-    Tracklet,
-    BBox,
+    Input,
     Keypoints,
     Mask,
+    Track,
+    Tracklet,
   } from "@pixano/core/src";
-  import type { ItemFeature } from "@pixano/core";
 
-  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import {
     createObjectInputsSchema,
@@ -33,7 +33,6 @@ License: CECILL-C
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
-
   //import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
   import { mapFeatureList } from "../../lib/api/featuresApi";
 
@@ -44,7 +43,7 @@ License: CECILL-C
   export let isAutofocusEnabled: boolean = true;
   export let entitiesCombo: { id: string; name: string }[] = [{ id: "new", name: "New" }];
   export let selectedEntityId: string = entitiesCombo[0].id;
-  export let shapeType: string;
+  export let baseSchema: BaseSchema;
   let objectValidationSchema: CreateObjectSchema;
 
   datasetSchema.subscribe((schema) => {
@@ -54,23 +53,27 @@ License: CECILL-C
     Object.entries(schema.schemas).forEach(([tname, sch]) => {
       let nonFeatsFields: string[] = [];
       let group = "entities";
-      if (["Entity", "Track", shapeType].includes(sch.base_schema)) {
-        if ("Entity" === sch.base_schema) {
+      if ([BaseSchema.Entity, BaseSchema.Track, baseSchema].includes(sch.base_schema)) {
+        if (sch.base_schema === BaseSchema.Entity) {
           nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
         }
-        if ("Track" === sch.base_schema) {
+        if (sch.base_schema === BaseSchema.Track) {
           nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
         }
-        if (shapeType === sch.base_schema) {
+        if (baseSchema === sch.base_schema) {
           group = "annotations";
-          if (shapeType === "BBox")
+          if (baseSchema === BaseSchema.BBox)
             nonFeatsFields = nonFeatsFields.concat(BBox.nonFeaturesFields());
-          if (shapeType === "KeyPoints")
+          if (baseSchema === BaseSchema.Keypoints)
             nonFeatsFields = nonFeatsFields.concat(Keypoints.nonFeaturesFields());
-          if (shapeType === "CompressedRLE")
+          if (baseSchema === BaseSchema.Mask)
             nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
-          if (shapeType === "Tracklet")
+          if (baseSchema === BaseSchema.Tracklet)
             nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
+          if (baseSchema === BaseSchema.TextSpan)
+            nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
+          if (baseSchema === BaseSchema.Message)
+            nonFeatsFields = nonFeatsFields.concat(Message.nonFeaturesFields());
         }
         //TODO: custom fields from other types
         for (const feat in sch.fields) {

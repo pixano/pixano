@@ -6,26 +6,29 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import {
-    type DatasetItem,
     type DatasetInfo,
+    type DatasetItem,
     type SaveItem,
-    PrimaryButton,
     type Schema,
+    api,
+    BaseSchema,
     Entity,
+    Image,
+    PrimaryButton,
+    SequenceFrame,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
-  import { api } from "@pixano/core/src";
   import {
-    datasetsStore,
     datasetSchema,
+    datasetsStore,
     isLoadingNewItemStore,
     modelsStore,
-    sourcesStore,
     saveCurrentItemStore,
+    sourcesStore,
   } from "../../../../lib/stores/datasetStores";
-  import { goto } from "$app/navigation";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -57,11 +60,13 @@ License: CECILL-C
         api
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {
-            let item_type: "image" | "video" | "3d" = "image";
+            let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
-            Object.values(item.views).map((view) => {
+
+            for (const viewname in item.views) {
+              let view = item.views[viewname];
               if (Array.isArray(view)) {
-                const video = view;
+                const video = view as SequenceFrame[];
                 item_type = "video";
                 video.forEach((sf) => {
                   sf.data.type = "video";
@@ -69,15 +74,21 @@ License: CECILL-C
                 });
                 video.sort((a, b) => a.data.frame_index - b.data.frame_index);
               } else {
-                const image = view;
+                const image = view as Image;
                 image.data.type = "image";
                 image.data.url = media_dir + image.data.url;
+
+                // VQA items have a "conversations" field in the entities
+                const is_vqa = "conversations" in item.entities;
+
+                if (is_vqa) {
+                  item_type = "vqa";
+                }
               }
-              return view;
-            });
+            }
             selectedItem = item;
             selectedItem.ui = { type: item_type, datasetId: dataset.id };
-            if (Object.keys(item).length === 0) {
+            if (Object.keys(selectedItem).length === 0) {
               noItemFound = true;
             } else {
               noItemFound = false;
@@ -122,9 +133,9 @@ License: CECILL-C
     data.sort((a, b) => {
       const priority = (object: Schema) => {
         // Highest priority: Track
-        if (object.table_info.base_schema === "Track") return 0;
+        if (object.table_info.base_schema === BaseSchema.Track) return 0;
         // Second priority : Entity as top entity
-        if (object.table_info.base_schema === "Entity") {
+        if (object.table_info.base_schema === BaseSchema.Entity) {
           if ((object as Entity).data.parent_ref.id === "") return 1;
           else return 2; //Third priority: Entity as sub entity
         }
@@ -134,6 +145,7 @@ License: CECILL-C
     });
 
     const no_delete_data = data.filter((d) => d.change_type !== "delete");
+
     for (const savedItem of no_delete_data) {
       let no_table = false;
       let route = savedItem.object.table_info.group;
@@ -155,6 +167,7 @@ License: CECILL-C
         await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
     }
+
     //gather deletes by group and table
     //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
     const delete_data = data.filter((d) => d.change_type === "delete");
@@ -173,6 +186,7 @@ License: CECILL-C
       },
       {} as Record<string, Record<string, string[]>>,
     );
+
     for (const group in delete_ids_by_group_and_table) {
       for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
         let no_table = false;
@@ -184,6 +198,7 @@ License: CECILL-C
         await api.deleteSchemasByIds(route, selectedDataset.id, ids, table, no_table);
       }
     }
+
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

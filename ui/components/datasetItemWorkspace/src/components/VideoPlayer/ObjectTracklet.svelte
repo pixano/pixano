@@ -6,26 +6,30 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, cn } from "@pixano/core";
   import {
-    Tracklet,
+    BaseSchema,
+    ContextMenu,
     SequenceFrame,
-    type TrackletItem,
-    type MView,
+    Tracklet,
+    View,
+    cn,
     type SaveItem,
+    type TrackletItem,
   } from "@pixano/core";
-  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import TrackletKeyItem from "./TrackletKeyItem.svelte";
-  import {
-    colorScale,
-    annotations,
-    selectedTool,
-    saveData,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
+  import {
+    annotations,
+    colorScale,
+    saveData,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import TrackletKeyItem from "./TrackletKeyItem.svelte";
 
   import { panTool } from "../../lib/settings/selectionTools";
+
+  type MView = Record<string, View | View[]>;
 
   export let trackId: string;
   export let tracklet: Tracklet;
@@ -103,7 +107,7 @@ License: CECILL-C
 
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (ann.is_tracklet && ann.id === tracklet.id) {
+        if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
           if (isStart) {
             (ann as Tracklet).data.start_timestep = newFrameIndex;
           }

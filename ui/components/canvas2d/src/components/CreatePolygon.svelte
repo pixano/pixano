@@ -9,10 +9,10 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Line } from "svelte-konva";
 
-  import type { Shape, Reference } from "@pixano/core";
-  import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
-  import { runLengthEncode, convertPointToSvg } from "../api/maskApi";
+  import { type Reference, SaveShapeType, type Shape } from "@pixano/core";
+  import { convertPointToSvg, runLengthEncode } from "../api/maskApi";
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
+  import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
@@ -29,7 +29,7 @@ License: CECILL-C
   let isClosed = false;
 
   $: {
-    if (newShape.status === "creating" && newShape.type === "mask") {
+    if (newShape.status === "creating" && newShape.type === SaveShapeType.mask) {
       const lastPolygonDetailsPoint = newShape.points.at(-1);
       const lastSimplifiedPoint = polygonPoints?.[0]?.at(-1);
       if (lastPolygonDetailsPoint && lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
@@ -56,7 +56,7 @@ License: CECILL-C
           counts,
           size: [currentImage.height, currentImage.width],
         },
-        type: "mask",
+        type: SaveShapeType.mask,
         viewRef,
         itemId: selectedItemId,
         imageWidth: currentImage.width,

@@ -6,18 +6,18 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, Tracklet, cn } from "@pixano/core";
-  import type { TrackletItem, SaveItem } from "@pixano/core";
+  import type { SaveItem, TrackletItem } from "@pixano/core";
+  import { BaseSchema, ContextMenu, Tracklet, cn } from "@pixano/core";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
+  import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
-    selectedTool,
-    saveData,
     entities,
+    saveData,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
 
   export let trackId: string;
 
@@ -59,7 +59,7 @@ License: CECILL-C
     annotations.update((anns) =>
       anns
         .map((ann) => {
-          if (ann.id === tracklet.id && ann.is_tracklet) {
+          if (ann.id === tracklet.id && ann.is_type(BaseSchema.Tracklet)) {
             (ann as Tracklet).ui.childs = (ann as Tracklet).ui.childs.filter(
               (fann) => fann.ui.frame_index !== itemFrameIndex,
             );

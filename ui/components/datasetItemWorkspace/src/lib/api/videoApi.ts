@@ -4,14 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BBox, Tracklet } from "@pixano/core";
-import type { KeypointsTemplate, SaveItem, Annotation } from "@pixano/core";
+import type { Annotation, KeypointsTemplate, SaveItem } from "@pixano/core";
+import { BaseSchema, BBox, Tracklet } from "@pixano/core";
 import { nanoid } from "nanoid";
 import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
 
-import { addOrUpdateSaveItem, getPixanoSource } from "./objectsApi";
-import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
+import { addOrUpdateSaveItem, getPixanoSource } from "./objectsApi";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const date = new Date(imageIndex * videoSpeed);
@@ -179,7 +179,7 @@ export const splitTrackletInTwo = (
 };
 
 export const sortByFrameIndex = (a: Annotation, b: Annotation) => {
-  if (a.is_tracklet && b.is_tracklet) {
+  if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
     return (a as Tracklet).data.start_timestep - (b as Tracklet).data.start_timestep;
   } else {
     const indexA = a.ui.frame_index !== undefined ? a.ui.frame_index : Number.POSITIVE_INFINITY;

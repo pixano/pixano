@@ -7,26 +7,35 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
-  import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
+  import {
+    Annotation,
+    BaseSchema,
+    DatasetItem,
+    Entity,
+    Mask,
+    Tracklet,
+    type SaveItem,
+  } from "@pixano/core";
 
+  import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
-  import { sortByFrameIndex } from "./lib/api/videoApi";
-  import { getTopEntity } from "./lib/api/objectsApi";
-  import Toolbar from "./components/Toolbar.svelte";
+  import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
+  import Toolbar from "./components/Toolbar.svelte";
+  import "./index.css";
+  import { getTopEntity } from "./lib/api/objectsApi";
+  import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
     annotations,
+    canSave,
+    entities,
     itemMetas,
     newShape,
-    canSave,
     saveData,
-    entities,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
-  import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
-  import { Loader2Icon } from "lucide-svelte";
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -41,28 +50,25 @@ License: CECILL-C
   const back2front = (ann: Annotation): Annotation => {
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
+    if (ann.table_info.base_schema === BaseSchema.Mask) {
+      //unpack Compressed RLE to uncompressed RLE
+      const mask: Mask = ann as Mask;
+      if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+    }
+
     if (selectedItem.ui.type === "image") {
       ann.ui = { datasetItemType: "image" };
-      if (ann.table_info.base_schema === "CompressedRLE") {
-        //unpack Compressed RLE to uncompressed RLE
-        const mask: Mask = ann as Mask;
-        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-      }
-    } else {
+    } else if (selectedItem.ui.type === "video") {
       ann.ui = { datasetItemType: "video" };
       //add frame_index to annotation
-      if (ann.table_info.base_schema !== "Tracklet") {
+      if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
         const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
       }
-
-      if (ann.table_info.base_schema === "CompressedRLE") {
-        //unpack Compressed RLE to uncompressed RLE
-        const mask: Mask = ann as Mask;
-        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-      }
+    } else if (selectedItem.ui.type === "vqa") {
+      ann.ui = { datasetItemType: "vqa" };
     }
     return ann;
   };
@@ -80,8 +86,8 @@ License: CECILL-C
 
     let newEntities: Entity[] = [];
     const subEntitiesChilds: Record<string, Annotation[]> = {};
-    Object.values(selectedItem.entities).forEach((sel_entities) => {
-      sel_entities.forEach((entity) => {
+    Object.values(selectedItem.entities).forEach((item_entities) => {
+      item_entities.forEach((entity) => {
         //build childs list
         entity.ui = { childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id) };
         newEntities.push(entity);
@@ -110,7 +116,7 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.map((ann) => {
         const top_entity = getTopEntity(ann, $entities);
-        if (ann.is_tracklet) {
+        if (ann.is_type(BaseSchema.Tracklet)) {
           const tracklet = ann as Tracklet;
           if (top_entity) {
             tracklet.ui.childs =
@@ -153,7 +159,7 @@ License: CECILL-C
       if (
         (obj.change_type === "add" || obj.change_type === "update") &&
         obj.object.table_info.group === "annotations" &&
-        obj.object.table_info.base_schema === "CompressedRLE" &&
+        obj.object.table_info.base_schema === BaseSchema.Mask &&
         Array.isArray((obj.object as Mask).data.counts)
       ) {
         const mask = structuredClone(obj.object) as Mask;

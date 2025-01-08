@@ -18,6 +18,7 @@
     "@pixano/dataset-item-workspace": "workspace:^",
     "@pixano/models": "workspace:^",
     "@pixano/table": "workspace:^",
+    "@pixano/text-canvas": "workspace:^",
     "lucide-svelte": "^0.292.0"
   },
   "devDependencies": {

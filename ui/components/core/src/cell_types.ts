@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { DatasetStat } from "./lib/types/datasetTypes";
+import type { DatasetStat } from "./lib/types/dataset";
 
 // Exports
 

@@ -8,12 +8,13 @@ License: CECILL-C
   // Imports
   import { Loader2Icon } from "lucide-svelte";
 
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { DatasetItem } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
-  import ImageViewer from "./ImageViewer.svelte";
-  import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
+  import ImageViewer from "./ImageViewer.svelte";
+  import TextImageViewer from "./TextImageViewer.svelte";
+  import VideoViewer from "./VideoViewer.svelte";
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
@@ -28,6 +29,8 @@ License: CECILL-C
     </div>
   {:else if selectedItem.ui.type === "video"}
     <VideoViewer {selectedItem} bind:currentAnn />
+  {:else if selectedItem.ui.type === "vqa"}
+    <TextImageViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
     <ImageViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "3d"}

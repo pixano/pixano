@@ -9,15 +9,21 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, SelectionTool, Shape, Reference } from "@pixano/core";
-  import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
-    sceneFunc,
-    hexToRGBA,
+    type Mask,
+    type Reference,
+    SaveShapeType,
+    type SelectionTool,
+    type Shape,
+  } from "@pixano/core";
+  import {
     convertPointToSvg,
+    hexToRGBA,
     parseSvgPath,
     runLengthEncode,
+    sceneFunc,
   } from "../api/maskApi";
+  import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
@@ -72,7 +78,7 @@ License: CECILL-C
     if (mask.ui.displayControl.editing) {
       newShape = {
         status: "editing",
-        type: "mask",
+        type: SaveShapeType.mask,
         viewRef,
         shapeId: mask.id,
         counts,

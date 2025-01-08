@@ -522,6 +522,8 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
     let nextPoint: string = "";
     while (nextPoint !== firstPoint) {
       nextPoint = targets.values().next().value!;
+      // TODO
+      if (nextPoint === undefined) break;
       path.push(splitPointKey(nextPoint));
       // Remove used edges and delete the point from polySegments entirely if it has no more edges left
       targets.delete(nextPoint);

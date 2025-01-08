@@ -45,6 +45,7 @@ makefile
 __pycache__
 *.pyc
 .env
+venv
 
 # Inference files
 *.pt

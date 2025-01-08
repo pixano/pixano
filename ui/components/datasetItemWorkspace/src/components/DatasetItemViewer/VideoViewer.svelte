@@ -8,48 +8,50 @@ License: CECILL-C
   // Imports
   import * as ort from "onnxruntime-web";
 
+  import { Canvas2D } from "@pixano/canvas2d";
   import {
-    DatasetItem,
     Annotation,
+    BaseSchema,
     BBox,
+    DatasetItem,
     Keypoints,
-    Track,
+    SaveShapeType,
     SequenceFrame,
+    Track,
     type EditShape,
-    type KeypointsTemplate,
-    type ImagesPerView,
     type HTMLImage,
+    type ImagesPerView,
+    type KeypointsTemplate,
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { Canvas2D } from "@pixano/canvas2d";
-  import {
-    itemBboxes,
-    itemKeypoints,
-    itemMasks,
-    tracklets,
-    entities,
-    annotations,
-    views,
-    newShape,
-    selectedTool,
-    colorScale,
-    selectedKeypointsTemplate,
-    imageSmoothing,
-    saveData,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
-  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
+  import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
-    updateExistingObject,
     addOrUpdateSaveItem,
     getPixanoSource,
+    updateExistingObject,
   } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
+  import {
+    annotations,
+    colorScale,
+    entities,
+    imageSmoothing,
+    itemBboxes,
+    itemKeypoints,
+    itemMasks,
+    newShape,
+    saveData,
+    selectedKeypointsTemplate,
+    selectedTool,
+    tracklets,
+    views,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
@@ -85,7 +87,7 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const bbox_childs_ids = new Set(
-          tracklet.ui.childs.filter((ann) => ann.is_bbox).map((bbox) => bbox.id),
+          tracklet.ui.childs.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
         );
         const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
         const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
@@ -114,7 +116,9 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const kpt_childs_ids = new Set(
-          tracklet.ui.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
+          tracklet.ui.childs
+            .filter((ann) => ann.is_type(BaseSchema.Keypoints))
+            .map((kpt) => kpt.id),
         );
         const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
         const kpt = kpt_childs.find((kpt) => kpt.ui!.frame_index === $currentFrameIndex);
@@ -280,9 +284,12 @@ License: CECILL-C
     //find corresponding annotation
     const update_ann = annotations.find((ann) => ann.id === shape.shapeId);
     if (update_ann) {
-      if (update_ann.is_bbox && shape.type === "bbox") {
+      if (update_ann.is_type(BaseSchema.BBox) && shape.type === SaveShapeType.bbox) {
         (update_ann as BBox).data.coords = shape.coords;
-      } else if (update_ann.is_keypoints && shape.type === "keypoints") {
+      } else if (
+        update_ann.is_type(BaseSchema.Keypoints) &&
+        shape.type === SaveShapeType.keypoints
+      ) {
         const coords = [];
         const states = [];
         for (const vertex of shape.vertices) {
@@ -292,7 +299,7 @@ License: CECILL-C
         }
         (update_ann as Keypoints).data.coords = coords;
         (update_ann as Keypoints).data.states = states;
-      } else if (update_ann.is_mask) {
+      } else if (update_ann.is_type(BaseSchema.Mask)) {
         console.log("TODO! mask");
         //mask not implemented yet in video
       } else {
@@ -313,7 +320,7 @@ License: CECILL-C
       //updated an interpolated annotation: create it
       //use start ann of interpolated as base for new ann
       let newAnn: Annotation | undefined = undefined;
-      if (shape.type === "bbox") {
+      if (shape.type === SaveShapeType.bbox) {
         const interpolated_box = $current_itemBBoxes.find((box) => box.id === shape.shapeId);
         if (interpolated_box && "startRef" in interpolated_box) {
           const newBBox = structuredClone(interpolated_box.startRef as BBox);
@@ -324,11 +331,12 @@ License: CECILL-C
           newBBox.updated_at = new Date(Date.now()).toISOString();
           newAnn = newBBox;
         }
-      } else if (shape.type === "keypoints") {
+      } else if (shape.type === SaveShapeType.keypoints) {
         const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
         if (interpolated_kpt && "startRef" in interpolated_kpt) {
           const keypointRef = annotations.find(
-            (ann) => ann.is_keypoints && ann.id === interpolated_kpt.ui!.startRef?.id,
+            (ann) =>
+              ann.is_type(BaseSchema.Keypoints) && ann.id === interpolated_kpt.ui!.startRef?.id,
           ) as Keypoints;
           if (keypointRef) {
             const newKpt = structuredClone(keypointRef);
@@ -348,7 +356,7 @@ License: CECILL-C
             newAnn = newKpt;
           }
         }
-      } else if (shape.type === "mask") {
+      } else if (shape.type === SaveShapeType.mask) {
         console.log("TODO! mask");
         //mask not implemented yet in video
       }
@@ -372,7 +380,7 @@ License: CECILL-C
   };
 
   const updateOrCreateShape = (shape: EditShape) => {
-    if (shape.type === "bbox" || shape.type === "keypoints") {
+    if (shape.type === SaveShapeType.bbox || shape.type === SaveShapeType.keypoints) {
       let { objects, save_data } = editKeyItemInTracklet($annotations, shape, $currentFrameIndex);
       annotations.set(objects);
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));

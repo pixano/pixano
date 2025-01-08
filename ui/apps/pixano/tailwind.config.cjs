@@ -7,6 +7,7 @@ export default {
     "./src/components/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/core/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/datasetItemWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
+    "../../components/textCanvas/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",

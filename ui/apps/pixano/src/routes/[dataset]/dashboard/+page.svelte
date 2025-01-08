@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { page } from "$app/stores";
 
-  import type { DatasetInfo } from "@pixano/core/src";
+  import type { DatasetInfo } from "@pixano/core";
   //import { api } from "@pixano/core/src";
   import Dashboard from "../../../components/dashboard/Dashboard.svelte";
 

@@ -45,17 +45,14 @@ from .annotations import (
     is_tracklet,
 )
 from .base_schema import BaseSchema, is_base_schema
-from .embeddings import (
-    Embedding,
-    ViewEmbedding,
-    create_view_embedding_function,
-    is_embedding,
-    is_view_embedding,
-)
+from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function, is_embedding, is_view_embedding
 from .entities import (
+    Conversation,
     Entity,
     Track,
+    create_conversation,
     create_track,
+    is_conversation,
     is_entity,
     is_track,
 )
@@ -93,6 +90,7 @@ __all__ = [
     "CamCalibration",
     "Classification",
     "CompressedRLE",
+    "Conversation",
     "Embedding",
     "Entity",
     "Extrinsics",
@@ -121,6 +119,7 @@ __all__ = [
     "create_cam_calibration",
     "create_classification",
     "create_compressed_rle",
+    "create_conversation",
     "create_image",
     "create_image_object",
     "create_keypoints",
@@ -143,6 +142,7 @@ __all__ = [
     "is_cam_calibration",
     "is_classification",
     "is_compressed_rle",
+    "is_conversation",
     "is_embedding",
     "is_entity",
     "is_image",
