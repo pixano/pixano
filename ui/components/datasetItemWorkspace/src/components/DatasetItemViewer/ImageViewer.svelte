@@ -6,33 +6,32 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
-  import { Canvas2D } from "@pixano/canvas2d";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
-  import { Image as ImageJS } from "image-js";
-
   // Import stores and API functions
-  import {
-    newShape,
-    itemBboxes,
-    itemKeypoints,
-    itemMasks,
-    selectedTool,
-    annotations,
-    preAnnotationIsActive,
-    colorScale,
-    filters,
-    itemMetas,
-    selectedKeypointsTemplate,
-    imageSmoothing,
-    modelsUiStore,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { afterUpdate } from "svelte";
   import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
-  import { afterUpdate } from "svelte";
+  import {
+    annotations,
+    colorScale,
+    filters,
+    imageSmoothing,
+    itemBboxes,
+    itemKeypoints,
+    itemMasks,
+    itemMetas,
+    modelsUiStore,
+    newShape,
+    preAnnotationIsActive,
+    selectedKeypointsTemplate,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
   export let selectedItem: DatasetItem;

@@ -15,7 +15,6 @@ License: CECILL-C
   // Import stores and API functions
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
-  import * as ort from "onnxruntime-web";
   import {
       annotations,
       colorScale,
