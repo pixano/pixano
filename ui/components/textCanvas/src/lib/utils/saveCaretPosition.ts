@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 export const saveCaretPosition = (element: HTMLElement) => {
   const selection = window.getSelection();
   if (!selection?.rangeCount) return null;
