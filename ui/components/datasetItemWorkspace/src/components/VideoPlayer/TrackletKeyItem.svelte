@@ -10,11 +10,7 @@ License: CECILL-C
   import { BaseSchema, ContextMenu, Tracklet, cn } from "@pixano/core";
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
-  import {
-    annotations,
-    entities,
-    saveData,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, entities, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let trackId: string;

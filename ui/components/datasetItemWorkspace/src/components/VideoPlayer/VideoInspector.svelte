@@ -60,7 +60,7 @@ License: CECILL-C
   <div class="h-full bg-white overflow-x-auto relative flex flex-col">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
-        <TimeTrack slot="timeTrack" {updateView} {resetTool}/>
+        <TimeTrack slot="timeTrack" {updateView} {resetTool} />
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
@@ -79,7 +79,7 @@ License: CECILL-C
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
-      <VideoControls {updateView} {resetTool}/>
+      <VideoControls {updateView} {resetTool} />
       <SliderRoot
         class="max-w-[200px]"
         bind:value={$videoControls.zoomLevel}

@@ -18,16 +18,9 @@ License: CECILL-C
   } from "@pixano/core";
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
-  import {
-    annotations,
-    colorScale,
-    saveData,
-    selectedTool,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, colorScale, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
-
-  import { panTool } from "../../lib/settings/selectionTools";
 
   type MView = Record<string, View | View[]>;
 

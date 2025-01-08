@@ -549,7 +549,7 @@ License: CECILL-C
         displayClassificationTool(selectedTool);
         break;
       case ToolType.Fusion:
-        displayFusionTool(selectedTool);
+        displayFusionTool();
         break;
 
       default:
@@ -588,7 +588,7 @@ License: CECILL-C
   // ********** KEY_POINT TOOL ********** //
 
   function dragInputKeyPointRectMove(viewRef: Reference) {
-    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+    if (selectedTool?.type === ToolType.Keypoint && newShape.status !== "saving") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
@@ -661,7 +661,7 @@ License: CECILL-C
     }
   }
 
-  function displayFusionTool(tool: SelectionTool) {
+  function displayFusionTool() {
     //deselect all (NOTE: quite strange way to deselect, should need rework)
     newShape = {
       status: "editing",
