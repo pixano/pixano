@@ -6,13 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-    Message,
-    MessageTypeEnum,
-    SaveShapeType,
-    TextSpan,
-    type ImagesPerView,
-    type Shape,
-    type TextSpanType,
+      Message,
+      MessageTypeEnum,
+      SaveShapeType,
+      TextSpan,
+      type ImagesPerView,
+      type Shape,
+      type TextSpanType,
   } from "@pixano/core";
   import { Answer } from "./components";
   import Question from "./components/Question.svelte";
@@ -26,7 +26,8 @@ License: CECILL-C
   export let messages: Message[];
   export let imagesPerView: ImagesPerView;
 
-  const viewRef = { id: imagesPerView.image[0].id, name: "images" };
+  const imagesPerViewKey = "image";
+  const viewRef = { id: imagesPerView[imagesPerViewKey][0].id, name: imagesPerViewKey };
 
   let textSpanAttributes: TextSpanType | null = null;
 
