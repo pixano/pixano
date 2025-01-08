@@ -2844,6 +2844,8 @@
       
         
       
+        
+      
     
     
       
@@ -2874,6 +2876,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/schemas/entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3862,7 +3885,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-145">145</a></span>
 <span class="normal"><a href="#__codelineno-0-146">146</a></span>
 <span class="normal"><a href="#__codelineno-0-147">147</a></span>
-<span class="normal"><a href="#__codelineno-0-148">148</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-148">148</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="__span-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize the dataset.</span>
 </span><span id="__span-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125"></a>
 </span><span id="__span-0-126"><a id="__codelineno-0-126" name="__codelineno-0-126"></a><span class="sd">    Args:</span>
@@ -3906,7 +3929,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 
 
 <h3 id="pixano.datasets.dataset.Dataset.id" class="doc doc-heading">
-            <code class="highlight language-python"><span class="nb">id</span><span class="p">:</span> <span class="nb">str</span></code>
+            <code class="highlight language-python"><span class="nb">id</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -3927,7 +3950,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 
 
 <h3 id="pixano.datasets.dataset.Dataset.num_rows" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">num_rows</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">num_rows</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -4100,7 +4123,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-579">579</a></span>
 <span class="normal"><a href="#__codelineno-0-580">580</a></span>
 <span class="normal"><a href="#__codelineno-0-581">581</a></span>
-<span class="normal"><a href="#__codelineno-0-582">582</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-544"><a id="__codelineno-0-544" name="__codelineno-0-544"></a><span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-582">582</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-544"><a id="__codelineno-0-544" name="__codelineno-0-544"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_data</span><span class="p">(</span>
 </span><span id="__span-0-545"><a id="__codelineno-0-545" name="__codelineno-0-545"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-546"><a id="__codelineno-0-546" name="__codelineno-0-546"></a>    <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-547"><a id="__codelineno-0-547" name="__codelineno-0-547"></a>    <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span>
@@ -4239,7 +4262,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-624">624</a></span>
 <span class="normal"><a href="#__codelineno-0-625">625</a></span>
 <span class="normal"><a href="#__codelineno-0-626">626</a></span>
-<span class="normal"><a href="#__codelineno-0-627">627</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-588"><a id="__codelineno-0-588" name="__codelineno-0-588"></a><span class="k">def</span> <span class="nf">add_dataset_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]</span> <span class="o">|</span> <span class="n">DatasetItem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]</span> <span class="o">|</span> <span class="n">DatasetItem</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-627">627</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-588"><a id="__codelineno-0-588" name="__codelineno-0-588"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_dataset_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]</span> <span class="o">|</span> <span class="n">DatasetItem</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]</span> <span class="o">|</span> <span class="n">DatasetItem</span><span class="p">:</span>
 </span><span id="__span-0-589"><a id="__codelineno-0-589" name="__codelineno-0-589"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Add dataset items to the dataset.</span>
 </span><span id="__span-0-590"><a id="__codelineno-0-590" name="__codelineno-0-590"></a>
 </span><span id="__span-0-591"><a id="__codelineno-0-591" name="__codelineno-0-591"></a><span class="sd">    Warn:</span>
@@ -4370,7 +4393,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-539">539</a></span>
 <span class="normal"><a href="#__codelineno-0-540">540</a></span>
 <span class="normal"><a href="#__codelineno-0-541">541</a></span>
-<span class="normal"><a href="#__codelineno-0-542">542</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-520"><a id="__codelineno-0-520" name="__codelineno-0-520"></a><span class="k">def</span> <span class="nf">compute_view_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-542">542</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-520"><a id="__codelineno-0-520" name="__codelineno-0-520"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute_view_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-521"><a id="__codelineno-0-521" name="__codelineno-0-521"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the [view embeddings][pixano.features.ViewEmbedding] via the</span>
 </span><span id="__span-0-522"><a id="__codelineno-0-522" name="__codelineno-0-522"></a><span class="sd">        [Embedding Function][lancedb.embeddings.base.EmbeddingFunction] stored in the table metadata.</span>
 </span><span id="__span-0-523"><a id="__codelineno-0-523" name="__codelineno-0-523"></a>
@@ -4619,7 +4642,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-260">260</a></span>
 <span class="normal"><a href="#__codelineno-0-261">261</a></span>
 <span class="normal"><a href="#__codelineno-0-262">262</a></span>
-<span class="normal"><a href="#__codelineno-0-263">263</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="k">def</span> <span class="nf">create_table</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-263">263</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_table</span><span class="p">(</span>
 </span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span>
@@ -4775,7 +4798,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-651">651</a></span>
 <span class="normal"><a href="#__codelineno-0-652">652</a></span>
 <span class="normal"><a href="#__codelineno-0-653">653</a></span>
-<span class="normal"><a href="#__codelineno-0-654">654</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-629"><a id="__codelineno-0-629" name="__codelineno-0-629"></a><span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-654">654</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-629"><a id="__codelineno-0-629" name="__codelineno-0-629"></a><span class="k">def</span><span class="w"> </span><span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 </span><span id="__span-0-630"><a id="__codelineno-0-630" name="__codelineno-0-630"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete data from a table.</span>
 </span><span id="__span-0-631"><a id="__codelineno-0-631" name="__codelineno-0-631"></a>
 </span><span id="__span-0-632"><a id="__codelineno-0-632" name="__codelineno-0-632"></a><span class="sd">    Args:</span>
@@ -4905,7 +4928,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-682">682</a></span>
 <span class="normal"><a href="#__codelineno-0-683">683</a></span>
 <span class="normal"><a href="#__codelineno-0-684">684</a></span>
-<span class="normal"><a href="#__codelineno-0-685">685</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-656"><a id="__codelineno-0-656" name="__codelineno-0-656"></a><span class="k">def</span> <span class="nf">delete_dataset_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-685">685</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-656"><a id="__codelineno-0-656" name="__codelineno-0-656"></a><span class="k">def</span><span class="w"> </span><span class="nf">delete_dataset_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 </span><span id="__span-0-657"><a id="__codelineno-0-657" name="__codelineno-0-657"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete dataset items.</span>
 </span><span id="__span-0-658"><a id="__codelineno-0-658" name="__codelineno-0-658"></a>
 </span><span id="__span-0-659"><a id="__codelineno-0-659" name="__codelineno-0-659"></a><span class="sd">    Args:</span>
@@ -5069,7 +5092,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-867">867</a></span>
 <span class="normal"><a href="#__codelineno-0-868">868</a></span>
 <span class="normal"><a href="#__codelineno-0-869">869</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-847"><a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="k">def</span> <span class="nf">find</span><span class="p">(</span>
+</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="k">def</span><span class="w"> </span><span class="nf">find</span><span class="p">(</span>
 </span><span id="__span-0-849"><a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-850"><a id="__codelineno-0-850" name="__codelineno-0-850"></a>    <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 </span><span id="__span-0-851"><a id="__codelineno-0-851" name="__codelineno-0-851"></a>    <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -5196,7 +5219,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-504">504</a></span>
 <span class="normal"><a href="#__codelineno-0-505">505</a></span>
 <span class="normal"><a href="#__codelineno-0-506">506</a></span>
-<span class="normal"><a href="#__codelineno-0-507">507</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-493"><a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="k">def</span> <span class="nf">find_ids_in_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-507">507</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-493"><a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_ids_in_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
 </span><span id="__span-0-494"><a id="__codelineno-0-494" name="__codelineno-0-494"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Search ids in a table.</span>
 </span><span id="__span-0-495"><a id="__codelineno-0-495" name="__codelineno-0-495"></a>
 </span><span id="__span-0-496"><a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="sd">    Args:</span>
@@ -5295,7 +5318,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-515">515</a></span>
 <span class="normal"><a href="#__codelineno-0-516">516</a></span>
 <span class="normal"><a href="#__codelineno-0-517">517</a></span>
-<span class="normal"><a href="#__codelineno-0-518">518</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-509"><a id="__codelineno-0-509" name="__codelineno-0-509"></a><span class="k">def</span> <span class="nf">get_all_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">SchemaGroup</span><span class="o">.</span><span class="n">ITEM</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-518">518</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-509"><a id="__codelineno-0-509" name="__codelineno-0-509"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">SchemaGroup</span><span class="o">.</span><span class="n">ITEM</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 </span><span id="__span-0-510"><a id="__codelineno-0-510" name="__codelineno-0-510"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get all the ids from a table.</span>
 </span><span id="__span-0-511"><a id="__codelineno-0-511" name="__codelineno-0-511"></a>
 </span><span id="__span-0-512"><a id="__codelineno-0-512" name="__codelineno-0-512"></a><span class="sd">    Args:</span>
@@ -5533,7 +5556,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-426">426</a></span>
 <span class="normal"><a href="#__codelineno-0-427">427</a></span>
 <span class="normal"><a href="#__codelineno-0-428">428</a></span>
-<span class="normal"><a href="#__codelineno-0-429">429</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-429">429</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_data</span><span class="p">(</span>
 </span><span id="__span-0-362"><a id="__codelineno-0-362" name="__codelineno-0-362"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-363"><a id="__codelineno-0-363" name="__codelineno-0-363"></a>    <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-364"><a id="__codelineno-0-364" name="__codelineno-0-364"></a>    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -5768,7 +5791,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-488">488</a></span>
 <span class="normal"><a href="#__codelineno-0-489">489</a></span>
 <span class="normal"><a href="#__codelineno-0-490">490</a></span>
-<span class="normal"><a href="#__codelineno-0-491">491</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-437"><a id="__codelineno-0-437" name="__codelineno-0-437"></a><span class="k">def</span> <span class="nf">get_dataset_items</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-491">491</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-437"><a id="__codelineno-0-437" name="__codelineno-0-437"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-438"><a id="__codelineno-0-438" name="__codelineno-0-438"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-439"><a id="__codelineno-0-439" name="__codelineno-0-439"></a>    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-440"><a id="__codelineno-0-440" name="__codelineno-0-440"></a>    <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -5916,7 +5939,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-928">928</a></span>
 <span class="normal"><a href="#__codelineno-0-929">929</a></span>
 <span class="normal"><a href="#__codelineno-0-930">930</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a><span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
+</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a><span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
 </span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;List the datasets information in directory.</span>
 </span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>
 </span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">    Args:</span>
@@ -6027,7 +6050,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-304">304</a></span>
 <span class="normal"><a href="#__codelineno-0-305">305</a></span>
 <span class="normal"><a href="#__codelineno-0-306">306</a></span>
-<span class="normal"><a href="#__codelineno-0-307">307</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="k">def</span> <span class="nf">open_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LanceTable</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-307">307</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="k">def</span><span class="w"> </span><span class="nf">open_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LanceTable</span><span class="p">:</span>
 </span><span id="__span-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Open a dataset table with LanceDB.</span>
 </span><span id="__span-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286"></a>
 </span><span id="__span-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">    Args:</span>
@@ -6159,7 +6182,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-279">279</a></span>
 <span class="normal"><a href="#__codelineno-0-280">280</a></span>
 <span class="normal"><a href="#__codelineno-0-281">281</a></span>
-<span class="normal"><a href="#__codelineno-0-282">282</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span> <span class="nf">open_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LanceTable</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-282">282</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span><span class="w"> </span><span class="nf">open_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LanceTable</span><span class="p">]:</span>
 </span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Open the dataset tables with LanceDB.</span>
 </span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267"></a>
 </span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">    Args:</span>
@@ -6277,7 +6300,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-335">335</a></span>
 <span class="normal"><a href="#__codelineno-0-336">336</a></span>
 <span class="normal"><a href="#__codelineno-0-337">337</a></span>
-<span class="normal"><a href="#__codelineno-0-338">338</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-323"><a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="k">def</span> <span class="nf">resolve_ref</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-338">338</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-323"><a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_ref</span><span class="p">(</span>
 </span><span id="__span-0-324"><a id="__codelineno-0-324" name="__codelineno-0-324"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">SchemaRef</span> <span class="o">|</span> <span class="n">ItemRef</span> <span class="o">|</span> <span class="n">ViewRef</span> <span class="o">|</span> <span class="n">EmbeddingRef</span> <span class="o">|</span> <span class="n">EntityRef</span> <span class="o">|</span> <span class="n">AnnotationRef</span> <span class="o">|</span> <span class="n">SourceRef</span>
 </span><span id="__span-0-325"><a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseSchema</span> <span class="o">|</span> <span class="n">Item</span> <span class="o">|</span> <span class="n">View</span> <span class="o">|</span> <span class="n">Embedding</span> <span class="o">|</span> <span class="n">Entity</span> <span class="o">|</span> <span class="n">Annotation</span> <span class="o">|</span> <span class="n">Source</span><span class="p">:</span>
 </span><span id="__span-0-326"><a id="__codelineno-0-326" name="__codelineno-0-326"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a [SchemaRef][pixano.features.SchemaRef].</span>
@@ -6461,7 +6484,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-912">912</a></span>
 <span class="normal"><a href="#__codelineno-0-913">913</a></span>
 <span class="normal"><a href="#__codelineno-0-914">914</a></span>
-<span class="normal"><a href="#__codelineno-0-915">915</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="k">def</span> <span class="nf">semantic_search</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-915">915</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a><span class="k">def</span><span class="w"> </span><span class="nf">semantic_search</span><span class="p">(</span>
 </span><span id="__span-0-872"><a id="__codelineno-0-872" name="__codelineno-0-872"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">skip</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="__span-0-873"><a id="__codelineno-0-873" name="__codelineno-0-873"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
 </span><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform a semantic search.</span>
@@ -6725,7 +6748,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-768">768</a></span>
 <span class="normal"><a href="#__codelineno-0-769">769</a></span>
 <span class="normal"><a href="#__codelineno-0-770">770</a></span>
-<span class="normal"><a href="#__codelineno-0-771">771</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="k">def</span> <span class="nf">update_data</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-771">771</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="k">def</span><span class="w"> </span><span class="nf">update_data</span><span class="p">(</span>
 </span><span id="__span-0-706"><a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-707"><a id="__codelineno-0-707" name="__codelineno-0-707"></a>    <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-708"><a id="__codelineno-0-708" name="__codelineno-0-708"></a>    <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span>
@@ -6962,7 +6985,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-842">842</a></span>
 <span class="normal"><a href="#__codelineno-0-843">843</a></span>
 <span class="normal"><a href="#__codelineno-0-844">844</a></span>
-<span class="normal"><a href="#__codelineno-0-845">845</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="k">def</span> <span class="nf">update_dataset_items</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-845">845</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="k">def</span><span class="w"> </span><span class="nf">update_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a>    <span class="n">dataset_items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">],</span>
 </span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a>    <span class="n">return_separately</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>

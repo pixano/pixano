@@ -2723,6 +2723,8 @@
       
         
       
+        
+      
     
     
       
@@ -2753,6 +2755,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../features/schemas/entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3696,7 +3719,7 @@
 <span class="normal"><a href="#__codelineno-0-116">116</a></span>
 <span class="normal"><a href="#__codelineno-0-117">117</a></span>
 <span class="normal"><a href="#__codelineno-0-118">118</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">DatasetItemModel</span><span class="p">)</span>
-</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">create_dataset_item</span><span class="p">(</span>
+</span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_dataset_item</span><span class="p">(</span>
 </span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101"></a>    <span class="n">dataset_item</span><span class="p">:</span> <span class="n">DatasetItemModel</span><span class="p">,</span>
@@ -3851,7 +3874,7 @@
 <span class="normal"><a href="#__codelineno-0-92">92</a></span>
 <span class="normal"><a href="#__codelineno-0-93">93</a></span>
 <span class="normal"><a href="#__codelineno-0-94">94</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">list</span><span class="p">[</span><span class="n">DatasetItemModel</span><span class="p">])</span>
-</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">create_dataset_items</span><span class="p">(</span>
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75"></a>    <span class="n">dataset_items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItemModel</span><span class="p">],</span>
 </span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
@@ -3971,7 +3994,7 @@
 <span class="normal"><a href="#__codelineno-0-196">196</a></span>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
 <span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">delete_dataset_item</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_dataset_item</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete a dataset item from a dataset.</span>
 </span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a>
 </span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="sd">    Args:</span>
@@ -4085,7 +4108,7 @@
 <span class="normal"><a href="#__codelineno-0-184">184</a></span>
 <span class="normal"><a href="#__codelineno-0-185">185</a></span>
 <span class="normal"><a href="#__codelineno-0-186">186</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">delete_dataset_items</span><span class="p">(</span>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="n">ids</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Query</span><span class="p">()],</span>
 </span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
@@ -4227,7 +4250,7 @@
 <span class="normal"><a href="#__codelineno-0-67">67</a></span>
 <span class="normal"><a href="#__codelineno-0-68">68</a></span>
 <span class="normal"><a href="#__codelineno-0-69">69</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">DatasetItemModel</span><span class="p">)</span>
-</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_dataset_item</span><span class="p">(</span>
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_item</span><span class="p">(</span>
 </span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)]</span>
 </span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetItemModel</span><span class="p">:</span>
 </span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get dataset item from a dataset.</span>
@@ -4416,7 +4439,7 @@
 <span class="normal"><a href="#__codelineno-0-50">50</a></span>
 <span class="normal"><a href="#__codelineno-0-51">51</a></span>
 <span class="normal"><a href="#__codelineno-0-52">52</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">list</span><span class="p">[</span><span class="n">DatasetItemModel</span><span class="p">])</span>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_dataset_items</span><span class="p">(</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a>    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
@@ -4596,7 +4619,7 @@
 <span class="normal"><a href="#__codelineno-0-165">165</a></span>
 <span class="normal"><a href="#__codelineno-0-166">166</a></span>
 <span class="normal"><a href="#__codelineno-0-167">167</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">DatasetItemModel</span><span class="p">)</span>
-</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">update_dataset_item</span><span class="p">(</span>
+</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_dataset_item</span><span class="p">(</span>
 </span><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150"></a>    <span class="n">dataset_item</span><span class="p">:</span> <span class="n">DatasetItemModel</span><span class="p">,</span>
@@ -4751,7 +4774,7 @@
 <span class="normal"><a href="#__codelineno-0-141">141</a></span>
 <span class="normal"><a href="#__codelineno-0-142">142</a></span>
 <span class="normal"><a href="#__codelineno-0-143">143</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121"></a><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{dataset_id}</span><span class="s2">/&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">list</span><span class="p">[</span><span class="n">DatasetItemModel</span><span class="p">])</span>
-</span><span id="__span-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">update_dataset_items</span><span class="p">(</span>
+</span><span id="__span-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_dataset_items</span><span class="p">(</span>
 </span><span id="__span-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124"></a>    <span class="n">dataset_items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItemModel</span><span class="p">],</span>
 </span><span id="__span-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>

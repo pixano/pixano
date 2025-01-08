@@ -2687,6 +2687,8 @@
       
         
       
+        
+      
     
     
       
@@ -2717,6 +2719,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../features/schemas/entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3621,7 +3644,7 @@
 <span class="normal"><a href="#__codelineno-0-91">91</a></span>
 <span class="normal"><a href="#__codelineno-0-92">92</a></span>
 <span class="normal"><a href="#__codelineno-0-93">93</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">DatasetModel</span><span class="p">)</span>
-</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_dataset</span><span class="p">(</span>
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset</span><span class="p">(</span>
 </span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
 </span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetModel</span><span class="p">:</span>
@@ -3753,7 +3776,7 @@
 <span class="normal"><a href="#__codelineno-0-74">74</a></span>
 <span class="normal"><a href="#__codelineno-0-75">75</a></span>
 <span class="normal"><a href="#__codelineno-0-76">76</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/info/</span><span class="si">{id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">DatasetInfoModel</span><span class="p">)</span>
-</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_dataset_info</span><span class="p">(</span>
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_info</span><span class="p">(</span>
 </span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
 </span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetInfoModel</span><span class="p">:</span>
@@ -3882,7 +3905,7 @@
 <span class="normal"><a href="#__codelineno-0-49">49</a></span>
 <span class="normal"><a href="#__codelineno-0-50">50</a></span>
 <span class="normal"><a href="#__codelineno-0-51">51</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/info&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfoModel</span><span class="p">])</span>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_datasets_info</span><span class="p">(</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_datasets_info</span><span class="p">(</span>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfoModel</span><span class="p">]:</span>
 </span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a list of dataset information.</span>
@@ -4045,7 +4068,7 @@
 <span class="normal"><a href="#__codelineno-0-118">118</a></span>
 <span class="normal"><a href="#__codelineno-0-119">119</a></span>
 <span class="normal"><a href="#__codelineno-0-120">120</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{id}</span><span class="s2">/</span><span class="si">{table}</span><span class="s2">/count&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
-</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_table_count</span><span class="p">(</span>
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_table_count</span><span class="p">(</span>
 </span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a>    <span class="n">settings</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">Settings</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_settings</span><span class="p">)],</span>

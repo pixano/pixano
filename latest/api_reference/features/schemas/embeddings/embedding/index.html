@@ -14,7 +14,7 @@
         <link rel="prev" href="../../base_schema/">
       
       
-        <link rel="next" href="../../entities/entity/">
+        <link rel="next" href="../../entities/conversation/">
       
       
       <link rel="icon" href="../../../../../assets/pixano.png">
@@ -2755,6 +2755,8 @@
       
         
       
+        
+      
     
     
       
@@ -2785,6 +2787,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3637,73 +3660,6 @@
       </tbody>
     </table>
 
-        <p>Raises <a class="autorefs autorefs-external" href="https://docs.pydantic.dev/2.4/api/pydantic_core/#pydantic_core.ValidationError"><code>ValidationError</code></a> if the input data cannot be
-validated to form a valid model.</p>
-<p><code>self</code> is explicitly positional-only to allow <code>self</code> as a field name.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>created_at</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="datetime.datetime" href="https://docs.python.org/3.12/library/datetime.html#datetime.datetime">datetime</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The creation date of the object.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>updated_at</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="datetime.datetime" href="https://docs.python.org/3.12/library/datetime.html#datetime.datetime">datetime</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The last modification date of the object.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>data</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3.12/library/typing.html#typing.Any">Any</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The data of the object validated by Pydantic.</p>
-              </div>
-            </td>
-            <td>
-                  <code>{}</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
 
 
 
@@ -3726,7 +3682,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-83">83</a></span>
 <span class="normal"><a href="#__codelineno-0-84">84</a></span>
 <span class="normal"><a href="#__codelineno-0-85">85</a></span>
-<span class="normal"><a href="#__codelineno-0-86">86</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-86">86</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
 </span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new model by parsing and validating input data from keyword arguments.</span>
 </span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>
 </span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a><span class="sd">    Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be</span>
@@ -3760,7 +3716,7 @@ validated to form a valid model.</p>
 
 
 <h3 id="pixano.features.schemas.embeddings.embedding.Embedding.item" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">item</span><span class="p">:</span> <span class="n">Item</span></code>
+            <code class="highlight language-python"><span class="n">item</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -3893,7 +3849,7 @@ data with auto-vectorization.</p>
 <span class="normal"><a href="#__codelineno-0-88">88</a></span>
 <span class="normal"><a href="#__codelineno-0-89">89</a></span>
 <span class="normal"><a href="#__codelineno-0-90">90</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68"></a><span class="k">def</span> <span class="nf">to_arrow_schema</span><span class="p">(</span>
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_arrow_schema</span><span class="p">(</span>
 </span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69"></a>    <span class="bp">cls</span><span class="p">,</span>
 </span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70"></a>    <span class="n">remove_vector</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 </span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a>    <span class="n">remove_metadata</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -3972,73 +3928,6 @@ data with auto-vectorization.</p>
       </tbody>
     </table>
 
-        <p>Raises <a class="autorefs autorefs-external" href="https://docs.pydantic.dev/2.4/api/pydantic_core/#pydantic_core.ValidationError"><code>ValidationError</code></a> if the input data cannot be
-validated to form a valid model.</p>
-<p><code>self</code> is explicitly positional-only to allow <code>self</code> as a field name.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>created_at</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="datetime.datetime" href="https://docs.python.org/3.12/library/datetime.html#datetime.datetime">datetime</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The creation date of the object.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>updated_at</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="datetime.datetime" href="https://docs.python.org/3.12/library/datetime.html#datetime.datetime">datetime</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The last modification date of the object.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>data</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3.12/library/typing.html#typing.Any">Any</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The data of the object validated by Pydantic.</p>
-              </div>
-            </td>
-            <td>
-                  <code>{}</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
 
 
 
@@ -4061,7 +3950,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-83">83</a></span>
 <span class="normal"><a href="#__codelineno-0-84">84</a></span>
 <span class="normal"><a href="#__codelineno-0-85">85</a></span>
-<span class="normal"><a href="#__codelineno-0-86">86</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-86">86</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
 </span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new model by parsing and validating input data from keyword arguments.</span>
 </span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>
 </span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a><span class="sd">    Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be</span>
@@ -4095,7 +3984,7 @@ validated to form a valid model.</p>
 
 
 <h3 id="pixano.features.schemas.embeddings.embedding.ViewEmbedding.view" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">view</span><span class="p">:</span> <span class="n">View</span></code>
+            <code class="highlight language-python"><span class="n">view</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -4277,7 +4166,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-174">174</a></span>
 <span class="normal"><a href="#__codelineno-0-175">175</a></span>
 <span class="normal"><a href="#__codelineno-0-176">176</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="k">def</span> <span class="nf">create_schema</span><span class="p">(</span>
+</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_schema</span><span class="p">(</span>
 </span><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136"></a>    <span class="bp">cls</span><span class="p">,</span>
 </span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a>    <span class="n">embedding_fn</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a>    <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -4455,7 +4344,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-130">130</a></span>
 <span class="normal"><a href="#__codelineno-0-131">131</a></span>
 <span class="normal"><a href="#__codelineno-0-132">132</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="k">def</span> <span class="nf">get_embedding_fn_from_table</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EmbeddingFunction</span><span class="p">:</span>
+</span><span id="__span-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_embedding_fn_from_table</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EmbeddingFunction</span><span class="p">:</span>
 </span><span id="__span-0-110"><a id="__codelineno-0-110" name="__codelineno-0-110"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the embedding function from a table.</span>
 </span><span id="__span-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111"></a>
 </span><span id="__span-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="sd">    Args:</span>
@@ -4535,7 +4424,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-211">211</a></span>
 <span class="normal"><a href="#__codelineno-0-212">212</a></span>
 <span class="normal"><a href="#__codelineno-0-213">213</a></span>
-<span class="normal"><a href="#__codelineno-0-214">214</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="k">def</span> <span class="nf">create_view_embedding_function</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-214">214</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_view_embedding_function</span><span class="p">(</span>
 </span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="n">type_embedding_function</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">EmbeddingFunction</span><span class="p">],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span>
 </span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">EmbeddingFunction</span><span class="p">]:</span>
 </span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a `ViewEmbeddingFunction` based on an</span>
@@ -4543,14 +4432,14 @@ validated to form a valid model.</p>
 </span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a>
 </span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="nd">@register</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="k">class</span> <span class="nc">ViewEmbeddingFunction</span><span class="p">(</span><span class="n">type_embedding_function</span><span class="p">):</span>
+</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">ViewEmbeddingFunction</span><span class="p">(</span><span class="n">type_embedding_function</span><span class="p">):</span>
 </span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;A `ViewEmbeddingFunction` based on an [EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction].&quot;&quot;&quot;</span>
 </span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a>
-</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="k">def</span> <span class="nf">_open_views</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">views</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">_open_views</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">views</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="w">            </span><span class="sd">&quot;&quot;&quot;Open the views in the dataset.&quot;&quot;&quot;</span>
 </span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>            <span class="k">return</span> <span class="p">[</span><span class="n">view</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">media_dir</span><span class="p">,</span> <span class="s2">&quot;image&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="n">views</span><span class="p">]</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>
-</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="k">def</span> <span class="nf">compute_source_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view_refs</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">compute_source_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view_refs</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="w">            </span><span class="sd">&quot;&quot;&quot;Compute the embeddings for the source column in the database.&quot;&quot;&quot;</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>            <span class="n">views</span> <span class="o">=</span> <span class="p">[</span><span class="n">dataset</span><span class="o">.</span><span class="n">resolve_ref</span><span class="p">(</span><span class="n">ViewRef</span><span class="p">(</span><span class="o">**</span><span class="n">view_ref</span><span class="p">))</span> <span class="k">for</span> <span class="n">view_ref</span> <span class="ow">in</span> <span class="n">view_refs</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()]</span>
 </span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a>            <span class="n">view_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">views</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -4584,7 +4473,7 @@ validated to form a valid model.</p>
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-179">179</a></span>
 <span class="normal"><a href="#__codelineno-0-180">180</a></span>
-<span class="normal"><a href="#__codelineno-0-181">181</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="k">def</span> <span class="nf">is_embedding</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_embedding</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 </span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a class is an `Embedding` or subclass of `Embedding`.&quot;&quot;&quot;</span>
 </span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="k">return</span> <span class="n">issubclass_strict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">Embedding</span><span class="p">,</span> <span class="n">strict</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
@@ -4610,7 +4499,7 @@ validated to form a valid model.</p>
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-184">184</a></span>
 <span class="normal"><a href="#__codelineno-0-185">185</a></span>
-<span class="normal"><a href="#__codelineno-0-186">186</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="k">def</span> <span class="nf">is_view_embedding</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_view_embedding</span><span class="p">(</span><span class="bp">cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">,</span> <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 </span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a class is an `ViewEmbedding` or subclass of `ViewEmbedding`.&quot;&quot;&quot;</span>
 </span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="k">return</span> <span class="n">issubclass_strict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ViewEmbedding</span><span class="p">,</span> <span class="n">strict</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>

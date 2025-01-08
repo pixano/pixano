@@ -2823,6 +2823,8 @@
       
         
       
+        
+      
     
     
       
@@ -2853,6 +2855,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/schemas/entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3817,7 +3840,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-383">383</a></span>
 <span class="normal"><a href="#__codelineno-0-384">384</a></span>
 <span class="normal"><a href="#__codelineno-0-385">385</a></span>
-<span class="normal"><a href="#__codelineno-0-386">386</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-371"><a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-386">386</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-371"><a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="n">created_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-372"><a id="__codelineno-0-372" name="__codelineno-0-372"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new model by parsing and validating input data from keyword arguments.</span>
 </span><span id="__span-0-373"><a id="__codelineno-0-373" name="__codelineno-0-373"></a>
 </span><span id="__span-0-374"><a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="sd">    Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be</span>
@@ -3972,7 +3995,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-512">512</a></span>
 <span class="normal"><a href="#__codelineno-0-513">513</a></span>
 <span class="normal"><a href="#__codelineno-0-514">514</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-480"><a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-481"><a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="k">def</span> <span class="nf">from_dataset_schema</span><span class="p">(</span><span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="s2">&quot;DatasetItem&quot;</span><span class="p">]:</span>
+</span><span id="__span-0-481"><a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_dataset_schema</span><span class="p">(</span><span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="s2">&quot;DatasetItem&quot;</span><span class="p">]:</span>
 </span><span id="__span-0-482"><a id="__codelineno-0-482" name="__codelineno-0-482"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a dataset item model based on the schema.</span>
 </span><span id="__span-0-483"><a id="__codelineno-0-483" name="__codelineno-0-483"></a>
 </span><span id="__span-0-484"><a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">    Args:</span>
@@ -4119,7 +4142,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-422">422</a></span>
 <span class="normal"><a href="#__codelineno-0-423">423</a></span>
 <span class="normal"><a href="#__codelineno-0-424">424</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-407"><a id="__codelineno-0-407" name="__codelineno-0-407"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-408"><a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="k">def</span> <span class="nf">from_schemas_data</span><span class="p">(</span>
+</span><span id="__span-0-408"><a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_schemas_data</span><span class="p">(</span>
 </span><span id="__span-0-409"><a id="__codelineno-0-409" name="__codelineno-0-409"></a>    <span class="bp">cls</span><span class="p">:</span> <span class="s2">&quot;DatasetItem&quot;</span><span class="p">,</span> <span class="n">schemas_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">BaseSchema</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
 </span><span id="__span-0-410"><a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetItem&quot;</span><span class="p">:</span>
 </span><span id="__span-0-411"><a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a DatasetItem from schemas data.</span>
@@ -4267,7 +4290,7 @@ dataset item.</p>
 <span class="normal"><a href="#__codelineno-0-553">553</a></span>
 <span class="normal"><a href="#__codelineno-0-554">554</a></span>
 <span class="normal"><a href="#__codelineno-0-555">555</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-516"><a id="__codelineno-0-516" name="__codelineno-0-516"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-517"><a id="__codelineno-0-517" name="__codelineno-0-517"></a><span class="k">def</span> <span class="nf">get_sub_dataset_item</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">selected_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">Self</span><span class="p">]:</span>
+</span><span id="__span-0-517"><a id="__codelineno-0-517" name="__codelineno-0-517"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_sub_dataset_item</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">selected_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">Self</span><span class="p">]:</span>
 </span><span id="__span-0-518"><a id="__codelineno-0-518" name="__codelineno-0-518"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new dataset item based on the selected fields of the original dataset</span>
 </span><span id="__span-0-519"><a id="__codelineno-0-519" name="__codelineno-0-519"></a><span class="sd">    item.</span>
 </span><span id="__span-0-520"><a id="__codelineno-0-520" name="__codelineno-0-520"></a>
@@ -4417,7 +4440,7 @@ dataset item.</p>
 <span class="normal"><a href="#__codelineno-0-470">470</a></span>
 <span class="normal"><a href="#__codelineno-0-471">471</a></span>
 <span class="normal"><a href="#__codelineno-0-472">472</a></span>
-<span class="normal"><a href="#__codelineno-0-473">473</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-452"><a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="k">def</span> <span class="nf">model_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-473">473</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-452"><a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="k">def</span><span class="w"> </span><span class="nf">model_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="s2">&quot;Dataset&quot;</span><span class="p">,</span> <span class="n">deep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 </span><span id="__span-0-453"><a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a copy of the model.</span>
 </span><span id="__span-0-454"><a id="__codelineno-0-454" name="__codelineno-0-454"></a>
 </span><span id="__span-0-455"><a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">    Args:</span>
@@ -4555,7 +4578,7 @@ comparing models without timestamps.</p>
 <span class="normal"><a href="#__codelineno-0-447">447</a></span>
 <span class="normal"><a href="#__codelineno-0-448">448</a></span>
 <span class="normal"><a href="#__codelineno-0-449">449</a></span>
-<span class="normal"><a href="#__codelineno-0-450">450</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-426"><a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="k">def</span> <span class="nf">model_dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exclude_timestamps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-450">450</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-426"><a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="k">def</span><span class="w"> </span><span class="nf">model_dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exclude_timestamps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 </span><span id="__span-0-427"><a id="__codelineno-0-427" name="__codelineno-0-427"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Dump the model to a dictionary.</span>
 </span><span id="__span-0-428"><a id="__codelineno-0-428" name="__codelineno-0-428"></a>
 </span><span id="__span-0-429"><a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="sd">    Args:</span>
@@ -4609,7 +4632,7 @@ comparing models without timestamps.</p>
 <span class="normal"><a href="#__codelineno-0-476">476</a></span>
 <span class="normal"><a href="#__codelineno-0-477">477</a></span>
 <span class="normal"><a href="#__codelineno-0-478">478</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-475"><a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-476"><a id="__codelineno-0-476" name="__codelineno-0-476"></a><span class="k">def</span> <span class="nf">to_dataset_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetSchema</span><span class="p">:</span>
+</span><span id="__span-0-476"><a id="__codelineno-0-476" name="__codelineno-0-476"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dataset_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetSchema</span><span class="p">:</span>
 </span><span id="__span-0-477"><a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a DatasetItem to a DatasetSchema.&quot;&quot;&quot;</span>
 </span><span id="__span-0-478"><a id="__codelineno-0-478" name="__codelineno-0-478"></a>    <span class="k">return</span> <span class="n">DatasetSchema</span><span class="o">.</span><span class="n">from_dataset_item</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
@@ -4704,7 +4727,7 @@ comparing models without timestamps.</p>
 <span class="normal"><a href="#__codelineno-0-402">402</a></span>
 <span class="normal"><a href="#__codelineno-0-403">403</a></span>
 <span class="normal"><a href="#__codelineno-0-404">404</a></span>
-<span class="normal"><a href="#__codelineno-0-405">405</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-388"><a id="__codelineno-0-388" name="__codelineno-0-388"></a><span class="k">def</span> <span class="nf">to_schemas_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">BaseSchema</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-405">405</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-388"><a id="__codelineno-0-388" name="__codelineno-0-388"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_schemas_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">BaseSchema</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 </span><span id="__span-0-389"><a id="__codelineno-0-389" name="__codelineno-0-389"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert DatasetItem to schemas data.</span>
 </span><span id="__span-0-390"><a id="__codelineno-0-390" name="__codelineno-0-390"></a>
 </span><span id="__span-0-391"><a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="sd">    Args:</span>
@@ -4800,10 +4823,6 @@ comparing models without timestamps.</p>
       </tbody>
     </table>
 
-        <p>Raises <a class="autorefs autorefs-external" href="https://docs.pydantic.dev/2.4/api/pydantic_core/#pydantic_core.ValidationError"><code>ValidationError</code></a> if the input data cannot be
-validated to form a valid model.</p>
-<p><code>self</code> is explicitly positional-only to allow <code>self</code> as a field name.</p>
-
 
 
 
@@ -4828,7 +4847,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-218">218</a></span>
 <span class="normal"><a href="#__codelineno-0-219">219</a></span>
 <span class="normal"><a href="#__codelineno-0-220">220</a></span>
-<span class="normal"><a href="#__codelineno-0-221">221</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-221">221</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new model by parsing and validating input data from keyword arguments.</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>
 </span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">    Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be</span>
@@ -5001,7 +5020,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-92">92</a></span>
 <span class="normal"><a href="#__codelineno-0-93">93</a></span>
 <span class="normal"><a href="#__codelineno-0-94">94</a></span>
-<span class="normal"><a href="#__codelineno-0-95">95</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">def</span> <span class="nf">add_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span> <span class="n">relation_item</span><span class="p">:</span> <span class="n">SchemaRelation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-95">95</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span> <span class="n">relation_item</span><span class="p">:</span> <span class="n">SchemaRelation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 </span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Add a schema to the dataset schema.</span>
 </span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58"></a>
 </span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59"></a><span class="sd">    Args:</span>
@@ -5141,7 +5160,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-261">261</a></span>
 <span class="normal"><a href="#__codelineno-0-262">262</a></span>
 <span class="normal"><a href="#__codelineno-0-263">263</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span class="n">dataset_schema_json</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetSchema&quot;</span><span class="p">:</span>
+</span><span id="__span-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="k">def</span><span class="w"> </span><span class="nf">deserialize</span><span class="p">(</span><span class="n">dataset_schema_json</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetSchema&quot;</span><span class="p">:</span>
 </span><span id="__span-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Deserialize the dataset schema.</span>
 </span><span id="__span-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246"></a>
 </span><span id="__span-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">    Args:</span>
@@ -5254,7 +5273,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-179">179</a></span>
 <span class="normal"><a href="#__codelineno-0-180">180</a></span>
 <span class="normal"><a href="#__codelineno-0-181">181</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="k">def</span> <span class="nf">format_table_name</span><span class="p">(</span><span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_table_name</span><span class="p">(</span><span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 </span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Format table name.</span>
 </span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>
 </span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    It converts the table name to lowercase and replaces spaces with underscores.</span>
@@ -5399,7 +5418,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-349">349</a></span>
 <span class="normal"><a href="#__codelineno-0-350">350</a></span>
 <span class="normal"><a href="#__codelineno-0-351">351</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="k">def</span> <span class="nf">from_dataset_item</span><span class="p">(</span><span class="n">dataset_item</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="s2">&quot;DatasetItem&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetSchema&quot;</span><span class="p">:</span>
+</span><span id="__span-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_dataset_item</span><span class="p">(</span><span class="n">dataset_item</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="s2">&quot;DatasetItem&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetSchema&quot;</span><span class="p">:</span>
 </span><span id="__span-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a dataset schema from a [DatasetItem][pixano.datasets.DatasetItem].</span>
 </span><span id="__span-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301"></a>
 </span><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">    Args:</span>
@@ -5546,7 +5565,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-294">294</a></span>
 <span class="normal"><a href="#__codelineno-0-295">295</a></span>
 <span class="normal"><a href="#__codelineno-0-296">296</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span>
+</span><span id="__span-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="k">def</span><span class="w"> </span><span class="nf">from_json</span><span class="p">(</span>
 </span><span id="__span-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="n">json_fp</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 </span><span id="__span-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatasetSchema&quot;</span><span class="p">:</span>
 </span><span id="__span-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a dataset schema from JSON file.</span>
@@ -5647,7 +5666,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-192">192</a></span>
 <span class="normal"><a href="#__codelineno-0-193">193</a></span>
 <span class="normal"><a href="#__codelineno-0-194">194</a></span>
-<span class="normal"><a href="#__codelineno-0-195">195</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="k">def</span> <span class="nf">get_table_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SchemaGroup</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_table_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SchemaGroup</span><span class="p">:</span>
 </span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the group of a table.</span>
 </span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>
 </span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">    Args:</span>
@@ -5775,7 +5794,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-239">239</a></span>
 <span class="normal"><a href="#__codelineno-0-240">240</a></span>
 <span class="normal"><a href="#__codelineno-0-241">241</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="nd">@model_serializer</span>
-</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="k">def</span><span class="w"> </span><span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 </span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialize the dataset schema.</span>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">    The serialized schema is a dictionary with the following format:</span>
@@ -5855,7 +5874,7 @@ validated to form a valid model.</p>
 <span class="normal"><a href="#__codelineno-0-277">277</a></span>
 <span class="normal"><a href="#__codelineno-0-278">278</a></span>
 <span class="normal"><a href="#__codelineno-0-279">279</a></span>
-<span class="normal"><a href="#__codelineno-0-280">280</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_fp</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-280">280</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_fp</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Save DatasetSchema to json file.&quot;&quot;&quot;</span>
 </span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="k">if</span> <span class="n">json_fp</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
 </span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="n">old_json_content</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_fp</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>

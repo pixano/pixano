@@ -2804,6 +2804,8 @@
       
         
       
+        
+      
     
     
       
@@ -2834,6 +2836,27 @@
             entities
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../features/schemas/entities/conversation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    conversation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3729,7 +3752,7 @@
 <span class="normal"><a href="#__codelineno-0-90">90</a></span>
 <span class="normal"><a href="#__codelineno-0-91">91</a></span>
 <span class="normal"><a href="#__codelineno-0-92">92</a></span>
-<span class="normal"><a href="#__codelineno-0-93">93</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77"></a><span class="k">def</span> <span class="nf">assert_table_in_group</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-93">93</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77"></a><span class="k">def</span><span class="w"> </span><span class="nf">assert_table_in_group</span><span class="p">(</span><span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Assert that a table belongs to a group.</span>
 </span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a>
 </span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="sd">    If the table does not belong to the group, raise a 404 error.</span>
@@ -3930,7 +3953,7 @@
 <span class="normal"><a href="#__codelineno-0-406">406</a></span>
 <span class="normal"><a href="#__codelineno-0-407">407</a></span>
 <span class="normal"><a href="#__codelineno-0-408">408</a></span>
-<span class="normal"><a href="#__codelineno-0-409">409</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-384"><a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">create_row_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-409">409</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-384"><a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_row_handler</span><span class="p">(</span>
 </span><span id="__span-0-385"><a id="__codelineno-0-385" name="__codelineno-0-385"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-386"><a id="__codelineno-0-386" name="__codelineno-0-386"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-387"><a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -4097,7 +4120,7 @@
 <span class="normal"><a href="#__codelineno-0-296">296</a></span>
 <span class="normal"><a href="#__codelineno-0-297">297</a></span>
 <span class="normal"><a href="#__codelineno-0-298">298</a></span>
-<span class="normal"><a href="#__codelineno-0-299">299</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span> <span class="nf">create_rows</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-299">299</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_rows</span><span class="p">(</span>
 </span><span id="__span-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
 </span><span id="__span-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="n">models</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchemaModel</span><span class="p">],</span>
@@ -4299,7 +4322,7 @@
 <span class="normal"><a href="#__codelineno-0-378">378</a></span>
 <span class="normal"><a href="#__codelineno-0-379">379</a></span>
 <span class="normal"><a href="#__codelineno-0-380">380</a></span>
-<span class="normal"><a href="#__codelineno-0-381">381</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">create_rows_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-381">381</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_rows_handler</span><span class="p">(</span>
 </span><span id="__span-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-359"><a id="__codelineno-0-359" name="__codelineno-0-359"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-360"><a id="__codelineno-0-360" name="__codelineno-0-360"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -4454,7 +4477,7 @@
 <span class="normal"><a href="#__codelineno-0-474">474</a></span>
 <span class="normal"><a href="#__codelineno-0-475">475</a></span>
 <span class="normal"><a href="#__codelineno-0-476">476</a></span>
-<span class="normal"><a href="#__codelineno-0-477">477</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-467"><a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">delete_row_handler</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Settings</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-477">477</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-467"><a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_row_handler</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Settings</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-468"><a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete a row from a table.</span>
 </span><span id="__span-0-469"><a id="__codelineno-0-469" name="__codelineno-0-469"></a>
 </span><span id="__span-0-470"><a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">    Args:</span>
@@ -4594,7 +4617,7 @@
 <span class="normal"><a href="#__codelineno-0-220">220</a></span>
 <span class="normal"><a href="#__codelineno-0-221">221</a></span>
 <span class="normal"><a href="#__codelineno-0-222">222</a></span>
-<span class="normal"><a href="#__codelineno-0-223">223</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="k">def</span> <span class="nf">delete_rows</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-223">223</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="k">def</span><span class="w"> </span><span class="nf">delete_rows</span><span class="p">(</span>
 </span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>    <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -4757,7 +4780,7 @@
 <span class="normal"><a href="#__codelineno-0-497">497</a></span>
 <span class="normal"><a href="#__codelineno-0-498">498</a></span>
 <span class="normal"><a href="#__codelineno-0-499">499</a></span>
-<span class="normal"><a href="#__codelineno-0-500">500</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-480"><a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">delete_rows_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-500">500</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-480"><a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_rows_handler</span><span class="p">(</span>
 </span><span id="__span-0-481"><a id="__codelineno-0-481" name="__codelineno-0-481"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-482"><a id="__codelineno-0-482" name="__codelineno-0-482"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-483"><a id="__codelineno-0-483" name="__codelineno-0-483"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -4906,7 +4929,7 @@
 <span class="normal"><a href="#__codelineno-0-46">46</a></span>
 <span class="normal"><a href="#__codelineno-0-47">47</a></span>
 <span class="normal"><a href="#__codelineno-0-48">48</a></span>
-<span class="normal"><a href="#__codelineno-0-49">49</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29"></a><span class="k">def</span> <span class="nf">get_dataset</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-49">49</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dataset</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dataset</span><span class="p">:</span>
 </span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a dataset.</span>
 </span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31"></a>
 </span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="sd">    If the dataset is not found, raise a 404 error.</span>
@@ -5078,7 +5101,7 @@
 <span class="normal"><a href="#__codelineno-0-177">177</a></span>
 <span class="normal"><a href="#__codelineno-0-178">178</a></span>
 <span class="normal"><a href="#__codelineno-0-179">179</a></span>
-<span class="normal"><a href="#__codelineno-0-180">180</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="k">def</span> <span class="nf">get_model_from_row</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="n">BaseSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_model_from_row</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="n">BaseSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
 </span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a model from a row.</span>
 </span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a>
 </span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="sd">    Args:</span>
@@ -5245,7 +5268,7 @@
 <span class="normal"><a href="#__codelineno-0-195">195</a></span>
 <span class="normal"><a href="#__codelineno-0-196">196</a></span>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
-<span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="k">def</span> <span class="nf">get_models_from_rows</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_models_from_rows</span><span class="p">(</span>
 </span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="n">model_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span>
 </span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span>
@@ -5419,7 +5442,7 @@
 <span class="normal"><a href="#__codelineno-0-351">351</a></span>
 <span class="normal"><a href="#__codelineno-0-352">352</a></span>
 <span class="normal"><a href="#__codelineno-0-353">353</a></span>
-<span class="normal"><a href="#__codelineno-0-354">354</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_row_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-354">354</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_row_handler</span><span class="p">(</span>
 </span><span id="__span-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">settings</span><span class="p">:</span> <span class="n">Settings</span>
 </span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseSchemaModel</span><span class="p">:</span>
 </span><span id="__span-0-342"><a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a row model.</span>
@@ -5644,7 +5667,7 @@
 <span class="normal"><a href="#__codelineno-0-130">130</a></span>
 <span class="normal"><a href="#__codelineno-0-131">131</a></span>
 <span class="normal"><a href="#__codelineno-0-132">132</a></span>
-<span class="normal"><a href="#__codelineno-0-133">133</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="k">def</span> <span class="nf">get_rows</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-133">133</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_rows</span><span class="p">(</span>
 </span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
 </span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">where</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -5924,7 +5947,7 @@
 <span class="normal"><a href="#__codelineno-0-333">333</a></span>
 <span class="normal"><a href="#__codelineno-0-334">334</a></span>
 <span class="normal"><a href="#__codelineno-0-335">335</a></span>
-<span class="normal"><a href="#__codelineno-0-336">336</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_rows_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-336">336</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_rows_handler</span><span class="p">(</span>
 </span><span id="__span-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -6143,7 +6166,7 @@
 <span class="normal"><a href="#__codelineno-0-434">434</a></span>
 <span class="normal"><a href="#__codelineno-0-435">435</a></span>
 <span class="normal"><a href="#__codelineno-0-436">436</a></span>
-<span class="normal"><a href="#__codelineno-0-437">437</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-412"><a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">update_row_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-437">437</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-412"><a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_row_handler</span><span class="p">(</span>
 </span><span id="__span-0-413"><a id="__codelineno-0-413" name="__codelineno-0-413"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-414"><a id="__codelineno-0-414" name="__codelineno-0-414"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-415"><a id="__codelineno-0-415" name="__codelineno-0-415"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -6312,7 +6335,7 @@
 <span class="normal"><a href="#__codelineno-0-259">259</a></span>
 <span class="normal"><a href="#__codelineno-0-260">260</a></span>
 <span class="normal"><a href="#__codelineno-0-261">261</a></span>
-<span class="normal"><a href="#__codelineno-0-262">262</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="k">def</span> <span class="nf">update_rows</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-262">262</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="k">def</span><span class="w"> </span><span class="nf">update_rows</span><span class="p">(</span>
 </span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span>
 </span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="n">models</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseSchemaModel</span><span class="p">],</span>
@@ -6516,7 +6539,7 @@
 <span class="normal"><a href="#__codelineno-0-461">461</a></span>
 <span class="normal"><a href="#__codelineno-0-462">462</a></span>
 <span class="normal"><a href="#__codelineno-0-463">463</a></span>
-<span class="normal"><a href="#__codelineno-0-464">464</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-440"><a id="__codelineno-0-440" name="__codelineno-0-440"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">update_rows_handler</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-464">464</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-440"><a id="__codelineno-0-440" name="__codelineno-0-440"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_rows_handler</span><span class="p">(</span>
 </span><span id="__span-0-441"><a id="__codelineno-0-441" name="__codelineno-0-441"></a>    <span class="n">dataset_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-442"><a id="__codelineno-0-442" name="__codelineno-0-442"></a>    <span class="n">group</span><span class="p">:</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-443"><a id="__codelineno-0-443" name="__codelineno-0-443"></a>    <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -6631,7 +6654,7 @@
 <span class="normal"><a href="#__codelineno-0-71">71</a></span>
 <span class="normal"><a href="#__codelineno-0-72">72</a></span>
 <span class="normal"><a href="#__codelineno-0-73">73</a></span>
-<span class="normal"><a href="#__codelineno-0-74">74</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52"></a><span class="k">def</span> <span class="nf">validate_group</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-74">74</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_group</span><span class="p">(</span>
 </span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53"></a>    <span class="n">group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">SchemaGroup</span><span class="p">,</span>
 </span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54"></a>    <span class="n">valid_groups</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">SchemaGroup</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">SchemaGroup</span><span class="p">),</span>
 </span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SchemaGroup</span><span class="p">:</span>
