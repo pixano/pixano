@@ -9,26 +9,25 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import {
-    type DatasetInfo,
-    type DatasetItem,
-    type SaveItem,
-    type Schema,
-    api,
-    BaseSchema,
-    Entity,
-    Image,
-    PrimaryButton,
-    SequenceFrame,
-    sequenceFrameSchema,
+      type DatasetInfo,
+      type DatasetItem,
+      type SaveItem,
+      type Schema,
+      api,
+      BaseSchema,
+      Entity,
+      Image,
+      PrimaryButton,
+      SequenceFrame
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import {
-    datasetSchema,
-    datasetsStore,
-    isLoadingNewItemStore,
-    modelsStore,
-    saveCurrentItemStore,
-    sourcesStore,
+      datasetSchema,
+      datasetsStore,
+      isLoadingNewItemStore,
+      modelsStore,
+      saveCurrentItemStore,
+      sourcesStore,
   } from "../../../../lib/stores/datasetStores";
 
   let selectedItem: DatasetItem;
@@ -63,40 +62,33 @@ License: CECILL-C
           .then((item) => {
             let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
+
+            // VQA items have a "conversations" field in the entities
+            const is_vqa = "conversations" in item.entities;
+
             for (const viewname in item.views) {
               let view = item.views[viewname];
               if (Array.isArray(view)) {
-                const isVideo = sequenceFrameSchema
-                  .array()
-                  .safeParse(view.map((v) => v.data)).success;
-
-                if (isVideo) {
-                  const video = view as SequenceFrame[];
-                  item_type = "video";
-                  video.forEach((sf) => {
-                    sf.data.type = "video";
-                    sf.data.url = media_dir + sf.data.url;
-                  });
-                  video.sort((a, b) => a.data.frame_index - b.data.frame_index);
-                } else {
-                  item_type = "vqa";
-                  const image = view[0] as Image; //TMP ??
-                  image.data.type = "image";
-                  image.data.url = media_dir + image.data.url;
-                  item.views[viewname] = image; //TMP
-                }
+                const video = view as SequenceFrame[];
+                item_type = "video";
+                video.forEach((sf) => {
+                  sf.data.type = "video";
+                  sf.data.url = media_dir + sf.data.url;
+                });
+                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
               } else {
-                //NOTE: in correct cases, here too we should choose between "image" & "vqa"
-                //Right now we can't really do this (or seek for some Text entities/annotation in datasetSchema maybe?)
-                //--admin user should give this info at build time
                 const image = view as Image;
-                image.data.type = "image"; //vqa case ??
+                image.data.type = "image";
                 image.data.url = media_dir + image.data.url;
+
+                if (is_vqa) {
+                  item_type = "vqa";
+                }
               }
             }
             selectedItem = item;
             selectedItem.ui = { type: item_type, datasetId: dataset.id };
-            if (Object.keys(item).length === 0) {
+            if (Object.keys(selectedItem).length === 0) {
               noItemFound = true;
             } else {
               noItemFound = false;

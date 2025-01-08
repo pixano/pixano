@@ -26,7 +26,7 @@ License: CECILL-C
   export let messages: Message[];
   export let imagesPerView: ImagesPerView;
 
-  const viewRef = { id: imagesPerView.images[0].id, name: "images" };
+  const viewRef = { id: imagesPerView.image[0].id, name: "images" };
 
   let textSpanAttributes: TextSpanType | null = null;
 
