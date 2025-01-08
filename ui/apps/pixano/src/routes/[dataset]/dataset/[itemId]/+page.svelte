@@ -9,25 +9,25 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import {
-      type DatasetInfo,
-      type DatasetItem,
-      type SaveItem,
-      type Schema,
-      api,
-      BaseSchema,
-      Entity,
-      Image,
-      PrimaryButton,
-      SequenceFrame
+    type DatasetInfo,
+    type DatasetItem,
+    type SaveItem,
+    type Schema,
+    api,
+    BaseSchema,
+    Entity,
+    Image,
+    PrimaryButton,
+    SequenceFrame,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import {
-      datasetSchema,
-      datasetsStore,
-      isLoadingNewItemStore,
-      modelsStore,
-      saveCurrentItemStore,
-      sourcesStore,
+    datasetSchema,
+    datasetsStore,
+    isLoadingNewItemStore,
+    modelsStore,
+    saveCurrentItemStore,
+    sourcesStore,
   } from "../../../../lib/stores/datasetStores";
 
   let selectedItem: DatasetItem;
@@ -63,9 +63,6 @@ License: CECILL-C
             let item_type: "image" | "video" | "3d" | "vqa" = "image";
             const media_dir = "media/";
 
-            // VQA items have a "conversations" field in the entities
-            const is_vqa = "conversations" in item.entities;
-
             for (const viewname in item.views) {
               let view = item.views[viewname];
               if (Array.isArray(view)) {
@@ -80,6 +77,9 @@ License: CECILL-C
                 const image = view as Image;
                 image.data.type = "image";
                 image.data.url = media_dir + image.data.url;
+
+                // VQA items have a "conversations" field in the entities
+                const is_vqa = "conversations" in item.entities;
 
                 if (is_vqa) {
                   item_type = "vqa";
