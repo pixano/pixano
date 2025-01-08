@@ -36,6 +36,8 @@ License: CECILL-C
   import { onMount } from "svelte";
 
   import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
+  import FusionTool from "./Toolbar/FusionTool.svelte";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
@@ -77,25 +79,26 @@ License: CECILL-C
     <IconButton
       tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
-      selected={$selectedTool?.type === "PAN"}
+      selected={$selectedTool?.type === ToolType.Pan}
     >
       <MousePointer />
     </IconButton>
     <IconButton
       tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
-      selected={$selectedTool?.type === "RECTANGLE" && !$selectedTool.isSmart}
+      selected={$selectedTool?.type === ToolType.Rectangle && !$selectedTool.isSmart}
     >
       <Square />
     </IconButton>
     <IconButton
       tooltipContent={polygonTool.name}
       on:click={() => selectTool(polygonTool)}
-      selected={$selectedTool?.type === "POLYGON"}
+      selected={$selectedTool?.type === ToolType.Polygon}
     >
       <Share2 />
     </IconButton>
     <KeyPointsSelection />
+    <FusionTool />
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {
@@ -110,7 +113,7 @@ License: CECILL-C
       <IconButton
         tooltipContent={addSmartPointTool.name}
         on:click={() => selectTool(addSmartPointTool)}
-        selected={$selectedTool?.type === "POINT_SELECTION" && !!$selectedTool.label}
+        selected={$selectedTool?.type === ToolType.PointSelection && !!$selectedTool.label}
       >
         <PlusCircleIcon />
         <MagicIcon />
@@ -118,7 +121,7 @@ License: CECILL-C
       <IconButton
         tooltipContent={removeSmartPointTool.name}
         on:click={() => selectTool(removeSmartPointTool)}
-        selected={$selectedTool?.type === "POINT_SELECTION" && !$selectedTool.label}
+        selected={$selectedTool?.type === ToolType.PointSelection && !$selectedTool.label}
       >
         <MinusCircleIcon />
         <MagicIcon />
@@ -126,7 +129,7 @@ License: CECILL-C
       <IconButton
         tooltipContent={smartRectangleTool.name}
         on:click={() => selectTool(smartRectangleTool)}
-        selected={$selectedTool?.type === "RECTANGLE" && $selectedTool.isSmart}
+        selected={$selectedTool?.type === ToolType.Rectangle && $selectedTool.isSmart}
       >
         <Square />
         <MagicIcon />

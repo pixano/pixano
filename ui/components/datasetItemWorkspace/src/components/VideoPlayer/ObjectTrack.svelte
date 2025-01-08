@@ -26,13 +26,7 @@ License: CECILL-C
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import {
-    annotations,
-    entities,
-    saveData,
-    selectedTool,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, entities, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -47,6 +41,7 @@ License: CECILL-C
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
+  export let resetTool: () => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
@@ -79,7 +74,7 @@ License: CECILL-C
       );
     }
     moveCursorToPosition(event.clientX);
-    selectedTool.set(panTool);
+    resetTool();
   };
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
@@ -346,6 +341,7 @@ License: CECILL-C
         onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
         {findNeighborItems}
         {moveCursorToPosition}
+        {resetTool}
       />
     {/each}
   </div>

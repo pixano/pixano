@@ -10,12 +10,10 @@ License: CECILL-C
   import { BaseSchema, ContextMenu, Tracklet, cn } from "@pixano/core";
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
-  import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     entities,
     saveData,
-    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
@@ -37,6 +35,7 @@ License: CECILL-C
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
   ) => boolean;
+  export let resetTool: () => void;
 
   let isItemBeingEdited = false;
 
@@ -132,7 +131,7 @@ License: CECILL-C
       startPosition = event.clientX;
       startFrameIndex = itemFrameIndex;
       startOneFrameInPixel = oneFrameInPixel;
-      selectedTool.set(panTool);
+      resetTool();
       const dragController = new AbortController();
 
       window.addEventListener(

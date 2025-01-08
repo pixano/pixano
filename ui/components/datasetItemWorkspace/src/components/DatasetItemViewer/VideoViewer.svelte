@@ -9,6 +9,7 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
 
   import { Canvas2D } from "@pixano/canvas2d";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
     BaseSchema,
@@ -37,6 +38,7 @@ License: CECILL-C
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
+    merges,
     colorScale,
     entities,
     imageSmoothing,
@@ -274,6 +276,29 @@ License: CECILL-C
     });
   };
 
+  const merge = (ann: Annotation) => {
+    if (
+      $selectedTool.type === ToolType.Fusion &&
+      ann.ui.top_entities &&
+      ann.ui.top_entities.length > 0
+    ) {
+      const top_entity = ann.ui.top_entities[0];
+      merges.update((assoc) => {
+        if (!assoc.to_fuse.includes(top_entity)) {
+          //check if top_entity is allowed (pas de recouvrement)
+          // better: disallow click on forbidden top entities
+
+          return { to_fuse: [...assoc.to_fuse, top_entity], forbids: assoc.forbids };
+        } else {
+          //already here, then remove it
+          const remove_index = assoc.to_fuse.indexOf(top_entity, 0);
+          assoc.to_fuse.splice(remove_index, 1);
+          return assoc;
+        }
+      });
+    }
+  };
+
   const editKeyItemInTracklet = (
     annotations: Annotation[],
     shape: EditShape,
@@ -391,13 +416,10 @@ License: CECILL-C
   };
 
   $: {
-    const shape = $newShape;
-    if (shape.status === "editing") {
-      updateOrCreateShape(shape);
+    if ($newShape.status === "editing") {
+      updateOrCreateShape($newShape);
     }
   }
-
-  //$: selectedTool.set($selectedTool);
 
   const startExpand = () => {
     expanding = true;
@@ -440,6 +462,7 @@ License: CECILL-C
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
+        {merge}
       />
     </div>
     <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />

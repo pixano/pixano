@@ -5,16 +5,8 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import { ToolType } from "../../../../canvas2d/src/tools";
 import type { InteractiveImageSegmenter } from "./modelsTypes";
-
-export type ToolType =
-  | "POINT_SELECTION"
-  | "RECTANGLE"
-  | "DELETE"
-  | "PAN"
-  | "CLASSIFICATION"
-  | "KEY_POINT"
-  | "POLYGON";
 
 // Exports
 type BaseTool<T extends ToolType> = {
@@ -26,10 +18,16 @@ type BaseTool<T extends ToolType> = {
 };
 
 export type AllTool = BaseTool<
-  "RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION" | "POLYGON" | "KEY_POINT"
+  | ToolType.Rectangle
+  | ToolType.Pan
+  | ToolType.Delete
+  | ToolType.Classification
+  | ToolType.Polygon
+  | ToolType.Keypoint
+  | ToolType.Fusion
 >;
 
-export type LabeledPointTool = BaseTool<"POINT_SELECTION"> & {
+export type LabeledPointTool = BaseTool<ToolType.PointSelection> & {
   label: number;
 };
 

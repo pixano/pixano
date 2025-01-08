@@ -27,7 +27,12 @@ import {
 import { derived, writable } from "svelte/store";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
-import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
+import type {
+  Filters,
+  ItemsMeta,
+  Merges,
+  ModelSelection,
+} from "../types/datasetItemWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
@@ -35,6 +40,7 @@ export const selectedTool = writable<SelectionTool>();
 export const annotations = writable<Annotation[]>([]);
 export const entities = writable<Entity[]>([]);
 export const views = writable<Record<string, View | View[]>>({});
+export const merges = writable<Merges>({ to_fuse: [], forbids: [] });
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const preAnnotationIsActive = writable<boolean>(false);

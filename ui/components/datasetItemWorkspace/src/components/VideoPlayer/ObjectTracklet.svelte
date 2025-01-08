@@ -41,6 +41,7 @@ License: CECILL-C
   export let onDeleteTrackletClick: () => void;
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
+  export let resetTool: () => void;
 
   const getLeft = (tracklet: Tracklet) =>
     (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
@@ -140,7 +141,7 @@ License: CECILL-C
 
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
-    selectedTool.set(panTool);
+    resetTool();
   };
 </script>
 
@@ -180,5 +181,6 @@ License: CECILL-C
     {trackId}
     {canContinueDragging}
     {updateTrackletWidth}
+    {resetTool}
   />
 {/each}

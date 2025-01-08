@@ -35,7 +35,6 @@ License: CECILL-C
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
-  import "./index.css";
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];

@@ -24,6 +24,7 @@ License: CECILL-C
     sceneFunc,
   } from "../api/maskApi";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
+  import { ToolType } from "../tools";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
@@ -130,7 +131,7 @@ License: CECILL-C
     draggable: canEdit,
     visible: !mask.ui.displayControl?.hidden,
     opacity: mask.ui.opacity,
-    listening: selectedTool.type === "PAN",
+    listening: selectedTool.type === ToolType.Pan,
   }}
 >
   {#if canEdit}
