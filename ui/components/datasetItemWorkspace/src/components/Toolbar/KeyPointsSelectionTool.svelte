@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { TangentIcon } from "lucide-svelte";
 
-  import { cn, IconButton, type Vertex } from "@pixano/core/src";
+  import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
 
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
@@ -19,6 +19,8 @@ License: CECILL-C
 
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import { ToolType } from "@pixano/canvas2d/src/tools";
+
+  export let selectTool: (tool: SelectionTool) => void;
 
   const defineDotColor = (vertex: Vertex, selected: boolean) => {
     if (vertex.features?.color) return vertex.features.color;
@@ -44,7 +46,7 @@ License: CECILL-C
     "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Keypoint,
   })}
 >
-  <IconButton tooltipContent={keyPointTool.name} on:click={() => selectedTool.set(keyPointTool)}>
+  <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>
     <TangentIcon />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Keypoint}

@@ -117,7 +117,7 @@ License: CECILL-C
     >
       <Share2 />
     </IconButton>
-    <KeyPointsSelection />
+    <KeyPointsSelection {selectTool} />
     <FusionTool {cleanFusion} />
   </div>
   <div
