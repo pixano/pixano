@@ -11,7 +11,7 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { Annotation, cn, IconButton, type SaveItem } from "@pixano/core/src";
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-  import { fusionTool, panTool } from "../../lib/settings/selectionTools";
+  import { fusionTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     entities,
@@ -19,15 +19,23 @@ License: CECILL-C
     saveData,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  export let cleanFusion: () => void;
 
   const onFusionClick = () => {
     merges.set({ to_fuse: [], forbids: [] }); //should not be needed, but for safety...
     selectedTool.set(fusionTool);
-    console.log("Fusion mode ON");
-    //TODO deselect everything -- done in Canvas2D, but may be better if possible to do it here...
+    //deselect everything = unhighlight all
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        ann.ui.highlighted = "all";
+        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false };
+        return ann;
+      }),
+    );
   };
 
-  //merges.subscribe((assoc) => console.log("fusion list:", assoc));
+  //TMP dev
+  merges.subscribe((assoc) => console.log("fusion list:", assoc));
 
   const onValidate = () => {
     let reassoc_anns: Annotation[] = [];
@@ -83,15 +91,11 @@ License: CECILL-C
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       });
     }
-
-    merges.set({ to_fuse: [], forbids: [] });
-    selectedTool.set(panTool);
+    cleanFusion();
   };
 
   const onAbort = () => {
-    console.log("Fusion abort");
-    merges.set({ to_fuse: [], forbids: [] });
-    selectedTool.set(panTool);
+    cleanFusion();
   };
 </script>
 

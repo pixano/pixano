@@ -28,8 +28,10 @@ License: CECILL-C
     polygonTool,
   } from "../lib/settings/selectionTools";
   import {
+    annotations,
     interactiveSegmenterModel,
     newShape,
+    merges,
     modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
@@ -42,8 +44,26 @@ License: CECILL-C
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
 
+  const cleanFusion = () => {
+    //deselect everything = unhighlight all
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        ann.ui.highlighted = "all";
+        return ann;
+      }),
+    );
+    merges.set({ to_fuse: [], forbids: [] });
+    selectedTool.set(panTool);
+  };
+
   const selectTool = (tool: SelectionTool) => {
-    if (tool !== $selectedTool) selectedTool.set(tool);
+    if (tool !== $selectedTool) {
+      if (previousSelectedTool?.type === ToolType.Fusion) {
+        //abort fusion
+        cleanFusion();
+      }
+      selectedTool.set(tool);
+    }
   };
 
   const handleSmartToolClick = () => {
@@ -98,7 +118,7 @@ License: CECILL-C
       <Share2 />
     </IconButton>
     <KeyPointsSelection />
-    <FusionTool />
+    <FusionTool {cleanFusion} />
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

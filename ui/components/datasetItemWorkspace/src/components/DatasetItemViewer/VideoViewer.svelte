@@ -15,6 +15,7 @@ License: CECILL-C
     BaseSchema,
     BBox,
     DatasetItem,
+    Entity,
     Keypoints,
     SaveShapeType,
     SequenceFrame,
@@ -32,6 +33,7 @@ License: CECILL-C
   import {
     addOrUpdateSaveItem,
     getPixanoSource,
+    getTopEntity,
     updateExistingObject,
   } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
@@ -276,26 +278,50 @@ License: CECILL-C
     });
   };
 
-  const merge = (ann: Annotation) => {
-    if (
-      $selectedTool.type === ToolType.Fusion &&
-      ann.ui.top_entities &&
-      ann.ui.top_entities.length > 0
-    ) {
-      const top_entity = ann.ui.top_entities[0];
-      merges.update((assoc) => {
-        if (!assoc.to_fuse.includes(top_entity)) {
-          //check if top_entity is allowed (pas de recouvrement)
-          // better: disallow click on forbidden top entities
+  const checkIfMergeAllowed = (to_fuse: Entity[]): boolean => {
+    //build combined tracklet ranges for each view of to_fuse entities
 
-          return { to_fuse: [...assoc.to_fuse, top_entity], forbids: assoc.forbids };
-        } else {
-          //already here, then remove it
+    //test against others
+    return true;
+  };
+
+  const merge = (clicked_ann: Annotation) => {
+    if ($selectedTool.type === ToolType.Fusion) {
+      const top_entity = getTopEntity(clicked_ann, $entities);
+      //check if top_entity is allowed (pas de recouvrement)
+      // better: disallow click on forbidden top entities
+
+      if (!$merges.to_fuse.includes(top_entity)) {
+        merges.update((assoc) => ({
+          to_fuse: [...assoc.to_fuse, top_entity],
+          forbids: assoc.forbids,
+        }));
+        //highlight
+        annotations.update((anns) =>
+          anns.map((ann) => {
+            if (top_entity.ui.childs?.includes(ann) && !ann.is_type(BaseSchema.Tracklet)) {
+              ann.ui.highlighted = "self";
+            }
+            return ann;
+          }),
+        );
+      } else {
+        //already here, then remove it
+        merges.update((assoc) => {
           const remove_index = assoc.to_fuse.indexOf(top_entity, 0);
           assoc.to_fuse.splice(remove_index, 1);
           return assoc;
-        }
-      });
+        });
+        //unhighlight
+        annotations.update((anns) =>
+          anns.map((ann) => {
+            if (top_entity.ui.childs?.includes(ann) && !ann.is_type(BaseSchema.Tracklet)) {
+              ann.ui.highlighted = "all";
+            }
+            return ann;
+          }),
+        );
+      }
     }
   };
 
@@ -417,7 +443,9 @@ License: CECILL-C
 
   $: {
     if ($newShape.status === "editing") {
-      updateOrCreateShape($newShape);
+      if ($selectedTool.type !== ToolType.Fusion) {
+        updateOrCreateShape($newShape);
+      }
     }
   }
 

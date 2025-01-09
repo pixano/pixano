@@ -548,9 +548,6 @@ License: CECILL-C
       case ToolType.Classification:
         displayClassificationTool(selectedTool);
         break;
-      case ToolType.Fusion:
-        displayFusionTool();
-        break;
 
       default:
         // Reset or disable any specific behavior
@@ -659,17 +656,6 @@ License: CECILL-C
       // deactivate drag on input points
       toggleInputPointDrag(false);
     }
-  }
-
-  function displayFusionTool() {
-    //deselect all (NOTE: quite strange way to deselect, should need rework)
-    newShape = {
-      status: "editing",
-      viewRef: {}, // TODO: is it OK ?
-      type: "none",
-      shapeId: null,
-      highlighted: "all",
-    };
   }
 
   // ********** CLASSIFICATION TOOL ********** //
