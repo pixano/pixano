@@ -16,22 +16,18 @@ License: CECILL-C
 
   const handleBlur = (
     e: FocusEvent & {
-      currentTarget: EventTarget & HTMLDivElement;
+      currentTarget: EventTarget & HTMLInputElement;
     },
   ) => {
-    const editableDiv = e.currentTarget;
-    const newMessageContent = editableDiv.innerText;
-
+    const newMessageContent = e.currentTarget.value;
     dispatch("messageContentChange", { messageId, newMessageContent });
   };
 </script>
 
-<div
+<input
+  type="text"
+  value={message.data.content}
+  placeholder="Your answer here"
+  class="p-2 text-slate-800 placeholder-slate-500 bg-slate-50 outline-none"
   on:blur={handleBlur}
-  contenteditable="true"
-  class="outline-none flex flex-row flex-wrap items-center"
-  role="textbox"
-  tabindex="0"
->
-  {message.data.content}
-</div>
+/>
