@@ -57,7 +57,6 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import { string } from "zod";
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
