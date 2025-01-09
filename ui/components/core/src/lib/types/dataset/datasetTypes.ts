@@ -37,7 +37,7 @@ export const tableInfoSchema = z
     base_schema: z.nativeEnum(BaseSchema),
   })
   .strict();
-type TableInfo = z.infer<typeof tableInfoSchema>;
+export type TableInfo = z.infer<typeof tableInfoSchema>;
 
 //note: this one is needed only to parse in BaseData<T> constructor
 //because I can't find a way to parse with the generic typed version
