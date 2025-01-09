@@ -28,6 +28,7 @@
   "dependencies": {
     "@pixano/canvas2d": "workspace:^",
     "@pixano/text-canvas": "workspace:^",
+    "@pixano/vqa-canvas": "workspace:^",
     "@pixano/canvas3d": "workspace:^",
     "@pixano/core": "workspace:^",
     "@pixano/models": "workspace:^",
