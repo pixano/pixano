@@ -313,6 +313,7 @@ License: CECILL-C
 </script>
 
 {#if track && tracklets}
+  <span style={`background: ${color}1a;`}>{track.data.name} ({track.id})</span>
   <div
     class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}
@@ -324,7 +325,6 @@ License: CECILL-C
       class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
       style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
     />
-    <span class="sticky left-0 m-1">{track.data.name} ({track.id})</span>
     <ContextMenu.Root>
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
