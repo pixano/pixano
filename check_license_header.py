@@ -35,6 +35,7 @@ License: CECILL-C
 # Files to exclude
 EXCLUDE_FILES = {
     "vite.config.ts",
+    "vitest.config.ts",
     "vite-env.d.ts",
     "vite.env.d.ts",
     "ambient.d.ts",
