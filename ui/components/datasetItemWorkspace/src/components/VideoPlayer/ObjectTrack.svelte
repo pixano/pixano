@@ -26,7 +26,12 @@ License: CECILL-C
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
-  import { annotations, entities, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    annotations,
+    entities,
+    colorScale,
+    saveData,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -48,6 +53,7 @@ License: CECILL-C
   let tracklets: Tracklet[];
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
+  $: color = $colorScale[1](track.id);
 
   $: if (track) {
     tracklets = $annotations.filter(
@@ -310,7 +316,7 @@ License: CECILL-C
   <div
     class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}
-    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 20}px;`}
+    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 20}px; background: ${color}1a;`}
     bind:this={objectTimeTrack}
     role="complementary"
   >
@@ -318,6 +324,7 @@ License: CECILL-C
       class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
       style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
     />
+    <span class="sticky left-0 m-1">{track.data.name} ({track.id})</span>
     <ContextMenu.Root>
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
