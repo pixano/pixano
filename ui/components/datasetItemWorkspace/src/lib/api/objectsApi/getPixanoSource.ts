@@ -15,7 +15,7 @@ export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
   const sources = get<Source[]>(srcStore);
   let pixanoSource = sources.find((src) => src.data.name === "Pixano" && src.data.kind === "other");
   if (!pixanoSource) {
-    const now = new Date(Date.now()).toISOString();
+    const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
     pixanoSource = new Source({
       id: "pixano_source",
       created_at: now,

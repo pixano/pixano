@@ -146,6 +146,7 @@ License: CECILL-C
 
     const no_delete_data = data.filter((d) => d.change_type !== "delete");
 
+    //TODO: gather items too (like deletes)
     for (const savedItem of no_delete_data) {
       let no_table = false;
       let route = savedItem.object.table_info.group;
