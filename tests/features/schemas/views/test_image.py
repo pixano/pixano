@@ -39,6 +39,23 @@ class TestImage:
         with pytest.raises(ValueError, match=r"Invalid output type: wrong_type"):
             Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, output_type="wrong_type")
 
+    def test_shorten_url_to_relative_path(self):
+        image = create_image(
+            url=IMAGE_JPG_ASSET_URL,
+            url_relative_path=ASSETS_DIRECTORY,
+        )
+        base64_image = image.open(ASSETS_DIRECTORY)
+
+        image2 = create_image(url=IMAGE_JPG_ASSET_URL)
+        image2.shorten_url_to_relative_path(ASSETS_DIRECTORY)
+        base64_image2 = image2.open(media_dir=ASSETS_DIRECTORY)
+
+        assert image2.url == image.url
+        assert base64_image2 == base64_image
+        assert image2.width == image.width
+        assert image2.height == image.height
+        assert image2.format == image.format
+
 
 def test_is_image():
     make_tests_is_sublass_strict(is_image, Image)

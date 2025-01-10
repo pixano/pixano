@@ -136,6 +136,25 @@ class Image(View):
 
         return pil_image
 
+    def shorten_url_to_relative_path(self, url_relative_path: Path) -> str:
+        """Changes the URL of an image to be relative.
+
+        Note:
+           This helps the creation of a dataset where Image object are created
+           with known dimensions format and theorical path, but images are not yet accessible.
+
+        Args:
+            url_relative_path (Path): The path to convert the URL to a relative path,
+              eg for images to be later searchable in the media_dir.
+
+        Returns:
+            str: shorten image url
+        """
+        url = Path(self.url)
+        url_relative_path = Path(url_relative_path)
+        self.url = url.relative_to(url_relative_path).as_posix()
+        return self.url
+
 
 def is_image(cls: type, strict: bool = False) -> bool:
     """Check if the given class is `Image` or a subclass of `Image`."""
@@ -155,14 +174,15 @@ def create_image(
     """Create an `Image` instance.
 
     Args:
-        url: The image URL. If not relative, the URL is converted to a relative path using `other_path`.
+        url: The image URL. If not relative, the URL is converted to a relative path using `url_relative_path`.
         id: Image ID.
         item_ref: Item reference.
         parent_ref: Parent view reference.
         width: The image width. If None, the width is extracted from the image file.
         height: The image height. If None, the height is extracted from the image file.
         format: The image format. If None, the format is extracted from the image file.
-        url_relative_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path,
+           eg for images to be searchable in the media_dir.
 
     Returns:
         The created `Image` instance.
@@ -185,5 +205,11 @@ def create_image(
         url = url.relative_to(url_relative_path)
 
     return Image(
-        id=id, item_ref=item_ref, parent_ref=parent_ref, url=url.as_posix(), width=width, height=height, format=format
+        id=id,
+        item_ref=item_ref,
+        parent_ref=parent_ref,
+        url=str(url.as_posix()),
+        width=width,
+        height=height,
+        format=format,
     )
