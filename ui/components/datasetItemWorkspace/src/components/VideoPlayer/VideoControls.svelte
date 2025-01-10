@@ -74,6 +74,30 @@ License: CECILL-C
       playVideo();
     }
   };
+
+  function shortcutHandler(event: KeyboardEvent) {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true"
+    ) {
+      return; // Ignore shortcut when typing text
+    }
+
+    switch (event.key) {
+      case " ":
+        if (event.repeat) break;
+        onPlayClick();
+        break;
+      case "ArrowRight":
+        onPlayStepClick();
+        break;
+      case "ArrowLeft":
+        onPlayStepBackClick();
+        break;
+    }
+  }
 </script>
 
 <div class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200 w-fit">
@@ -94,3 +118,4 @@ License: CECILL-C
     <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
   </p>
 </div>
+<svelte:window on:keydown={shortcutHandler} />
