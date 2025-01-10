@@ -114,9 +114,11 @@ License: CECILL-C
     );
     if (interpolatedBox) {
       const newItemOrig = structuredClone(interpolatedBox);
+      const top_entities = interpolatedBox.ui.top_entities; //need to keep it to keep class (lost by structured clone)
       const { ui, ...noUIfieldsBBox } = newItemOrig;
       newItemBBox = new BBox(noUIfieldsBBox);
       newItemBBox.ui = ui;
+      newItemBBox.ui.top_entities = top_entities;
       //coords are denormalized: normalize them
       const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
         newItemBBox.ui.frame_index!
@@ -146,9 +148,11 @@ License: CECILL-C
       ) as Keypoints;
       if (keypointsRef) {
         const newItemOrig = structuredClone(keypointsRef);
+        const top_entities = keypointsRef.ui.top_entities; //need to keep it to keep class (lost by structured clone)
         const { ui, ...noUIfieldsBBox } = newItemOrig;
         newItemKpt = new Keypoints(noUIfieldsBBox);
         newItemKpt.ui = ui;
+        newItemKpt.ui.top_entities = top_entities;
         if (interpolatedKpt.ui!.displayControl)
           newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
         if (interpolatedKpt.ui!.highlighted)
