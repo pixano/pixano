@@ -34,12 +34,8 @@ License: CECILL-C
     );
   };
 
-  //TMP dev
-  merges.subscribe((assoc) => console.log("fusion list:", assoc));
-
   const onValidate = () => {
     let reassoc_anns: Annotation[] = [];
-    console.log("Fusion validate (WIP = no constraint on impossible fusion yet!)");
     if ($merges.to_fuse.length > 1) {
       const [reference, ...to_fuse] = $merges.to_fuse;
       to_fuse.forEach((entity) => {
@@ -54,8 +50,9 @@ License: CECILL-C
               ann.ui.top_entities.length > 0 &&
               ann.data.entity_ref.id !== ann.ui.top_entities[0].id
             ) {
-              //TODO: if sub entities !
-              console.warn("ARGH, it's a sub entity !", ann);
+              //TODO: if sub entities ! (then we should change top_entities[1] to reference)
+              console.error("ERROR: Sub entities currently not managed for fusion.", ann);
+              return ann;
             }
             ann.data.entity_ref = { id: reference.id, name: reference.table_info.name };
             ann.ui.top_entities = [reference];

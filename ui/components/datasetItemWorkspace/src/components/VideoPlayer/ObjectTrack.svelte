@@ -313,9 +313,11 @@ License: CECILL-C
 </script>
 
 {#if track && tracklets}
-  <span class="sticky left-5 m-1" style={`background: ${color}1a;`}
-    >{track.data.name} ({track.id})</span
-  >
+  <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
+    <span class="sticky left-5 m-1" style={`background: ${color}1a;`}
+      >{track.data.name} ({track.id})</span
+    >
+  </div>
   <div
     class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}

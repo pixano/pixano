@@ -41,6 +41,8 @@ License: CECILL-C
   import FusionTool from "./Toolbar/FusionTool.svelte";
   import { ToolType } from "@pixano/canvas2d/src/tools";
 
+  export let isVideo: boolean = false;
+
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
 
@@ -118,7 +120,9 @@ License: CECILL-C
       <Share2 />
     </IconButton>
     <KeyPointsSelection {selectTool} />
-    <FusionTool {cleanFusion} />
+    {#if isVideo}
+      <FusionTool {cleanFusion} />
+    {/if}
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

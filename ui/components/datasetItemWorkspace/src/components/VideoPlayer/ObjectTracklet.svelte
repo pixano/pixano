@@ -35,6 +35,7 @@ License: CECILL-C
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;
+  const showKeyframes: boolean = false; //later this flag could be controled somewhere
 
   const getLeft = (tracklet: Tracklet) =>
     (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
@@ -161,21 +162,21 @@ License: CECILL-C
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-<!--
-{#each tracklet_annotations_frame_indexes as itemFrameIndex}
-  <TrackletKeyItem
-    {itemFrameIndex}
-    {tracklet}
-    {color}
-    {height}
-    {top}
-    {oneFrameInPixel}
-    {onEditKeyItemClick}
-    {onClick}
-    {trackId}
-    {canContinueDragging}
-    {updateTrackletWidth}
-    {resetTool}
-  />
-{/each}
--->
+{#if showKeyframes}
+  {#each tracklet_annotations_frame_indexes as itemFrameIndex}
+    <TrackletKeyItem
+      {itemFrameIndex}
+      {tracklet}
+      {color}
+      {height}
+      {top}
+      {oneFrameInPixel}
+      {onEditKeyItemClick}
+      {onClick}
+      {trackId}
+      {canContinueDragging}
+      {updateTrackletWidth}
+      {resetTool}
+    />
+  {/each}
+{/if}
