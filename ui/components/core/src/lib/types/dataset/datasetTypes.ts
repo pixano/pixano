@@ -244,7 +244,7 @@ export type Schema = Annotation | Entity | Item | Source;
 
 export type SaveItem = {
   change_type: "add" | "update" | "delete";
-  object: Annotation | Entity | Item | Source;
+  object: Schema;
 };
 
 // ITEM EMBEDDING

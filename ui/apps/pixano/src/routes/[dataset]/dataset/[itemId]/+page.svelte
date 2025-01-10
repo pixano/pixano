@@ -128,6 +128,35 @@ License: CECILL-C
     isLoadingNewItem = value;
   });
 
+  function reduceByTypeAndGroupAndTable(
+    data: SaveItem[],
+    type: string,
+  ): Record<string, Record<string, (Schema | string)[]>> {
+    const type_data = data.filter((d) => d.change_type === type);
+    return type_data.reduce(
+      (acc, item) => {
+        const group = item.object.table_info.group;
+        const table = item.object.table_info.name;
+        if (!acc[group]) {
+          acc[group] = {};
+        }
+        if (!acc[group][table]) {
+          acc[group][table] = [];
+        }
+        if (type === "delete") {
+          acc[group][table].push(item.object.id);
+        } else {
+          //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
+          // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
+          const { ui, ...bodyObj } = item.object; // eslint-disable-line @typescript-eslint/no-unused-vars
+          acc[group][table].push(bodyObj as Schema);
+        }
+        return acc;
+      },
+      {} as Record<string, Record<string, (Schema | string)[]>>,
+    );
+  }
+
   async function handleSaveItem(data: SaveItem[]) {
     //entities first to avoid database consistency checks issues
     data.sort((a, b) => {
@@ -144,50 +173,44 @@ License: CECILL-C
       return priority(a.object) - priority(b.object);
     });
 
-    const no_delete_data = data.filter((d) => d.change_type !== "delete");
+    //gather adds by group and table
+    const add_data_by_group_and_table = reduceByTypeAndGroupAndTable(data, "add");
+    for (const group in add_data_by_group_and_table) {
+      for (const [table, schs] of Object.entries(add_data_by_group_and_table[group])) {
+        let no_table = false;
+        let route = group;
+        if (route === "item") {
+          route = "items";
+          no_table = true;
+        }
+        if (route === "source") {
+          route = "sources";
+          no_table = true;
+        }
+        await api.addSchemas(route, selectedDataset.id, schs as Schema[], table, no_table);
+      }
+    }
 
-    //TODO: gather items too (like deletes)
-    for (const savedItem of no_delete_data) {
-      let no_table = false;
-      let route = savedItem.object.table_info.group;
-      if (route === "item") {
-        route = "items";
-        no_table = true;
-      }
-      if (route === "source") {
-        route = "sources";
-        no_table = true;
-      }
-      //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
-      // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
-      const { ui, ...bodyObj } = savedItem.object; // eslint-disable-line @typescript-eslint/no-unused-vars
-      if (savedItem.change_type === "add") {
-        await api.addSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
-      }
-      if (savedItem.change_type === "update") {
-        await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
+    //gather updates by group and table
+    const update_data_by_group_and_table = reduceByTypeAndGroupAndTable(data, "update");
+    for (const group in update_data_by_group_and_table) {
+      for (const [table, schs] of Object.entries(update_data_by_group_and_table[group])) {
+        let no_table = false;
+        let route = group;
+        if (route === "item") {
+          route = "items";
+          no_table = true;
+        }
+        if (route === "source") {
+          route = "sources";
+          no_table = true;
+        }
+        await api.updateSchemas(route, selectedDataset.id, schs as Schema[], table, no_table);
       }
     }
 
     //gather deletes by group and table
-    //-- if we delete a track, there is many things to delete, so it's more efficient to delete them all at once
-    const delete_data = data.filter((d) => d.change_type === "delete");
-    const delete_ids_by_group_and_table = delete_data.reduce(
-      (acc, item) => {
-        const group = item.object.table_info.group;
-        const table = item.object.table_info.name;
-        if (!acc[group]) {
-          acc[group] = {};
-        }
-        if (!acc[group][table]) {
-          acc[group][table] = [];
-        }
-        acc[group][table].push(item.object.id);
-        return acc;
-      },
-      {} as Record<string, Record<string, string[]>>,
-    );
-
+    const delete_ids_by_group_and_table = reduceByTypeAndGroupAndTable(data, "delete");
     for (const group in delete_ids_by_group_and_table) {
       for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
         let no_table = false;
@@ -196,7 +219,7 @@ License: CECILL-C
           route = "items";
           no_table = true;
         }
-        await api.deleteSchemasByIds(route, selectedDataset.id, ids, table, no_table);
+        await api.deleteSchemasByIds(route, selectedDataset.id, ids as string[], table, no_table);
       }
     }
 
