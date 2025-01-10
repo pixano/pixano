@@ -6,16 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-    Message,
-    MessageTypeEnum,
-    SaveShapeType,
-    TextSpan,
-    type ImagesPerView,
-    type Shape,
-    type TextSpanType,
+      Message,
+      SaveShapeType,
+      TextSpan,
+      type ImagesPerView,
+      type Shape,
+      type TextSpanType,
   } from "@pixano/core";
   import { Answer } from "./components";
-  import Question from "./components/Question.svelte";
   import { createUpdatedMessage, groupTextSpansByMessageId } from "./lib";
 
   // Exports
@@ -70,17 +68,10 @@ License: CECILL-C
   <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton"
     >Tag Selected Text</button
   >
-  {#each messages.sort((a, b) => a.data.number - b.data.number) as message}
-    {#if message.data.type === MessageTypeEnum.QUESTION}
-      <Question {message} />
-    {:else}
-      <Answer
-        {message}
-        {colorScale}
-        textSpans={spansByMessageId[message.id]}
-        bind:textSpanAttributes
-        on:messageContentChange={handleMessageContentChange}
-      />
-    {/if}
-  {/each}
+  <Answer
+    message={messages[1]}
+    {colorScale}
+    textSpans={spansByMessageId[messages[1].id]}
+    bind:textSpanAttributes
+  />
 </div>
