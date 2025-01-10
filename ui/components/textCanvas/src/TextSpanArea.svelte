@@ -6,15 +6,15 @@ License: CECILL-C
 
 <script lang="ts">
   import {
-      Message,
-      SaveShapeType,
-      TextSpan,
-      type ImagesPerView,
-      type Shape,
-      type TextSpanType,
+    Message,
+    SaveShapeType,
+    TextSpan,
+    type ImagesPerView,
+    type Shape,
+    type TextSpanType,
   } from "@pixano/core";
   import { Answer } from "./components";
-  import { createUpdatedMessage, groupTextSpansByMessageId } from "./lib";
+  import { groupTextSpansByMessageId } from "./lib";
 
   // Exports
   export let selectedItemId: string;
@@ -44,23 +44,6 @@ License: CECILL-C
       type: SaveShapeType.textSpan,
       attrs: textSpanAttributes,
     };
-  };
-
-  const handleMessageContentChange = (event: CustomEvent) => {
-    event.preventDefault();
-
-    const { messageId, newTextSpans, newMessageContent } = event.detail as {
-      messageId: string;
-      newTextSpans: TextSpan[];
-      newMessageContent: string;
-    };
-
-    const newSpansByMessageId = { ...spansByMessageId, [messageId]: newTextSpans };
-    textSpans = Object.values(newSpansByMessageId).flat();
-
-    messages = messages.map((message) =>
-      message.id === messageId ? createUpdatedMessage({ message, newMessageContent }) : message,
-    );
   };
 </script>
 
