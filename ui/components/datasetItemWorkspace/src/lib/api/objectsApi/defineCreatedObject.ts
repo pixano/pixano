@@ -35,7 +35,7 @@ export const defineCreatedObject = (
   isVideo: boolean,
   currentFrameIndex: number,
 ): Annotation | undefined => {
-  const now = new Date(Date.now()).toISOString();
+  const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
   const baseAnn = {
     id: nanoid(10),
     created_at: now,

@@ -13,10 +13,9 @@ License: CECILL-C
     videoControls,
   } from "../../lib/stores/videoViewerStores";
   import { onMount } from "svelte";
-  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (imageIndex: number) => void;
+  export let resetTool: () => void;
 
   let cursorElement: HTMLButtonElement;
   let timeTrackElement: HTMLElement;
@@ -25,12 +24,6 @@ License: CECILL-C
   const videoTotalLengthInMs = imageFilesLength * $videoControls.videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
   let timeTrackDensity = 1;
-
-  const changeSelectedTool = () => {
-    if ($selectedTool.name !== panTool.name) {
-      selectedTool.set(panTool);
-    }
-  };
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
@@ -44,7 +37,7 @@ License: CECILL-C
       if (moving) {
         currentFrameIndex.set(getImageIndexFromMouseMove(event, node, imageFilesLength));
         updateView($currentFrameIndex);
-        changeSelectedTool();
+        resetTool();
       }
     });
 
@@ -78,7 +71,7 @@ License: CECILL-C
       Math.round((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
     );
     updateView($currentFrameIndex);
-    changeSelectedTool();
+    resetTool();
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {

@@ -9,15 +9,18 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
 
   import { Canvas2D } from "@pixano/canvas2d";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
     BaseSchema,
     BBox,
     DatasetItem,
+    Entity,
     Keypoints,
     SaveShapeType,
     SequenceFrame,
     Track,
+    Tracklet,
     type EditShape,
     type HTMLImage,
     type ImagesPerView,
@@ -31,12 +34,14 @@ License: CECILL-C
   import {
     addOrUpdateSaveItem,
     getPixanoSource,
+    getTopEntity,
     updateExistingObject,
   } from "../../lib/api/objectsApi";
   import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
+    merges,
     colorScale,
     entities,
     imageSmoothing,
@@ -274,6 +279,155 @@ License: CECILL-C
     });
   };
 
+  function mergeFusionRangesByView(to_fuse: Entity[]): Record<string, [number, number][]> {
+    //build combined tracklet ranges for each view of to_fuse entities
+    const trackletsByView: Record<string, Tracklet[]> = {};
+    to_fuse
+      .flatMap((ent) =>
+        ent.ui.childs
+          ? (ent.ui.childs.filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[])
+          : [],
+      )
+      .forEach((tracklet) => {
+        if (!(tracklet.data.view_ref.name in trackletsByView))
+          trackletsByView[tracklet.data.view_ref.name] = [];
+        trackletsByView[tracklet.data.view_ref.name].push(tracklet);
+      });
+
+    const mergedByView: Record<string, [number, number][]> = {};
+    Object.entries(trackletsByView).forEach(([view, tracklets]) => {
+      mergedByView[view] = [];
+      if (tracklets.length > 0) {
+        // sort to ease merge
+        tracklets.sort((a, b) => a.data.start_timestep - b.data.start_timestep);
+        let currentTracklet = { ...tracklets[0] };
+        for (let i = 1; i < tracklets.length; i++) {
+          const tracklet = tracklets[i];
+          if (tracklet.data.start_timestep <= currentTracklet.data.end_timestep) {
+            // Merge range if overlap (or touching)
+            currentTracklet.data.end_timestep = Math.max(
+              currentTracklet.data.end_timestep,
+              tracklet.data.end_timestep,
+            );
+          } else {
+            // Add merged range and start a new one
+            mergedByView[view].push([
+              currentTracklet.data.start_timestep,
+              currentTracklet.data.end_timestep,
+            ]);
+            currentTracklet = { ...tracklet };
+          }
+        }
+        // Add last range
+        mergedByView[view].push([
+          currentTracklet.data.start_timestep,
+          currentTracklet.data.end_timestep,
+        ]);
+      }
+    });
+    return mergedByView;
+  }
+
+  function canMergeRangesByView(
+    record1: Record<string, [number, number][]>,
+    record2: Record<string, [number, number][]>,
+  ): boolean {
+    // Get all possible views
+    const allViews = new Set([...Object.keys(record1), ...Object.keys(record2)]);
+
+    for (const view of allViews) {
+      const ranges1 = record1[view] || [];
+      const ranges2 = record2[view] || [];
+
+      // sort both ranges on start then end
+      const allRanges = [...ranges1, ...ranges2].sort((a, b) =>
+        a[0] === b[0] ? a[1] - b[1] : a[0] - b[0],
+      );
+      // check if ranges overlap or touch
+      for (let i = 1; i < allRanges.length; i++) {
+        const prev = allRanges[i - 1];
+        const curr = allRanges[i];
+        if (prev[1] >= curr[0]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  const checkMergeForbids = (to_fuse: Entity[]) => {
+    const forbids: Entity[] = $merges.forbids;
+    const to_fuse_ranges = mergeFusionRangesByView(to_fuse);
+    const others = $entities.filter(
+      (ent) => !to_fuse.includes(ent) && ent.data.parent_ref.id === "",
+    );
+    others.forEach((ent) => {
+      const ranges = mergeFusionRangesByView([ent]);
+      if (canMergeRangesByView(ranges, to_fuse_ranges)) {
+        //remove from forbids (if present)
+        if (forbids.includes(ent)) {
+          const remove_index = forbids.indexOf(ent, 0);
+          forbids.splice(remove_index, 1);
+        }
+      } else {
+        //add to forbids
+        if (!forbids.includes(ent)) {
+          forbids.push(ent);
+        }
+      }
+    });
+    //adapt highlights
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        const top_ent = getTopEntity(ann, $entities);
+        if (forbids.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "none";
+        else if (!to_fuse.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "all";
+        return ann;
+      }),
+    );
+  };
+
+  const merge = (clicked_ann: Annotation) => {
+    if ($selectedTool.type === ToolType.Fusion) {
+      const top_entity = getTopEntity(clicked_ann, $entities);
+      //check if top_entity is allowed
+      if ($merges.forbids.includes(top_entity)) return;
+
+      if (!$merges.to_fuse.includes(top_entity)) {
+        merges.update((assoc) => ({
+          to_fuse: [...assoc.to_fuse, top_entity],
+          forbids: assoc.forbids,
+        }));
+        //highlight
+        annotations.update((anns) =>
+          anns.map((ann) => {
+            if (top_entity.ui.childs?.includes(ann) /*&& !ann.is_type(BaseSchema.Tracklet)*/) {
+              ann.ui.highlighted = "self";
+            }
+            return ann;
+          }),
+        );
+      } else {
+        //already here, then remove it
+        merges.update((assoc) => {
+          const remove_index = assoc.to_fuse.indexOf(top_entity, 0);
+          assoc.to_fuse.splice(remove_index, 1);
+          return assoc;
+        });
+        //unhighlight
+        annotations.update((anns) =>
+          anns.map((ann) => {
+            if (top_entity.ui.childs?.includes(ann) /*&& !ann.is_type(BaseSchema.Tracklet)*/) {
+              ann.ui.highlighted = "all";
+            }
+            return ann;
+          }),
+        );
+      }
+      checkMergeForbids($merges.to_fuse);
+    }
+  };
+
   const editKeyItemInTracklet = (
     annotations: Annotation[],
     shape: EditShape,
@@ -328,7 +482,7 @@ License: CECILL-C
           newBBox.data.coords = shape.coords;
           newBBox.data.view_ref = shape.viewRef;
           newBBox.ui.frame_index = currentFrame;
-          newBBox.updated_at = new Date(Date.now()).toISOString();
+          newBBox.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
           newAnn = newBBox;
         }
       } else if (shape.type === SaveShapeType.keypoints) {
@@ -352,7 +506,7 @@ License: CECILL-C
             newKpt.data.states = states;
             newKpt.data.view_ref = shape.viewRef;
             newKpt.ui.frame_index = currentFrame;
-            newKpt.updated_at = new Date(Date.now()).toISOString();
+            newKpt.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
             newAnn = newKpt;
           }
         }
@@ -391,13 +545,12 @@ License: CECILL-C
   };
 
   $: {
-    const shape = $newShape;
-    if (shape.status === "editing") {
-      updateOrCreateShape(shape);
+    if ($newShape.status === "editing") {
+      if ($selectedTool.type !== ToolType.Fusion) {
+        updateOrCreateShape($newShape);
+      }
     }
   }
-
-  //$: selectedTool.set($selectedTool);
 
   const startExpand = () => {
     expanding = true;
@@ -440,6 +593,7 @@ License: CECILL-C
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
+        {merge}
       />
     </div>
     <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />

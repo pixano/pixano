@@ -4,38 +4,46 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { ToolType } from "@pixano/canvas2d/src/tools";
 import type { SelectionTool } from "@pixano/core";
 
 export const panTool: SelectionTool = {
   name: "Move image",
-  type: "PAN",
+  type: ToolType.Pan,
   cursor: "move",
 };
 
 export const rectangleTool: SelectionTool = {
   name: "Create a bounding box",
-  type: "RECTANGLE",
+  type: ToolType.Rectangle,
   cursor: "crosshair",
   isSmart: false,
 };
 
 export const polygonTool: SelectionTool = {
   name: "Create a polygon",
-  type: "POLYGON",
+  type: ToolType.Polygon,
   cursor: "crosshair",
   isSmart: false,
 };
 
 export const keyPointTool: SelectionTool = {
   name: "Create key points",
-  type: "KEY_POINT",
+  type: ToolType.Keypoint,
   cursor: "crosshair",
+  isSmart: false,
+};
+
+export const fusionTool: SelectionTool = {
+  name: "Associate objects",
+  type: ToolType.Fusion,
+  cursor: "default",
   isSmart: false,
 };
 
 export const removeSmartPointTool: SelectionTool = {
   name: "Negative point selection",
-  type: "POINT_SELECTION",
+  type: ToolType.PointSelection,
   cursor: "crosshair",
   label: 0,
   isSmart: true,
@@ -43,7 +51,7 @@ export const removeSmartPointTool: SelectionTool = {
 
 export const addSmartPointTool: SelectionTool = {
   name: "Positive point selection",
-  type: "POINT_SELECTION",
+  type: ToolType.PointSelection,
   cursor: "crosshair",
   label: 1,
   isSmart: true,
@@ -51,7 +59,7 @@ export const addSmartPointTool: SelectionTool = {
 
 export const smartRectangleTool: SelectionTool = {
   name: "Rectangle selection",
-  type: "RECTANGLE",
+  type: ToolType.Rectangle,
   cursor: "crosshair",
   isSmart: true,
 };

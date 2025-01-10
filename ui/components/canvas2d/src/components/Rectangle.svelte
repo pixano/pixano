@@ -9,7 +9,13 @@ License: CECILL-C
   import { onDestroy, tick } from "svelte";
   import Konva from "konva";
   import { Rect, Group } from "svelte-konva";
-  import { SaveShapeType, type BBox, type SelectionTool, type Shape } from "@pixano/core";
+  import {
+    Annotation,
+    SaveShapeType,
+    type BBox,
+    type SelectionTool,
+    type Shape,
+  } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
@@ -19,6 +25,7 @@ License: CECILL-C
     toggleIsEditingBBox,
   } from "../api/rectangleApi";
   import LabelTag from "./LabelTag.svelte";
+  import { ToolType } from "../tools";
 
   export let stage: Konva.Stage;
   export let bbox: BBox;
@@ -26,6 +33,7 @@ License: CECILL-C
   export let zoomFactor: number;
   export let newShape: Shape;
   export let selectedTool: SelectionTool;
+  export let merge: (ann: Annotation) => void;
 
   const updateDimensions = (rect: Konva.Rect) => {
     const coords = getNewRectangleDimensions(rect, stage, bbox.data.view_ref);
@@ -79,6 +87,9 @@ License: CECILL-C
         type: "none",
       };
     }
+    //Note: design-wise, should be better to handle this on a upper level,
+    //but in case of interpolated we can't find top_entity with annotation id only
+    merge(bbox);
   };
 
   onDestroy(() => {
@@ -116,7 +127,9 @@ License: CECILL-C
 <Group
   on:dblclick={onDoubleClick}
   on:click={onClick}
-  config={{ listening: selectedTool?.type === "PAN" }}
+  config={{
+    listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Fusion,
+  }}
 >
   <Rect
     config={{

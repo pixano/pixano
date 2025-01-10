@@ -31,7 +31,7 @@ License: CECILL-C
   //Note: Previously Entities where grouped by source
   //Now they're all displayed regardless of source
   //so we fake a global source for ObjectsModelSection (may be rewritten later)
-  const now = new Date(Date.now()).toISOString();
+  const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
   const globalSource = new Source({
     id: "pixano_source",
     created_at: now,

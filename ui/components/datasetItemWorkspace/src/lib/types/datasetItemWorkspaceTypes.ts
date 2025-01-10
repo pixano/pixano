@@ -4,10 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { z } from "zod";
 import * as ort from "onnxruntime-web";
+import { z } from "zod";
 
-import { Item, Entity, Annotation, type FeaturesValues, type FeatureValues } from "@pixano/core";
+import { Annotation, Entity, Item, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
 import type {
   createObjectInputsSchema,
@@ -92,4 +92,10 @@ export type Filters = {
   greenRange: number[];
   blueRange: number[];
   u16BitRange: number[];
+};
+
+export type Merges = {
+  //reference: Entity,
+  to_fuse: Entity[];
+  forbids: Entity[];
 };

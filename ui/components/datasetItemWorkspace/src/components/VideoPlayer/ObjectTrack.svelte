@@ -26,12 +26,11 @@ License: CECILL-C
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
-  import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     entities,
+    colorScale,
     saveData,
-    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -47,12 +46,14 @@ License: CECILL-C
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
+  export let resetTool: () => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
+  $: color = $colorScale[1](track.id);
 
   $: if (track) {
     tracklets = $annotations.filter(
@@ -79,7 +80,7 @@ License: CECILL-C
       );
     }
     moveCursorToPosition(event.clientX);
-    selectedTool.set(panTool);
+    resetTool();
   };
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
@@ -312,10 +313,15 @@ License: CECILL-C
 </script>
 
 {#if track && tracklets}
+  <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
+    <span class="sticky left-5 m-1" style={`background: ${color}1a;`}
+      >{track.data.name} ({track.id})</span
+    >
+  </div>
   <div
     class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}
-    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 20}px;`}
+    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 10}px; background: ${color}1a;`}
     bind:this={objectTimeTrack}
     role="complementary"
   >
@@ -346,6 +352,7 @@ License: CECILL-C
         onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
         {findNeighborItems}
         {moveCursorToPosition}
+        {resetTool}
       />
     {/each}
   </div>

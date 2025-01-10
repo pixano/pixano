@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { TangentIcon } from "lucide-svelte";
 
-  import { cn, IconButton, type Vertex } from "@pixano/core/src";
+  import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
 
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
@@ -18,6 +18,9 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import { templates } from "../../lib/settings/keyPointsTemplates";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
+
+  export let selectTool: (tool: SelectionTool) => void;
 
   const defineDotColor = (vertex: Vertex, selected: boolean) => {
     if (vertex.features?.color) return vertex.features.color;
@@ -30,7 +33,7 @@ License: CECILL-C
   };
 
   selectedTool.subscribe((tool) => {
-    if (tool?.type !== "KEY_POINT") {
+    if (tool?.type !== ToolType.Keypoint) {
       selectedKeypointsTemplate.set(null);
     } else {
       selectedKeypointsTemplate.set(templates[0].template_id);
@@ -40,13 +43,13 @@ License: CECILL-C
 
 <div
   class={cn("flex items-center flex-col gap-4 mt-4", {
-    "bg-slate-200 rounded-sm": $selectedTool?.type === "KEY_POINT",
+    "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Keypoint,
   })}
 >
-  <IconButton tooltipContent={keyPointTool.name} on:click={() => selectedTool.set(keyPointTool)}>
+  <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>
     <TangentIcon />
   </IconButton>
-  {#if $selectedTool?.type === "KEY_POINT"}
+  {#if $selectedTool?.type === ToolType.Keypoint}
     {#each templates as template}
       <IconButton
         tooltipContent={template.template_id}

@@ -14,10 +14,9 @@ License: CECILL-C
     currentFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (frameIndex: number) => void;
+  export let resetTool: () => void;
 
   let currentTime: string;
 
@@ -38,7 +37,7 @@ License: CECILL-C
   $: currentTime = getCurrentImageTime($currentFrameIndex, $videoControls.videoSpeed);
 
   const onPlayStepClick = () => {
-    selectedTool.set(panTool);
+    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -51,7 +50,7 @@ License: CECILL-C
   };
 
   const onPlayStepBackClick = () => {
-    selectedTool.set(panTool);
+    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -67,7 +66,7 @@ License: CECILL-C
   };
 
   const onPlayClick = () => {
-    selectedTool.set(panTool);
+    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));

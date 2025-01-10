@@ -25,7 +25,7 @@ export const defineCreatedEntity = (
   alternateViewRef: { id: string; name: string } | undefined = undefined,
 ): Entity | Track => {
   const table = entitySchema.name;
-  const now = new Date(Date.now()).toISOString();
+  const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
   const entity = {
     id: nanoid(10),
     created_at: now,

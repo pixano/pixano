@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { Shape } from "@pixano/core";
   import { cn, Tabs, Skeleton } from "@pixano/core/src";
 
   import SceneInspector from "./SceneInspector.svelte";
@@ -16,21 +15,16 @@ License: CECILL-C
 
   export let isLoading: boolean;
 
-  let shape: Shape;
   let currentTab: "scene" | "objects" = "objects";
   let isButtonEnabled = false;
 
   canSave.subscribe((value) => {
     isButtonEnabled = value;
   });
-
-  newShape.subscribe((value) => {
-    shape = value;
-  });
 </script>
 
 <div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
-  {#if shape?.status === "saving"}
+  {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">

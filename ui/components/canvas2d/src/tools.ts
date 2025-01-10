@@ -13,8 +13,11 @@ import type { InteractiveImageSegmenter } from "@pixano/models";
 export enum ToolType {
   PointSelection = "POINT_SELECTION",
   Rectangle = "RECTANGLE",
+  Polygon = "POLYGON",
+  Keypoint = "KEY_POINT",
   Delete = "DELETE",
   Pan = "PAN",
+  Fusion = "FUSION",
   Classification = "CLASSIFICATION",
 }
 
@@ -122,11 +125,11 @@ export function createClassifTool(): ClassificationTool {
 }
 
 export type {
-  Tool,
-  PointSelectionTool,
-  PointSelectionModeTool,
-  RectangleTool,
+  ClassificationTool,
   DeleteTool,
   PanTool,
-  ClassificationTool,
+  PointSelectionModeTool,
+  PointSelectionTool,
+  RectangleTool,
+  Tool,
 };

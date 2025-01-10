@@ -20,6 +20,9 @@ License: CECILL-C
   } from "../../lib/stores/videoViewerStores";
   import { SliderRoot, Track, BBox, type KeypointsTemplate } from "@pixano/core";
   import { onMount } from "svelte";
+  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { panTool } from "../../lib/settings/selectionTools";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let updateView: (frameIndex: number) => void;
   export let tracks: Track[];
@@ -29,6 +32,12 @@ License: CECILL-C
   onMount(() => {
     videoControls.update((old) => ({ ...old, isLoaded: true }));
   });
+
+  const resetTool = () => {
+    if (![ToolType.Pan, ToolType.Fusion].includes($selectedTool.type)) {
+      selectedTool.set(panTool);
+    }
+  };
 
   const onTimeTrackClick = (index: number) => {
     if ($currentFrameIndex !== index) {
@@ -51,7 +60,7 @@ License: CECILL-C
   <div class="h-full bg-white overflow-x-auto relative flex flex-col">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
-        <TimeTrack slot="timeTrack" {updateView} />
+        <TimeTrack slot="timeTrack" {updateView} {resetTool} />
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
@@ -64,12 +73,13 @@ License: CECILL-C
             {onTimeTrackClick}
             {bboxes}
             {keypoints}
+            {resetTool}
           />
         </VideoPlayerRow>
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
-      <VideoControls {updateView} />
+      <VideoControls {updateView} {resetTool} />
       <SliderRoot
         class="max-w-[200px]"
         bind:value={$videoControls.zoomLevel}

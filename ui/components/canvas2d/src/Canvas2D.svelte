@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { SaveShapeType, WarningModal, type ImagesPerView } from "@pixano/core";
+  import { Annotation, SaveShapeType, WarningModal, type ImagesPerView } from "@pixano/core";
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import * as ort from "onnxruntime-web";
@@ -44,6 +44,7 @@ License: CECILL-C
     POINT_SELECTION,
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
+  import { ToolType } from "./tools";
 
   // Exports
   export let selectedItemId: string;
@@ -59,6 +60,9 @@ License: CECILL-C
   export let colorScale: (value: string) => string;
   export let isVideo: boolean = false;
   export let imageSmoothing: boolean = true;
+  export let merge: (ann: Annotation) => void = () => {
+    return;
+  };
 
   // Image settings
   export let filters: Writable<Filters> = writable<Filters>();
@@ -523,25 +527,25 @@ License: CECILL-C
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case "POINT_SELECTION":
+      case ToolType.PointSelection:
         displayInputPointTool(selectedTool);
         break;
-      case "RECTANGLE":
+      case ToolType.Rectangle:
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case "KEY_POINT":
+      case ToolType.Keypoint:
         // Enable key point creation or change cursor style
         break;
-      case "DELETE":
+      case ToolType.Delete:
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
         break;
-      case "PAN":
+      case ToolType.Pan:
         displayPanTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case "CLASSIFICATION":
+      case ToolType.Classification:
         displayClassificationTool(selectedTool);
         break;
 
@@ -581,7 +585,7 @@ License: CECILL-C
   // ********** KEY_POINT TOOL ********** //
 
   function dragInputKeyPointRectMove(viewRef: Reference) {
-    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+    if (selectedTool?.type === ToolType.Keypoint && newShape.status !== "saving") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
@@ -609,7 +613,7 @@ License: CECILL-C
   }
 
   function dragKeyPointInputRectEnd(viewRef: Reference) {
-    if (selectedTool?.type == "KEY_POINT") {
+    if (selectedTool?.type == ToolType.Keypoint) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
       if (rect && newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) {
@@ -882,7 +886,7 @@ License: CECILL-C
   }
 
   function dragInputRectMove(viewRef: Reference) {
-    if (selectedTool?.type === "RECTANGLE") {
+    if (selectedTool?.type === ToolType.Rectangle) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
@@ -903,7 +907,7 @@ License: CECILL-C
   }
 
   async function dragInputRectEnd(viewRef: Reference) {
-    if (selectedTool?.type == "RECTANGLE") {
+    if (selectedTool?.type === ToolType.Rectangle) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#drag-rect");
       if (rect) {
@@ -986,11 +990,11 @@ License: CECILL-C
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type === "POINT_SELECTION") {
+    if (selectedTool?.type === ToolType.PointSelection) {
       updateInputPointStage(position);
     }
 
-    if (selectedTool?.type === "RECTANGLE") {
+    if (selectedTool?.type === ToolType.Rectangle) {
       updateInputRectState(position);
     }
   }
@@ -1017,7 +1021,7 @@ License: CECILL-C
     const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
-    if (selectedTool?.type === "POLYGON") {
+    if (selectedTool?.type === ToolType.Polygon) {
       drawPolygonPoints(viewRef);
     }
 
@@ -1054,11 +1058,11 @@ License: CECILL-C
     }
     // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
-    if (selectedTool?.type == "PAN" || event.button == 1) {
+    if (selectedTool?.type === ToolType.Pan || event.button === 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewRef.name));
-    } else if (selectedTool?.type == "POINT_SELECTION") {
+    } else if (selectedTool?.type === ToolType.PointSelection) {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
@@ -1090,10 +1094,10 @@ License: CECILL-C
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewRef.name);
       await updateCurrentMask(viewRef);
-    } else if (selectedTool?.type == "RECTANGLE") {
+    } else if (selectedTool?.type == ToolType.Rectangle) {
       viewLayer.on("pointermove", () => dragInputRectMove(viewRef));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewRef));
-    } else if (selectedTool?.type === "KEY_POINT") {
+    } else if (selectedTool?.type === ToolType.Keypoint) {
       viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewRef));
       viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewRef));
     }
@@ -1242,6 +1246,7 @@ License: CECILL-C
                     {stage}
                     bind:newShape
                     {selectedTool}
+                    {merge}
                   />
                 {/if}
               {/each}
