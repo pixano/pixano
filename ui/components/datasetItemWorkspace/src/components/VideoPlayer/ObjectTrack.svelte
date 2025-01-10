@@ -321,7 +321,7 @@ License: CECILL-C
   <div
     class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}
-    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 20}px; background: ${color}1a;`}
+    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 10}px; background: ${color}1a;`}
     bind:this={objectTimeTrack}
     role="complementary"
   >
