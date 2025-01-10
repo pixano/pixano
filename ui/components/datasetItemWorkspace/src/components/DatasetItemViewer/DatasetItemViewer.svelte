@@ -13,8 +13,8 @@ License: CECILL-C
 
   import ThreeDimensionsViewer from "./3DViewer.svelte";
   import ImageViewer from "./ImageViewer.svelte";
-  import TextImageViewer from "./TextImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
+  import VqaViewer from "./VqaViewer.svelte";
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
@@ -30,7 +30,7 @@ License: CECILL-C
   {:else if selectedItem.ui.type === "video"}
     <VideoViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "vqa"}
-    <TextImageViewer {selectedItem} bind:currentAnn />
+    <VqaViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
     <ImageViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === "3d"}

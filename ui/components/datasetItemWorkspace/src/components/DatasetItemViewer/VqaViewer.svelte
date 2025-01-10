@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, Message, type ImagesPerView, type SaveItem } from "@pixano/core";
+  import { BaseSchema, DatasetItem, Image, type ImagesPerView, type SaveItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   import { Image as ImageJS } from "image-js";
@@ -31,6 +31,7 @@ License: CECILL-C
     selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { createUpdatedMessage } from "../../lib/utils/createUpdatedMessage";
 
   // Attributes
   export let selectedItem: DatasetItem;
@@ -136,14 +137,35 @@ License: CECILL-C
 
   const handleMessageContentChange = (
     event: CustomEvent<{
-      updatedMessage: Message;
+      messageId: string;
+      newMessageContent: string;
     }>,
   ) => {
     event.preventDefault();
 
+    const { messageId, newMessageContent } = event.detail;
+    const prevMessage = $messages.find((message) => message.id === messageId);
+
+    if (!prevMessage) {
+      return;
+    }
+
+    const updatedMessage = createUpdatedMessage({
+      message: prevMessage,
+      newMessageContent,
+    });
+
+    annotations.update((prevAnnotations) =>
+      prevAnnotations.map((annotation) =>
+        annotation.is_type(BaseSchema.Message) && annotation.id === messageId
+          ? updatedMessage
+          : annotation,
+      ),
+    );
+
     const save_item: SaveItem = {
       change_type: "update",
-      object: event.detail.updatedMessage,
+      object: updatedMessage,
     };
 
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
