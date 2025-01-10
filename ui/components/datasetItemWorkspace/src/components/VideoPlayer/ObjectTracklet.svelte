@@ -161,6 +161,7 @@ License: CECILL-C
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
+<!--
 {#each tracklet_annotations_frame_indexes as itemFrameIndex}
   <TrackletKeyItem
     {itemFrameIndex}
@@ -177,3 +178,4 @@ License: CECILL-C
     {resetTool}
   />
 {/each}
+-->
