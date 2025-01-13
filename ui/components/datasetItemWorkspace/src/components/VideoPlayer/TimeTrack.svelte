@@ -75,11 +75,25 @@ License: CECILL-C
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {
-    if (ms % 10 !== 0) return false;
-    if (50 < density && ms % 50 === 0) return true;
-    if (25 < density && density < 50 && ms % 20 === 0) return true;
-    if (density < 25) return true;
-    return false;
+    if (density > 2000) {
+      return ms % 1200 === 0;
+    } else if (density > 1000) {
+      return ms % 600 === 0;
+    } else if (density > 500) {
+      return ms % 300 === 0;
+    } else if (density > 400) {
+      return ms % 200 === 0;
+    } else if (density > 250) {
+      return ms % 150 === 0;
+    } else if (density > 100) {
+      return ms % 100 === 0;
+    } else if (density > 50) {
+      return ms % 50 === 0;
+    } else if (density > 25) {
+      return ms % 20 === 0;
+    } else {
+      return ms % 10 === 0;
+    }
   };
 
   $: {
@@ -89,10 +103,23 @@ License: CECILL-C
   }
 
   const shouldDisplayMarker = (ms: number, density: number) => {
-    if (density > 200) return false;
-    if (density > 25 && ms % 10 === 0) return true;
-    if (density < 25) return true;
-    return false;
+    if (density > 2000) {
+      return ms % 600 === 0;
+    } else if (density > 1000) {
+      return ms % 300 === 0;
+    } else if (density > 500) {
+      return ms % 150 === 0;
+    } else if (density > 400) {
+      return ms % 100 === 0;
+    } else if (density > 250) {
+      return ms % 50 === 0;
+    } else if (density > 20) {
+      return ms % 10 === 0;
+    } else if (density > 10) {
+      return ms % 5 === 0;
+    } else {
+      return true;
+    }
   };
 </script>
 
@@ -129,9 +156,15 @@ License: CECILL-C
       />
       {#if ms > 0}
         <span
-          class="absolute -translate-x-1/2 text-slate-300 bottom-1/3 pointer-events-none font-light text-xs pb-1"
-          style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
+          class="absolute -translate-x-1/2 text-slate-500 bottom-1/3 pointer-events-none font-light text-xs pb-1"
+          style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
         >
+          {#if videoTotalLengthInMs > 60000}
+            {Math.floor(ms / 600)}:{String(Math.floor(ms % 600) / 10).padStart(2, "0")}
+          {:else}
+            {Math.floor(ms % 600) / 10}s
+          {/if}
+        </span>
       {/if}
     {:else if shouldDisplayMarker(ms, timeTrackDensity)}
       <span
