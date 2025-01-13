@@ -7,8 +7,8 @@ License: CECILL-C
 import { z } from "zod";
 import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";
-import { BaseData, type BaseDataFields, referenceSchema } from "../datasetTypes";
 import { BaseSchema } from "../BaseSchema";
+import { BaseData, type BaseDataFields, referenceSchema } from "../datasetTypes";
 
 export const entitySchema = z
   .object({
@@ -20,11 +20,13 @@ export const entitySchema = z
 
 export type EntityType = z.infer<typeof entitySchema>; //export if needed
 
+export type EntityUIFields = {
+  childs?: Annotation[];
+};
+
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  ui: {
-    childs?: Annotation[];
-  } = { childs: [] };
+  ui: EntityUIFields = { childs: [] };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
@@ -53,7 +55,6 @@ export class Entity extends BaseData<EntityType> {
       console.error("ERROR: do not use 'is_*' on uninitialized object");
       return false;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     return this.table_info.base_schema === type;
   }
 

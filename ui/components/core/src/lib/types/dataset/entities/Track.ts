@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
-import { Entity, type EntityType } from "./Entity";
+import { Entity, type EntityType, type EntityUIFields } from "./Entity";
 
 const trackSchema = z
   .object({
@@ -17,6 +17,10 @@ const trackSchema = z
 export type TrackType = z.infer<typeof trackSchema>; //export if needed
 
 export class Track extends Entity {
+  ui: EntityUIFields & {
+    hidden?: boolean;
+  } = { hidden: false };
+
   constructor(obj: BaseDataFields<TrackType>) {
     trackSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<EntityType>);

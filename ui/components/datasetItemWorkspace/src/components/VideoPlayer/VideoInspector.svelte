@@ -65,17 +65,19 @@ License: CECILL-C
     </div>
     <div class="flex flex-col grow z-10">
       {#each tracks as track (track.ui.childs)}
-        <VideoPlayerRow>
-          <ObjectTrack
-            slot="timeTrack"
-            {track}
-            views={$views}
-            {onTimeTrackClick}
-            {bboxes}
-            {keypoints}
-            {resetTool}
-          />
-        </VideoPlayerRow>
+        {#if !track.ui.hidden}
+          <VideoPlayerRow>
+            <ObjectTrack
+              slot="timeTrack"
+              {track}
+              views={$views}
+              {onTimeTrackClick}
+              {bboxes}
+              {keypoints}
+              {resetTool}
+            />
+          </VideoPlayerRow>
+        {/if}
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">

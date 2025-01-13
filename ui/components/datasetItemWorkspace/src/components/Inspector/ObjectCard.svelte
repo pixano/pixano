@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ChevronRight, Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
+  import { ChevronRight, Eye, EyeOff, ListPlus, ListX, Pencil, Trash2 } from "lucide-svelte";
   import { derived } from "svelte/store";
 
   import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
@@ -14,6 +14,7 @@ License: CECILL-C
     Annotation,
     Entity,
     Item,
+    Track,
     type DisplayControl,
     type ObjectThumbnail,
     type SaveItem,
@@ -47,7 +48,6 @@ License: CECILL-C
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
 
   export let entity: Entity;
-
   let open: boolean = false;
   let showIcons: boolean = false;
   let isHighlighted: boolean = false;
@@ -57,6 +57,8 @@ License: CECILL-C
   let maskIsVisible: boolean = true;
   let keypointsIsVisible: boolean = true;
   let textSpansIsVisible: boolean = true;
+
+  let hiddenTrack = entity.is_track ? (entity as Track).ui.hidden : false;
 
   $: displayName =
     (entity.data.name
@@ -260,6 +262,15 @@ License: CECILL-C
     );
   };
 
+  const onTrackVisClick = () => {
+    if (entity.is_track) {
+      (entity as Track).ui.hidden = !(entity as Track).ui.hidden;
+      hiddenTrack = (entity as Track).ui.hidden;
+      //svelte hack to refresh
+      entities.set($entities);
+    }
+  };
+
   const onEditIconClick = () => {
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
@@ -309,7 +320,13 @@ License: CECILL-C
       <div
         class={cn(
           "flex-shrink-0 flex items-center justify-end",
-          showIcons || isEditing ? "basis-[120px]" : "basis-[40px]",
+          showIcons || isEditing
+            ? entity.is_track
+              ? "basis-[160px]"
+              : "basis-[120px]"
+            : entity.is_track && hiddenTrack
+              ? "basis-[80px]"
+              : "basis-[40px]",
         )}
         style="min-width: 40px;"
       >
@@ -319,6 +336,13 @@ License: CECILL-C
           >
           <IconButton tooltipContent="Delete object" on:click={deleteObject}
             ><Trash2 class="h-4" /></IconButton
+          >
+        {/if}
+        {#if entity.is_track && (showIcons || isEditing || hiddenTrack)}
+          <IconButton
+            tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
+            on:click={onTrackVisClick}
+            >{#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}</IconButton
           >
         {/if}
         <IconButton
