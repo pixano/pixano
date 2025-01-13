@@ -74,23 +74,56 @@ License: CECILL-C
       playVideo();
     }
   };
+
+  function shortcutHandler(event: KeyboardEvent) {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true"
+    ) {
+      return; // Ignore shortcut when typing text
+    }
+
+    switch (event.key) {
+      case " ":
+        if (event.repeat) break;
+        onPlayClick();
+        break;
+      case "ArrowRight":
+        onPlayStepClick();
+        break;
+      case "ArrowLeft":
+        onPlayStepBackClick();
+        break;
+    }
+  }
 </script>
 
 <div class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200 w-fit">
-  <button on:click={onPlayClick} class="text-primary">
+  <button
+    title={$videoControls.intervalId ? "Pause (space)" : "Play (space)"}
+    on:click={onPlayClick}
+    class="text-primary"
+  >
     {#if $videoControls.intervalId}
       <PauseIcon />
     {:else}
       <PlayIcon />
     {/if}
   </button>
-  <button on:click={onPlayStepBackClick} class="text-primary">
+  <button
+    title="One step backward (left arrow)"
+    on:click={onPlayStepBackClick}
+    class="text-primary"
+  >
     <StepBack />
   </button>
-  <button on:click={onPlayStepClick} class="text-primary">
+  <button title="One step forward (right arrow)" on:click={onPlayStepClick} class="text-primary">
     <StepForward />
   </button>
   <p>
     <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
   </p>
 </div>
+<svelte:window on:keydown={shortcutHandler} />

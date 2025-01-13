@@ -1156,6 +1156,15 @@ License: CECILL-C
   // ********** KEY EVENTS ********** //
 
   async function handleKeyDown(event: KeyboardEvent) {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true"
+    ) {
+      return; // Ignore shortcut when typing text
+    }
+
     if (event.key == "Delete" && highlighted_point != null) {
       //get view_name of highlighted_point
       const view_name = findViewName(highlighted_point);
