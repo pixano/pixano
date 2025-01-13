@@ -324,25 +324,25 @@ License: CECILL-C
             ? entity.is_track
               ? "basis-[160px]"
               : "basis-[120px]"
-            : "basis-[40px]",
+            : entity.is_track && hiddenTrack
+              ? "basis-[80px]"
+              : "basis-[40px]",
         )}
         style="min-width: 40px;"
       >
         {#if showIcons || isEditing}
-          {#if entity.is_track}
-            <IconButton
-              tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
-              on:click={onTrackVisClick}
-              >{#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX
-                  class="h-4"
-                />{/if}</IconButton
-            >
-          {/if}
           <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
             ><Pencil class="h-4" /></IconButton
           >
           <IconButton tooltipContent="Delete object" on:click={deleteObject}
             ><Trash2 class="h-4" /></IconButton
+          >
+        {/if}
+        {#if entity.is_track && (showIcons || isEditing || hiddenTrack)}
+          <IconButton
+            tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
+            on:click={onTrackVisClick}
+            >{#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}</IconButton
           >
         {/if}
         <IconButton
