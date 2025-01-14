@@ -75,25 +75,14 @@ License: CECILL-C
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {
-    if (density > 2000) {
-      return ms % 1200 === 0;
-    } else if (density > 1000) {
-      return ms % 600 === 0;
-    } else if (density > 500) {
-      return ms % 300 === 0;
-    } else if (density > 400) {
-      return ms % 200 === 0;
-    } else if (density > 250) {
-      return ms % 150 === 0;
-    } else if (density > 100) {
-      return ms % 100 === 0;
-    } else if (density > 50) {
-      return ms % 50 === 0;
-    } else if (density > 25) {
-      return ms % 20 === 0;
-    } else {
-      return ms % 10 === 0;
+    let densityThresholds = [2000, 1000, 500, 400, 250, 100, 50, 25];
+    let displayedTimes = [1200, 600, 300, 200, 150, 100, 50, 20];
+    for (let i = 0; i < densityThresholds.length; ++i) {
+      if (density > densityThresholds[i]) {
+        return ms % displayedTimes[i] === 0;
+      }
     }
+    return ms % 10 === 0;
   };
 
   $: {
@@ -103,23 +92,14 @@ License: CECILL-C
   }
 
   const shouldDisplayMarker = (ms: number, density: number) => {
-    if (density > 2000) {
-      return ms % 600 === 0;
-    } else if (density > 1000) {
-      return ms % 300 === 0;
-    } else if (density > 500) {
-      return ms % 150 === 0;
-    } else if (density > 400) {
-      return ms % 100 === 0;
-    } else if (density > 250) {
-      return ms % 50 === 0;
-    } else if (density > 20) {
-      return ms % 10 === 0;
-    } else if (density > 10) {
-      return ms % 5 === 0;
-    } else {
-      return true;
+    let densityThresholds = [2000, 1000, 500, 400, 250, 20, 10];
+    let displayedMarkers = [600, 300, 150, 100, 50, 10, 5];
+    for (let i = 0; i < densityThresholds.length; ++i) {
+      if (density > densityThresholds[i]) {
+        return ms % displayedMarkers[i] === 0;
+      }
     }
+    return true;
   };
 </script>
 
