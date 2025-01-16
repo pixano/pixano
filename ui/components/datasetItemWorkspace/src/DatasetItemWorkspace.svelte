@@ -16,7 +16,7 @@ License: CECILL-C
     Tracklet,
     type SaveItem,
   } from "@pixano/core";
-
+  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
@@ -74,6 +74,18 @@ License: CECILL-C
 
   const loadData = () => {
     views.set(selectedItem.views);
+
+    if (selectedItem.ui.type === "video") {
+      for (const view in selectedItem.views) {
+        if (Array.isArray(selectedItem.views[view])) {
+          const video = selectedItem.views[view] as SequenceFrame[];
+          const vspeed = Math.round(
+            (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
+          );
+          videoControls.update((old) => ({ ...old, videoSpeed: vspeed }));
+        }
+      }
+    }
 
     const newAnns: Annotation[] = [];
     Object.values(selectedItem.annotations).forEach((anns) => {
