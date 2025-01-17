@@ -57,24 +57,22 @@ License: CECILL-C
   };
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
-    return (
-      entity.data.parent_ref.id === "" && //not a sub entity
-      (!entity.ui.childs
-        ?.filter((ann) => !ann.is_type(BaseSchema.Tracklet))
-        .some(
-          (ann) =>
-            ann.data.view_ref.id === shape.viewRef.id &&
-            mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
-        ) ||
-        !entity.ui.childs
-          ?.filter((ann) => ann.is_type(BaseSchema.Tracklet))
-          .some(
-            (ann) =>
-              (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
-              (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
-              (ann as Tracklet).data.end_timestep > $currentFrameIndex,
-          ))
+    const isTopEntity = entity.data.parent_ref.id === "";
+    if (!isTopEntity) return false;
+    const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+    const sameKindInSameView = annsNotTracklets?.some(
+      (ann) =>
+        ann.data.view_ref.id === shape.viewRef.id &&
+        mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
     );
+    const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
+    const overlap = tracklets?.some(
+      (ann) =>
+        (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
+        (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
+        (ann as Tracklet).data.end_timestep > $currentFrameIndex,
+    );
+    return !sameKindInSameView && !overlap;
   };
 
   let entitiesCombo = derived([entities, newShape], ([$entities, $newShape]) => {
