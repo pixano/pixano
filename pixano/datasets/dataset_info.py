@@ -12,6 +12,7 @@ from typing import Literal, overload
 
 from pydantic import BaseModel, field_validator
 
+from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import Image
 
 
@@ -24,6 +25,7 @@ class DatasetInfo(BaseModel):
         description: Dataset description.
         estimated_size: Dataset estimated size.
         preview: Path to a preview thumbnail.
+        workspace: Workspace type.
     """
 
     id: str = ""
@@ -31,6 +33,7 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+    workspace: WorkspaceType = WorkspaceType.UNDEFINED
 
     @field_validator("id", mode="after")
     @classmethod
@@ -46,7 +49,9 @@ class DatasetInfo(BaseModel):
             json_fp: The path to the file where the DatasetInfo object
                 will be written.
         """
-        json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
+        model_dumped = self.model_dump()
+        model_dumped["workspace"] = model_dumped["workspace"].value
+        json_fp.write_text(json.dumps(model_dumped, indent=4), encoding="utf-8")
 
     @staticmethod
     def from_json(
@@ -61,6 +66,11 @@ class DatasetInfo(BaseModel):
             the dataset info object.
         """
         info_json = json.loads(json_fp.read_text(encoding="utf-8"))
+
+        if "workspace" not in info_json:
+            raise ValueError("Workspace type not found in info.json")
+
+        info_json["workspace"] = WorkspaceType(info_json["workspace"])
         info = DatasetInfo.model_validate(info_json)
 
         return info
