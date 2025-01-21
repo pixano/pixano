@@ -7,6 +7,7 @@
 from .base import FolderBaseBuilder
 from .image import ImageFolderBuilder
 from .video import VideoFolderBuilder
+from .vqa import VqaFolderBuilder
 
 
-__all__ = ["ImageFolderBuilder", "FolderBaseBuilder", "VideoFolderBuilder"]
+__all__ = ["ImageFolderBuilder", "FolderBaseBuilder", "VideoFolderBuilder", "VqaFolderBuilder"]

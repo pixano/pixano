@@ -10,81 +10,11 @@ from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
 
-from .base import FolderBaseBuilder
+from .image import ImageFolderBuilder
 
 
-# Image extensions supported by Pillow
-IMAGE_EXTENSIONS = [
-    ".blp",
-    ".bmp",
-    ".dib",
-    ".bufr",
-    ".cur",
-    ".pcx",
-    ".dcx",
-    ".dds",
-    ".ps",
-    ".eps",
-    ".fit",
-    ".fits",
-    ".fli",
-    ".flc",
-    ".ftc",
-    ".ftu",
-    ".gbr",
-    ".gif",
-    ".grib",
-    ".h5",
-    ".hdf",
-    ".png",
-    ".apng",
-    ".jp2",
-    ".j2k",
-    ".jpc",
-    ".jpf",
-    ".jpx",
-    ".j2c",
-    ".icns",
-    ".ico",
-    ".im",
-    ".iim",
-    ".tif",
-    ".tiff",
-    ".jfif",
-    ".jpe",
-    ".jpg",
-    ".jpeg",
-    ".mpg",
-    ".mpeg",
-    ".msp",
-    ".pcd",
-    ".pxr",
-    ".pbm",
-    ".pgm",
-    ".ppm",
-    ".pnm",
-    ".psd",
-    ".bw",
-    ".rgb",
-    ".rgba",
-    ".sgi",
-    ".ras",
-    ".tga",
-    ".icb",
-    ".vda",
-    ".vst",
-    ".webp",
-    ".wmf",
-    ".emf",
-    ".xbm",
-    ".xpm",
-]
-
-
-class ImageFolderBuilder(FolderBaseBuilder):
-    """Builder for image datasets stored in a folder."""
-
-    EXTENSIONS = IMAGE_EXTENSIONS
+class VqaFolderBuilder(ImageFolderBuilder):
+    """Builder for vqa datasets stored in a folder."""
 
     def __init__(
         self,
@@ -94,7 +24,7 @@ class ImageFolderBuilder(FolderBaseBuilder):
         info: DatasetInfo,
         url_prefix: Path | str | None = None,
     ) -> None:
-        """Initialize the `ImageFolderBuilder`.
+        """Initialize the `VqaFolderBuilder`.
 
         Args:
             source_dir: The source directory for the dataset.
@@ -105,7 +35,7 @@ class ImageFolderBuilder(FolderBaseBuilder):
                 relative path from the media directory.
         """
         if info.workspace is None:
-            info.workspace = WorkspaceType.IMAGE
+            info.workspace = WorkspaceType.VQA
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
         )
