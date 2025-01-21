@@ -169,11 +169,17 @@ License: CECILL-C
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <IconButton on:click={() => goToNeighborItem("previous")} tooltipContent="Previous item">
+          <IconButton
+            on:click={() => goToNeighborItem("previous")}
+            tooltipContent="Previous item (shift + left arrow)"
+          >
             <ArrowLeft />
           </IconButton>
           {currentItemId}
-          <IconButton on:click={() => goToNeighborItem("next")} tooltipContent="Next item">
+          <IconButton
+            on:click={() => goToNeighborItem("next")}
+            tooltipContent="Next item (shift + right arrow)"
+          >
             <ArrowRight />
           </IconButton>
         </div>
