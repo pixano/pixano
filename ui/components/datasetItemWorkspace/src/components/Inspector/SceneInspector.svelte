@@ -119,19 +119,19 @@ License: CECILL-C
     <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
     <div class="mx-4 mb-4">
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium first-letter:uppercase">File name</p>
+        <p class="font-medium">File name</p>
         <p class="truncate" title={meta.fileName}>{meta.fileName}</p>
       </div>
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium first-letter:uppercase">Width</p>
+        <p class="font-medium">Width</p>
         <p>{meta.width}</p>
       </div>
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium first-letter:uppercase">Height</p>
+        <p class="font-medium">Height</p>
         <p>{meta.height}</p>
       </div>
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium first-letter:uppercase">Format</p>
+        <p class="font-medium">Format</p>
         <p>{meta.format}</p>
       </div>
     </div>

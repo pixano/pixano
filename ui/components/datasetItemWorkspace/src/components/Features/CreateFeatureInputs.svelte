@@ -153,7 +153,7 @@ License: CECILL-C
 </script>
 
 {#if entitiesCombo.length > 0}
-  <span>Select attached Entity</span>
+  <span>Select parent entity</span>
   <select
     class="py-1 px-2 border rounded focus:outline-none
 bg-slate-100 border-slate-300 focus:border-main"
@@ -176,8 +176,8 @@ bg-slate-100 border-slate-300 focus:border-main"
           ? initialValues[feature.sch.name][feature.name]?.value === 1
           : false}
       />
-      <span
-        >{feature.label}
+      <span class="capitalize">
+        {feature.label}
         {#if feature.required}
           <span>*</span>
         {/if}
@@ -193,8 +193,8 @@ bg-slate-100 border-slate-300 focus:border-main"
   {/if}
   {#if ["int", "float", "str"].includes(feature.type)}
     <div>
-      <span
-        >{feature.label}
+      <span class="capitalize">
+        {feature.label}
         {#if feature.required}
           <span>*</span>
         {/if}

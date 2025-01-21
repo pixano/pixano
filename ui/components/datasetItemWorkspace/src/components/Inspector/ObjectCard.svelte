@@ -368,20 +368,20 @@ License: CECILL-C
         >
           <div class="flex flex-col gap-2">
             <div>
-              <p class="font-medium first-letter:uppercase">display</p>
+              <p class="font-medium">Display</p>
               <div class="flex gap-4">
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={boxIsVisible}
-                  annotationName="Box"
+                  annotationName="Bounding box"
                   base_schema={BaseSchema.BBox}
                 />
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={maskIsVisible}
-                  annotationName="Mask"
+                  annotationName="Segmentation mask"
                   base_schema={BaseSchema.Mask}
                 />
                 <DisplayCheckbox
