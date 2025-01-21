@@ -48,6 +48,8 @@ License: CECILL-C
   let objectProperties: ObjectProperties = {};
   let selectedEntityId: string = "";
 
+  const NEWTRACKLET_LENGTH = 5;
+
   const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
     bbox: BaseSchema.BBox,
     keypoints: BaseSchema.Keypoints,
@@ -57,24 +59,22 @@ License: CECILL-C
   };
 
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
-    return (
-      entity.data.parent_ref.id === "" && //not a sub entity
-      (!entity.ui.childs
-        ?.filter((ann) => !ann.is_type(BaseSchema.Tracklet))
-        .some(
-          (ann) =>
-            ann.data.view_ref.id === shape.viewRef.id &&
-            mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
-        ) ||
-        !entity.ui.childs
-          ?.filter((ann) => ann.is_type(BaseSchema.Tracklet))
-          .some(
-            (ann) =>
-              (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
-              (ann as Tracklet).data.start_timestep < $currentFrameIndex + 6 &&
-              (ann as Tracklet).data.end_timestep > $currentFrameIndex,
-          ))
+    const isTopEntity = entity.data.parent_ref.id === "";
+    if (!isTopEntity) return false;
+    const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+    const sameKindInSameView = annsNotTracklets?.some(
+      (ann) =>
+        ann.data.view_ref.id === shape.viewRef.id &&
+        mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
     );
+    const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
+    const overlap = tracklets?.some(
+      (ann) =>
+        (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
+        (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
+        (ann as Tracklet).data.end_timestep > $currentFrameIndex,
+    );
+    return !sameKindInSameView && !overlap;
   };
 
   let entitiesCombo = derived([entities, newShape], ([$entities, $newShape]) => {
@@ -258,7 +258,7 @@ License: CECILL-C
     let endFrameIndex: number = -1;
 
     if (isVideo) {
-      endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
+      endFrameIndex = $currentFrameIndex + NEWTRACKLET_LENGTH + 1; //+1 for the first while loop
       const seqs = $views[$newShape.viewRef.name];
       if (Array.isArray(seqs)) {
         while (!endView) {
