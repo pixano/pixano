@@ -14,28 +14,46 @@ License: CECILL-C
   export let imageUrl: string;
   export let maxHeight: number | undefined = undefined;
   export let maxWidth: number | undefined = undefined;
-  export let minWidth: number | undefined = undefined;
+  export let minSide: number | undefined = undefined;
 
   let [x, y, width, height] = coords;
-
+  const enlargeFactor = 0.2;
+  console.log("box", coords, imageDimension.width, imageDimension.height);
   let stage: Konva.Stage;
 
   const img = new Image();
   img.src = imageUrl;
 
-  let stageWidth = width * imageDimension.width;
-  let stageHeight = height * imageDimension.height;
+  let cropX = x * imageDimension.width - width * imageDimension.width * enlargeFactor;
+  if (cropX < 0) {
+    cropX = 0;
+  }
+  let cropY = y * imageDimension.height - height * imageDimension.height * enlargeFactor;
+  if (cropY < 0) {
+    cropY = 0;
+  }
+  let cropWidth = width * imageDimension.width * (1 + enlargeFactor * 2);
+  if (cropWidth > imageDimension.width) {
+    cropWidth = imageDimension.width;
+  }
+  let cropHeight = height * imageDimension.height * (1 + enlargeFactor * 2);
+  if (cropHeight > imageDimension.height) {
+    cropHeight = imageDimension.height;
+  }
+
+  let stageWidth = cropWidth;
+  let stageHeight = cropHeight;
 
   $: {
+    if (minSide && Math.max(stageWidth, stageHeight) < minSide) {
+      const ratio = Math.max(stageWidth, stageHeight) / minSide;
+      stageWidth /= ratio;
+      stageHeight /= ratio;
+    }
     if (maxHeight && stageHeight > maxHeight) {
       const ratio = stageHeight / maxHeight;
       stageWidth /= ratio;
       stageHeight /= ratio;
-    }
-    if (maxHeight && stageHeight < maxHeight) {
-      const ratio = maxHeight / stageHeight;
-      stageWidth *= ratio;
-      stageHeight *= ratio;
     }
     if (maxWidth && stageWidth > maxWidth) {
       const ratio = stageWidth / maxWidth;
@@ -43,39 +61,6 @@ License: CECILL-C
       stageHeight /= ratio;
     }
   }
-
-  $: {
-    if (minWidth && Math.max(stageWidth, stageHeight) < minWidth) {
-      const ratio = Math.max(stageWidth, stageHeight) / minWidth;
-      stageWidth /= ratio;
-      stageHeight /= ratio;
-    }
-  }
-
-  const defineCrop = () => {
-    let cropX = x * imageDimension.width - (width * imageDimension.width) / 2;
-    if (cropX < 0) {
-      cropX = 0;
-    }
-    let cropY = y * imageDimension.height - (height * imageDimension.height) / 2;
-    if (cropY < 0) {
-      cropY = 0;
-    }
-    let cropWidth = width * imageDimension.width * 2;
-    if (cropWidth > imageDimension.width) {
-      cropWidth = imageDimension.width;
-    }
-    let cropHeight = height * imageDimension.height * 2;
-    if (cropHeight > imageDimension.height) {
-      cropHeight = imageDimension.height;
-    }
-    return {
-      x: cropX,
-      y: cropY,
-      width: cropWidth,
-      height: cropHeight,
-    };
-  };
 </script>
 
 <div class="w-full h-fit flex justify-center">
@@ -97,7 +82,7 @@ License: CECILL-C
           height: stageHeight,
           image: img,
           id: "thumbnail-image",
-          crop: { ...defineCrop() },
+          crop: { x: cropX, y: cropY, height: cropHeight, width: cropWidth },
         }}
       />
     </Layer>
