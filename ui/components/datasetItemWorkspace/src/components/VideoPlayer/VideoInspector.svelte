@@ -83,7 +83,7 @@ License: CECILL-C
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
       <VideoControls {updateView} {resetTool} />
       <SliderRoot
-        class="max-w-[200px]"
+        class="max-w-[250px]"
         bind:value={$videoControls.zoomLevel}
         min={100}
         max={Math.max($lastFrameIndex * 3, 200)}
