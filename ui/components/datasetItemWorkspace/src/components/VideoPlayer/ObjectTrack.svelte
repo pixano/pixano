@@ -261,15 +261,16 @@ License: CECILL-C
 
   const onDeleteTrackletClick = (tracklet: Tracklet) => {
     const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
-    let to_del_entity: Entity | null = null;
+    let entitiesToDelete: Entity[] = [];
     entities.update((objects) =>
       objects.map((entity) => {
-        if (entity.is_track && entity.id === track.id)
+        if (entity.is_track && entity.id === track.id) {
           entity.ui.childs = entity.ui.childs?.filter(
             (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
           );
+        }
         if (entity.ui.childs?.length == 0) {
-          to_del_entity = entity;
+          entitiesToDelete.push(entity);
         }
         return entity;
       }),
@@ -289,13 +290,13 @@ License: CECILL-C
       object: tracklet,
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_tracklet));
-    if (to_del_entity) {
+    entitiesToDelete.forEach((entityToDelete) => {
       const save_del_entity: SaveItem = {
         change_type: "delete",
-        object: to_del_entity,
+        object: entityToDelete,
       };
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_entity));
-    }
+    });
   };
 
   const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
