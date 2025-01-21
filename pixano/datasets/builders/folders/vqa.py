@@ -9,8 +9,17 @@ from pathlib import Path
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
+from pixano.features import Conversation, Image, Message
 
 from .image import ImageFolderBuilder
+
+
+class DefaultVqaDatasetItem(DatasetItem):
+    """Default VQA DatasetItem Schema."""
+
+    image: Image
+    conversations: list[Conversation]
+    messages: list[Message]
 
 
 class VqaFolderBuilder(ImageFolderBuilder):
@@ -20,8 +29,8 @@ class VqaFolderBuilder(ImageFolderBuilder):
         self,
         source_dir: Path | str,
         target_dir: Path | str,
-        dataset_item: type[DatasetItem],
         info: DatasetInfo,
+        dataset_item: type[DatasetItem] = DefaultVqaDatasetItem,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `VqaFolderBuilder`.
