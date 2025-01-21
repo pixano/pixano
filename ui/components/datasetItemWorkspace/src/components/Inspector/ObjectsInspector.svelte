@@ -26,7 +26,7 @@ License: CECILL-C
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
 
   let allTopEntities: Entity[];
-  let selectedEntity: String;
+  let selectedEntity: string;
   let thumbnail: ObjectThumbnail | null = null;
 
   //Note: Previously Entities where grouped by source
