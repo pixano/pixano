@@ -40,9 +40,11 @@ License: CECILL-C
   const getLeft = (tracklet: Tracklet) =>
     (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
-    const end =
-      tracklet.data.end_timestep > $lastFrameIndex ? $lastFrameIndex : tracklet.data.end_timestep;
-    return ((end - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
+    let start = tracklet.data.start_timestep;
+    let end = tracklet.data.end_timestep;
+    if (end <= start) end = start + 1;
+    if (end > $lastFrameIndex) end = $lastFrameIndex;
+    return ((end - start) / ($lastFrameIndex + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
   const getTop = (tracklet: Tracklet, views: MView) => {
