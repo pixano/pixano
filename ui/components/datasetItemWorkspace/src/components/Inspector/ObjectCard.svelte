@@ -276,12 +276,19 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumb_box: Annotation | undefined = entity.ui.childs?.find((ann) =>
-    ann.is_type(BaseSchema.BBox),
-  );
-  const thumbnail: ObjectThumbnail | null = thumb_box
-    ? defineObjectThumbnail($itemMetas, $views, thumb_box)
-    : null;
+  const thumbnails: ObjectThumbnail[] = [];
+  for (const viewName of Object.keys($views)) {
+    const boxes: Annotation[] | undefined = entity.ui.childs?.filter(
+      (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == viewName,
+    );
+    const thumb_box: Annotation | undefined = boxes
+      ? boxes[Math.round(boxes.length / 2)]
+      : undefined;
+    const thumbnail: ObjectThumbnail | null = thumb_box
+      ? defineObjectThumbnail($itemMetas, $views, thumb_box)
+      : null;
+    if (thumbnail) thumbnails.push(thumbnail);
+  }
 </script>
 
 {#if entity.table_info.name !== "conversations"}
@@ -403,15 +410,17 @@ License: CECILL-C
               {isEditing}
               {saveInputChange}
             />
-            {#if thumbnail}
+            {#each thumbnails as thumbnail}
               <Thumbnail
                 imageDimension={thumbnail.baseImageDimensions}
                 coords={thumbnail.coords}
                 imageUrl={`/${thumbnail.uri}`}
-                minWidth={150}
-                maxWidth={300}
+                minSide={150}
+                maxWidth={200}
+                maxHeight={200}
               />
-            {/if}
+              <span class="text-center italic">{thumbnail.view}</span>
+            {/each}
             <TextSpansContent annotations={entity.ui.childs} />
           </div>
         </div>
