@@ -7,7 +7,14 @@ License: CECILL-C
 import * as ort from "onnxruntime-web";
 import { z } from "zod";
 
-import { Annotation, Entity, Item, WorkspaceType, type FeaturesValues, type FeatureValues } from "@pixano/core";
+import {
+  Annotation,
+  Entity,
+  Item,
+  WorkspaceType,
+  type FeaturesValues,
+  type FeatureValues,
+} from "@pixano/core";
 
 import type {
   createObjectInputsSchema,
