@@ -18,7 +18,6 @@ License: CECILL-C
 
   let [x, y, width, height] = coords;
   const enlargeFactor = 0.2;
-  console.log("box", coords, imageDimension.width, imageDimension.height);
   let stage: Konva.Stage;
 
   const img = new Image();
