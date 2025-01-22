@@ -43,7 +43,7 @@ export class DatasetInfo implements DatasetInfoType {
     this.num_items = obj.num_items;
     this.size = obj.size;
     this.preview = obj.preview;
-    this.workspace = obj.workspace;
+    this.workspace = obj.workspace as WorkspaceType;
     this.isFiltered = obj.isFiltered;
   }
 }
