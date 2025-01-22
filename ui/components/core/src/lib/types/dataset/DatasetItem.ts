@@ -10,6 +10,7 @@ import { baseDataFieldsSchema, type BaseDataFields } from "./datasetTypes";
 import { Entity, entitySchema } from "./entities";
 import { Item, itemSchema } from "./items";
 import { View, viewSchema } from "./views";
+import { WorkspaceType } from "./workspaceType";
 
 export const datasetItemSchema = z.object({
   item: baseDataFieldsSchema(itemSchema),
@@ -31,8 +32,8 @@ export class DatasetItem implements DatasetItemType {
   //UI only fields
   ui: {
     datasetId: string;
-    type: string;
-  } = { datasetId: "", type: "" };
+    type: WorkspaceType;
+  } = { datasetId: "", type: WorkspaceType.UNDEFINED };
 
   constructor(obj: DatasetItemType) {
     datasetItemSchema.parse(obj);

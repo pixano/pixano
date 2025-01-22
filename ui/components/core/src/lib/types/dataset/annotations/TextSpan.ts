@@ -8,6 +8,7 @@ import { z } from "zod";
 import { BaseSchema } from "../BaseSchema";
 import { referenceSchema, type BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
+import { WorkspaceType } from "../workspaceType";
 
 export const textSpanSchema = z
   .object({
@@ -26,7 +27,7 @@ export class TextSpan extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     bgColor?: string;
-  } = { datasetItemType: "text" };
+  } = { datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING };
 
   constructor(obj: BaseDataFields<TextSpanType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison

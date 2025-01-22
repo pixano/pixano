@@ -19,6 +19,7 @@ License: CECILL-C
     Image,
     PrimaryButton,
     SequenceFrame,
+    WorkspaceType,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import {
@@ -60,34 +61,59 @@ License: CECILL-C
         api
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {
-            let item_type: "image" | "video" | "3d" | "vqa" = "image";
+            //if workspace type not defined, infer type from datasetItem content
+            if (dataset.workspace === WorkspaceType.UNDEFINED) {
+              for (const viewname in item.views) {
+                if (Array.isArray(item.views[viewname])) {
+                  dataset.workspace = WorkspaceType.VIDEO;
+                  break;
+                } else {
+                  // VQA items have a "conversations" field in the entities
+                  const is_vqa = "conversations" in item.entities;
+                  if (is_vqa) {
+                    dataset.workspace = WorkspaceType.IMAGE_VQA;
+                    break;
+                  } else {
+                    dataset.workspace = WorkspaceType.IMAGE;
+                  }
+                }
+              }
+            }
+
+            //append media_dir tu url + set image/sequence frame type (ui field)
             const media_dir = "media/";
-
-            for (const viewname in item.views) {
-              let view = item.views[viewname];
-              if (Array.isArray(view)) {
-                const video = view as SequenceFrame[];
-                item_type = "video";
-                video.forEach((sf) => {
-                  sf.data.type = "video";
-                  sf.data.url = media_dir + sf.data.url;
-                });
-                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
-              } else {
-                const image = view as Image;
-                image.data.type = "image";
-                image.data.url = media_dir + image.data.url;
-
-                // VQA items have a "conversations" field in the entities
-                const is_vqa = "conversations" in item.entities;
-
-                if (is_vqa) {
-                  item_type = "vqa";
+            if (dataset.workspace === WorkspaceType.VIDEO) {
+              for (const viewname in item.views) {
+                let view = item.views[viewname];
+                if (Array.isArray(view)) {
+                  const video = view as SequenceFrame[];
+                  video.forEach((sf) => {
+                    sf.data.type = WorkspaceType.VIDEO;
+                    sf.data.url = media_dir + sf.data.url;
+                  });
+                  video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+                } else {
+                  throw Error("Video workspace without SequenceFrames.");
+                }
+              }
+            }
+            if (
+              dataset.workspace === WorkspaceType.IMAGE ||
+              dataset.workspace === WorkspaceType.IMAGE_VQA
+            ) {
+              for (const viewname in item.views) {
+                let view = item.views[viewname];
+                if (Array.isArray(view)) {
+                  throw Error("Not video workspace with SequenceFrames.");
+                } else {
+                  const image = view as Image;
+                  image.data.type = WorkspaceType.IMAGE;
+                  image.data.url = media_dir + image.data.url;
                 }
               }
             }
             selectedItem = item;
-            selectedItem.ui = { type: item_type, datasetId: dataset.id };
+            selectedItem.ui = { type: dataset.workspace, datasetId: dataset.id };
             if (Object.keys(selectedItem).length === 0) {
               noItemFound = true;
             } else {

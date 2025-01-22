@@ -67,10 +67,9 @@ class DatasetInfo(BaseModel):
         """
         info_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
-        if "workspace" not in info_json:
-            raise ValueError("Workspace type not found in info.json")
-
-        info_json["workspace"] = WorkspaceType(info_json["workspace"])
+        info_json["workspace"] = (
+            WorkspaceType(info_json["workspace"]) if "workspace" in info_json else WorkspaceType.UNDEFINED
+        )
         info = DatasetInfo.model_validate(info_json)
 
         return info

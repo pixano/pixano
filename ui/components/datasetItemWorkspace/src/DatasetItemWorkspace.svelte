@@ -14,6 +14,7 @@ License: CECILL-C
     Entity,
     Mask,
     Tracklet,
+    WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
 
@@ -47,18 +48,13 @@ License: CECILL-C
   let isSaving: boolean = false;
 
   const back2front = (ann: Annotation): Annotation => {
-    // put type and data in corresponding field (aka bbox, keypoiints or mask)
-    // adapt data model from back to front
+    ann.ui = { datasetItemType: selectedItem.ui.type };
     if (ann.table_info.base_schema === BaseSchema.Mask) {
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;
       if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
     }
-
-    if (selectedItem.ui.type === "image") {
-      ann.ui = { datasetItemType: "image" };
-    } else if (selectedItem.ui.type === "video") {
-      ann.ui = { datasetItemType: "video" };
+    if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       //add frame_index to annotation
       if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
         const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
@@ -66,8 +62,6 @@ License: CECILL-C
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
       }
-    } else if (selectedItem.ui.type === "vqa") {
-      ann.ui = { datasetItemType: "vqa" };
     }
     return ann;
   };

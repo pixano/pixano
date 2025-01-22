@@ -14,6 +14,7 @@ import {
   SaveShapeType,
   TextSpan,
   Tracklet,
+  WorkspaceType,
   type BBoxType,
   type DatasetSchema,
   type ItemFeature,
@@ -131,10 +132,10 @@ export const defineCreatedObject = (
 
   //need to put UI fields after creation, else zod rejects
   newObject.ui.datasetItemType = isVideo
-    ? "video"
+    ? WorkspaceType.VIDEO
     : shape.type === SaveShapeType.textSpan
-      ? "text"
-      : "image";
+      ? WorkspaceType.IMAGE_TEXT_ENTITY_LINKING
+      : WorkspaceType.IMAGE;
 
   if (isVideo && shape.type !== SaveShapeType.tracklet)
     newObject.ui.frame_index = currentFrameIndex;
