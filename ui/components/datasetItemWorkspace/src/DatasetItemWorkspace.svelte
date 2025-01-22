@@ -129,6 +129,7 @@ License: CECILL-C
 
     console.log("XXX entities", $entities);
     console.log("XXX annotations", $annotations);
+
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },
       item: selectedItem.item,
