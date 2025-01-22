@@ -190,7 +190,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === "video"} />
+  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
   <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />

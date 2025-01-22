@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, type BBox, type Entity, type Image, type SequenceFrame } from "@pixano/core";
+import { BaseSchema, WorkspaceType, type BBox, type Entity, type Image, type SequenceFrame } from "@pixano/core";
 import type { MView } from ".";
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
@@ -17,7 +17,7 @@ import { getTopEntity } from "./getTopEntity";
 export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
-  if (bbox.ui.datasetItemType === "video" && bbox.ui.displayControl?.hidden) return;
+  if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl?.hidden) return;
   if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.highlighted !== "self") return;
   if (!bbox.data.view_ref.name) return;
   let bbox_ui_coords = bbox.data.coords;

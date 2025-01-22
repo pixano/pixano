@@ -14,6 +14,7 @@ import {
   SaveShapeType,
   type Shape,
   Tracklet,
+  WorkspaceType,
 } from "@pixano/core";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
@@ -60,7 +61,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     if (newShape.shapeId !== ann.id) return ann;
 
     // Check if the object is an image Annotation
-    if (ann.ui.datasetItemType === "image") {
+    if (ann.ui.datasetItemType === WorkspaceType.IMAGE) {
       let changed = false;
       if (newShape.type === SaveShapeType.mask && ann.is_type(BaseSchema.Mask)) {
         (ann as Mask).data.counts = newShape.counts;
