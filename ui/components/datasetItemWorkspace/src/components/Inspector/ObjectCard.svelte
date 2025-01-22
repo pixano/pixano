@@ -277,17 +277,19 @@ License: CECILL-C
   };
 
   const thumbnails: ObjectThumbnail[] = [];
-  for (const viewName of Object.keys($views)) {
-    const boxes: Annotation[] | undefined = entity.ui.childs?.filter(
-      (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == viewName,
+  for (const view of Object.keys($views)) {
+    const highlightedBoxesByView = entity.ui.childs?.filter(
+      (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
     );
-    const thumb_box: Annotation | undefined = boxes
-      ? boxes[Math.floor(boxes.length / 2)]
-      : undefined;
-    const thumbnail: ObjectThumbnail | null = thumb_box
-      ? defineObjectThumbnail($itemMetas, $views, thumb_box)
-      : null;
-    if (thumbnail) thumbnails.push(thumbnail);
+    if (highlightedBoxesByView) {
+      const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
+      if (selectedBox) {
+        const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+        if (selectedThumbnail) {
+          thumbnails.push(selectedThumbnail);
+        }
+      }
+    }
   }
 </script>
 
