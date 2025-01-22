@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Literal, overload
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import Image
@@ -35,6 +35,11 @@ class DatasetInfo(BaseModel):
     preview: str = ""
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
 
+    @field_serializer("workspace")
+    def serialize_workspace(self, workspace: WorkspaceType):
+        """Dump workspace as string value, not enum."""
+        return workspace.value
+
     @field_validator("id", mode="after")
     @classmethod
     def _id_validator(cls, v: str) -> str:
@@ -50,7 +55,6 @@ class DatasetInfo(BaseModel):
                 will be written.
         """
         model_dumped = self.model_dump()
-        model_dumped["workspace"] = model_dumped["workspace"].value
         json_fp.write_text(json.dumps(model_dumped, indent=4), encoding="utf-8")
 
     @staticmethod

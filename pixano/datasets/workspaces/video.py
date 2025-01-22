@@ -12,4 +12,4 @@ class VideoWorkspace(Workspace):
 
     def validate_dataset_schema(self, schema):
         """Validate dataset schema."""
-        return ...
+        return super().validate_dataset_schema(schema)

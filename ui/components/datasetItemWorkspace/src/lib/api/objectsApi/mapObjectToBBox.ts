@@ -4,7 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, WorkspaceType, type BBox, type Entity, type Image, type SequenceFrame } from "@pixano/core";
+import {
+  BaseSchema,
+  WorkspaceType,
+  type BBox,
+  type Entity,
+  type Image,
+  type SequenceFrame,
+} from "@pixano/core";
 import type { MView } from ".";
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,

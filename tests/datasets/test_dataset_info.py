@@ -11,24 +11,46 @@ from pathlib import Path
 import pytest
 
 from pixano.datasets.dataset_info import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
 
 
 class TestDatasetInfo:
     def test_init(self):
         info = DatasetInfo()
-        assert info == DatasetInfo(id="", name="", description="", size="Unknown", preview="")
+        assert info == DatasetInfo(
+            id="", name="", description="", size="Unknown", preview="", workspace=WorkspaceType.UNDEFINED
+        )
 
-        info = DatasetInfo(id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview")
+        info = DatasetInfo(
+            id="id",
+            name="pascal",
+            description="PASCAL VOC 2007",
+            size="8GB",
+            preview="/preview",
+            workspace=WorkspaceType.IMAGE,
+        )
 
-        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview"}
+        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview", "workspace"}
 
         with pytest.raises(ValueError, match="id must not contain spaces"):
             DatasetInfo(
-                id="id with space", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview"
+                id="id with space",
+                name="pascal",
+                description="PASCAL VOC 2007",
+                size="8GB",
+                preview="/preview",
+                workspace=WorkspaceType.IMAGE,
             )
 
     def test_to_json(self):
-        info = DatasetInfo(id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview")
+        info = DatasetInfo(
+            id="id",
+            name="pascal",
+            description="PASCAL VOC 2007",
+            size="8GB",
+            preview="/preview",
+            workspace=WorkspaceType.IMAGE,
+        )
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
         info.to_json(temp_file)
         assert (
@@ -38,7 +60,8 @@ class TestDatasetInfo:
     "name": "pascal",
     "description": "PASCAL VOC 2007",
     "size": "8GB",
-    "preview": "/preview"
+    "preview": "/preview",
+    "workspace": "image"
 }"""
         )
 
@@ -50,12 +73,18 @@ class TestDatasetInfo:
     "name": "pascal",
     "description": "PASCAL VOC 2007",
     "size": "8GB",
-    "preview": "/preview"
+    "preview": "/preview",
+    "workspace": "image"
 }"""
         )
         info = DatasetInfo.from_json(temp_file)
         assert info == DatasetInfo(
-            id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", preview="/preview"
+            id="id",
+            name="pascal",
+            description="PASCAL VOC 2007",
+            size="8GB",
+            preview="/preview",
+            workspace=WorkspaceType.IMAGE,
         )
 
     def test_load_directory(self):
@@ -69,6 +98,7 @@ class TestDatasetInfo:
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
                 preview="/preview",
+                workspace=WorkspaceType.IMAGE,
             )
             info.to_json(info_dir / "info.json")
 
@@ -82,6 +112,7 @@ class TestDatasetInfo:
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
                 preview=info.preview,  # TODO: remove hard coded value
+                workspace=WorkspaceType.IMAGE,
             )
 
         # With return_path
@@ -94,6 +125,7 @@ class TestDatasetInfo:
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
                 preview=info.preview,  # TODO: remove hard coded value
+                workspace=WorkspaceType.IMAGE,
             )
             assert path == temp_dir / f"info_{i}"
 
@@ -111,6 +143,7 @@ class TestDatasetInfo:
             description="PASCAL VOC 2007",
             size="8GB",
             preview="/preview",
+            workspace=WorkspaceType.IMAGE,
         )
         info.to_json(info_dir / "info.json")
 
@@ -122,6 +155,7 @@ class TestDatasetInfo:
             description="PASCAL VOC 2007",
             size="8GB",
             preview=loaded_info.preview,  # TODO: remove hard coded value
+            workspace=WorkspaceType.IMAGE,
         )
 
         # With return_path
@@ -132,6 +166,7 @@ class TestDatasetInfo:
             description="PASCAL VOC 2007",
             size="8GB",
             preview=loaded_info.preview,  # TODO: remove hard coded value
+            workspace=WorkspaceType.IMAGE,
         )
         assert path == temp_dir / "info"
 

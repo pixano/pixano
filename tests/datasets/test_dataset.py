@@ -20,6 +20,7 @@ from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetIntegrityError
+from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import BBox, Image, Item
 from pixano.features.schemas.embeddings.embedding import ViewEmbedding, _to_pixano_name
 from pixano.features.types.schema_reference import ItemRef, ViewRef
@@ -36,6 +37,7 @@ class TestDataset:
             description="Description dataset_image_bboxes_keypoint.",
             size="Unknown",
             preview="",
+            workspace=WorkspaceType.IMAGE,
         )
         assert (
             dataset_image_bboxes_keypoint.schema.serialize()

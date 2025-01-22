@@ -15,6 +15,7 @@ from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
+from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.schemas.source import Source, SourceKind
 from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint
 
@@ -87,6 +88,7 @@ class TestDatasetBuilder:
             check_integrity=check_integrity,
         )
         assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
+        assert dataset_builder_image_bboxes_keypoint.info.workspace == WorkspaceType.IMAGE
 
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._INFO_FILE).exists()
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH).exists()
