@@ -13,6 +13,7 @@ License: CECILL-C
     SequenceFrame,
     Track,
     Tracklet,
+    WorkspaceType,
     type SaveItem,
     type SaveShape,
     type SaveTrackletShape,
@@ -252,7 +253,7 @@ License: CECILL-C
     let newObject2: Annotation | undefined = undefined;
     let newTracklet: Annotation | undefined = undefined;
 
-    const isVideo = $itemMetas.type === "video";
+    const isVideo = $itemMetas.type === WorkspaceType.VIDEO;
 
     let endView: SequenceFrame | undefined = undefined;
     let endFrameIndex: number = -1;

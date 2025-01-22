@@ -7,7 +7,7 @@ License: CECILL-C
 import * as ort from "onnxruntime-web";
 import { z } from "zod";
 
-import { Annotation, Entity, Item, type FeaturesValues, type FeatureValues } from "@pixano/core";
+import { Annotation, Entity, Item, WorkspaceType, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
 import type {
   createObjectInputsSchema,
@@ -79,7 +79,7 @@ export type ItemsMeta = {
   //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
   item: Item;
-  type: string;
+  type: WorkspaceType;
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";
 };
