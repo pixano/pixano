@@ -5,7 +5,7 @@
 # =====================================
 
 from .dataset_builder import DatasetBuilder
-from .folders import FolderBaseBuilder, ImageFolderBuilder, VideoFolderBuilder
+from .folders import FolderBaseBuilder, ImageFolderBuilder, VideoFolderBuilder, VqaFolderBuilder
 
 
-__all__ = ["DatasetBuilder", "FolderBaseBuilder", "ImageFolderBuilder", "VideoFolderBuilder"]
+__all__ = ["DatasetBuilder", "FolderBaseBuilder", "ImageFolderBuilder", "VideoFolderBuilder", "VqaFolderBuilder"]
