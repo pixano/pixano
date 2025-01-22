@@ -419,7 +419,7 @@ License: CECILL-C
                 maxWidth={200}
                 maxHeight={200}
               />
-              {#if thumbnails.length > 1}
+              {#if Object.keys($views).length > 1}
                 <span class="text-center italic">{thumbnail.view}</span>
               {/if}
             {/each}
