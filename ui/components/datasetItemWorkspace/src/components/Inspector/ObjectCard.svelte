@@ -282,7 +282,7 @@ License: CECILL-C
       (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == viewName,
     );
     const thumb_box: Annotation | undefined = boxes
-      ? boxes[Math.round(boxes.length / 2)]
+      ? boxes[Math.floor(boxes.length / 2)]
       : undefined;
     const thumbnail: ObjectThumbnail | null = thumb_box
       ? defineObjectThumbnail($itemMetas, $views, thumb_box)
@@ -419,7 +419,9 @@ License: CECILL-C
                 maxWidth={200}
                 maxHeight={200}
               />
-              <span class="text-center italic">{thumbnail.view}</span>
+              {#if thumbnails.length > 1}
+                <span class="text-center italic">{thumbnail.view}</span>
+              {/if}
             {/each}
             <TextSpansContent annotations={entity.ui.childs} />
           </div>
