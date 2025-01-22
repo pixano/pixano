@@ -85,7 +85,8 @@ License: CECILL-C
       })}
     >
       {#if thumbnail}
-        <span class="flex justify-center"> Selected object: {selectedEntity}</span>
+        <span class="flex justify-center font-medium text-slate-800"> Selected object </span>
+        <span class="flex justify-center text-slate-800">{selectedEntity}</span>
         {#key thumbnail.coords[0]}
           <Thumbnail
             imageDimension={thumbnail.baseImageDimensions}
