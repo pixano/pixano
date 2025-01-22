@@ -8,6 +8,7 @@ import { z } from "zod";
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
+import { WorkspaceType } from "../workspaceType";
 
 const trackletSchema = z
   .object({
@@ -25,7 +26,7 @@ export class Tracklet extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     childs: Annotation[];
-  } = { datasetItemType: "video", childs: [] };
+  } = { datasetItemType: WorkspaceType.VIDEO, childs: [] };
 
   constructor(obj: BaseDataFields<TrackletType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison

@@ -7,6 +7,10 @@ License: CECILL-C
 import { z } from "zod";
 import { WorkspaceType } from "./workspaceType";
 
+function z_enumFromArray(array: string[]) {
+  return z.enum([array[0], ...array.slice(1)]);
+}
+
 const datasetInfoSchema = z
   .object({
     id: z.string(),
@@ -14,7 +18,7 @@ const datasetInfoSchema = z
     description: z.string(),
     size: z.string(),
     preview: z.string(),
-    workspace: z.string(),
+    workspace: z_enumFromArray(Object.values(WorkspaceType)),
     num_items: z.number(),
     isFiltered: z.optional(z.boolean()),
   })

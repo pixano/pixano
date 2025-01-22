@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from ".";
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
+import { WorkspaceType } from "../workspaceType";
 
 export enum MessageTypeEnum {
   SYSTEM = "SYSTEM",
@@ -31,7 +32,7 @@ export class Message extends Annotation {
   declare data: MessageType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: "" };
+  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.IMAGE_VQA };
 
   constructor(obj: BaseDataFields<MessageType>) {
     if (obj.table_info.base_schema !== BaseSchema.Message) throw new Error("Not a Message");
