@@ -59,7 +59,7 @@ License: CECILL-C
       (ann) => ann.ui.highlighted === "self" && ann.is_type(BaseSchema.BBox),
     );
     const highlightedObject: Annotation | undefined = highlightedBoxes
-      ? highlightedBoxes[Math.round(highlightedBoxes.length / 2)]
+      ? highlightedBoxes[Math.floor(highlightedBoxes.length / 2)]
       : undefined;
 
     if (highlightedObject) {
