@@ -9,6 +9,7 @@ from pathlib import Path
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
+from pixano.features import BBox, CompressedRLE, Entity, Image, KeyPoints
 
 from .base import FolderBaseBuilder
 
@@ -81,6 +82,16 @@ IMAGE_EXTENSIONS = [
 ]
 
 
+class DefaultImageDatasetItem(DatasetItem):
+    """Default Image DatasetItem Schema."""
+
+    image: Image
+    objects: list[Entity]
+    bbox: list[BBox]
+    mask: list[CompressedRLE]
+    keypoints: list[KeyPoints]
+
+
 class ImageFolderBuilder(FolderBaseBuilder):
     """Builder for image datasets stored in a folder."""
 
@@ -90,8 +101,8 @@ class ImageFolderBuilder(FolderBaseBuilder):
         self,
         source_dir: Path | str,
         target_dir: Path | str,
-        dataset_item: type[DatasetItem],
         info: DatasetInfo,
+        dataset_item: type[DatasetItem] = DefaultImageDatasetItem,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `ImageFolderBuilder`.
@@ -104,7 +115,7 @@ class ImageFolderBuilder(FolderBaseBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
-        if info.workspace is None:
+        if info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
             info.workspace = WorkspaceType.IMAGE
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
