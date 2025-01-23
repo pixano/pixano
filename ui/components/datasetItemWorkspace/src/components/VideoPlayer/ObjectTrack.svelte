@@ -263,17 +263,19 @@ License: CECILL-C
     const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
     let entitiesToDelete: Entity[] = [];
     entities.update((objects) =>
-      objects.map((entity) => {
-        if (entity.is_track && entity.id === track.id) {
-          entity.ui.childs = entity.ui.childs?.filter(
-            (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
-          );
-        }
-        if (entity.ui.childs?.length == 0) {
-          entitiesToDelete.push(entity);
-        }
-        return entity;
-      }),
+      objects
+        .map((entity) => {
+          if (entity.is_track && entity.id === track.id) {
+            entity.ui.childs = entity.ui.childs?.filter(
+              (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
+            );
+          }
+          if (entity.ui.childs?.length == 0) {
+            entitiesToDelete.push(entity);
+          }
+          return entity;
+        })
+        .filter((entity) => !entitiesToDelete.includes(entity)),
     );
     annotations.update((anns) =>
       anns.filter((ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id),

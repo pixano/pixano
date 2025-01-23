@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { annotations, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, entities, views } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -25,9 +25,13 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let updateView: (frameIndex: number) => void;
-  export let tracks: Track[];
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
+
+  let tracks: Track[] = [];
+  entities.subscribe((entities) => {
+    tracks = entities.filter((entity) => entity.is_track);
+  });
 
   onMount(() => {
     videoControls.update((old) => ({ ...old, isLoaded: true }));
