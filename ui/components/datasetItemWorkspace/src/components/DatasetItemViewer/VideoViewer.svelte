@@ -19,7 +19,6 @@ License: CECILL-C
     Keypoints,
     SaveShapeType,
     SequenceFrame,
-    Track,
     Tracklet,
     type EditShape,
     type HTMLImage,
