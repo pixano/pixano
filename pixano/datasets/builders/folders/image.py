@@ -115,7 +115,7 @@ class ImageFolderBuilder(FolderBaseBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
-        if info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
+        if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
             info.workspace = WorkspaceType.IMAGE
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
