@@ -65,9 +65,9 @@ License: CECILL-C
 
   const onKeyUp = async (event: KeyboardEvent) => {
     if ((event.target as Element)?.tagName === "INPUT") return event.preventDefault();
-    if (event.key === "ArrowLeft") {
+    if (event.shiftKey && event.key === "ArrowLeft") {
       await goToNeighborItem("previous");
-    } else if (event.key === "ArrowRight") {
+    } else if (event.shiftKey && event.key === "ArrowRight") {
       await goToNeighborItem("next");
     }
     return event.key;
@@ -169,11 +169,17 @@ License: CECILL-C
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <IconButton on:click={() => goToNeighborItem("previous")} tooltipContent="Previous item">
+          <IconButton
+            on:click={() => goToNeighborItem("previous")}
+            tooltipContent="Previous item (shift + left arrow)"
+          >
             <ArrowLeft />
           </IconButton>
           {currentItemId}
-          <IconButton on:click={() => goToNeighborItem("next")} tooltipContent="Next item">
+          <IconButton
+            on:click={() => goToNeighborItem("next")}
+            tooltipContent="Next item (shift + right arrow)"
+          >
             <ArrowRight />
           </IconButton>
         </div>

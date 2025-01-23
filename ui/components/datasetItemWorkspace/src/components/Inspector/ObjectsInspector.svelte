@@ -7,13 +7,9 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Thumbnail } from "@pixano/canvas2d";
-  import { BaseSchema, cn, Entity, Source, type ObjectThumbnail } from "@pixano/core";
+  import { BaseSchema, Entity, Source, type ObjectThumbnail } from "@pixano/core";
 
-  import {
-    createObjectCardId,
-    defineObjectThumbnail,
-    getTopEntity,
-  } from "../../lib/api/objectsApi";
+  import { defineObjectThumbnail, getTopEntity } from "../../lib/api/objectsApi";
   import {
     annotations,
     entities,
@@ -24,9 +20,11 @@ License: CECILL-C
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
+  import { afterUpdate } from "svelte";
 
   let allTopEntities: Entity[];
-  let thumbnail: ObjectThumbnail | null = null;
+  let selectedEntities: string[];
+  const thumbnails: Record<string, ObjectThumbnail | null> = {};
 
   //Note: Previously Entities where grouped by source
   //Now they're all displayed regardless of source
@@ -49,41 +47,64 @@ License: CECILL-C
       allTopEntitiesSet.add(getTopEntity(ann, $entities));
     });
     allTopEntities = Array.from(allTopEntitiesSet);
-    //console.log("ObjectInspector refresh fired", $annotations, $entities, allTopEntities);
+    selectedEntities = [];
 
-    //scroll and set thumbnail to highlighted object if any
-    const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
-    if (highlightedObject) {
-      thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
-      const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "start" });
+    const highlightedBoxes = $annotations.filter(
+      (ann) => ann.ui.highlighted === "self" && ann.is_type(BaseSchema.BBox),
+    );
+
+    if (highlightedBoxes.length > 0) {
+      const highlightedBoxesByEntity = Object.groupBy(
+        highlightedBoxes,
+        ({ data }) => data.entity_ref.id,
+      );
+      selectedEntities = Object.keys(highlightedBoxesByEntity);
+      for (const [entity, entityBoxes] of Object.entries(highlightedBoxesByEntity)) {
+        if (entityBoxes) {
+          const selectedBox = entityBoxes[Math.floor(entityBoxes.length / 2)];
+          if (selectedBox) {
+            const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+            if (selectedThumbnail) {
+              thumbnails[entity] = selectedThumbnail;
+            }
+          }
+        }
       }
-    } else {
-      thumbnail = null;
+    }
+    const element = document.querySelector("#preAnnotationThumbnail");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  afterUpdate(() => {
+    handleAnnotationSortedByModel();
+  });
 </script>
 
-<div class="p-2 h-[calc(100vh-200px)]">
+<div class="p-2 h-[calc(100vh-200px)] w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
-    <div
-      class={cn({
-        block: !thumbnail,
-        "grid-rows-[150px_80%]": thumbnail,
-      })}
-    >
-      {#if thumbnail}
-        {#key thumbnail.coords[0]}
-          <Thumbnail
-            imageDimension={thumbnail.baseImageDimensions}
-            coords={thumbnail.coords}
-            imageUrl={`/${thumbnail.uri}`}
-            maxHeight={150}
-            maxWidth={300}
-          />
-        {/key}
+    <div id="preAnnotationThumbnail">
+      {#if selectedEntities.length > 0}
+        <span class="flex justify-center font-medium text-slate-800">
+          Selected object{selectedEntities.length > 1 ? "s" : ""}
+        </span>
+        {#each selectedEntities as selectedEntity}
+          <span class="flex justify-center text-slate-800">{selectedEntity}</span>
+          {#if thumbnails[selectedEntity]}
+            {#key thumbnails[selectedEntity].coords[0]}
+              <Thumbnail
+                imageDimension={thumbnails[selectedEntity].baseImageDimensions}
+                coords={thumbnails[selectedEntity].coords}
+                imageUrl={`/${thumbnails[selectedEntity].uri}`}
+                minSide={150}
+                maxHeight={200}
+                maxWidth={200}
+              />
+            {/key}
+          {/if}
+        {/each}
       {/if}
       <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
         {#each allTopEntities as entity}

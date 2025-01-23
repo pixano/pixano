@@ -91,9 +91,11 @@ License: CECILL-C
         onPlayClick();
         break;
       case "ArrowRight":
+        if (event.shiftKey) break;
         onPlayStepClick();
         break;
       case "ArrowLeft":
+        if (event.shiftKey) break;
         onPlayStepBackClick();
         break;
     }

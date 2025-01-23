@@ -17,7 +17,7 @@ License: CECILL-C
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-
+  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
@@ -68,8 +68,6 @@ License: CECILL-C
 
   const loadData = () => {
     views.set(selectedItem.views);
-    // Weird lint behaviour which see an enum comparaison here...
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const newAnns: Annotation[] = [];
     Object.values(selectedItem.annotations).forEach((anns) => {
       anns.forEach((ann) => newAnns.push(back2front(ann)));

@@ -131,22 +131,27 @@ class FolderBaseBuilder(DatasetBuilder):
         source_id = None
         for split in self.source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):
-                metadata = self._read_metadata(split / self.METADATA_FILENAME)
+                try:
+                    metadata = self._read_metadata(split / self.METADATA_FILENAME)
+                except FileNotFoundError:
+                    metadata = None
+                    entities_data = None
 
                 for view_file in split.glob("*"):
                     # only consider {split}/{item}.{ext} files
                     if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                         # retrieve item metadata in metadata file
                         item_metadata = {}
-                        for m in metadata:
-                            if m[self.view_name] == view_file.name:
-                                item_metadata = m
-                                break
-                        if not item_metadata:
-                            raise ValueError(f"Metadata not found for {view_file}")
+                        if metadata is not None:
+                            for m in metadata:
+                                if m[self.view_name] == view_file.name:
+                                    item_metadata = m
+                                    break
+                            if not item_metadata:
+                                raise ValueError(f"Metadata not found for {view_file}")
 
-                        # extract entity metadata from item metadata
-                        entities_data = item_metadata.pop(self.entity_name, None)
+                            # extract entity metadata from item metadata
+                            entities_data = item_metadata.pop(self.entity_name, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)

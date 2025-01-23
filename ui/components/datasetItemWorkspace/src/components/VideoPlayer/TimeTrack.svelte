@@ -75,11 +75,14 @@ License: CECILL-C
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {
-    if (ms % 10 !== 0) return false;
-    if (50 < density && ms % 50 === 0) return true;
-    if (25 < density && density < 50 && ms % 20 === 0) return true;
-    if (density < 25) return true;
-    return false;
+    let densityThresholds = [2000, 1000, 500, 400, 250, 100, 50, 25];
+    let displayedTimes = [1200, 600, 300, 200, 150, 100, 50, 20];
+    for (let i = 0; i < densityThresholds.length; ++i) {
+      if (density > densityThresholds[i]) {
+        return ms % displayedTimes[i] === 0;
+      }
+    }
+    return ms % 10 === 0;
   };
 
   $: {
@@ -89,10 +92,14 @@ License: CECILL-C
   }
 
   const shouldDisplayMarker = (ms: number, density: number) => {
-    if (density > 200) return false;
-    if (density > 25 && ms % 10 === 0) return true;
-    if (density < 25) return true;
-    return false;
+    let densityThresholds = [2000, 1000, 500, 400, 250, 20, 10];
+    let displayedMarkers = [600, 300, 150, 100, 50, 10, 5];
+    for (let i = 0; i < densityThresholds.length; ++i) {
+      if (density > densityThresholds[i]) {
+        return ms % displayedMarkers[i] === 0;
+      }
+    }
+    return true;
   };
 </script>
 
@@ -129,9 +136,15 @@ License: CECILL-C
       />
       {#if ms > 0}
         <span
-          class="absolute -translate-x-1/2 text-slate-300 bottom-1/3 pointer-events-none font-light text-xs pb-1"
-          style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
+          class="absolute -translate-x-1/2 text-slate-500 bottom-1/3 pointer-events-none font-light text-xs pb-1"
+          style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
         >
+          {#if videoTotalLengthInMs > 60000}
+            {Math.floor(ms / 600)}:{String(Math.floor(ms % 600) / 10).padStart(2, "0")}
+          {:else}
+            {Math.floor(ms % 600) / 10}s
+          {/if}
+        </span>
       {/if}
     {:else if shouldDisplayMarker(ms, timeTrackDensity)}
       <span
