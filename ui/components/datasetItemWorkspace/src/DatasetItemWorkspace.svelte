@@ -68,7 +68,8 @@ License: CECILL-C
 
   const loadData = () => {
     views.set(selectedItem.views);
-
+    // Weird lint behaviour which see an enum comparaison here...
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     const newAnns: Annotation[] = [];
     Object.values(selectedItem.annotations).forEach((anns) => {
       anns.forEach((ann) => newAnns.push(back2front(ann)));
