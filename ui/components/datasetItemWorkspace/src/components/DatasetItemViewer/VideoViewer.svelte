@@ -76,11 +76,6 @@ License: CECILL-C
     }
   }
 
-  let tracks: Track[] = [];
-  entities.subscribe((entities) => {
-    tracks = entities.filter((entity) => entity.is_track);
-  });
-
   const current_itemBBoxes = derived(
     [itemBboxes, currentFrameIndex, tracklets],
     ([$itemBboxes, $currentFrameIndex, $tracklets]) => {
@@ -165,9 +160,6 @@ License: CECILL-C
               id: im_ref.id,
               element: img,
             } as HTMLImage;
-            // console.log(
-            //   `Image ${im_ref.id} for ${viewKey} loaded and added to buffer at index ${index}.`,
-            // );
             resolve();
           };
           img.onerror = () => {
@@ -602,7 +594,6 @@ License: CECILL-C
       style={`max-height: ${inspectorMaxHeight}px`}
     >
       <VideoInspector
-        bind:tracks
         {updateView}
         bboxes={$current_itemBBoxes}
         keypoints={$current_itemKeypoints}
