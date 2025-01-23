@@ -17,7 +17,6 @@ License: CECILL-C
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
