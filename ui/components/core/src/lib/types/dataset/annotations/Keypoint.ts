@@ -8,6 +8,7 @@ import { z } from "zod";
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
+import { WorkspaceType } from "../workspaceType";
 
 const keypointsSchema = z
   .object({
@@ -23,7 +24,7 @@ export class Keypoints extends Annotation {
   declare data: KeypointsType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: "" };
+  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison

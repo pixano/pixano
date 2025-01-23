@@ -31,6 +31,18 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
+    def test_image_folder_no_workspace_specified(self):
+        source_dir = Path(tempfile.mkdtemp())
+        target_dir = Path(tempfile.mkdtemp())
+        urls_relative_path = source_dir.parent.parent
+
+        ImageFolderBuilder(
+            source_dir=source_dir,
+            target_dir=target_dir,
+            info=DatasetInfo(name="test", description="test"),
+            url_prefix=urls_relative_path,
+        )
+
     def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
@@ -54,10 +66,10 @@ class TestFolderBaseBuilder:
         urls_relative_path = source_dir.parent.parent
 
         ImageFolderBuilder(
-            source_dir,
-            target_dir,
-            dataset_item_bboxes_metadata,
-            DatasetInfo(name="test", description="test"),
+            source_dir=source_dir,
+            target_dir=target_dir,
+            info=DatasetInfo(name="test", description="test"),
+            dataset_item=dataset_item_bboxes_metadata,
             url_prefix=urls_relative_path,
         )
 
@@ -72,7 +84,12 @@ class TestFolderBaseBuilder:
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
-            ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
+            ImageFolderBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_item=Schema,
+            )
 
         # test 2: schema without entities
         class Schema(DatasetItem):
@@ -81,7 +98,12 @@ class TestFolderBaseBuilder:
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
-            ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
+            ImageFolderBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_item=Schema,
+            )
 
         # test 3: schema with two views
         class Schema(DatasetItem):
@@ -92,7 +114,12 @@ class TestFolderBaseBuilder:
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="Only one view schema is supported in folder based builders."):
-            ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
+            ImageFolderBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_item=Schema,
+            )
 
         # test 4: schema with two entities
         class Schema(DatasetItem):
@@ -103,7 +130,12 @@ class TestFolderBaseBuilder:
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
-            ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
+            ImageFolderBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_item=Schema,
+            )
 
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(

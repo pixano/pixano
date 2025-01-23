@@ -14,9 +14,9 @@ License: CECILL-C
     Entity,
     Mask,
     Tracklet,
+    WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
@@ -47,18 +47,13 @@ License: CECILL-C
   let isSaving: boolean = false;
 
   const back2front = (ann: Annotation): Annotation => {
-    // put type and data in corresponding field (aka bbox, keypoiints or mask)
-    // adapt data model from back to front
+    ann.ui = { datasetItemType: selectedItem.ui.type };
     if (ann.table_info.base_schema === BaseSchema.Mask) {
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;
       if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
     }
-
-    if (selectedItem.ui.type === "image") {
-      ann.ui = { datasetItemType: "image" };
-    } else if (selectedItem.ui.type === "video") {
-      ann.ui = { datasetItemType: "video" };
+    if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       //add frame_index to annotation
       if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
         const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
@@ -66,27 +61,12 @@ License: CECILL-C
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
       }
-    } else if (selectedItem.ui.type === "vqa") {
-      ann.ui = { datasetItemType: "vqa" };
     }
     return ann;
   };
 
   const loadData = () => {
     views.set(selectedItem.views);
-
-    if (selectedItem.ui.type === "video") {
-      for (const view in selectedItem.views) {
-        if (Array.isArray(selectedItem.views[view])) {
-          const video = selectedItem.views[view] as SequenceFrame[];
-          const vspeed = Math.round(
-            (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
-          );
-          videoControls.update((old) => ({ ...old, videoSpeed: vspeed }));
-        }
-      }
-    }
-
     const newAnns: Annotation[] = [];
     Object.values(selectedItem.annotations).forEach((anns) => {
       anns.forEach((ann) => newAnns.push(back2front(ann)));
@@ -147,6 +127,7 @@ License: CECILL-C
 
     console.log("XXX entities", $entities);
     console.log("XXX annotations", $annotations);
+
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },
       item: selectedItem.item,
@@ -208,7 +189,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === "video"} />
+  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
   <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />

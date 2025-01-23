@@ -25,6 +25,7 @@ class Message(Annotation):
         number: message number to associate different ANSWER messages to a QUESTION.
         user: identify who is the author of the message (eg a human, a model, the ground truth, etc).
         content: actual text of the message.
+        answer_choices: list of allowed answers, for 'Multiple Choice Question' when type=QUESTION.
         timestamp: creation date of the message.
         type: type of the message within "SYSTEM", "QUESTION" or"ANSWER".
             - SYSTEM: used for prefix messages stating the context. No associated answer expected
@@ -36,6 +37,7 @@ class Message(Annotation):
     user: str
     type: str
     content: str
+    answer_choices: list[str] = []
     timestamp: datetime = datetime(1, 1, 1, 0, 0, 0, 0)
 
     @model_validator(mode="after")
@@ -44,6 +46,10 @@ class Message(Annotation):
             raise ValueError("number should be a positive or null integer")
         elif self.type not in ["SYSTEM", "QUESTION", "ANSWER"]:
             raise ValueError("Message type be 'SYSTEM', 'QUESTION', 'ANSWER'.")
+        if self.type != "QUESTION" and len(self.answer_choices) > 0:
+            raise ValueError(
+                f"specifying MCQ anwsers is only allowed for Message of type 'QUESTION'. type={self.type}."
+            )
         return self
 
     @classmethod
@@ -64,6 +70,7 @@ class Message(Annotation):
             user="",
             type="QUESTION",
             content="",
+            answer_choices=[],
             timestamp=datetime(1, 1, 1, 0, 0, 0, 0),
         )
 
@@ -78,6 +85,7 @@ def create_message(
     user: str,
     type: Literal["SYSTEM", "QUESTION", "ANSWER"],
     content: str,
+    answer_choices: list[str] = [],
     timestamp: datetime = datetime(1, 1, 1, 0, 0, 0, 0),
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
@@ -92,6 +100,7 @@ def create_message(
         user: identify who is the author of the message (eg a human, a model, the ground truth, etc)
         type: type of the message within "SYSTEM", "QUESTION" or"ANSWER"
         content: actual text of the message
+        answer_choices: list of allowed answers
         timestamp: creation date of the message
         id: object id
         item_ref: Item reference.
@@ -107,6 +116,7 @@ def create_message(
         user=user,
         type=type,
         content=content,
+        answer_choices=answer_choices,
         timestamp=timestamp,
         id=id,
         item_ref=item_ref,

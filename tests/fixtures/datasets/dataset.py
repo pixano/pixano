@@ -13,6 +13,7 @@ import pytest
 import shortuuid
 
 from pixano.datasets.dataset import Dataset, DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 from tests.fixtures.datasets.builders.builder import (
     DatasetBuilderImageBboxesKeypoint,
@@ -29,6 +30,7 @@ def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset
         id="dataset_image_bboxes_keypoint",
         name="dataset_image_bboxes_keypoint",
         description="Description dataset_image_bboxes_keypoint.",
+        workspace=WorkspaceType.IMAGE,
     )
     dataset_builder_image_bboxes_keypoint = DatasetBuilderImageBboxesKeypoint(
         info=info_dataset_image_bboxes_keypoint,
@@ -47,6 +49,7 @@ def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_i
         id="dataset_multi_view_tracking_and_image",
         name="dataset_multi_view_tracking_and_image",
         description="Description dataset_multi_view_tracking_and_image.",
+        workspace=WorkspaceType.VIDEO,
     )
 
     dataset_builder_multi_view_tracking_and_image = DatasetBuilderMultiViewTrackingAndImage(

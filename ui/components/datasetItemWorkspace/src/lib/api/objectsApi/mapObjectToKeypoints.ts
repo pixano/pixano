@@ -4,7 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Image, Keypoints, KeypointsTemplate, SequenceFrame } from "@pixano/core";
+import {
+  WorkspaceType,
+  type Image,
+  type Keypoints,
+  type KeypointsTemplate,
+  type SequenceFrame,
+} from "@pixano/core";
 import type { MView } from ".";
 import { templates } from "../../settings/keyPointsTemplates";
 
@@ -15,7 +21,7 @@ export const mapObjectToKeypoints = (
   if (
     !keypoints ||
     !keypoints.data.view_ref.name ||
-    (keypoints.ui.datasetItemType === "video" && keypoints.ui.displayControl?.hidden)
+    (keypoints.ui.datasetItemType === WorkspaceType.VIDEO && keypoints.ui.displayControl?.hidden)
   )
     return;
   const template = templates.find((t) => t.template_id === keypoints.data.template_id);

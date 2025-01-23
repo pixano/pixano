@@ -6,6 +6,7 @@ License: CECILL-C
 
 import {
   BaseSchema,
+  WorkspaceType,
   type Annotation,
   type BBox,
   type Image,
@@ -25,7 +26,7 @@ export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: An
   if (!(view_name in views)) return null;
 
   const view =
-    metas.type === "video"
+    metas.type === WorkspaceType.VIDEO
       ? (views[view_name] as SequenceFrame[])[box.ui.frame_index!]
       : (views[view_name] as Image);
   let coords = box.data.coords;

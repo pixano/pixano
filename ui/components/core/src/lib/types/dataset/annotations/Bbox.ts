@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { BaseDataFields } from "../datasetTypes";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { BaseSchema } from "../BaseSchema";
+import { WorkspaceType } from "../workspaceType";
 
 export const bboxSchema = z
   .object({
@@ -29,7 +30,7 @@ export class BBox extends Annotation {
     strokeFactor?: number;
     tooltip?: string;
     startRef?: BBox; //for interpolated box
-  } = { datasetItemType: "" };
+  } = { datasetItemType: WorkspaceType.UNDEFINED };
 
   constructor(obj: BaseDataFields<BBoxType>) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison

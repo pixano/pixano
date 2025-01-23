@@ -14,6 +14,7 @@ import {
   type DisplayControl,
 } from "../datasetTypes";
 import type { Entity } from "../entities";
+import { WorkspaceType } from "../workspaceType";
 
 export const annotationSchema = z
   .object({
@@ -27,7 +28,7 @@ export const annotationSchema = z
 export type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 
 export type AnnotationUIFields = {
-  datasetItemType: string;
+  datasetItemType: WorkspaceType;
   //features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
@@ -38,7 +39,7 @@ export type AnnotationUIFields = {
 
 export abstract class Annotation extends BaseData<AnnotationType> {
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: "" };
+  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);

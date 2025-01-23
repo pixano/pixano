@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Loader2Icon } from "lucide-svelte";
 
-  import type { DatasetItem } from "@pixano/core";
+  import { type DatasetItem, WorkspaceType } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import ThreeDimensionsViewer from "./3DViewer.svelte";
@@ -27,13 +27,13 @@ License: CECILL-C
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
     </div>
-  {:else if selectedItem.ui.type === "video"}
+  {:else if selectedItem.ui.type === WorkspaceType.VIDEO}
     <VideoViewer {selectedItem} bind:currentAnn />
-  {:else if selectedItem.ui.type === "vqa"}
+  {:else if selectedItem.ui.type === WorkspaceType.IMAGE_VQA}
     <VqaViewer {selectedItem} bind:currentAnn />
-  {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
+  {:else if selectedItem.ui.type === WorkspaceType.IMAGE || !selectedItem.ui.type}
     <ImageViewer {selectedItem} bind:currentAnn />
-  {:else if selectedItem.ui.type === "3d"}
+  {:else if selectedItem.ui.type === WorkspaceType.PCL_3D}
     <ThreeDimensionsViewer />
   {/if}
 </div>

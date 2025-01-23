@@ -15,6 +15,7 @@ License: CECILL-C
     Entity,
     Item,
     Track,
+    WorkspaceType,
     type DisplayControl,
     type ObjectThumbnail,
     type SaveItem,
@@ -143,7 +144,7 @@ License: CECILL-C
       anns.map((ann) => {
         if (displayControlProperty === "editing") {
           //no change on non current anns for video
-          if (ann.ui.datasetItemType === "video") {
+          if (ann.ui.datasetItemType === WorkspaceType.VIDEO) {
             if (ann.ui.frame_index !== $currentFrameIndex) return ann;
           }
 

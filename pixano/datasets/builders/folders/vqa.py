@@ -9,44 +9,28 @@ from pathlib import Path
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
-from pixano.features import BBox, KeyPoints, SequenceFrame, Track, Tracklet
+from pixano.features import Conversation, Image, Message
 
-from .base import FolderBaseBuilder
-
-
-# TODO: Add more video extensions supported by ffmpeg
-VIDEO_EXTENSIONS = [
-    ".mp4",
-    ".avi",
-    ".mov",
-    ".mkv",
-    ".webm",
-    ".flv",
-    ".vob",
-]
+from .image import ImageFolderBuilder
 
 
-class DefaultVideoDatasetItem(DatasetItem):
-    """Default Video DatasetItem Schema."""
+class DefaultVqaDatasetItem(DatasetItem):
+    """Default VQA DatasetItem Schema."""
 
-    image: list[SequenceFrame]
-    tracks: list[Track]
-    tracklets: list[Tracklet]
-    bboxes: list[BBox]
-    keypoints: list[KeyPoints]
+    image: Image
+    conversations: list[Conversation]
+    messages: list[Message]
 
 
-class VideoFolderBuilder(FolderBaseBuilder):
-    """Builder for video datasets stored in a folder."""
-
-    EXTENSIONS = VIDEO_EXTENSIONS
+class VqaFolderBuilder(ImageFolderBuilder):
+    """Builder for vqa datasets stored in a folder."""
 
     def __init__(
         self,
         source_dir: Path | str,
         target_dir: Path | str,
         info: DatasetInfo,
-        dataset_item: type[DatasetItem] = DefaultVideoDatasetItem,
+        dataset_item: type[DatasetItem] = DefaultVqaDatasetItem,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `VqaFolderBuilder`.
@@ -60,7 +44,7 @@ class VideoFolderBuilder(FolderBaseBuilder):
                 relative path from the media directory.
         """
         if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
-            info.workspace = WorkspaceType.VIDEO
+            info.workspace = WorkspaceType.IMAGE_VQA
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
         )

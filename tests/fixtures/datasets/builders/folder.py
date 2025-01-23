@@ -76,18 +76,18 @@ def video_folder():
 @pytest.fixture
 def image_folder_builder(image_folder, dataset_item_image_bboxes_keypoints):
     return ImageFolderBuilder(
-        image_folder,
-        tempfile.mkdtemp(),
-        dataset_item_image_bboxes_keypoints,
-        DatasetInfo(name="test", description="test"),
+        source_dir=image_folder,
+        target_dir=tempfile.mkdtemp(),
+        info=DatasetInfo(name="test", description="test"),
+        dataset_item=dataset_item_image_bboxes_keypoints,
     )
 
 
 @pytest.fixture
 def video_folder_builder(video_folder, dataset_item_video_bboxes_keypoint):
     return VideoFolderBuilder(
-        video_folder,
-        tempfile.mkdtemp(),
-        dataset_item_video_bboxes_keypoint,
-        DatasetInfo(name="test", description="test"),
+        source_dir=video_folder,
+        target_dir=tempfile.mkdtemp(),
+        info=DatasetInfo(name="test", description="test"),
+        dataset_item=dataset_item_video_bboxes_keypoint,
     )

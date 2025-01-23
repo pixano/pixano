@@ -5,6 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+import { WorkspaceType } from "./workspaceType";
+
+function z_enumFromArray(array: string[]) {
+  return z.enum([array[0], ...array.slice(1)]);
+}
 
 const datasetInfoSchema = z
   .object({
@@ -13,6 +18,7 @@ const datasetInfoSchema = z
     description: z.string(),
     size: z.string(),
     preview: z.string(),
+    workspace: z_enumFromArray(Object.values(WorkspaceType)),
     num_items: z.number(),
     isFiltered: z.optional(z.boolean()),
   })
@@ -26,6 +32,7 @@ export class DatasetInfo implements DatasetInfoType {
   num_items: number;
   size: string;
   preview: string;
+  workspace: WorkspaceType;
   isFiltered?: boolean;
 
   constructor(obj: DatasetInfoType) {
@@ -36,6 +43,7 @@ export class DatasetInfo implements DatasetInfoType {
     this.num_items = obj.num_items;
     this.size = obj.size;
     this.preview = obj.preview;
+    this.workspace = obj.workspace as WorkspaceType;
     this.isFiltered = obj.isFiltered;
   }
 }

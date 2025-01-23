@@ -35,6 +35,7 @@ class DatasetInfoModel(DatasetInfo):
                     "size": "Unknown",
                     "preview": "path/to/preview.jpg",
                     "num_items": 100,
+                    "workspace": "image",
                 }
             ]
         },

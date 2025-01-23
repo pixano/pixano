@@ -38,7 +38,7 @@ License: CECILL-C
   // Component state variables
   let features: Feature[] = [];
   let isEditing: boolean = false;
-  let itemType: string = "";
+  let isVideo: boolean = false;
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
@@ -46,10 +46,9 @@ License: CECILL-C
     viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {
-        itemType = "video";
+        isVideo = true;
         image = view[0] as SequenceFrame;
       } else {
-        itemType = "image";
         image = view as Image;
       }
       return {
@@ -151,7 +150,7 @@ License: CECILL-C
       <Switch id="smoothing" bind:checked={$imageSmoothing} onChange={() => {}}></Switch>
     </div>
 
-    {#if itemType === "image"}
+    {#if !isVideo}
       <!-- Histogram Equalizer -->
       <div class="w-full my-1 flex items-center justify-between">
         <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
@@ -197,7 +196,7 @@ License: CECILL-C
     {/if}
   </div>
 
-  {#if itemType === "image"}
+  {#if !isVideo}
     <!-- Color Channels Filters -->
     <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
       <h4 class="uppercase font-medium h-6 text-gray-500">CHANNELS</h4>
