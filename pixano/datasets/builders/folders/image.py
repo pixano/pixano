@@ -87,8 +87,8 @@ class DefaultImageDatasetItem(DatasetItem):
 
     image: Image
     objects: list[Entity]
-    bbox: list[BBox]
-    mask: list[CompressedRLE]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
     keypoints: list[KeyPoints]
 
 

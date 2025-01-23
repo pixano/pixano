@@ -30,9 +30,9 @@ class DefaultVideoDatasetItem(DatasetItem):
     """Default Video DatasetItem Schema."""
 
     image: list[SequenceFrame]
-    track: list[Track]
-    tracklet: list[Tracklet]
-    bbox: list[BBox]
+    tracks: list[Track]
+    tracklets: list[Tracklet]
+    bboxes: list[BBox]
     keypoints: list[KeyPoints]
 
 
