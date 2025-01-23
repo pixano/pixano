@@ -44,5 +44,6 @@ export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: An
     },
     coords,
     uri: view?.data.url,
+    view: view_name,
   };
 };

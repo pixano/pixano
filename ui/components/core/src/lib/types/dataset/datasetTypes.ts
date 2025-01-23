@@ -225,6 +225,7 @@ export interface DisplayControl {
 
 export interface ObjectThumbnail {
   uri: string;
+  view: string;
   baseImageDimensions: {
     width: number;
     height: number;

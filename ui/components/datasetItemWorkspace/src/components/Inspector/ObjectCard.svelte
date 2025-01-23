@@ -276,12 +276,21 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumb_box: Annotation | undefined = entity.ui.childs?.find((ann) =>
-    ann.is_type(BaseSchema.BBox),
-  );
-  const thumbnail: ObjectThumbnail | null = thumb_box
-    ? defineObjectThumbnail($itemMetas, $views, thumb_box)
-    : null;
+  const thumbnails: ObjectThumbnail[] = [];
+  for (const view of Object.keys($views)) {
+    const highlightedBoxesByView = entity.ui.childs?.filter(
+      (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
+    );
+    if (highlightedBoxesByView) {
+      const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
+      if (selectedBox) {
+        const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+        if (selectedThumbnail) {
+          thumbnails.push(selectedThumbnail);
+        }
+      }
+    }
+  }
 </script>
 
 {#if entity.table_info.name !== "conversations"}
@@ -361,20 +370,20 @@ License: CECILL-C
         >
           <div class="flex flex-col gap-2">
             <div>
-              <p class="font-medium first-letter:uppercase">display</p>
+              <p class="font-medium">Display</p>
               <div class="flex gap-4">
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={boxIsVisible}
-                  annotationName="Box"
+                  annotationName="Bounding box"
                   base_schema={BaseSchema.BBox}
                 />
                 <DisplayCheckbox
                   isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
                   {handleSetAnnotationDisplayControl}
                   annotationIsVisible={maskIsVisible}
-                  annotationName="Mask"
+                  annotationName="Segmentation mask"
                   base_schema={BaseSchema.Mask}
                 />
                 <DisplayCheckbox
@@ -403,15 +412,19 @@ License: CECILL-C
               {isEditing}
               {saveInputChange}
             />
-            {#if thumbnail}
+            {#each thumbnails as thumbnail}
               <Thumbnail
                 imageDimension={thumbnail.baseImageDimensions}
                 coords={thumbnail.coords}
                 imageUrl={`/${thumbnail.uri}`}
-                minWidth={150}
-                maxWidth={300}
+                minSide={150}
+                maxWidth={200}
+                maxHeight={200}
               />
-            {/if}
+              {#if Object.keys($views).length > 1}
+                <span class="text-center italic">{thumbnail.view}</span>
+              {/if}
+            {/each}
             <TextSpansContent annotations={entity.ui.childs} />
           </div>
         </div>

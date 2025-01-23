@@ -21,7 +21,7 @@ License: CECILL-C
 
 {#if !isAnnotationEmpty}
   <div class="flex gap-2 mt-2 items-center">
-    <p class="font-light first-letter:uppercase">{annotationName}</p>
+    <p class="font-light">{annotationName}</p>
     <Checkbox
       handleClick={() =>
         handleSetAnnotationDisplayControl("hidden", annotationIsVisible, base_schema)}
