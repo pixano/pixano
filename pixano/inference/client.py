@@ -5,12 +5,13 @@
 # =====================================
 
 import re
+from typing import Any, Literal
 
 import requests  # type: ignore[import-untyped]
 from pixano_inference.pydantic.models import ModelInfo
 from pixano_inference.settings import Settings
 from pydantic import field_validator
-from requests import Response
+from requests import HTTPError, Response
 
 
 url_validation_regex = re.compile(  # from Django
@@ -48,29 +49,62 @@ class PixanoInferenceClient(Settings):
         client = PixanoInferenceClient(url=url, **settings.model_dump())
         return client
 
+    def _rest_call(self, path: str, method: Literal["GET", "POST", "PUT", "DELETE"], **kwargs) -> Response:
+        """Perform a REST call to the pixano inference server."""
+        match method:
+            case "GET":
+                request_fn = requests.get
+            case "POST":
+                request_fn = requests.post
+            case "PUT":
+                request_fn = requests.put
+            case "DELETE":
+                request_fn = requests.delete
+            case _:
+                raise ValueError(
+                    f"Invalid REST call method. Expected one of ['GET', 'POST', 'PUT', 'DELETE'], but got '{method}'."
+                )
+
+        url = f"{self.url}/{path}"
+        response = request_fn(url, **kwargs)
+        if not response.ok:
+            raise HTTPError(response.status_code, f"{response.url} failed: {response.text}.")
+
+        return response
+
     def get(self, path: str) -> Response:
         """Perform a GET request to the pixano inference server.
 
         Args:
             path: The path of the request.
         """
-        url = f"{self.url}/{path}"
-        response = requests.get(url=url)
-        if not response.ok:
-            raise ValueError(f"Failed to get {url}.")
-        return response
+        return self._rest_call(path=path, method="GET")
 
-    def post(self, path: str) -> Response:
+    def post(self, path: str, **kwargs: Any) -> Response:
         """Perform a POST request to the pixano inference server.
 
         Args:
             path: The path of the request.
+            kwargs: The keyword arguments to pass to the request.
         """
-        url = f"{self.url}/{path}"
-        response = requests.post(url=url)
-        if not response.ok:
-            raise ValueError(f"Failed to get {url}.")
-        return response
+        return self._rest_call(path=path, method="POST", **kwargs)
+
+    def put(self, path: str, **kwargs: Any) -> Response:
+        """Perform a PUT request to the pixano inference server.
+
+        Args:
+            path: The path of the request.
+            kwargs: The keyword arguments to pass to the request.
+        """
+        return self._rest_call(path=path, method="PUT", **kwargs)
+
+    def delete(self, path: str) -> Response:
+        """Perform a DELETE request to the pixano inference server.
+
+        Args:
+            path: The path of the request.
+        """
+        return self._rest_call(path=path, method="DELETE")
 
     def list_models(self) -> list[ModelInfo]:
         """List all models."""
