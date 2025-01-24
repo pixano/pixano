@@ -125,3 +125,5 @@ nav:
           - "Semantic search": tutorials/semantic_search.md
           - "Segmentation powered by SAM": tutorials/segmentation_powered_by_sam.md
       - "API reference": api_reference/
+
+  - "Pixano-Inference": https://pixano.github.io/pixano-inference/latest/
