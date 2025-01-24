@@ -92,6 +92,15 @@ class DefaultImageDatasetItem(DatasetItem):
     keypoints: list[KeyPoints]
 
 
+class MultiviewImageDatasetItem(DatasetItem):
+    """Multiview Image DatasetItem Schema. (incomplete, will add views at init)."""
+
+    objects: list[Entity]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
+    keypoints: list[KeyPoints]
+
+
 class ImageFolderBuilder(FolderBaseBuilder):
     """Builder for image datasets stored in a folder."""
 
@@ -115,6 +124,10 @@ class ImageFolderBuilder(FolderBaseBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
+        dataset_item = self._getMultiViewDefaultSchema(
+            Path(source_dir), dataset_item, DefaultImageDatasetItem, MultiviewImageDatasetItem
+        )
+        print("SCH", dataset_item, list(dataset_item.__fields__.keys()))
         if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
             info.workspace = WorkspaceType.IMAGE
         super().__init__(

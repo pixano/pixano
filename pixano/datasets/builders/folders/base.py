@@ -9,10 +9,11 @@ from typing import Any, Iterator, Mapping
 
 import pyarrow.json as pa_json
 import shortuuid
+from pydantic import create_model
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
+from pixano.features import BaseSchema, Entity, Image, Item, View, create_bbox, is_bbox
 from pixano.features.schemas.annotations.annotation import Annotation
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.source import SourceKind
@@ -105,6 +106,7 @@ class FolderBaseBuilder(DatasetBuilder):
         for k, s in self.schemas.items():
             if issubclass(s, View):
                 if view_name is not None:
+                    # TODO WIP allow multiview !!
                     raise ValueError("Only one view schema is supported in folder based builders.")
                 view_name = k
                 view_schema = s
@@ -135,29 +137,37 @@ class FolderBaseBuilder(DatasetBuilder):
                     metadata = self._read_metadata(split / self.METADATA_FILENAME)
                 except FileNotFoundError:
                     metadata = None
-                    entities_data = None
 
-                for view_file in split.glob("*"):
-                    # only consider {split}/{item}.{ext} files
-                    if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                        # retrieve item metadata in metadata file
-                        item_metadata = {}
-                        if metadata is not None:
-                            for m in metadata:
-                                if m[self.view_name] == view_file.name:
-                                    item_metadata = m
-                                    break
-                            if not item_metadata:
-                                raise ValueError(f"Metadata not found for {view_file}")
-
-                            # extract entity metadata from item metadata
-                            entities_data = item_metadata.pop(self.entity_name, None)
+                if metadata is None:
+                    for view_file in split.glob("*"):
+                        # only consider {split}/{item}.{ext} files
+                        if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
+                            # create item
+                            item = self._create_item(split.name, **{})
+                            # create view
+                            view = self._create_view(item, view_file, self.view_schema)
+                            yield {
+                                self.item_schema_name: item,
+                                self.view_name: view,
+                            }
+                else:  # metadata not None
+                    # retrieve item metadata in metadata file
+                    for item_metadata in metadata:
+                        # extract entity metadata from item metadata
+                        entities_data = item_metadata.pop(self.entity_name, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)
 
-                        # create view
-                        view = self._create_view(item, view_file, self.view_schema)
+                        # create view(s)
+                        print("VVV", self.view_name)
+                        if isinstance(item_metadata[self.view_name], list):
+                            for n, view_file in enumerate(item_metadata[self.view_name]):
+                                print("ESE", n, view_file)
+
+                        else:
+                            view_file = split / item_metadata[self.view_name]
+                            view = self._create_view(item, view_file, self.view_schema)
 
                         if entities_data is None:
                             yield {
@@ -292,3 +302,33 @@ class FolderBaseBuilder(DatasetBuilder):
         if not metadata_file.exists():
             raise FileNotFoundError(f"Metadata file {metadata_file} not found")
         return pa_json.read_json(metadata_file).to_pylist()
+
+    def _add_views_to_model(self, base_model: type[DatasetItem], n_views: int) -> type[DatasetItem]:
+        fields = {f"image_{n + 1}": (Image, None) for n in range(n_views)}
+
+        return create_model(
+            "MultiviewVqaDatasetItem",  # Nom du nouveau modèle
+            __base__=base_model,  # Modèle de base
+            **fields,  # Champs dynamiques
+        )
+
+    def _getMultiViewDefaultSchema(
+        self,
+        source_dir: Path,
+        dataset_item: type[DatasetItem],
+        BaseDefault: type[DatasetItem],
+        MultiviewDefault: type[DatasetItem],
+    ) -> type[DatasetItem]:
+        # dataset can have multiple views. If BaseDefault used
+        # check metadata file (first line of first split) for number of views
+        return_type = BaseDefault
+        if dataset_item == BaseDefault:
+            for split in source_dir.glob("*"):
+                if split.is_dir() and not split.name.startswith("."):
+                    try:
+                        metadata = self._read_metadata(split / self.METADATA_FILENAME)
+                        if isinstance(metadata[0]["image"], list):
+                            return_type = self._add_views_to_model(MultiviewDefault, len(metadata[0]["image"]))
+                    except Exception as e:
+                        print("DEBUG:", e)
+        return return_type

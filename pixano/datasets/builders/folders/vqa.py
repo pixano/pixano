@@ -22,6 +22,13 @@ class DefaultVqaDatasetItem(DatasetItem):
     messages: list[Message]
 
 
+class MultiviewVqaDatasetItem(DatasetItem):
+    """Default Mulitiview DatasetItem Schema. (incomplete, will add views at init)."""
+
+    conversations: list[Conversation]
+    messages: list[Message]
+
+
 class VqaFolderBuilder(ImageFolderBuilder):
     """Builder for vqa datasets stored in a folder."""
 
@@ -43,6 +50,9 @@ class VqaFolderBuilder(ImageFolderBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
+        dataset_item = self._getMultiViewDefaultSchema(
+            Path(source_dir), dataset_item, DefaultVqaDatasetItem, MultiviewVqaDatasetItem
+        )
         if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
             info.workspace = WorkspaceType.IMAGE_VQA
         super().__init__(
