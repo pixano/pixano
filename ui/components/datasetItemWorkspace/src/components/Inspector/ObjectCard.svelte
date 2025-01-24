@@ -277,8 +277,9 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumbnails = derived(entities, () => {
-    const thumbnail_array: ObjectThumbnail[] = [];
+  let thumbnails: ObjectThumbnail[] = [];
+  const setThumbnails = () => {
+    thumbnails = [];
     for (const view of Object.keys($views)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
         (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
@@ -288,13 +289,13 @@ License: CECILL-C
         if (selectedBox) {
           const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
           if (selectedThumbnail) {
-            thumbnail_array.push(selectedThumbnail);
+            thumbnails.push(selectedThumbnail);
           }
         }
       }
     }
-    return thumbnail_array;
-  });
+  };
+  $: $entities, setThumbnails();
 </script>
 
 {#if entity.table_info.name !== "conversations"}
@@ -416,7 +417,7 @@ License: CECILL-C
               {isEditing}
               {saveInputChange}
             />
-            {#each $thumbnails as thumbnail}
+            {#each thumbnails as thumbnail}
               <Thumbnail
                 imageDimension={thumbnail.baseImageDimensions}
                 coords={thumbnail.coords}

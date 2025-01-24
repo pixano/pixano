@@ -33,7 +33,11 @@ export const defineCreatedEntity = (
     table_info: { name: table, group: "entities", base_schema: entitySchema.base_schema },
     data: {
       item_ref: { name: "item", id: shape.itemId },
-      view_ref: alternateViewRef ? alternateViewRef : shape.viewRef,
+      view_ref: parentOfSub
+        ? alternateViewRef
+          ? alternateViewRef
+          : shape.viewRef
+        : { name: "", id: "" },
       parent_ref: parentOfSub ? parentOfSub : { name: "", id: "" },
     },
   };
