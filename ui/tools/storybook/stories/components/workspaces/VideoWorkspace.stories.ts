@@ -10,8 +10,8 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
-import { MockInteractiveImageSegmenter } from "./mocks";
-import { mockHandleSaveItem, mockedVideoDatasetItem } from "./datasetItemWorkspaceMocks";
+import { mockHandleSaveItem, MockInteractiveImageSegmenter } from "../../testing";
+import { mockVideoDatasetItem } from "../../testing/datasets";
 
 type Story = StoryObj<typeof meta>;
 
@@ -35,7 +35,7 @@ export const BasicVideoWorkspace: Story = {
     shouldSaveCurrentItem: false,
     models: [],
     handleSaveItem: mockHandleSaveItem,
-    selectedItem: mockedVideoDatasetItem,
+    selectedItem: mockVideoDatasetItem,
     featureValues: { main: {}, objects: {} },
   },
 };
