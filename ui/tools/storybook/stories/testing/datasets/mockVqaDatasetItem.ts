@@ -166,8 +166,8 @@ export const mockVqaDatasetItem: DatasetItem = {
   entities: {
     conversations: [conversation],
   },
-  annotations: { 
-    messages 
+  annotations: {
+    messages,
   },
   views: {
     image: mockImage,
