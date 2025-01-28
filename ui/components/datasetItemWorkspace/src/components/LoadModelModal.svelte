@@ -24,8 +24,8 @@ License: CECILL-C
   let selectedModelName: ModelSelection["selectedModelName"] = models ? models[0] : "";
   let selectedTableName: ModelSelection["selectedTableName"];
   let sortedTablesChoices = derived(datasetSchema, ($datasetSchema) => {
-    const withSam = $datasetSchema.groups.embeddings.filter((t) => t.includes("sam"));
-    const withoutSam = $datasetSchema.groups.embeddings.filter((t) => !t.includes("sam"));
+    const withSam = $datasetSchema?.groups.embeddings.filter((t) => t.includes("sam")) ?? [];
+    const withoutSam = $datasetSchema?.groups.embeddings.filter((t) => !t.includes("sam")) ?? [];
     return [...withSam, ...withoutSam];
   });
 

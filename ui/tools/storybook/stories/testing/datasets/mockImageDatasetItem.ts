@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { ImageDatasetItem } from "@pixano/core";
-import { mockImage } from "../shared";
+import { mock16BitImage, mockImage } from "../shared";
 
 export const mockImageDatasetItem: ImageDatasetItem = {
   type: "image",
@@ -209,5 +209,29 @@ export const mockImageDatasetItem: ImageDatasetItem = {
       },
     },
   ],
+  embeddings: {},
+};
+
+export const mock16BitImageDatasetItem: ImageDatasetItem = {
+  type: "image",
+  id: "fleurs.jpg",
+  split: "demo",
+  datasetId: "foo",
+  features: {
+    label: {
+      name: "label",
+      dtype: "str",
+      value: "printemps",
+    },
+    category_name: {
+      name: "category_name",
+      dtype: "str",
+      value: "foo",
+    },
+  },
+  views: {
+    image: mock16BitImage,
+  },
+  objects: [],
   embeddings: {},
 };

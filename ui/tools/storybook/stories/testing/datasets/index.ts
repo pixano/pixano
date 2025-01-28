@@ -6,3 +6,4 @@ License: CECILL-C
 
 export * from "./mockImageDatasetItem";
 export * from "./mockVideoDatasetItem";
+export * from "./mockVqaDatasetItem";

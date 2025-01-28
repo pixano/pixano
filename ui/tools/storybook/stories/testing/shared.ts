@@ -4,10 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { FeaturesValues, ImageDatasetItem, ItemView } from "@pixano/core/src";
+import type { AnnotationType, EntityType, FeaturesValues, ImageType, ViewType } from "@pixano/core";
+import { BaseSchema, Image } from "@pixano/core";
 import fleurs from "../../assets/fleurs.jpg";
 import tiff from "../../assets/tiff.png";
-import { imgThumbnail } from "../assets/base64image";
 
 // IMPORT ALL IMAGES
 export const gallery: string[] = Object.values(
@@ -17,70 +17,81 @@ export const gallery: string[] = Object.values(
   }),
 );
 
-export const mockImage: ItemView = {
-  id: "image",
-  type: "image",
-  uri: fleurs.slice(1),
-  thumbnail: imgThumbnail,
-  frame_number: undefined,
-  total_frames: undefined,
-  features: {
-    width: {
-      name: "width",
-      dtype: "int",
-      value: 770,
-    },
-    height: {
-      name: "height",
-      dtype: "int",
-      value: 513,
-    },
+export const mockAnnotationType: AnnotationType = {
+  item_ref: {
+    id: "fleurs.jpg",
+    name: "fleurs.jpg",
+  },
+  view_ref: {
+    id: "view_id",
+    name: "view_name",
+  },
+  entity_ref: {
+    id: "entity_id",
+    name: "entity_name",
+  },
+  source_ref: {
+    id: "Ground Truth",
+    name: "Ground Truth",
   },
 };
 
-export const mock16BitImage: ItemView = {
-  id: "image",
-  type: "image",
-  uri: tiff.slice(1),
-  thumbnail: "img",
-  frame_number: undefined,
-  total_frames: undefined,
-  features: {
-    width: {
-      name: "width",
-      dtype: "int",
-      value: 770,
-    },
-    height: {
-      name: "height",
-      dtype: "int",
-      value: 513,
-    },
+export const mockEntityType: EntityType = {
+  item_ref: {
+    id: "fleurs.jpg",
+    name: "fleurs.jpg",
+  },
+  view_ref: {
+    id: "image",
+    name: "image",
+  },
+  parent_ref: {
+    id: "",
+    name: "",
   },
 };
-export const mock16BitImageDatasetItem: ImageDatasetItem = {
-  type: "image",
-  id: "fleurs.jpg",
-  split: "demo",
-  datasetId: "foo",
-  features: {
-    label: {
-      name: "label",
-      dtype: "str",
-      value: "printemps",
-    },
-    category_name: {
-      name: "category_name",
-      dtype: "str",
-      value: "foo",
-    },
+
+export const mockViewType: ViewType = {
+  item_ref: {
+    id: "fleurs.jpg",
+    name: "fleurs.jpg",
   },
-  views: {
-    image: mock16BitImage,
+  parent_ref: {
+    id: "",
+    name: "",
   },
-  objects: [],
-  embeddings: {},
 };
+
+const baseImageData = {
+  width: 770,
+  height: 513,
+  format: "jpg",
+};
+
+const imageData: ImageType = {
+  ...baseImageData,
+  url: fleurs.slice(1),
+};
+
+export const mockImage = new Image({
+  id: "image_id",
+  table_info: { name: "image", group: "view", base_schema: BaseSchema.Image },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  data: { ...imageData, ...mockViewType },
+});
+
+const sixteenBitsImageData: ImageType = {
+  ...baseImageData,
+  url: tiff.slice(1),
+};
+export const mock16BitImage = new Image({
+  id: "image_id",
+  table_info: { name: "image", group: "view", base_schema: BaseSchema.Image },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  data: { ...sixteenBitsImageData, ...mockViewType },
+});
 
 export const mockFeaturesValues: FeaturesValues = {
   main: {
