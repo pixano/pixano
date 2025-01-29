@@ -4,4 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export { default as QuestionForm } from "./QuestionForm.svelte";
+export * from "./groupMessagesByNumber";

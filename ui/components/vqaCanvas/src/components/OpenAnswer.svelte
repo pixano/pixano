@@ -8,9 +8,9 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { createEventDispatcher } from "svelte";
 
-  export let message: Message;
+  export let answer: Message;
 
-  const messageId = message.id;
+  const answerId = answer.id;
 
   const dispatch = createEventDispatcher();
 
@@ -19,15 +19,15 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLInputElement;
     },
   ) => {
-    const newMessageContent = e.currentTarget.value;
-    dispatch("messageContentChange", { messageId, newMessageContent });
+    const answerContent = e.currentTarget.value;
+    dispatch("answerContentChange", { answerId, answerContent });
   };
 </script>
 
 <input
   type="text"
-  value={message.data.content}
+  value={answer.data.content}
   placeholder="Your answer here"
-  class="p-2 text-slate-800 placeholder-slate-500 bg-slate-50 outline-none"
+  class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
   on:blur={handleBlur}
 />
