@@ -50,7 +50,7 @@ License: CECILL-C
     //TODO: need to take schema relation into account (when schema relation available)
     //required when there is several differents tracks / entities / subentities for different purpose
     let featuresArray: InputFeatures = [];
-    Object.entries(schema.schemas).forEach(([tname, sch]) => {
+    Object.entries(schema?.schemas ?? {}).forEach(([tname, sch]) => {
       let nonFeatsFields: string[] = [];
       let group = "entities";
       if ([BaseSchema.Entity, BaseSchema.Track, baseSchema].includes(sch.base_schema)) {

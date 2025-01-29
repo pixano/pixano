@@ -9,19 +9,20 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+import { datasetSchema as datasetSchemaStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 import {
-  mock16BitImageDatasetItem,
   mockFeaturesValues,
   mockHandleSaveItem,
   MockInteractiveImageSegmenter,
 } from "../../testing";
-import { mockImageDatasetItem } from "../../testing/datasets";
+import { mockVqaDatasetItem } from "../../testing/datasets";
+import { datasetSchema } from "../../testing/datasetSchema";
 
 type Story = StoryObj<typeof meta>;
 
 const meta = {
-  title: "Components/Workspaces/ImageWorkspace",
+  title: "Components/Workspaces/VqaWorkspace",
   component: DatasetItemWorkspace,
   tags: ["autodocs"],
 } satisfies Meta<DatasetItemWorkspace>;
@@ -30,27 +31,18 @@ export default meta;
 
 const mock = new MockInteractiveImageSegmenter();
 interactiveSegmenterModel.set(mock);
+datasetSchemaStore.set(datasetSchema);
 
-export const BasicImageWorkspace: Story = {
+console.log("mock", mockVqaDatasetItem.views);
+
+export const VqaWorkspace: Story = {
   args: {
     canSaveCurrentItem: false,
     isLoading: false,
     shouldSaveCurrentItem: false,
     models: [],
     handleSaveItem: mockHandleSaveItem,
-    selectedItem: mockImageDatasetItem,
-    featureValues: mockFeaturesValues,
-  },
-};
-
-export const SixteenBitImageWorkspace: Story = {
-  args: {
-    canSaveCurrentItem: false,
-    isLoading: false,
-    shouldSaveCurrentItem: false,
-    models: [],
-    handleSaveItem: mockHandleSaveItem,
-    selectedItem: mock16BitImageDatasetItem,
+    selectedItem: mockVqaDatasetItem,
     featureValues: mockFeaturesValues,
   },
 };

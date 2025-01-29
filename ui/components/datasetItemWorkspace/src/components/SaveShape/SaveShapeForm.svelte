@@ -111,13 +111,13 @@ License: CECILL-C
     let topEntitySchema: DS_NamedSchema | undefined = undefined;
     let subEntitySchema: DS_NamedSchema | undefined = undefined;
     let trackSchemas: DS_NamedSchema[] = [];
-    Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
+    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
       if (sch.base_schema === BaseSchema.Track) {
         trackSchemas.push({ ...sch, name });
       }
     });
     let entitySchemas: DS_NamedSchema[] = [];
-    Object.entries($datasetSchema.schemas).forEach(([name, sch]) => {
+    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
       if (sch.base_schema === BaseSchema.Entity) entitySchemas.push({ ...sch, name });
     });
     if (trackSchemas.length > 0) {
@@ -128,7 +128,7 @@ License: CECILL-C
     } else if (entitySchemas.length > 0) {
       topEntitySchema = entitySchemas[0];
     } else {
-      console.error("ERROR: No available schema Entity", $datasetSchema.schemas);
+      console.error("ERROR: No available schema Entity", $datasetSchema?.schemas ?? {});
       throw new Error("ERROR: No available schema Entity");
     }
 
