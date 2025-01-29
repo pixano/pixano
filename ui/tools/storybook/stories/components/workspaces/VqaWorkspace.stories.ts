@@ -31,7 +31,7 @@ export default meta;
 
 const mock = new MockInteractiveImageSegmenter();
 interactiveSegmenterModel.set(mock);
-datasetSchemaStore.set(datasetSchema)
+datasetSchemaStore.set(datasetSchema);
 
 console.log("mock", mockVqaDatasetItem.views);
 
