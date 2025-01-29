@@ -174,7 +174,8 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-rows-[calc(100%-280px)_280px]">
+  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+    <VqaArea messages={$messages} on:messageContentChange={handleMessageContentChange} />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
@@ -189,7 +190,6 @@ License: CECILL-C
       bind:currentAnn
       bind:newShape={$newShape}
     />
-    <VqaArea messages={$messages} on:messageContentChange={handleMessageContentChange} />
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">
