@@ -28,6 +28,8 @@ const bboxData: BBoxType = {
   confidence: 1,
 };
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// The unused variables will be used in future commits
 const bbox = new BBox({
   id: "bbox_id",
   table_info: { name: "bbox", group: "annotations", base_schema: BaseSchema.BBox },

@@ -70,7 +70,7 @@ const baseImageData = {
 
 const imageData: ImageType = {
   ...baseImageData,
-  url: fleurs.slice(1),
+  url: (fleurs as string).slice(1),
 };
 
 export const mockImage = new Image({
@@ -83,7 +83,7 @@ export const mockImage = new Image({
 
 const sixteenBitsImageData: ImageType = {
   ...baseImageData,
-  url: tiff.slice(1),
+  url: (tiff as string).slice(1),
 };
 export const mock16BitImage = new Image({
   id: "image_id",
