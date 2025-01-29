@@ -94,6 +94,28 @@ License: CECILL-C
   const onAbort = () => {
     cleanFusion();
   };
+
+  function shortcutHandler(event: KeyboardEvent) {
+    if ($selectedTool?.type !== ToolType.Fusion) return;
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true"
+    ) {
+      return; // Ignore shortcut when typing text
+    }
+
+    switch (event.key) {
+      case "Escape":
+        onAbort();
+        break;
+      case "Enter":
+        onValidate();
+        break;
+    }
+  }
 </script>
 
 <div
@@ -109,11 +131,16 @@ License: CECILL-C
     <ReplaceAll />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Fusion}
-    <IconButton tooltipContent={"Validate association"} on:click={onValidate} selected={false}>
+    <IconButton
+      tooltipContent={"Validate association (Enter)"}
+      on:click={onValidate}
+      selected={false}
+    >
       <Check />
     </IconButton>
-    <IconButton tooltipContent={"Abort association"} on:click={onAbort} selected={false}>
+    <IconButton tooltipContent={"Abort association (Escape)"} on:click={onAbort} selected={false}>
       <X />
     </IconButton>
   {/if}
 </div>
+<svelte:window on:keydown={shortcutHandler} />
