@@ -19,7 +19,7 @@ import {
   type MaskType,
   type MessageType,
 } from "@pixano/core";
-import { mockAnnotationType, mockEntityType, mockImage } from "../shared";
+import { mockAnnotationType, mockEntityType, mockImage, mockMessageType } from "../shared";
 
 const bboxData: BBoxType = {
   coords: [0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153],
@@ -114,7 +114,7 @@ const entity = new Entity({
 });
 
 const conversation = new Conversation({
-  id: `entity_id`,
+  id: `conversation_id`,
   table_info: { name: "conversation", group: "entity", base_schema: BaseSchema.Conversation },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -150,7 +150,7 @@ const messages = messagesData.map(
       updated_at: new Date().toISOString(),
       data: {
         ...data,
-        ...mockAnnotationType,
+        ...mockMessageType,
       },
     }),
 );
@@ -166,6 +166,7 @@ const item = new Item({
 export const mockVqaDatasetItem: DatasetItem = {
   item,
   entities: {
+    multimodal_entity: [entity],
     conversations: [conversation],
   },
   annotations: {

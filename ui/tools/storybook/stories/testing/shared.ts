@@ -17,7 +17,7 @@ export const gallery: string[] = Object.values(
   }),
 );
 
-export const mockAnnotationType: AnnotationType = {
+const baseAnnotationType = {
   item_ref: {
     id: "fleurs.jpg",
     name: "fleurs.jpg",
@@ -26,13 +26,24 @@ export const mockAnnotationType: AnnotationType = {
     id: "view_id",
     name: "view_name",
   },
+  source_ref: {
+    id: "Ground Truth",
+    name: "Ground Truth",
+  },
+};
+export const mockAnnotationType: AnnotationType = {
+  ...baseAnnotationType,
   entity_ref: {
     id: "entity_id",
     name: "entity_name",
   },
-  source_ref: {
-    id: "Ground Truth",
-    name: "Ground Truth",
+};
+
+export const mockMessageType: AnnotationType = {
+  ...baseAnnotationType,
+  entity_ref: {
+    id: "conversation_id",
+    name: "conversation_name",
   },
 };
 
