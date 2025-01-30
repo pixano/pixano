@@ -12,25 +12,25 @@ License: CECILL-C
   import { VqaArea } from "@pixano/vqa-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
-// Import stores and API functions
+  // Import stores and API functions
   import type { ContentChangeEvent } from "@pixano/vqa-canvas/src/lib/types";
   import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
-      annotations,
-      colorScale,
-      filters,
-      imageSmoothing,
-      itemBboxes,
-      itemKeypoints,
-      itemMasks,
-      itemMetas,
-      messages,
-      newShape,
-      preAnnotationIsActive,
-      saveData,
-      selectedKeypointsTemplate,
-      selectedTool,
+    annotations,
+    colorScale,
+    filters,
+    imageSmoothing,
+    itemBboxes,
+    itemKeypoints,
+    itemMasks,
+    itemMetas,
+    messages,
+    newShape,
+    preAnnotationIsActive,
+    saveData,
+    selectedKeypointsTemplate,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { createUpdatedMessage } from "../../lib/utils/createUpdatedMessage";
 

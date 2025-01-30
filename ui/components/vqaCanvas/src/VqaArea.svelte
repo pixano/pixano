@@ -12,11 +12,11 @@ License: CECILL-C
   // Exports
   export let messages: Message[];
 
-  const messagesByNumber = groupMessagesByNumber(messages);
+  $: messagesByNumber = groupMessagesByNumber(messages);
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
   {#each messagesByNumber as messages}
-    <QuestionForm {messages} on:answerContentChange />
+    <QuestionForm bind:messages on:answerContentChange />
   {/each}
 </div>

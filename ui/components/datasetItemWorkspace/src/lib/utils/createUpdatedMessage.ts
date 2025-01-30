@@ -20,6 +20,7 @@ export const createUpdatedMessage = ({
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const { ui, ...rest } = message;
 
+  // Mandatory for storybook not to crash
   if ("_constructor-name_" in rest) {
     delete rest["_constructor-name_"];
   }
@@ -27,7 +28,7 @@ export const createUpdatedMessage = ({
   return new Message({
     ...rest,
     data: {
-      ...message.data,
+      ...rest.data,
       content: newContent,
       ...(newChoices !== undefined && { answers: newChoices }),
       ...(explanation !== undefined && { explanations: [explanation] }),
