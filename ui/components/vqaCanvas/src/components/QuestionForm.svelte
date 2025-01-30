@@ -7,8 +7,8 @@ License: CECILL-C
 <script lang="ts">
   import type { Message } from "@pixano/core";
   import { MessageTypeEnum, QuestionTypeEnum } from "@pixano/core";
-  import OpenAnswer from "./OpenAnswer.svelte";
   import ClosedAnswers from "./ClosedAnswers.svelte";
+  import OpenAnswer from "./OpenAnswer.svelte";
   import QuestionContent from "./QuestionContent.svelte";
   import QuestionHeader from "./QuestionHeader.svelte";
 
@@ -23,17 +23,20 @@ License: CECILL-C
 
   const isQuestionCompleted = answers.every((a) => a.data.content);
   const questionNumber = question.data.number + 1;
+
+  const choices = question.data.choices as string[];
+  const questionType = question.data.question_type as QuestionTypeEnum;
 </script>
 
 <div class="flex flex-col gap-2">
   <QuestionHeader {questionNumber} {isQuestionCompleted} />
   <QuestionContent content={question.data.content} />
 
-  {#if question.data.question_type === QuestionTypeEnum.OPEN}
-    {#each answers as answer}
-      <OpenAnswer {answer} />
-    {/each}
-  {:else}
-    <ClosedAnswers choices={question.data.choices} questionType={question.data.question_type} />
-  {/if}
+  {#each answers as answer}
+    {#if question.data.question_type === QuestionTypeEnum.OPEN}
+      <OpenAnswer {answer} on:answerContentChange />
+    {:else}
+      <ClosedAnswers answerId={answer.id} {choices} {questionType} on:answerContentChange />
+    {/if}
+  {/each}
 </div>

@@ -8,18 +8,29 @@ import { Message } from "@pixano/core";
 
 export const createUpdatedMessage = ({
   message,
-  newMessageContent,
+  newContent,
+  newChoices,
+  explanation,
 }: {
   message: Message;
-  newMessageContent: string;
+  newContent: string;
+  newChoices?: string[];
+  explanation?: string;
 }) => {
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const { ui, ...rest } = message;
+
+  if ("_constructor-name_" in rest) {
+    delete rest["_constructor-name_"];
+  }
+
   return new Message({
     ...rest,
     data: {
       ...message.data,
-      content: newMessageContent,
+      content: newContent,
+      ...(newChoices !== undefined && { answers: newChoices }),
+      ...(explanation !== undefined && { explanations: [explanation] }),
     },
   });
 };

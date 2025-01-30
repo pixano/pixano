@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { Message } from "@pixano/core";
   import { QuestionForm } from "./components";
-  import { groupMessagesByNumber } from "./utils";
+  import { groupMessagesByNumber } from "./lib/utils";
 
   // Exports
   export let messages: Message[];
@@ -17,6 +17,6 @@ License: CECILL-C
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
   {#each messagesByNumber as messages}
-    <QuestionForm {messages} />
+    <QuestionForm {messages} on:answerContentChange />
   {/each}
 </div>

@@ -19,8 +19,8 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLInputElement;
     },
   ) => {
-    const answerContent = e.currentTarget.value;
-    dispatch("answerContentChange", { answerId, answerContent });
+    const newContent = e.currentTarget.value;
+    dispatch("answerContentChange", { answerId, newContent });
   };
 </script>
 
