@@ -162,7 +162,7 @@ const messagesData: MessageType[] = [
     type: MessageTypeEnum.ANSWER,
     content: "",
     timestamp: new Date().toISOString(),
-    answers: ["D"],
+    answers: [""],
     explanations: [""],
   },
   {
