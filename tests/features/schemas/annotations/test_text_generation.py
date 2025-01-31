@@ -38,29 +38,55 @@ class TestMessage:
         assert msg2.user == "abc"
         assert msg2.type == "QUESTION"
         assert msg2.content == "Write a 500-word summary of this document."
-        assert msg2.answer_choices == []
+        assert msg2.choices == []
 
         msg3 = Message(
             number=1,
             user="abc",
             type="QUESTION",
             content="What is your favourite color?",
-            answer_choices=["R : red", "B : blue"],
+            choices=["R : red", "B : blue"],
         )
         assert msg3.user == "abc"
         assert msg3.type == "QUESTION"
         assert msg3.content == "What is your favourite color?"
-        assert msg3.answer_choices == ["R : red", "B : blue"]
+        assert msg3.choices == ["R : red", "B : blue"]
 
         msg4 = Message(number=2, user="def", type="ANSWER", content="B")
         assert msg4.user == "def"
         assert msg4.type == "ANSWER"
         assert msg4.content == "B"
-        assert msg4.answer_choices == []
+        assert msg4.choices == []
 
         with pytest.raises(ValidationError):
-            msg5 = Message(number=2, user="ghi", type="ANSWER", content="B", answer_choices=["R : red", "B : blue"])
+            msg5 = Message(number=2, user="ghi", type="ANSWER", content="B", choices=["R : red", "B : blue"])
             del msg5
+
+        msg6 = Message(
+            number=3,
+            user="jkl",
+            type="QUESTION",
+            question_type="SINGLE_CHOICE",
+            content="What is the airspeed velocity of an unladen swallow?",
+            choices=["European swallow", "African swallow"],
+        )
+        assert msg6.user == "jkl"
+        assert msg6.type == "QUESTION"
+        assert msg6.question_type == "SINGLE_CHOICE"
+        assert msg6.content == "What is the airspeed velocity of an unladen swallow?"
+        assert msg6.choices == ["European swallow", "African swallow"]
+
+        msg7 = Message(
+            number=3,
+            user="jkl",
+            type="ANSWER",
+            question_type="SINGLE_CHOICE_EXPLANATION",
+            content="[[1]]   The african swallow is faster",
+        )
+        assert msg7.user == "jkl"
+        assert msg7.type == "ANSWER"
+        assert msg7.question_type == "SINGLE_CHOICE_EXPLANATION"
+        assert msg7.content == "[[1]] The african swallow is faster"
 
     def test_none(self):
         none_msg = Message.none()
@@ -71,7 +97,7 @@ class TestMessage:
         assert none_msg.source_ref == SourceRef.none()
         assert none_msg.user == ""
         assert none_msg.content == ""
-        assert none_msg.answer_choices == []
+        assert none_msg.choices == []
         assert none_msg.type == "QUESTION"
 
 
