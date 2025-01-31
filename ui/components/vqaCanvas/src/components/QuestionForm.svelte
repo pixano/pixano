@@ -8,10 +8,11 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { MessageTypeEnum, QuestionTypeEnum } from "@pixano/core";
   import { isQuestionCompleted } from "../lib/utils";
-  import ClosedAnswers from "./ClosedAnswers.svelte";
+  import MultipleChoiceAnswer from "./MultipleChoiceAnswer.svelte";
   import OpenAnswer from "./OpenAnswer.svelte";
   import QuestionContent from "./QuestionContent.svelte";
   import QuestionHeader from "./QuestionHeader.svelte";
+  import SingleChoiceAnswer from "./SingleChoiceAnswer.svelte";
 
   export let messages: Message[];
 
@@ -27,7 +28,6 @@ License: CECILL-C
   const questionNumber = question.data.number + 1;
 
   const choices = question.data.choices as string[];
-  const questionType = question.data.question_type as QuestionTypeEnum;
 </script>
 
 <div class="flex flex-col gap-2">
@@ -37,8 +37,14 @@ License: CECILL-C
   {#each answers as answer}
     {#if question.data.question_type === QuestionTypeEnum.OPEN}
       <OpenAnswer {answer} on:answerContentChange />
+    {:else if question.data.question_type === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION}
+      <MultipleChoiceAnswer {answer} {choices} withExplanation={true} on:answerContentChange />
+    {:else if question.data.question_type === QuestionTypeEnum.MULTI_CHOICE}
+      <MultipleChoiceAnswer {answer} {choices} withExplanation={false} on:answerContentChange />
+    {:else if question.data.question_type === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION}
+      <SingleChoiceAnswer {answer} {choices} withExplanation={true} on:answerContentChange />
     {:else}
-      <ClosedAnswers {answer} {choices} {questionType} on:answerContentChange />
+      <SingleChoiceAnswer {answer} {choices} withExplanation={false} on:answerContentChange />
     {/if}
   {/each}
 </div>

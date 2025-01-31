@@ -5,20 +5,18 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { Message, QuestionTypeEnum } from "@pixano/core";
+  import type { Message } from "@pixano/core";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
   import { createEventDispatcher } from "svelte";
   import type { ContentChangeEvent } from "../lib/types";
   import { answerChoicesToCheckboxsState, serializeMessageContent } from "../lib/utils";
 
   export let choices: string[];
-  export let questionType: QuestionTypeEnum;
   export let answer: Message;
+  export let withExplanation: boolean;
 
   let explanation: string = (answer.data.explanations as string[])[0] ?? "";
   let checked: boolean[] = answerChoicesToCheckboxsState((answer.data.answers as string[]) ?? []);
-
-  const withExplanation = questionType.includes("EXPLANATION");
 
   const dispatch = createEventDispatcher();
 
