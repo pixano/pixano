@@ -6,6 +6,8 @@
 
 from enum import Enum
 
+from .dataset_items import DefaultImageDatasetItem, DefaultVideoDatasetItem, DefaultVQADatasetItem
+
 
 class WorkspaceType(Enum):
     """Workspace type.
@@ -29,4 +31,7 @@ class WorkspaceType(Enum):
 
 __all__ = [
     "WorkspaceType",
+    "DefaultImageDatasetItem",
+    "DefaultVideoDatasetItem",
+    "DefaultVQADatasetItem",
 ]

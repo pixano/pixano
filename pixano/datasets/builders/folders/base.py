@@ -12,6 +12,7 @@ import shortuuid
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
+from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
 from pixano.features.schemas.annotations.annotation import Annotation
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
@@ -69,10 +70,13 @@ class FolderBaseBuilder(DatasetBuilder):
         entity_schema: The schema of the entities.
         METADATA_FILENAME: The metadata filename.
         EXTENSIONS: The list of supported extensions.
+        WORKSPACE_TYPE: The workspace type of the dataset. Subclass should override this attribute if workspace is
+            known.
     """
 
     METADATA_FILENAME: str = "metadata.jsonl"
     EXTENSIONS: list[str]
+    WORKSPACE_TYPE = WorkspaceType.UNDEFINED
 
     def __init__(
         self,
@@ -92,6 +96,7 @@ class FolderBaseBuilder(DatasetBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
+        info.workspace = self.WORKSPACE_TYPE
         super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
         self.source_dir = Path(source_dir)
         if url_prefix is None:

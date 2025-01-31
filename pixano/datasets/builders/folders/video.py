@@ -9,7 +9,7 @@ from pathlib import Path
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
-from pixano.features import BBox, KeyPoints, SequenceFrame, Track, Tracklet
+from pixano.datasets.workspaces.dataset_items import DefaultVideoDatasetItem
 
 from .base import FolderBaseBuilder
 
@@ -26,20 +26,11 @@ VIDEO_EXTENSIONS = [
 ]
 
 
-class DefaultVideoDatasetItem(DatasetItem):
-    """Default Video DatasetItem Schema."""
-
-    image: list[SequenceFrame]
-    tracks: list[Track]
-    tracklets: list[Tracklet]
-    bboxes: list[BBox]
-    keypoints: list[KeyPoints]
-
-
 class VideoFolderBuilder(FolderBaseBuilder):
     """Builder for video datasets stored in a folder."""
 
     EXTENSIONS = VIDEO_EXTENSIONS
+    WORKSPACE_TYPE = WorkspaceType.VIDEO
 
     def __init__(
         self,
@@ -49,7 +40,7 @@ class VideoFolderBuilder(FolderBaseBuilder):
         dataset_item: type[DatasetItem] = DefaultVideoDatasetItem,
         url_prefix: Path | str | None = None,
     ) -> None:
-        """Initialize the `VqaFolderBuilder`.
+        """Initialize the `VideoFolderBuilder`.
 
         Args:
             source_dir: The source directory for the dataset.
@@ -59,8 +50,6 @@ class VideoFolderBuilder(FolderBaseBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
-        if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
-            info.workspace = WorkspaceType.VIDEO
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
         )
