@@ -8,29 +8,22 @@ from pathlib import Path
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.features import Conversation, Image, Message
+from pixano.datasets.workspaces import DefaultVQADatasetItem, WorkspaceType
 
 from .image import ImageFolderBuilder
 
 
-class DefaultVqaDatasetItem(DatasetItem):
-    """Default VQA DatasetItem Schema."""
-
-    image: Image
-    conversations: list[Conversation]
-    messages: list[Message]
-
-
-class VqaFolderBuilder(ImageFolderBuilder):
+class VQAFolderBuilder(ImageFolderBuilder):
     """Builder for vqa datasets stored in a folder."""
+
+    WORKSPACE_TYPE = WorkspaceType.IMAGE_VQA
 
     def __init__(
         self,
         source_dir: Path | str,
         target_dir: Path | str,
         info: DatasetInfo,
-        dataset_item: type[DatasetItem] = DefaultVqaDatasetItem,
+        dataset_item: type[DatasetItem] = DefaultVQADatasetItem,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `VqaFolderBuilder`.
@@ -43,8 +36,6 @@ class VqaFolderBuilder(ImageFolderBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
-        if not hasattr(info, "workspace") or info.workspace is None or info.workspace == WorkspaceType.UNDEFINED:
-            info.workspace = WorkspaceType.IMAGE_VQA
         super().__init__(
             source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
         )

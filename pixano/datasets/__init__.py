@@ -10,6 +10,7 @@ from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
 from .dataset_stat import DatasetStatistic
 from .queries import TableQueryBuilder
+from .workspaces import DefaultImageDatasetItem, DefaultVideoDatasetItem, DefaultVQADatasetItem, WorkspaceType
 
 
 __all__ = [
@@ -19,5 +20,9 @@ __all__ = [
     "DatasetItem",
     "DatasetSchema",
     "DatasetStatistic",
+    "DefaultImageDatasetItem",
+    "DefaultVideoDatasetItem",
+    "DefaultVQADatasetItem",
     "TableQueryBuilder",
+    "WorkspaceType",
 ]
