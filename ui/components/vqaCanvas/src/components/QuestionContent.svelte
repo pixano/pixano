@@ -5,9 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, type Message } from "@pixano/core";
+  import { cn } from "@pixano/core";
 
-  export let message: Message;
+  export let content: string;
 </script>
 
-<div class={cn("font-semibold")}>{message.data.content}</div>
+<div class={cn("text-gray-500")}>{content}</div>

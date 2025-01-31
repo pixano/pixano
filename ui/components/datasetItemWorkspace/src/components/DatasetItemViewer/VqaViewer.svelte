@@ -13,6 +13,7 @@ License: CECILL-C
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   // Import stores and API functions
+  import type { ContentChangeEvent } from "@pixano/vqa-canvas/src/lib/types";
   import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
@@ -135,16 +136,11 @@ License: CECILL-C
   // Reactive statement to set the selected tool
   $: selectedTool.set($selectedTool);
 
-  const handleMessageContentChange = (
-    event: CustomEvent<{
-      messageId: string;
-      newMessageContent: string;
-    }>,
-  ) => {
+  const handleAnswerContentChange = (event: CustomEvent<ContentChangeEvent>) => {
     event.preventDefault();
 
-    const { messageId, newMessageContent } = event.detail;
-    const prevMessage = $messages.find((message) => message.id === messageId);
+    const { answerId, newContent, newChoices, explanation } = event.detail;
+    const prevMessage = $messages.find((message) => message.id === answerId);
 
     if (!prevMessage) {
       return;
@@ -152,12 +148,14 @@ License: CECILL-C
 
     const updatedMessage = createUpdatedMessage({
       message: prevMessage,
-      newMessageContent,
+      newContent,
+      newChoices,
+      explanation,
     });
 
     annotations.update((prevAnnotations) =>
       prevAnnotations.map((annotation) =>
-        annotation.is_type(BaseSchema.Message) && annotation.id === messageId
+        annotation.is_type(BaseSchema.Message) && annotation.id === answerId
           ? updatedMessage
           : annotation,
       ),
@@ -174,7 +172,8 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-rows-[calc(100%-280px)_280px]">
+  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+    <VqaArea messages={$messages} on:answerContentChange={handleAnswerContentChange} />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
@@ -189,7 +188,6 @@ License: CECILL-C
       bind:currentAnn
       bind:newShape={$newShape}
     />
-    <VqaArea messages={$messages} on:messageContentChange={handleMessageContentChange} />
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">

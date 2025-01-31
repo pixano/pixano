@@ -4,4 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export { default as QuestionForm } from "./QuestionForm.svelte";
+export interface ContentChangeEvent {
+  answerId: string;
+  newContent: string;
+  newChoices: string[];
+  explanation: string;
+}

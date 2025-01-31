@@ -16,15 +16,44 @@ export enum MessageTypeEnum {
   ANSWER = "ANSWER",
 }
 
-export const messageSchema = z
+export enum QuestionTypeEnum {
+  OPEN = "OPEN",
+  SINGLE_CHOICE = "SINGLE_CHOICE",
+  SINGLE_CHOICE_EXPLANATION = "SINGLE_CHOICE_EXPLANATION",
+  MULTI_CHOICE = "MULTI_CHOICE",
+  MULTI_CHOICE_EXPLANATION = "MULTI_CHOICE_EXPLANATION",
+}
+
+const baseMessageSchema = z
   .object({
     number: z.number(),
     user: z.string(),
-    type: z.nativeEnum(MessageTypeEnum),
-    content: z.string(),
     timestamp: z.string(),
+    content: z.string(),
   })
   .passthrough();
+
+const questionSchema = baseMessageSchema.extend({
+  type: z.literal(MessageTypeEnum.QUESTION),
+  choices: z.string().array(),
+  question_type: z.nativeEnum(QuestionTypeEnum),
+});
+
+const answerSchema = baseMessageSchema.extend({
+  type: z.literal(MessageTypeEnum.ANSWER),
+  answers: z.string().array(),
+  explanations: z.string().array(),
+});
+
+const systemSchema = baseMessageSchema.extend({
+  type: z.literal(MessageTypeEnum.SYSTEM),
+});
+
+export const messageSchema = z.discriminatedUnion("type", [
+  questionSchema,
+  answerSchema,
+  systemSchema,
+]);
 
 export type MessageType = z.infer<typeof messageSchema>;
 
@@ -42,6 +71,17 @@ export class Message extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["number", "user", "type", "content", "timestamp"]);
+    return super
+      .nonFeaturesFields()
+      .concat([
+        "number",
+        "user",
+        "type",
+        "content",
+        "timestamp",
+        "choices",
+        "question_type",
+        "explanation",
+      ]);
   }
 }
