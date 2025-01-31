@@ -3,6 +3,7 @@ Copyright: CEA-LIST/DIASI/SIALV/LVA
 Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------->
+
 <script lang="ts">
   import { Label, RadioGroup } from "bits-ui";
   import { Check } from "lucide-svelte";
