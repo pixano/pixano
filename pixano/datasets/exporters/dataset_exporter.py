@@ -113,6 +113,8 @@ class DatasetExporter(ABC):
         for num_split_items, split in zip(splits["count_star()"], splits["split"]):
             if items_per_file is None:
                 split_items_per_file = num_split_items
+            else:
+                split_items_per_file = items_per_file
             if batch_size is None:
                 batch_size = num_split_items
 
