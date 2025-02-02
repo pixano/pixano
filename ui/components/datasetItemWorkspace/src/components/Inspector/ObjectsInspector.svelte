@@ -23,7 +23,7 @@ License: CECILL-C
   import { afterUpdate } from "svelte";
 
   let allTopEntities: Entity[];
-  let selectedEntities: string[];
+  let selectedEntitiesId: string[];
   const thumbnails: Record<string, ObjectThumbnail | null> = {};
 
   //Note: Previously Entities where grouped by source
@@ -47,25 +47,25 @@ License: CECILL-C
       allTopEntitiesSet.add(getTopEntity(ann, $entities));
     });
     allTopEntities = Array.from(allTopEntitiesSet);
-    selectedEntities = [];
+    selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
       (ann) => ann.ui.highlighted === "self" && ann.is_type(BaseSchema.BBox),
     );
 
     if (highlightedBoxes.length > 0) {
-      const highlightedBoxesByEntity = Object.groupBy(
+      const highlightedBoxesByEntityId = Object.groupBy(
         highlightedBoxes,
         ({ data }) => data.entity_ref.id,
       );
-      selectedEntities = Object.keys(highlightedBoxesByEntity);
-      for (const [entity, entityBoxes] of Object.entries(highlightedBoxesByEntity)) {
+      selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
+      for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
         if (entityBoxes) {
           const selectedBox = entityBoxes[Math.floor(entityBoxes.length / 2)];
           if (selectedBox) {
             const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
             if (selectedThumbnail) {
-              thumbnails[entity] = selectedThumbnail;
+              thumbnails[entityId] = selectedThumbnail;
             }
           }
         }
@@ -86,11 +86,11 @@ License: CECILL-C
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
     <div id="preAnnotationThumbnail">
-      {#if selectedEntities.length > 0}
+      {#if selectedEntitiesId.length > 0}
         <span class="flex justify-center font-medium text-slate-800">
-          Selected object{selectedEntities.length > 1 ? "s" : ""}
+          Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
         </span>
-        {#each selectedEntities as selectedEntity}
+        {#each selectedEntitiesId as selectedEntity}
           <span class="flex justify-center text-slate-800">{selectedEntity}</span>
           {#if thumbnails[selectedEntity]}
             {#key thumbnails[selectedEntity].coords[0]}
@@ -107,9 +107,11 @@ License: CECILL-C
         {/each}
       {/if}
       <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-        {#each allTopEntities as entity}
-          <ObjectCard bind:entity />
-        {/each}
+        {#key allTopEntities.length}
+          {#each allTopEntities as entity}
+            <ObjectCard {entity} />
+          {/each}
+        {/key}
       </ObjectsModelSection>
     </div>
   {/if}

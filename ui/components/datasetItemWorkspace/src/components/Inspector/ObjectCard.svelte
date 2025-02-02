@@ -277,21 +277,25 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumbnails: ObjectThumbnail[] = [];
-  for (const view of Object.keys($views)) {
-    const highlightedBoxesByView = entity.ui.childs?.filter(
-      (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
-    );
-    if (highlightedBoxesByView) {
-      const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
-      if (selectedBox) {
-        const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
-        if (selectedThumbnail) {
-          thumbnails.push(selectedThumbnail);
+  let thumbnails: ObjectThumbnail[] = [];
+  const setThumbnails = () => {
+    thumbnails = [];
+    for (const view of Object.keys($views)) {
+      const highlightedBoxesByView = entity.ui.childs?.filter(
+        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
+      );
+      if (highlightedBoxesByView) {
+        const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
+        if (selectedBox) {
+          const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+          if (selectedThumbnail) {
+            thumbnails.push(selectedThumbnail);
+          }
         }
       }
     }
-  }
+  };
+  $: $entities, setThumbnails();
 </script>
 
 {#if entity.table_info.name !== "conversations"}
