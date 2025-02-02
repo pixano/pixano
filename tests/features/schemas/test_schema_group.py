@@ -36,6 +36,11 @@ def test_schema_to_group(schema_type, expected):
     assert schema_to_group(schema_type) == expected
 
 
+def test_schema_to_group_error():
+    with pytest.raises(ValueError, match="Unknown schema type: 123456789"):
+        schema_to_group(123456789)
+
+
 @pytest.mark.parametrize(
     "group, plural, expected",
     [
@@ -57,3 +62,8 @@ def test_schema_to_group(schema_type, expected):
 )
 def test_group_to_str(group: SchemaGroup, plural: bool, expected: str):
     assert group_to_str(group, plural) == expected
+
+
+def test_group_to_str_error():
+    with pytest.raises(ValueError, match="Unknown schema group: unknown"):
+        group_to_str("unknown", False)
