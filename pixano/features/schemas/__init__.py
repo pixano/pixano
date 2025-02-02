@@ -58,7 +58,7 @@ from .entities import (
 )
 from .items import Item, is_item
 from .registry import register_schema
-from .schema_group import SchemaGroup
+from .schema_group import SchemaGroup, group_to_str, schema_to_group
 from .source import Source, SourceKind, create_source, is_source
 from .views import (
     Image,
@@ -135,6 +135,7 @@ __all__ = [
     "create_tracklet",
     "create_video",
     "create_view_embedding_function",
+    "group_to_str",
     "is_annotation",
     "is_base_schema",
     "is_bbox",
@@ -162,4 +163,5 @@ __all__ = [
     "is_video",
     "is_view_embedding",
     "register_schema",
+    "schema_to_group",
 ]

@@ -57,6 +57,7 @@ from .schemas import (
     create_tracklet,
     create_video,
     create_view_embedding_function,
+    group_to_str,
     is_annotation,
     is_base_schema,
     is_bbox,
@@ -84,6 +85,7 @@ from .schemas import (
     is_view,
     is_view_embedding,
     register_schema,
+    schema_to_group,
 )
 from .types import (
     AnnotationRef,
@@ -186,6 +188,7 @@ __all__ = [
     "create_video",
     "create_view_ref",
     "create_view_embedding_function",
+    "group_to_str",
     "is_annotation",
     "is_annotation_ref",
     "is_base_schema",
@@ -222,4 +225,5 @@ __all__ = [
     "is_view_embedding",
     "is_view_ref",
     "register_schema",
+    "schema_to_group",
 ]
