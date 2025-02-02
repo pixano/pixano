@@ -40,7 +40,7 @@ class TestDatasetExporter:
     ):
         export_dir = Path(tempfile.mkdtemp())
         exporter = DumbDatasetExporter(export_dir=export_dir, dataset=dataset_image_bboxes_keypoint, overwrite=True)
-        exporter.export(file_name, items_per_file, batch_size)
+        exporter.export(file_name, items_per_file=items_per_file, batch_size=batch_size)
 
         items_per_split = [("train", 2), ("test", 3)]
         sources = dataset_image_bboxes_keypoint.get_data(SchemaGroup.SOURCE.value, limit=int(1e9))
@@ -72,7 +72,6 @@ class TestDatasetExporter:
             else:
                 expected_num_files = ceil(num_items / items_per_file)
                 assert len(list(split_folder.iterdir())) == expected_num_files
-                print(list(split_folder.iterdir()))
                 for i in range(expected_num_files):
                     with open(split_folder / f"{expected_file_name}_{i}.txt", "r") as file:
                         json_content = json.load(file)

@@ -112,7 +112,7 @@ class DatasetExporter(ABC):
 
         for num_split_items, split in zip(splits["count_star()"], splits["split"]):
             if items_per_file is None:
-                items_per_file = num_split_items
+                split_items_per_file = num_split_items
             if batch_size is None:
                 batch_size = num_split_items
 
@@ -138,8 +138,9 @@ class DatasetExporter(ABC):
                     self.export_dataset_item(export_data, dataset_item)
 
                     if (
-                        cur_items_exported == num_split_items or cur_items_exported % items_per_file == 0
+                        cur_items_exported == num_split_items or cur_items_exported % split_items_per_file == 0
                     ):  # Export every n items
+                        print(cur_items_exported, num_split_items, split_items_per_file)
                         self.save_data(export_data, split, file_name, file_num)
 
                         file_num += 1
