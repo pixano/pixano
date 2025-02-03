@@ -16,7 +16,8 @@ License: CECILL-C
   export let message: Message;
 
   const messageId = message.id;
-  const richEditorContent = textSpansToHtml({ text: message.data.content, textSpans, colorScale });
+
+  $: richEditorContent = textSpansToHtml({ text: message.data.content, textSpans, colorScale });
 
   const mouseupListener = (
     e: MouseEvent & {
