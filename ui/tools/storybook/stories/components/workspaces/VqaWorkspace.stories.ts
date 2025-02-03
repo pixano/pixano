@@ -33,8 +33,6 @@ const mock = new MockInteractiveImageSegmenter();
 interactiveSegmenterModel.set(mock);
 datasetSchemaStore.set(datasetSchema);
 
-console.log("mock", mockVqaDatasetItem.views);
-
 export const VqaWorkspace: Story = {
   args: {
     canSaveCurrentItem: false,
