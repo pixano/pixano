@@ -15,10 +15,12 @@ import {
   Message,
   MessageTypeEnum,
   QuestionTypeEnum,
+  TextSpan,
   WorkspaceType,
   type BBoxType,
   type MaskType,
   type MessageType,
+  type TextSpanType,
 } from "@pixano/core";
 import { mockAnnotationType, mockEntityType, mockImage, mockMessageType } from "../shared";
 
@@ -126,32 +128,49 @@ const conversation = new Conversation({
   },
 });
 
-const messagesData: MessageType[] = [
-  {
-    number: 0,
-    user: "user",
-    type: MessageTypeEnum.QUESTION,
-    content:
-      'Deep learning is a subset of machine learning that focuses on utilizing neural networks to perform tasks such as classification, regression, and representation learning. The field takes inspiration from biological neuroscience and is centered around stacking artificial neurons into layers and "training" them to process data. The adjective "deep" refers to the use of multiple layers (ranging from three to several hundred or thousands) in the network. Methods used can be either supervised, semi-supervised or unsupervised.[2] Some common deep learning network architectures include fully connected networks, deep belief networks, recurrent neural networks, convolutional neural networks, generative adversarial networks, transformers, and neural radiance fields. These architectures have been applied to fields including computer vision, speech recognition, natural language processing, machine translation, bioinformatics, drug design, medical image analysis, climate science, material inspection and board game programs, where they have produced results comparable to and in some cases surpassing human expert performance.[3][4][5] Early forms of neural networks were inspired by information processing and distributed communication nodes in biological systems, particularly the human brain. However, current neural networks do not intend to model the brain function of organisms, and are generally seen as low-quality models for that purpose.',
-    timestamp: new Date().toISOString(),
-    choices: [],
-    question_type: QuestionTypeEnum.OPEN,
+const messageData: MessageType = {
+  number: 0,
+  user: "user",
+  type: MessageTypeEnum.QUESTION,
+  content:
+    'Deep learning is a subset of machine learning that focuses on utilizing neural networks to perform tasks such as classification, regression, and representation learning. The field takes inspiration from biological neuroscience and is centered around stacking artificial neurons into layers and "training" them to process data. The adjective "deep" refers to the use of multiple layers (ranging from three to several hundred or thousands) in the network. Methods used can be either supervised, semi-supervised or unsupervised.[2] Some common deep learning network architectures include fully connected networks, deep belief networks, recurrent neural networks, convolutional neural networks, generative adversarial networks, transformers, and neural radiance fields. These architectures have been applied to fields including computer vision, speech recognition, natural language processing, machine translation, bioinformatics, drug design, medical image analysis, climate science, material inspection and board game programs, where they have produced results comparable to and in some cases surpassing human expert performance.[3][4][5] Early forms of neural networks were inspired by information processing and distributed communication nodes in biological systems, particularly the human brain. However, current neural networks do not intend to model the brain function of organisms, and are generally seen as low-quality models for that purpose.',
+  timestamp: new Date().toISOString(),
+  choices: [],
+  question_type: QuestionTypeEnum.OPEN,
+};
+const message = new Message({
+  id: `message_id`,
+  table_info: { name: "messages", group: "annotations", base_schema: BaseSchema.Message },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  data: {
+    ...messageData,
+    ...mockMessageType,
   },
-];
+});
 
-const messages = messagesData.map(
-  (data, index) =>
-    new Message({
-      id: `message_id_${index}`,
-      table_info: { name: "messages", group: "annotations", base_schema: BaseSchema.Message },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      data: {
-        ...data,
-        ...mockMessageType,
-      },
-    }),
-);
+const span_start = 37;
+const span_end = 70;
+const textSpanData: TextSpanType = {
+  spans_start: [span_start],
+  spans_end: [span_end],
+  mention: messageData.content.slice(span_start, span_end + 1),
+  annotation_ref: {
+    id: "message_id",
+    name: "messages",
+  },
+};
+
+const textSpan = new TextSpan({
+  id: "textSpan_id",
+  table_info: { name: "textSpan", group: "annotations", base_schema: BaseSchema.TextSpan },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  data: {
+    ...textSpanData,
+    ...mockAnnotationType,
+  },
+});
 
 const item = new Item({
   id: "item_id",
@@ -168,9 +187,10 @@ export const mockEntityLinkingDatasetItem: DatasetItem = {
     conversations: [conversation],
   },
   annotations: {
-    messages,
+    messages: [message],
     masks,
     bboxes: [bbox],
+    text_spans: [textSpan],
   },
   views: {
     image: mockImage,
