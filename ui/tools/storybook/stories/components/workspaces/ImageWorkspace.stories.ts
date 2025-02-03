@@ -9,14 +9,16 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+import { datasetSchema as datasetSchemaStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 import {
-  mock16BitImageDatasetItem,
+  datasetSchema,
+  mock16BitsImageDatasetItem,
   mockFeaturesValues,
   mockHandleSaveItem,
+  mockImageDatasetItem,
   MockInteractiveImageSegmenter,
 } from "../../testing";
-import { mockImageDatasetItem } from "../../testing/datasets";
 
 type Story = StoryObj<typeof meta>;
 
@@ -30,6 +32,7 @@ export default meta;
 
 const mock = new MockInteractiveImageSegmenter();
 interactiveSegmenterModel.set(mock);
+datasetSchemaStore.set(datasetSchema);
 
 export const BasicImageWorkspace: Story = {
   args: {
@@ -50,7 +53,7 @@ export const SixteenBitImageWorkspace: Story = {
     shouldSaveCurrentItem: false,
     models: [],
     handleSaveItem: mockHandleSaveItem,
-    selectedItem: mock16BitImageDatasetItem,
+    selectedItem: mock16BitsImageDatasetItem,
     featureValues: mockFeaturesValues,
   },
 };

@@ -12,12 +12,12 @@ import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/li
 import { datasetSchema as datasetSchemaStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
 import {
+  datasetSchema,
   mockFeaturesValues,
   mockHandleSaveItem,
   MockInteractiveImageSegmenter,
+  mockVqaDatasetItem,
 } from "../../testing";
-import { mockVqaDatasetItem } from "../../testing/datasets";
-import { datasetSchema } from "../../testing/datasetSchema";
 
 type Story = StoryObj<typeof meta>;
 
