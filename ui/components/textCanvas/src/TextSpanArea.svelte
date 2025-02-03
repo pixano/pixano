@@ -51,10 +51,12 @@ License: CECILL-C
   <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton"
     >Tag Selected Text</button
   >
-  <Answer
-    message={messages[1]}
-    {colorScale}
-    textSpans={spansByMessageId[messages[1].id]}
-    bind:textSpanAttributes
-  />
+  {#each messages as message}
+    <Answer
+      {message}
+      {colorScale}
+      textSpans={spansByMessageId[message.id]}
+      bind:textSpanAttributes
+    />
+  {/each}
 </div>

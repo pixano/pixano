@@ -27,11 +27,6 @@ License: CECILL-C
   };
 </script>
 
-<div
-  on:mouseup={mouseupListener}
-  class="outline-none flex flex-row flex-wrap items-center"
-  role="textbox"
-  tabindex="0"
->
+<div on:mouseup={mouseupListener} class="border rounded-lg p-2" role="textbox" tabindex="0">
   {@html richEditorContent}
 </div>

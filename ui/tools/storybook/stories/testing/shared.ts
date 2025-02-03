@@ -24,7 +24,7 @@ const baseAnnotationType = {
   },
   view_ref: {
     id: "view_id",
-    name: "view_name",
+    name: "image",
   },
   source_ref: {
     id: "Ground Truth",

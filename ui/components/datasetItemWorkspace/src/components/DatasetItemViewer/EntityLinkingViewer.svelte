@@ -9,7 +9,7 @@ License: CECILL-C
   import { Canvas2D } from "@pixano/canvas2d";
   import { DatasetItem, Image, Message, type ImagesPerView, type SaveItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { VqaArea } from "@pixano/vqa-canvas";
+  import { TextSpanArea } from "@pixano/text-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   // Import stores and API functions
@@ -30,6 +30,7 @@ License: CECILL-C
     saveData,
     selectedKeypointsTemplate,
     selectedTool,
+    textSpans,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
@@ -152,7 +153,16 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-rows-[calc(100%-280px)_280px]">
+  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+    <TextSpanArea
+      {imagesPerView}
+      selectedItemId={selectedItem.item.id}
+      messages={$messages}
+      colorScale={$colorScale[1]}
+      textSpans={$textSpans}
+      bind:newShape={$newShape}
+      on:messageContentChange={handleMessageContentChange}
+    />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
@@ -167,7 +177,6 @@ License: CECILL-C
       bind:currentAnn
       bind:newShape={$newShape}
     />
-    <VqaArea messages={$messages} on:messageContentChange={handleMessageContentChange} />
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">
