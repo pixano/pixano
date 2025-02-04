@@ -12,6 +12,7 @@ License: CECILL-C
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import ThreeDimensionsViewer from "./3DViewer.svelte";
+  import EntityLinkingViewer from "./EntityLinkingViewer.svelte";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import VqaViewer from "./VqaViewer.svelte";
@@ -31,6 +32,8 @@ License: CECILL-C
     <VideoViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_VQA}
     <VqaViewer {selectedItem} bind:currentAnn />
+  {:else if selectedItem.ui.type === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING}
+    <EntityLinkingViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE || !selectedItem.ui.type}
     <ImageViewer {selectedItem} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.PCL_3D}
