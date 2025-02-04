@@ -4,4 +4,5 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export { default as QuestionForm } from "./QuestionForm.svelte";
+import Root from "./radio-group.svelte";
+export { Root as RadioGroup, Root };
