@@ -219,6 +219,8 @@ export const mockVqaDatasetItem: DatasetItem = {
   },
   annotations: {
     messages,
+    masks,
+    bboxes: [bbox],
   },
   views: {
     image: mockImage,
