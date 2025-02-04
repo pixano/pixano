@@ -13,7 +13,7 @@ License: CECILL-C
     type Shape,
     type TextSpanType,
   } from "@pixano/core";
-  import { Answer } from "./components";
+  import { SpannableMessage } from "./components";
   import { groupTextSpansByMessageId } from "./lib";
 
   // Exports
@@ -52,7 +52,7 @@ License: CECILL-C
     >Tag Selected Text</button
   >
   {#each messages as message}
-    <Answer
+    <SpannableMessage
       {message}
       {colorScale}
       textSpans={spansByMessageId[message.id]}
