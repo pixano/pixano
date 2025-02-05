@@ -31,7 +31,6 @@ class VQAFolderBuilder(ImageFolderBuilder):
     """Builder for vqa datasets stored in a folder."""
 
     WORKSPACE_TYPE = WorkspaceType.IMAGE_VQA
-    ANNOTATIONS_FILENAME: str = "annotations.jsonl"
 
     def __init__(
         self,
@@ -84,9 +83,9 @@ class VQAFolderBuilder(ImageFolderBuilder):
         for split in self.source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):
                 try:
-                    dataset_pieces = self._read_annotations(split / self.ANNOTATIONS_FILENAME)
+                    dataset_pieces = self._read_annotations(split / self.METADATA_FILENAME)
                 except Exception:
-                    raise ValueError(f"Could not read annotation file {split / self.ANNOTATIONS_FILENAME}")
+                    raise ValueError(f"Could not read annotation file {split / self.METADATA_FILENAME}")
 
                 for dataset_piece in dataset_pieces:
                     item_metadata = {}
