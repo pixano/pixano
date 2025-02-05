@@ -15,6 +15,7 @@ import shortuuid
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
+from pixano.datasets.utils import mosaic
 from pixano.datasets.workspaces import DefaultVQADatasetItem, WorkspaceType
 from pixano.features import BaseSchema, Entity, Item, Message, View, is_conversation
 from pixano.features.schemas.annotations import Annotation
@@ -23,7 +24,6 @@ from pixano.features.schemas.source import SourceKind
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from pixano.features.utils.creators import create_instance_of_schema
 
-from ..dataset_builder import DatasetBuilder
 from .image import ImageFolderBuilder
 
 
@@ -50,7 +50,9 @@ class VQAFolderBuilder(ImageFolderBuilder):
             url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
                 relative path from the media directory.
         """
-        DatasetBuilder.__init__(self, target_dir=target_dir, dataset_item=dataset_item, info=info)
+        super().__init__(
+            source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
+        )
         self.source_dir = Path(source_dir)
         if url_prefix is None:
             url_prefix = Path(".")
@@ -114,8 +116,13 @@ class VQAFolderBuilder(ImageFolderBuilder):
                             view_schema: type[View] = s
 
                             # create views
-                            for view_file in v:
-                                view_file = self.source_dir / Path(view_file)
+                            if isinstance(v, list):
+                                if len(v) > 1:
+                                    # create a mosaic from item images
+                                    mosaic_file = mosaic(self.source_dir, v)
+                                    view_file = self.source_dir / mosaic_file
+                                else:
+                                    view_file = self.source_dir / Path(v[0])
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_vqa_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
