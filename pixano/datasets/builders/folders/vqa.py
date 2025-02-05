@@ -119,7 +119,7 @@ class VQAFolderBuilder(ImageFolderBuilder):
                             if isinstance(v, list):
                                 if len(v) > 1:
                                     # create a mosaic from item images
-                                    mosaic_file = mosaic(self.source_dir, v)
+                                    mosaic_file = mosaic(self.source_dir, v, view_name)
                                     view_file = self.source_dir / mosaic_file
                                 else:
                                     view_file = self.source_dir / Path(v[0])
