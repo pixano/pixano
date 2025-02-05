@@ -163,6 +163,7 @@ class FolderBaseBuilder(DatasetBuilder):
                         item = self._create_item(split.name, **item_metadata)
 
                         # create view
+                        view_file = split / item_metadata[self.view_name]
                         view = self._create_view(item, view_file, self.view_schema)
 
                         if entities_data is None:
