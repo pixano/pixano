@@ -23,9 +23,14 @@ from ..dataset_schema import DatasetItem
 class DefaultVQADatasetItem(DatasetItem):
     """Default VQA DatasetItem Schema."""
 
-    image: Image
+    images: list[Image]
     conversations: list[Conversation]
     messages: list[Message]
+
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
+    keypoints: list[KeyPoints]
+    objects: list[Entity]
 
 
 class DefaultVideoDatasetItem(DatasetItem):

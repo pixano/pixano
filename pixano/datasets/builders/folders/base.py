@@ -140,23 +140,24 @@ class FolderBaseBuilder(DatasetBuilder):
                     metadata = self._read_metadata(split / self.METADATA_FILENAME)
                 except FileNotFoundError:
                     metadata = None
-                    entities_data = None
 
-                for view_file in split.glob("*"):
-                    # only consider {split}/{item}.{ext} files
-                    if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                        # retrieve item metadata in metadata file
-                        item_metadata = {}
-                        if metadata is not None:
-                            for m in metadata:
-                                if m[self.view_name] == view_file.name:
-                                    item_metadata = m
-                                    break
-                            if not item_metadata:
-                                raise ValueError(f"Metadata not found for {view_file}")
-
-                            # extract entity metadata from item metadata
-                            entities_data = item_metadata.pop(self.entity_name, None)
+                if metadata is None:
+                    for view_file in split.glob("*"):
+                        # only consider {split}/{item}.{ext} files
+                        if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
+                            # create item
+                            item = self._create_item(split.name, **{})
+                            # create view
+                            view = self._create_view(item, view_file, self.view_schema)
+                            yield {
+                                self.item_schema_name: item,
+                                self.view_name: view,
+                            }
+                else:  # metadata not None
+                    # retrieve item metadata in metadata file
+                    for item_metadata in metadata:
+                        # extract entity metadata from item metadata
+                        entities_data = item_metadata.pop(self.entity_name, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)
