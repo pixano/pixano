@@ -141,7 +141,6 @@ License: CECILL-C
   $: selectedTool.set($selectedTool);
 
   const handleAnswerContentChange = (event: CustomEvent<ContentChangeEvent>) => {
-    console.log("handleAnswerContentChange", event.detail);
     event.preventDefault();
     if (isNewAnswerEvent(event)) {
       addAnswer(event.detail);
