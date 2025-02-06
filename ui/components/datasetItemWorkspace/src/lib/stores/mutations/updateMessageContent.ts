@@ -4,19 +4,20 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, Message, type SaveItem } from "@pixano/core";
+import { BaseSchema, Message, MessageTypeEnum, type SaveItem } from "@pixano/core";
 import type { UpdatedMessageEvent } from "@pixano/vqa-canvas/src/lib/types";
+import { get } from "svelte/store";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
 import { createUpdatedMessage } from "../../utils/createUpdatedMessage";
-import { annotations, messages, saveData } from "../datasetItemWorkspaceStores";
+import { annotations, messages as messagesStore, saveData } from "../datasetItemWorkspaceStores";
 
 export const updateMessageContent = (detail: UpdatedMessageEvent) => {
   const { answerId, content, answers, explanations } = detail;
-  let prevMessage: Message | undefined;
 
-  messages.subscribe((messages) => {
-    prevMessage = messages.find((message) => message.id === answerId);
-  });
+  const messages = get<Message[]>(messagesStore);
+  const prevMessage = messages.find(
+    (message) => message.data.type === MessageTypeEnum.ANSWER && message.id === answerId,
+  );
 
   if (!prevMessage) {
     return;
