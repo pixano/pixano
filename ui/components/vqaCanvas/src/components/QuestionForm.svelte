@@ -24,7 +24,7 @@ License: CECILL-C
   const questionNumber = question.data.number + 1;
   const choices = question.data.choices as string[];
 
-  const answers = messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER);
+  $: answers = messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER);
   $: questionCompleted = isQuestionCompleted(messages);
 </script>
 

@@ -9,15 +9,18 @@ License: CECILL-C
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
   import { createEventDispatcher } from "svelte";
   import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
-  import { answerChoicesToCheckboxsState, serializeMessageContent } from "../lib/utils";
+  import {
+      checkboxsStateToAnswerChoices,
+      deserializeMessageContent,
+      serializeMessageContent,
+  } from "../lib/utils";
 
   export let choices: string[];
   export let answer: Message | null;
   export let withExplanation: boolean;
   export let questionId: string;
 
-  let explanation: string = (answer?.data.explanations as string[])[0] ?? "";
-  let checked: boolean[] = answerChoicesToCheckboxsState((answer?.data.answers as string[]) ?? []);
+  let { checked, explanations } = deserializeMessageContent(answer?.data.content ?? null);
 
   const answerId = answer?.id ?? null;
 
@@ -29,17 +32,13 @@ License: CECILL-C
   };
 
   const handleContentChange = () => {
-    const answers = checked.map((c, i) => (c ? i.toString() : null)).filter((c) => c !== null);
-    const baseEventDetail = {
-      content: serializeMessageContent({ choices: answers, explanation }),
-      answers,
-      explanations: [explanation],
-    };
+    const selectedChoices = checkboxsStateToAnswerChoices(checked);
+    const content = serializeMessageContent({ choices: selectedChoices, explanations });
 
     const eventDetail: ContentChangeEvent = answerId
-      ? { ...baseEventDetail, type: ContentChangeEventType.UPDATE, answerId }
+      ? { content, type: ContentChangeEventType.UPDATE, answerId }
       : {
-          ...baseEventDetail,
+          content,
           type: ContentChangeEventType.NEW_ANSWER,
           questionId,
         };
@@ -66,7 +65,7 @@ License: CECILL-C
       type="text"
       placeholder="Explanations"
       class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
-      bind:value={explanation}
+      bind:value={explanations}
       on:blur={handleContentChange}
     />
   {/if}
