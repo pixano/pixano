@@ -123,7 +123,6 @@ const conversation = new Conversation({
   updated_at: new Date().toISOString(),
   data: {
     kind: "conversation",
-    with_model: { id: "model_id", name: "model_name" },
     ...mockEntityType,
   },
 });

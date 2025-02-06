@@ -56,7 +56,7 @@ export const defineCreatedEntity = (
   } else if (entitySchema.base_schema === BaseSchema.Conversation) {
     const conversation = {
       ...entity,
-      data: { ...entity.data, kind: "name", with_model: { id: "model_id", name: "model" } }, //with_model: TODO
+      data: { ...entity.data, kind: "name" }, //TODO kind ??
     };
     return new Conversation(conversation);
   } else return new Entity(entity);

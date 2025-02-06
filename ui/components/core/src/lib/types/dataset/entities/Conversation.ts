@@ -29,6 +29,6 @@ export class Conversation extends Entity {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["kind", "with_model"]);
+    return super.nonFeaturesFields().concat(["kind"]);
   }
 }
