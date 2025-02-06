@@ -11,6 +11,7 @@ License: CECILL-C
   import {
     type DatasetInfo,
     type DatasetItem,
+    type FeaturesValues,
     type SaveItem,
     type Schema,
     api,
@@ -40,6 +41,7 @@ License: CECILL-C
   let canSaveCurrentItem: boolean = false;
   let shouldSaveCurrentItem: boolean = false;
   let noItemFound: boolean = false;
+  let featureValues: FeaturesValues = { main: {}, objects: {} };
 
   modelsStore.subscribe((value) => {
     models = value;
@@ -52,12 +54,64 @@ License: CECILL-C
 
   $: saveCurrentItemStore.update((old) => ({ ...old, canSave: canSaveCurrentItem }));
 
+  //TODO test quick & dirty -- WIP -- should use a common type from back & front
+  // also should use zod, etc.
+  type backFV = {
+    name: string;
+    restricted: boolean;
+    values: string[];
+  };
+  type backFVS = Record<string, Record<string, backFV[]>>;
+
+  const mapBackFeaturesValues2FrontFeaturesValues = (features_values: backFVS) => {
+    console.log("--- back features_values", features_values);
+    /*
+    --- current back format for features values (most probably to be changed)
+    {
+        "items": {}, //??
+        "views": {},
+        "entities": {"objects": [{"name": "category", "restricted": true, "values": ["rose", "orange"]}]},
+        "annotations": {}
+    }
+
+    --- current front format for features values (probably to change also -- but it "works" with this)
+    {
+      "main": {
+        "label": { "restricted": true, "values": ["nice", "very nice"] }
+      },
+      "objects": {
+        "category_name": {"restricted": true, "values": ["rose", "orange"]}
+    }
+    */
+    const frontFV: FeaturesValues = { main: {}, objects: {} };
+    if ("items" in features_values && features_values["items"] && features_values["items"]["items"]) {
+      for (const feat of features_values["items"]["items"]) {
+        let { name, ...fv } = feat;
+        frontFV.main[name] = fv;
+      }
+    }
+    if ("entities" in features_values && features_values["entities"]) {
+      for (const entity_group of $datasetSchema.groups.entities) {
+        frontFV.objects = {};
+        for (const feat of features_values["entities"][entity_group]) {
+          let { name, ...fv } = feat;
+          frontFV.objects[feat.name] = fv;
+        }
+      }
+    }
+
+    console.log("--- front features_values", frontFV);
+    return frontFV;
+  };
+
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
     api
       .getDataset(dataset.id)
       .then((ds) => {
+        console.log("XXX handleSelectIem - Dataset:", ds);
         datasetSchema.set(ds.dataset_schema);
+        featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
         api
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {
@@ -258,7 +312,7 @@ License: CECILL-C
     <DatasetItemWorkspace
       {selectedItem}
       {models}
-      featureValues={{ main: {}, objects: {} }}
+      {featureValues}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
