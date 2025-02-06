@@ -42,7 +42,7 @@ License: CECILL-C
       ...store,
       selectedTableName,
       yetToLoadEmbedding: true,
-      currentModalOpen: "none",
+      currentModalOpen: "loading",
     }));
   };
 
