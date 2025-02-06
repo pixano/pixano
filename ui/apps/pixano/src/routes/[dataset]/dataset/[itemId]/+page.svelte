@@ -84,7 +84,11 @@ License: CECILL-C
     }
     */
     const frontFV: FeaturesValues = { main: {}, objects: {} };
-    if ("items" in features_values && features_values["items"] && features_values["items"]["items"]) {
+    if (
+      "items" in features_values &&
+      features_values["items"] &&
+      features_values["items"]["items"]
+    ) {
       for (const feat of features_values["items"]["items"]) {
         let { name, ...fv } = feat;
         frontFV.main[name] = fv;
@@ -95,7 +99,7 @@ License: CECILL-C
         frontFV.objects = {};
         for (const feat of features_values["entities"][entity_group]) {
           let { name, ...fv } = feat;
-          frontFV.objects[feat.name] = fv;
+          frontFV.objects[name] = fv;
         }
       }
     }
