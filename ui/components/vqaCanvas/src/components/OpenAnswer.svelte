@@ -21,15 +21,9 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLInputElement;
     },
   ) => {
-    const baseEventDetail = {
-      content: e.currentTarget.value,
-      answers: undefined,
-      explanations: undefined,
-    };
-
     const eventDetail: ContentChangeEvent = answerId
-      ? { ...baseEventDetail, type: ContentChangeEventType.UPDATE, answerId }
-      : { ...baseEventDetail, type: ContentChangeEventType.NEW_ANSWER, questionId };
+      ? { content: e.currentTarget.value, type: ContentChangeEventType.UPDATE, answerId }
+      : { content: e.currentTarget.value, type: ContentChangeEventType.NEW_ANSWER, questionId };
 
     dispatch("answerContentChange", eventDetail);
   };

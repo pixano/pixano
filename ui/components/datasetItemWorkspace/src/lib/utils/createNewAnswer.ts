@@ -9,18 +9,8 @@ import { nanoid } from "nanoid";
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { getPixanoSource } from "../api/objectsApi";
 
-export const createNewAnswer = ({
-  question,
-  content,
-  answers,
-  explanations,
-}: {
-  question: Message;
-  content: string;
-  answers?: string[];
-  explanations?: string[];
-}) => {
-  const now = new Date().toISOString();
+export const createNewAnswer = ({ question, content }: { question: Message; content: string }) => {
+  const now = new Date().toISOString().replace(/Z$/, "+00:00");
   const pixanoSource = getPixanoSource(sourcesStore);
 
   const messageData: MessageType = {
@@ -29,19 +19,18 @@ export const createNewAnswer = ({
     content,
     timestamp: now,
     type: MessageTypeEnum.ANSWER,
-    answers: answers ?? [],
-    explanations: explanations ?? [],
   };
 
   return new Message({
-    id: nanoid(10),
+    id: nanoid(22),
     table_info: { name: "messages", group: "annotations", base_schema: BaseSchema.Message },
     created_at: now,
     updated_at: now,
     data: {
       ...question.data,
-      ...messageData,
       source_ref: { name: pixanoSource.table_info.name, id: pixanoSource.id },
+      choices: [],
+      ...messageData,
     },
   });
 };

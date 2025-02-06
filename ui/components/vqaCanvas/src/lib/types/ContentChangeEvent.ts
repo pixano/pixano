@@ -15,16 +15,12 @@ export interface UpdatedMessageEvent {
   type: ContentChangeEventType.UPDATE;
   answerId: string;
   content: string;
-  answers?: string[];
-  explanations?: string[];
 }
 
 export interface NewAnswerEvent {
   type: ContentChangeEventType.NEW_ANSWER;
   questionId: string;
   content: string;
-  answers?: string[];
-  explanations?: string[];
 }
 
 export const isNewAnswerEvent = (

@@ -8,27 +8,22 @@ import { BaseSchema, Message, MessageTypeEnum, type SaveItem } from "@pixano/cor
 import type { UpdatedMessageEvent } from "@pixano/vqa-canvas/src/lib/types";
 import { get } from "svelte/store";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
-import { createUpdatedMessage } from "../../utils/createUpdatedMessage";
+import { createUpdatedAnswer } from "../../utils/createUpdatedAnswer";
 import { annotations, messages as messagesStore, saveData } from "../datasetItemWorkspaceStores";
 
 export const updateMessageContent = (detail: UpdatedMessageEvent) => {
-  const { answerId, content, answers, explanations } = detail;
+  const { answerId, content } = detail;
 
   const messages = get<Message[]>(messagesStore);
-  const prevMessage = messages.find(
+  const prevAnswer = messages.find(
     (message) => message.data.type === MessageTypeEnum.ANSWER && message.id === answerId,
   );
 
-  if (!prevMessage) {
+  if (!prevAnswer) {
     return;
   }
 
-  const updatedMessage = createUpdatedMessage({
-    message: prevMessage,
-    content,
-    answers,
-    explanations,
-  });
+  const updatedMessage = createUpdatedAnswer({ prevAnswer, content });
 
   annotations.update((prevAnnotations) =>
     prevAnnotations.map((annotation) =>

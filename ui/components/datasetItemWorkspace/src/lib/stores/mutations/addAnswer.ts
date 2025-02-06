@@ -12,7 +12,7 @@ import { createNewAnswer } from "../../utils/createNewAnswer";
 import { annotations, messages as messagesStore, saveData } from "../datasetItemWorkspaceStores";
 
 export const addAnswer = (detail: NewAnswerEvent) => {
-  const { questionId, content, answers, explanations } = detail;
+  const { questionId, content } = detail;
 
   const messages = get<Message[]>(messagesStore);
   const question = messages.find(
@@ -26,8 +26,6 @@ export const addAnswer = (detail: NewAnswerEvent) => {
   const newMessage = createNewAnswer({
     question,
     content,
-    answers,
-    explanations,
   });
 
   annotations.update((prevAnnotations) => [...prevAnnotations, newMessage]);
