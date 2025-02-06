@@ -8,11 +8,9 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { MessageTypeEnum, QuestionTypeEnum } from "@pixano/core";
   import { isQuestionCompleted } from "../lib/utils";
-  import MultipleChoiceAnswer from "./MultipleChoiceAnswer.svelte";
-  import OpenAnswer from "./OpenAnswer.svelte";
+  import FormattedAnswer from "./FormattedAnswer.svelte";
   import QuestionContent from "./QuestionContent.svelte";
   import QuestionHeader from "./QuestionHeader.svelte";
-  import SingleChoiceAnswer from "./SingleChoiceAnswer.svelte";
 
   export let messages: Message[];
 
@@ -22,12 +20,12 @@ License: CECILL-C
     throw new Error("Question not found");
   }
 
+  const questionType = question.data.question_type as QuestionTypeEnum;
+  const questionNumber = question.data.number + 1;
+  const choices = question.data.choices as string[];
+
   const answers = messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER);
   $: questionCompleted = isQuestionCompleted(messages);
-
-  const questionNumber = question.data.number + 1;
-
-  const choices = question.data.choices as string[];
 </script>
 
 <div class="flex flex-col gap-2">
@@ -35,16 +33,22 @@ License: CECILL-C
   <QuestionContent content={question.data.content} />
 
   {#each answers as answer}
-    {#if question.data.question_type === QuestionTypeEnum.OPEN}
-      <OpenAnswer {answer} on:answerContentChange />
-    {:else if question.data.question_type === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION}
-      <MultipleChoiceAnswer {answer} {choices} withExplanation={true} on:answerContentChange />
-    {:else if question.data.question_type === QuestionTypeEnum.MULTI_CHOICE}
-      <MultipleChoiceAnswer {answer} {choices} withExplanation={false} on:answerContentChange />
-    {:else if question.data.question_type === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION}
-      <SingleChoiceAnswer {answer} {choices} withExplanation={true} on:answerContentChange />
-    {:else}
-      <SingleChoiceAnswer {answer} {choices} withExplanation={false} on:answerContentChange />
-    {/if}
+    <FormattedAnswer
+      questionId={question.id}
+      {questionType}
+      {answer}
+      {choices}
+      on:answerContentChange
+    />
   {/each}
+
+  {#if answers.length === 0}
+    <FormattedAnswer
+      questionId={question.id}
+      {questionType}
+      answer={null}
+      {choices}
+      on:answerContentChange
+    />
+  {/if}
 </div>

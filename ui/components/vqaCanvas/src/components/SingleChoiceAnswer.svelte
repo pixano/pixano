@@ -8,16 +8,18 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
   import { createEventDispatcher } from "svelte";
-  import type { ContentChangeEvent } from "../lib/types";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
   import { serializeMessageContent } from "../lib/utils";
 
   export let choices: string[];
-  export let answer: Message;
+  export let answer: Message | null;
   export let withExplanation: boolean;
+  export let questionId: string;
 
   const radioGroupValues = choices.map((c) => ({ id: c, value: c }));
 
-  let explanation: string = (answer.data.explanations as string[])[0] ?? "";
+  let explanation: string = (answer?.data.explanations as string[])[0] ?? "";
+  const answerId = answer?.id ?? null;
 
   let selectedValue: string;
   $: selectedValue, handleContentChange();
@@ -25,14 +27,24 @@ License: CECILL-C
   const dispatch = createEventDispatcher();
 
   const handleContentChange = () => {
-    const newContent = serializeMessageContent({ choices: [selectedValue], explanation });
-
-    const eventDetail: ContentChangeEvent = {
-      answerId: answer.id,
-      newContent,
-      newChoices: [selectedValue],
-      explanation,
+    const baseEventDetail = {
+      content: serializeMessageContent({ choices: [selectedValue], explanation }),
+      answers: [selectedValue],
+      explanations: [explanation],
     };
+
+    const eventDetail: ContentChangeEvent = answerId
+      ? {
+          ...baseEventDetail,
+          type: ContentChangeEventType.UPDATE,
+          answerId,
+        }
+      : {
+          ...baseEventDetail,
+          type: ContentChangeEventType.NEW_ANSWER,
+          questionId,
+        };
+
     dispatch("answerContentChange", eventDetail);
   };
 </script>

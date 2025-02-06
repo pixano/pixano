@@ -8,14 +8,14 @@ import { Message } from "@pixano/core";
 
 export const createUpdatedMessage = ({
   message,
-  newContent,
-  newChoices,
-  explanation,
+  content,
+  answers,
+  explanations,
 }: {
   message: Message;
-  newContent: string;
-  newChoices?: string[];
-  explanation?: string;
+  content: string;
+  answers?: string[];
+  explanations?: string[];
 }) => {
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const { ui, ...rest } = message;
@@ -27,11 +27,12 @@ export const createUpdatedMessage = ({
 
   return new Message({
     ...rest,
+    updated_at: new Date().toISOString(),
     data: {
       ...rest.data,
-      content: newContent,
-      ...(newChoices !== undefined && { answers: newChoices }),
-      ...(explanation !== undefined && { explanations: [explanation] }),
+      content,
+      answers: answers ?? [],
+      explanations: explanations ?? [],
     },
   });
 };
