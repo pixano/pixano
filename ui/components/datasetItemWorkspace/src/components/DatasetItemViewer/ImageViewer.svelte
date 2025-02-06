@@ -58,6 +58,10 @@ License: CECILL-C
       )
         .then((results) => {
           embeddings = results;
+          modelsUiStore.update((store) => ({
+            ...store,
+            currentModalOpen: "none",
+          }));
         })
         .catch((err) => {
           modelsUiStore.update((store) => ({
