@@ -42,7 +42,7 @@ License: CECILL-C
     // Add field to column list
     itemColumns.push(
       table.column({
-        header: col.name,
+        header: col.name.replace("_", " "),
         // giving the exact type is troublesome here, for this one we will allow 'any' assignement
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         cell: TableCell[col.type],
