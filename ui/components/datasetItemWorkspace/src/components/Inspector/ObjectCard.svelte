@@ -24,7 +24,6 @@ License: CECILL-C
 
   import { createFeature } from "../../lib/api/featuresApi";
   import {
-    createObjectCardId,
     defineObjectThumbnail,
     getTopEntity,
     toggleObjectDisplayControl,
@@ -302,7 +301,7 @@ License: CECILL-C
   <article
     on:mouseenter={() => (showIcons = true)}
     on:mouseleave={() => (showIcons = open)}
-    id={createObjectCardId(entity)}
+    id={`card-object-${entity.id}`}
   >
     <div
       class={cn(
