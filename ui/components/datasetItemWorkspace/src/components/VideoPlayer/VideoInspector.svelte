@@ -49,15 +49,6 @@ License: CECILL-C
       updateView($currentFrameIndex);
     }
   };
-
-  annotations.subscribe((value) => {
-    const highlightedObject = value.find((item) => item.ui.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#video-object-${highlightedObject.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  });
 </script>
 
 {#if $videoControls.isLoaded}
