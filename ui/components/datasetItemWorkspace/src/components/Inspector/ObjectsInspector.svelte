@@ -71,10 +71,6 @@ License: CECILL-C
         }
       }
     }
-    const element = document.querySelector("#preAnnotationThumbnail");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   afterUpdate(() => {
@@ -85,34 +81,32 @@ License: CECILL-C
 <div class="p-2 h-[calc(100vh-200px)] w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
-    <div id="preAnnotationThumbnail">
-      {#if selectedEntitiesId.length > 0}
-        <span class="flex justify-center font-medium text-slate-800">
-          Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
-        </span>
-        {#each selectedEntitiesId as selectedEntity}
-          <span class="flex justify-center text-slate-800">{selectedEntity}</span>
-          {#if thumbnails[selectedEntity]}
-            {#key thumbnails[selectedEntity].coords[0]}
-              <Thumbnail
-                imageDimension={thumbnails[selectedEntity].baseImageDimensions}
-                coords={thumbnails[selectedEntity].coords}
-                imageUrl={`/${thumbnails[selectedEntity].uri}`}
-                minSide={150}
-                maxHeight={200}
-                maxWidth={200}
-              />
-            {/key}
-          {/if}
+    {#if selectedEntitiesId.length > 0}
+      <span class="flex justify-center font-medium text-slate-800">
+        Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
+      </span>
+      {#each selectedEntitiesId as selectedEntity}
+        <span class="flex justify-center text-slate-800">{selectedEntity}</span>
+        {#if thumbnails[selectedEntity]}
+          {#key thumbnails[selectedEntity].coords[0]}
+            <Thumbnail
+              imageDimension={thumbnails[selectedEntity].baseImageDimensions}
+              coords={thumbnails[selectedEntity].coords}
+              imageUrl={`/${thumbnails[selectedEntity].uri}`}
+              minSide={150}
+              maxHeight={200}
+              maxWidth={200}
+            />
+          {/key}
+        {/if}
+      {/each}
+    {/if}
+    <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
+      {#key allTopEntities.length}
+        {#each allTopEntities as entity}
+          <ObjectCard {entity} />
         {/each}
-      {/if}
-      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-        {#key allTopEntities.length}
-          {#each allTopEntities as entity}
-            <ObjectCard {entity} />
-          {/each}
-        {/key}
-      </ObjectsModelSection>
-    </div>
+      {/key}
+    </ObjectsModelSection>
   {/if}
 </div>
