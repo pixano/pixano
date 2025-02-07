@@ -56,7 +56,7 @@ License: CECILL-C
     if (highlightedBoxes.length > 0) {
       const highlightedBoxesByEntityId = Object.groupBy(
         highlightedBoxes,
-        ({ data }) => data.entity_ref.id,
+        (ann) => getTopEntity(ann, $entities).id,
       );
       selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
       for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
