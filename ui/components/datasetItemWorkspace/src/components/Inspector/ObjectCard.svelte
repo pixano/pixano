@@ -27,6 +27,7 @@ License: CECILL-C
     defineObjectThumbnail,
     getTopEntity,
     toggleObjectDisplayControl,
+    highlightObject,
   } from "../../lib/api/objectsApi";
   import {
     annotations,
@@ -37,7 +38,7 @@ License: CECILL-C
     selectedTool,
     views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
 
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
@@ -69,7 +70,11 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (isEditing) open = true;
+  $: if (isEditing) {
+    open = true;
+  } else {
+    open = false;
+  }
 
   const features = derived(
     [currentFrameIndex, entities, annotations],
@@ -250,16 +255,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    annotations.update((objects) =>
-      objects.map((ann) => {
-        ann.ui.highlighted = isHighlighted
-          ? "all"
-          : getTopEntity(ann, $entities).id === entity.id
-            ? "self"
-            : "none";
-        return ann;
-      }),
-    );
+    highlightObject(entity, $entities, isHighlighted, $lastFrameIndex);
   };
 
   const onTrackVisClick = () => {
@@ -272,6 +268,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
+    highlightObject(entity, $entities, isHighlighted, $lastFrameIndex);
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };

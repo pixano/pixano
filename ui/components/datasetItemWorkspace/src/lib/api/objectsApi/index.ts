@@ -26,6 +26,7 @@ export * from "./sortAndFilterObjectsToAnnotate";
 export * from "./getPixanoSource";
 export * from "./getTable";
 export * from "./getTopEntity";
+export * from "./highlightObject";
 export * from "./mapObjectToBBox";
 export * from "./mapObjectToKeypoints";
 export * from "./mapObjectToMasks";

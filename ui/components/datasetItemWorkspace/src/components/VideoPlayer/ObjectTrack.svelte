@@ -24,7 +24,12 @@ License: CECILL-C
     Tracklet,
   } from "@pixano/core";
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
+  import {
+    addOrUpdateSaveItem,
+    getPixanoSource,
+    getTopEntity,
+    highlightObject,
+  } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import {
     annotations,
@@ -51,6 +56,7 @@ License: CECILL-C
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
+  let isHighlighted: boolean = false;
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);
@@ -60,6 +66,10 @@ License: CECILL-C
       (ann) => ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id,
     ) as Tracklet[];
   }
+
+  annotations.subscribe(() => {
+    isHighlighted = track.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
+  });
 
   const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
@@ -317,18 +327,33 @@ License: CECILL-C
     }
     return [previous, next];
   };
+
+  const onColoredDotClick = () => {
+    highlightObject(track, $entities, isHighlighted, $lastFrameIndex);
+  };
 </script>
 
 {#if track && tracklets}
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
-    <span class="sticky left-5 m-1" style={`background: ${color}1a;`}
-      >{track.data.name} ({track.id})</span
-    >
+    <div class="w-fit sticky left-5 m-1 px-1" style={`background: ${color}1a;`}>
+      <button
+        class="rounded-full border w-3 h-3"
+        style="background:{color}"
+        title="Highlight object"
+        on:click={onColoredDotClick}
+      />
+      <span class="">{track.data.name} ({track.id})</span>
+    </div>
   </div>
   <div
-    class="flex gap-5 relative my-auto z-20"
     id={`video-object-${track.id}`}
-    style={`width: ${$videoControls.zoomLevel[0]}%; height: ${Object.keys(views).length * 10}px; background: ${color}1a;`}
+    class="flex gap-5 relative my-auto z-20 border-2"
+    style={`
+      width: ${$videoControls.zoomLevel[0]}%;
+      height: ${Object.keys(views).length * 10}px; 
+      background: ${color}1a;
+      border-color:${isHighlighted ? color : "transparent"}
+    `}
     bind:this={objectTimeTrack}
     role="complementary"
   >
