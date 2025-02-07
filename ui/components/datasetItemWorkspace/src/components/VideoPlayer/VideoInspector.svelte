@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { annotations, entities, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { entities, views } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
