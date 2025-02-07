@@ -29,18 +29,20 @@ License: CECILL-C
 >
   <!-- Dataset Infos -->
   <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
-    <div>
-      <h3
-        class="text-lg font-semibold truncate text-primary"
-        title="{dataset.name}&#10;&#13;{dataset.description}"
-      >
-        {dataset.name}
-      </h3>
-    </div>
+    <h3
+      class="text-lg w-5/6 font-semibold truncate text-primary"
+      title="{dataset.name}&#10;&#13;{dataset.description}"
+    >
+      {dataset.name}
+    </h3>
 
     <p class="text-sm text-slate-500 font-medium">
-      {dataset.num_items} items {dataset.size && dataset.size != "N/A" ? " - " + dataset.size : ""}
+      {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
+      {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
+        ? " - " + dataset.size
+        : ""}
     </p>
+
     <svg
       xmlns="http://www.w3.org/2000/svg"
       height="48"
