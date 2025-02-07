@@ -41,7 +41,7 @@ License: CECILL-C
         </span>
         <span class="w-1/4 ml-8 text-5xl font-bold text-right">
           {selectedDataset.num_items}
-          <span class="text-xl"> item{selectedDataset.num_items > 1 ? "s" : ""}s</span>
+          <span class="text-xl"> item{selectedDataset.num_items > 1 ? "s" : ""}</span>
         </span>
       </div>
 
