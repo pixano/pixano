@@ -36,13 +36,17 @@ License: CECILL-C
     {#if datasets}
       <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
         <span class="mr-2 text-4xl font-medium"> {datasets?.length} </span>
-        <span class="text-xl font-medium"> datasets </span>
+        <span class="text-xl font-medium">
+          dataset{datasets?.length > 1 ? "s" : ""}
+        </span>
       </div>
       <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
         <span class="mr-2 text-4xl font-medium">
           {datasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
         </span>
-        <span class="text-xl font-medium"> items </span>
+        <span class="text-xl font-medium">
+          item{datasets.reduce((sum, dataset) => sum + dataset.num_items, 0) > 1 ? "s" : ""}
+        </span>
       </div>
       <div class="grow self-end flex flex-row justify-end items-end">
         <div class="flex items-center space-x-2">
