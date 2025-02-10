@@ -12,13 +12,13 @@ License: CECILL-C
 
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
-    selectedTool,
-    selectedKeypointsTemplate,
     newShape,
+    selectedKeypointsTemplate,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
-  import { templates } from "../../lib/settings/keyPointsTemplates";
   import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectTool: (tool: SelectionTool) => void;
 
@@ -42,7 +42,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center flex-col gap-4 mt-4", {
+  class={cn("flex items-center gap-4", {
     "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Keypoint,
   })}
 >

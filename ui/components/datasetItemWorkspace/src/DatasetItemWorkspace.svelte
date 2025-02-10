@@ -17,25 +17,23 @@ License: CECILL-C
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
-  import Toolbar from "./components/Toolbar.svelte";
   import "./index.css";
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
     annotations,
-    canSave,
     entities,
     itemMetas,
     newShape,
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
+  import { videoControls } from "./lib/stores/videoViewerStores";
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -151,7 +149,7 @@ License: CECILL-C
     saveData.set([]);
   };
 
-  canSave.subscribe((value) => (canSaveCurrentItem = value));
+  canSaveCurrentItem = $saveData.length > 0;
 
   $: if (selectedItem) {
     newShape.update((old) => ({ ...old, status: "none" }));
@@ -182,6 +180,9 @@ License: CECILL-C
   saveData.subscribe((save_data) => console.log("Change in SaveData", save_data));
 
   const onSave = async () => {
+    if ($saveData.length === 0) {
+      return;
+    }
     isSaving = true;
     await handleSaveItem(front2back($saveData));
     saveData.set([]);
@@ -195,7 +196,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
+<div class="flex-1 grid grid-cols-[calc(100%-380px)_380px]">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -203,8 +204,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
   <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
-  <Inspector on:click={onSave} {isLoading} />
+  <Inspector {isLoading} />
   <LoadModelModal {models} />
 </div>

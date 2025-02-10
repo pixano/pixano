@@ -18,7 +18,7 @@ License: CECILL-C
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
 
-  import MagicIcon from "../assets/MagicIcon.svelte";
+  import MagicIcon from "../../assets/MagicIcon.svelte";
   import {
     panTool,
     smartRectangleTool,
@@ -26,7 +26,7 @@ License: CECILL-C
     addSmartPointTool,
     removeSmartPointTool,
     polygonTool,
-  } from "../lib/settings/selectionTools";
+  } from "../../lib/settings/selectionTools";
   import {
     annotations,
     interactiveSegmenterModel,
@@ -34,11 +34,11 @@ License: CECILL-C
     merges,
     modelsUiStore,
     selectedTool,
-  } from "../lib/stores/datasetItemWorkspaceStores";
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
 
-  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
-  import FusionTool from "./Toolbar/FusionTool.svelte";
+  import KeyPointsSelection from "./KeyPointsSelectionTool.svelte";
+  import FusionTool from "./FusionTool.svelte";
   import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let isVideo: boolean = false;
@@ -96,8 +96,8 @@ License: CECILL-C
   }
 </script>
 
-<div class="h-full shadow-md py-4 px-2 w-16 border-l bg-slate-100 z-10">
-  <div class="flex items-center flex-col gap-4">
+<div class="flex gap-4">
+  <div class="flex items-center gap-4">
     <IconButton
       tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
@@ -125,7 +125,7 @@ License: CECILL-C
     {/if}
   </div>
   <div
-    class={cn("flex items-center flex-col gap-4 mt-4", {
+    class={cn("flex items-center gap-4", {
       "bg-slate-200 rounded-sm": showSmartTools,
     })}
   >

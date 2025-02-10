@@ -6,24 +6,19 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { cn, Tabs, Skeleton } from "@pixano/core/src";
+  import { Skeleton, Tabs } from "@pixano/core/src";
 
-  import SceneInspector from "./SceneInspector.svelte";
-  import ObjectsInspector from "./ObjectsInspector.svelte";
+  import { newShape } from "../../lib/stores/datasetItemWorkspaceStores";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
-  import { canSave, newShape } from "../../lib/stores/datasetItemWorkspaceStores";
+  import ObjectsInspector from "./ObjectsInspector.svelte";
+  import SceneInspector from "./SceneInspector.svelte";
 
   export let isLoading: boolean;
 
   let currentTab: "scene" | "objects" = "objects";
-  let isButtonEnabled = false;
-
-  canSave.subscribe((value) => {
-    isButtonEnabled = value;
-  });
 </script>
 
-<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
+<div class="h-full shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
@@ -55,17 +50,6 @@ License: CECILL-C
             <SceneInspector />
           {/if}
         </Tabs.Content>
-        <button
-          disabled={!isButtonEnabled}
-          class={cn(
-            "h-12 w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer bg-slate-50 z-50",
-            {
-              "bg-slate-100 hover:bg-slate-100 pointer-events-none cursor-not-allowed text-slate-500":
-                !isButtonEnabled,
-            },
-          )}
-          on:click>SAVE CHANGES</button
-        >
       </div>
     </Tabs.Root>
   {/if}

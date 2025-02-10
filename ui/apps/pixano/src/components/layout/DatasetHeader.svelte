@@ -8,20 +8,19 @@ License: CECILL-C
   // Imports
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
+  import { Loader2Icon } from "lucide-svelte";
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { IconButton, PrimaryButton, ConfirmModal } from "@pixano/core/src";
+  import { ConfirmModal, PrimaryButton } from "@pixano/core/src";
 
-  import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
+  import { findNeighborItemId } from "$lib/api/navigationApi";
   import {
     currentDatasetStore,
-    datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
-  import { navItems } from "$lib/constants/headerConstants";
+  import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar/Toolbar.svelte";
 
   export let pageId: string | null;
   export let datasetItemsIds: string[];
@@ -73,8 +72,12 @@ License: CECILL-C
     return event.key;
   };
 
-  const handleSaveAndContinue = async () => {
+  const handleSave = () => {
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
+  };
+
+  const handleSaveAndContinue = async () => {
+    handleSave();
     await handleContinue();
   };
 
@@ -86,18 +89,6 @@ License: CECILL-C
     await goto(showConfirmModal);
     showConfirmModal = "none";
     saveCurrentItemStore.set({ canSave: false, shouldSave: false });
-  };
-
-  // Return to the previous page
-  const handleReturnToPreviousPage = async () => {
-    if (currentItemId) {
-      // Update the current page to ensure that we follow the selected item
-      datasetTableStore.update((pagination) => {
-        pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
-        return pagination;
-      });
-      await navigateTo(`/${$currentDatasetStore.id}/dataset`);
-    } else await navigateTo("/");
   };
 
   const navigateTo = async (route: string) => {
@@ -113,91 +104,39 @@ License: CECILL-C
   //second one on browser navigation (back/forward)
   // parameter is given, but we don't need it -- if we don't take it, tslint warns...
   // eslint-disable-next-line
-  function preventUnsavedUnload(_: HTMLElement) {
-    function checkNavigation(e: BeforeUnloadEvent) {
+  const preventUnsavedUnload = (_: HTMLElement) => {
+    const checkNavigation = (e: BeforeUnloadEvent) => {
       if (canSaveCurrentItem) {
         e.preventDefault();
       }
-    }
+    };
     window.addEventListener("beforeunload", checkNavigation);
     return {
       destroy() {
         window.removeEventListener("beforeunload", checkNavigation);
       },
     };
-  }
-
-  // this one is bugged... disabled for now
-  // require:  import { beforeNavigate } from "$app/navigation";
-  //
-  // beforeNavigate(({to, cancel}) => {
-  //   if (to) {
-  //     cancel();
-  //     navigateTo(to.url.toString())
-  //   }
-  //   // if (to && canSaveCurrentItem) {
-  //   //   showConfirmModal = to.url.toString()
-  //   //   cancel()
-  //   // }
-  // });
+  };
 </script>
 
-<header class="w-full fixed z-40 font-Montserrat">
-  <div
-    class="h-20 p-5 flex justify-between items-center shrink-0
-      bg-white border-b border-slate-200 shadow-sm text-slate-800"
-    use:preventUnsavedUnload
-  >
-    {#if $currentDatasetStore}
-      <div class="h-10 flex items-center font-semibold text-2xl">
-        <div class="flex gap-4 items-center font-light">
-          <button on:click={() => navigateTo("/")} class="h-10 w-10">
-            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-          </button>
-          <IconButton
-            on:click={handleReturnToPreviousPage}
-            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-          >
-            <ArrowLeftCircleIcon />
-          </IconButton>
-          {$currentDatasetStore.name}
-        </div>
-      </div>
+<header
+  class="w-full h-16 p-5 font-Montserrat flex justify-between items-center shrink-0 bg-white border-b border-slate-200 shadow-sm text-slate-800"
+  use:preventUnsavedUnload
+>
+  <div class="flex items-center gap-4">
+    <button on:click={() => navigateTo("/")} class="h-10 w-10">
+      <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+    </button>
+    {#if isLoading}
+      <Loader2Icon class="animate-spin" />
+    {:else if currentItemId}
+      {currentItemId}
     {/if}
-    {#if currentItemId}
-      {#if isLoading}
-        <Loader2Icon class="animate-spin" />
-      {:else}
-        <div class="flex items-center gap-4">
-          <IconButton
-            on:click={() => goToNeighborItem("previous")}
-            tooltipContent="Previous item (shift + left arrow)"
-          >
-            <ArrowLeft />
-          </IconButton>
-          {currentItemId}
-          <IconButton
-            on:click={() => goToNeighborItem("next")}
-            tooltipContent="Next item (shift + right arrow)"
-          >
-            <ArrowRight />
-          </IconButton>
-        </div>
-      {/if}
-    {/if}
-    <div class="flex gap-4">
-      {#each navItems as { name, Icon }}
-        <PrimaryButton
-          isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-          on:click={() => navigateTo(`/${$currentDatasetStore.id}/${name.toLocaleLowerCase()}`)}
-        >
-          <Icon strokeWidth={1} />
-          {name}
-        </PrimaryButton>
-      {/each}
-    </div>
   </div>
+  <Toolbar />
+  <PrimaryButton isSelected={true} on:click={handleSave}>Save</PrimaryButton>
 </header>
+
 {#if showConfirmModal !== "none"}
   <ConfirmModal
     message="You have unsaved changes"
