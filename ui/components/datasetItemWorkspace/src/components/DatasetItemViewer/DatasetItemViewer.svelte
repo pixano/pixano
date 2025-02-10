@@ -23,7 +23,7 @@ License: CECILL-C
   export let headerHeight: number;
 </script>
 
-<div class="max-w-[100%] bg-slate-800" style={`max-height: calc(100vh - ${headerHeight}px)`}>
+<div class="max-w-full bg-slate-800">
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />

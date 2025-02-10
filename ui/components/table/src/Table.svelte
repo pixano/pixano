@@ -9,17 +9,16 @@ License: CECILL-C
   import { TableCell } from "./TableCell";
 
   // Pixano Core Imports
-  import { icons } from "@pixano/core";
   import type { TableData } from "@pixano/core";
+  import { icons } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
-
   // Svelte Imports
   import { createEventDispatcher } from "svelte";
-  import { readable } from "svelte/store";
-  import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render } from "svelte-headless-table";
+  import { createTable, Render, Subscribe } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
+  import SortableList from "svelte-sortable-list";
+  import { readable } from "svelte/store";
 
   // Exports
   export let items: TableData;
@@ -90,7 +89,7 @@ License: CECILL-C
 
 <!-- Settings popup -->
 <div
-  class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
+  class="fixed w-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
     flex items-center justify-center font-Montserrat
     {popupOpened ? 'block' : 'hidden'}"
 >
@@ -134,9 +133,9 @@ License: CECILL-C
     </div>
   </div>
 </div>
+
 <div
-  class="h-[75vh] w-full overflow-y-auto overflow-x-auto
-    rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
+  class="flex-1 w-full overflow-y-auto rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->

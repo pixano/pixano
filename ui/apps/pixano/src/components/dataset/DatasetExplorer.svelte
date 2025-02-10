@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { createEventDispatcher } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
+  import { createEventDispatcher } from "svelte";
 
-  import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
-  import { Table } from "@pixano/table";
   import type { DatasetBrowser } from "@pixano/core/src";
+  import { LoadingModal, PrimaryButton, WarningModal } from "@pixano/core/src";
+  import { Table } from "@pixano/table";
 
   import {
     svg_clear,
@@ -22,11 +22,11 @@ License: CECILL-C
     svg_search,
   } from "@pixano/core/src/icons";
 
-  import { datasetTableStore } from "../../lib/stores/datasetStores";
   import {
     DEFAULT_DATASET_TABLE_PAGE,
     DEFAULT_DATASET_TABLE_SIZE,
   } from "$lib/constants/pixanoConstants";
+  import { datasetTableStore } from "../../lib/stores/datasetStores";
 
   // Exports
   export let selectedDataset: DatasetBrowser;
@@ -129,102 +129,74 @@ License: CECILL-C
       query,
     }));
   }
-
-  // HACK TO CONVERT PREVIOUS TABLE INPUT TO NEW FORMAT
-  // WILL NEED TO BE CHANGED/REMOVED ONCE THE NEW FORMAT IS SENT
-  // let tableItems: Array<Array<ItemFeature>> = [];
-  // selectedDataset.page?.items.forEach((item) => {
-  //   let tableItem: Array<ItemFeature> = [];
-  //   tableItem.push({ name: "id", dtype: "int", value: item.id });
-  //   tableItem.push({ name: "split", dtype: "str", value: item.split });
-
-  //   Object.values(item.views).forEach((view: View) => {
-  //     tableItem.push({
-  //       name: view.id,
-  //       dtype: "image",
-  //       value: view.thumbnail ? view.thumbnail : "",
-  //     });
-  //   });
-
-  //   Object.values(item.features).forEach((feature) => {
-  //     tableItem.push({ name: feature.name, dtype: feature.dtype, value: feature.value });
-  //   });
-
-  //   tableItems.push(tableItem);
-  // });
 </script>
 
-<div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
+<div class="w-full px-20 bg-slate-50 flex flex-1 flex-col text-slate-800 max-h-screen">
   {#if selectedDataset.pagination}
     <!-- Items list -->
-    <div class="w-full h-full flex flex-col">
-      <div class="py-5 h-20 flex space-x-2 items-center">
-        <div class="flex-grow" />
+    <div class="ml-auto flex items-center py-5 h-20 space-x-2">
+      {#if searchModels.length > 0}
+        <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
+          {#each searchModels as model}
+            <option value={selectedSearchModel}>
+              {model}
+            </option>
+          {/each}
+        </select>
         <div class="relative flex items-center">
-          {#if searchModels.length > 0}
-            <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
-              {#each searchModels as model}
-                <option value={selectedSearchModel}>
-                  {model}
-                </option>
-              {/each}
-            </select>
-            <div class="relative flex items-center">
-              <input
-                id="sem-search-input"
-                type="text"
-                value={searchInput}
-                placeholder="Semantic search using {selectedSearchModel}"
-                class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
-                on:change={handleSearch}
-              />
+          <input
+            id="sem-search-input"
+            type="text"
+            value={searchInput}
+            placeholder="Semantic search using {selectedSearchModel}"
+            class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
+            on:change={handleSearch}
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="absolute left-2 h-5 w-5 text-slate-800 pointer-events-none"
+          >
+            <path d={svg_search} fill="currentcolor" />
+          </svg>
+          {#if searchInput !== ""}
+            <button
+              class="absolute right-2 p-1 rounded-full transition-colors hover:bg-slate-300"
+              on:click={handleClearSearch}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 height="48"
                 viewBox="0 -960 960 960"
                 width="48"
-                class="absolute left-2 h-5 w-5 text-slate-800 pointer-events-none"
+                class="h-5 w-5 text-slate-800"
               >
-                <path d={svg_search} fill="currentcolor" />
+                <path d={svg_clear} fill="currentcolor" />
               </svg>
-              {#if searchInput !== ""}
-                <button
-                  class="absolute right-2 p-1 rounded-full transition-colors hover:bg-slate-300"
-                  on:click={handleClearSearch}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    height="48"
-                    viewBox="0 -960 960 960"
-                    width="48"
-                    class="h-5 w-5 text-slate-800"
-                  >
-                    <path d={svg_clear} fill="currentcolor" />
-                  </svg>
-                </button>
-              {/if}
-            </div>
+            </button>
           {/if}
-        </div>
-      </div>
-      {#if isLoadingTableItems}
-        <div class="flex-grow flex justify-center items-center">
-          <Loader2Icon class="animate-spin" />
-        </div>
-      {:else if !selectedDataset.isErrored}
-        <Table
-          items={selectedDataset.table_data}
-          on:selectItem={(event) => handleSelectItem(event.detail)}
-        />
-      {:else}
-        <div
-          class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
-        >
-          <p>Error: dataset items could not be loaded</p>
-          <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
         </div>
       {/if}
     </div>
+    {#if isLoadingTableItems}
+      <div class="flex-grow flex justify-center items-center">
+        <Loader2Icon class="animate-spin" />
+      </div>
+    {:else if !selectedDataset.isErrored}
+      <Table
+        items={selectedDataset.table_data}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
+      />
+    {:else}
+      <div
+        class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
+      >
+        <p>Error: dataset items could not be loaded</p>
+        <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
+      </div>
+    {/if}
 
     {#if !selectedDataset.isErrored}
       <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
