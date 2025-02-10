@@ -55,7 +55,6 @@ License: CECILL-C
       }),
     );
     merges.set({ to_fuse: [], forbids: [] });
-    selectedTool.set(panTool);
   };
 
   const selectTool = (tool: SelectionTool) => {
