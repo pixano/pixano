@@ -71,8 +71,7 @@ License: CECILL-C
   }
 
   function handleClearSearch() {
-    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
-    handleSearch();
+    searchInput = "";
   }
 
   function handleGoToFirstPage() {
@@ -119,9 +118,12 @@ License: CECILL-C
     }
   }
 
-  function handleSearch() {
-    searchInput = (document.getElementById("sem-search-input") as HTMLInputElement).value;
-    let query = { model: selectedSearchModel as string, search: searchInput };
+  function handleSearch(
+    e: Event & {
+      currentTarget: EventTarget & HTMLInputElement;
+    },
+  ) {
+    let query = { model: selectedSearchModel as string, search: e.currentTarget.value };
     isLoadingTableItems = true;
     datasetTableStore.update((value) => ({
       ...value,
@@ -145,9 +147,8 @@ License: CECILL-C
         </select>
         <div class="relative flex items-center">
           <input
-            id="sem-search-input"
             type="text"
-            value={searchInput}
+            bind:value={searchInput}
             placeholder="Semantic search using {selectedSearchModel}"
             class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
             on:change={handleSearch}
