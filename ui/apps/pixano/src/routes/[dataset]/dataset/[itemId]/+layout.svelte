@@ -11,17 +11,15 @@ License: CECILL-C
 
   import { api } from "@pixano/core/src";
 
-  import pixanoFavicon from "../assets/favicon.ico";
-  import MainHeader from "../components/layout/MainHeader.svelte";
+  import pixanoFavicon from "../../../../assets/favicon.ico";
+  import DatasetHeader from "../../../../components/layout/DatasetHeader.svelte";
   import {
     currentDatasetStore,
     datasetsStore,
     datasetTableStore,
     defaultDatasetTableValues,
     modelsStore,
-  } from "../lib/stores/datasetStores";
-
-  import "./styles.css";
+  } from "../../../../lib/stores/datasetStores";
 
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
@@ -69,17 +67,7 @@ License: CECILL-C
   }
 </script>
 
-<svelte:head>
-  <link rel="icon" type="image/svg" href={pixanoFavicon} />
-  <title>Pixano</title>
-  <meta name="description" content="Pixano app" />
-</svelte:head>
-
-<div class="app h-screen flex flex-col">
-  {#if $page.route.id === "/"}
-    <MainHeader datasets={$datasetsStore} />
-  {/if}
-  <main class="bg-slate-50 flex-1 flex flex-col">
-    <slot />
-  </main>
-</div>
+<main class="h-screen flex flex-col">
+  <DatasetHeader pageId={$page.route.id} datasetItemsIds={currentDatasetItemsIds} />
+  <slot />
+</main>
