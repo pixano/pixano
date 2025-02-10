@@ -11,6 +11,7 @@ import VideoCell from "./TableCells/VideoCell.svelte";
 import NumberCell from "./TableCells/NumberCell.svelte";
 import BooleanCell from "./TableCells/BooleanCell.svelte";
 import TextCell from "./TableCells/TextCell.svelte";
+import DateTimeCell from "./TableCells/DateTimeCell.svelte";
 import { createRender } from "svelte-headless-table";
 import type { DatasetStat } from "@pixano/core";
 
@@ -29,6 +30,7 @@ export const TableCell = {
   float: createRenderFunction(NumberCell),
   bool: createRenderFunction(BooleanCell),
   str: createRenderFunction(TextCell),
+  datetime: createRenderFunction(DateTimeCell),
   video: createRenderFunction(VideoCell),
   histogram: createRenderFunction(HistogramCell),
 };
