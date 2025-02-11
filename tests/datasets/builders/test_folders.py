@@ -83,7 +83,9 @@ class TestFolderBaseBuilder:
             entities: list[entity_category]
             bbox: list[BBox]
 
-        with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
+        with pytest.raises(
+            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
+        ):
             ImageFolderBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,
@@ -97,7 +99,9 @@ class TestFolderBaseBuilder:
             metadata: str
             bbox: list[BBox]
 
-        with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
+        with pytest.raises(
+            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
+        ):
             ImageFolderBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,
