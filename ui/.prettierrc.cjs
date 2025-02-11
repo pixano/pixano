@@ -3,7 +3,8 @@ module.exports = {
   singleQuote: false,
   trailingComma: "all",
   printWidth: 100,
-  plugins: ["prettier-plugin-svelte"],
+  importOrder: ["<THIRD_PARTY_MODULES>", "", "^(@pixano)(/.*)$", "", "^([$]app|[$]lib|[.])"],
+  plugins: ["prettier-plugin-svelte", "@ianvs/prettier-plugin-sort-imports"],
   overrides: [
     {
       files: ["tsconfig.json", "jsconfig.json"],
