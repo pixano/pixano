@@ -26,13 +26,15 @@ License: CECILL-C
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   type ViewMeta = {
-    fileName: string | undefined;
+    url: string | undefined;
     width: number;
     height: number;
     format: string;
     id: string;
+    view: string;
   };
 
   // Component state variables
@@ -42,21 +44,22 @@ License: CECILL-C
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
-  views.subscribe((views) => {
+  $: views.subscribe((views) => {
     viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {
         isVideo = true;
-        image = view[0] as SequenceFrame;
+        image = view[$currentFrameIndex] as SequenceFrame;
       } else {
         image = view as Image;
       }
       return {
-        fileName: image.data.url.split("/").at(-1),
+        url: image.data.url,
         width: image.data.width,
         height: image.data.height,
         format: image.data.format,
         id: image.id,
+        view: image.table_info.name,
       };
     });
     features = createFeature($itemMetas.item, $datasetSchema);
@@ -114,22 +117,25 @@ License: CECILL-C
 
 <!-- Item Meta Information Section -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
+  <h3 class="uppercase font-medium h-10 flex items-center">Views</h3>
   {#each viewMeta as meta}
-    <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
-    <div class="mx-4 mb-4">
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium">File name</p>
-        <p class="truncate" title={meta.fileName}>{meta.fileName}</p>
+    <h2 class="font-medium h-10 flex items-center truncate" title="{meta.id} ({meta.view})">
+      {meta.id} ({meta.view})
+    </h2>
+    <div class="mx-4">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
+        <p class="font-medium">URL</p>
+        <p class="truncate" title={meta.url}>{meta.url}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Width</p>
         <p>{meta.width}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Height</p>
         <p>{meta.height}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Format</p>
         <p>{meta.format}</p>
       </div>
