@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { WorkspaceType } from "./workspaceType";
 
 function z_enumFromArray(array: string[]) {

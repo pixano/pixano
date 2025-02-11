@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { nanoid } from "nanoid";
+
 import {
   Annotation,
   BaseSchema,
@@ -22,7 +24,7 @@ import {
   type Reference,
   type SaveShape,
 } from "@pixano/core";
-import { nanoid } from "nanoid";
+
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { getPixanoSource } from "./getPixanoSource";
 import { getTable } from "./getTable";

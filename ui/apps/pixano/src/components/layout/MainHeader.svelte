@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import type { DatasetInfo } from "@pixano/core";
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
   import { svg_search } from "@pixano/core/src/icons";
 
   import { datasetsStore } from "$lib/stores/datasetStores";
-  import type { DatasetInfo } from "@pixano/core";
 
   export let datasets: Array<DatasetInfo>;
 
@@ -30,12 +30,12 @@ License: CECILL-C
 >
   <div class="flex gap-4 items-center">
     <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-7 h-7" />
-    <span class="text-2xl font-semibold text-slate-50 uppercase"> Pixano </span>
+    <span class="text-2xl font-semibold text-slate-50 uppercase">Pixano</span>
   </div>
   <div class="flex pt-4 h-36 w-full items-center flex-wrap text-slate-50">
     {#if datasets}
       <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
-        <span class="mr-2 text-4xl font-medium"> {datasets?.length} </span>
+        <span class="mr-2 text-4xl font-medium">{datasets?.length}</span>
         <span class="text-xl font-medium">
           dataset{datasets?.length > 1 ? "s" : ""}
         </span>

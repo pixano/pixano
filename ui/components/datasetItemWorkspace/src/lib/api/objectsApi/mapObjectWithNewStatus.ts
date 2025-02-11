@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Annotation } from "@pixano/core";
+
 import type { ObjectProperties } from "../../types/datasetItemWorkspaceTypes";
 
 export const mapObjectWithNewStatus = (

@@ -9,8 +9,8 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
-import { datasetSchema as datasetSchemaStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
+import { datasetSchema as datasetSchemaStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 import {
   mockFeaturesValues,
   mockHandleSaveItem,

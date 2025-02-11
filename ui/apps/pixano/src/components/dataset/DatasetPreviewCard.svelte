@@ -9,8 +9,8 @@ License: CECILL-C
   import { createEventDispatcher } from "svelte";
 
   import type { DatasetInfo } from "@pixano/core/src";
-  import { svg_right_arrow } from "@pixano/core/src/icons";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import { svg_right_arrow } from "@pixano/core/src/icons";
 
   // Exports
   export let dataset: DatasetInfo;

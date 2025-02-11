@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { TextSpan } from "@pixano/core";
+
 import type { HTMLTextSpanDataAttributes } from "../types";
 import { createHtmlTags } from "./createHtmlTags";
 

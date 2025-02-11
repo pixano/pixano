@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.ItemProps & {

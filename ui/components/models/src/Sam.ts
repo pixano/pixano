@@ -5,13 +5,8 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
-import * as ort from "onnxruntime-web";
 import { nanoid } from "nanoid";
-import {
-  convertSegmentsToSVG,
-  generatePolygonSegments,
-  maskDataToFortranArrayToRle,
-} from "./mask_utils";
+import * as ort from "onnxruntime-web";
 
 import type {
   Box,
@@ -21,6 +16,11 @@ import type {
   LabeledPointsTensor,
   SegmentationResult,
 } from "./interfaces";
+import {
+  convertSegmentsToSVG,
+  generatePolygonSegments,
+  maskDataToFortranArrayToRle,
+} from "./mask_utils";
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
 

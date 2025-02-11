@@ -8,7 +8,8 @@ License: CECILL-C
   // Imports
   import { Check } from "lucide-svelte";
   import { tick } from "svelte";
-  import { Command, cn, Popover } from "@pixano/core/src";
+
+  import { cn, Command, Popover } from "@pixano/core/src";
 
   export let onTextInputChange: (value: string) => void;
   export let featureList: { value: string; label: string; isTemp?: boolean }[] = [];

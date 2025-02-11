@@ -4,8 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, Source, type SaveItem } from "@pixano/core";
 import { get, type Writable } from "svelte/store";
+
+import { BaseSchema, Source, type SaveItem } from "@pixano/core";
+
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 

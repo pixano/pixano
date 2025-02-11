@@ -8,17 +8,16 @@ License: CECILL-C
   // Imports
   import { TangentIcon } from "lucide-svelte";
 
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
 
+  import { templates } from "../../lib/settings/keyPointsTemplates";
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
-    selectedTool,
-    selectedKeypointsTemplate,
     newShape,
+    selectedKeypointsTemplate,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-
-  import { templates } from "../../lib/settings/keyPointsTemplates";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let selectTool: (tool: SelectionTool) => void;
 

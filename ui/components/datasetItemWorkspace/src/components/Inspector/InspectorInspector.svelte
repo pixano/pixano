@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { cn, Tabs, Skeleton } from "@pixano/core/src";
+  import { cn, Skeleton, Tabs } from "@pixano/core/src";
 
-  import SceneInspector from "./SceneInspector.svelte";
-  import ObjectsInspector from "./ObjectsInspector.svelte";
-  import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { canSave, newShape } from "../../lib/stores/datasetItemWorkspaceStores";
+  import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
+  import ObjectsInspector from "./ObjectsInspector.svelte";
+  import SceneInspector from "./SceneInspector.svelte";
 
   export let isLoading: boolean;
 
@@ -64,8 +64,10 @@ License: CECILL-C
                 !isButtonEnabled,
             },
           )}
-          on:click>SAVE CHANGES</button
+          on:click
         >
+          SAVE CHANGES
+        </button>
       </div>
     </Tabs.Root>
   {/if}

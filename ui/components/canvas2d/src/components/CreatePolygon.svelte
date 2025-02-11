@@ -9,7 +9,8 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Line } from "svelte-konva";
 
-  import { type Reference, SaveShapeType, type Shape } from "@pixano/core";
+  import { SaveShapeType, type Reference, type Shape } from "@pixano/core";
+
   import { convertPointToSvg, runLengthEncode } from "../api/maskApi";
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
   import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";

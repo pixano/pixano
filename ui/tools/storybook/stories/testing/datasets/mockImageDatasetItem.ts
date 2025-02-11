@@ -15,6 +15,7 @@ import {
   type BBoxType,
   type MaskType,
 } from "@pixano/core";
+
 import { mock16BitImage, mockAnnotationType, mockEntityType, mockImage } from "../shared";
 
 const bboxData: BBoxType = {

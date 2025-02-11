@@ -6,9 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { type KeypointsTemplate, type Reference, SaveShapeType, type Shape } from "@pixano/core";
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
+
+  import { SaveShapeType, type KeypointsTemplate, type Reference, type Shape } from "@pixano/core";
 
   import { findRectBoundaries } from "../api/keypointsApi";
   import KeyPoints from "./keypoints/Keypoint.svelte";

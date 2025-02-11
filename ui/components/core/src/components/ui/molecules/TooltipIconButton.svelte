@@ -6,9 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { cn } from "../../../lib/utils/styleUtils";
   import { Button } from "../button";
   import * as Tooltip from "../tooltip";
-  import { cn } from "../../../lib/utils/styleUtils";
 
   export let tooltipContent: string = "";
   export let selected: boolean = false;

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type { AnnotationType, EntityType, FeaturesValues, ImageType, ViewType } from "@pixano/core";
 import { BaseSchema, Image } from "@pixano/core";
+
 import fleurs from "../../assets/fleurs.jpg";
 import tiff from "../../assets/tiff.png";
 

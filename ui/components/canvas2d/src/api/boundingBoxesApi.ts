@@ -4,9 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { MaskSVG, SelectionTool } from "@pixano/core";
-
 import Konva from "konva";
+
+import type { MaskSVG, SelectionTool } from "@pixano/core";
 
 import { MASK_STROKEWIDTH } from "../lib/constants";
 
