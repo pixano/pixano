@@ -70,12 +70,24 @@ def add_label_above(image, text, label_height=30):
     return new_img
 
 
-def create_mosaic(source_dir: Path, image_files, output_path, label_prefix="image", padding=10, label_height=30):
+def create_mosaic(
+    source_dir: Path, split, image_files, output_path, label_prefix="image", padding=10, label_height=30
+):
     """Create a mosaic from image_files with black background."""
     if not image_files:
         return
 
-    images = [Image.open(source_dir / f).convert("RGBA") for f in image_files]
+    need_split = False
+    images = []
+    for f in image_files:
+        try:
+            image = Image.open(source_dir / f)
+        except FileNotFoundError:
+            image = Image.open(source_dir / split / f)
+            need_split = True
+        image = image.convert("RGBA")
+        images.append(image)
+
     rows, cols = arrange_grid(len(images))
     avg_width, avg_height = compute_average_size(images)
 
@@ -98,11 +110,14 @@ def create_mosaic(source_dir: Path, image_files, output_path, label_prefix="imag
         y_offset = (idx // cols) * (avg_height + label_height + padding)
         mosaic.paste(img, (x_offset, y_offset))
 
-    mosaic.save(source_dir / output_path, format="JPEG", quality=85, optimize=True)
+    if need_split:
+        mosaic.save(source_dir / split / output_path, format="JPEG", quality=85, optimize=True)
+    else:
+        mosaic.save(source_dir / output_path, format="JPEG", quality=85, optimize=True)
 
 
-def mosaic(source_dir: Path, image_files: list[str], view_name: str) -> str:
+def mosaic(source_dir: Path, split: str, image_files: list[str], view_name: str) -> str:
     """Create a mosaic from input images."""
     mosaic_filename = generate_mosaic_name(image_files)
-    create_mosaic(source_dir, image_files, mosaic_filename, label_prefix=view_name, label_height=30, padding=5)
+    create_mosaic(source_dir, split, image_files, mosaic_filename, label_prefix=view_name, label_height=30, padding=5)
     return mosaic_filename

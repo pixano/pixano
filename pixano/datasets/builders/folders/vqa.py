@@ -13,7 +13,6 @@ from typing import Any, Iterator
 import pyarrow.json as pa_json
 import shortuuid
 
-from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.utils import mosaic
 from pixano.datasets.workspaces import DefaultVQADatasetItem, WorkspaceType
@@ -31,47 +30,7 @@ class VQAFolderBuilder(ImageFolderBuilder):
     """Builder for vqa datasets stored in a folder."""
 
     WORKSPACE_TYPE = WorkspaceType.IMAGE_VQA
-
-    def __init__(
-        self,
-        source_dir: Path | str,
-        target_dir: Path | str,
-        info: DatasetInfo,
-        dataset_item: type[DatasetItem] = DefaultVQADatasetItem,
-        url_prefix: Path | str | None = None,
-    ) -> None:
-        """Initialize the `VqaFolderBuilder`.
-
-        Args:
-            source_dir: The source directory for the dataset.
-            target_dir: The target directory for the dataset.
-            dataset_item: The dataset item schema.
-            info: User informations (name, description, ...) for the dataset.
-            url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
-                relative path from the media directory.
-        """
-        super().__init__(
-            source_dir=source_dir, target_dir=target_dir, dataset_item=dataset_item, info=info, url_prefix=url_prefix
-        )
-        self.source_dir = Path(source_dir)
-        if url_prefix is None:
-            url_prefix = Path(".")
-        else:
-            url_prefix = Path(url_prefix)
-        self.url_prefix = url_prefix
-
-        self.views_schema: dict[str, type[View]] = {}
-        self.entities_schema: dict[str, type[Entity]] = {}
-        self.annotations_schema: dict[str, type[Annotation]] = {}
-        for k, s in self.schemas.items():
-            if issubclass(s, View):
-                self.views_schema.update({k: s})
-            if issubclass(s, Entity):
-                self.entities_schema.update({k: s})
-            if issubclass(s, Annotation):
-                self.annotations_schema.update({k: s})
-        if not self.views_schema or not self.entities_schema or not self.annotations_schema:
-            raise ValueError("At least one View and one Entity schema must be defined in the schemas argument.")
+    DEFAULT_SCHEMA: type[DatasetItem] = DefaultVQADatasetItem
 
     def generate_data(
         self,
@@ -119,7 +78,7 @@ class VQAFolderBuilder(ImageFolderBuilder):
                             if isinstance(v, list):
                                 if len(v) > 1:
                                     # create a mosaic from item images
-                                    mosaic_file = mosaic(self.source_dir, v, view_name)
+                                    mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
                                     view_file = self.source_dir / mosaic_file
                                 else:
                                     view_file = self.source_dir / Path(v[0])
@@ -154,15 +113,6 @@ class VQAFolderBuilder(ImageFolderBuilder):
 
                     yield all_entities_data
                     yield all_annotations_data
-
-    def _create_item(self, split: str, **item_metadata) -> BaseSchema:
-        item = self.item_schema(
-            split=split,
-            **item_metadata,
-        )
-        if not item.id:
-            item.id = shortuuid.uuid()
-        return item
 
     def _create_vqa_view(self, item: Item, view_file: Path, view_schema: type[View]) -> View:
         if not issubclass(view_schema, View):

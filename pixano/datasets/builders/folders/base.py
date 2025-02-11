@@ -77,13 +77,14 @@ class FolderBaseBuilder(DatasetBuilder):
     METADATA_FILENAME: str = "metadata.jsonl"
     EXTENSIONS: list[str]
     WORKSPACE_TYPE = WorkspaceType.UNDEFINED
+    DEFAULT_SCHEMA: type[DatasetItem] | None = None
 
     def __init__(
         self,
         source_dir: Path | str,
         target_dir: Path | str,
-        dataset_item: type[DatasetItem],
         info: DatasetInfo,
+        dataset_item: type[DatasetItem] | None = None,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `FolderBaseBuilder`.
@@ -97,6 +98,10 @@ class FolderBaseBuilder(DatasetBuilder):
                 relative path from the media directory.
         """
         info.workspace = self.WORKSPACE_TYPE
+        if self.DEFAULT_SCHEMA is not None and dataset_item is None:
+            dataset_item = self.DEFAULT_SCHEMA
+        if dataset_item is None:
+            raise ValueError("A schema (dataset_item) is required.")
         super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
         self.source_dir = Path(source_dir)
         if url_prefix is None:
@@ -105,23 +110,26 @@ class FolderBaseBuilder(DatasetBuilder):
             url_prefix = Path(url_prefix)
         self.url_prefix = url_prefix
 
-        view_name = None
-        entity_name = None
+        self.views_schema: dict[str, type[View]] = {}
+        self.entities_schema: dict[str, type[Entity]] = {}
+        self.annotations_schema: dict[str, type[Annotation]] = {}
+
         for k, s in self.schemas.items():
             if issubclass(s, View):
-                if view_name is not None:
-                    raise ValueError("Only one view schema is supported in folder based builders.")
-                view_name = k
-                view_schema = s
+                self.views_schema.update({k: s})
             if issubclass(s, Entity):
-                entity_name = k
-                entity_schema = s
-        if view_name is None or entity_name is None:
-            raise ValueError("View and entity schemas must be defined in the schemas argument.")
-        self.view_name = view_name
-        self.view_schema: type[View] = view_schema
-        self.entity_name = entity_name
-        self.entity_schema: type[Entity] = entity_schema
+                self.entities_schema.update({k: s})
+            if issubclass(s, Annotation):
+                self.annotations_schema.update({k: s})
+        if not self.views_schema or not self.entities_schema:
+            raise ValueError("At least one View and one Entity schema must be defined in the schemas argument.")
+
+        # for compatibility with actual ImageFolderBuilder that allows only one view and one entity
+        # TODO - allow multiview and multi entities in base FolderBuilder
+        if len(self.views_schema) == 1:
+            self.view_name, self.view_schema = list(self.views_schema.items())[0]
+        if len(self.entities_schema) == 1:
+            self.entity_name, self.entity_schema = list(self.entities_schema.items())[0]
 
     def generate_data(
         self,
@@ -184,11 +192,17 @@ class FolderBaseBuilder(DatasetBuilder):
                         }
 
     def _create_item(self, split: str, **item_metadata) -> BaseSchema:
-        return self.item_schema(
-            id=shortuuid.uuid(),
-            split=split,
-            **item_metadata,
-        )
+        if "id" in item_metadata:
+            return self.item_schema(
+                split=split,
+                **item_metadata,
+            )
+        else:
+            return self.item_schema(
+                id=shortuuid.uuid(),
+                split=split,
+                **item_metadata,
+            )
 
     def _create_view(self, item: Item, view_file: Path, view_schema: type[View]) -> View:
         if not issubclass(view_schema, View):
