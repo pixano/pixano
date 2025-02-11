@@ -35,15 +35,15 @@ export const highlightObject = (
       return ann;
     }),
   );
+  const cardElement = document.querySelector(`#card-object-${entity.id}`);
+  if (cardElement) {
+    cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  const trackElement = document.querySelector(`#video-object-${entity.id}`);
+  if (trackElement) {
+    trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
   if (highlightFrameIndex != lastFrameIndex + 1) {
     currentFrameIndex.set(highlightFrameIndex);
-    const cardElement = document.querySelector(`#card-object-${entity.id}`);
-    if (cardElement) {
-      cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    const trackElement = document.querySelector(`#video-object-${entity.id}`);
-    if (trackElement) {
-      trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
   }
 };
