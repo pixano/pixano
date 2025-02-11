@@ -121,6 +121,8 @@ class Message(Annotation):
 
     @model_validator(mode="before")
     def _check_data(data):
+        if "type" not in data:
+            raise ValueError("the message expect a type, either QUESTION or ANSWER.")
         data["type"] = data.get("type").upper()
         data["question_type"] = data.get("question_type", "OPEN").upper()
         if data["type"] == "QUESTION":

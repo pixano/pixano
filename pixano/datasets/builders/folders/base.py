@@ -126,8 +126,11 @@ class FolderBaseBuilder(DatasetBuilder):
 
         # for compatibility with actual ImageFolderBuilder that allows only one view and one entity
         # TODO - allow multiview and multi entities in base FolderBuilder
+        # Note: technically VQA also allow only one view, so for now we keep the ValueError
         if len(self.views_schema) == 1:
             self.view_name, self.view_schema = list(self.views_schema.items())[0]
+        else:
+            raise ValueError("Only one view schema is supported in folder based builders.")
         if len(self.entities_schema) == 1:
             self.entity_name, self.entity_schema = list(self.entities_schema.items())[0]
 

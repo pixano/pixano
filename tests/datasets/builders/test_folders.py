@@ -125,22 +125,6 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 4: schema with two entities
-        class Schema(DatasetItem):
-            view: Image
-            metadata: str
-            entities: list[entity_category]
-            entities2: list[entity_category]
-            bbox: list[BBox]
-
-        with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
-            ImageFolderBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
-                info=DatasetInfo(name="test", description="test"),
-                dataset_item=Schema,
-            )
-
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
             split="train",

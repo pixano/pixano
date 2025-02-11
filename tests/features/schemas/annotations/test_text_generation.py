@@ -17,7 +17,7 @@ from tests.features.utils import make_tests_is_sublass_strict
 
 class TestMessage:
     def test_constructor(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="the message expect a type, either QUESTION or ANSWER."):
             Message()
         with pytest.raises(ValidationError):
             Message(number=-1, user="abc", type="SYSTEM", content="You are a kind image annotator")
