@@ -6,15 +6,16 @@ License: CECILL-C
 
 import { Entity, Tracklet, BaseSchema } from "@pixano/core";
 import { annotations } from "../../stores/datasetItemWorkspaceStores";
-import { currentFrameIndex } from "../../stores/videoViewerStores";
 import { getTopEntity } from "./getTopEntity";
 
 export const highlightObject = (
   entity: Entity,
   entities: Entity[],
   isHighlighted: boolean,
+  currentFrameIndex: number,
   lastFrameIndex: number,
-) => {
+): number => {
+  let objectAlreadyVisible = false;
   let highlightFrameIndex = lastFrameIndex + 1;
   console.log(entity.id, isHighlighted);
   annotations.update((objects) =>
@@ -25,12 +26,19 @@ export const highlightObject = (
           ? "self"
           : "none";
       if (
+        !objectAlreadyVisible &&
         getTopEntity(ann, entities).id === entity.id &&
         ann.is_type(BaseSchema.Tracklet) &&
         ann.ui.highlighted === "self" &&
         (ann as Tracklet).data.start_timestep < highlightFrameIndex
       ) {
         highlightFrameIndex = (ann as Tracklet).data.start_timestep;
+        if (
+          currentFrameIndex > (ann as Tracklet).data.start_timestep &&
+          currentFrameIndex < (ann as Tracklet).data.end_timestep
+        ) {
+          objectAlreadyVisible = true;
+        }
       }
       return ann;
     }),
@@ -43,7 +51,9 @@ export const highlightObject = (
   if (trackElement) {
     trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
   }
-  if (highlightFrameIndex != lastFrameIndex + 1) {
-    currentFrameIndex.set(highlightFrameIndex);
+  if (!objectAlreadyVisible && highlightFrameIndex != lastFrameIndex + 1) {
+    return highlightFrameIndex;
+  } else {
+    return currentFrameIndex;
   }
 };

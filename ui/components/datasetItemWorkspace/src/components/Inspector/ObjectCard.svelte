@@ -255,7 +255,16 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    highlightObject(entity, $entities, isHighlighted, $lastFrameIndex);
+    const newFrameIndex = highlightObject(
+      entity,
+      $entities,
+      isHighlighted,
+      $currentFrameIndex,
+      $lastFrameIndex,
+    );
+    if (newFrameIndex != $currentFrameIndex) {
+      currentFrameIndex.set(newFrameIndex);
+    }
   };
 
   const onTrackVisClick = () => {
@@ -268,7 +277,16 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
-    highlightObject(entity, $entities, isHighlighted, $lastFrameIndex);
+    const newFrameIndex = highlightObject(
+      entity,
+      $entities,
+      isHighlighted,
+      $currentFrameIndex,
+      $lastFrameIndex,
+    );
+    if (newFrameIndex != $currentFrameIndex) {
+      currentFrameIndex.set(newFrameIndex);
+    }
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };
