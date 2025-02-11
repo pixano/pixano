@@ -17,7 +17,6 @@ export const highlightObject = (
 ): number => {
   let objectAlreadyVisible = false;
   let highlightFrameIndex = lastFrameIndex + 1;
-  console.log(entity.id, isHighlighted);
   annotations.update((objects) =>
     objects.map((ann) => {
       ann.ui.highlighted = isHighlighted
@@ -32,12 +31,13 @@ export const highlightObject = (
         ann.ui.highlighted === "self" &&
         (ann as Tracklet).data.start_timestep < highlightFrameIndex
       ) {
-        highlightFrameIndex = (ann as Tracklet).data.start_timestep;
         if (
-          currentFrameIndex > (ann as Tracklet).data.start_timestep &&
-          currentFrameIndex < (ann as Tracklet).data.end_timestep
+          currentFrameIndex >= (ann as Tracklet).data.start_timestep &&
+          currentFrameIndex <= (ann as Tracklet).data.end_timestep
         ) {
           objectAlreadyVisible = true;
+        } else {
+          highlightFrameIndex = (ann as Tracklet).data.start_timestep;
         }
       }
       return ann;
