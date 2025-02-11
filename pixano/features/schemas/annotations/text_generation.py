@@ -125,6 +125,7 @@ class Message(Annotation):
             raise ValueError("the message expect a type, either QUESTION or ANSWER.")
         data["type"] = data.get("type").upper()
         data["question_type"] = data.get("question_type", "OPEN").upper()
+        data["choices"] = data.get("choices", [])
         if data["type"] == "QUESTION":
             if data["question_type"] == "OPEN" and len(data["choices"]) > 0:
                 data["question_type"] = "MULTI_CHOICE"
