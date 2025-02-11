@@ -86,7 +86,7 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const bbox_childs_ids = new Set(
-          tracklet.ui.childs.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
+          tracklet.ui.childs?.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
         );
         const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
         const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
@@ -116,7 +116,7 @@ License: CECILL-C
       for (const tracklet of current_tracklets) {
         const kpt_childs_ids = new Set(
           tracklet.ui.childs
-            .filter((ann) => ann.is_type(BaseSchema.Keypoints))
+            ?.filter((ann) => ann.is_type(BaseSchema.Keypoints))
             .map((kpt) => kpt.id),
         );
         const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
