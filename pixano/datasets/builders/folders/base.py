@@ -114,8 +114,6 @@ class FolderBaseBuilder(DatasetBuilder):
                 view_name = k
                 view_schema = s
             if issubclass(s, Entity):
-                if entity_name is not None:
-                    raise ValueError("Only one entity schema is supported in folder based builders.")
                 entity_name = k
                 entity_schema = s
         if view_name is None or entity_name is None:
