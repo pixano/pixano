@@ -88,6 +88,7 @@ License: CECILL-C
     switch (event.key) {
       case " ":
         if (event.repeat) break;
+        event.preventDefault();
         onPlayClick();
         break;
       case "ArrowRight":

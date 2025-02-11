@@ -104,7 +104,7 @@ License: CECILL-C
 </script>
 
 <div
-  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200"
+  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200 focus:outline-none"
   style={`width: ${$videoControls.zoomLevel[0]}%`}
   role="slider"
   tabindex="0"
