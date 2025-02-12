@@ -135,8 +135,7 @@ License: CECILL-C
   </div>
 </div>
 <div
-  class="w-full overflow-y-auto
-    rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
+  class="w-full overflow-y-auto rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->
