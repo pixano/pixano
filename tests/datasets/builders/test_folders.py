@@ -13,7 +13,7 @@ import pytest
 from pixano.datasets.builders.folders import FolderBaseBuilder, ImageFolderBuilder, VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import Image, Item, Video
+from pixano.features import Entity, Image, Item, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
@@ -39,15 +39,21 @@ class TestFolderBaseBuilder:
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
         assert image_folder_builder.target_dir.is_dir()
+        assert image_folder_builder_no_jsonl.source_dir.is_dir()
+        assert image_folder_builder_no_jsonl.target_dir.is_dir()
         assert video_folder_builder.source_dir.is_dir()
         assert video_folder_builder.target_dir.is_dir()
         assert image_folder_builder.view_name == "view"
+        assert image_folder_builder_no_jsonl.view_name == "image"
         assert video_folder_builder.view_name == "view"
         assert image_folder_builder.view_schema == Image
+        assert image_folder_builder_no_jsonl.view_schema == Image
         assert video_folder_builder.view_schema == Video
         assert image_folder_builder.entity_name == "entities"
+        assert image_folder_builder_no_jsonl.entity_name == "objects"
         assert video_folder_builder.entity_name == "entities"
         assert image_folder_builder.entity_schema == entity_category
+        assert image_folder_builder_no_jsonl.entity_schema == Entity
         assert video_folder_builder.entity_schema == entity_category
         assert image_folder_builder.url_prefix == Path(".")
 
