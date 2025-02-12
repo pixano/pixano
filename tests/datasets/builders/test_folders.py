@@ -10,10 +10,15 @@ from unittest.mock import patch
 
 import pytest
 
-from pixano.datasets.builders.folders import FolderBaseBuilder, ImageFolderBuilder, VideoFolderBuilder
+from pixano.datasets.builders.folders import (
+    FolderBaseBuilder,
+    ImageFolderBuilder,
+    VideoFolderBuilder,
+    VQAFolderBuilder,
+)
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import Entity, Image, Item, Video
+from pixano.features import Conversation, Entity, Image, Item, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
@@ -56,6 +61,16 @@ class TestFolderBaseBuilder:
         assert image_folder_builder_no_jsonl.entity_schema == Entity
         assert video_folder_builder.entity_schema == entity_category
         assert image_folder_builder.url_prefix == Path(".")
+
+    def test_vqa_init(self, vqa_folder_builder):
+        assert isinstance(vqa_folder_builder, VQAFolderBuilder)
+        assert vqa_folder_builder.source_dir.is_dir()
+        assert vqa_folder_builder.target_dir.is_dir()
+        assert vqa_folder_builder.view_name == "image"
+        assert vqa_folder_builder.view_schema == Image
+        assert vqa_folder_builder.entity_name == "conversations"
+        assert vqa_folder_builder.entity_schema == Conversation
+        assert vqa_folder_builder.url_prefix == Path(".")
 
     def test_url_prefix_init(self, dataset_item_bboxes_metadata):
         source_dir = Path(tempfile.mkdtemp())

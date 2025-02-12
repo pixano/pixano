@@ -36,6 +36,8 @@ from tests.fixtures.datasets.builders.folder import (
     image_folder_no_jsonl,
     video_folder,
     video_folder_builder,
+    vqa_folder,
+    vqa_folder_builder,
 )
 from tests.fixtures.datasets.dataset import (
     dataset_image_bboxes_keypoint,
