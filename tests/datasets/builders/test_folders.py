@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pixano.datasets.builders.folders import ImageFolderBuilder, VideoFolderBuilder
+from pixano.datasets.builders.folders import FolderBaseBuilder, ImageFolderBuilder, VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.features import Image, Item, Video
@@ -76,6 +76,14 @@ class TestFolderBaseBuilder:
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
+
+        # test: no schema with FolderBaseBuilder
+        with pytest.raises(ValueError, match="A schema (dataset_item) is required."):
+            FolderBaseBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+            )
 
         # test 1: schema without view
         class Schema(DatasetItem):
