@@ -77,7 +77,7 @@ class TestFolderBaseBuilder:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
 
-        # test: no schema with FolderBaseBuilder
+        # test 1: no schema with FolderBaseBuilder
         with pytest.raises(ValueError, match="A schema is required."):
             FolderBaseBuilder(
                 source_dir=source_dir,
@@ -85,7 +85,7 @@ class TestFolderBaseBuilder:
                 info=DatasetInfo(name="test", description="test"),
             )
 
-        # test 1: schema without view
+        # test 2: schema without view
         class Schema(DatasetItem):
             metadata: str
             entities: list[entity_category]
@@ -101,7 +101,7 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 2: schema without entities
+        # test 3: schema without entities
         class Schema(DatasetItem):
             view: Image
             metadata: str
@@ -117,7 +117,7 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 3: schema with two views
+        # test 4: schema with two views
         class Schema(DatasetItem):
             view: Image
             view2: Image
