@@ -6,19 +6,15 @@ License: CECILL-C
 
 import { Message } from "@pixano/core";
 
-export const createUpdatedMessage = ({
-  message,
-  newContent,
-  newChoices,
-  explanation,
+export const createUpdatedAnswer = ({
+  prevAnswer,
+  content,
 }: {
-  message: Message;
-  newContent: string;
-  newChoices?: string[];
-  explanation?: string;
+  prevAnswer: Message;
+  content: string;
 }) => {
   /* eslint-disable @typescript-eslint/no-unused-vars */
-  const { ui, ...rest } = message;
+  const { ui, ...rest } = prevAnswer;
 
   // Mandatory for storybook not to crash
   if ("_constructor-name_" in rest) {
@@ -29,9 +25,7 @@ export const createUpdatedMessage = ({
     ...rest,
     data: {
       ...rest.data,
-      content: newContent,
-      ...(newChoices !== undefined && { answers: newChoices }),
-      ...(explanation !== undefined && { explanations: [explanation] }),
+      content,
     },
   });
 };

@@ -11,5 +11,8 @@ const EMPTY_CONTENT_STRING = ["", "[[]]"];
 
 export const isQuestionCompleted = (messages: Message[]) => {
   const answers = messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER);
-  return answers.every((a) => !EMPTY_CONTENT_STRING.includes(a.data.content.trim()));
+  return (
+    answers.length > 0 &&
+    answers.every((a) => !EMPTY_CONTENT_STRING.includes(a.data.content.trim()))
+  );
 };
