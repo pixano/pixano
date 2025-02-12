@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { ArrowLeft, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
 
-  import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
+  import { IconButton, PrimaryButton } from "@pixano/core/src";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
 
   export let currentItemId: string;
