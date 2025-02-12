@@ -252,6 +252,18 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     return urle
 
 
+def mask_area(rle: dict[str, list[int]]) -> float:
+    """Compute mask area.
+
+    Args:
+        rle: Mask as RLE
+
+    Returns:
+        Mask area
+    """
+    return float(mask_api.area(rle))
+
+
 def image_to_base64(image: Image.Image, format: str | None = None) -> str:
     """Encode image from Pillow to base64.
 

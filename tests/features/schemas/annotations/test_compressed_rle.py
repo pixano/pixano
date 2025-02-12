@@ -17,6 +17,7 @@ from pixano.features.utils import (
     rle_to_polygons,
     rle_to_urle,
     urle_to_rle,
+    mask_area,
 )
 from pixano.features.utils.image import encode_rle
 from tests.features.utils import make_tests_is_sublass_strict
@@ -82,6 +83,14 @@ class TestCompressedRLE:
 
         assert rle.size == expected_rle.size
         assert rle.counts == expected_rle.counts
+
+    def test_area(self):
+        urle = {"counts": [1, 2, 3, 2, 4, 1], "size": [10, 10]}
+        rle = CompressedRLE.from_urle(urle)
+        expected_area = mask_area(urle_to_rle(urle))
+        area = rle.area
+
+        assert area == expected_area
 
     def test_encode(self):
         mask = np.ndarray((10, 10), dtype=bool).tolist()
