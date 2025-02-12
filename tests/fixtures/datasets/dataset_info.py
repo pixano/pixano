@@ -20,6 +20,15 @@ def info_dataset_image_bboxes_keypoint():
 
 
 @pytest.fixture()
+def info_dataset_vqa():
+    return DatasetInfo(
+        name="dataset_vqa",
+        description="Description dataset_vqa.",
+        workspace=WorkspaceType.VQA,
+    )
+
+
+@pytest.fixture()
 def info_dataset_multi_view_tracking_and_image():
     return DatasetInfo(
         name="dataset_multi_view_tracking_and_image",

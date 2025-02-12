@@ -32,7 +32,7 @@ class Answer:
 
     @classmethod
     def parse(cls, content: str):
-        """Utility function that parses a str content into the 3 fields of then Answer object.
+        """Utility function that parses a str content into the 3 fields of the Answer object.
 
         The input should be formated as follow "[[A;B;C]] this is a justification."
 
