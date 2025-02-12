@@ -195,7 +195,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
+<div class="w-full h-full grid grid-cols-[calc(100%-380px)_380px]">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -203,7 +203,6 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
   <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />

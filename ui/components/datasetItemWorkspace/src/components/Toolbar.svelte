@@ -95,8 +95,8 @@ License: CECILL-C
   }
 </script>
 
-<div class="h-full shadow-md py-4 px-2 w-16 border-l bg-slate-100 z-10">
-  <div class="flex items-center flex-col gap-4">
+<div class="flex gap-4 z-10">
+  <div class="flex items-center gap-4">
     <IconButton
       tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
@@ -124,7 +124,7 @@ License: CECILL-C
     {/if}
   </div>
   <div
-    class={cn("flex items-center flex-col gap-4 mt-4", {
+    class={cn("flex items-center gap-4", {
       "bg-slate-200 rounded-sm": showSmartTools,
     })}
   >
