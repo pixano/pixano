@@ -11,13 +11,13 @@ import numpy as np
 from pixano.features import CompressedRLE, create_compressed_rle, is_compressed_rle
 from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from pixano.features.utils import (
+    mask_area,
     mask_to_rle,
     polygons_to_rle,
     rle_to_mask,
     rle_to_polygons,
     rle_to_urle,
     urle_to_rle,
-    mask_area,
 )
 from pixano.features.utils.image import encode_rle
 from tests.features.utils import make_tests_is_sublass_strict

@@ -200,14 +200,12 @@ class App:
 @click.option(
     "--aws_endpoint",
     type=str,
-    help=("S3 endpoint URL, use 'AWS' if not provided. " "Used if library_dir or media_dir is an S3 path"),
+    help=("S3 endpoint URL, use 'AWS' if not provided. Used if library_dir or media_dir is an S3 path"),
 )
 @click.option(
     "--aws_region",
     type=str,
-    help=(
-        "S3 region name, not always required for private storages." "Used if library_dir or media_dir is an S3 path"
-    ),
+    help=("S3 region name, not always required for private storages.Used if library_dir or media_dir is an S3 path"),
 )
 @click.option(
     "--aws_access_key",
