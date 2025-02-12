@@ -73,6 +73,15 @@ class TestFolderBaseBuilder:
             url_prefix=urls_relative_path,
         )
 
+    def test_no_jsonl(self):
+        source_dir = Path(tempfile.mkdtemp())
+        target_dir = Path(tempfile.mkdtemp())
+        ImageFolderBuilder(
+            source_dir=source_dir,
+            target_dir=target_dir,
+            info=DatasetInfo(name="test", description="test"),
+        )
+
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
