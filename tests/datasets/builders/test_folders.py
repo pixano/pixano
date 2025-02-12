@@ -78,7 +78,7 @@ class TestFolderBaseBuilder:
         target_dir = Path(tempfile.mkdtemp())
 
         # test: no schema with FolderBaseBuilder
-        with pytest.raises(ValueError, match="A schema (dataset_item) is required."):
+        with pytest.raises(ValueError, match="A schema is required."):
             FolderBaseBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,

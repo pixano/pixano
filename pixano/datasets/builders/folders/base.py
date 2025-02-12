@@ -101,7 +101,7 @@ class FolderBaseBuilder(DatasetBuilder):
         if self.DEFAULT_SCHEMA is not None and dataset_item is None:
             dataset_item = self.DEFAULT_SCHEMA
         if dataset_item is None:
-            raise ValueError("A schema (dataset_item) is required.")
+            raise ValueError("A schema is required.")
         super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
         self.source_dir = Path(source_dir)
         if url_prefix is None:

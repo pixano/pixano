@@ -10,9 +10,9 @@ License: CECILL-C
   import { createEventDispatcher } from "svelte";
   import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
   import {
-      checkboxsStateToAnswerChoices,
-      deserializeMessageContent,
-      serializeMessageContent,
+    checkboxsStateToAnswerChoices,
+    deserializeMessageContent,
+    serializeMessageContent,
   } from "../lib/utils";
 
   export let choices: string[];
