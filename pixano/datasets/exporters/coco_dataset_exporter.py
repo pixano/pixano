@@ -6,6 +6,7 @@
 
 
 import json
+from datetime import datetime
 from typing import Any
 
 from fastapi.encoders import jsonable_encoder
@@ -14,9 +15,9 @@ from pixano.features import (
     BaseSchema,
     SchemaGroup,
     Source,
-    group_to_str,
     schema_to_group,
 )
+from pixano.features.schemas import BBox, CompressedRLE, Image, SequenceFrame
 
 from ..dataset_info import DatasetInfo
 from ..dataset_schema import DatasetItem
@@ -36,21 +37,31 @@ class COCODatasetExporter(DatasetExporter):
         Returns:
             A dictionary containing the data to be exported.
         """
-        export_data = {"info": info.model_dump()}
-
-        for group, schemas in self.dataset.schema.groups.items():
-            if group == SchemaGroup.EMBEDDING:
-                continue
-            elif group == SchemaGroup.ITEM:
-                export_data[group_to_str(group, plural=True)] = []
-            else:
-                export_data[group_to_str(group, plural=True)] = {schema: [] for schema in schemas}
-        export_data[group_to_str(SchemaGroup.SOURCE, plural=True)] = [
-            s.model_dump(exclude_timestamps=True) for s in sources
-        ]
+        export_data = {
+            "info": {
+                "id": info.id,
+                "name": info.name,
+                "year": datetime.now().year,
+                "version": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "description": info.description,
+                "contributor": "",
+                "url": "",
+                "date_created": datetime.now(),
+            },
+            "licenses": [
+                {
+                    "id": 0,
+                    "name": "Exported from Pixano",
+                    "url": "",
+                }
+            ],
+            "images": [],
+            "annotations": [],
+            "categories": [],
+        }
         return export_data
 
-    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> None:
+    def export_dataset_item(self, export_data: dict[str, dict | list], dataset_item: DatasetItem) -> None:
         """Store the dataset item in the `export_data` dictionary.
 
         Args:
@@ -63,20 +74,33 @@ class COCODatasetExporter(DatasetExporter):
                 continue
             elif isinstance(schema_data, list):
                 group = schema_to_group(schema_data[0])
-                if group == SchemaGroup.ITEM:
-                    list_ = export_data[group_to_str(group, plural=True)]
-                else:
-                    list_ = export_data[group_to_str(group, plural=True)][schema_name]
-                list_.extend([s.model_dump(exclude_timestamps=True) for s in schema_data])
+                if group == SchemaGroup.VIEW:
+                    export_data["images"].extend(
+                        [coco_image(s, schema_name) for s in schema_data if isinstance(s, Image)]
+                    )
+                elif group == SchemaGroup.ANNOTATION:
+                    anns = {s["entity_id"]: s for s in export_data["annotations"]}
+                    for schema in schema_data:
+                        if isinstance(schema, BBox | CompressedRLE):
+                            entity_id = schema.entity_ref.id
+                            if entity_id in anns.keys():
+                                anns[entity_id] = coco_annotation(schema, anns[entity_id])
+                            else:
+                                anns[entity_id] = coco_annotation(schema)
+
+                    export_data["annotations"].extend(anns.values())
             else:
                 group = schema_to_group(schema_data)
-                if group == SchemaGroup.ITEM:
-                    list_ = export_data[group_to_str(group, plural=True)]
-                else:
-                    print(group, export_data[group_to_str(group, plural=True)])
-                    list_ = export_data[group_to_str(group, plural=True)][schema_name]
-
-                list_.append(schema_data.model_dump(exclude_timestamps=True))
+                if group == SchemaGroup.VIEW:
+                    export_data["images"].append(coco_image(schema_data, schema_name))
+                elif group == SchemaGroup.ANNOTATION and isinstance(schema_data, BBox | CompressedRLE):
+                    anns = {s["entity_id"]: s for s in export_data["annotations"]}
+                    entity_id = schema_data.entity_ref.id
+                    if entity_id in anns.keys():
+                        anns[entity_id] = coco_annotation(schema_data, anns[entity_id])
+                    else:
+                        anns[entity_id] = coco_annotation(schema_data)
+                    export_data["annotations"] = anns.values()
 
     def save_data(self, export_data: dict[str, Any], split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.
@@ -97,3 +121,74 @@ class COCODatasetExporter(DatasetExporter):
         """
         json_path = self.export_dir / f"{split}_{file_name}_{file_num}.json"
         json_path.write_text(json.dumps(jsonable_encoder(export_data), indent=4), encoding="utf-8")
+
+
+def coco_image(image: Image, view: str) -> dict[str, Any]:
+    """Return image in COCO format.
+
+    Args:
+        image (Image): Image
+        view (str): Image view
+
+    Returns:
+        Image in COCO format
+    """
+    coco_img = {
+        "id": image.id,
+        "view": view,
+        "width": image.width,
+        "height": image.height,
+        "file_name": image.url,
+        "license": 0,
+        "date_captured": image.created_at,
+    }
+    if isinstance(image, SequenceFrame):
+        coco_img["timestamp"] = image.timestamp
+        coco_img["frame_index"] = image.frame_index
+    return coco_img
+
+
+def coco_annotation(ann: BBox | CompressedRLE, existing_coco_ann: dict[str, Any] = None) -> dict[str, Any]:
+    """Return annotation in COCO format.
+
+    Args:
+        ann (BBox | CompressedRLE): Annotation
+        existing_coco_ann (dict[str, Any]): Existing annotation in COCO format to complete
+
+    Returns:
+        Annotation in COCO format
+    """
+    coco_ann = {}
+    if existing_coco_ann is not None:
+        coco_ann = existing_coco_ann
+        if isinstance(ann, BBox):
+            coco_ann["bbox"] = ann.xywh_coords
+            coco_ann["confidence"] = ann.confidence
+        elif isinstance(ann, CompressedRLE):
+            coco_ann["segmentation"] = ann.to_polygons()
+            coco_ann["area"] = ann.area
+    else:
+        if isinstance(ann, BBox):
+            coco_ann = {
+                "id": ann.id,
+                "entity_id": ann.entity_ref.id,
+                "image_id": ann.view_ref.id,
+                "category_id": None,  # TODO: category
+                "segmentation": None,
+                "area": None,
+                "bbox": ann.coords,
+                "confidence": ann.confidence,
+                "iscrowd": 0,
+            }
+        elif isinstance(ann, CompressedRLE):
+            coco_ann = {
+                "id": ann.id,
+                "entity_id": ann.entity_ref.id,
+                "image_id": ann.view_ref.id,
+                "category_id": None,  # TODO: category
+                "segmentation": ann.to_polygons(),
+                "area": ann.area,
+                "bbox": None,
+                "iscrowd": 0,
+            }
+    return coco_ann
