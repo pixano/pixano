@@ -252,7 +252,7 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     return urle
 
 
-def mask_area(rle: dict[str, list[int]]) -> float:
+def mask_area(rle: dict[str, list[int] | bytes]) -> float:
     """Compute mask area.
 
     Args:

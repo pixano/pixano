@@ -61,7 +61,7 @@ class COCODatasetExporter(DatasetExporter):
         }
         return export_data
 
-    def export_dataset_item(self, export_data: dict[str, dict | list], dataset_item: DatasetItem) -> None:
+    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> None:
         """Store the dataset item in the `export_data` dictionary.
 
         Args:
@@ -88,7 +88,7 @@ class COCODatasetExporter(DatasetExporter):
                             else:
                                 anns[entity_id] = coco_annotation(schema)
 
-                    export_data["annotations"].extend(anns.values())
+                    export_data["annotations"].extend(list(anns.values()))
             else:
                 group = schema_to_group(schema_data)
                 if group == SchemaGroup.VIEW:
@@ -100,7 +100,7 @@ class COCODatasetExporter(DatasetExporter):
                         anns[entity_id] = coco_annotation(schema_data, anns[entity_id])
                     else:
                         anns[entity_id] = coco_annotation(schema_data)
-                    export_data["annotations"] = anns.values()
+                    export_data["annotations"] = list(anns.values())
 
     def save_data(self, export_data: dict[str, Any], split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.
@@ -148,7 +148,7 @@ def coco_image(image: Image, view: str) -> dict[str, Any]:
     return coco_img
 
 
-def coco_annotation(ann: BBox | CompressedRLE, existing_coco_ann: dict[str, Any] = None) -> dict[str, Any]:
+def coco_annotation(ann: BBox | CompressedRLE, existing_coco_ann: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return annotation in COCO format.
 
     Args:
