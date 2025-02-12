@@ -13,7 +13,7 @@ import shortuuid
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
-from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
+from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_annotation, is_bbox, is_entity, is_view
 from pixano.features.schemas.annotations.annotation import Annotation
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.source import SourceKind
@@ -115,11 +115,11 @@ class FolderBaseBuilder(DatasetBuilder):
         self.annotations_schema: dict[str, type[Annotation]] = {}
 
         for k, s in self.schemas.items():
-            if issubclass(s, View):
+            if is_view(s):
                 self.views_schema.update({k: s})
-            if issubclass(s, Entity):
+            elif is_entity(s):
                 self.entities_schema.update({k: s})
-            if issubclass(s, Annotation):
+            elif is_annotation(s):
                 self.annotations_schema.update({k: s})
         if not self.views_schema or not self.entities_schema:
             raise ValueError("At least one View and one Entity schema must be defined in the schemas argument.")
@@ -153,15 +153,16 @@ class FolderBaseBuilder(DatasetBuilder):
                 if metadata is None:
                     for view_file in split.glob("*"):
                         # only consider {split}/{item}.{ext} files
-                        if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                            # create item
-                            item = self._create_item(split.name, **{})
-                            # create view
-                            view = self._create_view(item, view_file, self.view_schema)
-                            yield {
-                                self.item_schema_name: item,
-                                self.view_name: view,
-                            }
+                        if not view_file.is_file() or view_file.suffix in self.EXTENSIONS:
+                            continue
+                        # create item
+                        item = self._create_item(split.name, **{})
+                        # create view
+                        view = self._create_view(item, view_file, self.view_schema)
+                        yield {
+                            self.item_schema_name: item,
+                            self.view_name: view,
+                        }
                 else:  # metadata not None
                     # retrieve item metadata in metadata file
                     for item_metadata in metadata:
@@ -195,17 +196,12 @@ class FolderBaseBuilder(DatasetBuilder):
                         }
 
     def _create_item(self, split: str, **item_metadata) -> BaseSchema:
-        if "id" in item_metadata:
-            return self.item_schema(
-                split=split,
-                **item_metadata,
-            )
-        else:
-            return self.item_schema(
-                id=shortuuid.uuid(),
-                split=split,
-                **item_metadata,
-            )
+        if "id" not in item_metadata:
+            item_metadata["id"] = shortuuid.uuid()
+        return self.item_schema(
+            split=split,
+            **item_metadata,
+        )
 
     def _create_view(self, item: Item, view_file: Path, view_schema: type[View]) -> View:
         if not issubclass(view_schema, View):
