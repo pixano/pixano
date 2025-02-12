@@ -47,7 +47,9 @@ def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_p
                 f.write(json.dumps(item) + "\n")
 
 
-def _create_folder(samples_path: list[Path], splits: list[str], num_items_per_split: list[int]):
+def _create_folder(
+    samples_path: list[Path], splits: list[str], num_items_per_split: list[int], with_jsonl: bool = True
+):
     source_dir = Path(tempfile.mkdtemp())
     for split, num_items in zip(splits, num_items_per_split):
         for item in range(num_items):
@@ -55,7 +57,8 @@ def _create_folder(samples_path: list[Path], splits: list[str], num_items_per_sp
             item_path = source_dir / split / f"item_{item}{sample_path.suffix}"
             item_path.parent.mkdir(parents=True, exist_ok=True)
             item_path.symlink_to(sample_path)
-    _create_metadata_file_image(source_dir, splits, num_items_per_split)
+    if with_jsonl:
+        _create_metadata_file_image(source_dir, splits, num_items_per_split)
     return source_dir
 
 
@@ -63,6 +66,14 @@ def _create_folder(samples_path: list[Path], splits: list[str], num_items_per_sp
 def image_folder():
     source_dir = _create_folder(
         [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [10, 5]
+    )
+    return source_dir
+
+
+@pytest.fixture
+def image_folder_no_jsonl():
+    source_dir = _create_folder(
+        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [10, 5], with_jsonl=False
     )
     return source_dir
 
@@ -80,6 +91,15 @@ def image_folder_builder(image_folder, dataset_item_image_bboxes_keypoints):
         target_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
         dataset_item=dataset_item_image_bboxes_keypoints,
+    )
+
+
+@pytest.fixture
+def image_folder_builder_no_jsonl(image_folder_no_jsonl, dataset_item_image_bboxes_keypoints):
+    return ImageFolderBuilder(
+        source_dir=image_folder_no_jsonl,
+        target_dir=tempfile.mkdtemp(),
+        info=DatasetInfo(name="test", description="test"),
     )
 
 

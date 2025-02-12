@@ -31,20 +31,11 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_image_folder_no_workspace_specified(self):
-        source_dir = Path(tempfile.mkdtemp())
-        target_dir = Path(tempfile.mkdtemp())
-        urls_relative_path = source_dir.parent.parent
-
-        ImageFolderBuilder(
-            source_dir=source_dir,
-            target_dir=target_dir,
-            info=DatasetInfo(name="test", description="test"),
-            url_prefix=urls_relative_path,
-        )
-
-    def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
+    def test_image_video_init(
+        self, image_folder_builder, image_folder_builder_no_jsonl, video_folder_builder, entity_category
+    ):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
+        assert isinstance(image_folder_builder_no_jsonl, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
         assert image_folder_builder.target_dir.is_dir()

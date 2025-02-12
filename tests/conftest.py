@@ -32,6 +32,8 @@ from tests.fixtures.datasets.builders.builder import (
 from tests.fixtures.datasets.builders.folder import (
     image_folder,
     image_folder_builder,
+    image_folder_builder_no_jsonl,
+    image_folder_no_jsonl,
     video_folder,
     video_folder_builder,
 )
