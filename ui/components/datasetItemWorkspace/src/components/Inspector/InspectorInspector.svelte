@@ -18,16 +18,18 @@ License: CECILL-C
   let currentTab: "scene" | "objects" = "objects";
 </script>
 
-<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
+<div
+  class="h-[calc(100vh-80px)] flex flex-col overflow-y-auto shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat"
+>
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
-    <Tabs.Root bind:value={currentTab} class="h-full">
-      <Tabs.List class="h-[48px]">
-        <Tabs.Trigger value="objects" class="w-1/2">Objects</Tabs.Trigger>
-        <Tabs.Trigger value="scene" class="w-1/2 ">Scene</Tabs.Trigger>
+    <Tabs.Root bind:value={currentTab} class="flex flex-col">
+      <Tabs.List class="flex h-12">
+        <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
+        <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="objects" class="h-[calc(100%-48px)] overflow-y-auto">
+      <Tabs.Content value="objects">
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />
@@ -38,7 +40,7 @@ License: CECILL-C
           <ObjectsInspector />
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="scene" class="max-h-[calc(100vh-200px)] overflow-y-auto">
+      <Tabs.Content value="scene">
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />

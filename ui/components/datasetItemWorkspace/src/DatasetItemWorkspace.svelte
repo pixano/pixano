@@ -17,13 +17,11 @@ License: CECILL-C
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
   import { Loader2Icon } from "lucide-svelte";
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
-  import Toolbar from "./components/Toolbar.svelte";
   import "./index.css";
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
@@ -36,6 +34,7 @@ License: CECILL-C
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
+  import { videoControls } from "./lib/stores/videoViewerStores";
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -43,7 +42,6 @@ License: CECILL-C
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
-  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
 
@@ -195,7 +193,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full h-full grid grid-cols-[calc(100%-380px)_380px]">
+<div class="flex-1 grid grid-cols-[calc(100%-380px)_380px]">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -203,7 +201,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
+  <DatasetItemViewer {selectedItem} {isLoading} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />
 </div>

@@ -368,7 +368,7 @@ License: CECILL-C
       </div>
     </div>
     {#if open}
-      <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
+      <div class="pl-5 text-slate-800 bg-white">
         <div
           class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
           style="border-color:{color}"

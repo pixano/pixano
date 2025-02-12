@@ -254,18 +254,15 @@ License: CECILL-C
 </script>
 
 {#if selectedItem && selectedDataset}
-  <div class="pt-20 h-1 min-h-screen">
-    <DatasetItemWorkspace
-      {selectedItem}
-      {models}
-      featureValues={{ main: {}, objects: {} }}
-      {handleSaveItem}
-      isLoading={isLoadingNewItem}
-      bind:canSaveCurrentItem
-      {shouldSaveCurrentItem}
-      headerHeight={80}
-    />
-  </div>
+  <DatasetItemWorkspace
+    {selectedItem}
+    {models}
+    featureValues={{ main: {}, objects: {} }}
+    {handleSaveItem}
+    isLoading={isLoadingNewItem}
+    bind:canSaveCurrentItem
+    {shouldSaveCurrentItem}
+  />
 {/if}
 {#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
