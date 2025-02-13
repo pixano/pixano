@@ -12,7 +12,7 @@ const face: KeypointsTemplate = {
   vertices: [
     {
       x: 0.3,
-      y: 0.1,
+      y: 0.25,
       features: {
         label: "eye left",
         color: "blue",
@@ -20,7 +20,7 @@ const face: KeypointsTemplate = {
     },
     {
       x: 0.6,
-      y: 0.1,
+      y: 0.25,
       features: {
         label: "eye right",
         color: "blue",
@@ -28,7 +28,7 @@ const face: KeypointsTemplate = {
     },
     {
       x: 0.45,
-      y: 0.3,
+      y: 0.45,
       features: {
         label: "nose",
         color: "green",
@@ -36,7 +36,7 @@ const face: KeypointsTemplate = {
     },
     {
       x: 0.45,
-      y: 0.6,
+      y: 0.75,
       features: {
         label: "mouth",
         color: "red",
@@ -55,7 +55,7 @@ const person: KeypointsTemplate = {
   template_id: "person",
   vertices: [
     {
-      x: 0.5,
+      x: 0.45,
       y: 0.1,
       features: {
         label: "head",
@@ -63,48 +63,48 @@ const person: KeypointsTemplate = {
       },
     },
     {
-      x: 0.5,
-      y: 0.4,
+      x: 0.45,
+      y: 0.3,
       features: {
         label: "middle",
         state: "visible",
       },
     },
     {
-      x: 0.3,
-      y: 0.4,
+      x: 0.25,
+      y: 0.3,
       features: {
         label: "left arm",
         state: "visible",
       },
     },
     {
-      x: 0.7,
-      y: 0.4,
+      x: 0.65,
+      y: 0.3,
       features: {
         label: "right arm",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.7,
+      x: 0.45,
+      y: 0.5,
       features: {
         label: "belly",
         state: "visible",
       },
     },
     {
-      x: 0.3,
-      y: 0.9,
+      x: 0.25,
+      y: 0.8,
       features: {
         label: "left foot",
         state: "visible",
       },
     },
     {
-      x: 0.7,
-      y: 0.9,
+      x: 0.65,
+      y: 0.8,
       features: {
         label: "right foot",
         state: "visible",
@@ -126,7 +126,7 @@ const cow: KeypointsTemplate = {
   template_id: "cow",
   vertices: [
     {
-      x: 0.5,
+      x: 0.45,
       y: 0.1,
       features: {
         label: "museau",
@@ -134,80 +134,80 @@ const cow: KeypointsTemplate = {
       },
     },
     {
-      x: 0.5,
-      y: 0.5,
+      x: 0.45,
+      y: 0.4,
       features: {
         label: "dosA",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.9,
+      x: 0.45,
+      y: 0.8,
       features: {
         label: "dosD",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.23,
+      x: 0.45,
+      y: 0.2,
       features: {
         label: "chignon",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.37,
+      x: 0.45,
+      y: 0.3,
       features: {
         label: "cou",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.63,
+      x: 0.45,
+      y: 0.53,
       features: {
         label: "dosB",
         state: "visible",
       },
     },
     {
-      x: 0.5,
-      y: 0.77,
+      x: 0.45,
+      y: 0.66,
       features: {
         label: "dosC",
         state: "visible",
       },
     },
     {
-      x: 0.3,
-      y: 0.5,
+      x: 0.25,
+      y: 0.4,
       features: {
         label: "AG",
         state: "visible",
       },
     },
     {
-      x: 0.7,
-      y: 0.5,
+      x: 0.65,
+      y: 0.4,
       features: {
         label: "AD",
         state: "visible",
       },
     },
     {
-      x: 0.7,
-      y: 0.9,
+      x: 0.65,
+      y: 0.8,
       features: {
         label: "PD",
         state: "visible",
       },
     },
     {
-      x: 0.3,
-      y: 0.9,
+      x: 0.25,
+      y: 0.8,
       features: {
         label: "PG",
         state: "visible",
