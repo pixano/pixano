@@ -73,9 +73,7 @@ class COCODatasetExporter(DatasetExporter):
         """
         data: dict[str, BaseSchema | list[BaseSchema] | None] = dataset_item.to_schemas_data(self.dataset.schema)
         for schema_name, schema_data in data.items():
-            if not schema_data:
-                continue
-            else:
+            if schema_data:
                 schema_data = schema_data if isinstance(schema_data, list) else [schema_data]
                 group = schema_to_group(schema_data[0])
                 if group == SchemaGroup.VIEW:
