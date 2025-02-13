@@ -48,7 +48,7 @@ class DatasetExporter(ABC):
         self._overwrite = overwrite
 
     @abstractmethod
-    def initialize_export_data(self, info: DatasetInfo, sources: list[Source]) -> dict | list:
+    def initialize_export_data(self, info: DatasetInfo, sources: list[Source]) -> Any:
         """Initialize the data structure to be exported.
 
         Args:
@@ -61,7 +61,7 @@ class DatasetExporter(ABC):
         ...
 
     @abstractmethod
-    def export_dataset_item(self, export_data: dict | list, dataset_item: DatasetItem) -> dict | list:
+    def export_dataset_item(self, export_data: Any, dataset_item: DatasetItem) -> Any:
         """Store the dataset item in the data structure to be exported.
 
         Args:
@@ -73,7 +73,7 @@ class DatasetExporter(ABC):
         ...
 
     @abstractmethod
-    def save_data(self, export_data: dict | list, split: str, file_name: str, file_num: int) -> None:
+    def save_data(self, export_data: Any, split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.
 
         Args:
