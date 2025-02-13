@@ -8,10 +8,10 @@ License: CECILL-C
 import fs from "fs";
 import { readFile } from "fs/promises";
 import * as ort from "onnxruntime-node";
-import { describe, expect, test } from "vitest";
 import { Tensor } from "onnxruntime-web";
+import { describe, expect, test } from "vitest";
 
-import type { LabeledClick, Box } from "../src/interfaces";
+import type { Box, LabeledClick } from "../src/interfaces";
 import * as npyjs from "../src/npy";
 import { SAM } from "../src/Sam";
 

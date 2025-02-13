@@ -7,8 +7,9 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Slider as SliderPrimitive } from "bits-ui";
+  import { ZoomIn, ZoomOut } from "lucide-svelte";
+
   import { cn } from "../../../lib/utils/styleUtils";
-  import { ZoomOut, ZoomIn } from "lucide-svelte";
 
   type $$Props = SliderPrimitive.Props;
 

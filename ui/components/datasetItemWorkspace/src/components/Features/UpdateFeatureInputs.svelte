@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Item, Entity, Annotation } from "@pixano/core";
+  import { Annotation, Entity, Item } from "@pixano/core";
   import { Checkbox, type FeaturesValues } from "@pixano/core/src";
-  import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  import FeatureTextInput from "./TextFeatureInput.svelte";
+  import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import ListFeature from "./SelectFeatureInput.svelte";
+  import FeatureTextInput from "./TextFeatureInput.svelte";
 
   export let features: Feature[];
   export let featureClass: keyof FeaturesValues;

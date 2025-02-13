@@ -5,15 +5,17 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import { createRender } from "svelte-headless-table";
+
+import type { DatasetStat } from "@pixano/core";
+
+import BooleanCell from "./TableCells/BooleanCell.svelte";
+import DateTimeCell from "./TableCells/DateTimeCell.svelte";
 import HistogramCell from "./TableCells/HistogramCell.svelte";
 import ImageCell from "./TableCells/ImageCell.svelte";
-import VideoCell from "./TableCells/VideoCell.svelte";
 import NumberCell from "./TableCells/NumberCell.svelte";
-import BooleanCell from "./TableCells/BooleanCell.svelte";
 import TextCell from "./TableCells/TextCell.svelte";
-import DateTimeCell from "./TableCells/DateTimeCell.svelte";
-import { createRender } from "svelte-headless-table";
-import type { DatasetStat } from "@pixano/core";
+import VideoCell from "./TableCells/VideoCell.svelte";
 
 type cellType = string | number | boolean | DatasetStat;
 

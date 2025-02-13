@@ -11,6 +11,7 @@ import {
   type KeypointsTemplate,
   type SequenceFrame,
 } from "@pixano/core";
+
 import type { MView } from ".";
 import { templates } from "../../settings/keyPointsTemplates";
 

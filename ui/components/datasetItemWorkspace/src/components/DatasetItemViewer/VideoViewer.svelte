@@ -7,6 +7,8 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import * as ort from "onnxruntime-web";
+  import { onMount } from "svelte";
+  import { derived } from "svelte/store";
 
   import { Canvas2D } from "@pixano/canvas2d";
   import { ToolType } from "@pixano/canvas2d/src/tools";
@@ -27,8 +29,7 @@ License: CECILL-C
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { onMount } from "svelte";
-  import { derived } from "svelte/store";
+
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     addOrUpdateSaveItem,
@@ -40,13 +41,13 @@ License: CECILL-C
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
-    merges,
     colorScale,
     entities,
     imageSmoothing,
     itemBboxes,
     itemKeypoints,
     itemMasks,
+    merges,
     newShape,
     saveData,
     selectedKeypointsTemplate,

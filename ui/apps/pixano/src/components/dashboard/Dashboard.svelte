@@ -24,8 +24,10 @@ License: CECILL-C
         on:click={() => (selectedTab = tab)}
         class={cn("p-4 text-left first-letter:capitalize hover:bg-slate-100", {
           "bg-slate-200 text-primary hover:bg-slate-200": tab === selectedTab,
-        })}>{tab}</button
+        })}
       >
+        {tab}
+      </button>
     {/each}
   </div>
   <div class="w-3/4 flex flex-col z-10 p-8">
@@ -41,7 +43,7 @@ License: CECILL-C
         </span>
         <span class="w-1/4 ml-8 text-5xl font-bold text-right">
           {selectedDataset.num_items}
-          <span class="text-xl"> item{selectedDataset.num_items > 1 ? "s" : ""}</span>
+          <span class="text-xl">item{selectedDataset.num_items > 1 ? "s" : ""}</span>
         </span>
       </div>
 
@@ -54,7 +56,7 @@ License: CECILL-C
     {:else if selectedTab === "derived source feature"}
       <!-- Stats -->
       {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
-        <span class="text-5xl font-bold"> Statistics </span>
+        <span class="text-5xl font-bold">Statistics</span>
         <div class="mt-6 h-full overflow-y-auto flex flex-wrap justify-between gap-6">
           <!-- If charts are ready to be displayed, display them -->
           {#each selectedDataset.stats as chart}

@@ -6,10 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import Command from "./command.svelte";
-  import * as Dialog from "../dialog";
   import type { Dialog as DialogPrimitive } from "bits-ui";
   import type { Command as CommandPrimitive } from "cmdk-sv";
+
+  import * as Dialog from "../dialog";
+  import Command from "./command.svelte";
 
   type $$Props = DialogPrimitive.Props & CommandPrimitive.CommandProps;
 

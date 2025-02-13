@@ -4,8 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, type BBox, type Entity, type Source } from "@pixano/core";
 import { get } from "svelte/store";
+
+import { BaseSchema, type BBox, type Entity, type Source } from "@pixano/core";
+
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { DEFAULT_FEATURE } from "../../settings/defaultFeatures";
 

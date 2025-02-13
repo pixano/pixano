@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { derived } from "svelte/store";
+
   import {
     Annotation,
     BaseSchema,
@@ -19,7 +21,7 @@ License: CECILL-C
     type SaveTrackletShape,
   } from "@pixano/core";
   import { Button, SaveShapeType, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
-  import { derived } from "svelte/store";
+
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
@@ -42,6 +44,7 @@ License: CECILL-C
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+
   export let currentTab: "scene" | "objects";
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
@@ -452,8 +455,10 @@ License: CECILL-C
     <div class="flex gap-4">
       <Button
         class="text-white"
-        on:click={() => newShape.set({ status: "none", shouldReset: true })}>Cancel</Button
+        on:click={() => newShape.set({ status: "none", shouldReset: true })}
       >
+        Cancel
+      </Button>
       <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>

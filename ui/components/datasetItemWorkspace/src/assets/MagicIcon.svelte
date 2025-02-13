@@ -43,5 +43,5 @@ License: CECILL-C
       height="14.26"
       rx="0.27"
     />
-  </g></svg
->
+  </g>
+</svg>

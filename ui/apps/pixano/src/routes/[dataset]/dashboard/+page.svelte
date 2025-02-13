@@ -6,10 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { currentDatasetStore } from "$lib/stores/datasetStores";
-  import type { DatasetInfo } from "@pixano/core/src";
   import { onDestroy } from "svelte";
+
+  import type { DatasetInfo } from "@pixano/core/src";
+
   import Dashboard from "../../../components/dashboard/Dashboard.svelte";
+  import { currentDatasetStore } from "$lib/stores/datasetStores";
 
   let selectedDataset: DatasetInfo;
 

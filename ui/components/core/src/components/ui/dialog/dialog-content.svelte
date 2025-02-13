@@ -7,9 +7,10 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Dialog as DialogPrimitive } from "bits-ui";
+  import { X } from "lucide-svelte";
+
   import * as Dialog from ".";
   import { cn, flyAndScale } from "../../../lib/utils/styleUtils";
-  import { X } from "lucide-svelte";
 
   type $$Props = DialogPrimitive.ContentProps;
 

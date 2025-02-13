@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Home, Database } from "lucide-svelte";
+import { Database, Home } from "lucide-svelte";
 
 export const navItems = [
   {

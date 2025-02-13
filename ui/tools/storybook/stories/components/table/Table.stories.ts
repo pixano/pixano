@@ -5,7 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Meta, StoryObj } from "@storybook/svelte";
+
 import { Table } from "@pixano/table";
+
 import { items } from "./tableMocks";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction

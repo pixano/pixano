@@ -8,8 +8,8 @@ License: CECILL-C
   // Imports
   import { Button as ButtonPrimitive } from "bits-ui";
 
-  import { cn } from "../../../lib/utils/styleUtils";
   import { buttonVariants, type Props } from ".";
+  import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = Props;
 

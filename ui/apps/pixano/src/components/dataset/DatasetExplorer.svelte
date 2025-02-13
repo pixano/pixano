@@ -6,13 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { createEventDispatcher } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
+  import { createEventDispatcher } from "svelte";
 
-  import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
-  import { Table } from "@pixano/table";
+  import { LoadingModal, PrimaryButton, WarningModal } from "@pixano/core/src";
   import type { DatasetBrowser } from "@pixano/core/src";
-
   import {
     svg_clear,
     svg_first_page,
@@ -21,6 +19,7 @@ License: CECILL-C
     svg_prev_page,
     svg_search,
   } from "@pixano/core/src/icons";
+  import { Table } from "@pixano/table";
 
   import { datasetTableStore } from "../../lib/stores/datasetStores";
   import {
