@@ -73,9 +73,10 @@ class COCODatasetExporter(DatasetExporter):
         """
         data: dict[str, BaseSchema | list[BaseSchema] | None] = dataset_item.to_schemas_data(self.dataset.schema)
         for schema_name, schema_data in data.items():
-            if schema_data is None or isinstance(schema_data, list) and len(schema_data) == 0:
+            if not schema_data:
                 continue
-            elif isinstance(schema_data, list):
+            else:
+                schema_data = schema_data if isinstance(schema_data, list) else [schema_data]
                 group = schema_to_group(schema_data[0])
                 if group == SchemaGroup.VIEW:
                     export_data["images"].extend(
@@ -90,18 +91,6 @@ class COCODatasetExporter(DatasetExporter):
                                 anns[entity_id] = coco_annotation(schema, anns[entity_id])
                             else:
                                 anns[entity_id] = coco_annotation(schema)
-                    export_data["annotations"] = list(anns.values())
-            else:
-                group = schema_to_group(schema_data)
-                if group == SchemaGroup.VIEW:
-                    export_data["images"].append(coco_image(schema_data, schema_name))
-                elif group == SchemaGroup.ANNOTATION and isinstance(schema_data, BBox | CompressedRLE):
-                    anns = {s["entity_id"]: s for s in export_data["annotations"]}
-                    entity_id = schema_data.entity_ref.id
-                    if entity_id in anns.keys():
-                        anns[entity_id] = coco_annotation(schema_data, anns[entity_id])
-                    else:
-                        anns[entity_id] = coco_annotation(schema_data)
                     export_data["annotations"] = list(anns.values())
         return export_data
 

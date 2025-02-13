@@ -62,9 +62,10 @@ class DefaultJSONDatasetExporter(DatasetExporter):
         """
         data: dict[str, BaseSchema | list[BaseSchema] | None] = dataset_item.to_schemas_data(self.dataset.schema)
         for schema_name, schema_data in data.items():
-            if schema_data is None or isinstance(schema_data, list) and len(schema_data) == 0:
+            if not schema_data:
                 continue
-            elif isinstance(schema_data, list):
+            else:
+                schema_data = schema_data if isinstance(schema_data, list) else [schema_data]
                 group = schema_to_group(schema_data[0])
                 if group == SchemaGroup.ITEM:
                     export_data[group_to_str(group, plural=True)].extend(
@@ -73,17 +74,6 @@ class DefaultJSONDatasetExporter(DatasetExporter):
                 else:
                     export_data[group_to_str(group, plural=True)][schema_name].extend(
                         [s.model_dump(exclude_timestamps=True) for s in schema_data]
-                    )
-            else:
-                group = schema_to_group(schema_data)
-                if group == SchemaGroup.ITEM:
-                    export_data[group_to_str(group, plural=True)].append(
-                        schema_data.model_dump(exclude_timestamps=True)
-                    )
-                else:
-                    print(group, export_data[group_to_str(group, plural=True)])
-                    export_data[group_to_str(group, plural=True)][schema_name].append(
-                        schema_data.model_dump(exclude_timestamps=True)
                     )
         return export_data
 
