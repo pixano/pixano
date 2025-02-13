@@ -5,13 +5,13 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
-  type BaseDataFields,
   BaseSchema,
   Conversation,
-  type ConversationType,
   Entity,
-  type EntityType,
   Track,
+  type BaseDataFields,
+  type ConversationType,
+  type EntityType,
   type TrackType,
 } from "../../types";
 

@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { BaseSchema } from "../BaseSchema";
-import { type BaseDataFields, referenceSchema } from "../datasetTypes";
+import { referenceSchema, type BaseDataFields } from "../datasetTypes";
 import { Entity, type EntityType } from "./Entity";
 
 export const conversationSchema = z

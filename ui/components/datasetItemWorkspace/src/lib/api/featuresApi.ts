@@ -14,6 +14,7 @@ import {
   type FeaturesValues,
   type ItemFeature,
 } from "@pixano/core";
+
 import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
 import type {
   CheckboxFeature,

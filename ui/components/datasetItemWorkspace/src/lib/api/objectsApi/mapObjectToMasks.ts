@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { BaseSchema, type Mask } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
+
 import {
   HIGHLIGHTED_MASK_STROKE_FACTOR,
   NOT_ANNOTATION_ITEM_OPACITY,

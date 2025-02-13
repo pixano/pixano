@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Slider as SliderPrimitive } from "bits-ui";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = SliderPrimitive.Props & {
@@ -55,9 +56,10 @@ License: CECILL-C
       )}
       data-bits-slider-thumb=""
       style={`position: absolute; left: ${pourcentage}%; translate: -50%;`}
-      >{#if isMouseOverThumb && pourcentage > 0 && pourcentage < $$restProps.max * 100}{displayedValue}
-      {/if}</button
     >
+      {#if isMouseOverThumb && pourcentage > 0 && pourcentage < $$restProps.max * 100}{displayedValue}
+      {/if}
+    </button>
   </SliderPrimitive.Root>
   <span>{$$restProps.max}</span>
 </div>

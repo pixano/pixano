@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import Root from "./checkbox.svelte";
+
 export {
   Root,
   //

@@ -12,12 +12,12 @@ License: CECILL-C
   import type {
     CreateKeypointShape,
     KeypointsTemplate,
-    SaveKeyBoxShape,
     Reference,
+    SaveKeyBoxShape,
   } from "@pixano/core";
 
-  import Keypoints from "./keypoints/Keypoint.svelte";
   import { findRectBoundaries } from "../api/keypointsApi";
+  import Keypoints from "./keypoints/Keypoint.svelte";
 
   export let zoomFactor: number;
   export let newShape: CreateKeypointShape | SaveKeyBoxShape;

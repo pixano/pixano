@@ -8,6 +8,7 @@ License: CECILL-C
   /* eslint-disable svelte/no-at-html-tags */
 
   import type { Message, TextSpan, TextSpanType } from "@pixano/core";
+
   import { editorSelectionToTextSpan, textSpansToHtml } from "../lib";
 
   export let textSpans: TextSpan[] = [];

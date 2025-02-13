@@ -6,8 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
   import type { DatasetInfo } from "@pixano/core/src";
+
+  import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
   import { datasetsStore } from "../lib/stores/datasetStores";
 
   let datasets: Array<DatasetInfo>;

@@ -6,14 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
   // Import stores and API functions
   import { afterUpdate } from "svelte";
+
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+
   import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";

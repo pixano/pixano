@@ -8,6 +8,7 @@ import Konva from "konva";
 import simplify from "simplify-js";
 
 import type { MaskSVG } from "@pixano/core";
+
 import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
 export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
