@@ -119,7 +119,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center flex-col gap-4 mt-4", {
+  class={cn("flex items-center gap-4", {
     "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Fusion,
   })}
 >
