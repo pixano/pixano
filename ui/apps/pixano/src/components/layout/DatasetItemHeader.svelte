@@ -12,7 +12,6 @@ License: CECILL-C
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
 
   import { currentDatasetStore } from "$lib/stores/datasetStores";
-  import { api } from "@pixano/core/src";
 
   export let currentItemId: string;
   export let isLoading: boolean;
@@ -28,11 +27,6 @@ License: CECILL-C
       await goToNeighborItem("next");
     }
     return event.key;
-  };
-
-  const isVideoDatasetItem = async () => {
-    const datasetItem = await api.getDatasetItem($currentDatasetStore.id, currentItemId);
-    return datasetItem.ui.type === WorkspaceType.VIDEO;
   };
 </script>
 
@@ -57,9 +51,7 @@ License: CECILL-C
       </IconButton>
     </div>
 
-    {#await isVideoDatasetItem() then isVideo}
-      <Toolbar {isVideo} />
-    {/await}
+    <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
   {/if}
 {/if}
 <PrimaryButton on:click={handleSave}>Save</PrimaryButton>
