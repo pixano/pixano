@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { Message } from "@pixano/core";
   import { createEventDispatcher } from "svelte";
+
+  import type { Message } from "@pixano/core";
 
   export let answer: Message;
 

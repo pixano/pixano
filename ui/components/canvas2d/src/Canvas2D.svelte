@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Annotation, SaveShapeType, WarningModal, type ImagesPerView } from "@pixano/core";
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import * as ort from "onnxruntime-web";
@@ -15,8 +14,12 @@ License: CECILL-C
   import { writable, type Writable } from "svelte/store";
 
   import {
+    Annotation,
     BBox,
     Mask,
+    SaveShapeType,
+    WarningModal,
+    type ImagesPerView,
     type KeypointsTemplate,
     type LabeledPointTool,
     type Reference,
@@ -25,9 +28,9 @@ License: CECILL-C
     type Vertex,
   } from "@pixano/core";
   import { cn } from "@pixano/core/src";
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
 
-  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";

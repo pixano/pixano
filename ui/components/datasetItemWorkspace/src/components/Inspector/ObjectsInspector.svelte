@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { afterUpdate } from "svelte";
+
   import { Thumbnail } from "@pixano/canvas2d";
   import { BaseSchema, Entity, Source, type ObjectThumbnail } from "@pixano/core";
 
@@ -20,7 +22,6 @@ License: CECILL-C
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
-  import { afterUpdate } from "svelte";
 
   let allTopEntities: Entity[];
   let selectedEntitiesId: string[];

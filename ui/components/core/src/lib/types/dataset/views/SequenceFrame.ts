@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
-import { type ImageType, Image } from "./Image";
+import { Image, type ImageType } from "./Image";
 import { type ViewType } from "./View";
 
 export const sequenceFrameSchema = z

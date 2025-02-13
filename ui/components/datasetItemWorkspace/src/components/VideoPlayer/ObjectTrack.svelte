@@ -23,13 +23,14 @@ License: CECILL-C
     Track,
     Tracklet,
   } from "@pixano/core";
+
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource, getTopEntity } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import {
     annotations,
-    entities,
     colorScale,
+    entities,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
@@ -321,9 +322,9 @@ License: CECILL-C
 
 {#if track && tracklets}
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
-    <span class="sticky left-5 m-1" style={`background: ${color}1a;`}
-      >{track.data.name} ({track.id})</span
-    >
+    <span class="sticky left-5 m-1" style={`background: ${color}1a;`}>
+      {track.data.name} ({track.id})
+    </span>
   </div>
   <div
     class="flex gap-5 relative my-auto z-20"

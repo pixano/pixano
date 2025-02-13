@@ -5,4 +5,5 @@ License: CECILL-C
 -------------------------------------*/
 
 import Root from "./radio-group.svelte";
+
 export { Root as RadioGroup, Root };

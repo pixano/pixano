@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Message } from "@pixano/core";
+
   import { QuestionForm } from "./components";
   import { groupMessagesByNumber } from "./lib/utils";
 

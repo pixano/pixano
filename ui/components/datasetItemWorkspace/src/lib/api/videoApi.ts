@@ -4,13 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { nanoid } from "nanoid";
+
 import type { Annotation, KeypointsTemplate, SaveItem } from "@pixano/core";
 import { BaseSchema, BBox, Tracklet } from "@pixano/core";
-import { nanoid } from "nanoid";
-import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
 
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
+import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
 import { addOrUpdateSaveItem, getPixanoSource } from "./objectsApi";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {

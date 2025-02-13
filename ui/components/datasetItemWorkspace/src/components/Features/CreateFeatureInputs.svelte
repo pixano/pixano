@@ -20,21 +20,20 @@ License: CECILL-C
   } from "@pixano/core/src";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
-
+  //import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  import { mapFeatureList } from "../../lib/api/featuresApi";
   import {
     createObjectInputsSchema,
     createSchemaFromFeatures,
     type InputFeatures,
   } from "../../lib/settings/objectValidationSchemas";
+  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import type {
     CreateObjectInputs,
     CreateObjectSchema,
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
-  //import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
-  import { mapFeatureList } from "../../lib/api/featuresApi";
 
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
