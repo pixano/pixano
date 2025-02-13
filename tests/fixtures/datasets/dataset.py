@@ -50,17 +50,15 @@ def dataset_vqa(dataset_item_vqa) -> Dataset:
         id="dataset_vqa",
         name="dataset_vqa",
         description="Description dataset_vqa.",
-        workspace=WorkspaceType.IMAGE,
+        workspace=WorkspaceType.IMAGE_VQA,
     )
-    dataset_builder_image_bboxes_keypoint = DatasetBuilderVQA(
+    dataset_builder_vqa = DatasetBuilderVQA(
         info=info_dataset_vqa,
         target_dir=LIBRARY_DIR / "dataset_vqa",
         dataset_item=dataset_item_vqa,
     )
-    dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
-        dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
-    )
-    return dataset_builder_image_bboxes_keypoint.build(mode="overwrite", check_integrity="none")
+    dataset_builder_vqa.db = lancedb.connect(dataset_builder_vqa.target_dir / Dataset._DB_PATH)
+    return dataset_builder_vqa.build(mode="overwrite", check_integrity="none")
 
 
 @pytest.fixture(scope="session")

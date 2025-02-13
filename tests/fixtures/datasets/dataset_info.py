@@ -24,7 +24,7 @@ def info_dataset_vqa():
     return DatasetInfo(
         name="dataset_vqa",
         description="Description dataset_vqa.",
-        workspace=WorkspaceType.VQA,
+        workspace=WorkspaceType.IMAGE_VQA,
     )
 
 

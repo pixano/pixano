@@ -17,7 +17,7 @@ from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.schemas.source import Source, SourceKind
-from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint
+from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint, DatasetBuilderVQA
 
 
 class TestDatasetBuilder:
@@ -28,7 +28,12 @@ class TestDatasetBuilder:
             (Path(tempfile.gettempdir())),
         ],
     )
-    def test_init(self, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, target_dir):
+    def test_init(
+        self,
+        dataset_item_image_bboxes_keypoint,
+        info_dataset_image_bboxes_keypoint,
+        target_dir,
+    ):
         builder = DatasetBuilderImageBboxesKeypoint(
             5, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
         )
@@ -40,6 +45,35 @@ class TestDatasetBuilder:
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(),
             dataset_item_image_bboxes_keypoint.to_dataset_schema().schemas.items(),
+            strict=True,
+        ):
+            assert key1 == key2
+            assert type(value1) is type(value2)
+        assert isinstance(builder.db, lancedb.DBConnection)
+        assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
+
+    @pytest.mark.parametrize(
+        "target_dir",
+        [
+            (tempfile.gettempdir()),
+            (Path(tempfile.gettempdir())),
+        ],
+    )
+    def test_init_vqa(
+        self,
+        dataset_item_vqa,
+        info_dataset_vqa,
+        target_dir,
+    ):
+        builder = DatasetBuilderVQA(4, target_dir, dataset_item_vqa, info_dataset_vqa)
+        assert builder.target_dir == Path(target_dir)
+        assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
+        assert builder.info == info_dataset_vqa
+        assert isinstance(builder.dataset_schema, DatasetSchema)
+        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "conversations", "messages"}
+        for (key1, value1), (key2, value2) in zip(
+            builder.schemas.items(),
+            dataset_item_vqa.to_dataset_schema().schemas.items(),
             strict=True,
         ):
             assert key1 == key2

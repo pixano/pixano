@@ -102,6 +102,7 @@ def generate_data_item_vqa(num_rows: int, item_schema_name, item_schema):
         conversations.append(
             Conversation(
                 id=f"conversation_{i}",
+                kind="Math",
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
                 created_at=datetime(2021, 1, 1, 0, 0, 0),

@@ -59,6 +59,7 @@ from tests.fixtures.datasets.dataset_item import (
     dataset_item_image_embeddings,
     dataset_item_multi_view_tracking_and_image,
     dataset_item_video_bboxes_keypoint,
+    dataset_item_vqa,
 )
 from tests.fixtures.datasets.dataset_schema import (
     dataset_schema_image_bboxes_keypoint,
