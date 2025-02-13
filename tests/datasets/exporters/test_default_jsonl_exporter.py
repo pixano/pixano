@@ -31,7 +31,7 @@ class TestDefaultJSONLDataset:
         dataset_item = dataset_image_bboxes_keypoint.get_dataset_items(limit=1)[0]
 
         export_data = []
-        exporter.export_dataset_item(export_data, dataset_item)
+        export_data = exporter.export_dataset_item(export_data, dataset_item)
 
         expected_export_data = [dataset_item.model_dump(exclude_timestamps=True)]
 

@@ -50,12 +50,15 @@ class DefaultJSONDatasetExporter(DatasetExporter):
         ]
         return export_data
 
-    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> None:
+    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> dict[str, Any]:
         """Store the dataset item in the `export_data` dictionary.
 
         Args:
             export_data: A dictionary containing the data to be exported.
             dataset_item: The dataset item to be exported.
+
+        Returns:
+            A dictionary containing the data to be exported.
         """
         data: dict[str, BaseSchema | list[BaseSchema] | None] = dataset_item.to_schemas_data(self.dataset.schema)
         for schema_name, schema_data in data.items():
@@ -64,19 +67,25 @@ class DefaultJSONDatasetExporter(DatasetExporter):
             elif isinstance(schema_data, list):
                 group = schema_to_group(schema_data[0])
                 if group == SchemaGroup.ITEM:
-                    list_ = export_data[group_to_str(group, plural=True)]
+                    export_data[group_to_str(group, plural=True)].extend(
+                        [s.model_dump(exclude_timestamps=True) for s in schema_data]
+                    )
                 else:
-                    list_ = export_data[group_to_str(group, plural=True)][schema_name]
-                list_.extend([s.model_dump(exclude_timestamps=True) for s in schema_data])
+                    export_data[group_to_str(group, plural=True)][schema_name].extend(
+                        [s.model_dump(exclude_timestamps=True) for s in schema_data]
+                    )
             else:
                 group = schema_to_group(schema_data)
                 if group == SchemaGroup.ITEM:
-                    list_ = export_data[group_to_str(group, plural=True)]
+                    export_data[group_to_str(group, plural=True)].append(
+                        schema_data.model_dump(exclude_timestamps=True)
+                    )
                 else:
                     print(group, export_data[group_to_str(group, plural=True)])
-                    list_ = export_data[group_to_str(group, plural=True)][schema_name]
-
-                list_.append(schema_data.model_dump(exclude_timestamps=True))
+                    export_data[group_to_str(group, plural=True)][schema_name].append(
+                        schema_data.model_dump(exclude_timestamps=True)
+                    )
+        return export_data
 
     def save_data(self, export_data: dict[str, Any], split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.

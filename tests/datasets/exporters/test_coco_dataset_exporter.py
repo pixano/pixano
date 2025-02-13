@@ -11,58 +11,70 @@ from pathlib import Path
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.exporters import COCODatasetExporter
 from pixano.datasets.exporters.coco_dataset_exporter import coco_annotation, coco_image
-from pixano.features import Source
+from pixano.features import BBox, CompressedRLE, Image, Source
 
 
 class TestCOCODatasetExporter:
-    def test_initialize_export_data(self, dataset_image_bboxes_keypoint: Dataset):
-        exporter = COCODatasetExporter(dataset_image_bboxes_keypoint, "/")
-        info = dataset_image_bboxes_keypoint.info
-        sources = [Source(name="test", kind="model")]
+    def test_initialize_export_data(
+        self,
+        dataset_image_bboxes_keypoint: Dataset,
+        dataset_multi_view_tracking_and_image: Dataset,
+    ):
+        for ds in [dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image]:
+            exporter = COCODatasetExporter(ds, "/")
+            info = ds.info
+            sources = [Source(name="test", kind="model")]
+            export_data = exporter.initialize_export_data(info, sources)
 
-        export_data = exporter.initialize_export_data(info, sources)
+            assert list(export_data.keys()) == ["info", "licenses", "images", "annotations", "categories"]
+            assert export_data["info"]["id"] == info.id
+            assert export_data["info"]["name"] == info.name
+            assert export_data["info"]["description"] == info.description
 
-        assert list(export_data.keys()) == ["info", "licenses", "images", "annotations", "categories"]
-        assert export_data["info"]["id"] == info.id
-        assert export_data["info"]["name"] == info.name
-        assert export_data["info"]["description"] == info.description
+    def test_export_dataset_item(
+        self,
+        dataset_image_bboxes_keypoint: Dataset,
+        dataset_multi_view_tracking_and_image: Dataset,
+    ):
+        for ds in [dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image]:
+            exporter = COCODatasetExporter(ds, "/")
+            dataset_items = ds.get_dataset_items(limit=2)
 
-    def test_export_dataset_item(self, dataset_image_bboxes_keypoint: Dataset):
-        exporter = COCODatasetExporter(dataset_image_bboxes_keypoint, "/")
-        dataset_items = dataset_image_bboxes_keypoint.get_dataset_items(limit=2)
-        dataset_item = dataset_items[0]
-        export_data = {
-            "annotations": [],
-            "images": [],
-        }
+            for dataset_item in dataset_items:
+                export_data = {"annotations": [], "images": []}
+                export_data = exporter.export_dataset_item(export_data, dataset_item)
 
-        exporter.export_dataset_item(export_data, dataset_item)
-        expected_export_data = {
-            "annotations": [coco_annotation(bbox) for bbox in dataset_item.bboxes],
-            "images": [coco_image(dataset_item.image, "image")],
-        }
+                images = []
+                annotations = {}
+                for schema_name, schema_data in dataset_item.to_schemas_data(ds.schema).items():
+                    schemas = schema_data if isinstance(schema_data, list) else [schema_data]
+                    for schema in schemas:
+                        if isinstance(schema, BBox | CompressedRLE):
+                            entity_id = schema.entity_ref.id
+                            if entity_id in annotations.keys():
+                                annotations[entity_id] = coco_annotation(schema, annotations[entity_id])
+                            else:
+                                annotations[entity_id] = coco_annotation(schema)
+                        elif isinstance(schema, Image):
+                            images.append(coco_image(schema, schema_name))
 
-        assert export_data == expected_export_data
+                expected_export_data = {
+                    "annotations": list(annotations.values()),
+                    "images": images,
+                }
 
-        dataset_item = dataset_items[1]
-        export_data = {
-            "annotations": [],
-            "images": [],
-        }
+                assert export_data == expected_export_data
 
-        exporter.export_dataset_item(export_data, dataset_item)
-        expected_export_data = {
-            "annotations": [coco_annotation(bbox) for bbox in dataset_item.bboxes],
-            "images": [coco_image(dataset_item.image, "image")],
-        }
+    def test_save_data(
+        self,
+        dataset_image_bboxes_keypoint: Dataset,
+        dataset_multi_view_tracking_and_image: Dataset,
+    ):
+        for ds in [dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image]:
+            export_dir = Path(tempfile.mkdtemp())
+            exporter = COCODatasetExporter(ds, export_dir)
+            export_data = {"save": "please"}
+            exporter.save_data(export_data, "split", "file", 1)
 
-        assert export_data == expected_export_data
-
-    def test_save_data(self, dataset_image_bboxes_keypoint: Dataset):
-        export_dir = Path(tempfile.mkdtemp())
-        exporter = COCODatasetExporter(dataset_image_bboxes_keypoint, export_dir)
-        export_data = {"save": "please"}
-        exporter.save_data(export_data, "split", "file", 1)
-
-        save_json = json.load((export_dir / "split_file_1.json").open())
-        assert save_json == export_data
+            save_json = json.load((export_dir / "split_file_1.json").open())
+            assert save_json == export_data

@@ -61,12 +61,15 @@ class COCODatasetExporter(DatasetExporter):
         }
         return export_data
 
-    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> None:
+    def export_dataset_item(self, export_data: dict[str, Any], dataset_item: DatasetItem) -> dict[str, Any]:
         """Store the dataset item in the `export_data` dictionary.
 
         Args:
             export_data: A dictionary containing the data to be exported.
             dataset_item: The dataset item to be exported.
+
+        Returns:
+            A dictionary containing the data to be exported.
         """
         data: dict[str, BaseSchema | list[BaseSchema] | None] = dataset_item.to_schemas_data(self.dataset.schema)
         for schema_name, schema_data in data.items():
@@ -87,8 +90,7 @@ class COCODatasetExporter(DatasetExporter):
                                 anns[entity_id] = coco_annotation(schema, anns[entity_id])
                             else:
                                 anns[entity_id] = coco_annotation(schema)
-
-                    export_data["annotations"].extend(list(anns.values()))
+                    export_data["annotations"] = list(anns.values())
             else:
                 group = schema_to_group(schema_data)
                 if group == SchemaGroup.VIEW:
@@ -101,6 +103,7 @@ class COCODatasetExporter(DatasetExporter):
                     else:
                         anns[entity_id] = coco_annotation(schema_data)
                     export_data["annotations"] = list(anns.values())
+        return export_data
 
     def save_data(self, export_data: dict[str, Any], split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.

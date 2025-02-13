@@ -45,7 +45,7 @@ class TestDefaultJSONDatasetExporter:
             "views": {"image": []},
         }
 
-        exporter.export_dataset_item(export_data, dataset_item)
+        export_data = exporter.export_dataset_item(export_data, dataset_item)
         expected_export_data = {
             "info": info.model_dump(),
             "annotations": {
@@ -72,7 +72,7 @@ class TestDefaultJSONDatasetExporter:
             "views": {"image": []},
         }
 
-        exporter.export_dataset_item(export_data, dataset_item)
+        export_data = exporter.export_dataset_item(export_data, dataset_item)
         expected_export_data = {
             "info": info.model_dump(),
             "annotations": {

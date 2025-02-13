@@ -39,14 +39,20 @@ class DefaultJSONLDatasetExporter(DatasetExporter):
         ]
         return export_data
 
-    def export_dataset_item(self, export_data: list[dict[str, Any]], dataset_item: DatasetItem) -> None:
+    def export_dataset_item(
+        self, export_data: list[dict[str, Any]], dataset_item: DatasetItem
+    ) -> list[dict[str, Any]]:
         """Store the dataset item in the `export_data` list of dictionaries.
 
         Args:
             export_data: A list of dictionaries containing the dataset items to be exported.
             dataset_item: The dataset item to be exported.
+
+        Returns:
+            A list of dictionaries containing the dataset items to be exported.
         """
         export_data.append(dataset_item.model_dump(exclude_timestamps=True))
+        return export_data
 
     def save_data(self, export_data: list[dict[str, Any]], split: str, file_name: str, file_num: int) -> None:
         """Save data to the specified directory.
