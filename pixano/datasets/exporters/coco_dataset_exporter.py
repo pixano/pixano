@@ -113,18 +113,19 @@ class COCODatasetExporter(DatasetExporter):
                     for schema in schema_data:
                         if isinstance(schema, Entity) and hasattr(schema, "category"):
                             ann_id = f"{schema.view_ref.id}_{schema.id}"
-                            if schema.id in anns.keys():
-                                anns[ann_id] = coco_annotation(schema, anns[ann_id], self.category_dict)
-                            else:
-                                anns[ann_id] = coco_annotation(schema, category_dict=self.category_dict)
+                            anns[ann_id] = coco_annotation(
+                                ann=schema,
+                                existing_coco_ann=anns[ann_id] if ann_id in anns.keys() else None,
+                                category_dict=self.category_dict,
+                            )
                 elif group == SchemaGroup.ANNOTATION:
                     for schema in schema_data:
                         if isinstance(schema, BBox | CompressedRLE):
                             ann_id = f"{schema.view_ref.id}_{schema.entity_ref.id}"
-                            if ann_id in anns.keys():
-                                anns[ann_id] = coco_annotation(schema, anns[ann_id])
-                            else:
-                                anns[ann_id] = coco_annotation(schema)
+                            anns[ann_id] = coco_annotation(
+                                ann=schema,
+                                existing_coco_ann=anns[ann_id] if ann_id in anns.keys() else None,
+                            )
         export_data["annotations"] = list(anns.values())
         return export_data
 
