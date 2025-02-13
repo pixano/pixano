@@ -135,7 +135,7 @@ def generate_data_item_vqa(num_rows: int, item_schema_name, item_schema):
                     type="ANSWER",
                     question_type="MULTI_CHOICE",
                     choices=[],
-                    id=f"message_{i}",
+                    id=f"message_{i}_answer",
                     item_ref=ItemRef(id=item_id),
                     view_ref=ViewRef(id=f"image_{i}", name="image"),
                     entity_ref=EntityRef(id=f"conversation_{i}", name="conversations"),

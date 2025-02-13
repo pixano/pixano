@@ -190,6 +190,99 @@ class TestDatasetBuilder:
         for mock in table_mocks:
             mock.call_count == 2 if flush_every_n_samples is None else 1
 
+    @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
+    @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
+    @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
+    @pytest.mark.parametrize("check_integrity", ["raise", "warn", "none"])
+    def test_build_vqa(
+        self,
+        dataset_builder_vqa,
+        mode,
+        flush_every_n_samples,
+        compact_every_n_transactions,
+        check_integrity,
+    ):
+        # Mock the compact method to register the call count
+        compact_dataset_mock = MagicMock()
+        compact_table_mock = MagicMock()
+        dataset_builder_vqa.compact_dataset = compact_dataset_mock
+        dataset_builder_vqa.compact_table = compact_table_mock
+
+        dataset = dataset_builder_vqa.build(
+            flush_every_n_samples=flush_every_n_samples,
+            compact_every_n_transactions=compact_every_n_transactions,
+            mode="create",
+            check_integrity=check_integrity,
+        )
+        assert dataset_builder_vqa.info.description == "Description dataset_vqa."
+        assert dataset_builder_vqa.info.workspace == WorkspaceType.IMAGE_VQA
+
+        assert (dataset_builder_vqa.target_dir / Dataset._INFO_FILE).exists()
+        assert (dataset_builder_vqa.target_dir / Dataset._DB_PATH).exists()
+        assert (dataset_builder_vqa.target_dir / Dataset._FEATURES_VALUES_FILE).exists()
+        assert (dataset_builder_vqa.target_dir / Dataset._SCHEMA_FILE).exists()
+
+        assert isinstance(dataset, Dataset)
+        assert dataset.info == dataset_builder_vqa.info
+        assert dataset.num_rows == 4
+        assert set(dataset.open_tables().keys()) == {"image", "item", "conversations", "messages"}
+
+        assert compact_dataset_mock.call_count == 1
+        if compact_every_n_transactions is None:
+            assert compact_table_mock.call_count == 0
+        else:
+            if flush_every_n_samples is None:
+                assert compact_table_mock.call_count == 8
+            elif flush_every_n_samples == 3:
+                assert compact_table_mock.call_count == 1
+            else:
+                raise ValueError("Invalid flush_every_n_samples value, update test")
+
+        if mode == "create":
+            with pytest.raises(OSError, match="Dataset already exists"):
+                dataset_builder_vqa.build(
+                    flush_every_n_samples=flush_every_n_samples,
+                    compact_every_n_transactions=compact_every_n_transactions,
+                    mode=mode,
+                    check_integrity=check_integrity,
+                )
+            return
+
+        # Mock the add method to register the call count
+        # Not done before as the tables are created only when the build method is called the first time
+        def _side_effect_table_add(self, *args, **kwargs):
+            return self.add(*args, **kwargs)
+
+        table_mocks = []
+        for table in dataset_builder_vqa.open_tables().values():
+            table_mock = MagicMock(side_effect=_side_effect_table_add)
+            table.add = table_mock
+            table_mocks.append(table_mock)
+
+        dataset_builder_vqa.num_rows = 5
+        dataset = dataset_builder_vqa.build(
+            flush_every_n_samples=flush_every_n_samples,
+            compact_every_n_transactions=compact_every_n_transactions,
+            mode=mode,
+            check_integrity="none",
+        )
+
+        assert dataset.num_rows == 5 if mode == "overwrite" else 9
+        assert compact_dataset_mock.call_count == 2
+
+        if compact_every_n_transactions is None:
+            assert compact_table_mock.call_count == 0
+        else:
+            if flush_every_n_samples is None:
+                assert compact_table_mock.call_count == 16
+            elif flush_every_n_samples == 3:
+                assert compact_table_mock.call_count == 3
+            else:
+                raise ValueError("Invalid flush_every_n_samples value, update test")
+
+        for mock in table_mocks:
+            mock.call_count == 2 if flush_every_n_samples is None else 1
+
     def test_build_error(self, dataset_builder_image_bboxes_keypoint):
         class WrongIdBuilder(DatasetBuilder):
             def generate_data(self):
