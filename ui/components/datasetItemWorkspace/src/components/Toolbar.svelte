@@ -10,7 +10,7 @@ License: CECILL-C
     MousePointer,
     Square,
     Share2,
-    BrushIcon,
+    Wand2Icon,
     PlusCircleIcon,
     MinusCircleIcon,
   } from "lucide-svelte";
@@ -18,7 +18,6 @@ License: CECILL-C
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
 
-  import MagicIcon from "../assets/MagicIcon.svelte";
   import {
     panTool,
     smartRectangleTool,
@@ -129,8 +128,7 @@ License: CECILL-C
     })}
   >
     <IconButton tooltipContent="Use a smart segmentation model" on:click={handleSmartToolClick}>
-      <BrushIcon />
-      <MagicIcon />
+      <Wand2Icon />
     </IconButton>
     {#if showSmartTools}
       <IconButton
@@ -139,7 +137,6 @@ License: CECILL-C
         selected={$selectedTool?.type === ToolType.PointSelection && !!$selectedTool.label}
       >
         <PlusCircleIcon />
-        <MagicIcon />
       </IconButton>
       <IconButton
         tooltipContent={removeSmartPointTool.name}
@@ -147,7 +144,6 @@ License: CECILL-C
         selected={$selectedTool?.type === ToolType.PointSelection && !$selectedTool.label}
       >
         <MinusCircleIcon />
-        <MagicIcon />
       </IconButton>
       <IconButton
         tooltipContent={smartRectangleTool.name}
@@ -155,7 +151,6 @@ License: CECILL-C
         selected={$selectedTool?.type === ToolType.Rectangle && $selectedTool.isSmart}
       >
         <Square />
-        <MagicIcon />
       </IconButton>
     {/if}
   </div>
