@@ -36,7 +36,7 @@ class COCODatasetExporter(DatasetExporter):
         export_dir: str | Path,
         overwrite: bool = False,
         category_format: str = "coco91",
-        custom_category_dict: dict[str, int] = None,
+        custom_category_dict: dict[str, int] | None = None,
     ):
         """Initialize a new instance of the DatasetExporter class.
 
