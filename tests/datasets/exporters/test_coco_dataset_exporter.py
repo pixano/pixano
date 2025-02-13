@@ -11,7 +11,7 @@ from pathlib import Path
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.exporters import COCODatasetExporter
 from pixano.datasets.exporters.coco_dataset_exporter import coco_annotation, coco_image
-from pixano.features import BBox, CompressedRLE, Image, Source
+from pixano.features import BBox, CompressedRLE, Entity, Image, Source
 
 
 class TestCOCODatasetExporter:
@@ -49,12 +49,21 @@ class TestCOCODatasetExporter:
                 for schema_name, schema_data in dataset_item.to_schemas_data(ds.schema).items():
                     schemas = schema_data if isinstance(schema_data, list) else [schema_data]
                     for schema in schemas:
-                        if isinstance(schema, BBox | CompressedRLE):
-                            entity_id = schema.entity_ref.id
+                        if (isinstance(schema, Entity) and hasattr(schema, "category")) or isinstance(
+                            schema, BBox | CompressedRLE
+                        ):
+                            entity_id = schema.id if isinstance(schema, Entity) else schema.entity_ref.id
                             if entity_id in annotations.keys():
-                                annotations[entity_id] = coco_annotation(schema, annotations[entity_id])
+                                annotations[entity_id] = coco_annotation(
+                                    ann=schema,
+                                    existing_coco_ann=annotations[entity_id],
+                                    category_dict=exporter.category_dict,
+                                )
                             else:
-                                annotations[entity_id] = coco_annotation(schema)
+                                annotations[entity_id] = coco_annotation(
+                                    ann=schema,
+                                    category_dict=exporter.category_dict,
+                                )
                         elif isinstance(schema, Image):
                             images.append(coco_image(schema, schema_name))
 
