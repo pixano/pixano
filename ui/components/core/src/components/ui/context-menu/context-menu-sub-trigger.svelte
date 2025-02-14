@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
   import { ChevronRight } from "lucide-svelte";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.SubTriggerProps & {

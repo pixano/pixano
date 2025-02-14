@@ -5,8 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import PendingQuestion from "../assets/icons/pending-question.png";
   import CompletedQuestion from "../assets/icons/completed-question.png";
+  import PendingQuestion from "../assets/icons/pending-question.png";
 
   export let questionNumber: number;
   export let isQuestionCompleted: boolean;

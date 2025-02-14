@@ -23,6 +23,7 @@ License: CECILL-C
     Track,
     Tracklet,
   } from "@pixano/core";
+
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     addOrUpdateSaveItem,
@@ -33,8 +34,8 @@ License: CECILL-C
   import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
   import {
     annotations,
-    entities,
     colorScale,
+    entities,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
@@ -359,7 +360,7 @@ License: CECILL-C
     class="flex gap-5 relative my-auto z-20 border-2"
     style={`
       width: ${$videoControls.zoomLevel[0]}%;
-      height: ${Object.keys(views).length * 10}px; 
+      height: ${Object.keys(views).length * 10}px;
       background: ${color}1a;
       border-color:${isHighlighted ? color : "transparent"}
     `}

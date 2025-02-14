@@ -13,6 +13,7 @@ License: CECILL-C
     type Shape,
     type TextSpanType,
   } from "@pixano/core";
+
   import { SpannableMessage } from "./components";
   import { groupTextSpansByMessageId } from "./lib";
 
@@ -48,9 +49,9 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto">
-  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton"
-    >Tag Selected Text</button
-  >
+  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton">
+    Tag Selected Text
+  </button>
   {#each messages as message}
     <SpannableMessage
       {message}

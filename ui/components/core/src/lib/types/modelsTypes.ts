@@ -7,7 +7,7 @@ License: CECILL-C
 // Imports
 import type { Tensor } from "onnxruntime-web";
 
-import type { MaskType, MaskSVG, Reference } from "./dataset";
+import type { MaskSVG, MaskType, Reference } from "./dataset";
 
 // Exports
 export interface LabeledClick {

@@ -12,6 +12,7 @@ import {
   type Image,
   type SequenceFrame,
 } from "@pixano/core";
+
 import type { MView } from ".";
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,

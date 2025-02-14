@@ -6,22 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
+  import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Loader2Icon } from "lucide-svelte";
 
+  import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { IconButton, PrimaryButton, ConfirmModal } from "@pixano/core/src";
-
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
+  import { navItems } from "$lib/constants/headerConstants";
   import {
     currentDatasetStore,
     datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
-  import { navItems } from "$lib/constants/headerConstants";
 
   export let pageId: string | null;
   export let datasetItemsIds: string[];

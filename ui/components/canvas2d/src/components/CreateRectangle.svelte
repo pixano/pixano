@@ -6,13 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Rect, Group } from "svelte-konva";
+  import type Konva from "konva";
+  import { Group, Rect } from "svelte-konva";
+
+  import type { CreateRectangleShape, Reference, SaveRectangleShape } from "@pixano/core";
 
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
-
   import LabelTag from "./LabelTag.svelte";
-  import type { CreateRectangleShape, SaveRectangleShape, Reference } from "@pixano/core";
-  import type Konva from "konva";
 
   export let zoomFactor: number;
   export let newShape: CreateRectangleShape | SaveRectangleShape;

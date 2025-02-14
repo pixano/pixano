@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import type { BaseDataFields } from "../datasetTypes";
 import { Entity, type EntityType, type EntityUIFields } from "./Entity";
 

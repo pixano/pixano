@@ -7,20 +7,20 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
 
   import { api } from "@pixano/core/src";
 
-  import MainHeader from "../components/layout/MainHeader.svelte";
+  import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
+  import MainHeader from "../components/layout/MainHeader.svelte";
   import {
+    currentDatasetStore,
     datasetsStore,
-    modelsStore,
     datasetTableStore,
     defaultDatasetTableValues,
-    currentDatasetStore,
+    modelsStore,
   } from "../lib/stores/datasetStores";
-  import pixanoFavicon from "../assets/favicon.ico";
+  import { page } from "$app/stores";
 
   import "./styles.css";
 

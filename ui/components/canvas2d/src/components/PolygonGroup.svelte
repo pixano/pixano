@@ -10,12 +10,13 @@ License: CECILL-C
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
   import {
+    SaveShapeType,
     type Mask,
     type Reference,
-    SaveShapeType,
     type SelectionTool,
     type Shape,
   } from "@pixano/core";
+
   import {
     convertPointToSvg,
     hexToRGBA,

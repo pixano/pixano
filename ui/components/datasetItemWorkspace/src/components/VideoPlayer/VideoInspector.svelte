@@ -6,23 +6,22 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { entities, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { onMount } from "svelte";
 
-  import ObjectTrack from "./ObjectTrack.svelte";
-  import TimeTrack from "./TimeTrack.svelte";
-  import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import VideoControls from "./VideoControls.svelte";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { BBox, SliderRoot, Track, type KeypointsTemplate } from "@pixano/core";
 
+  import { panTool } from "../../lib/settings/selectionTools";
+  import { entities, selectedTool, views } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot, Track, BBox, type KeypointsTemplate } from "@pixano/core";
-  import { onMount } from "svelte";
-  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import ObjectTrack from "./ObjectTrack.svelte";
+  import TimeTrack from "./TimeTrack.svelte";
+  import VideoControls from "./VideoControls.svelte";
+  import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
   export let updateView: (frameIndex: number) => void;
   export let bboxes: BBox[];

@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Loader2Icon } from "lucide-svelte";
+
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import {
     Annotation,
@@ -17,14 +19,16 @@ License: CECILL-C
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
-  import { Loader2Icon } from "lucide-svelte";
+
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
   import Toolbar from "./components/Toolbar.svelte";
+  import { videoControls } from "./lib/stores/videoViewerStores";
+
   import "./index.css";
+
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
@@ -36,6 +40,7 @@ License: CECILL-C
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
+
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];

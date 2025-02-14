@@ -22,13 +22,16 @@ License: CECILL-C
   } from "@pixano/core";
   import { BaseSchema, cn, IconButton } from "@pixano/core/src";
 
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { createFeature } from "../../lib/api/featuresApi";
   import {
+    addOrUpdateSaveItem,
     defineObjectThumbnail,
     getTopEntity,
-    toggleObjectDisplayControl,
     highlightObject,
+    toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
+  import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     colorScale,
@@ -40,11 +43,6 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
-
-  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-
-  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { panTool } from "../../lib/settings/selectionTools";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
 
@@ -341,9 +339,9 @@ License: CECILL-C
           title="Highlight object"
           on:click={onColoredDotClick}
         />
-        <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap"
-          >{displayName}</span
-        >
+        <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap">
+          {displayName}
+        </span>
       </div>
       <div
         class={cn(
@@ -359,19 +357,20 @@ License: CECILL-C
         style="min-width: 40px;"
       >
         {#if showIcons || isEditing}
-          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
-            ><Pencil class="h-4" /></IconButton
-          >
-          <IconButton tooltipContent="Delete object" on:click={deleteObject}
-            ><Trash2 class="h-4" /></IconButton
-          >
+          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}>
+            <Pencil class="h-4" />
+          </IconButton>
+          <IconButton tooltipContent="Delete object" on:click={deleteObject}>
+            <Trash2 class="h-4" />
+          </IconButton>
         {/if}
         {#if entity.is_track && (showIcons || isEditing || hiddenTrack)}
           <IconButton
             tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
             on:click={onTrackVisClick}
-            >{#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}</IconButton
           >
+            {#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}
+          </IconButton>
         {/if}
         <IconButton
           on:click={() => (open = !open)}

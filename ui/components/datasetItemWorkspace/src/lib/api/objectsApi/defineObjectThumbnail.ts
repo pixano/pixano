@@ -12,6 +12,7 @@ import {
   type Image,
   type SequenceFrame,
 } from "@pixano/core";
+
 import type { MView } from ".";
 import type { ItemsMeta } from "../../types/datasetItemWorkspaceTypes";
 

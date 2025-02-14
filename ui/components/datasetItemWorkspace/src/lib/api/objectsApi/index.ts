@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Annotation, Entity, View } from "@pixano/core";
+
 import { PRE_ANNOTATION } from "../../constants";
 
 export type MView = Record<string, View | View[]>;

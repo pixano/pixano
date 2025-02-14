@@ -4,7 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Entity, Tracklet, BaseSchema } from "@pixano/core";
+import { BaseSchema, Entity, Tracklet } from "@pixano/core";
+
 import { annotations } from "../../stores/datasetItemWorkspaceStores";
 import { getTopEntity } from "./getTopEntity";
 

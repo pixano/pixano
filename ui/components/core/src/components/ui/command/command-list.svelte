@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Command as CommandPrimitive } from "cmdk-sv";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = CommandPrimitive.ListProps;

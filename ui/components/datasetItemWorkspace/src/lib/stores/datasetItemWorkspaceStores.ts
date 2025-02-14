@@ -5,12 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import { derived, writable } from "svelte/store";
+
 import {
-  type InteractiveImageSegmenter,
-  type KeypointsTemplate,
-  type SaveItem,
-  type SelectionTool,
-  type Shape,
   Annotation,
   BaseSchema,
   BBox,
@@ -23,8 +20,12 @@ import {
   Tracklet,
   utils,
   View,
+  type InteractiveImageSegmenter,
+  type KeypointsTemplate,
+  type SaveItem,
+  type SelectionTool,
+  type Shape,
 } from "@pixano/core";
-import { derived, writable } from "svelte/store";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
 import type {
