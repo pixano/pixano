@@ -4,8 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, Message, MessageTypeEnum, type MessageType } from "@pixano/core";
 import { nanoid } from "nanoid";
+
+import { BaseSchema, Message, MessageTypeEnum, type MessageType } from "@pixano/core";
+
 import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { getPixanoSource } from "../api/objectsApi";
 

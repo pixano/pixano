@@ -6,8 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
+
   import type { Message } from "@pixano/core";
+
+  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
 
   export let answer: Message | null;
   export let questionId: string;

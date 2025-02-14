@@ -9,7 +9,7 @@ License: CECILL-C
 
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
-  import { createEventDispatcher } from "svelte";
+
   import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
   import { deserializeMessageContent, serializeMessageContent } from "../lib/utils";
 

@@ -4,9 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { get } from "svelte/store";
+
 import { MessageTypeEnum, type Message, type SaveItem } from "@pixano/core";
 import type { NewAnswerEvent } from "@pixano/vqa-canvas/src/lib/types";
-import { get } from "svelte/store";
+
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
 import { createNewAnswer } from "../../utils/createNewAnswer";
 import { annotations, messages as messagesStore, saveData } from "../datasetItemWorkspaceStores";

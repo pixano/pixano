@@ -15,10 +15,11 @@ License: CECILL-C
   import { VqaArea } from "@pixano/vqa-canvas";
   // Import stores and API functions
   import {
-    type ContentChangeEvent,
     isNewAnswerEvent,
     isUpdatedMessageEvent,
+    type ContentChangeEvent,
   } from "@pixano/vqa-canvas/src/lib/types";
+
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
