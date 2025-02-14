@@ -6,13 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
+
   import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
   import {
-    lastFrameIndex,
     currentFrameIndex,
+    lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { onMount } from "svelte";
 
   export let updateView: (imageIndex: number) => void;
   export let resetTool: () => void;
@@ -104,7 +105,7 @@ License: CECILL-C
 </script>
 
 <div
-  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200"
+  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200 focus:outline-none"
   style={`width: ${$videoControls.zoomLevel[0]}%`}
   role="slider"
   tabindex="0"
@@ -123,8 +124,7 @@ License: CECILL-C
     <span class="block h-[60%] bg-primary w-2 rounded-t" />
     <span
       class="block w-0 h-0 border-l-[4px] border-l-transparent border-t-[8px] border-t-primary border-r-[4px] border-r-transparent"
-    >
-    </span>
+    ></span>
     <span class="w-[1px] bg-primary absolute ml-1" />
     <span class="w-[1px] bg-primary h-5 absolute top-full ml-1" />
   </button>

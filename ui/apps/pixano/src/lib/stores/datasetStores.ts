@@ -6,7 +6,9 @@ License: CECILL-C
 
 // Imports
 import { writable } from "svelte/store";
+
 import type { DatasetInfo, DatasetSchema, Source } from "@pixano/core";
+
 import {
   DEFAULT_DATASET_TABLE_PAGE,
   DEFAULT_DATASET_TABLE_SIZE,

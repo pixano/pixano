@@ -8,14 +8,15 @@ License: CECILL-C
   // Imports
   import {
     BaseSchema,
+    cn,
     ContextMenu,
     SequenceFrame,
     Tracklet,
     View,
-    cn,
     type SaveItem,
     type TrackletItem,
   } from "@pixano/core";
+
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
   import { annotations, colorScale, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -157,9 +158,9 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}
-      >Add a point</ContextMenu.Item
-    >
+    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
+      Add a point
+    </ContextMenu.Item>
     <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>

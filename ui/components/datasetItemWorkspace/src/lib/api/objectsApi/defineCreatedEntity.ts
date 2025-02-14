@@ -4,17 +4,18 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { nanoid } from "nanoid";
+
 import {
   BaseSchema,
   Conversation,
+  Entity,
+  Track,
   type DatasetSchema,
   type DS_NamedSchema,
-  Entity,
   type ItemFeature,
   type SaveShape,
-  Track,
 } from "@pixano/core";
-import { nanoid } from "nanoid";
 
 export const defineCreatedEntity = (
   shape: SaveShape,

@@ -22,6 +22,7 @@ import {
   type MessageType,
   type TextSpanType,
 } from "@pixano/core";
+
 import { mockAnnotationType, mockEntityType, mockImage, mockMessageType } from "../shared";
 
 const bboxData: BBoxType = {

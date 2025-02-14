@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import type { Message } from "@pixano/core";
   import { MessageTypeEnum, QuestionTypeEnum } from "@pixano/core";
+
   import { isQuestionCompleted } from "../lib/utils";
   import FormattedAnswer from "./FormattedAnswer.svelte";
   import QuestionContent from "./QuestionContent.svelte";

@@ -6,12 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Image as ImageJS } from "image-js";
+  import { Loader2Icon } from "lucide-svelte";
+
   import { Canvas2D } from "@pixano/canvas2d";
   import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
-  import { Image as ImageJS } from "image-js";
-  import { Loader2Icon } from "lucide-svelte";
   // Import stores and API functions
   import {
     type ContentChangeEvent,

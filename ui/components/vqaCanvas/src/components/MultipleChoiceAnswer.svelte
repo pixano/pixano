@@ -5,6 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
+
   import type { Message } from "@pixano/core";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
   import { createEventDispatcher } from "svelte";

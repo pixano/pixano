@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
 
 const viewEmbeddingSchema = z

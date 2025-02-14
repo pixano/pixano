@@ -6,13 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
   import {
-    type DatasetInfo,
-    type DatasetItem,
-    type SaveItem,
-    type Schema,
     api,
     BaseSchema,
     Entity,
@@ -20,8 +14,13 @@ License: CECILL-C
     PrimaryButton,
     SequenceFrame,
     WorkspaceType,
+    type DatasetInfo,
+    type DatasetItem,
+    type SaveItem,
+    type Schema,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
+
   import {
     datasetSchema,
     datasetsStore,
@@ -30,6 +29,8 @@ License: CECILL-C
     saveCurrentItemStore,
     sourcesStore,
   } from "../../../../lib/stores/datasetStores";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -254,18 +255,15 @@ License: CECILL-C
 </script>
 
 {#if selectedItem && selectedDataset}
-  <div class="pt-20 h-1 min-h-screen">
-    <DatasetItemWorkspace
-      {selectedItem}
-      {models}
-      featureValues={{ main: {}, objects: {} }}
-      {handleSaveItem}
-      isLoading={isLoadingNewItem}
-      bind:canSaveCurrentItem
-      {shouldSaveCurrentItem}
-      headerHeight={80}
-    />
-  </div>
+  <DatasetItemWorkspace
+    {selectedItem}
+    {models}
+    featureValues={{ main: {}, objects: {} }}
+    {handleSaveItem}
+    isLoading={isLoadingNewItem}
+    bind:canSaveCurrentItem
+    {shouldSaveCurrentItem}
+  />
 {/if}
 {#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">

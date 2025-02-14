@@ -5,10 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
-import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { WorkspaceType } from "../workspaceType";
+import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
 export const classificationSchema = z
   .object({

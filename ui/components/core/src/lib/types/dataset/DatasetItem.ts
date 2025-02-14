@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { Annotation, annotationSchema } from "./annotations";
 import { baseDataFieldsSchema, type BaseDataFields } from "./datasetTypes";
 import { Entity, entitySchema } from "./entities";

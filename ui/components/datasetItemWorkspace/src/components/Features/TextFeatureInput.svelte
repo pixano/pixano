@@ -8,13 +8,13 @@ License: CECILL-C
   // Imports
   import { CheckCheckIcon } from "lucide-svelte";
 
-  import { Item, Entity, Annotation } from "@pixano/core";
+  import { Annotation, Entity, Item } from "@pixano/core";
   import { Input, type FeaturesValues } from "@pixano/core/src";
 
-  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
-  import type { TextFeature, NumberFeature } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addNewInput, mapFeatureList } from "../../lib/api/featuresApi";
+  import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
+  import type { NumberFeature, TextFeature } from "../../lib/types/datasetItemWorkspaceTypes";
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
   export let feature: TextFeature | NumberFeature;
   export let isEditing: boolean;

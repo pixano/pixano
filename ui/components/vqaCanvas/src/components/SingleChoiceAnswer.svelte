@@ -5,6 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
+
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
   import { createEventDispatcher } from "svelte";

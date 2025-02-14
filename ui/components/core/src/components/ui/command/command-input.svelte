@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { Command as CommandPrimitive } from "cmdk-sv";
   import { Search } from "lucide-svelte";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = CommandPrimitive.InputProps;

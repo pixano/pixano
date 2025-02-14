@@ -6,6 +6,7 @@ License: CECILL-C
 
 // Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
+
 import { Histogram } from "@pixano/core";
 
 const meta = {

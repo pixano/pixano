@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Tabs as TabsPrimitive } from "bits-ui";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = TabsPrimitive.TriggerProps;
