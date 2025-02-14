@@ -54,16 +54,15 @@ def _create_metadata_file_vqa(source_dir: Path, splits: list[str], num_items_per
         for item in range(num_items):
             metadata.append(
                 {
-                    "id": f"id_{item}",
-                    "image": [f"item_{item}.jpg" if item % 2 == 0 else f"item_{item}.png"],
+                    "image": [f"item_{item}{'.jpg' if item % 2 == 0 else '.png'}"],
                     "conversations": [
                         {
                             "question": {
                                 "content": "What is the greatest number ?",
                                 "question_type": "multi_choice",
-                                "choices": ["0", "15", "-14", "3.14", "58"],
+                                "choices": ["0", "15", "3.14", "58"],
                             },
-                            "responses": ["58"],
+                            "responses": [] if item % 2 == 0 else [{"content": "58"}],
                         }
                     ],
                 }
@@ -128,7 +127,7 @@ def video_folder():
 @pytest.fixture
 def vqa_folder():
     source_dir = _create_vqa_folder(
-        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [10, 5]
+        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [2, 2]
     )
     return source_dir
 

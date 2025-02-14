@@ -126,7 +126,7 @@ def generate_data_item_vqa(num_rows: int, item_schema_name, item_schema):
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
         )
-        if i % 2 == 0:
+        if i % 2 != 0:
             messages.append(
                 Message(
                     number=0,

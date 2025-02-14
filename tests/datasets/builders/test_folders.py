@@ -18,7 +18,7 @@ from pixano.datasets.builders.folders import (
 )
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import Conversation, Entity, Image, Item, Video
+from pixano.features import Conversation, Entity, Image, Item, Message, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
@@ -416,3 +416,93 @@ class TestFolderBaseBuilder:
             else:  # no entities
                 assert "entities" not in item
                 assert "bbox" not in item
+
+    def test_generate_vqa_items(self, vqa_folder_builder: VQAFolderBuilder):
+        def reconstruct_dict_list(generator):
+            """VQA generate data by chunks, not complete dict,
+            so we rebuild a list of complete dicts, knowing that "item" key
+            is always first."""
+            final_list = []
+            temp_dict = {}
+            no_finalize_for_first_one = True
+            for i, piece in enumerate(generator):
+                if "item" in piece:
+                    if no_finalize_for_first_one:
+                        no_finalize_for_first_one = False
+                    else:
+                        # "item" appears AGAIN - finalize current dict
+                        final_list.append(temp_dict.copy())
+                        temp_dict.clear()
+                temp_dict.update(piece)
+            if temp_dict:
+                final_list.append(temp_dict)
+            return final_list
+
+        with patch(
+            "pixano.datasets.builders.folders.VQAFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
+        ):
+            items = reconstruct_dict_list(vqa_folder_builder.generate_data())
+        assert len(items) == 4
+        assert len([item for item in items if item["item"].split == "train"]) == 2
+        assert len([item for item in items if item["item"].split == "val"]) == 2
+        for i, item in enumerate(items):
+            actual_item: Item = item["item"]
+            view: Image = item["image"]
+
+            assert view.item_ref == ItemRef(id=actual_item.id)
+            assert view.url == f"{actual_item.split}/item_{i % 2}.{'png' if i % 2 else 'jpg'}"
+
+            conversations: list[Conversation] = item["conversations"]
+            messages: list[Message] = item["messages"]
+
+            if i % 2 == 0:  # 1 message (question)
+                assert len(conversations) == 1
+                assert len(messages) == 1
+                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
+                    id=conversations[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    kind="vqa",
+                ).model_dump(exclude_timestamps=True)
+                messages[0].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="QUESTION",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)
+            else:  # 2 messages: question & answer
+                assert len(conversations) == 1
+                assert len(messages) == 2
+                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
+                    id=conversations[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    kind="vqa",
+                ).model_dump(exclude_timestamps=True)
+                messages[0].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="QUESTION",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)
+                messages[1].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="ANSWER",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)

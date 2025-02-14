@@ -149,11 +149,10 @@ class FolderBaseBuilder(DatasetBuilder):
                     metadata = self._read_metadata(split / self.METADATA_FILENAME)
                 except FileNotFoundError:
                     metadata = None
-
                 if metadata is None:
                     for view_file in split.glob("*"):
                         # only consider {split}/{item}.{ext} files
-                        if not view_file.is_file() or view_file.suffix in self.EXTENSIONS:
+                        if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
                             continue
                         # create item
                         item = self._create_item(split.name, **{})

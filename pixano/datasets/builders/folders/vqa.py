@@ -82,6 +82,8 @@ class VQAFolderBuilder(ImageFolderBuilder):
                                     view_file = self.source_dir / mosaic_file
                                 else:
                                     view_file = self.source_dir / Path(v[0])
+                                    if not view_file.is_file():  # no split path in metadata.jsonl
+                                        view_file = self.source_dir / split / Path(v[0])
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_vqa_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
@@ -142,6 +144,8 @@ class VQAFolderBuilder(ImageFolderBuilder):
     ) -> tuple[dict[str, list[Entity]], dict[str, list[Annotation]]]:
         def update_viewref(content, views_data, view_ref):
             match = re.match(r".*<image (\d)>.*", content)
+            if match is None:
+                return view_ref
             for m in match.groups():
                 num = int(m) - 1
                 if num >= 0 and num < len(views_data):
