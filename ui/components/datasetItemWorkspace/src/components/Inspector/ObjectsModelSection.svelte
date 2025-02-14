@@ -7,14 +7,14 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Eye, EyeOff } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { derived } from "svelte/store";
 
   import { IconButton, Source } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, OTHER } from "../../lib/constants";
   import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { onMount } from "svelte";
-  import { derived } from "svelte/store";
 
   export let source: Source | undefined;
   export let numberOfItem: number;

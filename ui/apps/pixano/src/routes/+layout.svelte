@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { page } from "$app/stores";
   import { onMount } from "svelte";
 
   import { api, cn } from "@pixano/core/src";
@@ -21,6 +20,7 @@ License: CECILL-C
     defaultDatasetTableValues,
     modelsStore,
   } from "../lib/stores/datasetStores";
+  import { page } from "$app/stores";
 
   import "./styles.css";
 

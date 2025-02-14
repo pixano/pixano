@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Loader2Icon } from "lucide-svelte";
 
-  import { type DatasetItem, WorkspaceType } from "@pixano/core";
+  import { WorkspaceType, type DatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import ThreeDimensionsViewer from "./3DViewer.svelte";

@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { DatasetBrowser } from "@pixano/core/src";
-
   import {
     svg_first_page,
     svg_last_page,
@@ -15,11 +14,11 @@ License: CECILL-C
     svg_prev_page,
   } from "@pixano/core/src/icons";
 
+  import { datasetTableStore } from "../../lib/stores/datasetStores";
   import {
     DEFAULT_DATASET_TABLE_PAGE,
     DEFAULT_DATASET_TABLE_SIZE,
   } from "$lib/constants/pixanoConstants";
-  import { datasetTableStore } from "../../lib/stores/datasetStores";
 
   // Exports
   export let selectedDataset: DatasetBrowser;

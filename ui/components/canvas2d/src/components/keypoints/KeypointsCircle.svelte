@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import type Konva from "konva";
   import { Circle } from "svelte-konva";
 
   import type { Vertex, VertexStates } from "@pixano/core";
 
-  import type Konva from "konva";
   import LabelTag from "../LabelTag.svelte";
 
   export let stage: Konva.Stage;
@@ -90,18 +90,24 @@ License: CECILL-C
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
     on:click={() => onMenuClick("visible")}
-    disabled={vertex.features.state === "visible"}>Visible</button
+    disabled={vertex.features.state === "visible"}
   >
+    Visible
+  </button>
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
     on:click={() => onMenuClick("hidden")}
-    disabled={vertex.features.state === "hidden"}>Hidden</button
+    disabled={vertex.features.state === "hidden"}
   >
+    Hidden
+  </button>
   <button
     class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
     on:click={() => onMenuClick("invisible")}
-    disabled={vertex.features.state === "invisible"}>Invisible</button
+    disabled={vertex.features.state === "invisible"}
   >
+    Invisible
+  </button>
 </div>
 <Circle
   config={{

@@ -7,11 +7,10 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import type { DatasetBrowser } from "@pixano/core/src";
-
-  import { svg_clear, svg_search } from "@pixano/core/src/icons";
-
   import { createEventDispatcher } from "svelte";
+
+  import type { DatasetBrowser } from "@pixano/core/src";
+  import { svg_clear, svg_search } from "@pixano/core/src/icons";
 
   // Exports
   export let selectedDataset: DatasetBrowser;

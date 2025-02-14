@@ -6,27 +6,28 @@ License: CECILL-C
 
 <script lang="ts">
   // External library imports
-  import RangeSlider from "svelte-range-slider-pips";
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
-  import { IconButton, Switch } from "@pixano/core/src";
-  import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
+  import RangeSlider from "svelte-range-slider-pips";
 
-  // Local imports
-  import {
-    saveData,
-    views,
-    itemMetas,
-    filters,
-    imageSmoothing,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
+  import { IconButton, Switch } from "@pixano/core/src";
+
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { createFeature } from "../../lib/api/featuresApi";
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-  import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  // Local imports
+  import {
+    filters,
+    imageSmoothing,
+    itemMetas,
+    saveData,
+    views,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   type ViewMeta = {
     url: string | undefined;
@@ -152,19 +153,19 @@ License: CECILL-C
     <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
     <!-- Image Smoothing -->
     <div class="w-full my-1 flex items-center justify-between">
-      <label for="smoothing" class="select-none cursor-pointer"> Image smoothing </label>
+      <label for="smoothing" class="select-none cursor-pointer">Image smoothing</label>
       <Switch id="smoothing" bind:checked={$imageSmoothing} onChange={() => {}}></Switch>
     </div>
 
     {#if !isVideo}
       <!-- Histogram Equalizer -->
       <div class="w-full my-1 flex items-center justify-between">
-        <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
+        <label for="equalizer" class="select-none cursor-pointer">Equalize histogram</label>
         <Switch id="equalizer" bind:checked={$filters.equalizeHistogram} onChange={() => {}} />
       </div>
       <!-- Brightness -->
       <div class="flex items-center">
-        <label for="brightness" class="w-20 pb-1">Brightness </label>
+        <label for="brightness" class="w-20 pb-1">Brightness</label>
         <div class="grow text-xs">
           <RangeSlider
             range="min"
@@ -183,7 +184,7 @@ License: CECILL-C
 
       <!-- Contrast -->
       <div class="flex items-center text-sm">
-        <label for="contrast" class="w-20 pb-1">Contrast </label>
+        <label for="contrast" class="w-20 pb-1">Contrast</label>
         <div class="grow text-xs">
           <RangeSlider
             range="min"
@@ -197,7 +198,7 @@ License: CECILL-C
             }}
           />
         </div>
-        <span class="w-8">{Math.round($filters.contrast + 50)}% </span>
+        <span class="w-8">{Math.round($filters.contrast + 50)}%</span>
       </div>
     {/if}
   </div>
@@ -218,8 +219,8 @@ License: CECILL-C
       {#if combineChannels || $itemMetas.color === "grayscale"}
         <!-- Grayscale -->
         <div class="flex items-center text-sm text-center">
-          <span class="text-left w-4"> G </span>
-          <span class="w-8"> {$filters.redRange[0]} </span>
+          <span class="text-left w-4">G</span>
+          <span class="w-8">{$filters.redRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -236,13 +237,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.redRange[1]} </span>
+          <span class="w-8">{$filters.redRange[1]}</span>
         </div>
       {:else}
         <!-- Red -->
         <div class="flex items-center text-sm text-center text-red-500">
-          <span class="text-left w-4"> R </span>
-          <span class="w-8"> {$filters.redRange[0]} </span>
+          <span class="text-left w-4">R</span>
+          <span class="w-8">{$filters.redRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -257,13 +258,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.redRange[1]} </span>
+          <span class="w-8">{$filters.redRange[1]}</span>
         </div>
 
         <!-- Green -->
         <div class="flex items-center text-sm text-center text-green-500">
-          <span class="text-left w-4"> G </span>
-          <span class="w-8"> {$filters.greenRange[0]} </span>
+          <span class="text-left w-4">G</span>
+          <span class="w-8">{$filters.greenRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -278,13 +279,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.greenRange[1]} </span>
+          <span class="w-8">{$filters.greenRange[1]}</span>
         </div>
 
         <!-- Blue -->
         <div class="flex items-center text-sm text-center text-blue-500">
-          <span class="text-left w-4"> B </span>
-          <span class="w-8"> {$filters.blueRange[0]} </span>
+          <span class="text-left w-4">B</span>
+          <span class="w-8">{$filters.blueRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -299,7 +300,7 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.blueRange[1]} </span>
+          <span class="w-8">{$filters.blueRange[1]}</span>
         </div>
       {/if}
     </div>

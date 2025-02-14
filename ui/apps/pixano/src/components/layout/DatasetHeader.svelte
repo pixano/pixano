@@ -6,14 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
   import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Loader2Icon } from "lucide-svelte";
 
+  import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
-
+  import DatasetItemHeader from "./DatasetItemHeader.svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
   import { navItems } from "$lib/constants/headerConstants";
   import {
@@ -22,7 +22,6 @@ License: CECILL-C
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
-  import DatasetItemHeader from "./DatasetItemHeader.svelte";
 
   export let pageId: string | null;
   export let datasetItemsIds: string[];

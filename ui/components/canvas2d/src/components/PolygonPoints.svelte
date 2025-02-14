@@ -8,7 +8,9 @@ License: CECILL-C
   // Imports
   import Konva from "konva";
   import { Circle } from "svelte-konva";
+
   import type { Reference } from "@pixano/core";
+
   import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
   // Exports

@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { cn } from "@pixano/core";
+
   let className: string | undefined | null = undefined;
 
   export { className as class };

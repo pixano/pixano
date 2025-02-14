@@ -4,9 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BBox, type Reference } from "@pixano/core";
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
+
+import { BBox, type Reference } from "@pixano/core";
 
 export const toggleIsEditingBBox = (
   value: "on" | "off",

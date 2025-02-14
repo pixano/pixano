@@ -10,12 +10,13 @@ import {
   BBox,
   Keypoints,
   Mask,
-  type SaveItem,
   SaveShapeType,
-  type Shape,
   Tracklet,
   WorkspaceType,
+  type SaveItem,
+  type Shape,
 } from "@pixano/core";
+
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";

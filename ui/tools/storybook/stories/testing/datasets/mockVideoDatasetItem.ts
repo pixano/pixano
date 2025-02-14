@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Tracklet, VideoDatasetItem, VideoItemBBox } from "@pixano/core";
+
 import { gallery, mockImage } from "../shared";
 
 const displayedMBox: VideoItemBBox[] = [

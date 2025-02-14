@@ -7,38 +7,38 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import {
-    MousePointer,
-    Square,
-    Share2,
-    Wand2Icon,
-    PlusCircleIcon,
+    BrushIcon,
     MinusCircleIcon,
+    MousePointer,
+    PlusCircleIcon,
+    Share2,
+    Square,
+    Wand2Icon,
   } from "lucide-svelte";
+  import { onMount } from "svelte";
 
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
 
   import {
-    panTool,
-    smartRectangleTool,
-    rectangleTool,
     addSmartPointTool,
-    removeSmartPointTool,
+    panTool,
     polygonTool,
+    rectangleTool,
+    removeSmartPointTool,
+    smartRectangleTool,
   } from "../lib/settings/selectionTools";
   import {
     annotations,
     interactiveSegmenterModel,
-    newShape,
     merges,
     modelsUiStore,
+    newShape,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
-  import { onMount } from "svelte";
-
-  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
   import FusionTool from "./Toolbar/FusionTool.svelte";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
 
   export let isVideo: boolean = false;
 

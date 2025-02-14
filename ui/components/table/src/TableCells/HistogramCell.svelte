@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Histogram } from "@pixano/core";
-
   import type { DatasetStat } from "@pixano/core";
 
   // Exports

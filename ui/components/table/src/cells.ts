@@ -4,9 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import TableCell from "./TableCell.svelte";
-import { type ImageFeature, type ItemFeature } from "@pixano/core";
 import { createRender } from "svelte-headless-table";
+
+import { type ImageFeature, type ItemFeature } from "@pixano/core";
+
+import TableCell from "./TableCell.svelte";
 
 // Default cells that we assume are present in every dataset
 export const DefaultCell = (feature: { id: string; value: string | number }) => {
