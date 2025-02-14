@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
 
-  import { api } from "@pixano/core/src";
+  import { api, cn } from "@pixano/core/src";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
@@ -26,6 +26,8 @@ License: CECILL-C
 
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
+
+  const HOME_ROUTE_ID = "/";
 
   onMount(() => {
     api
@@ -77,12 +79,14 @@ License: CECILL-C
 </svelte:head>
 
 <div class="app">
-  {#if $page.route.id === "/"}
+  {#if $page.route.id === HOME_ROUTE_ID}
     <MainHeader datasets={$datasetsStore} />
   {:else}
     <DatasetHeader pageId={$page.route.id} datasetItemsIds={currentDatasetItemsIds} />
   {/if}
-  <main class="h-1 min-h-screen bg-slate-50">
+  <main
+    class={cn("bg-slate-50 flex flex-col h-screen", $page.route.id !== HOME_ROUTE_ID && "pt-20")}
+  >
     <slot />
   </main>
 </div>
