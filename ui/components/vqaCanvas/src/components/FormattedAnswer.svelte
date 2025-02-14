@@ -8,6 +8,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Message, QuestionTypeEnum } from "@pixano/core";
+
   import MultipleChoiceAnswer from "./MultipleChoiceAnswer.svelte";
   import OpenAnswer from "./OpenAnswer.svelte";
   import SingleChoiceAnswer from "./SingleChoiceAnswer.svelte";
