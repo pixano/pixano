@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import {
-    BrushIcon,
     MinusCircleIcon,
     MousePointer,
     PlusCircleIcon,
