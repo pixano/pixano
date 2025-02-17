@@ -460,7 +460,7 @@ def test_delete_dataset_items(
     deleted_ids = [dataset_item.id for dataset_item in dataset_items]
 
     delete_url = (
-        "/dataset_items/dataset_multi_view_tracking_and_image/" f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
+        f"/dataset_items/dataset_multi_view_tracking_and_image/?{'&'.join([f'ids={id}' for id in deleted_ids])}"
     )
     response = client.delete(delete_url)
 

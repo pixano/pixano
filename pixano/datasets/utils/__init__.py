@@ -11,7 +11,7 @@ from .integrity import (
     get_integry_checks_from_schemas,
     handle_integrity_errors,
 )
-from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
+from .labels import category_id, category_name, coco_ids_80to91
 from .mosaic import mosaic
 from .video import create_video_preview
 
@@ -24,11 +24,9 @@ __all__ = [
     "check_table_integrity",
     "create_video_preview",
     "coco_ids_80to91",
-    "coco_names_80",
-    "coco_names_91",
-    "dota_ids",
+    "category_id",
+    "category_name",
     "get_integry_checks_from_schemas",
     "handle_integrity_errors",
     "mosaic",
-    "voc_names",
 ]
