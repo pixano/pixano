@@ -45,7 +45,7 @@ License: CECILL-C
     //svelte hack: use a temp Set to set the whole list once
     const allTopEntitiesSet = new Set<Entity>();
     $annotations.forEach((ann) => {
-      allTopEntitiesSet.add(getTopEntity(ann, $entities));
+      allTopEntitiesSet.add(getTopEntity(ann));
     });
     allTopEntities = Array.from(allTopEntitiesSet);
     selectedEntitiesId = [];
@@ -57,7 +57,7 @@ License: CECILL-C
     if (highlightedBoxes.length > 0) {
       const highlightedBoxesByEntityId = Object.groupBy(
         highlightedBoxes,
-        (ann) => getTopEntity(ann, $entities).id,
+        (ann) => getTopEntity(ann).id,
       );
       selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
       for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {

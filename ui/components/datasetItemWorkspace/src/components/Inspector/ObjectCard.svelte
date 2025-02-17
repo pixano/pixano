@@ -150,7 +150,7 @@ License: CECILL-C
             if (ann.ui.frame_index !== $currentFrameIndex) return ann;
           }
 
-          if (getTopEntity(ann, $entities).id === entity.id) {
+          if (getTopEntity(ann).id === entity.id) {
             if (isVisible) {
               ann.ui.highlighted = "self";
             } else {
@@ -166,7 +166,7 @@ License: CECILL-C
           };
         }
         if (
-          getTopEntity(ann, $entities).id === entity.id &&
+          getTopEntity(ann).id === entity.id &&
           (!base_schema || (base_schema && ann.table_info.base_schema === base_schema))
         ) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);

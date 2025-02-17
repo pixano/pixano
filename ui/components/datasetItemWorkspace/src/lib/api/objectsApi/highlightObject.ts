@@ -8,7 +8,7 @@ import { get } from "svelte/store";
 
 import { BaseSchema, Entity, Tracklet } from "@pixano/core";
 
-import { annotations, entities } from "../../stores/datasetItemWorkspaceStores";
+import { annotations } from "../../stores/datasetItemWorkspaceStores";
 import { currentFrameIndex, lastFrameIndex } from "../../stores/videoViewerStores";
 import { getTopEntity } from "./getTopEntity";
 
@@ -17,14 +17,15 @@ export const highlightObject = (entity: Entity, isHighlighted: boolean): number 
   let highlightFrameIndex = get(lastFrameIndex) + 1;
   annotations.update((objects) =>
     objects.map((ann) => {
+      console.log("zaz", highlightFrameIndex)
       ann.ui.highlighted = isHighlighted
         ? "all"
-        : getTopEntity(ann, get(entities)).id === entity.id
+        : getTopEntity(ann).id === entity.id
           ? "self"
           : "none";
       if (
         !objectAlreadyVisible &&
-        getTopEntity(ann, get(entities)).id === entity.id &&
+        getTopEntity(ann).id === entity.id &&
         ann.is_type(BaseSchema.Tracklet) &&
         ann.ui.highlighted === "self" &&
         (ann as Tracklet).data.start_timestep < highlightFrameIndex

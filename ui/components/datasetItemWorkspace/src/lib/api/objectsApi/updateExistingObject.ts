@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { get } from "svelte/store";
-
 import {
   Annotation,
   BaseSchema,
@@ -21,8 +19,7 @@ import {
 
 import { getTopEntity, highlightObject } from ".";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
-import { entities, saveData } from "../../stores/datasetItemWorkspaceStores";
-import { currentFrameIndex } from "../../stores/videoViewerStores";
+import { saveData } from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 import { getPixanoSource } from "./getPixanoSource";
 
@@ -45,11 +42,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     if (newShape.highlighted === "self") {
       if (newShape.shapeId === ann.id) {
         ann.ui.highlighted = "self";
-        const newFrameIndex = highlightObject(getTopEntity(ann, get(entities)), false);
-
-        if (newFrameIndex != get(currentFrameIndex)) {
-          currentFrameIndex.set(newFrameIndex);
-        }
+        highlightObject(getTopEntity(ann), false);
       } else {
         if (ann.is_type(BaseSchema.Tracklet)) {
           //NOTE TODO: it works, but the states with 1 tracklet highlighted in a track with several tracklet leads to bug with icon click

@@ -100,7 +100,7 @@ License: CECILL-C
       objects.map((ann) => {
         const to_highlight =
           (!ann.is_type(BaseSchema.Tracklet) &&
-            getTopEntity(ann, $entities).id === track.id &&
+            getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
           (ann.is_type(BaseSchema.Tracklet) && ann.id === track.id);
         ann.ui.highlighted = to_highlight ? "self" : "none";

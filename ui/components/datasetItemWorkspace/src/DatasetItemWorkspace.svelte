@@ -125,7 +125,7 @@ License: CECILL-C
     //add tracklets childs & all annotations top_entity
     annotations.update((anns) =>
       anns.map((ann) => {
-        const top_entity = getTopEntity(ann, $entities);
+        const top_entity = getTopEntity(ann);
         if (ann.is_type(BaseSchema.Tracklet)) {
           const tracklet = ann as Tracklet;
           if (top_entity) {

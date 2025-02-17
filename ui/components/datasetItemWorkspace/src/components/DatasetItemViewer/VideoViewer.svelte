@@ -371,7 +371,7 @@ License: CECILL-C
     //adapt highlights
     annotations.update((anns) =>
       anns.map((ann) => {
-        const top_ent = getTopEntity(ann, $entities);
+        const top_ent = getTopEntity(ann);
         if (forbids.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "none";
         else if (!to_fuse.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "all";
         return ann;
@@ -381,7 +381,7 @@ License: CECILL-C
 
   const merge = (clicked_ann: Annotation) => {
     if ($selectedTool.type === ToolType.Fusion) {
-      const top_entity = getTopEntity(clicked_ann, $entities);
+      const top_entity = getTopEntity(clicked_ann);
       //check if top_entity is allowed
       if ($merges.forbids.includes(top_entity)) return;
 
