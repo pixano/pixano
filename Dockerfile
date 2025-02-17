@@ -10,6 +10,8 @@ FROM node:18-slim AS base
 # Install pnpm and build frontend
 FROM base AS build
 
+RUN npm i -g corepack@latest
+
 RUN corepack enable
 
 WORKDIR /app
