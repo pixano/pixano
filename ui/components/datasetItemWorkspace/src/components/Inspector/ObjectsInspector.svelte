@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { afterUpdate } from "svelte";
+
   import { Thumbnail } from "@pixano/canvas2d";
   import { BaseSchema, Entity, Source, type ObjectThumbnail } from "@pixano/core";
 
@@ -20,7 +22,6 @@ License: CECILL-C
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
-  import { afterUpdate } from "svelte";
 
   let allTopEntities: Entity[];
   let selectedEntitiesId: string[];
@@ -56,7 +57,7 @@ License: CECILL-C
     if (highlightedBoxes.length > 0) {
       const highlightedBoxesByEntityId = Object.groupBy(
         highlightedBoxes,
-        ({ data }) => data.entity_ref.id,
+        (ann) => getTopEntity(ann, $entities).id,
       );
       selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
       for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
@@ -82,7 +83,7 @@ License: CECILL-C
   });
 </script>
 
-<div class="p-2 h-[calc(100vh-200px)] w-full">
+<div class="p-2 w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
     <div id="preAnnotationThumbnail">

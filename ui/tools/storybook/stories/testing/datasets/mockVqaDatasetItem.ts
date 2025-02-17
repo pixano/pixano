@@ -14,11 +14,13 @@ import {
   Mask,
   Message,
   MessageTypeEnum,
+  QuestionTypeEnum,
   WorkspaceType,
   type BBoxType,
   type MaskType,
   type MessageType,
 } from "@pixano/core";
+
 import { mockAnnotationType, mockEntityType, mockImage, mockMessageType } from "../shared";
 
 const bboxData: BBoxType = {
@@ -120,7 +122,6 @@ const conversation = new Conversation({
   updated_at: new Date().toISOString(),
   data: {
     kind: "conversation",
-    with_model: { id: "model_id", name: "model_name" },
     ...mockEntityType,
   },
 });
@@ -130,17 +131,56 @@ const messagesData: MessageType[] = [
     number: 0,
     user: "user",
     type: MessageTypeEnum.QUESTION,
-    content: "What is your favourite color?",
+    content:
+      "Calculate the area of the zero circle with the following data:<image 1>Assume that the tracing arm of the planimeter was so set that one revolution of the measuring wheel measures 100 $cm^{2}$ on the paper.",
+    timestamp: new Date().toISOString(),
+    choices: [],
+    question_type: QuestionTypeEnum.OPEN,
+  },
+  {
+    number: 0,
+    user: "user",
+    type: MessageTypeEnum.ANSWER,
+    content: "1970.6",
     timestamp: new Date().toISOString(),
   },
   {
     number: 1,
     user: "user",
+    type: MessageTypeEnum.QUESTION,
+    content:
+      "Each of the following situations relates to a different company. <image 1> For company B, find the missing amounts.",
+    timestamp: new Date().toISOString(),
+    choices: ["$63,020", "$58,410", "$71,320", "$77,490"],
+    question_type: QuestionTypeEnum.SINGLE_CHOICE,
+  },
+  {
+    number: 1,
+    user: "user",
     type: MessageTypeEnum.ANSWER,
-    content: "Red",
+    content: "",
+    timestamp: new Date().toISOString(),
+  },
+  {
+    number: 2,
+    user: "user",
+    type: MessageTypeEnum.QUESTION,
+    content:
+      "<image 1> by Mark Gertler can be found in the Touchstones Rochdale museum. Which artist belonging to the Bloomsbury group was Gertler in a relationship with?",
+    timestamp: new Date().toISOString(),
+    choices: ["Vanessa Bell", "Eileen Agar", "Dora Carrington", "Leonora Carrington"],
+    question_type: QuestionTypeEnum.MULTI_CHOICE_EXPLANATION,
+  },
+  {
+    number: 2,
+    user: "user",
+    type: MessageTypeEnum.ANSWER,
+    content:
+      "[[C]] Gertler and Carrington met at the Slade School of Fine Art in the early 1910s, alongside their friend and fellow artist Richard Nevinson. When both men fell in love with Carrington, Gertler wrote to Nevinson: 'I am writing here to tell you that our friendship must end from now, my sole reason being that I am in love with Carrington and I have reason to believe that you are so too. Therefore, much as I have tried to overlook it, I have come to the conclusion that rivals, and rivals in love, cannot be friends.' Image: The Bokhara Coat, 1920, Mark Gertler (1891-1939); Bridgeman Images",
     timestamp: new Date().toISOString(),
   },
 ];
+
 const messages = messagesData.map(
   (data, index) =>
     new Message({
@@ -171,6 +211,8 @@ export const mockVqaDatasetItem: DatasetItem = {
   },
   annotations: {
     messages,
+    masks,
+    bboxes: [bbox],
   },
   views: {
     image: mockImage,

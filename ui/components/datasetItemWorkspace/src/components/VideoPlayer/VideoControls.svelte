@@ -6,12 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
   import { onDestroy } from "svelte";
-  import { PlayIcon, PauseIcon, StepForward, StepBack } from "lucide-svelte";
+
   import { getCurrentImageTime } from "../../lib/api/videoApi";
   import {
-    lastFrameIndex,
     currentFrameIndex,
+    lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
 
@@ -30,6 +31,10 @@ License: CECILL-C
     const interval = setInterval(() => {
       currentFrameIndex.update((index) => (index + 1) % ($lastFrameIndex + 1));
       updateView($currentFrameIndex);
+      if ($currentFrameIndex === 0) {
+        clearInterval($videoControls.intervalId);
+        videoControls.update((old) => ({ ...old, intervalId: 0 }));
+      }
     }, $videoControls.videoSpeed);
     videoControls.update((old) => ({ ...old, intervalId: Number(interval) }));
   };
@@ -88,6 +93,7 @@ License: CECILL-C
     switch (event.key) {
       case " ":
         if (event.repeat) break;
+        event.preventDefault();
         onPlayClick();
         break;
       case "ArrowRight":
@@ -125,7 +131,8 @@ License: CECILL-C
     <StepForward />
   </button>
   <p>
-    <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
+    <span>{currentTime}</span>
+    <span class="text-gray-400">({$currentFrameIndex})</span>
   </p>
 </div>
 <svelte:window on:keydown={shortcutHandler} />

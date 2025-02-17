@@ -15,6 +15,14 @@ on:
       - "ui/**"
       - ".github/workflows/docker.yml"
       - "pyproject.toml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "pixano/**"
+      - "ui/**"
+      - ".github/workflows/docker.yml"
+      - "pyproject.toml"
 
 env:
   TEST_TAG: pixano/pixano:test
@@ -65,6 +73,7 @@ jobs:
           fi
 
       - name: Build and push latest
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           push: true

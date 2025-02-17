@@ -6,14 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, type ImagesPerView, type SaveItem } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { VqaArea } from "@pixano/vqa-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
+
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import { VqaArea } from "@pixano/vqa-canvas";
   // Import stores and API functions
-  import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
+  import {
+    isNewAnswerEvent,
+    isUpdatedMessageEvent,
+    type ContentChangeEvent,
+  } from "@pixano/vqa-canvas/src/lib/types";
+
+  import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
@@ -27,11 +34,11 @@ License: CECILL-C
     messages,
     newShape,
     preAnnotationIsActive,
-    saveData,
     selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { createUpdatedMessage } from "../../lib/utils/createUpdatedMessage";
+  import { addAnswer } from "../../lib/stores/mutations/addAnswer";
+  import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
   export let selectedItem: DatasetItem;
@@ -135,46 +142,20 @@ License: CECILL-C
   // Reactive statement to set the selected tool
   $: selectedTool.set($selectedTool);
 
-  const handleMessageContentChange = (
-    event: CustomEvent<{
-      messageId: string;
-      newMessageContent: string;
-    }>,
-  ) => {
+  const handleAnswerContentChange = (event: CustomEvent<ContentChangeEvent>) => {
     event.preventDefault();
-
-    const { messageId, newMessageContent } = event.detail;
-    const prevMessage = $messages.find((message) => message.id === messageId);
-
-    if (!prevMessage) {
-      return;
+    if (isNewAnswerEvent(event)) {
+      addAnswer(event.detail);
+    } else if (isUpdatedMessageEvent(event)) {
+      updateMessageContent(event.detail);
     }
-
-    const updatedMessage = createUpdatedMessage({
-      message: prevMessage,
-      newMessageContent,
-    });
-
-    annotations.update((prevAnnotations) =>
-      prevAnnotations.map((annotation) =>
-        annotation.is_type(BaseSchema.Message) && annotation.id === messageId
-          ? updatedMessage
-          : annotation,
-      ),
-    );
-
-    const save_item: SaveItem = {
-      change_type: "update",
-      object: updatedMessage,
-    };
-
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
   };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-rows-[calc(100%-280px)_280px]">
+  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+    <VqaArea messages={$messages} on:answerContentChange={handleAnswerContentChange} />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
@@ -189,7 +170,6 @@ License: CECILL-C
       bind:currentAnn
       bind:newShape={$newShape}
     />
-    <VqaArea messages={$messages} on:messageContentChange={handleMessageContentChange} />
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">

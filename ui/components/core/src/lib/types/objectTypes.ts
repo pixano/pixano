@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { SegmentationResult } from ".";
-import type { BBox, DisplayControl, Mask, Entity, Reference } from "./dataset";
+import type { BBox, DisplayControl, Entity, Mask, Reference } from "./dataset";
 
 // OBJECTS FEATURES
 export type TextFeature = {

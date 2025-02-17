@@ -27,7 +27,7 @@ _PIXANO_TYPES_REGISTRY: dict[str, type[BaseType]] = _TYPES_REGISTRY.copy()
 
 def _add_type_to_registry(cls, registry: dict[str, type[BaseType]]) -> None:
     if not (cls in _ATOMIC_PYTHON_TYPES or issubclass(cls, BaseType)):
-        raise ValueError(f"Table type {type} must be a an atomic python type or " "derive from BaseType.")
+        raise ValueError(f"Table type {type} must be a an atomic python type or derive from BaseType.")
 
     cls_name = cls.__name__
     if cls_name in registry:

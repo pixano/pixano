@@ -7,9 +7,9 @@ License: CECILL-C
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-export type { Tensor };
-
 import type { MaskSVG, MaskType, Reference } from "@pixano/core/src/lib/types/dataset";
+
+export type { Tensor };
 
 // Exports
 export interface LabeledClick {

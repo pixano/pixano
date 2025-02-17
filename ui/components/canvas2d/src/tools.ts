@@ -6,7 +6,6 @@ License: CECILL-C
 
 // Imports
 import { icons } from "@pixano/core";
-
 import type { InteractiveImageSegmenter } from "@pixano/models";
 
 // Exports

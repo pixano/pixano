@@ -7,16 +7,18 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { derived } from "svelte/store";
-  import { SelectModal, WarningModal, LoadingModal } from "@pixano/core";
+
+  import { LoadingModal, SelectModal, WarningModal } from "@pixano/core";
+  import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
   import { SAM } from "@pixano/models";
+
+  import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     interactiveSegmenterModel,
     modelsUiStore,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
-  import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import type { ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
-  import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
   export let models: Array<string>;
 
@@ -42,7 +44,7 @@ License: CECILL-C
       ...store,
       selectedTableName,
       yetToLoadEmbedding: true,
-      currentModalOpen: "none",
+      currentModalOpen: "loading",
     }));
   };
 

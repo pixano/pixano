@@ -49,7 +49,7 @@ class DatasetExporter(ABC):
 
     @abstractmethod
     def initialize_export_data(self, info: DatasetInfo, sources: list[Source]) -> Any:
-        """Initialize the dictionary or list of dictionaries to be exported.
+        """Initialize the data structure to be exported.
 
         Args:
             info: The dataset information.
@@ -61,12 +61,14 @@ class DatasetExporter(ABC):
         ...
 
     @abstractmethod
-    def export_dataset_item(self, export_data: Any, dataset_item: DatasetItem) -> None:
-        """Store the dataset item in the `export_data` dictionary or list of dictionaries.
+    def export_dataset_item(self, export_data: Any, dataset_item: DatasetItem) -> Any:
+        """Store the dataset item in the data structure to be exported.
 
         Args:
             export_data: The data structure to be exported.
             dataset_item: The dataset item to be exported.
+
+        Returns: The data structure to be exported.
         """
         ...
 
@@ -118,7 +120,7 @@ class DatasetExporter(ABC):
             if batch_size is None:
                 batch_size = num_split_items
 
-            export_data = self.initialize_export_data(info, sources)  # JSON dictionary to be exported
+            export_data = self.initialize_export_data(info, sources)
 
             file_num = 0  # Number of files exported so far
             cur_items_exported = 0  # Number of items exported so far
@@ -137,7 +139,7 @@ class DatasetExporter(ABC):
                 for dataset_item in dataset_items:
                     cur_items_exported += 1
 
-                    self.export_dataset_item(export_data, dataset_item)
+                    export_data = self.export_dataset_item(export_data, dataset_item)
 
                     if (
                         cur_items_exported == num_split_items or cur_items_exported % split_items_per_file == 0

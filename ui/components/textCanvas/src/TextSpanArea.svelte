@@ -7,16 +7,15 @@ License: CECILL-C
 <script lang="ts">
   import {
     Message,
-    MessageTypeEnum,
     SaveShapeType,
     TextSpan,
     type ImagesPerView,
     type Shape,
     type TextSpanType,
   } from "@pixano/core";
-  import { Answer } from "./components";
-  import Question from "./components/Question.svelte";
-  import { createUpdatedMessage, groupTextSpansByMessageId } from "./lib";
+
+  import { SpannableMessage } from "./components";
+  import { groupTextSpansByMessageId } from "./lib";
 
   // Exports
   export let selectedItemId: string;
@@ -47,40 +46,18 @@ License: CECILL-C
       attrs: textSpanAttributes,
     };
   };
-
-  const handleMessageContentChange = (event: CustomEvent) => {
-    event.preventDefault();
-
-    const { messageId, newTextSpans, newMessageContent } = event.detail as {
-      messageId: string;
-      newTextSpans: TextSpan[];
-      newMessageContent: string;
-    };
-
-    const newSpansByMessageId = { ...spansByMessageId, [messageId]: newTextSpans };
-    textSpans = Object.values(newSpansByMessageId).flat();
-
-    messages = messages.map((message) =>
-      message.id === messageId ? createUpdatedMessage({ message, newMessageContent }) : message,
-    );
-  };
 </script>
 
 <div class="bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto">
-  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton"
-    >Tag Selected Text</button
-  >
-  {#each messages.sort((a, b) => a.data.number - b.data.number) as message}
-    {#if message.data.type === MessageTypeEnum.QUESTION}
-      <Question {message} />
-    {:else}
-      <Answer
-        {message}
-        {colorScale}
-        textSpans={spansByMessageId[message.id]}
-        bind:textSpanAttributes
-        on:messageContentChange={handleMessageContentChange}
-      />
-    {/if}
+  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton">
+    Tag Selected Text
+  </button>
+  {#each messages as message}
+    <SpannableMessage
+      {message}
+      {colorScale}
+      textSpans={spansByMessageId[message.id]}
+      bind:textSpanAttributes
+    />
   {/each}
 </div>

@@ -6,24 +6,24 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
+  import { BoxSelectIcon, Check, Filter } from "lucide-svelte";
 
-  import { PrimaryButton, SliderWithValue, IconButton, Switch, cn } from "@pixano/core";
-  import { Annotation } from "@pixano/core";
-  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import {
-    annotations,
-    preAnnotationIsActive,
-    colorScale,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { Annotation, cn, IconButton, PrimaryButton, SliderWithValue, Switch } from "@pixano/core";
+  import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
+
   import {
     getObjectsToPreAnnotate,
     mapObjectWithNewStatus,
     sortAndFilterObjectsToAnnotate,
   } from "../../lib/api/objectsApi";
-  import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
+  import {
+    annotations,
+    colorScale,
+    preAnnotationIsActive,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
 
   let objectsToAnnotate: Annotation[] = [];
   let filteredObjectsToAnnotate: Annotation[] = [];
@@ -152,9 +152,9 @@ License: CECILL-C
           {/key}
         </div>
         <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
-          <PrimaryButton on:click={onAcceptItem} isSelected disabled={!isFormValid}
-            ><Check />Accept</PrimaryButton
-          >
+          <PrimaryButton on:click={onAcceptItem} isSelected disabled={!isFormValid}>
+            <Check />Accept
+          </PrimaryButton>
           <PrimaryButton on:click={onRejectItem}>Reject</PrimaryButton>
         </div>
       </div>

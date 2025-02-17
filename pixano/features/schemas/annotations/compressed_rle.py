@@ -72,6 +72,15 @@ class CompressedRLE(Annotation):
             updated_at=datetime(1970, 1, 1),
         )
 
+    @property
+    def area(self) -> float:
+        """Return mask area.
+
+        Returns:
+            Mask area
+        """
+        return image_utils.mask_area({"size": self.size, "counts": self.counts})
+
     def to_mask(self) -> np.ndarray:
         """Convert the compressed RLE mask to a NumPy array.
 

@@ -7,9 +7,11 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
-  import { goto } from "$app/navigation";
+
   import type { DatasetInfo } from "@pixano/core/src";
+
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
+  import { goto } from "$app/navigation";
   import { currentDatasetStore } from "$lib/stores/datasetStores";
 
   export let datasets: Array<DatasetInfo>;

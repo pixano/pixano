@@ -5,9 +5,12 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { cn, type Message } from "@pixano/core";
+  // Exports
+  export let value: string;
 
-  export let message: Message;
+  const date = new Date(value);
 </script>
 
-<div class={cn("font-semibold")}>{message.data.content}</div>
+<div class="min-w-24 px-2">
+  {date.toLocaleString("fr-FR")}
+</div>

@@ -6,20 +6,26 @@ License: CECILL-C
 
 import { Message } from "@pixano/core";
 
-export const createUpdatedMessage = ({
-  message,
-  newMessageContent,
+export const createUpdatedAnswer = ({
+  prevAnswer,
+  content,
 }: {
-  message: Message;
-  newMessageContent: string;
+  prevAnswer: Message;
+  content: string;
 }) => {
   /* eslint-disable @typescript-eslint/no-unused-vars */
-  const { ui, ...rest } = message;
+  const { ui, ...rest } = prevAnswer;
+
+  // Mandatory for storybook not to crash
+  if ("_constructor-name_" in rest) {
+    delete rest["_constructor-name_"];
+  }
+
   return new Message({
     ...rest,
     data: {
-      ...message.data,
-      content: newMessageContent,
+      ...rest.data,
+      content,
     },
   });
 };

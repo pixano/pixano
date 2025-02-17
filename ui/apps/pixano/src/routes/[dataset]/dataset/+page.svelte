@@ -6,15 +6,15 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { onDestroy } from "svelte";
 
   import type { DatasetBrowser } from "@pixano/core/src";
+  import { getBrowser } from "@pixano/core/src/api";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
-  import { getBrowser } from "@pixano/core/src/api";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { datasetTableStore } from "$lib/stores/datasetStores";
-  import { onDestroy } from "svelte";
 
   let selectedDatasetId: string;
   let selectedDataset: DatasetBrowser;
@@ -39,7 +39,5 @@ License: CECILL-C
 </script>
 
 {#if selectedDataset?.table_data}
-  <div class="pt-20 h-1 min-h-screen">
-    <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
-  </div>
+  <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
 {/if}

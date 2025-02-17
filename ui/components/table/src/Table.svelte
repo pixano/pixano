@@ -6,7 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   // Local Imports
-  import { TableCell } from "./TableCell";
+
+  // Svelte Imports
+  import { createEventDispatcher } from "svelte";
+  import { createTable, Render, Subscribe } from "svelte-headless-table";
+  import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
+  import SortableList from "svelte-sortable-list";
+  import { readable } from "svelte/store";
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
@@ -14,12 +20,7 @@ License: CECILL-C
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
-  // Svelte Imports
-  import { createEventDispatcher } from "svelte";
-  import { readable } from "svelte/store";
-  import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render } from "svelte-headless-table";
-  import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
+  import { TableCell } from "./TableCell";
 
   // Exports
   export let items: TableData;
@@ -42,7 +43,7 @@ License: CECILL-C
     // Add field to column list
     itemColumns.push(
       table.column({
-        header: col.name,
+        header: col.name.replace("_", " "),
         // giving the exact type is troublesome here, for this one we will allow 'any' assignement
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         cell: TableCell[col.type],
@@ -98,7 +99,7 @@ License: CECILL-C
     class="px-12 pt-10 flex flex-col
     bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
   >
-    <span class="text-3xl font-bold mb-4"> Column settings </span>
+    <span class="text-3xl font-bold mb-4">Column settings</span>
     <span class="text-sm italic text-gray-500 font-medium mb-3">
       Drag and drop to re-order, toggle box for visibility.
     </span>
@@ -135,8 +136,7 @@ License: CECILL-C
   </div>
 </div>
 <div
-  class="h-[75vh] w-full overflow-y-auto overflow-x-auto
-    rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
+  class="w-full overflow-y-auto rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type { AnnotationType, EntityType, FeaturesValues, ImageType, ViewType } from "@pixano/core";
 import { BaseSchema, Image } from "@pixano/core";
+
 import fleurs from "../../assets/fleurs.jpg";
 import tiff from "../../assets/tiff.png";
 
@@ -24,7 +25,7 @@ const baseAnnotationType = {
   },
   view_ref: {
     id: "view_id",
-    name: "view_name",
+    name: "image",
   },
   source_ref: {
     id: "Ground Truth",

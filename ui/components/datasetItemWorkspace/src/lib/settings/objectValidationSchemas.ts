@@ -5,8 +5,10 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
-import type { CreateObjectSchemaDefinition } from "../types/datasetItemWorkspaceTypes";
+
 import { tableInfoSchema } from "@pixano/core";
+
+import type { CreateObjectSchemaDefinition } from "../types/datasetItemWorkspaceTypes";
 
 export const listInputSchema = z.object({
   name: z.string(),
