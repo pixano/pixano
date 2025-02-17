@@ -28,22 +28,29 @@ from tests.fixtures.app.routers.models.annotations import (
 from tests.fixtures.datasets.builders.builder import (
     dataset_builder_image_bboxes_keypoint,
     dataset_builder_multi_view_tracking_and_image,
+    dataset_builder_vqa,
 )
 from tests.fixtures.datasets.builders.folder import (
     image_folder,
     image_folder_builder,
+    image_folder_builder_no_jsonl,
+    image_folder_no_jsonl,
     video_folder,
     video_folder_builder,
+    vqa_folder,
+    vqa_folder_builder,
 )
 from tests.fixtures.datasets.dataset import (
     dataset_image_bboxes_keypoint,
     dataset_image_bboxes_keypoint_copy,
     dataset_multi_view_tracking_and_image,
     dataset_multi_view_tracking_and_image_copy,
+    dataset_vqa,
 )
 from tests.fixtures.datasets.dataset_info import (
     info_dataset_image_bboxes_keypoint,
     info_dataset_multi_view_tracking_and_image,
+    info_dataset_vqa,
 )
 from tests.fixtures.datasets.dataset_item import (
     dataset_item_bboxes_metadata,
@@ -52,6 +59,7 @@ from tests.fixtures.datasets.dataset_item import (
     dataset_item_image_embeddings,
     dataset_item_multi_view_tracking_and_image,
     dataset_item_video_bboxes_keypoint,
+    dataset_item_vqa,
 )
 from tests.fixtures.datasets.dataset_schema import (
     dataset_schema_image_bboxes_keypoint,

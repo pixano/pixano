@@ -12,6 +12,7 @@ from .integrity import (
     handle_integrity_errors,
 )
 from .labels import category_id, category_name, coco_ids_80to91
+from .mosaic import mosaic
 from .video import create_video_preview
 
 
@@ -27,4 +28,5 @@ __all__ = [
     "category_name",
     "get_integry_checks_from_schemas",
     "handle_integrity_errors",
+    "mosaic",
 ]

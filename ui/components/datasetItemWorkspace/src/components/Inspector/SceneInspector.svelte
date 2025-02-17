@@ -95,7 +95,7 @@ License: CECILL-C
 </script>
 
 <!-- Features Section -->
-<div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
+<div class="p-4 pb-8 text-slate-800">
   <h3 class="uppercase font-medium h-10">
     <span>Features</span>
     <IconButton
@@ -145,7 +145,7 @@ License: CECILL-C
 </div>
 
 <!-- Filters Section -->
-<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
+<div class="p-4 pb-8 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
 
   <!-- General Filters -->

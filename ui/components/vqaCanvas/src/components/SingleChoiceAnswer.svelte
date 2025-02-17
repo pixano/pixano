@@ -10,31 +10,40 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
 
-  import type { ContentChangeEvent } from "../lib/types";
-  import { serializeMessageContent } from "../lib/utils";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
+  import { deserializeMessageContent, serializeMessageContent } from "../lib/utils";
 
   export let choices: string[];
-  export let answer: Message;
+  export let answer: Message | null;
   export let withExplanation: boolean;
+  export let questionId: string;
 
   const radioGroupValues = choices.map((c) => ({ id: c, value: c }));
 
-  let explanation: string = (answer.data.explanations as string[])[0] ?? "";
+  let { checked, explanations } = deserializeMessageContent(answer?.data.content ?? null);
 
-  let selectedValue: string;
+  const answerId = answer?.id ?? null;
+
+  let selectedValue: string = radioGroupValues[checked.indexOf(true)].value;
   $: selectedValue, handleContentChange();
 
   const dispatch = createEventDispatcher();
 
   const handleContentChange = () => {
-    const newContent = serializeMessageContent({ choices: [selectedValue], explanation });
+    const content = serializeMessageContent({ choices: [selectedValue], explanations });
 
-    const eventDetail: ContentChangeEvent = {
-      answerId: answer.id,
-      newContent,
-      newChoices: [selectedValue],
-      explanation,
-    };
+    const eventDetail: ContentChangeEvent = answerId
+      ? {
+          content,
+          type: ContentChangeEventType.UPDATE,
+          answerId,
+        }
+      : {
+          content,
+          type: ContentChangeEventType.NEW_ANSWER,
+          questionId,
+        };
+
     dispatch("answerContentChange", eventDetail);
   };
 </script>
@@ -48,7 +57,7 @@ License: CECILL-C
       type="text"
       placeholder="Explanations"
       class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
-      bind:value={explanation}
+      bind:value={explanations}
       on:blur={handleContentChange}
     />
   {/if}

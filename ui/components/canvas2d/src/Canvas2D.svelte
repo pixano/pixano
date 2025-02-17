@@ -538,7 +538,7 @@ License: CECILL-C
         // Enable box creation or change cursor style
         break;
       case ToolType.Keypoint:
-        // Enable key point creation or change cursor style
+        // Enable keypoint creation or change cursor style
         break;
       case ToolType.Delete:
         clearAnnotationAndInputs();
