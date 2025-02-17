@@ -41,7 +41,7 @@ License: CECILL-C
     selectedTool,
     views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
@@ -253,13 +253,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightObject(
-      entity,
-      $entities,
-      isHighlighted,
-      $currentFrameIndex,
-      $lastFrameIndex,
-    );
+    const newFrameIndex = highlightObject(entity, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
     }
@@ -275,13 +269,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
-    const newFrameIndex = highlightObject(
-      entity,
-      $entities,
-      isHighlighted,
-      $currentFrameIndex,
-      $lastFrameIndex,
-    );
+    const newFrameIndex = highlightObject(entity, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
     }

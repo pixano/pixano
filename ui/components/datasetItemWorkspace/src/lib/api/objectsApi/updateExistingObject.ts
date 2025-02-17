@@ -22,7 +22,7 @@ import {
 import { getTopEntity, highlightObject } from ".";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { entities, saveData } from "../../stores/datasetItemWorkspaceStores";
-import { currentFrameIndex, lastFrameIndex } from "../../stores/videoViewerStores";
+import { currentFrameIndex } from "../../stores/videoViewerStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 import { getPixanoSource } from "./getPixanoSource";
 
@@ -45,13 +45,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     if (newShape.highlighted === "self") {
       if (newShape.shapeId === ann.id) {
         ann.ui.highlighted = "self";
-        const newFrameIndex = highlightObject(
-          getTopEntity(ann, get(entities)),
-          get(entities),
-          false,
-          get(currentFrameIndex),
-          get(lastFrameIndex),
-        );
+        const newFrameIndex = highlightObject(getTopEntity(ann, get(entities)), false);
 
         if (newFrameIndex != get(currentFrameIndex)) {
           currentFrameIndex.set(newFrameIndex);
