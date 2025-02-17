@@ -10,8 +10,6 @@ import { PRE_ANNOTATION } from "../../constants";
 
 export type MView = Record<string, View | View[]>;
 
-export const createObjectCardId = (object: Annotation | Entity): string => `object-${object.id}`;
-
 export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
   return entities.find((entity) => entity.id === ann.data.entity_ref.id);
 };
@@ -29,6 +27,7 @@ export * from "./sortAndFilterObjectsToAnnotate";
 export * from "./getPixanoSource";
 export * from "./getTable";
 export * from "./getTopEntity";
+export * from "./highlightObject";
 export * from "./mapObjectToBBox";
 export * from "./mapObjectToKeypoints";
 export * from "./mapObjectToMasks";

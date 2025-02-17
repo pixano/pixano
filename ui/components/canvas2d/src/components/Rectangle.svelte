@@ -68,23 +68,13 @@ License: CECILL-C
     stickLabelsToRectangle(tooltip, currentRect);
   };
 
-  const onDoubleClick = () => {
-    newShape = {
-      status: "editing",
-      shapeId: bbox.id,
-      viewRef: bbox.data.view_ref,
-      highlighted: "self",
-      type: "none",
-    };
-  };
-
   const onClick = () => {
     if (bbox.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: bbox.id,
         viewRef: bbox.data.view_ref,
-        highlighted: "all",
+        highlighted: "self",
         type: "none",
       };
     }
@@ -126,7 +116,6 @@ License: CECILL-C
 </script>
 
 <Group
-  on:dblclick={onDoubleClick}
   on:click={onClick}
   config={{
     listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Fusion,

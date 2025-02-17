@@ -4,14 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  BaseSchema,
-  WorkspaceType,
-  type BBox,
-  type Entity,
-  type Image,
-  type SequenceFrame,
-} from "@pixano/core";
+import { BaseSchema, WorkspaceType, type BBox, type Image, type SequenceFrame } from "@pixano/core";
 
 import type { MView } from ".";
 import {
@@ -22,7 +15,7 @@ import {
 import { defineTooltip } from "./defineTooltip";
 import { getTopEntity } from "./getTopEntity";
 
-export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
+export const mapObjectToBBox = (bbox: BBox, views: MView): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
   if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl?.hidden) return;
@@ -50,7 +43,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
       bbox_ui_coords[3] * imageHeight,
     ];
   }
-  const entity = getTopEntity(bbox, entities);
+  const entity = getTopEntity(bbox);
   const tooltip = entity ? defineTooltip(bbox, entity) : "";
 
   return {

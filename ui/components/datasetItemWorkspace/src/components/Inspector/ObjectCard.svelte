@@ -26,9 +26,9 @@ License: CECILL-C
   import { createFeature } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
-    createObjectCardId,
     defineObjectThumbnail,
     getTopEntity,
+    highlightObject,
     toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
   import { panTool } from "../../lib/settings/selectionTools";
@@ -68,7 +68,11 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (isEditing) open = true;
+  $: if (isEditing) {
+    open = true;
+  } else {
+    open = false;
+  }
 
   const features = derived(
     [currentFrameIndex, entities, annotations],
@@ -146,7 +150,7 @@ License: CECILL-C
             if (ann.ui.frame_index !== $currentFrameIndex) return ann;
           }
 
-          if (getTopEntity(ann, $entities).id === entity.id) {
+          if (getTopEntity(ann).id === entity.id) {
             if (isVisible) {
               ann.ui.highlighted = "self";
             } else {
@@ -162,7 +166,7 @@ License: CECILL-C
           };
         }
         if (
-          getTopEntity(ann, $entities).id === entity.id &&
+          getTopEntity(ann).id === entity.id &&
           (!base_schema || (base_schema && ann.table_info.base_schema === base_schema))
         ) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);
@@ -249,16 +253,10 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    annotations.update((objects) =>
-      objects.map((ann) => {
-        ann.ui.highlighted = isHighlighted
-          ? "all"
-          : getTopEntity(ann, $entities).id === entity.id
-            ? "self"
-            : "none";
-        return ann;
-      }),
-    );
+    const newFrameIndex = highlightObject(entity, isHighlighted);
+    if (newFrameIndex != $currentFrameIndex) {
+      currentFrameIndex.set(newFrameIndex);
+    }
   };
 
   const onTrackVisClick = () => {
@@ -271,6 +269,10 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
+    const newFrameIndex = highlightObject(entity, isHighlighted);
+    if (newFrameIndex != $currentFrameIndex) {
+      currentFrameIndex.set(newFrameIndex);
+    }
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };
@@ -300,7 +302,7 @@ License: CECILL-C
   <article
     on:mouseenter={() => (showIcons = true)}
     on:mouseleave={() => (showIcons = open)}
-    id={createObjectCardId(entity)}
+    id={`card-object-${entity.id}`}
   >
     <div
       class={cn(
