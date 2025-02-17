@@ -6,8 +6,8 @@ License: CECILL-C
 
 export const serializeMessageContent = ({
   choices,
-  explanation,
+  explanations,
 }: {
   choices: string[];
-  explanation: string;
-}) => `[[${choices.join(",")}]] ${explanation}`;
+  explanations: string;
+}) => `[[${choices.join(",")}]] ${explanations}`;

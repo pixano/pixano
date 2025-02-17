@@ -31,6 +31,10 @@ License: CECILL-C
     const interval = setInterval(() => {
       currentFrameIndex.update((index) => (index + 1) % ($lastFrameIndex + 1));
       updateView($currentFrameIndex);
+      if ($currentFrameIndex === 0) {
+        clearInterval($videoControls.intervalId);
+        videoControls.update((old) => ({ ...old, intervalId: 0 }));
+      }
     }, $videoControls.videoSpeed);
     videoControls.update((old) => ({ ...old, intervalId: Number(interval) }));
   };

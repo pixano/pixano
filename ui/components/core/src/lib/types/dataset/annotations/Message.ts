@@ -42,8 +42,6 @@ const questionSchema = baseMessageSchema.extend({
 
 const answerSchema = baseMessageSchema.extend({
   type: z.literal(MessageTypeEnum.ANSWER),
-  answers: z.string().array(),
-  explanations: z.string().array(),
 });
 
 const systemSchema = baseMessageSchema.extend({

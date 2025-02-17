@@ -27,6 +27,12 @@ class DefaultVQADatasetItem(DatasetItem):
     conversations: list[Conversation]
     messages: list[Message]
 
+    # TODO will be added soon... (but need some rework to allow both Conversation and Entity)
+    # bboxes: list[BBox]
+    # masks: list[CompressedRLE]
+    # keypoints: list[KeyPoints]
+    # objects: list[Entity]
+
 
 class DefaultVideoDatasetItem(DatasetItem):
     """Default Video DatasetItem Schema."""

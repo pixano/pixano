@@ -12,6 +12,7 @@ from .integrity import (
     handle_integrity_errors,
 )
 from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
+from .mosaic import mosaic
 from .video import create_video_preview
 
 
@@ -28,5 +29,6 @@ __all__ = [
     "dota_ids",
     "get_integry_checks_from_schemas",
     "handle_integrity_errors",
+    "mosaic",
     "voc_names",
 ]

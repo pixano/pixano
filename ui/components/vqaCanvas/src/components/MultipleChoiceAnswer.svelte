@@ -10,15 +10,21 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
-  import type { ContentChangeEvent } from "../lib/types";
-  import { answerChoicesToCheckboxsState, serializeMessageContent } from "../lib/utils";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
+  import {
+    checkboxsStateToAnswerChoices,
+    deserializeMessageContent,
+    serializeMessageContent,
+  } from "../lib/utils";
 
   export let choices: string[];
-  export let answer: Message;
+  export let answer: Message | null;
   export let withExplanation: boolean;
+  export let questionId: string;
 
-  let explanation: string = (answer.data.explanations as string[])[0] ?? "";
-  let checked: boolean[] = answerChoicesToCheckboxsState((answer.data.answers as string[]) ?? []);
+  let { checked, explanations } = deserializeMessageContent(answer?.data.content ?? null);
+
+  const answerId = answer?.id ?? null;
 
   const dispatch = createEventDispatcher();
 
@@ -28,15 +34,17 @@ License: CECILL-C
   };
 
   const handleContentChange = () => {
-    const newChoices = checked.map((c, i) => (c ? i.toString() : null)).filter((c) => c !== null);
-    const newContent = serializeMessageContent({ choices: newChoices, explanation });
+    const selectedChoices = checkboxsStateToAnswerChoices(checked);
+    const content = serializeMessageContent({ choices: selectedChoices, explanations });
 
-    const eventDetail: ContentChangeEvent = {
-      answerId: answer.id,
-      newContent,
-      newChoices,
-      explanation,
-    };
+    const eventDetail: ContentChangeEvent = answerId
+      ? { content, type: ContentChangeEventType.UPDATE, answerId }
+      : {
+          content,
+          type: ContentChangeEventType.NEW_ANSWER,
+          questionId,
+        };
+
     dispatch("answerContentChange", eventDetail);
   };
 </script>
@@ -59,7 +67,7 @@ License: CECILL-C
       type="text"
       placeholder="Explanations"
       class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
-      bind:value={explanation}
+      bind:value={explanations}
       on:blur={handleContentChange}
     />
   {/if}
