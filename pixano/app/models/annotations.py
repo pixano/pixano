@@ -4,8 +4,10 @@
 # License: CECILL-C
 # =====================================
 
+import json
+
 from pydantic import ConfigDict, field_validator
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar
 
 from pixano.app.models.table_info import TableInfo
 from pixano.features import Annotation
@@ -57,3 +59,18 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
         if not issubclass(schema_type, Annotation):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
         return super().to_row(schema_type)
+
+    @classmethod
+    def from_row(cls, row: Annotation, table_info: TableInfo) -> Self:
+        """Create a SourceModel from a Source.
+
+        Args:
+            row: The row to create the model from.
+            table_info: The table info of the row.
+
+        Returns:
+            The created model.
+        """
+        source_model = BaseSchemaModel.from_row(row, table_info)
+        source_model.data["metadata"] = json.loads(source_model.data["inference_metadata"])
+        return source_model
