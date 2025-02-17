@@ -17,7 +17,6 @@ export const highlightObject = (entity: Entity, isHighlighted: boolean): number 
   let highlightFrameIndex = get(lastFrameIndex) + 1;
   annotations.update((objects) =>
     objects.map((ann) => {
-      console.log("zaz", highlightFrameIndex)
       ann.ui.highlighted = isHighlighted
         ? "all"
         : getTopEntity(ann).id === entity.id
