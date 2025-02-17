@@ -51,7 +51,7 @@ License: CECILL-C
 </script>
 
 {#if $videoControls.isLoaded}
-  <div class="h-full bg-white overflow-x-auto relative flex flex-col">
+  <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
         <TimeTrack slot="timeTrack" {updateView} {resetTool} />

@@ -46,11 +46,11 @@ export const highlightObject = (
   );
   const cardElement = document.querySelector(`#card-object-${entity.id}`);
   if (cardElement) {
-    cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    cardElement.scrollIntoView({ block: "center" });
   }
   const trackElement = document.querySelector(`#video-object-${entity.id}`);
   if (trackElement) {
-    trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    trackElement.scrollIntoView({ block: "center" });
   }
   if (!objectAlreadyVisible && highlightFrameIndex != lastFrameIndex + 1) {
     return highlightFrameIndex;

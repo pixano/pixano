@@ -71,7 +71,7 @@ License: CECILL-C
       <p>{numberOfItem}</p>
     </div>
   </div>
-  <div class="p-2 pt-0 max-h-full overflow-y-auto">
+  <div class="p-2 pt-0 max-h-full overflow-y-auto scroll-smooth">
     <slot />
   </div>
 </section>
