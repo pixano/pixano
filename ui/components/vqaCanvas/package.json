@@ -24,13 +24,7 @@
   },
   "dependencies": {
     "@pixano/core": "workspace:^",
-    "@pixano/dataset-item-workspace": "workspace:^",
-    "@pixano/models": "workspace:^",
-    "konva": "^9.3.16",
     "nanoid": "^5.0.5",
-    "onnxruntime-web": "~1.16.3",
-    "simplify-js": "^1.2.4",
-    "svelte-konva": "^0.1.1",
     "vite-plugin-externals": "^0.6.2",
     "zod": "^3.23.8"
   }
