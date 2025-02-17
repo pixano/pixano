@@ -165,11 +165,19 @@
          <lastmod>2025-02-17</lastmod>
     </url>
     <url>
+         <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/coco_dataset_exporter/</loc>
+         <lastmod>2025-02-17</lastmod>
+    </url>
+    <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/dataset_exporter/</loc>
          <lastmod>2025-02-17</lastmod>
     </url>
     <url>
-         <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/default/</loc>
+         <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/default_json_dataset_exporter/</loc>
+         <lastmod>2025-02-17</lastmod>
+    </url>
+    <url>
+         <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/default_jsonl_dataset_exporter/</loc>
          <lastmod>2025-02-17</lastmod>
     </url>
     <url>
