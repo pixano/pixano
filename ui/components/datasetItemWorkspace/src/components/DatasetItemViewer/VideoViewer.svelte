@@ -33,6 +33,7 @@ License: CECILL-C
     addOrUpdateSaveItem,
     getPixanoSource,
     getTopEntity,
+    scrollIntoView,
     updateExistingObject,
   } from "../../lib/api/objectsApi";
   import {
@@ -444,6 +445,10 @@ License: CECILL-C
     if ($newShape.status === "editing") {
       if ($selectedTool.type !== ToolType.Fusion) {
         updateOrCreateShape($newShape);
+      } else {
+        if ($newShape.top_entity_id) {
+          scrollIntoView($newShape.top_entity_id);
+        }
       }
     }
   }

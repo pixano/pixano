@@ -11,6 +11,7 @@ import { BaseSchema, Tracklet } from "@pixano/core";
 import { annotations } from "../../stores/datasetItemWorkspaceStores";
 import { currentFrameIndex, lastFrameIndex } from "../../stores/videoViewerStores";
 import { getTopEntity } from "./getTopEntity";
+import { scrollIntoView } from "./scrollIntoView";
 
 export const highlightObject = (entity_id: string, isHighlighted: boolean): number => {
   let highlightFrameIndex = get(lastFrameIndex) + 1;
@@ -27,15 +28,8 @@ export const highlightObject = (entity_id: string, isHighlighted: boolean): numb
       return ann;
     }),
   );
-  const cardElement = document.querySelector(`#card-object-${entity_id}`);
-  if (cardElement) {
-    cardElement.scrollIntoView({ block: "center" });
-  }
-  const trackElement = document.querySelector(`#video-object-${entity_id}`);
-  if (trackElement) {
-    trackElement.scrollIntoView({ block: "center" });
-  }
-  if (highlightFrameIndex != get(lastFrameIndex) + 1) {
+  scrollIntoView(entity_id);
+  if (!isHighlighted && highlightFrameIndex != get(lastFrameIndex) + 1) {
     return highlightFrameIndex;
   } else {
     return get(currentFrameIndex);
