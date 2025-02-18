@@ -434,10 +434,10 @@ License: CECILL-C
       let { objects, save_data } = editKeyItemInTracklet($annotations, shape, $currentFrameIndex);
       annotations.set(objects);
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
-      newShape.set({ status: "none" });
     } else {
       annotations.update((objects) => updateExistingObject(objects, shape));
     }
+    newShape.set({ status: "none" });
   };
 
   $: {

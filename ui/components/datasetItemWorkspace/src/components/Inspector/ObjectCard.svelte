@@ -254,7 +254,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightObject(entity, isHighlighted);
+    const newFrameIndex = highlightObject(entity.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
       updateView($currentFrameIndex);
@@ -271,11 +271,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
-    const newFrameIndex = highlightObject(entity, isHighlighted);
-    if (newFrameIndex != $currentFrameIndex) {
-      currentFrameIndex.set(newFrameIndex);
-      updateView($currentFrameIndex);
-    }
+    highlightObject(entity.id, isHighlighted);
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };

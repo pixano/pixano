@@ -29,7 +29,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     newShape.highlighted === "self"
   ) {
     //it is an interpolated object. Highlight anyway
-    if (newShape.top_entity) highlightObject(newShape.top_entity, false);
+    if (newShape.top_entity) highlightObject(newShape.top_entity_id, false);
     return objects;
   }
   return objects.map((ann) => {
@@ -43,7 +43,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     }
     if (newShape.highlighted === "self") {
       if (newShape.shapeId === ann.id) {
-        highlightObject(getTopEntity(ann), false);
+        highlightObject(getTopEntity(ann).id, false);
       }
     }
 

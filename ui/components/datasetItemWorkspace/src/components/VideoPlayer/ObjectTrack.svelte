@@ -330,7 +330,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightObject(track, isHighlighted);
+    const newFrameIndex = highlightObject(track.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
       updateView($currentFrameIndex);

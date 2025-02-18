@@ -73,7 +73,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: bbox.id,
-        top_entity: bbox.ui.top_entities[0],
+        top_entity_id: bbox.ui.top_entities[0].id,
         viewRef: bbox.data.view_ref,
         highlighted: "self",
         type: "none",

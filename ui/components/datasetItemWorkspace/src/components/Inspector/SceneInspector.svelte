@@ -54,14 +54,23 @@ License: CECILL-C
       } else {
         image = view as Image;
       }
-      return {
-        url: image?.data.url,
-        width: image.data.width,
-        height: image.data.height,
-        format: image.data.format,
-        id: image.id,
-        view: image.table_info.name,
-      };
+      return image
+        ? {
+            url: image.data.url,
+            width: image.data.width,
+            height: image.data.height,
+            format: image.data.format,
+            id: image.id,
+            view: image.table_info.name,
+          }
+        : {
+            url: undefined,
+            width: 0,
+            height: 0,
+            format: "",
+            id: "",
+            view: "",
+          };
     });
     features = createFeature($itemMetas.item, $datasetSchema);
   });
