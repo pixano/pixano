@@ -6,14 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
   import {
-    type DatasetInfo,
-    type DatasetItem,
-    type FeaturesValues,
-    type SaveItem,
-    type Schema,
     api,
     BaseSchema,
     Entity,
@@ -21,8 +14,14 @@ License: CECILL-C
     PrimaryButton,
     SequenceFrame,
     WorkspaceType,
+    type DatasetInfo,
+    type DatasetItem,
+    type FeaturesValues,
+    type SaveItem,
+    type Schema,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
+
   import {
     datasetSchema,
     datasetsStore,
@@ -31,6 +30,8 @@ License: CECILL-C
     saveCurrentItemStore,
     sourcesStore,
   } from "../../../../lib/stores/datasetStores";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -84,17 +85,17 @@ License: CECILL-C
     }
     */
     const frontFV: FeaturesValues = { main: {}, objects: {} };
-    if (
-      "items" in feature_values &&
-      feature_values["items"] &&
-      feature_values["items"]["items"]
-    ) {
+    if ("items" in feature_values && feature_values["items"] && feature_values["items"]["items"]) {
       for (const feat of feature_values["items"]["items"]) {
         let { name, ...fv } = feat;
         frontFV.main[name] = fv;
       }
     }
-    if ("entities" in feature_values && feature_values["entities"]) {
+    if (
+      "entities" in feature_values &&
+      feature_values["entities"] &&
+      Object.keys(feature_values["entities"]).length > 0
+    ) {
       for (const entity_group of $datasetSchema.groups.entities) {
         frontFV.objects = {};
         for (const feat of feature_values["entities"][entity_group]) {
