@@ -37,6 +37,7 @@ License: CECILL-C
     colorScale,
     entities,
     saveData,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -44,6 +45,7 @@ License: CECILL-C
     videoControls,
   } from "../../lib/stores/videoViewerStores";
   import ObjectTracklet from "./ObjectTracklet.svelte";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   type MView = Record<string, View | View[]>;
 
@@ -330,6 +332,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
+    if ($selectedTool.type === ToolType.Fusion) return;
     const newFrameIndex = highlightObject(track.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);

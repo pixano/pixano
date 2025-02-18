@@ -28,7 +28,7 @@ export const highlightObject = (entity_id: string, isHighlighted: boolean): numb
       return ann;
     }),
   );
-  scrollIntoView(entity_id);
+  if (!isHighlighted) scrollIntoView(entity_id);
   if (!isHighlighted && highlightFrameIndex != get(lastFrameIndex) + 1) {
     return highlightFrameIndex;
   } else {

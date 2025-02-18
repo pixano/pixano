@@ -46,6 +46,7 @@ License: CECILL-C
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let entity: Entity;
   let open: boolean = false;
@@ -254,6 +255,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
+    if ($selectedTool.type === ToolType.Fusion) return;
     const newFrameIndex = highlightObject(entity.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
@@ -271,6 +273,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
+    if ($selectedTool.type === ToolType.Fusion) return;
     highlightObject(entity.id, isHighlighted);
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
@@ -335,7 +338,9 @@ License: CECILL-C
           "flex-shrink-0 flex items-center justify-end",
           showIcons || isEditing
             ? entity.is_track
-              ? "basis-[160px]"
+              ? $selectedTool.type !== ToolType.Fusion
+                ? "basis-[160px]"
+                : "basis-[120px]"
               : "basis-[120px]"
             : entity.is_track && hiddenTrack
               ? "basis-[80px]"
@@ -344,9 +349,15 @@ License: CECILL-C
         style="min-width: 40px;"
       >
         {#if showIcons || isEditing}
-          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}>
-            <Pencil class="h-4" />
-          </IconButton>
+          {#if $selectedTool.type !== ToolType.Fusion}
+            <IconButton
+              tooltipContent="Edit object"
+              selected={isEditing}
+              on:click={onEditIconClick}
+            >
+              <Pencil class="h-4" />
+            </IconButton>
+          {/if}
           <IconButton tooltipContent="Delete object" on:click={deleteObject}>
             <Trash2 class="h-4" />
           </IconButton>
