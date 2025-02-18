@@ -33,7 +33,7 @@ License: CECILL-C
         <Tabs.Trigger value="scene" class="w-1/2 ">Scene</Tabs.Trigger>
       </Tabs.List>
       <div class="h-[calc(100%-48px)] flex flex-col justify-between">
-        <Tabs.Content value="objects" class="h-full overflow-y-auto">
+        <Tabs.Content value="objects" class="h-full overflow-y-auto scroll-smooth">
           {#if isLoading}
             <div class="p-4 flex flex-col gap-4">
               <Skeleton class="h-8 w-full" />
