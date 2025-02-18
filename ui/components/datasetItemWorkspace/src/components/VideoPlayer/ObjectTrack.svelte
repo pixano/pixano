@@ -6,44 +6,44 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import type {
-    KeypointsTemplate,
-    SaveItem,
-    SequenceFrame,
-    TrackletItem,
-    View,
+      KeypointsTemplate,
+      SaveItem,
+      SequenceFrame,
+      TrackletItem,
+      View,
   } from "@pixano/core";
   import {
-    Annotation,
-    BaseSchema,
-    BBox,
-    ContextMenu,
-    Entity,
-    Keypoints,
-    Track,
-    Tracklet,
+      Annotation,
+      BaseSchema,
+      BBox,
+      ContextMenu,
+      Entity,
+      Keypoints,
+      Track,
+      Tracklet,
   } from "@pixano/core";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
-    addOrUpdateSaveItem,
-    getPixanoSource,
-    getTopEntity,
-    highlightObject,
+      addOrUpdateSaveItem,
+      getPixanoSource,
+      getTopEntity,
+      highlightObject,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo, updateView } from "../../lib/api/videoApi";
   import {
-    annotations,
-    colorScale,
-    entities,
-    saveData,
-    selectedTool,
+      annotations,
+      colorScale,
+      entities,
+      saveData,
+      selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
-    currentFrameIndex,
-    lastFrameIndex,
-    videoControls,
+      currentFrameIndex,
+      lastFrameIndex,
+      videoControls,
   } from "../../lib/stores/videoViewerStores";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
