@@ -63,8 +63,8 @@ License: CECILL-C
   };
   type backFVS = Record<string, Record<string, backFV[]>>;
 
-  const mapBackFeaturesValues2FrontFeaturesValues = (features_values: backFVS) => {
-    console.log("--- back features_values", features_values);
+  const mapBackFeaturesValues2FrontFeaturesValues = (feature_values: backFVS) => {
+    console.log("--- back feature_values", feature_values);
     /*
     --- current back format for features values (most probably to be changed)
     {
@@ -85,26 +85,26 @@ License: CECILL-C
     */
     const frontFV: FeaturesValues = { main: {}, objects: {} };
     if (
-      "items" in features_values &&
-      features_values["items"] &&
-      features_values["items"]["items"]
+      "items" in feature_values &&
+      feature_values["items"] &&
+      feature_values["items"]["items"]
     ) {
-      for (const feat of features_values["items"]["items"]) {
+      for (const feat of feature_values["items"]["items"]) {
         let { name, ...fv } = feat;
         frontFV.main[name] = fv;
       }
     }
-    if ("entities" in features_values && features_values["entities"]) {
+    if ("entities" in feature_values && feature_values["entities"]) {
       for (const entity_group of $datasetSchema.groups.entities) {
         frontFV.objects = {};
-        for (const feat of features_values["entities"][entity_group]) {
+        for (const feat of feature_values["entities"][entity_group]) {
           let { name, ...fv } = feat;
           frontFV.objects[name] = fv;
         }
       }
     }
 
-    console.log("--- front features_values", frontFV);
+    console.log("--- front feature_values", frontFV);
     return frontFV;
   };
 

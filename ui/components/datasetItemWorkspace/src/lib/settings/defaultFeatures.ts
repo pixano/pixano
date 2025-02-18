@@ -6,10 +6,11 @@ License: CECILL-C
 
 import type { ItemFeature } from "@pixano/core";
 
-export const DEFAULT_FEATURE = "name";
+// default features used to display tooltip, in this order
+export const DEFAULT_FEATURES = ["name", "category", "category_name"];
 
 export const defaultObjectFeatures = {
-  [DEFAULT_FEATURE]: {
+  [DEFAULT_FEATURES[0]]: {
     name: "name",
     dtype: "str",
     label: "name",
