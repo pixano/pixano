@@ -529,6 +529,9 @@ importers:
       '@pixano/core':
         specifier: workspace:^
         version: link:../core
+      lucide-svelte:
+        specifier: ^0.292.0
+        version: 0.292.0(svelte@4.2.19)
       nanoid:
         specifier: ^5.0.5
         version: 5.1.0

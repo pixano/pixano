@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@pixano/core": "workspace:^",
+    "lucide-svelte": "^0.292.0",
     "nanoid": "^5.0.5",
     "vite-plugin-externals": "^0.6.2",
     "zod": "^3.23.8"
