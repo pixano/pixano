@@ -23,6 +23,7 @@ License: CECILL-C
     Track,
     Tracklet,
   } from "@pixano/core";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
@@ -45,7 +46,6 @@ License: CECILL-C
     videoControls,
   } from "../../lib/stores/videoViewerStores";
   import ObjectTracklet from "./ObjectTracklet.svelte";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   type MView = Record<string, View | View[]>;
 

@@ -10,6 +10,7 @@ License: CECILL-C
   import { derived } from "svelte/store";
 
   import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
     Entity,
@@ -46,7 +47,6 @@ License: CECILL-C
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let entity: Entity;
   let open: boolean = false;
