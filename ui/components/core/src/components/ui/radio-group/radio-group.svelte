@@ -8,13 +8,18 @@ License: CECILL-C
   import { Label, RadioGroup } from "bits-ui";
   import { Check } from "lucide-svelte";
 
+  import { cn } from "../../../lib/utils/styleUtils";
+
   export let selectedValue: string;
   export let values: { id: string; value: string }[];
+  export let itemClass: string | undefined = undefined;
 </script>
 
 <RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium" bind:value={selectedValue}>
   {#each values as { id, value }}
-    <div class="group flex select-none items-center text-foreground transition-all">
+    <div
+      class={cn("group flex select-none items-center text-foreground transition-all", itemClass)}
+    >
       <RadioGroup.Item
         {id}
         {value}
