@@ -84,19 +84,16 @@ export const colorScale = derived(
   initialColorScale,
 );
 
-export const itemBboxes = derived(
-  [annotations, views, entities],
-  ([$annotations, $views, $entities]) => {
-    const bboxes: BBox[] = [];
-    for (const ann of $annotations) {
-      if (ann.is_type(BaseSchema.BBox)) {
-        const box = mapObjectToBBox(ann as BBox, $views, $entities);
-        if (box) bboxes.push(box);
-      }
+export const itemBboxes = derived([annotations, views], ([$annotations, $views]) => {
+  const bboxes: BBox[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_type(BaseSchema.BBox)) {
+      const box = mapObjectToBBox(ann as BBox, $views);
+      if (box) bboxes.push(box);
     }
-    return bboxes;
-  },
-);
+  }
+  return bboxes;
+});
 
 export const itemMasks = derived(annotations, ($annotations) => {
   const masks: Mask[] = [];

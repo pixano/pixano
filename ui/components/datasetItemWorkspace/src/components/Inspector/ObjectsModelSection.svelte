@@ -63,7 +63,7 @@ License: CECILL-C
     <slot name="modelSelection" />
     <p>{numberOfItem}</p>
   </div>
-  <div class="p-2 pt-0 max-h-full overflow-y-auto">
+  <div class="p-2 pt-0 max-h-full">
     <slot />
   </div>
 </section>

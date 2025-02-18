@@ -7,6 +7,8 @@ License: CECILL-C
 // Imports
 import { writable } from "svelte/store";
 
+import { type HTMLImage, type ImagesPerView } from "@pixano/core";
+
 // Exports
 
 type VideoControls = {
@@ -15,6 +17,12 @@ type VideoControls = {
   isLoaded: boolean;
   videoSpeed: number;
 };
+
+export const imagesPerView = writable<ImagesPerView>({});
+export const imagesPerViewBuffer = writable<Record<string, HTMLImage[]>>({});
+export const imagesFilesUrlsByFrame = writable<
+  Record<string, { id: string; url: string } | undefined>[]
+>([]);
 
 export const lastFrameIndex = writable<number>();
 export const currentFrameIndex = writable<number>(0);

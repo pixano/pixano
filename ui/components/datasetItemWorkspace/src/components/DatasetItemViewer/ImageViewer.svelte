@@ -167,6 +167,7 @@ License: CECILL-C
   // Reactive statement to update item objects when new shape is being edited and pre-annotation is not active
   $: if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
     annotations.update((objects) => updateExistingObject(objects, $newShape));
+    newShape.set({ status: "none" });
   }
 
   // Reactive statement to set the selected tool

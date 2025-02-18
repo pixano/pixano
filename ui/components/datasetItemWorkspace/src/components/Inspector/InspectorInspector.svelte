@@ -24,12 +24,12 @@ License: CECILL-C
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
-    <Tabs.Root bind:value={currentTab} class="flex flex-col">
+    <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
       <Tabs.List class="flex h-12">
         <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="objects">
+      <Tabs.Content value="objects" class="h-full overflow-y-auto scroll-smooth">
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />
@@ -40,7 +40,7 @@ License: CECILL-C
           <ObjectsInspector />
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="scene">
+      <Tabs.Content value="scene" class="h-full overflow-y-auto scroll-smooth">
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />

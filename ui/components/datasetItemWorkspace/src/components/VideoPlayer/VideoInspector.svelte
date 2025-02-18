@@ -12,12 +12,7 @@ License: CECILL-C
   import { BBox, SliderRoot, Track, type KeypointsTemplate } from "@pixano/core";
 
   import { panTool } from "../../lib/settings/selectionTools";
-  import {
-    annotations,
-    entities,
-    selectedTool,
-    views,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { entities, selectedTool, views } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -53,19 +48,10 @@ License: CECILL-C
       updateView($currentFrameIndex);
     }
   };
-
-  annotations.subscribe((value) => {
-    const highlightedObject = value.find((item) => item.ui.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#video-object-${highlightedObject.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  });
 </script>
 
 {#if $videoControls.isLoaded}
-  <div class="h-full bg-white overflow-x-auto relative flex flex-col">
+  <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
         <TimeTrack slot="timeTrack" {updateView} {resetTool} />

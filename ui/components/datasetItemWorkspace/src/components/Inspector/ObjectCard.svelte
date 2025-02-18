@@ -10,6 +10,7 @@ License: CECILL-C
   import { derived } from "svelte/store";
 
   import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
     Entity,
@@ -26,11 +27,12 @@ License: CECILL-C
   import { createFeature } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
-    createObjectCardId,
     defineObjectThumbnail,
     getTopEntity,
+    highlightObject,
     toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
+  import { updateView } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
@@ -68,7 +70,11 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (isEditing) open = true;
+  $: if (isEditing) {
+    open = true;
+  } else {
+    open = false;
+  }
 
   const features = derived(
     [currentFrameIndex, entities, annotations],
@@ -146,7 +152,7 @@ License: CECILL-C
             if (ann.ui.frame_index !== $currentFrameIndex) return ann;
           }
 
-          if (getTopEntity(ann, $entities).id === entity.id) {
+          if (getTopEntity(ann).id === entity.id) {
             if (isVisible) {
               ann.ui.highlighted = "self";
             } else {
@@ -162,7 +168,7 @@ License: CECILL-C
           };
         }
         if (
-          getTopEntity(ann, $entities).id === entity.id &&
+          getTopEntity(ann).id === entity.id &&
           (!base_schema || (base_schema && ann.table_info.base_schema === base_schema))
         ) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);
@@ -249,16 +255,12 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    annotations.update((objects) =>
-      objects.map((ann) => {
-        ann.ui.highlighted = isHighlighted
-          ? "all"
-          : getTopEntity(ann, $entities).id === entity.id
-            ? "self"
-            : "none";
-        return ann;
-      }),
-    );
+    if ($selectedTool.type === ToolType.Fusion) return;
+    const newFrameIndex = highlightObject(entity.id, isHighlighted);
+    if (newFrameIndex != $currentFrameIndex) {
+      currentFrameIndex.set(newFrameIndex);
+      updateView($currentFrameIndex);
+    }
   };
 
   const onTrackVisClick = () => {
@@ -271,6 +273,8 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
+    if ($selectedTool.type === ToolType.Fusion) return;
+    highlightObject(entity.id, isHighlighted);
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);
   };
@@ -300,7 +304,7 @@ License: CECILL-C
   <article
     on:mouseenter={() => (showIcons = true)}
     on:mouseleave={() => (showIcons = open)}
-    id={createObjectCardId(entity)}
+    id={`card-object-${entity.id}`}
   >
     <div
       class={cn(
@@ -334,7 +338,9 @@ License: CECILL-C
           "flex-shrink-0 flex items-center justify-end",
           showIcons || isEditing
             ? entity.is_track
-              ? "basis-[160px]"
+              ? $selectedTool.type !== ToolType.Fusion
+                ? "basis-[160px]"
+                : "basis-[120px]"
               : "basis-[120px]"
             : entity.is_track && hiddenTrack
               ? "basis-[80px]"
@@ -343,9 +349,15 @@ License: CECILL-C
         style="min-width: 40px;"
       >
         {#if showIcons || isEditing}
-          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}>
-            <Pencil class="h-4" />
-          </IconButton>
+          {#if $selectedTool.type !== ToolType.Fusion}
+            <IconButton
+              tooltipContent="Edit object"
+              selected={isEditing}
+              on:click={onEditIconClick}
+            >
+              <Pencil class="h-4" />
+            </IconButton>
+          {/if}
           <IconButton tooltipContent="Delete object" on:click={deleteObject}>
             <Trash2 class="h-4" />
           </IconButton>
