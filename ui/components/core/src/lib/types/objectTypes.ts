@@ -166,6 +166,7 @@ export type EditShape = {
   shapeId: string;
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
+  top_entity?: Entity;
 } & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;

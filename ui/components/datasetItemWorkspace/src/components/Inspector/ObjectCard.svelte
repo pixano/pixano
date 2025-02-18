@@ -31,6 +31,7 @@ License: CECILL-C
     highlightObject,
     toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
+  import { updateView } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
@@ -256,6 +257,7 @@ License: CECILL-C
     const newFrameIndex = highlightObject(entity, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
+      updateView($currentFrameIndex);
     }
   };
 
@@ -272,6 +274,7 @@ License: CECILL-C
     const newFrameIndex = highlightObject(entity, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
+      updateView($currentFrameIndex);
     }
     handleSetAnnotationDisplayControl("editing", !isEditing);
     !isEditing && selectedTool.set(panTool);

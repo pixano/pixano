@@ -13,7 +13,6 @@ import { currentFrameIndex, lastFrameIndex } from "../../stores/videoViewerStore
 import { getTopEntity } from "./getTopEntity";
 
 export const highlightObject = (entity: Entity, isHighlighted: boolean): number => {
-  let objectAlreadyVisible = false;
   let highlightFrameIndex = get(lastFrameIndex) + 1;
   annotations.update((objects) =>
     objects.map((ann) => {
@@ -22,21 +21,8 @@ export const highlightObject = (entity: Entity, isHighlighted: boolean): number 
         : getTopEntity(ann).id === entity.id
           ? "self"
           : "none";
-      if (
-        !objectAlreadyVisible &&
-        getTopEntity(ann).id === entity.id &&
-        ann.is_type(BaseSchema.Tracklet) &&
-        ann.ui.highlighted === "self" &&
-        (ann as Tracklet).data.start_timestep < highlightFrameIndex
-      ) {
-        if (
-          get(currentFrameIndex) >= (ann as Tracklet).data.start_timestep &&
-          get(currentFrameIndex) <= (ann as Tracklet).data.end_timestep
-        ) {
-          objectAlreadyVisible = true;
-        } else {
-          highlightFrameIndex = (ann as Tracklet).data.start_timestep;
-        }
+      if (getTopEntity(ann).id === entity.id && ann.is_type(BaseSchema.Tracklet)) {
+        highlightFrameIndex = Math.min(highlightFrameIndex, (ann as Tracklet).data.start_timestep);
       }
       return ann;
     }),
@@ -49,7 +35,7 @@ export const highlightObject = (entity: Entity, isHighlighted: boolean): number 
   if (trackElement) {
     trackElement.scrollIntoView({ block: "center" });
   }
-  if (!objectAlreadyVisible && highlightFrameIndex != get(lastFrameIndex) + 1) {
+  if (highlightFrameIndex != get(lastFrameIndex) + 1) {
     return highlightFrameIndex;
   } else {
     return get(currentFrameIndex);

@@ -23,8 +23,6 @@ License: CECILL-C
     SequenceFrame,
     Tracklet,
     type EditShape,
-    type HTMLImage,
-    type ImagesPerView,
     type KeypointsTemplate,
     type SaveItem,
   } from "@pixano/core";
@@ -37,7 +35,12 @@ License: CECILL-C
     getTopEntity,
     updateExistingObject,
   } from "../../lib/api/objectsApi";
-  import { boxLinearInterpolation, keypointsLinearInterpolation } from "../../lib/api/videoApi";
+  import {
+    boxLinearInterpolation,
+    keypointsLinearInterpolation,
+    setBufferSpecs,
+    updateView,
+  } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
@@ -55,20 +58,19 @@ License: CECILL-C
     tracklets,
     views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    currentFrameIndex,
+    imagesFilesUrlsByFrame,
+    imagesPerView,
+    imagesPerViewBuffer,
+    lastFrameIndex,
+  } from "../../lib/stores/videoViewerStores";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   let embeddings: Record<string, ort.Tensor> = {};
-
-  // buffer
-  const ratioOfBackwardBuffer = 0.1;
-  const bufferSize = 200;
-  let previousCount: number = 0;
-  let nextCount: number = 0;
-  let timerId: ReturnType<typeof setTimeout>;
 
   $: {
     if (selectedItem) {
@@ -87,7 +89,7 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const bbox_childs_ids = new Set(
-          tracklet.ui.childs.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
+          tracklet.ui.childs?.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
         );
         const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
         const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
@@ -117,7 +119,7 @@ License: CECILL-C
       for (const tracklet of current_tracklets) {
         const kpt_childs_ids = new Set(
           tracklet.ui.childs
-            .filter((ann) => ann.is_type(BaseSchema.Keypoints))
+            ?.filter((ann) => ann.is_type(BaseSchema.Keypoints))
             .map((kpt) => kpt.id),
         );
         const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
@@ -141,80 +143,14 @@ License: CECILL-C
 
   let inspectorMaxHeight = 250;
   let expanding = false;
-
-  let imagesPerView: ImagesPerView = {};
-  const imagesPerViewBuffer: Record<string, HTMLImage[]> = {};
-
-  let imagesFilesUrlsByFrame: Record<string, { id: string; url: string } | undefined>[] = [];
-
   let isLoaded = false;
-
-  function preloadViewsImage(index: number) {
-    Object.entries(imagesFilesUrlsByFrame[index]).map(([viewKey, im_ref]) => {
-      if (im_ref && !imagesPerViewBuffer[viewKey][index]) {
-        void new Promise<void>((resolve, reject) => {
-          const img = new Image();
-          img.src = `/${im_ref.url}`;
-          img.onload = () => {
-            imagesPerViewBuffer[viewKey][index] = {
-              id: im_ref.id,
-              element: img,
-            } as HTMLImage;
-            resolve();
-          };
-          img.onerror = () => {
-            console.warn(`Failed to load image: ${im_ref.url}`);
-            reject(new Error(`Failed to load image: ${im_ref.url}`));
-          };
-        });
-      }
-    });
-  }
-
-  function preloadImagesProgressively(currentIndex: number = 0) {
-    const previous: number[] = [];
-    const next: number[] = [];
-
-    const num_frames = $lastFrameIndex + 1;
-    // previous (inverted and circular)
-    for (let i = 1; i <= previousCount; i++) {
-      previous.push((currentIndex - i + num_frames) % num_frames);
-    }
-    // next (inculing current, circular)
-    for (let i = 0; i < nextCount; i++) {
-      next.push((currentIndex + i) % num_frames);
-    }
-    const includedIndices = new Set([...previous, ...next]);
-    const excludedIndices = Array.from({ length: num_frames }, (_, i) => i).filter(
-      (index) => !includedIndices.has(index),
-    );
-
-    clearTimeout(timerId); // reinit timer on each update
-    timerId = setTimeout(() => {
-      for (const i of next) {
-        preloadViewsImage(i);
-      }
-      for (const i of previous) {
-        preloadViewsImage(i);
-      }
-    }, 20); // timeout to spare bandwith (cancel outdated updates)
-
-    //delete buffered images out of currentIndex window (currentIndex -10 : currentIndex + 30)
-    Object.keys(imagesPerViewBuffer).forEach((viewKey) => {
-      for (const i of excludedIndices) {
-        if (i in imagesPerViewBuffer[viewKey]) {
-          delete imagesPerViewBuffer[viewKey][i];
-        }
-      }
-    });
-  }
 
   onMount(() => {
     const longestView = Math.max(
       ...Object.values(selectedItem.views).map((view) => (view as SequenceFrame[]).length),
     );
     //build imagesFilesUrlByFrame
-    imagesFilesUrlsByFrame = Array.from({ length: longestView }).map((_, i) => {
+    $imagesFilesUrlsByFrame = Array.from({ length: longestView }).map((_, i) => {
       return Object.entries(selectedItem.views).reduce(
         (acc, [key, value]) => {
           const viewFrames = value as SequenceFrame[];
@@ -228,48 +164,16 @@ License: CECILL-C
     });
     // Initialize the buffer structure with arrays for each view
     for (const viewKey in selectedItem.views) {
-      imagesPerViewBuffer[viewKey] = [];
+      $imagesPerViewBuffer[viewKey] = [];
     }
 
-    const n_view = Object.keys(imagesPerViewBuffer).length;
-    previousCount = Math.round((ratioOfBackwardBuffer * bufferSize) / n_view);
-    nextCount = Math.round(((1 - ratioOfBackwardBuffer) * bufferSize) / n_view);
+    setBufferSpecs();
 
     isLoaded = true;
 
     lastFrameIndex.set(longestView - 1);
     updateView(0);
   });
-
-  const updateView = (imageIndex: number) => {
-    preloadImagesProgressively(imageIndex);
-    Object.entries(imagesFilesUrlsByFrame[imageIndex]).forEach(([key, im_ref]) => {
-      if (
-        key in imagesPerViewBuffer &&
-        imagesPerViewBuffer[key][imageIndex] &&
-        imagesPerViewBuffer[key][imageIndex].element.complete
-      ) {
-        imagesPerView = {
-          ...imagesPerView,
-          [key]: [...(imagesPerView[key] || []), imagesPerViewBuffer[key][imageIndex]].slice(-2),
-        };
-      } else {
-        if (im_ref) {
-          const image = new Image();
-          const src = `/${im_ref.url}`;
-          if (!src) return;
-          image.src = src;
-          //NOTE double image, avoid flashing by "swapping" with previous image
-          imagesPerView = {
-            ...imagesPerView,
-            [key]: [...(imagesPerView[key] || []), { id: im_ref.id, element: image }].slice(-2),
-          };
-        } else {
-          //console.warn("Media not present")
-        }
-      }
-    });
-  };
 
   function mergeFusionRangesByView(to_fuse: Entity[]): Record<string, [number, number][]> {
     //build combined tracklet ranges for each view of to_fuse entities
@@ -570,7 +474,7 @@ License: CECILL-C
     <div class="overflow-hidden grow">
       <Canvas2D
         selectedItemId={selectedItem.item.id}
-        {imagesPerView}
+        imagesPerView={$imagesPerView}
         colorScale={$colorScale[1]}
         bboxes={$current_itemBBoxes}
         masks={$itemMasks}

@@ -31,7 +31,7 @@ License: CECILL-C
     getTopEntity,
     highlightObject,
   } from "../../lib/api/objectsApi";
-  import { sortByFrameIndex, splitTrackletInTwo } from "../../lib/api/videoApi";
+  import { sortByFrameIndex, splitTrackletInTwo, updateView } from "../../lib/api/videoApi";
   import {
     annotations,
     colorScale,
@@ -333,6 +333,7 @@ License: CECILL-C
     const newFrameIndex = highlightObject(track, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
+      updateView($currentFrameIndex);
     }
   };
 </script>

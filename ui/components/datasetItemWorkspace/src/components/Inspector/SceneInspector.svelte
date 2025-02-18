@@ -55,7 +55,7 @@ License: CECILL-C
         image = view as Image;
       }
       return {
-        url: image.data.url,
+        url: image?.data.url,
         width: image.data.width,
         height: image.data.height,
         format: image.data.format,
