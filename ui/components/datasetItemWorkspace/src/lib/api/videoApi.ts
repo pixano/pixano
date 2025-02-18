@@ -280,6 +280,7 @@ function preloadImagesProgressively(currentIndex: number = 0) {
 }
 
 export const updateView = (imageIndex: number) => {
+  if (get(imagesFilesUrlsByFrame).length === 0) return;
   preloadImagesProgressively(imageIndex);
   const buffer = get(imagesPerViewBuffer);
   Object.entries(get(imagesFilesUrlsByFrame)[imageIndex]).forEach(([key, im_ref]) => {
