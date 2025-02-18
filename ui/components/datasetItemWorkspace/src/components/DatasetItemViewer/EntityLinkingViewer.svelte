@@ -155,7 +155,7 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+  <div class="h-full grid grid-cols-[300px_auto]">
     <TextSpanArea
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
