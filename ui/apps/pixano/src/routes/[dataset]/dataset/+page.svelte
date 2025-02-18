@@ -39,7 +39,5 @@ License: CECILL-C
 </script>
 
 {#if selectedDataset?.table_data}
-  <div class="pt-20 h-1 min-h-screen">
-    <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
-  </div>
+  <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
 {/if}

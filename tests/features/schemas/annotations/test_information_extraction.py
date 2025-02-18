@@ -43,12 +43,14 @@ class TestTextSpan:
         assert list(ne2.spans_length) == [3, 3]
 
     def test_spans_property_on_ungrounded_entity(self):
-        ne3 = TextSpan(spans_start=[], spans_end=[], mention="abc def", annotation_ref=AnnotationRef.none())
+        with pytest.warns(UserWarning, match="To ground a TextSpan in a text, spans offsets should not be empty"):
+            ne3 = TextSpan(spans_start=[], spans_end=[], mention="abc def", annotation_ref=AnnotationRef.none())
         assert list(ne3.spans) == []
         assert list(ne3.spans_length) == []
 
     def test_none(self):
-        none_ne = TextSpan.none()
+        with pytest.warns(UserWarning, match="To ground a TextSpan in a text, spans offsets should not be empty"):
+            none_ne = TextSpan.none()
         assert none_ne.id == ""
         assert none_ne.item_ref == ItemRef.none()
         assert none_ne.view_ref == ViewRef.none()

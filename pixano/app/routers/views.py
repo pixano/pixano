@@ -72,7 +72,7 @@ async def get_views(
 async def get_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> ViewModel:
-    """Get an view from a table of a dataset.
+    """Get a view from a table of a dataset.
 
     Args:
         dataset_id: Dataset ID containing the table.

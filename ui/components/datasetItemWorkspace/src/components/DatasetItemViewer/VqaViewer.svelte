@@ -10,13 +10,17 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, type ImagesPerView, type SaveItem } from "@pixano/core";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   // Import stores and API functions
-  import type { ContentChangeEvent } from "@pixano/vqa-canvas/src/lib/types";
+  import {
+    isNewAnswerEvent,
+    isUpdatedMessageEvent,
+    type ContentChangeEvent,
+  } from "@pixano/vqa-canvas/src/lib/types";
 
-  import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
@@ -30,11 +34,11 @@ License: CECILL-C
     messages,
     newShape,
     preAnnotationIsActive,
-    saveData,
     selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { createUpdatedMessage } from "../../lib/utils/createUpdatedMessage";
+  import { addAnswer } from "../../lib/stores/mutations/addAnswer";
+  import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
   export let selectedItem: DatasetItem;
@@ -140,35 +144,11 @@ License: CECILL-C
 
   const handleAnswerContentChange = (event: CustomEvent<ContentChangeEvent>) => {
     event.preventDefault();
-
-    const { answerId, newContent, newChoices, explanation } = event.detail;
-    const prevMessage = $messages.find((message) => message.id === answerId);
-
-    if (!prevMessage) {
-      return;
+    if (isNewAnswerEvent(event)) {
+      addAnswer(event.detail);
+    } else if (isUpdatedMessageEvent(event)) {
+      updateMessageContent(event.detail);
     }
-
-    const updatedMessage = createUpdatedMessage({
-      message: prevMessage,
-      newContent,
-      newChoices,
-      explanation,
-    });
-
-    annotations.update((prevAnnotations) =>
-      prevAnnotations.map((annotation) =>
-        annotation.is_type(BaseSchema.Message) && annotation.id === answerId
-          ? updatedMessage
-          : annotation,
-      ),
-    );
-
-    const save_item: SaveItem = {
-      change_type: "update",
-      object: updatedMessage,
-    };
-
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
   };
 </script>
 

@@ -24,8 +24,6 @@ License: CECILL-C
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
-  import Toolbar from "./components/Toolbar.svelte";
-  import { videoControls } from "./lib/stores/videoViewerStores";
 
   import "./index.css";
 
@@ -40,6 +38,7 @@ License: CECILL-C
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
+  import { videoControls } from "./lib/stores/videoViewerStores";
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
@@ -48,7 +47,6 @@ License: CECILL-C
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
-  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
 
@@ -200,7 +198,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
+<div class="flex-1 grid grid-cols-[calc(100%-380px)_380px]">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -208,8 +206,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
-  <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
+  <DatasetItemViewer {selectedItem} {isLoading} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />
 </div>

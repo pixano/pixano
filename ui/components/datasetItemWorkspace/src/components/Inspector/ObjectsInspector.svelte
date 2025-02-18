@@ -79,7 +79,7 @@ License: CECILL-C
   });
 </script>
 
-<div class="p-2 h-[calc(100vh-200px)] w-full">
+<div class="p-2 w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
     {#if selectedEntitiesId.length > 0}

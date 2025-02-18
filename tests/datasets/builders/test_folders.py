@@ -10,10 +10,15 @@ from unittest.mock import patch
 
 import pytest
 
-from pixano.datasets.builders.folders import ImageFolderBuilder, VideoFolderBuilder
+from pixano.datasets.builders.folders import (
+    FolderBaseBuilder,
+    ImageFolderBuilder,
+    VideoFolderBuilder,
+    VQAFolderBuilder,
+)
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import Image, Item, Video
+from pixano.features import Conversation, Entity, Image, Item, Message, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
@@ -31,34 +36,41 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_image_folder_no_workspace_specified(self):
-        source_dir = Path(tempfile.mkdtemp())
-        target_dir = Path(tempfile.mkdtemp())
-        urls_relative_path = source_dir.parent.parent
-
-        ImageFolderBuilder(
-            source_dir=source_dir,
-            target_dir=target_dir,
-            info=DatasetInfo(name="test", description="test"),
-            url_prefix=urls_relative_path,
-        )
-
-    def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
+    def test_image_video_init(
+        self, image_folder_builder, image_folder_builder_no_jsonl, video_folder_builder, entity_category
+    ):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
+        assert isinstance(image_folder_builder_no_jsonl, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
         assert image_folder_builder.target_dir.is_dir()
+        assert image_folder_builder_no_jsonl.source_dir.is_dir()
+        assert image_folder_builder_no_jsonl.target_dir.is_dir()
         assert video_folder_builder.source_dir.is_dir()
         assert video_folder_builder.target_dir.is_dir()
         assert image_folder_builder.view_name == "view"
+        assert image_folder_builder_no_jsonl.view_name == "image"
         assert video_folder_builder.view_name == "view"
         assert image_folder_builder.view_schema == Image
+        assert image_folder_builder_no_jsonl.view_schema == Image
         assert video_folder_builder.view_schema == Video
         assert image_folder_builder.entity_name == "entities"
+        assert image_folder_builder_no_jsonl.entity_name == "objects"
         assert video_folder_builder.entity_name == "entities"
         assert image_folder_builder.entity_schema == entity_category
+        assert image_folder_builder_no_jsonl.entity_schema == Entity
         assert video_folder_builder.entity_schema == entity_category
         assert image_folder_builder.url_prefix == Path(".")
+
+    def test_vqa_init(self, vqa_folder_builder):
+        assert isinstance(vqa_folder_builder, VQAFolderBuilder)
+        assert vqa_folder_builder.source_dir.is_dir()
+        assert vqa_folder_builder.target_dir.is_dir()
+        assert vqa_folder_builder.view_name == "image"
+        assert vqa_folder_builder.view_schema == Image
+        assert vqa_folder_builder.entity_name == "conversations"
+        assert vqa_folder_builder.entity_schema == Conversation
+        assert vqa_folder_builder.url_prefix == Path(".")
 
     def test_url_prefix_init(self, dataset_item_bboxes_metadata):
         source_dir = Path(tempfile.mkdtemp())
@@ -73,17 +85,36 @@ class TestFolderBaseBuilder:
             url_prefix=urls_relative_path,
         )
 
+    def test_no_jsonl(self):
+        source_dir = Path(tempfile.mkdtemp())
+        target_dir = Path(tempfile.mkdtemp())
+        ImageFolderBuilder(
+            source_dir=source_dir,
+            target_dir=target_dir,
+            info=DatasetInfo(name="test", description="test"),
+        )
+
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
 
-        # test 1: schema without view
+        # test 1: no schema with FolderBaseBuilder
+        with pytest.raises(ValueError, match="A schema is required."):
+            FolderBaseBuilder(
+                source_dir=source_dir,
+                target_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+            )
+
+        # test 2: schema without view
         class Schema(DatasetItem):
             metadata: str
             entities: list[entity_category]
             bbox: list[BBox]
 
-        with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
+        with pytest.raises(
+            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
+        ):
             ImageFolderBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,
@@ -91,13 +122,15 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 2: schema without entities
+        # test 3: schema without entities
         class Schema(DatasetItem):
             view: Image
             metadata: str
             bbox: list[BBox]
 
-        with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
+        with pytest.raises(
+            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
+        ):
             ImageFolderBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,
@@ -105,7 +138,7 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 3: schema with two views
+        # test 4: schema with two views
         class Schema(DatasetItem):
             view: Image
             view2: Image
@@ -114,22 +147,6 @@ class TestFolderBaseBuilder:
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="Only one view schema is supported in folder based builders."):
-            ImageFolderBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
-                info=DatasetInfo(name="test", description="test"),
-                dataset_item=Schema,
-            )
-
-        # test 4: schema with two entities
-        class Schema(DatasetItem):
-            view: Image
-            metadata: str
-            entities: list[entity_category]
-            entities2: list[entity_category]
-            bbox: list[BBox]
-
-        with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
             ImageFolderBuilder(
                 source_dir=source_dir,
                 target_dir=target_dir,
@@ -399,3 +416,93 @@ class TestFolderBaseBuilder:
             else:  # no entities
                 assert "entities" not in item
                 assert "bbox" not in item
+
+    def test_generate_vqa_items(self, vqa_folder_builder: VQAFolderBuilder):
+        def reconstruct_dict_list(generator):
+            """VQA generate data by chunks, not complete dict,
+            so we rebuild a list of complete dicts, knowing that "item" key
+            is always first."""
+            final_list = []
+            temp_dict = {}
+            no_finalize_for_first_one = True
+            for i, piece in enumerate(generator):
+                if "item" in piece:
+                    if no_finalize_for_first_one:
+                        no_finalize_for_first_one = False
+                    else:
+                        # "item" appears AGAIN - finalize current dict
+                        final_list.append(temp_dict.copy())
+                        temp_dict.clear()
+                temp_dict.update(piece)
+            if temp_dict:
+                final_list.append(temp_dict)
+            return final_list
+
+        with patch(
+            "pixano.datasets.builders.folders.VQAFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
+        ):
+            items = reconstruct_dict_list(vqa_folder_builder.generate_data())
+        assert len(items) == 4
+        assert len([item for item in items if item["item"].split == "train"]) == 2
+        assert len([item for item in items if item["item"].split == "val"]) == 2
+        for i, item in enumerate(items):
+            actual_item: Item = item["item"]
+            view: Image = item["image"]
+
+            assert view.item_ref == ItemRef(id=actual_item.id)
+            assert view.url == f"{actual_item.split}/item_{i % 2}.{'png' if i % 2 else 'jpg'}"
+
+            conversations: list[Conversation] = item["conversations"]
+            messages: list[Message] = item["messages"]
+
+            if i % 2 == 0:  # 1 message (question)
+                assert len(conversations) == 1
+                assert len(messages) == 1
+                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
+                    id=conversations[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    kind="vqa",
+                ).model_dump(exclude_timestamps=True)
+                messages[0].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="QUESTION",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)
+            else:  # 2 messages: question & answer
+                assert len(conversations) == 1
+                assert len(messages) == 2
+                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
+                    id=conversations[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    kind="vqa",
+                ).model_dump(exclude_timestamps=True)
+                messages[0].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="QUESTION",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)
+                messages[1].model_dump(exclude_timestamps=True) == Message(
+                    id=messages[0].id,
+                    item_ref=ItemRef(id=actual_item.id),
+                    view_ref=ViewRef(id=view.id, name="image"),
+                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
+                    source_ref=SourceRef(id="source_id"),
+                    type="ANSWER",
+                    content="",
+                    number=0,
+                    user="import",
+                ).model_dump(exclude_timestamps=True)

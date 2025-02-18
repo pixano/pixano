@@ -10,7 +10,10 @@ FROM node:18-slim AS base
 # Install pnpm and build frontend
 FROM base AS build
 
+RUN npm i -g corepack@latest
+
 RUN corepack enable
+RUN corepack use pnpm@8.15.9
 
 WORKDIR /app
 
