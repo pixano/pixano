@@ -28,6 +28,7 @@ class TestAnnotationModel:
                 "format": "xywh",
                 "is_normalized": False,
                 "confidence": -1.0,
+                "inference_metadata": {},
             },
         )
         bbox = model.to_row(BBox)

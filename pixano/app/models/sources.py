@@ -32,7 +32,7 @@ class SourceModel(BaseSchemaModel[Source]):
                     "data": {
                         "name": "source_0",
                         "kind": "model",
-                        "metadata": '\\{"model_id": "model_0"\\}',
+                        "metadata": {"model_id": "model_0"},
                     },
                 }
             ]
@@ -51,7 +51,9 @@ class SourceModel(BaseSchemaModel[Source]):
         """Create a [Source][pixano.features.Source] from the model."""
         if not issubclass(schema_type, Source):
             raise ValueError(f"Schema type must be a subclass of {Source.__name__}.")
-        return super().to_row(schema_type)
+        row = super().to_row(schema_type)
+        row.metadata = json.dumps(self.data["metadata"])
+        return row
 
     @classmethod
     def from_row(cls, row: Source, table_info: TableInfo) -> Self:
@@ -66,4 +68,4 @@ class SourceModel(BaseSchemaModel[Source]):
         """
         source_model = BaseSchemaModel.from_row(row, table_info)
         source_model.data["metadata"] = json.loads(source_model.data["metadata"])
-        return source_model
+        return cls.model_construct(**source_model.__dict__)  # Avoid validation and casting

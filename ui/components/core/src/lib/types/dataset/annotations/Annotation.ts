@@ -23,6 +23,7 @@ export const annotationSchema = z
     view_ref: referenceSchema,
     entity_ref: referenceSchema,
     source_ref: referenceSchema,
+    inference_metadata: z.record(z.any()),
   })
   .passthrough();
 

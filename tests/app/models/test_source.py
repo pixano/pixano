@@ -18,7 +18,7 @@ class TestSourceModel:
         model = SourceModel(
             id="id",
             table_info=table_info,
-            data={"name": "source_0", "kind": "model"},
+            data={"name": "source_0", "kind": "model", "metadata": {}},
             created_at=datetime(2021, 1, 1, 0, 0, 0),
             updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
