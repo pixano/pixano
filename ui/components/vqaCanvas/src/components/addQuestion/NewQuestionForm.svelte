@@ -10,6 +10,7 @@ License: CECILL-C
   import { QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
+  import type { StoreQuestionEvent } from "../../lib/types";
   import AddChoiceButton from "./AddChoiceButton.svelte";
   import QuestionChoice from "./NewQuestionChoice.svelte";
 
@@ -27,7 +28,12 @@ License: CECILL-C
   };
 
   const handleStoreQuestion = () => {
-    dispatch("storeQuestion");
+    const eventDetail: StoreQuestionEvent = {
+      content: questionContent,
+      question_type: questionType,
+      choices: questionChoices,
+    };
+    dispatch("storeQuestion", eventDetail);
   };
 </script>
 

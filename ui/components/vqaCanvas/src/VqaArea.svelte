@@ -8,8 +8,8 @@ License: CECILL-C
   import { Message } from "@pixano/core";
 
   import { QuestionForm } from "./components";
-  import { groupMessagesByNumber } from "./lib/utils";
   import AddQuestionButton from "./components/addQuestion/AddQuestionButton.svelte";
+  import { groupMessagesByNumber } from "./lib/utils";
 
   // Exports
   export let messages: Message[];
@@ -18,7 +18,7 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
-  <AddQuestionButton />
+  <AddQuestionButton on:storeQuestion />
   {#each messagesByNumber as messages}
     <QuestionForm bind:messages on:answerContentChange />
   {/each}

@@ -29,11 +29,6 @@ License: CECILL-C
     questionChoices = mockResponse.choices;
     questionContent = mockResponse.question;
   };
-
-  const handleStoreQuestion = () => {
-    // TODO: store question
-    console.log("store question");
-  };
 </script>
 
 <!-- stop propagation to prevent from closing the modal when clicking on the background -->
@@ -61,11 +56,6 @@ License: CECILL-C
   </div>
 
   {#if questionType !== undefined}
-    <NewQuestionForm
-      {questionType}
-      bind:questionChoices
-      bind:questionContent
-      on:storeQuestion={handleStoreQuestion}
-    />
+    <NewQuestionForm {questionType} bind:questionChoices bind:questionContent on:storeQuestion />
   {/if}
 </div>

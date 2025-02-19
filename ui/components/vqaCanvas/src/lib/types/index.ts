@@ -5,3 +5,4 @@ License: CECILL-C
 -------------------------------------*/
 
 export * from "./ContentChangeEvent";
+export * from "./StoreQuestionEvent";

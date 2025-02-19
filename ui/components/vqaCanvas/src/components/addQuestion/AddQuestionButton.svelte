@@ -5,11 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
+
   import { PrimaryButton } from "@pixano/core";
 
+  import type { StoreQuestionEvent } from "../../lib/types";
   import AddQuestionModal from "./AddQuestionModal.svelte";
 
   let showAddQuestionModal = false;
+
+  const dispatch = createEventDispatcher();
 
   const handleOpenModal = (event: MouseEvent) => {
     // stopPropgation is not called as event modifier
@@ -33,13 +38,18 @@ License: CECILL-C
       showAddQuestionModal = false;
     }
   };
+
+  const handleStoreQuestion = (event: CustomEvent<StoreQuestionEvent>) => {
+    showAddQuestionModal = false;
+    dispatch("storeQuestion", event.detail);
+  };
 </script>
 
 <div class="relative h-fit">
   <PrimaryButton on:click={handleOpenModal}>Add question</PrimaryButton>
 
   {#if showAddQuestionModal}
-    <AddQuestionModal />
+    <AddQuestionModal on:storeQuestion={handleStoreQuestion} />
   {/if}
 </div>
 
