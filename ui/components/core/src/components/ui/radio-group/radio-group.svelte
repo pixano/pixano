@@ -11,17 +11,17 @@ License: CECILL-C
   import { cn } from "../../../lib/utils/styleUtils";
 
   export let selectedValue: string;
-  export let values: { id: string; value: string }[];
+  export let values: { value: string; label: string }[];
   export let itemClass: string | undefined = undefined;
 </script>
 
 <RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium" bind:value={selectedValue}>
-  {#each values as { id, value }}
+  {#each values as { label, value }}
     <div
       class={cn("group flex select-none items-center text-foreground transition-all", itemClass)}
     >
       <RadioGroup.Item
-        {id}
+        id={value}
         {value}
         class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary-light data-[state=checked]:text-primary-foreground flex items-center justify-center"
       >
@@ -30,7 +30,7 @@ License: CECILL-C
         {/if}
       </RadioGroup.Item>
 
-      <Label.Root for={id} class="pl-3">{value}</Label.Root>
+      <Label.Root for={value} class="pl-3">{label}</Label.Root>
     </div>
   {/each}
 </RadioGroup.Root>

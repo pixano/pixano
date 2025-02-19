@@ -9,12 +9,12 @@ License: CECILL-C
 
   export let questionType: QuestionTypeEnum;
 
-  const availableQuestionTypes: { id: QuestionTypeEnum; value: string }[] = [
-    { id: QuestionTypeEnum.OPEN, value: "Open" },
-    { id: QuestionTypeEnum.SINGLE_CHOICE, value: "Single choice without explanation" },
-    { id: QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION, value: "Single choice with explanation" },
-    { id: QuestionTypeEnum.MULTI_CHOICE, value: "Multiple choice without explanation" },
-    { id: QuestionTypeEnum.MULTI_CHOICE_EXPLANATION, value: "Multiple choice with explanation" },
+  const availableQuestionTypes: { value: QuestionTypeEnum; label: string }[] = [
+    { value: QuestionTypeEnum.OPEN, label: "Open" },
+    { value: QuestionTypeEnum.SINGLE_CHOICE, label: "Single choice without explanation" },
+    { value: QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION, label: "Single choice with explanation" },
+    { value: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple choice without explanation" },
+    { value: QuestionTypeEnum.MULTI_CHOICE_EXPLANATION, label: "Multiple choice with explanation" },
   ];
 </script>
 

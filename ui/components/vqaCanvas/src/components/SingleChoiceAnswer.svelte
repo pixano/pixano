@@ -18,7 +18,7 @@ License: CECILL-C
   export let withExplanation: boolean;
   export let questionId: string;
 
-  const radioGroupValues = choices.map((c) => ({ id: c, value: c }));
+  const radioGroupValues = choices.map((c) => ({ value: c, label: c }));
 
   let { checked, explanations } = deserializeMessageContent(answer?.data.content ?? null);
 
