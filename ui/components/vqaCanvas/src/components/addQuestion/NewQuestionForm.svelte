@@ -49,6 +49,7 @@ License: CECILL-C
 
   {#if questionType !== QuestionTypeEnum.OPEN}
     <div class="flex flex-col gap-2">
+      <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
       {#each questionChoices as _, index}
         <QuestionChoice {index} bind:questionChoices />
       {/each}
