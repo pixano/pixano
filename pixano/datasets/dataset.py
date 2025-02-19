@@ -478,6 +478,7 @@ class Dataset:
 
             for row in rows:
                 row.dataset = self
+                row.table_name = table_name
                 item_id = row.item_ref.id
                 if is_collection:
                     if table_name not in data_dict[item_id]:

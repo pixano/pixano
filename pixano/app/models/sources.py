@@ -4,8 +4,10 @@
 # License: CECILL-C
 # =====================================
 
+import json
+
 from pydantic import ConfigDict, field_validator
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar
 
 from pixano.app.models.table_info import TableInfo
 from pixano.features import Source
@@ -30,7 +32,7 @@ class SourceModel(BaseSchemaModel[Source]):
                     "data": {
                         "name": "source_0",
                         "kind": "model",
-                        "metadata": '\\{"model_id": "model_0"\\}',
+                        "metadata": {"model_id": "model_0"},
                     },
                 }
             ]
@@ -49,4 +51,21 @@ class SourceModel(BaseSchemaModel[Source]):
         """Create a [Source][pixano.features.Source] from the model."""
         if not issubclass(schema_type, Source):
             raise ValueError(f"Schema type must be a subclass of {Source.__name__}.")
-        return super().to_row(schema_type)
+        row = super().to_row(schema_type)
+        row.metadata = json.dumps(self.data["metadata"])
+        return row
+
+    @classmethod
+    def from_row(cls, row: Source, table_info: TableInfo) -> Self:
+        """Create a SourceModel from a Source.
+
+        Args:
+            row: The row to create the model from.
+            table_info: The table info of the row.
+
+        Returns:
+            The created model.
+        """
+        source_model = BaseSchemaModel.from_row(row, table_info)
+        source_model.data["metadata"] = json.loads(source_model.data["metadata"])
+        return cls.model_construct(**source_model.__dict__)  # Avoid validation and casting

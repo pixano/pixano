@@ -7,6 +7,7 @@
 from datetime import datetime
 
 from .base_type import BaseType
+from .nd_array_float import NDArrayFloat
 
 
 _ATOMIC_PYTHON_TYPES: list[type] = [
@@ -20,7 +21,7 @@ _ATOMIC_PYTHON_TYPES: list[type] = [
     memoryview,
 ]
 
-_TYPES_REGISTRY: dict[str, type] = {"BaseType": BaseType, "datetime": datetime}
+_TYPES_REGISTRY: dict[str, type] = {"BaseType": BaseType, "datetime": datetime, "NDArrayFloat": NDArrayFloat}
 _PIXANO_TYPES_REGISTRY: dict[str, type[BaseType]] = _TYPES_REGISTRY.copy()
 
 

@@ -5,8 +5,7 @@
 # =====================================
 
 import pytest
-
-from pixano.inference.client import PixanoInferenceClient
+from pixano_inference.client import PixanoInferenceClient
 
 
 @pytest.fixture(scope="session")

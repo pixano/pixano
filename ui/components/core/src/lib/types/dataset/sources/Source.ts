@@ -12,7 +12,7 @@ const sourceSchema = z
   .object({
     name: z.string(),
     kind: z.string(),
-    metadata: z.string(),
+    metadata: z.record(z.string(), z.any()),
   })
   .strict();
 export type sourceType = z.infer<typeof sourceSchema>;

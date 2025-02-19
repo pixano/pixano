@@ -4,8 +4,10 @@
 # License: CECILL-C
 # =====================================
 
+import json
+
 from pydantic import ConfigDict, field_validator
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar
 
 from pixano.app.models.table_info import TableInfo
 from pixano.features import Annotation
@@ -38,6 +40,7 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
                         "format": "xywh",
                         "is_normalized": False,
                         "confidence": 0.8,
+                        "inference_metadata": {},
                     },
                 }
             ]
@@ -56,4 +59,21 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
         """Create an [Annotation][pixano.features.Annotation] from the model."""
         if not issubclass(schema_type, Annotation):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
-        return super().to_row(schema_type)
+        row = super().to_row(schema_type)
+        row.inference_metadata = json.dumps(self.data["inference_metadata"])
+        return row
+
+    @classmethod
+    def from_row(cls, row: Annotation, table_info: TableInfo) -> Self:
+        """Create an AnnotationModel from an [Annotation][pixano.features.Annotation].
+
+        Args:
+            row: The row to create the model from.
+            table_info: The table info of the row.
+
+        Returns:
+            The created model.
+        """
+        annotation_model = BaseSchemaModel.from_row(row, table_info)
+        annotation_model.data["inference_metadata"] = json.loads(row.inference_metadata)
+        return cls.model_construct(**annotation_model.__dict__)  # Avoid validation and casting

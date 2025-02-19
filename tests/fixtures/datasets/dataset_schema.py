@@ -100,6 +100,7 @@ def json_dataset_schema_item_categories_image_bbox():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
         },
@@ -234,6 +235,7 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "embeddings": {
@@ -471,6 +473,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "mask_image": {
@@ -486,6 +489,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_image": {
@@ -502,6 +506,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "bboxes_video": {
@@ -519,6 +524,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_video": {
@@ -535,6 +541,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "tracklets": {
@@ -552,6 +559,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "image_embedding": {
@@ -680,6 +688,7 @@ def json_dataset_image_bboxes_keypoint():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoint": {
@@ -693,6 +702,7 @@ def json_dataset_image_bboxes_keypoint():
                     "template_id": {"type": "str", "collection": False},
                     "coords": {"type": "float", "collection": True},
                     "states": {"type": "str", "collection": True},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "item": {
