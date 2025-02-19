@@ -1,0 +1,27 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from pixano_inference.client import PixanoInferenceClient
+
+from pixano.app.settings import Settings, get_settings
+
+
+inference_router = APIRouter(prefix="/inference", tags=["Inference", "Models"])
+
+
+@inference_router.post("/connect")
+async def connect_inference(url: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
+    """Connect to Pixano Inference."""
+    try:
+        client = PixanoInferenceClient.connect(url)
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Impossible to connect to Pixano Inference from url: {url}")
+
+    settings.pixano_inference_client = client
+    return

@@ -15,6 +15,7 @@ from pixano.app.routers.dataset_items import router as dataset_items_router
 from pixano.app.routers.datasets import router as datasets_router
 from pixano.app.routers.embeddings import router as embeddings_router
 from pixano.app.routers.entities import router as entities_router
+from pixano.app.routers.inference import inference_router
 from pixano.app.routers.items import router as items_router
 from pixano.app.routers.items_info import router as items_info_router
 from pixano.app.routers.models import router as models_router
@@ -90,5 +91,6 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(sources_router)
     app.include_router(views_router)
     app.include_router(models_router)
+    app.include_router(inference_router)
 
     return app
