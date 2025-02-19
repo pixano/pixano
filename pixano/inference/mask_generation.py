@@ -46,8 +46,8 @@ def image_mask_generation(
         labels: Labels of the points. If 0, the point is background else the point is foreground.
 
     Returns:
-        tuple of the compressed RLE mask, its score, the source of the image, the image embedding and the high
-        resolution features.
+        tuple of the compressed RLE mask, its score, the source of the image, the image embeddings and the high
+        resolution features The features are returned if not provided in the arguments otherwise None is returned.
     """
     image_request = image.url if is_url(image.url) else image.open(media_dir, "base64")
     if image_embedding is None or isinstance(image_embedding, (LanceVector, NDArrayFloat)):
@@ -111,8 +111,8 @@ def image_mask_generation(
         view_ref=ViewRef(name=image.table_name, id=image.id),
         entity_ref=EntityRef(name=entity.table_name, id=entity.id),
         source_ref=SourceRef(id=source.id),
+        inference_metadata=inference_metadata,
         **mask_inference.model_dump(),
-        **inference_metadata,
     )
     score = response.data.scores.values[0]
 

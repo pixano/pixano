@@ -15,8 +15,9 @@ from pixano_inference.pydantic.tasks import (
     TextImageConditionalGenerationRequest,
     TextImageConditionalGenerationResponse,
 )
+from pixano_inference.utils import is_url
 
-from pixano.features import Conversation, EntityRef, Message, Source, SourceRef
+from pixano.features import Conversation, EntityRef, Image, Message, Source, SourceRef
 
 
 DEFAULT_IMAGE_REGEX = r"<image(\s\d+)?>"
@@ -62,16 +63,19 @@ def messages_to_prompt(
                 message_prompt["role"] = role_assistant
             case _:
                 raise ValueError(f"Unknown message type {message.type}")
-        num_images = len(re.findall(image_regex, message.content))
+        find_all = re.findall(image_regex, message.content)
+        num_images = len(find_all)
+        if num_images > 0:
+            image: Image = message.view
         for i in range(num_images):
             message_prompt["content"].append(
                 {
                     "type": "image_url",
-                    "image_url": {"url": message.view.open(media_dir=media_dir, output_type="base64")},
+                    "image_url": {"url": image.url if is_url(image.url) else image.open(media_dir, "base64")},
                 }
             )
         used_images += num_images
-        message_content = message.content if num_images == 0 else message.content.replace(image_regex, "")
+        message_content = message.content if num_images == 0 else re.sub(image_regex, "", message.content)
         message_prompt["content"].append({"type": "text", "text": message_content})
         prompt.append(message_prompt)
     return prompt
@@ -116,19 +120,19 @@ def text_image_conditional_generation(
         role_user=role_user,
         role_assistant=role_assistant,
     )
-    last_message_type = messages[-1].type
-    match messages[-1].type:
+    last_message = messages[-1]
+    match last_message.type:
         case "SYSTEM":
             response_type = "QUESTION"
-            number = messages[-1].number + 1
+            number = last_message.number + 1
         case "ANSWER":
             response_type = "QUESTION"
-            number = messages[-1].number + 1
+            number = last_message.number + 1
         case "QUESTION":
             response_type = "ANSWER"
-            number = messages[-1].number
+            number = last_message.number
         case _:
-            raise ValueError(f"Invalid last message type {last_message_type}")
+            raise ValueError(f"Invalid last message type {last_message.type}")
     request = TextImageConditionalGenerationRequest(
         model=source.name,
         prompt=prompt,
@@ -149,8 +153,8 @@ def text_image_conditional_generation(
 
     message = Message(
         id=shortuuid.uuid(),
-        item_ref=conversation.item_ref,
-        view_ref=conversation.view_ref,
+        item_ref=last_message.item_ref,
+        view_ref=last_message.view_ref,
         entity_ref=EntityRef(id=conversation.id, name=conversation.table_name),
         source_ref=SourceRef(id=source.id),
         type=response_type,
