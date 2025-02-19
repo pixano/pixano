@@ -23,7 +23,7 @@ export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
       created_at: now,
       updated_at: now,
       table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-      data: { name: "Pixano", kind: "other", metadata: "{}" },
+      data: { name: "Pixano", kind: "other", metadata: {} },
     });
     srcStore.update((sources) => {
       sources.push(pixanoSource!);
