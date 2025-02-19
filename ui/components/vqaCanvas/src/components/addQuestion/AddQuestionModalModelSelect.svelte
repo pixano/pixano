@@ -15,7 +15,7 @@ License: CECILL-C
   ];
 </script>
 
-<div class="p-3 flex flex-col gap-2">
+<div class="px-3 flex flex-col gap-2">
   <!-- For some reason, some tailwind classes don't work on select -->
   <!-- Use style instead -->
   <select

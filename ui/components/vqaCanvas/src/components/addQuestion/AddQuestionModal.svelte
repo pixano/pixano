@@ -10,16 +10,29 @@ License: CECILL-C
   import type { QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
-  import { default as Header } from "./AddQuestionModalHeader.svelte";
   import { default as ModelSelect } from "./AddQuestionModalModelSelect.svelte";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
+  import NewQuestionForm from "./NewQuestionForm.svelte";
 
   let questionType: QuestionTypeEnum;
   let completionModel: string;
+  let questionChoices: string[] = [];
+  let questionContent: string = "";
 
   const handleGenerateQuestion = () => {
     // TODO: generate question
-    console.log("generate question");
+    const mockResponse = {
+      question: "What is the main object?",
+      choices: ["A", "B", "C"],
+    };
+
+    questionChoices = mockResponse.choices;
+    questionContent = mockResponse.question;
+  };
+
+  const handleStoreQuestion = () => {
+    // TODO: store question
+    console.log("store question");
   };
 </script>
 
@@ -28,9 +41,12 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] left-[calc(300px+5px)] z-50 overflow-y-auto w-60 rounded-md bg-white text-slate-800 flex flex-col item-center pb-3"
+  class="fixed top-[calc(80px+5px)] left-[calc(300px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
-  <Header />
+  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
+    <p>QA editor</p>
+  </div>
+
   <QuestionTypeSelect bind:questionType />
   <ModelSelect bind:selectedModel={completionModel} />
 
@@ -43,4 +59,13 @@ License: CECILL-C
       <Sparkles size={20} />Generate
     </PrimaryButton>
   </div>
+
+  {#if questionType !== undefined}
+    <NewQuestionForm
+      {questionType}
+      bind:questionChoices
+      bind:questionContent
+      on:storeQuestion={handleStoreQuestion}
+    />
+  {/if}
 </div>
