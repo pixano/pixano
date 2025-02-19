@@ -68,12 +68,17 @@ async def call_text_image_conditional_generation(
     client = get_client_from_settings(settings=settings)
 
     conversation_row = conversation.to_row(schema_type=dataset.schema.schemas[conversation.table_info.name])
+    conversation_row.dataset = dataset
+    conversation_row.table_name = conversation.table_info.name
 
     messages_in_one_table = len({m.table_info.name for m in messages}) == 1
     if not messages_in_one_table:
         raise HTTPException(status_code=400, detail="Only one table for messages is allowed.")
 
     messages_rows = [m.to_row(schema_type=dataset.schema.schemas[messages[0].table_info.name]) for m in messages]
+    for m in messages_rows:
+        m.dataset = dataset
+        m.table_name = messages[0].table_info.name
 
     sources: list[Source] = dataset.get_data(table_name="source", limit=2, where=f"name='{model}' AND kind='model'")
     if len(sources) > 1:
