@@ -20,7 +20,7 @@ License: CECILL-C
     isUpdatedMessageEvent,
     type ContentChangeEvent,
     type StoreQuestionEvent,
-  } from "@pixano/vqa-canvas/src/lib/types";
+  } from "@pixano/vqa-canvas/src/features/annotateItem/lib/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
