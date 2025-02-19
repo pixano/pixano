@@ -15,7 +15,7 @@ from pixano.app.routers.dataset_items import router as dataset_items_router
 from pixano.app.routers.datasets import router as datasets_router
 from pixano.app.routers.embeddings import router as embeddings_router
 from pixano.app.routers.entities import router as entities_router
-from pixano.app.routers.inference import inference_router
+from pixano.app.routers.inference import router as inference_router
 from pixano.app.routers.items import router as items_router
 from pixano.app.routers.items_info import router as items_info_router
 from pixano.app.routers.models import router as models_router

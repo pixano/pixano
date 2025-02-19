@@ -7,7 +7,7 @@
 from typing import Annotated
 
 import shortuuid
-from fastapi import Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.models import AnnotationModel
 from pixano.app.models.entities import EntityModel
@@ -25,11 +25,12 @@ from pixano.inference.text_image_conditional_generation import (
     text_image_conditional_generation,
 )
 
-from .router import inference_router
+
+router = APIRouter(prefix="/task/conditional_generation", tags=["Task", "Conditional Generation"])
 
 
-@inference_router.post(
-    "/task/image-text-conditional-generation",
+@router.post(
+    "/image-text",
     response_model=AnnotationModel,
 )
 async def call_text_image_conditional_generation(
