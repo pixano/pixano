@@ -75,7 +75,7 @@ async def call_text_image_conditional_generation(
 
     messages_rows = [m.to_row(schema_type=dataset.schema.schemas[messages[0].table_info.name]) for m in messages]
 
-    sources: list[Source] = dataset.get_data(table_name="source", limit=2, where=f"name='{model}' AND kind='model")
+    sources: list[Source] = dataset.get_data(table_name="source", limit=2, where=f"name='{model}' AND kind='model'")
     if len(sources) > 1:
         raise HTTPException(status_code=400, detail="Only one source for model is allowed.")
     elif len(sources) == 0:
