@@ -7,7 +7,7 @@
 from typing import Annotated
 
 import shortuuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from pixano.app.models import AnnotationModel
 from pixano.app.models.entities import EntityModel
@@ -15,6 +15,8 @@ from pixano.app.routers.inference.utils import get_client_from_settings
 from pixano.app.routers.utils import get_dataset
 from pixano.app.settings import Settings, get_settings
 from pixano.features import Conversation, Message, Source
+from pixano.features.schemas.annotations.text_generation import is_message
+from pixano.features.schemas.entities.conversation import is_conversation
 from pixano.inference.text_image_conditional_generation import (
     DEFAULT_IMAGE_REGEX,
     DEFAULT_MAX_NEW_TOKENS,
@@ -26,25 +28,25 @@ from pixano.inference.text_image_conditional_generation import (
 )
 
 
-router = APIRouter(prefix="/task/conditional_generation", tags=["Task", "Conditional Generation"])
+router = APIRouter(prefix="/tasks/conditional_generation", tags=["Task", "Conditional Generation"])
 
 
 @router.post(
-    "/image-text",
+    "/text-image",
     response_model=AnnotationModel,
 )
 async def call_text_image_conditional_generation(
-    dataset_id: str,
-    conversation: EntityModel,
-    messages: list[AnnotationModel],
-    model: str,
+    dataset_id: Annotated[str, Body(embed=True)],
+    conversation: Annotated[EntityModel, Body(embed=True)],
+    messages: Annotated[list[AnnotationModel], Body(embed=True)],
+    model: Annotated[str, Body(embed=True)],
     settings: Annotated[Settings, Depends(get_settings)],
-    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
-    temperature: float = DEFAULT_TEMPERATURE,
-    image_regex: str = DEFAULT_IMAGE_REGEX,
-    role_system: str = DEFAULT_ROLE_SYSTEM,
-    role_user: str = DEFAULT_ROLE_USER,
-    role_assistant: str = DEFAULT_ROLE_ASSISTANT,
+    max_new_tokens: Annotated[int, Body(embed=True)] = DEFAULT_MAX_NEW_TOKENS,
+    temperature: Annotated[float, Body(embed=True)] = DEFAULT_TEMPERATURE,
+    image_regex: Annotated[str, Body(embed=True)] = DEFAULT_IMAGE_REGEX,
+    role_system: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_SYSTEM,
+    role_user: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_USER,
+    role_assistant: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_ASSISTANT,
 ) -> AnnotationModel:
     """Call a text image conditional generation model for a conversation.
 
@@ -67,6 +69,9 @@ async def call_text_image_conditional_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     client = get_client_from_settings(settings=settings)
 
+    if not is_conversation(dataset.schema.schemas[conversation.table_info.name]):
+        raise HTTPException(status_code=400, detail="Conversation must be a conversation.")
+
     conversation_row: Conversation = conversation.to_row(
         schema_type=dataset.schema.schemas[conversation.table_info.name]
     )
@@ -76,6 +81,8 @@ async def call_text_image_conditional_generation(
     messages_in_one_table = len({m.table_info.name for m in messages}) == 1
     if not messages_in_one_table:
         raise HTTPException(status_code=400, detail="Only one table for messages is allowed.")
+    elif not is_message(dataset.schema.schemas[messages[0].table_info.name]):
+        raise HTTPException(status_code=400, detail="Messages must be a message.")
 
     messages_rows: list[Message] = []
     for m in messages:
@@ -85,6 +92,7 @@ async def call_text_image_conditional_generation(
         messages_rows.append(m_row)
 
     sources: list[Source] = dataset.get_data(table_name="source", limit=2, where=f"name='{model}' AND kind='model'")
+    # TODO: enforce check consistency for source to have a unique name instead of checking here.
     if len(sources) > 1:
         raise HTTPException(status_code=400, detail="Only one source for model is allowed.")
     elif len(sources) == 0:

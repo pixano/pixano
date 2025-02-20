@@ -6,7 +6,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pixano_inference.pydantic import ModelConfig
 from pixano_inference.pydantic.models import ModelInfo
 
@@ -17,7 +17,7 @@ from pixano.app.settings import Settings, get_settings
 router = APIRouter(prefix="/models", tags=["Models"])
 
 
-@router.get("/list", response_model=list[ModelInfo])
+@router.get("/list/", response_model=list[ModelInfo])
 async def list_models(
     settings: Annotated[Settings, Depends(get_settings)], task: str | None = None
 ) -> list[ModelInfo]:
@@ -31,8 +31,8 @@ async def list_models(
 
 @router.post("/instantiate")
 async def instantiate_model(
-    config: ModelConfig,
-    provider: str,
+    config: Annotated[ModelConfig, Body(embed=True)],
+    provider: Annotated[str, Body(embed=True)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ModelInfo:
     """Instantiate a model from pixano inference client."""
@@ -40,7 +40,7 @@ async def instantiate_model(
     return client.instantiate_model(provider=provider, config=config)
 
 
-@router.delete("/{model_name}")
+@router.delete("/delete/{model_name}")
 async def delete_model(
     model_name: str,
     settings: Annotated[Settings, Depends(get_settings)],
