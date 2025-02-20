@@ -49,7 +49,7 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref"]);
+    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref", "inference_metadata"]);
   }
 
   static deepCreateInstanceArray(
