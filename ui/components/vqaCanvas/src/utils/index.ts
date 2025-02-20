@@ -4,5 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./ContentChangeEvent";
-export * from "./StoreQuestionEvent";
+export * from "./groupMessagesByNumber";

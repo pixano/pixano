@@ -9,9 +9,8 @@ License: CECILL-C
 
   import { AddQuestionButton } from "./features/addQuestion/components";
   import { QuestionForm } from "./features/annotateItem/components";
-  import { groupMessagesByNumber } from "./features/annotateItem/lib/utils";
+  import { groupMessagesByNumber } from "./utils";
 
-  // Exports
   export let messages: Message[];
 
   $: messagesByNumber = groupMessagesByNumber(messages);

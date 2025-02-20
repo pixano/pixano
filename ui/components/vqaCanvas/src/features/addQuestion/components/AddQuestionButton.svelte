@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { PrimaryButton } from "@pixano/core";
 
-  import type { StoreQuestionEvent } from "../../lib/types";
+  import type { StoreQuestionEvent } from "../types";
   import AddQuestionModal from "./AddQuestionModal.svelte";
 
   let showAddQuestionModal = false;

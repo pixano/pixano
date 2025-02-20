@@ -7,6 +7,5 @@ License: CECILL-C
 export * from "./answerChoicesToCheckboxsState";
 export * from "./checkboxsStateToAnswerChoices";
 export * from "./deserializeMessageContent";
-export * from "./groupMessagesByNumber";
 export * from "./isQuestionCompleted";
 export * from "./serializeMessageContent";

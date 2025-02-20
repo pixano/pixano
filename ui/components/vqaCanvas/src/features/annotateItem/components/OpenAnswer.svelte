@@ -9,7 +9,7 @@ License: CECILL-C
 
   import type { Message } from "@pixano/core";
 
-  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../types";
 
   export let answer: Message | null;
   export let questionId: string;

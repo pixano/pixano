@@ -10,12 +10,12 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
-  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../types";
   import {
     checkboxsStateToAnswerChoices,
     deserializeMessageContent,
     serializeMessageContent,
-  } from "../lib/utils";
+  } from "../utils";
 
   export let choices: string[];
   export let answer: Message | null;

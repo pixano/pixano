@@ -10,8 +10,8 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
 
-  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
-  import { deserializeMessageContent, serializeMessageContent } from "../lib/utils";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../types";
+  import { deserializeMessageContent, serializeMessageContent } from "../utils";
 
   export let choices: string[];
   export let answer: Message | null;
