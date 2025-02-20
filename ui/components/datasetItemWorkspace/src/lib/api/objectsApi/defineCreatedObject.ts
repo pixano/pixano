@@ -50,6 +50,7 @@ export const defineCreatedObject = (
     view_ref: viewRef,
     entity_ref: { name: entity.table_info.name, id: entity.id },
     source_ref: { name: pixSource.table_info.name, id: pixSource.id },
+    inference_metadata: {},
   };
   let newObject: Annotation | undefined = undefined;
 
