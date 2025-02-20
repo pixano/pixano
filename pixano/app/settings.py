@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import boto3
+from pixano_inference.client import PixanoInferenceClient
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
 from s3path import S3Path, register_configuration_parameter
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
     aws_region: str | None = None
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
+    pixano_inference_client: PixanoInferenceClient | None = None
 
     @field_validator("library_dir", mode="before")
     @classmethod

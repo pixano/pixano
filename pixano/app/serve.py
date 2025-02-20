@@ -15,6 +15,7 @@ import uvicorn
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pixano_inference.client import PixanoInferenceClient
 
 from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
@@ -73,6 +74,7 @@ class App:
         aws_secret_key: str | None = None,
         host: str = "127.0.0.1",
         port: int = 8000,
+        pixano_inference_url: str | None = None,
     ):
         """Initialize and serve the Pixano app.
 
@@ -92,6 +94,7 @@ class App:
                 is an S3 path.
             host: App host.
             port: App port.
+            pixano_inference_url: Pixano inference URL if any.
         """
 
         # Override app settings
@@ -105,6 +108,9 @@ class App:
                 aws_region=aws_region,
                 aws_access_key=aws_access_key,
                 aws_secret_key=aws_secret_key,
+                pixano_inference_client=PixanoInferenceClient.connect(pixano_inference_url)
+                if pixano_inference_url is not None
+                else None,
             )
 
         # Create app
@@ -231,6 +237,7 @@ class App:
     help="Pixano app URL port",
     show_default=True,
 )
+@click.option("--pixano_inference_url", type=str, help="Pixano inference API url.", default="")
 def main(
     library_dir: str,
     media_dir: str,
@@ -241,6 +248,7 @@ def main(
     aws_secret_key: str,
     host: str,
     port: int,
+    pixano_inference_url: str,
 ) -> None:
     """Launch Pixano App in LIBRARY_DIR.
 
@@ -256,6 +264,7 @@ def main(
         aws_secret_key: S3 AWS secret key.
         host: App host.
         port: App port.
+        pixano_inference_url: Pixano inference URL.
     """
     App(
         library_dir,
@@ -267,6 +276,7 @@ def main(
         aws_secret_key,
         host,
         port,
+        pixano_inference_url if pixano_inference_url != "" else None,
     )
 
 

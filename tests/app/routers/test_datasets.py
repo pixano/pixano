@@ -19,13 +19,19 @@ def test_get_datasets_info(
     app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     info_model_dataset_image_bboxes_keypoint: DatasetInfo,
     info_model_dataset_multi_view_tracking_and_image: DatasetInfo,
+    info_model_dataset_vqa: DatasetInfo,
 ):
     app, settings, client = app_and_settings_with_client
 
     info_model_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
     info_model_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
+    info_model_dataset_vqa.id = "dataset_vqa"
 
-    infos = [info_model_dataset_image_bboxes_keypoint, info_model_dataset_multi_view_tracking_and_image]
+    infos = [
+        info_model_dataset_image_bboxes_keypoint,
+        info_model_dataset_multi_view_tracking_and_image,
+        info_model_dataset_vqa,
+    ]
 
     response = client.get("/datasets/info")
     assert response.status_code == 200

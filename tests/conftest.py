@@ -15,6 +15,7 @@ from tests.fixtures.app.app import (
 from tests.fixtures.app.models.dataset_info import (
     info_model_dataset_image_bboxes_keypoint,
     info_model_dataset_multi_view_tracking_and_image,
+    info_model_dataset_vqa,
 )
 from tests.fixtures.app.routers.browser import (
     browser_dataset_image_bboxes_keypoint,
@@ -46,6 +47,7 @@ from tests.fixtures.datasets.dataset import (
     dataset_multi_view_tracking_and_image,
     dataset_multi_view_tracking_and_image_copy,
     dataset_vqa,
+    dataset_vqa_copy,
 )
 from tests.fixtures.datasets.dataset_info import (
     info_dataset_image_bboxes_keypoint,
@@ -87,4 +89,4 @@ from tests.fixtures.features.entity import (
 )
 from tests.fixtures.features.item import item_categories, item_categories_name_index, item_metadata
 from tests.fixtures.features.sequence_frame import sequence_frame_category
-from tests.fixtures.inference.client import simple_pixano_inference_client
+from tests.fixtures.inference.client import simple_pixano_inference_client, simple_pixano_inference_client_fn_scope

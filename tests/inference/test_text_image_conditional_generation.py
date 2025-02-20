@@ -21,7 +21,7 @@ from pixano_inference.pydantic import (
 from responses import Response
 
 from pixano.features import Conversation, EntityRef, Image, ItemRef, Message, Source, SourceRef, ViewRef
-from pixano.inference.image_text_conditional_generation import messages_to_prompt, text_image_conditional_generation
+from pixano.inference.text_image_conditional_generation import messages_to_prompt, text_image_conditional_generation
 
 
 FILE_PATH = Path(os.path.dirname(os.path.realpath(__file__)))
