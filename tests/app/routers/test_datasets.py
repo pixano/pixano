@@ -25,7 +25,6 @@ def test_get_datasets_info(
 
     info_model_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
     info_model_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
-    info_model_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
     info_model_dataset_vqa.id = "dataset_vqa"
 
     infos = [
