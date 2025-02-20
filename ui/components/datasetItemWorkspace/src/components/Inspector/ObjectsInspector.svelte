@@ -45,7 +45,7 @@ License: CECILL-C
     //svelte hack: use a temp Set to set the whole list once
     const allTopEntitiesSet = new Set<Entity>();
     $annotations.forEach((ann) => {
-      const top_entity = getTopEntity(ann)
+      const top_entity = getTopEntity(ann);
       if (!top_entity.is_conversation) allTopEntitiesSet.add(top_entity);
     });
     allTopEntities = Array.from(allTopEntitiesSet);
