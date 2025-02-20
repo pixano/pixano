@@ -14,6 +14,7 @@ License: CECILL-C
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   // Import stores and API functions
+
   import {
     isNewAnswerEvent,
     isUpdatedMessageEvent,
@@ -26,6 +27,7 @@ License: CECILL-C
   import {
     annotations,
     colorScale,
+    entities,
     filters,
     imageSmoothing,
     itemBboxes,
@@ -154,10 +156,7 @@ License: CECILL-C
   };
 
   const handleStoreQuestion = (event: CustomEvent<StoreQuestionEvent>) => {
-    const datasetItemEntities = selectedItem.entities;
-    const conversationEntities = Object.values(datasetItemEntities)
-      .flat()
-      .filter((entity) => entity.is_type(BaseSchema.Conversation));
+    const conversationEntities = $entities.filter((e) => e.is_type(BaseSchema.Conversation));
 
     if (conversationEntities.length === 0) {
       console.error("ERROR: No conversation entity found");
