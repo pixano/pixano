@@ -1126,7 +1126,7 @@ class TestDataset:
         path = dataset_image_bboxes_keypoint.path.parent
 
         datasets_info = Dataset.list(path)
-        assert len(datasets_info) == 2
+        assert len(datasets_info) == 3
         assert dataset_image_bboxes_keypoint.info in datasets_info
 
     def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):

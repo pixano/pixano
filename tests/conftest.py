@@ -15,6 +15,7 @@ from tests.fixtures.app.app import (
 from tests.fixtures.app.models.dataset_info import (
     info_model_dataset_image_bboxes_keypoint,
     info_model_dataset_multi_view_tracking_and_image,
+    info_model_dataset_vqa,
 )
 from tests.fixtures.app.routers.browser import (
     browser_dataset_image_bboxes_keypoint,
