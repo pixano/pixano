@@ -36,7 +36,7 @@ License: CECILL-C
     created_at: now,
     updated_at: now,
     table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-    data: { name: "All", kind: "Global", metadata: "{}" },
+    data: { name: "All", kind: "Global", metadata: {} },
   });
 
   $: $annotations, $entities, handleAnnotationSortedByModel();
