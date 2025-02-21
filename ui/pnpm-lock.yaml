@@ -128,7 +128,7 @@ importers:
         version: link:../models
       konva:
         specifier: ^9.3.16
-        version: 9.3.16
+        version: 9.3.18
       nanoid:
         specifier: ^5.0.5
         version: 5.1.0
@@ -140,7 +140,7 @@ importers:
         version: 1.2.4
       svelte-konva:
         specifier: ^0.1.1
-        version: 0.1.1(konva@9.3.16)(svelte@4.2.19)
+        version: 0.1.1(konva@9.3.18)(svelte@4.2.19)
       vite-plugin-externals:
         specifier: ^0.6.2
         version: 0.6.2(vite@5.4.14(@types/node@22.13.4)(less@4.2.2)(terser@5.39.0))
@@ -238,7 +238,7 @@ importers:
         version: 3.1.0
       konva:
         specifier: ^9.3.16
-        version: 9.3.16
+        version: 9.3.18
       lucide-svelte:
         specifier: ^0.292.0
         version: 0.292.0(svelte@4.2.19)
@@ -250,7 +250,7 @@ importers:
         version: 3.1.5(chart.js@4.4.8)(svelte@4.2.19)
       svelte-konva:
         specifier: ^0.1.1
-        version: 0.1.1(konva@9.3.16)(svelte@4.2.19)
+        version: 0.1.1(konva@9.3.18)(svelte@4.2.19)
       svelte-vega:
         specifier: ^2.1.0
         version: 2.3.0(svelte@4.2.19)(vega-embed@6.29.0(vega-lite@5.23.0(vega@5.31.0))(vega@5.31.0))(vega-lite@5.23.0(vega@5.31.0))(vega@5.31.0)
@@ -479,7 +479,7 @@ importers:
         version: link:../models
       konva:
         specifier: ^9.3.16
-        version: 9.3.16
+        version: 9.3.18
       nanoid:
         specifier: ^5.0.5
         version: 5.1.0
@@ -491,7 +491,7 @@ importers:
         version: 1.2.4
       svelte-konva:
         specifier: ^0.1.1
-        version: 0.1.1(konva@9.3.16)(svelte@4.2.19)
+        version: 0.1.1(konva@9.3.18)(svelte@4.2.19)
       vite-plugin-externals:
         specifier: ^0.6.2
         version: 0.6.2(vite@5.4.14(@types/node@22.13.4)(less@4.2.2)(terser@5.39.0))
