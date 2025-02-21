@@ -38,6 +38,7 @@ export const createNewQuestion = (props: {
     type: MessageTypeEnum.QUESTION,
     choices: props.choices,
     question_type: props.question_type,
+    inference_metadata: {},
   };
 
   return new Message({
