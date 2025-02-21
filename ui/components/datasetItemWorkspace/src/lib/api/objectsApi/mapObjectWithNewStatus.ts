@@ -12,10 +12,9 @@ export const mapObjectWithNewStatus = (
   allObjects: Annotation[],
   objectsToAnnotate: Annotation[],
   status: "accepted" | "rejected",
-  features: ObjectProperties = {},
+  features: ObjectProperties = {}, // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Annotation[] => {
   //TODO (preAnnotation)
-  features;
   return allObjects;
 
   // const nextObjectId = objectsToAnnotate[1]?.id;

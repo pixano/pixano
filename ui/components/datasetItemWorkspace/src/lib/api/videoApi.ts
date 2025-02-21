@@ -271,7 +271,7 @@ function preloadImagesProgressively(currentIndex: number = 0) {
     Object.keys(buff).forEach((viewKey) => {
       for (const i of excludedIndices) {
         if (i in buff[viewKey]) {
-          delete buff[viewKey][i];
+          delete buff[viewKey][i]; // eslint-disable-line @typescript-eslint/no-array-delete
         }
       }
     });

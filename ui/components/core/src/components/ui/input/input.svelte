@@ -12,7 +12,7 @@ License: CECILL-C
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = HTMLInputAttributes;
-  type $$Events = InputEvents;
+  type $$Events = InputEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let value: $$Props["value"] = undefined;

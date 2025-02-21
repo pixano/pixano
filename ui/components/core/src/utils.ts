@@ -50,6 +50,7 @@ export function isValidURL(urlString: string) {
   try {
     return Boolean(new URL(urlString));
   } catch (e) {
+    // eslint-disable-line @typescript-eslint/no-unused-vars
     return false;
   }
 }

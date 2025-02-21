@@ -79,9 +79,7 @@ License: CECILL-C
   const features = derived(
     [currentFrameIndex, entities, annotations],
     ([$currentFrameIndex, $entities, $annotations]) => {
-      //features may depends on an annotation change, but we access them with entity.ui.childs instead of $annotations
-      //to prevent lint unused-vars
-      $annotations;
+      // eslint-disable-line @typescript-eslint/no-unused-vars
       //get all features from Top entity (obj) to evental sub entities and annotations
       //let anns_features: Record<string, Feature[]> = {};
       let feats: Record<string, Feature[]> = {};
@@ -276,7 +274,7 @@ License: CECILL-C
     if ($selectedTool.type === ToolType.Fusion) return;
     highlightObject(entity.id, isHighlighted);
     handleSetAnnotationDisplayControl("editing", !isEditing);
-    !isEditing && selectedTool.set(panTool);
+    if (!isEditing) selectedTool.set(panTool);
   };
 
   let thumbnails: ObjectThumbnail[] = [];
@@ -297,7 +295,7 @@ License: CECILL-C
       }
     }
   };
-  $: $entities, setThumbnails();
+  entities.subscribe(() => setThumbnails());
 </script>
 
 <article

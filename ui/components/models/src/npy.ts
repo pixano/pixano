@@ -66,7 +66,7 @@ const dtypes = {
 
 export function parse(buffer: ArrayBuffer | Array<number>) {
   const buf = new Uint8Array(buffer);
-  if (buf[6] != 1) throw "Only npy version 1 is supported";
+  if (buf[6] != 1) throw new Error("Only npy version 1 is supported");
 
   const headerLength = buf[8] + buf[9] * 256;
   const offsetBytes = 10 + headerLength;
@@ -86,7 +86,7 @@ export function parse(buffer: ArrayBuffer | Array<number>) {
       .replace(/,*\),*/g, "]"),
   ) as Header;
 
-  if (header["fortan_order"]) throw "Fortran-contiguous array data are not supported";
+  if (header["fortan_order"]) throw new Error("Fortran-contiguous array data are not supported");
   const dtype = dtypes[header["descr"] as keyof typeof dtypes];
 
   return {

@@ -11,7 +11,7 @@ License: CECILL-C
 
   import { cn } from "../../../lib/utils/styleUtils";
 
-  type $$Props = CommandPrimitive.InputProps;
+  type $$Props = CommandPrimitive.InputProps; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: string | undefined | null = undefined;
   export let value: string = "";
