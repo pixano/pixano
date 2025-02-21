@@ -7,7 +7,7 @@ License: CECILL-C
 import { get } from "svelte/store";
 
 import { MessageTypeEnum, type Message, type SaveItem } from "@pixano/core";
-import type { NewAnswerEvent } from "@pixano/vqa-canvas/src/lib/types";
+import type { NewAnswerEvent } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
 import { createNewAnswer } from "../../utils/createNewAnswer";

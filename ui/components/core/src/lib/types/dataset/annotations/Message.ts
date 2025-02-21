@@ -54,6 +54,7 @@ export const messageSchema = z.discriminatedUnion("type", [
   systemSchema,
 ]);
 
+export type QuestionType = z.infer<typeof questionSchema>;
 export type MessageType = z.infer<typeof messageSchema>;
 
 export class Message extends Annotation {

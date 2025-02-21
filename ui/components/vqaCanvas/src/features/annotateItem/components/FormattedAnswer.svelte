@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------->
 
-<!-- When svelte is updated, this component could be replaced by a {#snnipet} in QuestionForm.svelte -->
+<!-- When svelte is updated, this component can be replaced by a {#snnipet} in QuestionForm.svelte -->
 
 <script lang="ts">
   import { Message, QuestionTypeEnum } from "@pixano/core";

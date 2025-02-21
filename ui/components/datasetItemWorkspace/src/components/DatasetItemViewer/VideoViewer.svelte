@@ -469,7 +469,7 @@ License: CECILL-C
 </script>
 
 <section
-  class="pl-4 h-full w-full flex flex-col"
+  class="h-full w-full flex flex-col"
   on:mouseup={stopExpand}
   on:mousemove={expand}
   role="tab"

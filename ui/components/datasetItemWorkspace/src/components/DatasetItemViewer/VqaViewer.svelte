@@ -10,21 +10,24 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import { BaseSchema, DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
+  import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
   // Import stores and API functions
+
   import {
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
-  } from "@pixano/vqa-canvas/src/lib/types";
+  } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
     colorScale,
+    entities,
     filters,
     imageSmoothing,
     itemBboxes,
@@ -38,6 +41,7 @@ License: CECILL-C
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
+  import { addQuestion } from "../../lib/stores/mutations/addQuestion";
   import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
@@ -150,12 +154,27 @@ License: CECILL-C
       updateMessageContent(event.detail);
     }
   };
+
+  const handleStoreQuestion = (event: CustomEvent<StoreQuestionEvent>) => {
+    const conversationEntities = $entities.filter((e) => e.is_type(BaseSchema.Conversation));
+
+    if (conversationEntities.length === 0) {
+      console.error("ERROR: No conversation entity found");
+      return;
+    }
+
+    addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
+  };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
-    <VqaArea messages={$messages} on:answerContentChange={handleAnswerContentChange} />
+  <div class="h-full grid grid-cols-[300px_auto]">
+    <VqaArea
+      messages={$messages}
+      on:answerContentChange={handleAnswerContentChange}
+      on:storeQuestion={handleStoreQuestion}
+    />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
