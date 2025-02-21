@@ -5,7 +5,7 @@
 # =====================================
 
 # Use the official Node.js image
-FROM node:lts-slim AS base
+FROM node:23-slim AS base
 
 # Install pnpm and build frontend
 FROM base AS build
@@ -78,6 +78,10 @@ EXPOSE 8000
 # Copy the build files to FastAPI static files
 WORKDIR /app/pixano/app
 COPY --from=build /app/pixano/app/dist ./dist/
+
+# Clean up the build environment
+RUN rm -Rf /root/.cache/pip
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Run the server
 # TODO: Improve the conditional statement to avoid the use of the shell if possible
