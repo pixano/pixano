@@ -13,14 +13,14 @@ License: CECILL-C
   import { BaseSchema, DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
+  import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
   // Import stores and API functions
 
   import {
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
-    type StoreQuestionEvent,
-  } from "@pixano/vqa-canvas/src/lib/types";
+  } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";

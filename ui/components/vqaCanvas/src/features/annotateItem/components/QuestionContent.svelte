@@ -10,4 +10,4 @@ License: CECILL-C
   export let content: string;
 </script>
 
-<div class={cn("text-gray-500")}>{content}</div>
+<p class={cn("text-gray-500")}>{content}</p>

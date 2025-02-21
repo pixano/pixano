@@ -10,7 +10,7 @@ License: CECILL-C
   import { QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
-  import type { StoreQuestionEvent } from "../../lib/types";
+  import type { StoreQuestionEvent } from "../types";
   import AddChoiceButton from "./AddChoiceButton.svelte";
   import QuestionChoice from "./NewQuestionChoice.svelte";
 

@@ -7,11 +7,10 @@ License: CECILL-C
 <script lang="ts">
   import { Message } from "@pixano/core";
 
-  import { QuestionForm } from "./components";
-  import AddQuestionButton from "./components/addQuestion/AddQuestionButton.svelte";
-  import { groupMessagesByNumber } from "./lib/utils";
+  import { AddQuestionButton } from "./features/addQuestion/components";
+  import { QuestionForm } from "./features/annotateItem/components";
+  import { groupMessagesByNumber } from "./utils";
 
-  // Exports
   export let messages: Message[];
 
   $: messagesByNumber = groupMessagesByNumber(messages);

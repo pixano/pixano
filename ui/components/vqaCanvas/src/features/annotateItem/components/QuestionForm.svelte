@@ -8,7 +8,7 @@ License: CECILL-C
   import type { Message } from "@pixano/core";
   import { MessageTypeEnum, QuestionTypeEnum } from "@pixano/core";
 
-  import { isQuestionCompleted } from "../lib/utils";
+  import { isQuestionCompleted } from "../utils";
   import FormattedAnswer from "./FormattedAnswer.svelte";
   import QuestionContent from "./QuestionContent.svelte";
   import QuestionHeader from "./QuestionHeader.svelte";

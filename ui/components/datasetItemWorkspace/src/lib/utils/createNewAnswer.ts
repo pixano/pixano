@@ -21,6 +21,7 @@ export const createNewAnswer = ({ question, content }: { question: Message; cont
     content,
     timestamp: now,
     type: MessageTypeEnum.ANSWER,
+    inference_metadata: {},
   };
 
   return new Message({

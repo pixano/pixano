@@ -8,37 +8,37 @@ License: CECILL-C
   import { createEventDispatcher } from "svelte";
 
   import type { Message } from "@pixano/core";
-  import { RadioGroup } from "@pixano/core";
+  import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
-  import { ContentChangeEventType, type ContentChangeEvent } from "../lib/types";
-  import { deserializeMessageContent, serializeMessageContent } from "../lib/utils";
+  import { ContentChangeEventType, type ContentChangeEvent } from "../types";
+  import {
+    checkboxsStateToAnswerChoices,
+    deserializeMessageContent,
+    serializeMessageContent,
+  } from "../utils";
 
   export let choices: string[];
   export let answer: Message | null;
   export let withExplanation: boolean;
   export let questionId: string;
 
-  const radioGroupValues = choices.map((c) => ({ value: c, label: c }));
-
   let { checked, explanations } = deserializeMessageContent(answer?.data.content ?? null);
 
   const answerId = answer?.id ?? null;
 
-  let selectedValue: string = radioGroupValues[checked.indexOf(true)]?.value;
-  /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
-  $: selectedValue, handleContentChange();
-
   const dispatch = createEventDispatcher();
 
+  const handleCheckboxChange = (index: number, isChecked: boolean) => {
+    checked[index] = isChecked;
+    handleContentChange();
+  };
+
   const handleContentChange = () => {
-    const content = serializeMessageContent({ choices: [selectedValue], explanations });
+    const selectedChoices = checkboxsStateToAnswerChoices(checked);
+    const content = serializeMessageContent({ choices: selectedChoices, explanations });
 
     const eventDetail: ContentChangeEvent = answerId
-      ? {
-          content,
-          type: ContentChangeEventType.UPDATE,
-          answerId,
-        }
+      ? { content, type: ContentChangeEventType.UPDATE, answerId }
       : {
           content,
           type: ContentChangeEventType.NEW_ANSWER,
@@ -50,9 +50,18 @@ License: CECILL-C
 </script>
 
 <div class="p-2 border border-slate-100 rounded-lg flex flex-col gap-3">
-  <div class="flex flex-row gap-2 items-center">
-    <RadioGroup bind:selectedValue values={radioGroupValues} />
-  </div>
+  {#each choices as choice, index}
+    <div class="flex flex-row gap-2 items-center">
+      <!-- Do not bind with checked variable because handleClick is triggered before the change applies to binded value -->
+      <Checkbox
+        checked={checked[index]}
+        handleClick={(checked) => {
+          handleCheckboxChange(index, checked);
+        }}
+      />
+      <span>{choice}</span>
+    </div>
+  {/each}
   {#if withExplanation}
     <input
       type="text"
