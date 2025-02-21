@@ -12,7 +12,7 @@ License: CECILL-C
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.CheckboxItemProps;
-  type $$Events = ContextMenuPrimitive.CheckboxItemEvents;
+  type $$Events = ContextMenuPrimitive.CheckboxItemEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = undefined;

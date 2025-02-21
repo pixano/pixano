@@ -62,7 +62,7 @@ License: CECILL-C
           <Command.Item
             value={listItem.value}
             onSelect={(currentValue) => {
-              value = currentValue;
+              value = currentValue; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
               closeAndFocusTrigger(ids.trigger);
             }}
           >

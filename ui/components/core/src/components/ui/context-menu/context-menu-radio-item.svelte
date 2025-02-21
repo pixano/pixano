@@ -12,7 +12,7 @@ License: CECILL-C
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.RadioItemProps;
-  type $$Events = ContextMenuPrimitive.RadioItemEvents;
+  type $$Events = ContextMenuPrimitive.RadioItemEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let value: ContextMenuPrimitive.RadioItemProps["value"];

@@ -27,7 +27,6 @@ export class Classification extends Annotation {
   ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
 
   constructor(obj: BaseDataFields<ClassificationType>) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (obj.table_info.base_schema !== BaseSchema.Classification)
       throw new Error("Not a Classification");
     classificationSchema.parse(obj.data);

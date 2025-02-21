@@ -39,7 +39,7 @@ License: CECILL-C
     data: { name: "All", kind: "Global", metadata: {} },
   });
 
-  $: $annotations, $entities, handleAnnotationSortedByModel();
+  $: $annotations, $entities, handleAnnotationSortedByModel(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 
   const handleAnnotationSortedByModel = () => {
     //svelte hack: use a temp Set to set the whole list once

@@ -75,7 +75,6 @@ export abstract class Annotation extends BaseData<AnnotationType> {
       console.error("ERROR: do not use 'is_*' on uninitialized object");
       return false;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     return this.table_info.base_schema === type;
   }
 }

@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
-
 import {
   Annotation,
   BBox,

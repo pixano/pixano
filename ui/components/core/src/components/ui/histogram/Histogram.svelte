@@ -17,7 +17,6 @@ License: CECILL-C
     type ChartDataset,
   } from "chart.js";
   import zoomPlugin from "chartjs-plugin-zoom";
-  import { min } from "d3";
   import { Bar } from "svelte-chartjs";
 
   import type { DatasetStat } from "../../..";

@@ -782,7 +782,6 @@ License: CECILL-C
 
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     timerId = setTimeout(() => updateCurrentMask(viewRef), 50); // delay before predict to spare CPU
   }
 
@@ -941,7 +940,9 @@ License: CECILL-C
               imageHeight: getCurrentImage(viewRef.name).height,
             };
           }
-          selectedTool.isSmart && (await updateCurrentMask(viewRef));
+          if (selectedTool.isSmart) {
+            await updateCurrentMask(viewRef);
+          }
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");

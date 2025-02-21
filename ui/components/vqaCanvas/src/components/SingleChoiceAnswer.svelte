@@ -25,7 +25,7 @@ License: CECILL-C
   const answerId = answer?.id ?? null;
 
   let selectedValue: string = radioGroupValues[checked.indexOf(true)].value;
-  $: selectedValue, handleContentChange();
+  $: selectedValue, handleContentChange(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 
   const dispatch = createEventDispatcher();
 

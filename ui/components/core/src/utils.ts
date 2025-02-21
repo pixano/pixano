@@ -49,6 +49,7 @@ export function ordinalColorScale(range: Iterable<string>) {
 export function isValidURL(urlString: string) {
   try {
     return Boolean(new URL(urlString));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return false;
   }

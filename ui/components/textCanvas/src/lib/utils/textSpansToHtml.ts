@@ -105,7 +105,6 @@ const buildSpanTree = ({
     const spanPosition = getTextSpanPosition(text, textSpan, colorScale);
     let currentNode: SpanTree = tree;
 
-    /* eslint-disable-next-line no-constant-condition */
     while (true) {
       const parentNode = currentNode.children.find(
         (node) => node.start <= spanPosition.start && node.end >= spanPosition.end,

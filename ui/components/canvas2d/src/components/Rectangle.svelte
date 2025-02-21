@@ -113,7 +113,7 @@ License: CECILL-C
     }
   };
 
-  $: bbox.ui.displayControl?.editing, void handleEditing();
+  $: bbox.ui.displayControl?.editing, void handleEditing(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 </script>
 
 <Group

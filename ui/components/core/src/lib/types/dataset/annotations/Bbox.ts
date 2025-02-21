@@ -34,7 +34,6 @@ export class BBox extends Annotation {
   } = { datasetItemType: WorkspaceType.UNDEFINED };
 
   constructor(obj: BaseDataFields<BBoxType>) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (obj.table_info.base_schema !== BaseSchema.BBox) throw new Error("Not a BBox");
     bboxSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);

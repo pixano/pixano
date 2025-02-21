@@ -14,7 +14,7 @@ License: CECILL-C
   type $$Props = ContextMenuPrimitive.SubTriggerProps & {
     inset?: boolean;
   };
-  type $$Events = ContextMenuPrimitive.SubTriggerEvents;
+  type $$Events = ContextMenuPrimitive.SubTriggerEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let inset: $$Props["inset"] = undefined;

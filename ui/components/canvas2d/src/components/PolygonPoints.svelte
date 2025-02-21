@@ -39,8 +39,9 @@ License: CECILL-C
       on:dragmove={() => handlePolygonPointsDragMove?.(point.id, i)}
       on:dragend={() => handlePolygonPointsDragEnd?.()}
       on:mouseover={(e) => {
-        e.detail.target?.attrs?.id === `dot-${polygonId}-${i}-${point.id}` &&
+        if (e.detail.target?.attrs?.id === `dot-${polygonId}-${i}-${point.id}`) {
           scaleCircleRadius(point.id, i, 2);
+        }
       }}
       on:mouseleave={() => scaleCircleRadius(point.id, i, 1)}
       config={{
