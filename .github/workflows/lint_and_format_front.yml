@@ -66,10 +66,10 @@ jobs:
         with:
           node-version: 23
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.4.1
 
       - name: Install dependencies
         run: |
