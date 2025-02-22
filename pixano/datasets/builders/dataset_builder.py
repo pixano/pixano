@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import logging
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from pathlib import Path
@@ -18,6 +19,9 @@ from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, Dataset
 from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source, SourceKind
+
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetBuilder(ABC):
@@ -155,8 +159,8 @@ class DatasetBuilder(ABC):
         # count transactions per table
         transactions_per_table: dict[str, int] = {table_name: 0 for table_name in tables.keys()}
 
-        print("Building dataset...")
-        for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
+        logger.info(f"Building dataset {self.info.name}")
+        for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
             # assert that items have keys that are in tables
             for table_name, item_value in items.items():
                 if item_value is None or item_value == []:
@@ -194,7 +198,7 @@ class DatasetBuilder(ABC):
         self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
         self.info.to_json(self.target_dir / Dataset._INFO_FILE)
 
-        print(f"Dataset built in {self.target_dir} with id {self.info.id}")
+        logger.info(f"Dataset {self.info.name} built in {self.target_dir} with id {self.info.id}")
 
         # save features_values.json
         # TMP: empty now
@@ -209,10 +213,10 @@ class DatasetBuilder(ABC):
         dataset = Dataset(self.target_dir)
 
         if check_integrity != "none":
-            print("Checking dataset integrity...")
+            logger.info(f"Checking dataset {dataset.info.name} integrity...")
             handle_integrity_errors(check_dataset_integrity(dataset), raise_or_warn=check_integrity)
 
-        print("Dataset built successfully.")
+        logger.info(f"Dataset {dataset.info.name} built successfully.")
         return dataset
 
     def compact_table(self, table_name: str) -> None:
