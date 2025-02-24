@@ -19,12 +19,12 @@ export async function inferenceConnect(url: string): Promise<void> {
         } else {
           const err = await response.text();
           console.log("api.inferenceConnect -", response.status, response.statusText, err);
-          reject(err);
+          reject(new Error(`${response.status} ${response.statusText} - ${err}`));
         }
       })
       .catch((err) => {
         console.log("api.inferenceConnect -", err);
-        reject(err);
+        reject(new Error(err));
       });
   });
 }
