@@ -12,7 +12,7 @@ License: CECILL-C
   import { createTable, Render, Subscribe } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
   import SortableList from "svelte-sortable-list";
-  import { readable } from "svelte/store";
+  import { writable } from "svelte/store";
 
   // Pixano Core Imports
   import type { TableData } from "@pixano/core";
@@ -25,8 +25,10 @@ License: CECILL-C
   // Exports
   export let items: TableData;
 
+  $: data.set(items.rows);
+
   // Add data into a readable store and create table object
-  const data = readable(items.rows);
+  const data = writable(items.rows);
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
