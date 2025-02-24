@@ -15,8 +15,8 @@ License: CECILL-C
   import { readable } from "svelte/store";
 
   // Pixano Core Imports
-  import { icons } from "@pixano/core";
   import type { TableData } from "@pixano/core";
+  import { icons } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -90,51 +90,53 @@ License: CECILL-C
 </script>
 
 <!-- Settings popup -->
-<div
-  class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
-    flex items-center justify-center font-Montserrat
-    {popupOpened ? 'block' : 'hidden'}"
->
+{#if popupOpened}
   <div
-    class="px-12 pt-10 flex flex-col
-    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
+    flex items-center justify-center font-Montserrat"
   >
-    <span class="text-3xl font-bold mb-4">Column settings</span>
-    <span class="text-sm italic text-gray-500 font-medium mb-3">
-      Drag and drop to re-order, toggle box for visibility.
-    </span>
-    <div class="flex flex-col space-y-2">
-      <SortableList list={$columnIdOrder} on:sort={sortList} let:item>
-        <div class="py-1 px-2 flex items-center space-x-2 border rounded-sm">
-          <Checkbox id={item} bind:checked={shownColumnsById[item]}></Checkbox>
-          <label for={item} class="text-sm select-none grow cursor-pointer">
-            {item}
-          </label>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-6 w-6 cursor-move"
-          >
-            <path d={icons.svg_drag_handle} fill="grey" />
-          </svg>
-        </div>
-      </SortableList>
-    </div>
+    <div
+      class="px-12 pt-10 flex flex-col
+    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+    >
+      <span class="text-3xl font-bold mb-4">Column settings</span>
+      <span class="text-sm italic text-gray-500 font-medium mb-3">
+        Drag and drop to re-order, toggle box for visibility.
+      </span>
+      <div class="flex flex-col space-y-2">
+        <SortableList list={$columnIdOrder} on:sort={sortList} let:item>
+          <div class="py-1 px-2 flex items-center space-x-2 border rounded-sm">
+            <Checkbox id={item} bind:checked={shownColumnsById[item]}></Checkbox>
+            <label for={item} class="text-sm select-none grow cursor-pointer">
+              {item}
+            </label>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-6 w-6 cursor-move"
+            >
+              <path d={icons.svg_drag_handle} fill="grey" />
+            </svg>
+          </div>
+        </SortableList>
+      </div>
 
-    <div class="my-6 flex justify-end items-end">
-      <Button
-        class="text-white"
-        on:click={() => {
-          popupOpened = false;
-        }}
-      >
-        Done
-      </Button>
+      <div class="my-6 flex justify-end items-end">
+        <Button
+          class="text-white"
+          on:click={() => {
+            popupOpened = false;
+          }}
+        >
+          Done
+        </Button>
+      </div>
     </div>
   </div>
-</div>
+{/if}
+
 <div
   class="w-full overflow-y-auto rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
