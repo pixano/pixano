@@ -34,7 +34,7 @@ License: CECILL-C
   const handleGenerateQuestion = () => {
     //TEST TMP: get dataset item metadata for a more dedicated question
     const all_feats = $itemMetas.item.data;
-    const { split, ...feats } = all_feats;
+    const { split, ...feats } = all_feats; // eslint-disable-line @typescript-eslint/no-unused-vars
 
     let conv_ui: Conversation = $entities.filter((e) =>
       e.is_type(BaseSchema.Conversation),

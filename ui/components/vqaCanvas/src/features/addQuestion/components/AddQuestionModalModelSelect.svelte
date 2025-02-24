@@ -50,7 +50,8 @@ License: CECILL-C
                       models = new_models.map((model) => {
                         return { id: model.name, value: model.name };
                       });
-                    });
+                    })
+                    .catch((err) => console.error("Can't list models", err));
                 })
                 .catch((err) =>
                   console.error(`Couldn't instantiate model '${model_config.config.name}'`, err),
