@@ -20,6 +20,7 @@ License: CECILL-C
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
+    type GenerateAnswerEvent,
   } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -42,6 +43,7 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
   import { addQuestion } from "../../lib/stores/mutations/addQuestion";
+  import { generateAnswer } from "../../lib/stores/mutations/generateAnswer";
   import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
@@ -165,6 +167,17 @@ License: CECILL-C
 
     addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
   };
+
+  const handleGenerateAnswer = (event: CustomEvent<GenerateAnswerEvent>) => {
+    const question = $messages.find((m) => m.id === event.detail.questionId);
+
+    if (question === undefined) {
+      console.error("ERROR: Message not found");
+      return;
+    }
+
+    generateAnswer(question);
+  };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
@@ -174,6 +187,7 @@ License: CECILL-C
       messages={$messages}
       on:answerContentChange={handleAnswerContentChange}
       on:storeQuestion={handleStoreQuestion}
+      on:generateAnswer={handleGenerateAnswer}
     />
     <Canvas2D
       {imagesPerView}

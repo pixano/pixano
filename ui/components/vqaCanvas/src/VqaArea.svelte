@@ -19,6 +19,6 @@ License: CECILL-C
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
   <AddQuestionButton on:storeQuestion />
   {#each messagesByNumber as messages}
-    <QuestionForm bind:messages on:answerContentChange />
+    <QuestionForm bind:messages on:answerContentChange on:generateAnswer />
   {/each}
 </div>
