@@ -10,7 +10,7 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, isQuestionData, type ImagesPerView } from "@pixano/core";
+  import { BaseSchema, DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
