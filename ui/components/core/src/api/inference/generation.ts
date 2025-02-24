@@ -4,10 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Annotation } from "../../lib/types"
-import type {
-  CondititionalGenerationTextImageInput,
-} from "../../lib/types";
+import type { CondititionalGenerationTextImageInput } from "../../lib/types";
+import { Annotation } from "../../lib/types";
 
 export async function conditional_generation_text_image(
   input: CondititionalGenerationTextImageInput,

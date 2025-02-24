@@ -4,25 +4,27 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export async function inferenceConnect(url: string) {
-  //TODO? check url is an actual url
-  try {
-    const response = await fetch(`/inference/connect?url=${encodeURIComponent(url)}`, {
+export async function inferenceConnect(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fetch(`/inference/connect?url=${encodeURIComponent(url)}`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
-    if (!response.ok) {
-      console.log(
-        "api.inferenceConnect -",
-        response.status,
-        response.statusText,
-        await response.text(),
-      );
-    }
-  } catch (e) {
-    console.log("api.inferenceConnect -", e);
-  }
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          resolve();
+        } else {
+          const err = await response.text();
+          console.log("api.inferenceConnect -", response.status, response.statusText, err);
+          reject(err);
+        }
+      })
+      .catch((err) => {
+        console.log("api.inferenceConnect -", err);
+        reject(err);
+      });
+  });
 }

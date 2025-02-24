@@ -11,16 +11,12 @@ License: CECILL-C
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import {
     Annotation,
-    api,
     BaseSchema,
-    Conversation,
     DatasetItem,
     Entity,
     Mask,
-    Message,
     Tracklet,
     WorkspaceType,
-    type CondititionalGenerationTextImageInput,
     type SaveItem,
   } from "@pixano/core";
 
@@ -30,8 +26,6 @@ License: CECILL-C
   import LoadModelModal from "./components/LoadModelModal.svelte";
 
   import "./index.css";
-
-  import { type ModelConfig } from "@pixano/core";
 
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
@@ -55,84 +49,6 @@ License: CECILL-C
   export let shouldSaveCurrentItem: boolean;
 
   let isSaving: boolean = false;
-
-  const tests_inference = () => {
-    const generate = () => {
-      let conv_ui: Conversation = $entities.filter((e) =>
-        e.is_type(BaseSchema.Conversation),
-      )[0] as Conversation;
-      let msgs: Message[] = [];
-      if (conv_ui.ui.childs) {
-        for (const ann of conv_ui.ui.childs) {
-          if (ann.is_type(BaseSchema.Message)) {
-            const { ui, ...no_ui_ann } = ann;
-            msgs.push(no_ui_ann as Message);
-          }
-        }
-      }
-      //requires to strip ui to avoir circular ref
-      const { ui, ...conv } = conv_ui;
-
-      const input: CondititionalGenerationTextImageInput = {
-        dataset_id: selectedItem.ui.datasetId,
-        conversation: conv as Conversation,
-        messages: msgs,
-        model: "llava-qwen",
-      };
-      console.log("Model Input:", input);
-      api
-        .conditional_generation_text_image(input)
-        .then((ann) => {
-          console.log("Model output: ", ann);
-          console.log(`Model answer: ${(ann as Message).data.content}`);
-          console.log(`Model answer string length: ${(ann as Message).data.content.length}`);
-        })
-        .catch((err) => {
-          console.error("Model genration error:", err);
-        });
-    };
-
-    const inference_url = "http://localhost:9152";
-    api
-      .inferenceConnect(inference_url)
-      .then(() => {
-        console.log("connected to Pixano Inference at:", inference_url);
-        //instanciate a model
-        const model_config: ModelConfig = {
-          config: {
-            name: "llava-qwen",
-            task: "image_text_conditional_generation",
-            path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-            config: { dtype: "bfloat16" },
-            processor_config: {},
-          },
-          provider: "vllm",
-        };
-        api.listModels().then((previous_models) => {
-          const has_qwen = previous_models.filter((m) => m.name === "llava-qwen").length === 1;
-
-          if (has_qwen) {
-            console.log("models:", previous_models);
-            generate();
-          } else {
-            api
-              .instantiateModel(model_config) //NOTE: take some time (~40sec)
-              .then(() => {
-                console.log("model 'llava-qwen' added.");
-                //listModels
-                api.listModels().then((new_models) => {
-                  console.log("models", new_models);
-                  generate();
-                });
-              })
-              .catch((err) => console.error("Couldn't instantiate model 'llava-qwen'", err));
-          }
-        });
-      })
-      .catch(() => {
-        console.log("NOT connected to Pixano Inference!");
-      });
-  };
 
   const back2front = (ann: Annotation): Annotation => {
     ann.ui = { datasetItemType: selectedItem.ui.type };
@@ -228,12 +144,6 @@ License: CECILL-C
 
     console.log("XXX entities", $entities);
     console.log("XXX annotations", $annotations);
-
-    //TMP TEST inference api
-    const test_inference = true;
-    if (test_inference) {
-      tests_inference();
-    }
 
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },

@@ -52,23 +52,26 @@ License: CECILL-C
     //   }
     // }
 
-    //Prompt as fake Message to get a QUESTION --for convenience, we clone the ffirst message and change the content
+    //Prompt as fake Message to get a QUESTION --for convenience, we clone the first message and change the content
     let prompt: Message | null = null;
     const tmp_prompt = conv_ui.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Message));
     if (tmp_prompt && tmp_prompt.length > 0) {
-      const { ui, ...no_ui_ann } = tmp_prompt[0];
+      const { ui, ...no_ui_ann } = tmp_prompt[0]; // eslint-disable-line @typescript-eslint/no-unused-vars
       prompt = structuredClone(no_ui_ann) as Message;
-      //prompt.data.content = `Please formulate a question in relation to the given image and following metadata: ${JSON.stringify(feats)}`;
+      prompt.data.content =
+        "You have to formulate a QUESTION in relation to the given image <image 1>." +
+        `If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): ${JSON.stringify(feats)}` +
+        "Please also provide the expected answer.";
       prompt.data.question_type = QuestionTypeEnum.OPEN;
       prompt.data.choices = [];
-      prompt.data.content = `Please formulate a relevant question about the image`;
+      //prompt.data.content = `Please formulate a relevant question about the <image 1>`;
     }
     if (!prompt) return;
 
-    console.log("Prompt", prompt?.data.content);
+    console.log("Prompt:", prompt?.data.content);
 
     //requires to strip ui to avoir circular ref
-    const { ui, ...conv } = conv_ui;
+    const { ui, ...conv } = conv_ui; // eslint-disable-line @typescript-eslint/no-unused-vars
 
     const input: CondititionalGenerationTextImageInput = {
       dataset_id: $currentDatasetStore.id,

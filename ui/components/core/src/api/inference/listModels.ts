@@ -21,7 +21,7 @@ export async function listModels(task: string | null = null): Promise<ModelList[
     if (!response.ok) {
       console.log("api.listModels -", response.status, response.statusText, await response.text());
     } else {
-      model_list = await response.json() as ModelList[];
+      model_list = (await response.json()) as ModelList[];
     }
   } catch (e) {
     console.log("api.listModels -", e);
