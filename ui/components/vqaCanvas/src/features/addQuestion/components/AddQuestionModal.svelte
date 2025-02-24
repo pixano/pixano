@@ -32,6 +32,8 @@ License: CECILL-C
   let questionContent: string = "";
 
   const handleGenerateQuestion = () => {
+    if (!completionModel || completionModel.length === 0) return;
+
     //TEST TMP: get dataset item metadata for a more dedicated question
     const all_feats = $itemMetas.item.data;
     const { split, ...feats } = all_feats; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -58,6 +60,7 @@ License: CECILL-C
     if (tmp_prompt && tmp_prompt.length > 0) {
       const { ui, ...no_ui_ann } = tmp_prompt[0]; // eslint-disable-line @typescript-eslint/no-unused-vars
       prompt = structuredClone(no_ui_ann) as Message;
+      // PROMPT --- TODO: make it user defined (with a default)
       prompt.data.content =
         "You have to formulate a QUESTION in relation to the given image <image 1>." +
         `If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): ${JSON.stringify(feats)}` +
@@ -68,7 +71,7 @@ License: CECILL-C
     }
     if (!prompt) return;
 
-    console.log("Prompt:", prompt?.data.content);
+    console.log("Prompt:", prompt?.data.content); //TMP DEV
 
     //requires to strip ui to avoir circular ref
     const { ui, ...conv } = conv_ui; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -77,15 +80,14 @@ License: CECILL-C
       dataset_id: $currentDatasetStore.id,
       conversation: conv as Conversation,
       messages: [prompt],
-      model: "llava-qwen",
+      model: completionModel,
     };
-    console.log("Model Input:", input);
+    console.log("Model Input:", input); //TMP DEV
     api
       .conditional_generation_text_image(input)
       .then((ann) => {
-        console.log("Model output: ", ann);
-        console.log(`Model answer: ${(ann as Message).data.content}`);
-        console.log(`Model answer string length: ${(ann as Message).data.content.length}`);
+        console.log("Model output: ", ann); //TMP DEV
+        console.log(`Model answer: ${(ann as Message).data.content}`); //TMP DEV
         questionContent = (ann as Message).data.content;
         questionChoices = [];
       })
