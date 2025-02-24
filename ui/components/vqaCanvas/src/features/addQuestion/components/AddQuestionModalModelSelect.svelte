@@ -5,14 +5,20 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  export let selectedModel: string;
+  import { onMount } from "svelte";
 
-  // TODO: fetch models from API
-  const models = [
-    { id: "model1", value: "Model 1" },
-    { id: "model2", value: "Model 2" },
-    { id: "model3", value: "Model 3" },
-  ];
+  import { api, MultimodalImageNLPTask } from "@pixano/core";
+
+  export let selectedModel: string;
+  let models: { id: string; value: string }[] = [];
+
+  onMount(() => {
+    api.listModels(MultimodalImageNLPTask.CONDITIONAL_GENERATION).then((model_list) => {
+      models = model_list.map((model) => {
+        return { id: model.name, value: model.name };
+      });
+    });
+  });
 </script>
 
 <div class="px-3 flex flex-col gap-2">

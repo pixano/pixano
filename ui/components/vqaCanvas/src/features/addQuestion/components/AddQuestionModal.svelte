@@ -7,9 +7,21 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import type { QuestionTypeEnum } from "@pixano/core";
+  import {
+    api,
+    BaseSchema,
+    Conversation,
+    Message,
+    QuestionTypeEnum,
+    type CondititionalGenerationTextImageInput,
+  } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
+  import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import {
+    entities,
+    itemMetas,
+  } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
   import { default as ModelSelect } from "./AddQuestionModalModelSelect.svelte";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
@@ -20,14 +32,63 @@ License: CECILL-C
   let questionContent: string = "";
 
   const handleGenerateQuestion = () => {
-    // TODO: generate question
-    const mockResponse = {
-      question: "What is the main object?",
-      choices: ["A", "B", "C"],
-    };
+    //TEST TMP: get dataset item metadata for a more dedicated question
+    const all_feats = $itemMetas.item.data;
+    const { split, ...feats } = all_feats;
 
-    questionChoices = mockResponse.choices;
-    questionContent = mockResponse.question;
+    let conv_ui: Conversation = $entities.filter((e) =>
+      e.is_type(BaseSchema.Conversation),
+    )[0] as Conversation;
+
+    //TMP WIP -- this is to get the Conversation messages (childs)
+    //But here we want to generate a QUESTION ! So we will provide a fake Message, that ask for a question...
+    // let msgs: Message[] = [];
+    // if (conv_ui.ui.childs) {
+    //   for (const ann of conv_ui.ui.childs) {
+    //     if (ann.is_type(BaseSchema.Message)) {
+    //       const { ui, ...no_ui_ann } = ann;
+    //       msgs.push(no_ui_ann as Message);
+    //     }
+    //   }
+    // }
+
+    //Prompt as fake Message to get a QUESTION --for convenience, we clone the ffirst message and change the content
+    let prompt: Message | null = null;
+    const tmp_prompt = conv_ui.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Message));
+    if (tmp_prompt && tmp_prompt.length > 0) {
+      const { ui, ...no_ui_ann } = tmp_prompt[0];
+      prompt = structuredClone(no_ui_ann) as Message;
+      //prompt.data.content = `Please formulate a question in relation to the given image and following metadata: ${JSON.stringify(feats)}`;
+      prompt.data.question_type = QuestionTypeEnum.OPEN;
+      prompt.data.choices = [];
+      prompt.data.content = `Please formulate a relevant question about the image`;
+    }
+    if (!prompt) return;
+
+    console.log("Prompt", prompt?.data.content);
+
+    //requires to strip ui to avoir circular ref
+    const { ui, ...conv } = conv_ui;
+
+    const input: CondititionalGenerationTextImageInput = {
+      dataset_id: $currentDatasetStore.id,
+      conversation: conv as Conversation,
+      messages: [prompt],
+      model: "llava-qwen",
+    };
+    console.log("Model Input:", input);
+    api
+      .conditional_generation_text_image(input)
+      .then((ann) => {
+        console.log("Model output: ", ann);
+        console.log(`Model answer: ${(ann as Message).data.content}`);
+        console.log(`Model answer string length: ${(ann as Message).data.content.length}`);
+        questionContent = (ann as Message).data.content;
+        questionChoices = [];
+      })
+      .catch((err) => {
+        console.error("Model genration error:", err);
+      });
   };
 </script>
 
