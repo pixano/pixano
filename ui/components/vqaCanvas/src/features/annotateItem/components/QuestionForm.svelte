@@ -23,6 +23,7 @@ License: CECILL-C
 
   const questionType = question.data.question_type as QuestionTypeEnum;
   const questionNumber = question.data.number + 1;
+  const questionId = question.id;
   const choices = question.data.choices as string[];
 
   $: answers = messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER);
@@ -30,7 +31,12 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-2">
-  <QuestionHeader {questionNumber} isQuestionCompleted={questionCompleted} />
+  <QuestionHeader
+    {questionId}
+    {questionNumber}
+    isQuestionCompleted={questionCompleted}
+    on:generateAnswer
+  />
   <QuestionContent content={question.data.content} />
 
   {#each answers as answer}
