@@ -4156,6 +4156,10 @@
 <h2 id="pixano.inference.mask_generation.image_mask_generation" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">image_mask_generation</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">entity</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">image_embedding</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">high_resolution_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bbox</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
 </h2>
 
 
@@ -4212,7 +4216,7 @@
                 <code>image</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.Image" href="../../features/schemas/views/image/#pixano.features.schemas.views.image.Image">Image</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Image (pixano.features.Image)" href="../../features/schemas/views/image/#pixano.features.schemas.views.image.Image">Image</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4228,7 +4232,7 @@
                 <code>entity</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.schemas.entities.entity.Entity" href="../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Entity (pixano.features.schemas.entities.entity.Entity)" href="../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4244,7 +4248,7 @@
                 <code>source</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.Source" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Source (pixano.features.Source)" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4260,7 +4264,7 @@
                 <code>image_embedding</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.ViewEmbedding" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a> | <span title="pixano.features.NDArrayFloat">NDArrayFloat</span> | <span title="pixano_inference.pydantic.LanceVector">LanceVector</span> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="ViewEmbedding (pixano.features.ViewEmbedding)" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a> | <span title="pixano.features.NDArrayFloat">NDArrayFloat</span> | <span title="pixano_inference.pydantic.LanceVector">LanceVector</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4276,7 +4280,7 @@
                 <code>high_resolution_features</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="pixano.features.ViewEmbedding" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<span title="pixano.features.NDArrayFloat">NDArrayFloat</span>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<span title="pixano_inference.pydantic.LanceVector">LanceVector</span>] | None</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="ViewEmbedding (pixano.features.ViewEmbedding)" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<span title="pixano.features.NDArrayFloat">NDArrayFloat</span>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<span title="pixano_inference.pydantic.LanceVector">LanceVector</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4292,7 +4296,7 @@
                 <code>bbox</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.BBox" href="../../features/schemas/annotations/bbox/#pixano.features.schemas.annotations.bbox.BBox">BBox</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="BBox (pixano.features.BBox)" href="../../features/schemas/annotations/bbox/#pixano.features.schemas.annotations.bbox.BBox">BBox</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4350,7 +4354,7 @@
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.CompressedRLE" href="../../features/schemas/annotations/compressed_rle/#pixano.features.schemas.annotations.compressed_rle.CompressedRLE">CompressedRLE</a></code>
+                  <code><a class="autorefs autorefs-internal" title="CompressedRLE (pixano.features.CompressedRLE)" href="../../features/schemas/annotations/compressed_rle/#pixano.features.schemas.annotations.compressed_rle.CompressedRLE">CompressedRLE</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4470,7 +4474,7 @@
 <span class="normal"><a href="#__codelineno-0-116">116</a></span>
 <span class="normal"><a href="#__codelineno-0-117">117</a></span>
 <span class="normal"><a href="#__codelineno-0-118">118</a></span>
-<span class="normal"><a href="#__codelineno-0-119">119</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="k">def</span><span class="w"> </span><span class="nf">image_mask_generation</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-119">119</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">image_mask_generation</span><span class="p">(</span>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23"></a>    <span class="n">client</span><span class="p">:</span> <span class="n">PixanoInferenceClient</span><span class="p">,</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24"></a>    <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a>    <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="p">,</span>
@@ -4545,7 +4549,7 @@
 </span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="n">model</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
 </span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="p">)</span>
 </span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a>
-</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="n">response</span><span class="p">:</span> <span class="n">ImageMaskGenerationResponse</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">image_mask_generation</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="n">response</span><span class="p">:</span> <span class="n">ImageMaskGenerationResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">image_mask_generation</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
 </span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a>
 </span><span id="__span-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">inference_metadata</span> <span class="o">=</span> <span class="n">jsonable_encoder</span><span class="p">(</span>
 </span><span id="__span-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a>        <span class="p">{</span>

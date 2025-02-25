@@ -4204,7 +4204,7 @@
                 <code>conversation</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-internal" title="pixano.app.models.entities.EntityModel" href="../../../models/entities/#pixano.app.models.entities.EntityModel">EntityModel</a>, <span title="fastapi.Body">Body</span>(embed=True)]</code>
+                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-internal" title="EntityModel (pixano.app.models.entities.EntityModel)" href="../../../models/entities/#pixano.app.models.entities.EntityModel">EntityModel</a>, <span title="fastapi.Body">Body</span>(embed=True)]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4220,7 +4220,7 @@
                 <code>messages</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="pixano.app.models.AnnotationModel" href="../../../models/annotations/#pixano.app.models.annotations.AnnotationModel">AnnotationModel</a>], <span title="fastapi.Body">Body</span>(embed=True)]</code>
+                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="AnnotationModel (pixano.app.models.AnnotationModel)" href="../../../models/annotations/#pixano.app.models.annotations.AnnotationModel">AnnotationModel</a>], <span title="fastapi.Body">Body</span>(embed=True)]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4267,7 +4267,7 @@
                 <code>settings</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-internal" title="pixano.app.settings.Settings" href="../../../settings/#pixano.app.settings.Settings">Settings</a>, <span title="fastapi.Depends">Depends</span>(<a class="autorefs autorefs-internal" title="pixano.app.settings.get_settings" href="../../../settings/#pixano.app.settings.get_settings">get_settings</a>)]</code>
+                  <code><a class="autorefs autorefs-external" title="typing.Annotated" href="https://docs.python.org/3.12/library/typing.html#typing.Annotated">Annotated</a>[<a class="autorefs autorefs-internal" title="Settings (pixano.app.settings.Settings)" href="../../../settings/#pixano.app.settings.Settings">Settings</a>, <span title="fastapi.Depends">Depends</span>(<a class="autorefs autorefs-internal" title="get_settings (pixano.app.settings.get_settings)" href="../../../settings/#pixano.app.settings.get_settings">get_settings</a>)]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4540,7 +4540,7 @@
 </span><span id="__span-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102"></a>        <span class="n">source</span> <span class="o">=</span> <span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </span><span id="__span-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103"></a>
 </span><span id="__span-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>        <span class="n">infered_message</span> <span class="o">=</span> <span class="n">text_image_conditional_generation</span><span class="p">(</span>
+</span><span id="__span-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>        <span class="n">infered_message</span> <span class="o">=</span> <span class="k">await</span> <span class="n">text_image_conditional_generation</span><span class="p">(</span>
 </span><span id="__span-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106"></a>            <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
 </span><span id="__span-0-107"><a id="__codelineno-0-107" name="__codelineno-0-107"></a>            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
 </span><span id="__span-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a>            <span class="n">media_dir</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">media_dir</span><span class="p">,</span>

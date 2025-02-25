@@ -4189,7 +4189,7 @@
                 <code>messages</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="pixano.features.Message" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="Message (pixano.features.Message)" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4421,6 +4421,10 @@
 <h2 id="pixano.inference.text_image_conditional_generation.text_image_conditional_generation" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">text_image_conditional_generation</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">media_dir</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">conversation</span><span class="p">,</span> <span class="n">max_new_tokens</span><span class="o">=</span><span class="n">DEFAULT_MAX_NEW_TOKENS</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="n">DEFAULT_TEMPERATURE</span><span class="p">,</span> <span class="n">image_regex</span><span class="o">=</span><span class="n">DEFAULT_IMAGE_REGEX</span><span class="p">,</span> <span class="n">role_system</span><span class="o">=</span><span class="n">DEFAULT_ROLE_SYSTEM</span><span class="p">,</span> <span class="n">role_user</span><span class="o">=</span><span class="n">DEFAULT_ROLE_USER</span><span class="p">,</span> <span class="n">role_assistant</span><span class="o">=</span><span class="n">DEFAULT_ROLE_ASSISTANT</span><span class="p">)</span></code>
 
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
 </h2>
 
 
@@ -4461,7 +4465,7 @@
                 <code>source</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.Source" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Source (pixano.features.Source)" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4493,7 +4497,7 @@
                 <code>messages</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="pixano.features.Message" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="Message (pixano.features.Message)" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4509,7 +4513,7 @@
                 <code>conversation</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.Conversation" href="../../features/schemas/entities/conversation/#pixano.features.schemas.entities.conversation.Conversation">Conversation</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Conversation (pixano.features.Conversation)" href="../../features/schemas/entities/conversation/#pixano.features.schemas.entities.conversation.Conversation">Conversation</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4631,7 +4635,7 @@
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="pixano.features.Message" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Message (pixano.features.Message)" href="../../features/schemas/annotations/text_generation/#pixano.features.schemas.annotations.text_generation.Message">Message</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4728,7 +4732,7 @@
 <span class="normal"><a href="#__codelineno-0-165">165</a></span>
 <span class="normal"><a href="#__codelineno-0-166">166</a></span>
 <span class="normal"><a href="#__codelineno-0-167">167</a></span>
-<span class="normal"><a href="#__codelineno-0-168">168</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="k">def</span><span class="w"> </span><span class="nf">text_image_conditional_generation</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">text_image_conditional_generation</span><span class="p">(</span>
 </span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a>    <span class="n">client</span><span class="p">:</span> <span class="n">PixanoInferenceClient</span><span class="p">,</span>
 </span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a>    <span class="n">source</span><span class="p">:</span> <span class="n">Source</span><span class="p">,</span>
 </span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a>    <span class="n">media_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
@@ -4787,7 +4791,7 @@
 </span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a>        <span class="n">max_new_tokens</span><span class="o">=</span><span class="n">max_new_tokens</span><span class="p">,</span>
 </span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141"></a>        <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
 </span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142"></a>    <span class="p">)</span>
-</span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a>    <span class="n">response</span><span class="p">:</span> <span class="n">TextImageConditionalGenerationResponse</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">text_image_conditional_generation</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a>    <span class="n">response</span><span class="p">:</span> <span class="n">TextImageConditionalGenerationResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">text_image_conditional_generation</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
 </span><span id="__span-0-144"><a id="__codelineno-0-144" name="__codelineno-0-144"></a>
 </span><span id="__span-0-145"><a id="__codelineno-0-145" name="__codelineno-0-145"></a>    <span class="n">inference_metadata</span> <span class="o">=</span> <span class="n">jsonable_encoder</span><span class="p">(</span>
 </span><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146"></a>        <span class="p">{</span>
