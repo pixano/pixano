@@ -102,7 +102,7 @@ async def call_text_image_conditional_generation(
         source = sources[0]
 
     try:
-        infered_message = text_image_conditional_generation(
+        infered_message = await text_image_conditional_generation(
             client=client,
             source=source,
             media_dir=settings.media_dir,

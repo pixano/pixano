@@ -23,7 +23,7 @@ async def list_models(
 ) -> list[ModelInfo]:
     """List all models from pixano inference client."""
     client = get_client_from_settings(settings)
-    models = client.list_models()
+    models = await client.list_models()
     if task is None:
         return models
     return [m for m in models if task == m.task]
@@ -37,7 +37,7 @@ async def instantiate_model(
 ) -> ModelInfo:
     """Instantiate a model from pixano inference client."""
     client = get_client_from_settings(settings)
-    return client.instantiate_model(provider=provider, config=config)
+    return await client.instantiate_model(provider=provider, config=config)
 
 
 @router.delete("/delete/{model_name}")
@@ -47,4 +47,4 @@ async def delete_model(
 ) -> None:
     """Delete a model from pixano inference client."""
     client = get_client_from_settings(settings)
-    return client.delete_model(model_name=model_name)
+    return await client.delete_model(model_name=model_name)
