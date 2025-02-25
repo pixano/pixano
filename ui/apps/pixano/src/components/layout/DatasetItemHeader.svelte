@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
+  import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Loader2Icon } from "lucide-svelte";
 
   import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
