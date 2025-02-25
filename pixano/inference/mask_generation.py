@@ -19,7 +19,7 @@ from pixano.features.schemas.entities.entity import Entity
 from pixano.features.types.schema_reference import EntityRef, SourceRef, ViewRef
 
 
-def image_mask_generation(
+async def image_mask_generation(
     client: PixanoInferenceClient,
     media_dir: Path,
     image: Image,
@@ -94,7 +94,7 @@ def image_mask_generation(
         model=source.name,
     )
 
-    response: ImageMaskGenerationResponse = client.image_mask_generation(request)
+    response: ImageMaskGenerationResponse = await client.image_mask_generation(request)
 
     inference_metadata = jsonable_encoder(
         {

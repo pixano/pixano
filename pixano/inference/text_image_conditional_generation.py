@@ -81,7 +81,7 @@ def messages_to_prompt(
     return prompt
 
 
-def text_image_conditional_generation(
+async def text_image_conditional_generation(
     client: PixanoInferenceClient,
     source: Source,
     media_dir: Path,
@@ -140,7 +140,7 @@ def text_image_conditional_generation(
         max_new_tokens=max_new_tokens,
         temperature=temperature,
     )
-    response: TextImageConditionalGenerationResponse = client.text_image_conditional_generation(request)
+    response: TextImageConditionalGenerationResponse = await client.text_image_conditional_generation(request)
 
     inference_metadata = jsonable_encoder(
         {
