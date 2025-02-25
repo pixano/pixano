@@ -9,6 +9,7 @@ License: CECILL-C
   import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
 
   import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
 
   import { currentDatasetStore } from "$lib/stores/datasetStores";
@@ -36,13 +37,19 @@ License: CECILL-C
     <Loader2Icon class="animate-spin" />
   {:else}
     <div class="flex items-center gap-4">
-      <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
-        <Home />
-      </IconButton>
+      <div class="h-10 flex items-center font-semibold text-2xl">
+        <div class="flex gap-4 items-center font-light">
+          <div class="h-10 w-10">
+            <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
+              <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+            </IconButton>
+          </div>
+          {$currentDatasetStore.name}
+        </div>
+      </div>
       <IconButton on:click={handleReturnToPreviousPage} tooltipContent={"Back to dataset"}>
         <ArrowLeftCircleIcon />
       </IconButton>
-
       {currentItemId}
       <IconButton
         on:click={() => goToNeighborItem("previous")}
@@ -57,7 +64,6 @@ License: CECILL-C
         <ArrowRight />
       </IconButton>
     </div>
-
     <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
   {/if}
 {/if}

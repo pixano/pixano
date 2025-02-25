@@ -142,9 +142,11 @@ License: CECILL-C
     {#if $currentDatasetStore}
       <div class="h-10 flex items-center font-semibold text-2xl">
         <div class="flex gap-4 items-center font-light">
-          <button on:click={() => navigateTo("/")} class="h-10 w-10">
-            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-          </button>
+          <div class="h-10 w-10">
+            <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
+              <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+            </IconButton>
+          </div>
           {$currentDatasetStore.name}
         </div>
       </div>
