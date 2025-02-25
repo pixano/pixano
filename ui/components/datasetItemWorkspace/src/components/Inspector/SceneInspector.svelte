@@ -22,8 +22,8 @@ License: CECILL-C
     filters,
     imageSmoothing,
     itemMetas,
+    mediaViews,
     saveData,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
@@ -45,7 +45,7 @@ License: CECILL-C
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
-  $: views.subscribe((views) => {
+  $: mediaViews.subscribe((views) => {
     viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {

@@ -34,9 +34,9 @@ License: CECILL-C
     annotations,
     entities,
     itemMetas,
+    mediaViews,
     newShape,
     saveData,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type {
@@ -263,7 +263,7 @@ License: CECILL-C
 
     if (isVideo) {
       endFrameIndex = $currentFrameIndex + NEWTRACKLET_LENGTH + 1; //+1 for the first while loop
-      const seqs = $views[$newShape.viewRef.name];
+      const seqs = $mediaViews[$newShape.viewRef.name];
       if (Array.isArray(seqs)) {
         while (!endView) {
           endFrameIndex = endFrameIndex - 1;

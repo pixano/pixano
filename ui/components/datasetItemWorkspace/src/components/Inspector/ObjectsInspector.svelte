@@ -16,8 +16,8 @@ License: CECILL-C
     annotations,
     entities,
     itemMetas,
+    mediaViews,
     preAnnotationIsActive,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
@@ -65,7 +65,7 @@ License: CECILL-C
         if (entityBoxes) {
           const selectedBox = entityBoxes[Math.floor(entityBoxes.length / 2)];
           if (selectedBox) {
-            const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+            const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, selectedBox);
             if (selectedThumbnail) {
               thumbnails[entityId] = selectedThumbnail;
             }
