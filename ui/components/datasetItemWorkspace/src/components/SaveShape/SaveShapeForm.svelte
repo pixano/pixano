@@ -267,7 +267,7 @@ License: CECILL-C
       if (Array.isArray(seqs)) {
         while (!endView) {
           endFrameIndex = endFrameIndex - 1;
-          endView = (seqs as SequenceFrame[]).find(
+          endView = seqs.find(
             (view) =>
               view.data.frame_index === endFrameIndex &&
               view.table_info.name === ($newShape as SaveShape).viewRef.name,
