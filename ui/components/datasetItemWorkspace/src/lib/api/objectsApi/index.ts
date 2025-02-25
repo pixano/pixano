@@ -35,4 +35,3 @@ export * from "./scrollIntoView";
 export * from "./sortAndFilterObjectsToAnnotate";
 export * from "./toggleObjectDisplayControl";
 export * from "./updateExistingObject";
-
