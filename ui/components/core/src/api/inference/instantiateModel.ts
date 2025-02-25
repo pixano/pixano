@@ -16,13 +16,13 @@ export async function instantiateModel(model_config: ModelConfig): Promise<void>
       method: "POST",
       body: JSON.stringify(model_config),
     })
-      .then(async (response) => {
+      .then((response) => {
+        console.log("XXX instantiate response:", response);
         if (response.ok) {
           resolve();
         } else {
-          const err = await response.text();
-          console.log("api.instantiateModel -", response.status, response.statusText, err);
-          reject(new Error(`${response.status} ${response.statusText} - ${err}`));
+          console.log("api.instantiateModel -", response.status, response.statusText);
+          reject(new Error(`${response.status} ${response.statusText}`));
         }
       })
       .catch((err) => {

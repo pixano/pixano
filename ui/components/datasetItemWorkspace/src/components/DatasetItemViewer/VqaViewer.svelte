@@ -50,6 +50,8 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  let completionModel: string;
+
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
@@ -176,7 +178,7 @@ License: CECILL-C
       return;
     }
 
-    generateAnswer(question);
+    generateAnswer(completionModel, question);
   };
 </script>
 
@@ -185,6 +187,7 @@ License: CECILL-C
   <div class="h-full grid grid-cols-[300px_auto]">
     <VqaArea
       messages={$messages}
+      bind:completionModel
       on:answerContentChange={handleAnswerContentChange}
       on:storeQuestion={handleStoreQuestion}
       on:generateAnswer={handleGenerateAnswer}

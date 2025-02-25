@@ -59,6 +59,6 @@ License: CECILL-C
   {/if}
 
   <PrimaryButton isSelected disabled={questionContent === ""} on:click={handleStoreQuestion}>
-    Save changes
+    Confirm changes
   </PrimaryButton>
 </div>

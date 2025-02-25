@@ -13,13 +13,12 @@ export async function inferenceConnect(url: string): Promise<void> {
       },
       method: "POST",
     })
-      .then(async (response) => {
+      .then((response) => {
         if (response.ok) {
           resolve();
         } else {
-          const err = await response.text();
-          console.log("api.inferenceConnect -", response.status, response.statusText, err);
-          reject(new Error(`${response.status} ${response.statusText} - ${err}`));
+          console.log("api.inferenceConnect -", response.status, response.statusText);
+          reject(new Error(`${response.status} ${response.statusText}`));
         }
       })
       .catch((err) => {

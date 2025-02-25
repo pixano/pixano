@@ -7,92 +7,28 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import {
-    api,
-    BaseSchema,
-    Conversation,
-    Message,
-    QuestionTypeEnum,
-    type CondititionalGenerationTextImageInput,
-  } from "@pixano/core";
+  import { QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
-  import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import {
-    entities,
-    itemMetas,
-  } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
-  import { default as ModelSelect } from "./AddQuestionModalModelSelect.svelte";
+  import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
+  export let completionModel: string;
+
   let questionType: QuestionTypeEnum;
-  let completionModel: string;
   let questionChoices: string[] = [];
   let questionContent: string = "";
 
   const handleGenerateQuestion = () => {
     if (!completionModel || completionModel.length === 0) return;
-
-    //TEST TMP: get dataset item metadata for a more dedicated question
-    const all_feats = $itemMetas.item.data;
-    const { split, ...feats } = all_feats; // eslint-disable-line @typescript-eslint/no-unused-vars
-
-    let conv_ui: Conversation = $entities.filter((e) =>
-      e.is_type(BaseSchema.Conversation),
-    )[0] as Conversation;
-
-    //TMP WIP -- this is to get the Conversation messages (childs)
-    //But here we want to generate a QUESTION ! So we will provide a fake Message, that ask for a question...
-    // let msgs: Message[] = [];
-    // if (conv_ui.ui.childs) {
-    //   for (const ann of conv_ui.ui.childs) {
-    //     if (ann.is_type(BaseSchema.Message)) {
-    //       const { ui, ...no_ui_ann } = ann;
-    //       msgs.push(no_ui_ann as Message);
-    //     }
-    //   }
-    // }
-
-    //Prompt as fake Message to get a QUESTION --for convenience, we clone the first message and change the content
-    let prompt: Message | null = null;
-    const tmp_prompt = conv_ui.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Message));
-    if (tmp_prompt && tmp_prompt.length > 0) {
-      const { ui, ...no_ui_ann } = tmp_prompt[0]; // eslint-disable-line @typescript-eslint/no-unused-vars
-      prompt = structuredClone(no_ui_ann) as Message;
-      // PROMPT --- TODO: make it user defined (with a default)
-      prompt.data.content =
-        "You have to formulate a QUESTION in relation to the given image <image 1>." +
-        `If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): ${JSON.stringify(feats)}` +
-        "Please also provide the expected answer.";
-      prompt.data.question_type = QuestionTypeEnum.OPEN;
-      prompt.data.choices = [];
-      //prompt.data.content = `Please formulate a relevant question about the <image 1>`;
-    }
-    if (!prompt) return;
-
-    console.log("Prompt:", prompt?.data.content); //TMP DEV
-
-    //requires to strip ui to avoir circular ref
-    const { ui, ...conv } = conv_ui; // eslint-disable-line @typescript-eslint/no-unused-vars
-
-    const input: CondititionalGenerationTextImageInput = {
-      dataset_id: $currentDatasetStore.id,
-      conversation: conv as Conversation,
-      messages: [prompt],
-      model: completionModel,
-    };
-    console.log("Model Input:", input); //TMP DEV
-    api
-      .conditional_generation_text_image(input)
-      .then((ann) => {
-        console.log("Model output: ", ann); //TMP DEV
-        console.log(`Model answer: ${(ann as Message).data.content}`); //TMP DEV
-        questionContent = (ann as Message).data.content;
-        questionChoices = [];
+    generateQuestion(completionModel)
+      .then(([resQuestionContent, resQuestionChoices]) => {
+        questionContent = resQuestionContent;
+        questionChoices = resQuestionChoices;
       })
       .catch((err) => {
-        console.error("Model genration error:", err);
+        console.error("Error while generating question:", err);
       });
   };
 </script>
@@ -109,7 +45,6 @@ License: CECILL-C
   </div>
 
   <QuestionTypeSelect bind:questionType />
-  <ModelSelect bind:selectedModel={completionModel} />
 
   <div class="flex flex-col gap-2 px-3">
     <PrimaryButton
