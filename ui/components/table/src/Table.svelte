@@ -25,10 +25,11 @@ License: CECILL-C
   // Exports
   export let items: TableData;
 
+  // Add data into a writable store, reactive to items
+  const data = writable(items.rows);
   $: data.set(items.rows);
 
-  // Add data into a readable store and create table object
-  const data = writable(items.rows);
+  // Create table object
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),

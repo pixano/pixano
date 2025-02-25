@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Loader2Icon } from "lucide-svelte";
+  import { ArrowLeft, ArrowRight, Loader2Icon } from "lucide-svelte";
 
   import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
@@ -130,7 +130,14 @@ License: CECILL-C
   use:preventUnsavedUnload
 >
   {#if $page.route.id === DATASET_ITEM_ROUTE}
-    <DatasetItemHeader {currentItemId} {isLoading} {handleSave} {goToNeighborItem} {navigateTo} />
+    <DatasetItemHeader
+      {currentItemId}
+      {isLoading}
+      {handleSave}
+      {goToNeighborItem}
+      {handleReturnToPreviousPage}
+      {navigateTo}
+    />
   {:else}
     {#if $currentDatasetStore}
       <div class="h-10 flex items-center font-semibold text-2xl">
@@ -138,12 +145,6 @@ License: CECILL-C
           <button on:click={() => navigateTo("/")} class="h-10 w-10">
             <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
           </button>
-          <IconButton
-            on:click={handleReturnToPreviousPage}
-            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-          >
-            <ArrowLeftCircleIcon />
-          </IconButton>
           {$currentDatasetStore.name}
         </div>
       </div>
