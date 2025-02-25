@@ -19,6 +19,10 @@ License: CECILL-C
   function handleConfirm() {
     dispatch("confirm");
   }
+
+  function handleCancel() {
+    dispatch("cancel");
+  }
 </script>
 
 <div class="fixed inset-0 z-50 overflow-y-auto">
@@ -47,11 +51,20 @@ License: CECILL-C
 
       <button
         type="button"
+        disabled={!selected || selected === ""}
         class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-primary transition-colors hover:bg-primary-foreground"
+        bg-primary transition-colors hover:bg-primary-foreground disabled:bg-primary-light"
         on:click={handleConfirm}
       >
         Ok
+      </button>
+      <button
+        type="button"
+        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
+        bg-primary transition-colors hover:bg-primary-foreground"
+        on:click={handleCancel}
+      >
+        Cancel
       </button>
     </div>
   </div>

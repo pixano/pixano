@@ -13,6 +13,7 @@ License: CECILL-C
   import { SAM } from "@pixano/models";
 
   import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { panTool } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
     modelsUiStore,
@@ -61,6 +62,16 @@ License: CECILL-C
     modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
   }
 
+  const closeModal = () => {
+    modelsUiStore.set({
+      currentModalOpen: "none",
+      selectedModelName: "",
+      selectedTableName: "",
+      yetToLoadEmbedding: true,
+    });
+    selectedTool.set(panTool);
+  };
+
   $: {
     if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
       modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
@@ -78,6 +89,7 @@ License: CECILL-C
     ifNoChoices={""}
     bind:selected={selectedModelName}
     on:confirm={loadModel}
+    on:cancel={closeModal}
   />
 {/if}
 {#if currentModalOpen === "loading"}
@@ -90,6 +102,7 @@ License: CECILL-C
     ifNoChoices={""}
     bind:selected={selectedTableName}
     on:confirm={getViewEmbeddings}
+    on:cancel={closeModal}
   />
 {/if}
 {#if currentModalOpen === "noModel"}
