@@ -4,5 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./ContentChangeEvent";
-export * from "./GenerateAnswerEvent";
+export interface GenerateAnswerEvent {
+  questionId: string;
+}
