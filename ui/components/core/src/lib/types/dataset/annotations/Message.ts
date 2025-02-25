@@ -85,3 +85,7 @@ export class Message extends Annotation {
       ]);
   }
 }
+
+export const isQuestionData = (messageType: MessageType): messageType is QuestionType => {
+  return messageType.type === MessageTypeEnum.QUESTION;
+};

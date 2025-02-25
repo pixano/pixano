@@ -5,6 +5,7 @@
 # =====================================
 
 
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,9 @@ from ..dataset import Dataset
 from ..dataset_info import DatasetInfo
 from ..dataset_schema import DatasetItem
 from ..queries import TableQueryBuilder
+
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetExporter(ABC):
@@ -112,6 +116,7 @@ class DatasetExporter(ABC):
         arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
         splits: dict[str, list[Any]] = arrow_results.to_pydict()
 
+        logger.info(f"Exporting dataset {self.dataset.info.name} to {self.export_dir}.")
         for num_split_items, split in zip(splits["count_star()"], splits["split"]):
             if items_per_file is None:
                 split_items_per_file = num_split_items
@@ -124,9 +129,14 @@ class DatasetExporter(ABC):
 
             file_num = 0  # Number of files exported so far
             cur_items_exported = 0  # Number of items exported so far
-            print(f"Exporting split {split} containing {num_split_items} items to {self.export_dir}")
+            logger.info(
+                f"Exporting split {split} of dataset {self.dataset.info.name}: number of items {num_split_items}"
+            )
 
-            for _ in tqdm.tqdm(range(0, num_split_items, batch_size), desc="Exporting data"):
+            for _ in tqdm.tqdm(
+                range(0, num_split_items, batch_size),
+                desc=f"Exporting data split {split} of dataset {self.dataset.info.name}",
+            ):
                 item_ids = list(
                     TableQueryBuilder(item_table)
                     .select("id")
@@ -144,11 +154,13 @@ class DatasetExporter(ABC):
                     if (
                         cur_items_exported == num_split_items or cur_items_exported % split_items_per_file == 0
                     ):  # Export every n items
-                        print(cur_items_exported, num_split_items, split_items_per_file)
                         self.save_data(export_data, split, file_name, file_num)
 
                         file_num += 1
                         if cur_items_exported != num_split_items:
                             export_data = self.initialize_export_data(info, sources)
 
-            print(f"Export completed for the {num_split_items} items in {file_num} files.")
+            logger.info(
+                f"Completed export split {split} of dataset {self.dataset.info.name} in {file_num} file"
+                f"{'s' if file_num > 1 else ''}."
+            )
