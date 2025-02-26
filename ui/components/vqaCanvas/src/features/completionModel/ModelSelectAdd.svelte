@@ -5,18 +5,30 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { AlignJustify } from "lucide-svelte";
+  import { AlignJustify, Sparkles } from "lucide-svelte";
 
   import { api, MultimodalImageNLPTask, PrimaryButton } from "@pixano/core";
 
-  import AddModelModal from "./ConnectAddModelModal.svelte";
+  import AddModelModal from "./AddModelModal.svelte";
+  import { connect } from "./connect";
+  import ConnectModal from "./ConnectModal.svelte";
 
   export let selectedModel: string;
+  let defaultURL = "http://localhost:9152";
+  let isConnected = false;
   let models: { id: string; value: string }[] = [];
 
   $: if (!selectedModel && models.length >= 1) {
     selectedModel = models[0].value;
   }
+
+  //Try to connect with default URL at startup
+  connect(defaultURL)
+    .then((status) => {
+      isConnected = status;
+      if (isConnected) listModels();
+    })
+    .catch();
 
   const listModels = () => {
     api
@@ -29,19 +41,33 @@ License: CECILL-C
       .catch((err) => console.error("Can't list models", err));
   };
 
+  let showConnectModal = false;
   let showAddModelModal = false;
 
-  const handleOpenModal = (event: MouseEvent) => {
+  const handleOpenConnectModal = (event: MouseEvent) => {
+    // stopPropgation is not called as event modifier
+    // because event modifiers can only be used on DOM elements
+    event.stopPropagation();
+    showConnectModal = true;
+    document.body.addEventListener("click", handleCloseConnectModal);
+  };
+
+  const handleCloseConnectModal = () => {
+    showConnectModal = false;
+    document.body.removeEventListener("click", handleCloseConnectModal);
+  };
+
+  const handleOpenAddModelModal = (event: MouseEvent) => {
     // stopPropgation is not called as event modifier
     // because event modifiers can only be used on DOM elements
     event.stopPropagation();
     showAddModelModal = true;
-    document.body.addEventListener("click", handleCloseModal);
+    document.body.addEventListener("click", handleCloseAddModelModal);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseAddModelModal = () => {
     showAddModelModal = false;
-    document.body.removeEventListener("click", handleCloseModal);
+    document.body.removeEventListener("click", handleCloseAddModelModal);
   };
 
   const handleKeyDown = (
@@ -51,12 +77,27 @@ License: CECILL-C
   ) => {
     if (event.key === "Escape") {
       if ((event.target as Element)?.tagName === "INPUT") return event.preventDefault();
+      showConnectModal = false;
       showAddModelModal = false;
     }
   };
 </script>
 
 <div class="px-3 flex flex-row gap-2">
+  <div class="flex-none content-center">
+    <button
+      on:click={handleOpenConnectModal}
+      class="p-2 rounded-full hover:bg-primary-light transition duration-300"
+    >
+      <Sparkles
+        size={20}
+        class={`${isConnected ? (selectedModel && selectedModel !== "" ? "text-green-500" : "text-yellow-500") : "text-red-500"}`}
+      />
+    </button>
+    {#if showConnectModal}
+      <ConnectModal bind:isConnected {defaultURL} on:cancelConnect={handleCloseConnectModal} />
+    {/if}
+  </div>
   <div class="flex flex-col grow">
     <!-- For some reason, some tailwind classes don't work on select -->
     <!-- Use style instead -->
@@ -72,9 +113,11 @@ License: CECILL-C
     </select>
   </div>
   <div class="flex-none content-center">
-    <PrimaryButton on:click={handleOpenModal}><AlignJustify /></PrimaryButton>
+    <PrimaryButton disabled={!isConnected} on:click={handleOpenAddModelModal}>
+      <AlignJustify />
+    </PrimaryButton>
     {#if showAddModelModal}
-      <AddModelModal on:listModels={listModels} on:cancel={handleCloseModal} />
+      <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
     {/if}
   </div>
 </div>

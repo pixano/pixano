@@ -19,7 +19,6 @@ License: CECILL-C
 
   //TMP: default values
   let formData = {
-    pi_url: "http://localhost:9152",
     provider: "vllm",
     model_name: "llava-qwen",
     model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
@@ -27,26 +26,10 @@ License: CECILL-C
   };
 
   let isWorking = false;
-  let isConnected = false;
   const dispatch = createEventDispatcher();
 
-  function handleConnect() {
-    api
-      .inferenceConnect(formData.pi_url)
-      .then(() => {
-        console.log("connected to Pixano Inference at:", formData.pi_url);
-        dispatch("listModels");
-        isConnected = true;
-        //dispatch("cancel"); //also close modal (?)
-      })
-      .catch(() => {
-        console.error("NOT connected to Pixano Inference!");
-        isConnected = false;
-      });
-  }
-
   function handleCancel() {
-    dispatch("cancel");
+    dispatch("cancelAddModel");
   }
 
   const handleChange = (event: InputEvents["change"]) => {
@@ -82,7 +65,7 @@ License: CECILL-C
         console.error(`Couldn't instantiate model '${model_config.config.name}'`, err);
         //TMP BUG: even if OK, I got a 500 Internal Server Error ... so refresh model list anyway
         dispatch("listModels");
-        dispatch("cancel");
+        dispatch("cancelAddModel");
       });
   };
 </script>
@@ -94,35 +77,6 @@ License: CECILL-C
   on:click|stopPropagation={() => {}}
   class="fixed top-[calc(80px+5px)] left-[calc(300px+5px+315px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
-  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Pixano Inference connection</p>
-  </div>
-  <div class="flex flex-col">
-    <h5 class="font-medium">Pixano Inference provider URL</h5>
-    <div class="flex items-center justify-between gap-2 px-3">
-      <Input
-        name="pi_url"
-        value={formData.pi_url}
-        type="string"
-        on:change={handleChange}
-        on:keyup={(e) => e.stopPropagation()}
-      />
-      <PrimaryButton
-        on:click={handleConnect}
-        isSelected
-        disabled={isWorking || formData.pi_url === ""}
-      >
-        OK
-      </PrimaryButton>
-      <div class="content-center justify-self-end">
-        {#if isConnected}
-          Connected
-        {:else}
-          Not connected
-        {/if}
-      </div>
-    </div>
-  </div>
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Instantiate VQA model</p>
   </div>
