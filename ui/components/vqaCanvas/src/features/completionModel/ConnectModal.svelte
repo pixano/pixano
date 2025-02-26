@@ -14,7 +14,7 @@ License: CECILL-C
   import { connect } from "./connect";
 
   export let isConnected = false;
-  export let defaultURL;
+  export let defaultURL: string;
 
   // default values
   let formData = {

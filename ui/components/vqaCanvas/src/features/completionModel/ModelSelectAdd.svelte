@@ -28,7 +28,7 @@ License: CECILL-C
       isConnected = status;
       if (isConnected) listModels();
     })
-    .catch();
+    .catch(() => {});
 
   const listModels = () => {
     api

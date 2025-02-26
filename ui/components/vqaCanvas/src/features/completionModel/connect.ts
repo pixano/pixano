@@ -12,7 +12,7 @@ export async function connect(url: string): Promise<boolean> {
     console.log("connected to Pixano Inference at:", url);
     return true;
   } catch (err) {
-    console.error("NOT connected to Pixano Inference!");
+    console.error("NOT connected to Pixano Inference!", err);
     return false;
   }
 }
