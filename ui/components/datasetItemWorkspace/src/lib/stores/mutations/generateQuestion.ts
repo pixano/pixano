@@ -40,7 +40,7 @@ export const generateQuestion = async (completionModel: string): Promise<[string
       // PROMPT --- TODO: make it user defined (with a default)
       prompt.data.content =
         "You have to formulate a QUESTION in relation to the given image <image 1>." +
-        `If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): ${JSON.stringify(feats)}`
+        `If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): ${JSON.stringify(feats)}`;
       prompt.data.question_type = QuestionTypeEnum.OPEN;
       prompt.data.choices = [];
       //prompt.data.content = `Please formulate a relevant question about the <image 1>`;

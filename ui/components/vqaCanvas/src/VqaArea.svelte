@@ -14,13 +14,14 @@ License: CECILL-C
 
   export let messages: Message[];
   export let completionModel: string;
+  export let width: number;
 
   $: messagesByNumber = groupMessagesByNumber(messages);
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
   <ModelSelectAdd bind:selectedModel={completionModel} />
-  <AddQuestionButton {completionModel} on:storeQuestion />
+  <AddQuestionButton {width} {completionModel} on:storeQuestion />
   {#each messagesByNumber as messages}
     <QuestionForm bind:messages on:answerContentChange on:generateAnswer />
   {/each}

@@ -23,7 +23,7 @@ License: CECILL-C
   let textarea: HTMLTextAreaElement | null = null;
 
   $: if (questionContent) {
-    adjustHeight();
+    void adjustHeight();
   }
 
   const adjustHeight = async () => {
