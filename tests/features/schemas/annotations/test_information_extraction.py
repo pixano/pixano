@@ -18,25 +18,21 @@ class TestTextSpan:
         with pytest.raises(ValidationError):
             TextSpan()
         with pytest.raises(ValidationError):
-            TextSpan(spans_start=[123, 128], spans_end=[126], mention="abc", annotation_ref=AnnotationRef.none())
+            TextSpan(spans_start=[123, 128], spans_end=[126], mention="abc")
         with pytest.raises(ValidationError):
-            TextSpan(spans_start=[123], spans_end=[-126], mention="abc", annotation_ref=AnnotationRef.none())
+            TextSpan(spans_start=[123], spans_end=[-126], mention="abc")
         with pytest.raises(ValidationError):
-            TextSpan(spans_start=[123], spans_end=[120], mention="abc", annotation_ref=AnnotationRef.none())
-        with pytest.raises(ValidationError):
-            TextSpan(spans_start=[123], spans_end=[120], mention="abc", annotation_ref=ViewRef.none())
+            TextSpan(spans_start=[123], spans_end=[120], mention="abc")
 
-        ne = TextSpan(spans_start=[123], spans_end=[126], mention="abc", annotation_ref=AnnotationRef.none())
+        ne = TextSpan(spans_start=[123], spans_end=[126], mention="abc")
         assert ne.mention == "abc"
 
     def test_spans_property(self):
-        ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc", annotation_ref=AnnotationRef.none())
+        ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc")
         assert list(ne1.spans) == [(123, 126)]
 
     def test_spans_property_on_disjoint_entity(self):
-        ne2 = TextSpan(
-            spans_start=[123, 131], spans_end=[126, 134], mention="abc def", annotation_ref=AnnotationRef.none()
-        )
+        ne2 = TextSpan(spans_start=[123, 131], spans_end=[126, 134], mention="abc def")
         assert list(ne2.spans) == [(123, 126), (131, 134)]
         assert ne2.spans_start == [123, 131]
         assert ne2.spans_end == [126, 134]
@@ -44,7 +40,7 @@ class TestTextSpan:
 
     def test_spans_property_on_ungrounded_entity(self):
         with pytest.warns(UserWarning, match="To ground a TextSpan in a text, spans offsets should not be empty"):
-            ne3 = TextSpan(spans_start=[], spans_end=[], mention="abc def", annotation_ref=AnnotationRef.none())
+            ne3 = TextSpan(spans_start=[], spans_end=[], mention="abc def")
         assert list(ne3.spans) == []
         assert list(ne3.spans_length) == []
 
@@ -57,7 +53,6 @@ class TestTextSpan:
         assert none_ne.entity_ref == EntityRef.none()
         assert none_ne.mention == ""
         assert list(none_ne.spans) == []
-        assert none_ne.annotation_ref == AnnotationRef.none()
 
 
 class TestRelation:
@@ -70,12 +65,8 @@ class TestRelation:
             Relation(object_ref=AnnotationRef(id="789", name="named_entities"))
 
     def test_references(self):
-        ne1 = TextSpan(
-            spans_start=[123], spans_end=[126], mention="abc", id="ne1", annotation_ref=AnnotationRef.none()
-        )
-        ne2 = TextSpan(
-            spans_start=[128], spans_end=[131], mention="def", id="ne2", annotation_ref=AnnotationRef.none()
-        )
+        ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc", id="ne1")
+        ne2 = TextSpan(spans_start=[128], spans_end=[131], mention="def", id="ne2")
         rel = Relation(
             predicate="ad-hoc",
             subject_ref=AnnotationRef(id=ne1.id, name="named_entities"),
@@ -111,7 +102,7 @@ def test_is_relation():
 
 def test_create_text_span():
     # Test 1: default references
-    ne = create_text_span(spans_start=[123], spans_end=[126], mention="abc", annotation_ref=AnnotationRef.none())
+    ne = create_text_span(spans_start=[123], spans_end=[126], mention="abc")
     assert isinstance(ne, TextSpan)
     assert ne.mention == "abc"
     assert list(ne.spans) == [(123, 126)]
@@ -129,7 +120,6 @@ def test_create_text_span():
         item_ref=ItemRef(id="item_1"),
         view_ref=ViewRef(id="view_1", name="text"),
         entity_ref=EntityRef(id="entity_1", name="entity"),
-        annotation_ref=AnnotationRef.none(),
     )
     assert isinstance(ne, TextSpan)
     assert ne.mention == "abc"

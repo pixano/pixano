@@ -49,11 +49,14 @@ from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function
 from .entities import (
     Conversation,
     Entity,
+    MultimediaEntity,
     Track,
     create_conversation,
+    create_multimedia_entity,
     create_track,
     is_conversation,
     is_entity,
+    is_multimedia_entity,
     is_track,
 )
 from .items import Item, is_item
@@ -101,6 +104,7 @@ __all__ = [
     "KeyPoints",
     "KeyPoints3D",
     "Message",
+    "MultimediaEntity",
     "TextSpan",
     "PointCloud",
     "Relation",
@@ -126,6 +130,7 @@ __all__ = [
     "create_keypoints3d",
     "create_text_span",
     "create_message",
+    "create_multimedia_entity",
     "create_point_cloud",
     "create_relation",
     "create_sequence_frame",
@@ -152,6 +157,7 @@ __all__ = [
     "is_keypoints3d",
     "is_text_span",
     "is_message",
+    "is_multimedia_entity",
     "is_point_cloud",
     "is_relation",
     "is_sequence_frame",

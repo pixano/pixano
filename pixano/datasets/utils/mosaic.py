@@ -116,8 +116,9 @@ def create_mosaic(
         mosaic.save(source_dir / output_path, format="JPEG", quality=85, optimize=True)
 
 
-def mosaic(source_dir: Path, split: str, image_files: list[str], view_name: str) -> str:
+def mosaic(source_dir: Path, split: str, image_files: list[str], view_name: str, mosaic_filename: str = "") -> str:
     """Create a mosaic from input images."""
-    mosaic_filename = generate_mosaic_name(image_files)
+    if not mosaic_filename:
+        mosaic_filename = generate_mosaic_name(image_files)
     create_mosaic(source_dir, split, image_files, mosaic_filename, label_prefix=view_name, label_height=30, padding=5)
     return mosaic_filename
