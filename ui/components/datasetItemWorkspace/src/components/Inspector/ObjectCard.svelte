@@ -39,9 +39,9 @@ License: CECILL-C
     colorScale,
     entities,
     itemMetas,
+    mediaViews,
     saveData,
     selectedTool,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
@@ -280,14 +280,14 @@ License: CECILL-C
   let thumbnails: ObjectThumbnail[] = [];
   const setThumbnails = () => {
     thumbnails = [];
-    for (const view of Object.keys($views)) {
+    for (const view of Object.keys($mediaViews)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
         (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
       );
       if (highlightedBoxesByView) {
         const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
         if (selectedBox) {
-          const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+          const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, selectedBox);
           if (selectedThumbnail) {
             thumbnails.push(selectedThumbnail);
           }
@@ -430,7 +430,7 @@ License: CECILL-C
               maxWidth={200}
               maxHeight={200}
             />
-            {#if Object.keys($views).length > 1}
+            {#if Object.keys($mediaViews).length > 1}
               <span class="text-center italic">{thumbnail.view}</span>
             {/if}
           {/each}

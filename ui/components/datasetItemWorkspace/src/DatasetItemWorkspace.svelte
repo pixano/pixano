@@ -14,6 +14,7 @@ License: CECILL-C
     BaseSchema,
     DatasetItem,
     Entity,
+    isSequenceFrameArray,
     Mask,
     Tracklet,
     WorkspaceType,
@@ -34,6 +35,7 @@ License: CECILL-C
     canSave,
     entities,
     itemMetas,
+    mediaViews,
     newShape,
     saveData,
     views,
@@ -60,7 +62,7 @@ License: CECILL-C
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       //add frame_index to annotation
       if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
-        const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
+        const seqframe = ($mediaViews[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
@@ -74,8 +76,8 @@ License: CECILL-C
 
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       for (const view in selectedItem.views) {
-        if (Array.isArray(selectedItem.views[view])) {
-          const video = selectedItem.views[view] as SequenceFrame[];
+        if (isSequenceFrameArray(selectedItem.views[view])) {
+          const video = selectedItem.views[view];
           const vspeed = Math.round(
             (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
           );

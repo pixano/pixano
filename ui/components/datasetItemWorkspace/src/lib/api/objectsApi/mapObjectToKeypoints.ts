@@ -4,13 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  WorkspaceType,
-  type Image,
-  type Keypoints,
-  type KeypointsTemplate,
-  type SequenceFrame,
-} from "@pixano/core";
+import { WorkspaceType, type Keypoints, type KeypointsTemplate } from "@pixano/core";
 
 import type { MView } from ".";
 import { templates } from "../../settings/keyPointsTemplates";
@@ -29,7 +23,7 @@ export const mapObjectToKeypoints = (
   if (!template) return;
 
   const view = views[keypoints.data.view_ref.name];
-  const image = Array.isArray(view) ? (view[0] as SequenceFrame) : (view as Image);
+  const image = Array.isArray(view) ? view[0] : view;
   const imageHeight = image.data.height || 1;
   const imageWidth = image.data.width || 1;
   const vertices = [];

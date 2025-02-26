@@ -51,13 +51,13 @@ License: CECILL-C
     itemBboxes,
     itemKeypoints,
     itemMasks,
+    mediaViews,
     merges,
     newShape,
     saveData,
     selectedKeypointsTemplate,
     selectedTool,
     tracklets,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -97,7 +97,7 @@ License: CECILL-C
         if (box) current_bboxes_and_interpolated.push(box);
         else if (bbox_childs.length > 1) {
           const sample_bbox = bbox_childs[0];
-          const view_id = ($views[sample_bbox.data.view_ref.name] as SequenceFrame[])[
+          const view_id = ($mediaViews[sample_bbox.data.view_ref.name] as SequenceFrame[])[
             $currentFrameIndex
           ].id;
           const interpolated_box = boxLinearInterpolation(bbox_childs, $currentFrameIndex, view_id);
@@ -128,8 +128,9 @@ License: CECILL-C
         if (kpt) current_kpts_and_interpolated.push(kpt);
         else if (kpt_childs.length > 1) {
           const sample_kpt = kpt_childs[0];
-          const view_id = ($views[sample_kpt.viewRef!.name] as SequenceFrame[])[$currentFrameIndex]
-            .id;
+          const view_id = ($mediaViews[sample_kpt.viewRef!.name] as SequenceFrame[])[
+            $currentFrameIndex
+          ].id;
           const interpolated_kpt = keypointsLinearInterpolation(
             kpt_childs,
             $currentFrameIndex,

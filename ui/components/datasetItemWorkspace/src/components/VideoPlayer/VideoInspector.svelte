@@ -12,7 +12,7 @@ License: CECILL-C
   import { BBox, SliderRoot, Track, type KeypointsTemplate } from "@pixano/core";
 
   import { panTool } from "../../lib/settings/selectionTools";
-  import { entities, selectedTool, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -64,7 +64,7 @@ License: CECILL-C
             <ObjectTrack
               slot="timeTrack"
               {track}
-              views={$views}
+              views={$mediaViews}
               {onTimeTrackClick}
               {bboxes}
               {keypoints}
