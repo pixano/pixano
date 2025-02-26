@@ -20,7 +20,15 @@ License: CECILL-C
   export let navigateTo: (route: string) => Promise<string | undefined>;
 
   const onKeyUp = async (event: KeyboardEvent) => {
-    if ((event.target as Element)?.tagName === "INPUT") return event.preventDefault();
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true" ||
+      (event.target as Element)?.tagName === "INPUT"
+    ) {
+      return event.preventDefault(); // Ignore shortcut when typing text
+    }
     if (event.shiftKey && event.key === "ArrowLeft") {
       await goToNeighborItem("previous");
     } else if (event.shiftKey && event.key === "ArrowRight") {

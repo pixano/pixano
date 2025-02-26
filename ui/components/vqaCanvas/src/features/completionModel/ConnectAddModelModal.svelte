@@ -27,7 +27,7 @@ License: CECILL-C
   };
 
   let isWorking = false;
-
+  let isConnected = false;
   const dispatch = createEventDispatcher();
 
   function handleConnect() {
@@ -36,10 +36,12 @@ License: CECILL-C
       .then(() => {
         console.log("connected to Pixano Inference at:", formData.pi_url);
         dispatch("listModels");
-        dispatch("cancel"); //also close modal (?)
+        isConnected = true;
+        //dispatch("cancel"); //also close modal (?)
       })
       .catch(() => {
         console.error("NOT connected to Pixano Inference!");
+        isConnected = false;
       });
   }
 
@@ -97,7 +99,7 @@ License: CECILL-C
   </div>
   <div class="flex flex-col">
     <h5 class="font-medium">Pixano Inference provider URL</h5>
-    <div class="flex flex-row gap-2 px-3">
+    <div class="flex items-center justify-between gap-2 px-3">
       <Input
         name="pi_url"
         value={formData.pi_url}
@@ -112,6 +114,13 @@ License: CECILL-C
       >
         OK
       </PrimaryButton>
+      <div class="content-center justify-self-end">
+        {#if isConnected}
+          Connected
+        {:else}
+          Not connected
+        {/if}
+      </div>
     </div>
   </div>
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">

@@ -11,6 +11,7 @@ import {
   BaseSchema,
   Conversation,
   isQuestionData,
+  QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
   type Message,
   type SaveItem,
@@ -29,6 +30,10 @@ export const generateAnswer = (completionModel: string, question: Message) => {
     return;
   }
 
+  if (question.data.question_type !== QuestionTypeEnum.OPEN) {
+    console.warn("Sorry, generation is only available for Open questions for now.");
+    return;
+  }
   modelGeneration(completionModel, question)
     .then((answer) => {
       const newAnswer = createNewAnswer({ question, content: answer });
@@ -57,12 +62,16 @@ export const modelGeneration = async (
     )[0] as Conversation;
 
     //requires to strip ui to avoir circular ref
-    const { ui, ...conv_no_ui } = conv; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { ui: ui_c, ...conv_no_ui } = conv; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { ui: ui_q, ...question_no_ui } = question; // eslint-disable-line @typescript-eslint/no-unused-vars
+
+    //add mention of "image" in question
+    question_no_ui.data.content = question_no_ui.data.content + " <image 1>";
 
     const input: CondititionalGenerationTextImageInput = {
       dataset_id: get(currentDatasetStore).id,
       conversation: conv_no_ui as Conversation,
-      messages: [question],
+      messages: [question_no_ui],
       model: completionModel,
     };
     console.log("Model Input:", input); //TMP DEV
