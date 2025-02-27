@@ -34,6 +34,17 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -49,6 +60,7 @@ jobs:
       - name: Build and push test
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           load: true
           tags: ${{ env.TEST_TAG }}
 
@@ -74,9 +86,11 @@ jobs:
               exit 1
           fi
 
+
       - name: Build and push latest
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}
