@@ -5,6 +5,7 @@
 # =====================================
 
 from pathlib import Path
+from typing import Any
 
 import shortuuid
 from fastapi.encoders import jsonable_encoder
@@ -30,6 +31,7 @@ async def image_mask_generation(
     bbox: BBox | None = None,
     points: list[list[int]] | None = None,
     labels: list[int] | None = None,
+    **client_kwargs: Any,
 ) -> tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None]:
     """Image mask generation task.
 
@@ -44,6 +46,7 @@ async def image_mask_generation(
         bbox: Bounding box of the object in the original image.
         points: Points to generate mask for.
         labels: Labels of the points. If 0, the point is background else the point is foreground.
+        client_kwargs: Additional kwargs for the client to be passed.
 
     Returns:
         tuple of the compressed RLE mask, its score, the source of the image, the image embeddings and the high
@@ -94,7 +97,7 @@ async def image_mask_generation(
         model=source.name,
     )
 
-    response: ImageMaskGenerationResponse = await client.image_mask_generation(request)
+    response: ImageMaskGenerationResponse = await client.image_mask_generation(request, **client_kwargs)
 
     inference_metadata = jsonable_encoder(
         {

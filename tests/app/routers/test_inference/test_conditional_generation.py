@@ -6,7 +6,6 @@
 
 from unittest.mock import patch
 
-import pytest
 from fastapi.applications import FastAPI
 from fastapi.encoders import jsonable_encoder
 from starlette.testclient import TestClient
@@ -15,13 +14,13 @@ from pixano.app.models import AnnotationModel, EntityModel, TableInfo
 from pixano.app.settings import Settings
 from pixano.datasets.dataset import Dataset
 from pixano.features import Conversation, Message, SchemaGroup
-from pixano.inference.text_image_conditional_generation import text_image_conditional_generation
 
 
 @patch("pixano.app.routers.inference.conditional_generation.text_image_conditional_generation")
 def test_call_text_image_conditional_generation(
     mock_text_image_conditional_generation,
     app_and_settings_with_client_copy: tuple[FastAPI, Settings, TestClient],
+    dataset_vqa: Dataset,
 ):
     app, settings, client = app_and_settings_with_client_copy
 
@@ -62,9 +61,9 @@ def test_call_text_image_conditional_generation(
 
     response = client.post(url, json=json)
     assert response.status_code == 200
-    assert expected_output.to_row(Message).model_dump(
+    assert expected_output.to_row(dataset_vqa).model_dump(
         exclude="id", exclude_timestamps=True
-    ) == AnnotationModel.model_validate(response.json()).to_row(Message).model_dump(
+    ) == AnnotationModel.model_validate(response.json()).to_row(dataset_vqa).model_dump(
         exclude="id", exclude_timestamps=True
     )
 
@@ -75,9 +74,9 @@ def test_call_text_image_conditional_generation(
     # Execute again to check the source is not created again.
     response = client.post(url, json=json)
     assert response.status_code == 200
-    assert expected_output.to_row(Message).model_dump(
+    assert expected_output.to_row(dataset_vqa).model_dump(
         exclude="id", exclude_timestamps=True
-    ) == AnnotationModel.model_validate(response.json()).to_row(Message).model_dump(
+    ) == AnnotationModel.model_validate(response.json()).to_row(dataset_vqa).model_dump(
         exclude="id", exclude_timestamps=True
     )
 

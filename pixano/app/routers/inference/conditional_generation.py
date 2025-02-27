@@ -6,7 +6,6 @@
 
 from typing import Annotated
 
-import shortuuid
 from fastapi import APIRouter, Body, Depends, HTTPException
 
 from pixano.app.models import AnnotationModel
@@ -14,7 +13,7 @@ from pixano.app.models.entities import EntityModel
 from pixano.app.routers.inference.utils import get_client_from_settings
 from pixano.app.routers.utils import get_dataset
 from pixano.app.settings import Settings, get_settings
-from pixano.features import Conversation, Message, Source
+from pixano.features import Conversation, Message
 from pixano.features.schemas.annotations.text_generation import is_message
 from pixano.features.schemas.entities.conversation import is_conversation
 from pixano.inference.text_image_conditional_generation import (
@@ -26,6 +25,8 @@ from pixano.inference.text_image_conditional_generation import (
     DEFAULT_TEMPERATURE,
     text_image_conditional_generation,
 )
+
+from .utils import get_model_source
 
 
 router = APIRouter(prefix="/tasks/conditional_generation", tags=["Task", "Conditional Generation"])
@@ -55,7 +56,6 @@ async def call_text_image_conditional_generation(
         conversation: The conversation to use.
         messages: The messages to use.
         model: The name of the model to use.
-        source: The source to use.
         settings: App settings.
         max_new_tokens: The maximum number of tokens to generate.
         temperature: The temperature to use.
@@ -72,11 +72,7 @@ async def call_text_image_conditional_generation(
     if not is_conversation(dataset.schema.schemas[conversation.table_info.name]):
         raise HTTPException(status_code=400, detail="Conversation must be a conversation.")
 
-    conversation_row: Conversation = conversation.to_row(
-        schema_type=dataset.schema.schemas[conversation.table_info.name]
-    )
-    conversation_row.dataset = dataset
-    conversation_row.table_name = conversation.table_info.name
+    conversation_row: Conversation = conversation.to_row(dataset)
 
     messages_in_one_table = len({m.table_info.name for m in messages}) == 1
     if not messages_in_one_table:
@@ -86,20 +82,10 @@ async def call_text_image_conditional_generation(
 
     messages_rows: list[Message] = []
     for m in messages:
-        m_row: Message = m.to_row(schema_type=dataset.schema.schemas[messages[0].table_info.name])
-        m_row.dataset = dataset
-        m_row.table_name = messages[0].table_info.name
+        m_row: Message = m.to_row(dataset)
         messages_rows.append(m_row)
 
-    sources: list[Source] = dataset.get_data(table_name="source", limit=2, where=f"name='{model}' AND kind='model'")
-    # TODO: enforce check consistency for source to have a unique name instead of checking here.
-    if len(sources) > 1:
-        raise HTTPException(status_code=400, detail="Only one source for model is allowed.")
-    elif len(sources) == 0:
-        source = Source(id=shortuuid.uuid(), name=model, kind="model")
-        dataset.add_data("source", data=[source])
-    else:
-        source = sources[0]
+    source = get_model_source(dataset=dataset, model=model)
 
     try:
         infered_message = await text_image_conditional_generation(

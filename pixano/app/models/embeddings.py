@@ -7,11 +7,11 @@
 from pydantic import ConfigDict, field_validator
 from typing_extensions import TypeVar
 
-from pixano.app.models.table_info import TableInfo
-from pixano.features import Embedding
-from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets import Dataset
+from pixano.features import Embedding, SchemaGroup, is_embedding
 
 from .base_schema import BaseSchemaModel
+from .table_info import TableInfo
 
 
 T = TypeVar("T", bound=Embedding)
@@ -46,8 +46,8 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
             raise ValueError(f"Table info group must be {SchemaGroup.EMBEDDING.value}.")
         return value
 
-    def to_row(self, schema_type: type[T]) -> T:
+    def to_row(self, dataset: Dataset) -> Embedding:
         """Create an [Embedding][pixano.features.Embedding] from the model."""
-        if not issubclass(schema_type, Embedding):
+        if not is_embedding(dataset.schema.schemas[self.table_info.name]):
             raise ValueError(f"Schema type must be a subclass of {Embedding.__name__}.")
-        return super().to_row(schema_type)
+        return super().to_row(dataset)
