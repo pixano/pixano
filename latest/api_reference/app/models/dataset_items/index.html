@@ -1543,6 +1543,8 @@
       
         
       
+        
+      
     
     
       
@@ -1631,6 +1633,28 @@
   
   <span class="md-ellipsis">
     utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../routers/inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -3938,6 +3962,8 @@
       
         
       
+        
+      
     
     
       
@@ -4004,6 +4030,28 @@
   
   <span class="md-ellipsis">
     text_image_conditional_generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -4822,7 +4870,7 @@ comparing models without timestamps.</p>
 
 
 <h3 id="pixano.app.models.dataset_items.DatasetItemModel.to_dataset_item" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_dataset_item</span><span class="p">(</span><span class="n">dataset_schema</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_dataset_item</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span></code>
 
 </h3>
 
@@ -4845,14 +4893,14 @@ comparing models without timestamps.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                <code>dataset_schema</code>
+                <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.DatasetSchema)" href="../../../datasets/dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.Dataset)" href="../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The schema of the dataset containing the dataset item.</p>
+                <p>The dataset containing the model.</p>
               </div>
             </td>
             <td>
@@ -4910,12 +4958,11 @@ comparing models without timestamps.</p>
 <span class="normal"><a href="#__codelineno-0-168">168</a></span>
 <span class="normal"><a href="#__codelineno-0-169">169</a></span>
 <span class="normal"><a href="#__codelineno-0-170">170</a></span>
-<span class="normal"><a href="#__codelineno-0-171">171</a></span>
-<span class="normal"><a href="#__codelineno-0-172">172</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dataset_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetItem</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dataset_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatasetItem</span><span class="p">:</span>
 </span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a [DatasetItem][pixano.datasets.DatasetItem] from a model.</span>
 </span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150"></a>
 </span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="sd">        dataset_schema: The schema of the dataset containing the dataset item.</span>
+</span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="sd">        dataset: The dataset containing the model.</span>
 </span><span id="__span-0-153"><a id="__codelineno-0-153" name="__codelineno-0-153"></a>
 </span><span id="__span-0-154"><a id="__codelineno-0-154" name="__codelineno-0-154"></a><span class="sd">    Returns:</span>
 </span><span id="__span-0-155"><a id="__codelineno-0-155" name="__codelineno-0-155"></a><span class="sd">        The created dataset item.</span>
@@ -4923,19 +4970,18 @@ comparing models without timestamps.</p>
 </span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="n">schema_dict</span> <span class="o">=</span> <span class="p">{}</span>
 </span><span id="__span-0-158"><a id="__codelineno-0-158" name="__codelineno-0-158"></a>
 </span><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">item</span>
-</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">schema_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">dataset_schema</span><span class="o">.</span><span class="n">schemas</span><span class="p">[</span><span class="s2">&quot;item&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
+</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">schema_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
 </span><span id="__span-0-161"><a id="__codelineno-0-161" name="__codelineno-0-161"></a>
 </span><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">annotations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">entities</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">views</span><span class="p">]:</span>
 </span><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163"></a>        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">group</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a>            <span class="n">schema</span> <span class="o">=</span> <span class="n">dataset_schema</span><span class="o">.</span><span class="n">schemas</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a>            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
-</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a>            <span class="k">elif</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a>            <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
-</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a>
-</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="k">return</span> <span class="n">DatasetItem</span><span class="o">.</span><span class="n">from_dataset_schema</span><span class="p">(</span><span class="n">dataset_schema</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">schema_dict</span><span class="p">)</span>
+</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a>            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a>            <span class="k">elif</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a>            <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a>                <span class="n">schema_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="k">return</span> <span class="n">DatasetItem</span><span class="o">.</span><span class="n">from_dataset_schema</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="n">exclude_embeddings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">schema_dict</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4946,7 +4992,7 @@ comparing models without timestamps.</p>
 
 
 <h3 id="pixano.app.models.dataset_items.DatasetItemModel.to_dataset_items" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">dataset_schema</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
@@ -4989,14 +5035,14 @@ comparing models without timestamps.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>dataset_schema</code>
+                <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.DatasetSchema)" href="../../../datasets/dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.Dataset)" href="../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The schema of the dataset containing the dataset items.</p>
+                <p>The dataset containing the model.</p>
               </div>
             </td>
             <td>
@@ -5031,7 +5077,8 @@ comparing models without timestamps.</p>
 
             <details class="quote">
               <summary>Source code in <code>pixano/app/models/dataset_items.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-174">174</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
 <span class="normal"><a href="#__codelineno-0-175">175</a></span>
 <span class="normal"><a href="#__codelineno-0-176">176</a></span>
 <span class="normal"><a href="#__codelineno-0-177">177</a></span>
@@ -5041,19 +5088,18 @@ comparing models without timestamps.</p>
 <span class="normal"><a href="#__codelineno-0-181">181</a></span>
 <span class="normal"><a href="#__codelineno-0-182">182</a></span>
 <span class="normal"><a href="#__codelineno-0-183">183</a></span>
-<span class="normal"><a href="#__codelineno-0-184">184</a></span>
-<span class="normal"><a href="#__codelineno-0-185">185</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dataset_items</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;DatasetItemModel&quot;</span><span class="p">],</span> <span class="n">dataset_schema</span><span class="p">:</span> <span class="n">DatasetSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]:</span>
-</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a list of [DatasetItem][pixano.datasets.DatasetItem]s from a list of models.</span>
-</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a>
-</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">        models: The models to create the dataset items from.</span>
-</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">        dataset_schema: The schema of the dataset containing the dataset items.</span>
-</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a>
-</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">        The list of created dataset items.</span>
-</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">to_dataset_item</span><span class="p">(</span><span class="n">dataset_schema</span><span class="p">)</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span><span class="p">]</span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="nd">@staticmethod</span>
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dataset_items</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;DatasetItemModel&quot;</span><span class="p">],</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetItem</span><span class="p">]:</span>
+</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a list of [DatasetItem][pixano.datasets.DatasetItem]s from a list of models.</span>
+</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a>
+</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        models: The models to create the dataset items from.</span>
+</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">        dataset: The dataset containing the model.</span>
+</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a>
+</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">        The list of created dataset items.</span>
+</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="k">return</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">to_dataset_item</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span><span class="p">]</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

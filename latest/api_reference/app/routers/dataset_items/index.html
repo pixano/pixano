@@ -1555,6 +1555,8 @@
       
         
       
+        
+      
     
     
       
@@ -1643,6 +1645,28 @@
   
   <span class="md-ellipsis">
     utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -3950,6 +3974,8 @@
       
         
       
+        
+      
     
     
       
@@ -4016,6 +4042,28 @@
   
   <span class="md-ellipsis">
     text_image_conditional_generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -4531,7 +4579,7 @@
 </span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88"></a>    <span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">library_dir</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 </span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a>
 </span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">add_dataset_items</span><span class="p">(</span><span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">dataset_items</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">add_dataset_items</span><span class="p">(</span><span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">dataset_items</span><span class="p">,</span> <span class="n">dataset</span><span class="p">))</span>
 </span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a>    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
 </span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Invalid dataset items&quot;</span><span class="p">)</span>
 </span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">return</span> <span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">from_dataset_items</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
@@ -5431,7 +5479,7 @@
 </span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a>    <span class="n">dataset</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="n">dataset_id</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">library_dir</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 </span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a>
 </span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">update_dataset_items</span><span class="p">(</span><span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">dataset_items</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a>        <span class="n">rows</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">update_dataset_items</span><span class="p">(</span><span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">to_dataset_items</span><span class="p">(</span><span class="n">dataset_items</span><span class="p">,</span> <span class="n">dataset</span><span class="p">))</span>
 </span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141"></a>    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
 </span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142"></a>        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Invalid dataset items&quot;</span><span class="p">)</span>
 </span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a>    <span class="k">return</span> <span class="n">DatasetItemModel</span><span class="o">.</span><span class="n">from_dataset_items</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>

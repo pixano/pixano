@@ -1516,6 +1516,8 @@
       
         
       
+        
+      
     
     
       
@@ -1604,6 +1606,28 @@
   
   <span class="md-ellipsis">
     utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../routers/inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -3911,6 +3935,8 @@
       
         
       
+        
+      
     
     
       
@@ -3977,6 +4003,28 @@
   
   <span class="md-ellipsis">
     text_image_conditional_generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../inference/zero_shot_detection/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    zero_shot_detection
     
   </span>
   
@@ -4287,7 +4335,7 @@
 
 
 <h3 id="pixano.app.models.entities.EntityModel.to_row" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_row</span><span class="p">(</span><span class="n">schema_type</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">to_row</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span></code>
 
 </h3>
 
@@ -4302,11 +4350,11 @@
 <span class="normal"><a href="#__codelineno-0-50">50</a></span>
 <span class="normal"><a href="#__codelineno-0-51">51</a></span>
 <span class="normal"><a href="#__codelineno-0-52">52</a></span>
-<span class="normal"><a href="#__codelineno-0-53">53</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schema_type</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">T</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">T</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-53">53</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Entity</span><span class="p">:</span>
 </span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an [Entity][pixano.features.Entity] from the model.&quot;&quot;&quot;</span>
-</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">schema_type</span><span class="p">,</span> <span class="n">Entity</span><span class="p">):</span>
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_entity</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">schemas</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">table_info</span><span class="o">.</span><span class="n">name</span><span class="p">]):</span>
 </span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Schema type must be a subclass of </span><span class="si">{</span><span class="n">Entity</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53"></a>    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">schema_type</span><span class="p">)</span>
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53"></a>    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_row</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
