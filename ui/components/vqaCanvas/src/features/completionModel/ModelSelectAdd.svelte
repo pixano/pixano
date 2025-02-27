@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { AlignJustify, Sparkles } from "lucide-svelte";
+  import { Plus, Sparkles } from "lucide-svelte";
 
   import { api, MultimodalImageNLPTask, PrimaryButton } from "@pixano/core";
 
@@ -114,7 +114,7 @@ License: CECILL-C
   </div>
   <div class="flex-none content-center">
     <PrimaryButton disabled={!isConnected} on:click={handleOpenAddModelModal}>
-      <AlignJustify />
+      <Plus />
     </PrimaryButton>
     {#if showAddModelModal}
       <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
