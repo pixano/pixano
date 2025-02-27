@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Plus, Sparkles } from "lucide-svelte";
+  import { onMount } from "svelte";
 
   import {
     api,
@@ -16,59 +17,57 @@ License: CECILL-C
   } from "@pixano/core";
 
   import { pixanoInferenceStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { connect } from "../../utils/connect";
   import { updatedPixanoInferenceStore } from "../../utils/updatePixInfStore";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
-  let selectedModel: string;
-  let defaultURL = "http://localhost:9152";
-  let isConnected = false;
-  let models: { id: string; value: string }[] = [];
+  export let selectedModel: string;
 
-  //reactive: if no model selected and there is available model, select first
-  $: if (!selectedModel && models.length >= 1) {
-    selectedModel = models[0].value;
-  }
+  let defaultURL = "http://localhost:9152";
+  let isInferenceApiConnected = false;
+  let inferenceModels: { id: string; value: string }[] = [];
 
   //reactive: when model selected, update store
   $: if (selectedModel) {
     pixanoInferenceStore.update((pis) =>
-      pis.map((pi) => {
-        if (
-          pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION &&
-          pi.name === selectedModel
-        ) {
-          pi.selected = true;
-        }
-        return pi;
-      }),
+      pis.map((pi) =>
+        pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && pi.name === selectedModel
+          ? { ...pi, selected: true }
+          : { ...pi, selected: false },
+      ),
     );
   }
 
   //Try to connect with default URL at startup
-  api.isInferenceApiHealthy(defaultURL).then((status) => {
-    isConnected = status;
-    if (isConnected) listModels();
+  onMount(() => {
+    api
+      .isInferenceApiHealthy(defaultURL)
+      .then((status) => {
+        isInferenceApiConnected = status;
+        if (isInferenceApiConnected) listModels();
+      })
+      .catch(() => console.error("Cannot connect to inference API"));
   });
 
   const listModels = () => {
     api
       .listModels()
       .then((available_models) => {
-        const defaultPrompts: SystemPrompt[] = Object.values(QuestionTypeEnum)
-          .filter((value) => typeof value === "string")
-          .map(
-            (qtype) => ({ content: "", question_type: qtype, as_system: true }), //TODO? give a default system prompt ?
-          );
+        const defaultPrompts: SystemPrompt[] = Object.values(QuestionTypeEnum).map(
+          (qtype) => ({ content: "", question_type: qtype, as_system: true }), //TODO? give a default system prompt ?
+        );
+
         pixanoInferenceStore.update((currentList) =>
           updatedPixanoInferenceStore(available_models, currentList, defaultPrompts),
         );
-        models = available_models
+
+        inferenceModels = available_models
           .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
-          .map((model) => {
-            return { id: model.name, value: model.name };
-          });
+          .map((model) => ({ id: model.name, value: model.name }));
+
+        if (inferenceModels.length > 0) {
+          selectedModel = inferenceModels[0].value;
+        }
       })
       .catch((err) => {
         console.error("Can't list models", err);
@@ -126,20 +125,27 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex flex-row gap-2 justify-between">
-  <IconButton tooltipContent="Pixano Inference connection" on:click={handleOpenConnectModal}>
-    <Sparkles
-      class={`${isConnected ? (selectedModel && selectedModel !== "" ? "text-green-500" : "text-yellow-500") : "text-red-500"}`}
-    />
-  </IconButton>
-  {#if showConnectModal}
-    <ConnectModal
-      bind:isConnected
-      {defaultURL}
-      on:listModels={listModels}
-      on:cancelConnect={handleCloseConnectModal}
-    />
-  {/if}
+<div class="px-3 flex flex-row gap-2">
+  <div class="flex-none content-center">
+    <IconButton tooltipContent="Pixano Inference connection" on:click={handleOpenConnectModal}>
+      <Sparkles
+        size={20}
+        class={isInferenceApiConnected
+          ? selectedModel
+            ? "text-green-500"
+            : "text-yellow-500"
+          : "text-red-500"}
+      />
+    </IconButton>
+    {#if showConnectModal}
+      <ConnectModal
+        bind:isConnected={isInferenceApiConnected}
+        {defaultURL}
+        on:cancelConnect={handleCloseConnectModal}
+        on:listModels={listModels}
+      />
+    {/if}
+  </div>
   <div class="flex flex-col grow">
     <!-- For some reason, some tailwind classes don't work on select -->
     <!-- Use style instead -->
@@ -149,20 +155,23 @@ License: CECILL-C
       bind:value={selectedModel}
     >
       <option value="" selected disabled>Select a model</option>
-      {#each models as { id, value }}
+      {#each inferenceModels as { id, value }}
         <option value={id}>{value}</option>
       {/each}
     </select>
   </div>
-  <IconButton
-    tooltipContent="Instantiate a model"
-    disabled={!isConnected}
-    on:click={handleOpenAddModelModal}
-  >
-    <Plus />
-  </IconButton>
-  {#if showAddModelModal}
-    <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
-  {/if}
+
+  <div class="flex-none content-center">
+    <IconButton
+      tooltipContent="Instantiate a model"
+      disabled={!isInferenceApiConnected}
+      on:click={handleOpenAddModelModal}
+    >
+      <Plus />
+    </IconButton>
+    {#if showAddModelModal}
+      <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
+    {/if}
+  </div>
 </div>
 <svelte:window on:keydown={handleKeyDown} />

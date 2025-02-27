@@ -32,14 +32,13 @@ License: CECILL-C
 
   const handleGenerateQuestion = () => {
     if (!completionModel || completionModel.length === 0) return;
-    generateQuestion(completionModel)
-      .then(([resQuestionContent, resQuestionChoices]) => {
-        questionContent = resQuestionContent;
-        questionChoices = resQuestionChoices;
-      })
-      .catch((err) => {
-        console.error("Error while generating question:", err);
-      });
+
+    const generatedQuestion = await generateQuestion(completionModel);
+
+    if (!generatedQuestion) return;
+
+    questionContent = generatedQuestion.content;
+    questionChoices = generatedQuestion.choices;
   };
 </script>
 

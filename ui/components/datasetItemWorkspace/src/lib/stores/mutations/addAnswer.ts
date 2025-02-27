@@ -10,7 +10,7 @@ import { MessageTypeEnum, type Message, type SaveItem } from "@pixano/core";
 import type { NewAnswerEvent } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
-import { createNewAnswer } from "../../utils/createNewAnswer";
+import { createNewMessage } from "../../utils/createNewMessage";
 import { annotations, messages as messagesStore, saveData } from "../datasetItemWorkspaceStores";
 
 export const addAnswer = (detail: NewAnswerEvent) => {
@@ -25,16 +25,20 @@ export const addAnswer = (detail: NewAnswerEvent) => {
     return;
   }
 
-  const newMessage = createNewAnswer({
-    question,
+  const newAnswer = createNewMessage({
+    ...question.data,
+    type: MessageTypeEnum.ANSWER,
+    user: "user",
+    inference_metadata: {},
     content,
+    choices: [],
   });
 
-  annotations.update((prevAnnotations) => [...prevAnnotations, newMessage]);
+  annotations.update((prevAnnotations) => [...prevAnnotations, newAnswer]);
 
   const save_item: SaveItem = {
     change_type: "add",
-    object: newMessage,
+    object: newAnswer,
   };
 
   saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));

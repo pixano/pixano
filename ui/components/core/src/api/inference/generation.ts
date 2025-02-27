@@ -4,12 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { CondititionalGenerationTextImageInput } from "../../lib/types";
-import { Annotation } from "../../lib/types";
+import type { CondititionalGenerationTextImageInput, Message } from "../../lib/types";
 
 export async function conditional_generation_text_image(
   input: CondititionalGenerationTextImageInput,
-): Promise<Annotation | null> {
+): Promise<Message | null> {
   try {
     const response = await fetch("/inference/tasks/conditional_generation/text-image", {
       headers: {
@@ -30,9 +29,9 @@ export async function conditional_generation_text_image(
       return null;
     }
 
-    return (await response.json()) as Annotation;
+    return (await response.json()) as Message;
   } catch (e) {
-    // console.log("api.conditional_generation_text_image -", e);
+    console.error("api.conditional_generation_text_image -", e);
     return null;
   }
 }
