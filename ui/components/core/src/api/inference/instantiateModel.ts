@@ -7,43 +7,21 @@ License: CECILL-C
 import { type ModelConfig } from "../../lib/types";
 
 export async function instantiateModel(model_config: ModelConfig): Promise<void> {
-  return new Promise((resolve, reject) => {
-    fetch(`/inference/models/instantiate`, {
+  try {
+    const response = await fetch(`/inference/models/instantiate`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
       method: "POST",
       body: JSON.stringify(model_config),
-    })
-      .then((response) => {
-        console.log("XXX instantiate response:", response);
-        if (response.ok) {
-          resolve();
-        } else {
-          console.log("api.instantiateModel -", response.status, response.statusText);
-          reject(new Error(`${response.status} ${response.statusText}`));
-        }
-      })
-      .catch((err) => {
-        reject(new Error(err));
-      });
-  });
-}
-
-export async function deleteModel(model_name: string) {
-  try {
-    const response = await fetch(`/inference/models/delete/${model_name}`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      method: "DELETE",
     });
+
     if (!response.ok) {
-      console.log("api.deleteModel -", response.status, response.statusText, await response.text());
+      console.log("api.instantiateModel -", response.status, response.statusText);
+      return;
     }
   } catch (e) {
-    console.log("api.deleteModel -", e);
+    console.log("api.instantiateModel -", e);
   }
 }
