@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel
 from typing_extensions import Self
 
-from pixano.datasets import DatasetItem, DatasetSchema
+from pixano.datasets import Dataset, DatasetItem, DatasetSchema
 from pixano.features import Annotation, Entity, Item, View
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
@@ -145,11 +145,11 @@ class DatasetItemModel(BaseModel):
         """
         return [cls.from_dataset_item(dataset_item, dataset_schema) for dataset_item in dataset_items]
 
-    def to_dataset_item(self, dataset_schema: DatasetSchema) -> DatasetItem:
+    def to_dataset_item(self, dataset: Dataset) -> DatasetItem:
         """Create a [DatasetItem][pixano.datasets.DatasetItem] from a model.
 
         Args:
-            dataset_schema: The schema of the dataset containing the dataset item.
+            dataset: The dataset containing the model.
 
         Returns:
             The created dataset item.
@@ -157,29 +157,28 @@ class DatasetItemModel(BaseModel):
         schema_dict = {}
 
         item = self.item
-        schema_dict.update(item.to_row(dataset_schema.schemas["item"]).model_dump())
+        schema_dict.update(item.to_row(dataset).model_dump())
 
         for group in [self.annotations, self.entities, self.views]:
             for key, value in group.items():
-                schema = dataset_schema.schemas[key]
                 if isinstance(value, list):
-                    schema_dict[key] = [v.to_row(schema) for v in value]
+                    schema_dict[key] = [v.to_row(dataset) for v in value]
                 elif value is None:
                     schema_dict[key] = None
                 else:
-                    schema_dict[key] = value.to_row(schema)
+                    schema_dict[key] = value.to_row(dataset)
 
-        return DatasetItem.from_dataset_schema(dataset_schema, exclude_embeddings=True).model_validate(schema_dict)
+        return DatasetItem.from_dataset_schema(dataset.schema, exclude_embeddings=True).model_validate(schema_dict)
 
     @staticmethod
-    def to_dataset_items(models: list["DatasetItemModel"], dataset_schema: DatasetSchema) -> list[DatasetItem]:
+    def to_dataset_items(models: list["DatasetItemModel"], dataset: Dataset) -> list[DatasetItem]:
         """Create a list of [DatasetItem][pixano.datasets.DatasetItem]s from a list of models.
 
         Args:
             models: The models to create the dataset items from.
-            dataset_schema: The schema of the dataset containing the dataset items.
+            dataset: The dataset containing the model.
 
         Returns:
             The list of created dataset items.
         """
-        return [model.to_dataset_item(dataset_schema) for model in models]
+        return [model.to_dataset_item(dataset) for model in models]

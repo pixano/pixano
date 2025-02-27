@@ -5,16 +5,12 @@
 # =====================================
 
 from pydantic import ConfigDict, field_validator
-from typing_extensions import TypeVar
 
-from pixano.app.models.table_info import TableInfo
-from pixano.features import Item
-from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets import Dataset
+from pixano.features import Item, SchemaGroup, is_item
 
 from .base_schema import BaseSchemaModel
-
-
-T = TypeVar("T", bound=Item)
+from .table_info import TableInfo
 
 
 class ItemModel(BaseSchemaModel[Item]):
@@ -41,8 +37,8 @@ class ItemModel(BaseSchemaModel[Item]):
             raise ValueError(f"Table info group must be {SchemaGroup.ITEM.value}.")
         return value
 
-    def to_row(self, schema_type: type[T]) -> T:
+    def to_row(self, dataset: Dataset) -> Item:
         """Create an [Item][pixano.features.Item] from the model."""
-        if not issubclass(schema_type, Item):
+        if not is_item(dataset.schema.schemas[self.table_info.name]):
             raise ValueError(f"Schema type must be a subclass of {Item.__name__}.")
-        return super().to_row(schema_type)
+        return super().to_row(dataset)

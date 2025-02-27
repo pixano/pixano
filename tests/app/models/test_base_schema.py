@@ -72,52 +72,61 @@ class TestBaseModelSchema:
             ),
         ]
 
-    def test_to_row(self):
+    def test_to_row(self, dataset_image_bboxes_keypoint):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
         model = BaseSchemaModel(
             id="id",
             table_info=table_info,
-            data={"split": "train"},
+            data={"split": "train", "metadata": "metadata"},
             created_at=datetime(2021, 1, 1, 0, 0, 0),
             updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
-        item = model.to_row(Item)
+        item = model.to_row(dataset_image_bboxes_keypoint)
 
-        assert item == Item(
-            id="id", split="train", created_at=datetime(2021, 1, 1, 0, 0, 0), updated_at=datetime(2021, 1, 1, 0, 0, 0)
+        assert (
+            item.model_dump()
+            == dataset_image_bboxes_keypoint.schema.schemas["item"](
+                id="id",
+                split="train",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                metadata="metadata",
+            ).model_dump()
         )
 
-    def test_to_rows(self):
+    def test_to_rows(self, dataset_image_bboxes_keypoint):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
         models = [
             BaseSchemaModel(
                 id="id1",
                 table_info=table_info,
-                data={"split": "train"},
+                data={"split": "train", "metadata": "metadata"},
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             ),
             BaseSchemaModel(
                 id="id2",
                 table_info=table_info,
-                data={"split": "test"},
+                data={"split": "test", "metadata": "metadata"},
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             ),
         ]
-        items = BaseSchemaModel.to_rows(models, Item)
+        items = [m.model_dump() for m in BaseSchemaModel.to_rows(models, dataset_image_bboxes_keypoint)]
 
         assert items == [
-            Item(
+            dataset_image_bboxes_keypoint.schema.schemas["item"](
                 id="id1",
                 split="train",
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
-            ),
-            Item(
+                metadata="metadata",
+            ).model_dump(),
+            dataset_image_bboxes_keypoint.schema.schemas["item"](
                 id="id2",
                 split="test",
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
-            ),
+                metadata="metadata",
+            ).model_dump(),
         ]

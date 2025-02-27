@@ -7,16 +7,13 @@
 import json
 
 from pydantic import ConfigDict, field_validator
-from typing_extensions import Self, TypeVar
+from typing_extensions import Self
 
-from pixano.app.models.table_info import TableInfo
-from pixano.features import Source
-from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets import Dataset
+from pixano.features import SchemaGroup, Source
 
 from .base_schema import BaseSchemaModel
-
-
-T = TypeVar("T", bound=Source)
+from .table_info import TableInfo
 
 
 class SourceModel(BaseSchemaModel[Source]):
@@ -47,11 +44,19 @@ class SourceModel(BaseSchemaModel[Source]):
             raise ValueError(f"Table info group must be {SchemaGroup.SOURCE.value}.")
         return value
 
-    def to_row(self, schema_type: type[T]) -> T:
+    def to_row(self, dataset: Dataset) -> Source:
         """Create a [Source][pixano.features.Source] from the model."""
-        if not issubclass(schema_type, Source):
-            raise ValueError(f"Schema type must be a subclass of {Source.__name__}.")
-        row = super().to_row(schema_type)
+        schema_dict = self.model_dump()
+        row = Source.model_validate(
+            {
+                "id": schema_dict["id"],
+                "created_at": schema_dict["created_at"],
+                "updated_at": schema_dict["updated_at"],
+                **schema_dict["data"],
+            }
+        )
+        row.dataset = dataset
+        row.table_name = self.table_info.name
         row.metadata = json.dumps(self.data["metadata"])
         return row
 

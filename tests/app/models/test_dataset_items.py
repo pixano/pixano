@@ -13,7 +13,7 @@ from pixano.app.models import (
     TableInfo,
     ViewModel,
 )
-from pixano.datasets import DatasetItem, DatasetSchema
+from pixano.datasets import Dataset, DatasetItem, DatasetSchema
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils.python import get_super_type_from_dict
 from tests.fixtures.datasets.builders.builder import generate_data_multi_view_tracking_and_image
@@ -198,6 +198,7 @@ class TestDatasetItemModel:
     def test_to_dataset_items(
         self,
         dataset_schema_multi_view_tracking_and_image: DatasetSchema,
+        dataset_multi_view_tracking_and_image: Dataset,
     ):
         dataset_items = []
         items_data = []
@@ -222,7 +223,7 @@ class TestDatasetItemModel:
         )
 
         dataset_items_recovered = DatasetItemModel.to_dataset_items(
-            dataset_item_models, dataset_schema_multi_view_tracking_and_image
+            dataset_item_models, dataset_multi_view_tracking_and_image
         )
 
         for dataset_item, dataset_item_recovered in zip(dataset_items, dataset_items_recovered, strict=True):
