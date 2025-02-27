@@ -34,6 +34,17 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -74,6 +85,7 @@ jobs:
               docker rm pixano
               exit 1
           fi
+
 
       - name: Build and push latest
         if: github.event_name == 'push'
