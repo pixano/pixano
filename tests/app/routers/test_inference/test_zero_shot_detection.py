@@ -46,7 +46,7 @@ def test_call_text_image_conditional_generation(
                     is_normalized=False,
                     confidence=0.5,
                 ),
-                TableInfo(name="", group=SchemaGroup.ANNOTATION.value, base_schema="BBox"),
+                TableInfo(name="box", group=SchemaGroup.ANNOTATION.value, base_schema="BBox"),
             ),
             classification=AnnotationModel.from_row(
                 Classification(
@@ -55,7 +55,7 @@ def test_call_text_image_conditional_generation(
                     labels=["a cat"],
                     confidences=[0.5],
                 ),
-                TableInfo(name="", group=SchemaGroup.ANNOTATION.value, base_schema="Classification"),
+                TableInfo(name="classes", group=SchemaGroup.ANNOTATION.value, base_schema="Classification"),
             ),
         )
     ]
@@ -86,6 +86,8 @@ def test_call_text_image_conditional_generation(
             "entity": entity,
             "classes": ["a  cat", "a dog"],
             "model": "model",
+            "box_table_name": "box",
+            "class_table_name": "classes",
         }
     )
 
