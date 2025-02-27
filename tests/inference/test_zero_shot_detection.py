@@ -10,15 +10,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from fastapi.encoders import jsonable_encoder
-from lancedb.pydantic import Vector
 from pixano_inference.client import PixanoInferenceClient
 from pixano_inference.pydantic import (
-    CompressedRLE as PixanoInferenceCompressedRLE,
-)
-from pixano_inference.pydantic import (
     ImageZeroShotDetectionOutput,
-    ImageZeroShotDetectionRequest,
     ImageZeroShotDetectionResponse,
 )
 
@@ -31,7 +25,6 @@ from pixano.features import (
     ItemRef,
     Source,
     SourceRef,
-    ViewEmbedding,
     ViewRef,
 )
 from pixano.inference.zero_shot_detection import image_zero_shot_detection
