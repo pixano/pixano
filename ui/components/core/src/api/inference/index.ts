@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./connect";
+export * from "./isInferenceApiHealthy";
 export * from "./listModels";
 export * from "./instantiateModel";
 export * from "./generation";

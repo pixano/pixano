@@ -7,11 +7,9 @@ License: CECILL-C
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
 
-  import { PrimaryButton } from "@pixano/core";
+  import { api, PrimaryButton } from "@pixano/core";
   import type { InputEvents } from "@pixano/core/src/components/ui/input";
   import Input from "@pixano/core/src/components/ui/input/input.svelte";
-
-  import { connect } from "../../utils/connect";
 
   export let isConnected = false;
   export let defaultURL: string;
@@ -24,9 +22,8 @@ License: CECILL-C
   const dispatch = createEventDispatcher();
 
   async function handleConnect() {
-    const newConnection = await connect(formData.pi_url);
-    if (!isConnected && newConnection) isConnected = newConnection;
-    if (newConnection) {
+    isConnected = await api.isInferenceApiHealthy(formData.pi_url);
+    if (isConnected) {
       dispatch("listModels");
       dispatch("cancelConnect"); //also close modal
     }

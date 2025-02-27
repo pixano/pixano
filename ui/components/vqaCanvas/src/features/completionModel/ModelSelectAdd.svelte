@@ -47,12 +47,10 @@ License: CECILL-C
   }
 
   //Try to connect with default URL at startup
-  connect(defaultURL)
-    .then((status) => {
-      isConnected = status;
-      if (isConnected) listModels();
-    })
-    .catch(() => {});
+  api.isInferenceApiHealthy(defaultURL).then((status) => {
+    isConnected = status;
+    if (isConnected) listModels();
+  });
 
   const listModels = () => {
     api
