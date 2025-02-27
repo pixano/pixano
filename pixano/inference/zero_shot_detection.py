@@ -26,6 +26,7 @@ async def image_zero_shot_detection(
     classes: list[str] | str,
     box_threshold: float = 0.5,
     text_threshold: float = 0.5,
+    **client_kwargs,
 ) -> list[tuple[BBox, Classification]]:
     """Image zero shot task.
 
@@ -38,6 +39,7 @@ async def image_zero_shot_detection(
         classes: List of classes to detect in the image.
         box_threshold: Box threshold for detection in the image.
         text_threshold: Text threshold for detection in the image.
+        client_kwargs: Additional kwargs for the client to be passed.
 
     Returns:
         List of BBoxes and Classifications detected in the image with respect to classes and threshold values.
@@ -52,7 +54,7 @@ async def image_zero_shot_detection(
         model=source.name,
     )
 
-    response: ImageZeroShotDetectionResponse = await client.image_zero_shot_detection(request)
+    response: ImageZeroShotDetectionResponse = await client.image_zero_shot_detection(request, **client_kwargs)
 
     inference_metadata = jsonable_encoder(
         {

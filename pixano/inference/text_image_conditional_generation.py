@@ -93,6 +93,7 @@ async def text_image_conditional_generation(
     role_system: str = DEFAULT_ROLE_SYSTEM,
     role_user: str = DEFAULT_ROLE_USER,
     role_assistant: str = DEFAULT_ROLE_ASSISTANT,
+    **client_kwargs: Any,
 ) -> Message:
     """Generate text from an image using the Pixano Inference API.
 
@@ -108,6 +109,7 @@ async def text_image_conditional_generation(
         role_system: The role of the system in the prompt.
         role_user: The role of the user in the prompt.
         role_assistant: The role of the assistant in the prompt.
+        client_kwargs: Additional kwargs for the client to be passed.
 
     Returns:
         The response message and its source.
@@ -140,7 +142,9 @@ async def text_image_conditional_generation(
         max_new_tokens=max_new_tokens,
         temperature=temperature,
     )
-    response: TextImageConditionalGenerationResponse = await client.text_image_conditional_generation(request)
+    response: TextImageConditionalGenerationResponse = await client.text_image_conditional_generation(
+        request, **client_kwargs
+    )
 
     inference_metadata = jsonable_encoder(
         {
