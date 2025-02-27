@@ -39,6 +39,8 @@ async def call_image_zero_shot_detection(
     entity: Annotated[EntityModel, Body(embed=True)],
     classes: Annotated[list[str] | str, Body(embed=True)],
     model: Annotated[str, Body(embed=True)],
+    box_table_name: Annotated[str, Body(embed=True)],
+    class_table_name: Annotated[str, Body(embed=True)],
     settings: Annotated[Settings, Depends(get_settings)],
     box_threshold: Annotated[float, Body(embed=True)] = 0.3,
     text_threshold: Annotated[float, Body(embed=True)] = 0.2,
@@ -51,6 +53,8 @@ async def call_image_zero_shot_detection(
         entity: The entity to use for detection.
         classes: Labels to detect.
         model: The name of the model to use.
+        box_table_name: The name of the table to use for boxes in dataset.
+        class_table_name: The name of the table to use for classifications in dataset.
         settings: App settings.
         box_threshold: Box threshold for detection in the image.
         text_threshold: Text threshold for detection in the image.
@@ -85,10 +89,11 @@ async def call_image_zero_shot_detection(
     output: list[ZeroShotOutput] = []
     for bbox, classification in bboxes_and_classifications:
         bbox_model = AnnotationModel.from_row(
-            row=bbox, table_info=TableInfo(name="", group="annotations", base_schema="BBox")
+            row=bbox, table_info=TableInfo(name=box_table_name, group="annotations", base_schema="BBox")
         )
         classification_model = AnnotationModel.from_row(
-            row=classification, table_info=TableInfo(name="", group="annotations", base_schema="Classification")
+            row=classification,
+            table_info=TableInfo(name=class_table_name, group="annotations", base_schema="Classification"),
         )
         output.append(ZeroShotOutput(bbox=bbox_model, classification=classification_model))
     return output
