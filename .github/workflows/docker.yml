@@ -49,6 +49,7 @@ jobs:
       - name: Build and push test
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           load: true
           tags: ${{ env.TEST_TAG }}
 
@@ -78,5 +79,6 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}
