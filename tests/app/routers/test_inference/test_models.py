@@ -54,7 +54,7 @@ def test_list_models(
 def test_instantiate_model(mock_instantiate_model, app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
     url = "/inference/models/instantiate"
     app, settings, client = app_and_settings_with_client
-    mock_instantiate_model.return_value = ModelInfo(name="model1", task="causal_lm")
+    mock_instantiate_model.return_value = None
 
     response = client.post(
         url,
@@ -66,7 +66,7 @@ def test_instantiate_model(mock_instantiate_model, app_and_settings_with_client:
         ),
     )
     assert response.status_code == 200
-    assert response.json() == ModelInfo(name="model1", task="causal_lm").model_dump()
+    assert response.json() is None
 
 
 @patch("pixano.inference.PixanoInferenceClient.delete_model")
