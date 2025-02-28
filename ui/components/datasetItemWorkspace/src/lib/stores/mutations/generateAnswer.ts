@@ -8,9 +8,7 @@ import { get } from "svelte/store";
 
 import {
   api,
-  BaseSchema,
   isQuestionData,
-  MessageTypeEnum,
   QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
   type Message,
@@ -19,7 +17,7 @@ import {
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
-import { createNewMessage } from "../../utils/createNewMessage";
+import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { annotations, conversations, saveData } from "../datasetItemWorkspaceStores";
 
 export const generateAnswer = async (completionModel: string, question: Message) => {
@@ -42,27 +40,10 @@ export const generateAnswer = async (completionModel: string, question: Message)
     return null;
   }
 
-  const prompt = `
-    You MUST add 'Dear Master,' at the beginning of your answer. This is VERY important and mandatory! 
-    - and now the question: ${question.data.content}
-  `;
-
-  const systemMessage = createNewMessage({
-    item_ref: conversation.data.item_ref,
-    view_ref: conversation.data.view_ref,
-    entity_ref: { name: BaseSchema.Conversation, id: conversation.id },
-    type: MessageTypeEnum.SYSTEM,
-    user: "system",
-    inference_metadata: {},
-    choices: [],
-    number: question.data.number,
-    content: prompt,
-  });
-
   const input: CondititionalGenerationTextImageInput = {
     dataset_id: get(currentDatasetStore).id,
-    conversation,
-    messages: [question, systemMessage],
+    conversation: removeFieldFromObject(conversation, "ui"),
+    messages: [removeFieldFromObject(question, "ui")],
     model: completionModel,
   };
 

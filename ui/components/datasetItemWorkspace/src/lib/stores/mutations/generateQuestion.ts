@@ -15,6 +15,7 @@ import {
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { createNewMessage } from "../../utils/createNewMessage";
+import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
 
 const prompt = `
@@ -56,8 +57,8 @@ export const generateQuestion = async (
 
   const input: CondititionalGenerationTextImageInput = {
     dataset_id: get(currentDatasetStore).id,
-    conversation,
-    messages: [systemMessage],
+    conversation: removeFieldFromObject(conversation, "ui"),
+    messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
   };
 

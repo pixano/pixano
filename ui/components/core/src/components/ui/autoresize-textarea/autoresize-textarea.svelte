@@ -10,6 +10,8 @@ License: CECILL-C
 
   let textarea: HTMLTextAreaElement | null = null;
 
+  // We have to include value to trigger the resize
+  /* eslint-disable @typescript-eslint/no-unused-expressions */
   $: value !== undefined && resizeTextarea();
 
   const resizeTextarea = () => {
