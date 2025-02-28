@@ -6,20 +6,24 @@
 
 from .conversation import Conversation, create_conversation, is_conversation
 from .entity import Entity, is_entity
-from .multimedia_entity import MultimediaEntity, create_multimedia_entity, is_multimedia_entity
+from .multimodal_entity import MultimodalEntity, create_multimodal_entity, is_multimodal_entity
+from .named_entity import NamedEntity, create_named_entity, is_named_entity
 from .track import Track, create_track, is_track
 
 
 __all__ = [
     "Conversation",
     "Entity",
-    "MultimediaEntity",
+    "MultimodalEntity",
+    "NamedEntity",
     "Track",
     "create_conversation",
-    "create_multimedia_entity",
+    "create_multimodal_entity",
+    "create_named_entity",
     "create_track",
     "is_conversation",
     "is_entity",
-    "is_multimedia_entity",
+    "is_multimodal_entity",
+    "is_named_entity",
     "is_track",
 ]

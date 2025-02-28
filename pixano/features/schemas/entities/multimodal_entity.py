@@ -12,43 +12,43 @@ from .named_entity import NamedEntity
 
 
 @_register_schema_internal
-class Track(NamedEntity):
-    """A `Track` entity.
+class MultimodalEntity(NamedEntity):
+    """A `multimedia` entity.
 
-    A track represents an entity that is shared among multiple view across time.
+    A MultimodalEntity represents an entity that is shared among multiple view of different type : image + text.
 
     Attributes:
-        name: The name of the track.
+        name: The name of the Entity.
     """
 
     name: str
 
 
-def is_track(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a `Track` or a subclass of `Track`."""
-    return issubclass_strict(cls, Track, strict)
+def is_multimodal_entity(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is a `MultimodalEntity` or a subclass of `MultimodalEntity`."""
+    return issubclass_strict(cls, MultimodalEntity, strict)
 
 
-def create_track(
+def create_multimodal_entity(
     name: str,
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     parent_ref: EntityRef = EntityRef.none(),
-) -> Track:
-    """Create a `Track` instance.
+) -> MultimodalEntity:
+    """Create a `MultimodalEntity` instance.
 
     Args:
-        name: The name of the track.
-        id: Track ID.
+        name: The name of the multimedia_entity.
+        id: MultimodalEntity ID.
         item_ref: Item reference.
         view_ref: View reference.
         parent_ref: Entity reference.
 
     Returns:
-        The created `Track` instance.
+        The created `MultimodalEntity` instance.
     """
-    return Track(
+    return MultimodalEntity(
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,

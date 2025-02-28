@@ -12,43 +12,43 @@ from .entity import Entity
 
 
 @_register_schema_internal
-class MultimediaEntity(Entity):
-    """A `multimedia` entity.
+class NamedEntity(Entity):
+    """A named entity.
 
-    A MultimediaEntity represents an entity that is shared among multiple view of different type : image + text.
+    A NamedEntity represents an entity with a simple name attribute.
 
     Attributes:
-        name: The name of the Entity.
+        name: The name of the entity.
     """
 
     name: str
 
 
-def is_multimedia_entity(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a `MultimediaEntity` or a subclass of `MultimediaEntity`."""
-    return issubclass_strict(cls, MultimediaEntity, strict)
+def is_named_entity(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is a `NamedEntity` or a subclass of `NamedEntity`."""
+    return issubclass_strict(cls, NamedEntity, strict)
 
 
-def create_multimedia_entity(
+def create_named_entity(
     name: str,
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     parent_ref: EntityRef = EntityRef.none(),
-) -> MultimediaEntity:
-    """Create a `MultimediaEntity` instance.
+) -> NamedEntity:
+    """Create a `NamedEntity` instance.
 
     Args:
-        name: The name of the multimedia_entity.
-        id: MultimediaEntity ID.
+        name: The name of the entity.
+        id: NamedEntity ID.
         item_ref: Item reference.
         view_ref: View reference.
         parent_ref: Entity reference.
 
     Returns:
-        The created `MultimediaEntity` instance.
+        The created `NamedEntity` instance.
     """
-    return MultimediaEntity(
+    return NamedEntity(
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
