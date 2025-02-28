@@ -21,7 +21,7 @@ class Track(NamedEntity):
         name: The name of the track.
     """
 
-    name: str
+    pass
 
 
 def is_track(cls: type, strict: bool = False) -> bool:

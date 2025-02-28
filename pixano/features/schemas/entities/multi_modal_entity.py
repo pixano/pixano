@@ -12,43 +12,43 @@ from .named_entity import NamedEntity
 
 
 @_register_schema_internal
-class MultimodalEntity(NamedEntity):
+class MultiModalEntity(NamedEntity):
     """A `multimedia` entity.
 
-    A MultimodalEntity represents an entity that is shared among multiple view of different type : image + text.
+    A MultiModalEntity represents an entity that is shared among multiple view of different type : image + text.
 
     Attributes:
         name: The name of the Entity.
     """
 
-    name: str
+    pass
 
 
-def is_multimodal_entity(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is a `MultimodalEntity` or a subclass of `MultimodalEntity`."""
-    return issubclass_strict(cls, MultimodalEntity, strict)
+def is_multi_modal_entity(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is a `MultiModalEntity` or a subclass of `MultiModalEntity`."""
+    return issubclass_strict(cls, MultiModalEntity, strict)
 
 
-def create_multimodal_entity(
+def create_multi_modal_entity(
     name: str,
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     parent_ref: EntityRef = EntityRef.none(),
-) -> MultimodalEntity:
-    """Create a `MultimodalEntity` instance.
+) -> MultiModalEntity:
+    """Create a `MultiModalEntity` instance.
 
     Args:
         name: The name of the multimedia_entity.
-        id: MultimodalEntity ID.
+        id: MultiModalEntity ID.
         item_ref: Item reference.
         view_ref: View reference.
         parent_ref: Entity reference.
 
     Returns:
-        The created `MultimodalEntity` instance.
+        The created `MultiModalEntity` instance.
     """
-    return MultimodalEntity(
+    return MultiModalEntity(
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
