@@ -19,7 +19,6 @@ from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.features.schemas.source import Source
 from pixano.utils import get_super_type_from_dict
 
 
@@ -239,8 +238,7 @@ def update_rows(
         The updated rows.
     """
     try:
-        schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
-        rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
+        rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, dataset)
     except Exception as err:
         raise HTTPException(
             status_code=400,
@@ -278,8 +276,7 @@ def create_rows(
         The added rows.
     """
     try:
-        schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
-        rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
+        rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, dataset)
     except Exception as err:
         raise HTTPException(
             status_code=400,

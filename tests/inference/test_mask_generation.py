@@ -7,9 +7,9 @@
 import os
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-import responses
 from fastapi.encoders import jsonable_encoder
 from lancedb.pydantic import Vector
 from pixano_inference.client import PixanoInferenceClient
@@ -20,7 +20,6 @@ from pixano_inference.pydantic import (
     ImageMaskGenerationOutput,
     ImageMaskGenerationResponse,
 )
-from responses import Response
 
 from pixano.features import (
     BBox,
@@ -61,12 +60,15 @@ class ViewEmbedding8(ViewEmbedding):
     shape: list[int] = [2, 4]
 
 
-@responses.activate
+@pytest.mark.asyncio
+@patch("pixano_inference.client.PixanoInferenceClient.image_mask_generation")
 @pytest.mark.parametrize(
     "response, expected_output, image_embedding, high_resolution_features, bbox, points, labels",
     [
         (
             ImageMaskGenerationResponse(
+                id="id",
+                status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
@@ -105,6 +107,8 @@ class ViewEmbedding8(ViewEmbedding):
         ),
         (
             ImageMaskGenerationResponse(
+                id="id",
+                status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
@@ -143,7 +147,8 @@ class ViewEmbedding8(ViewEmbedding):
         ),
     ],
 )
-def test_image_mask_generation(
+async def test_image_mask_generation(
+    mock_image_mask_generation,
     simple_pixano_inference_client: PixanoInferenceClient,
     response: ImageMaskGenerationResponse,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
@@ -154,19 +159,12 @@ def test_image_mask_generation(
     labels: list[int],
     image_url: Image,
 ):
-    responses.add(
-        Response(
-            method="POST",
-            url=f"{simple_pixano_inference_client.url}/tasks/image/mask_generation",
-            json=jsonable_encoder(response),
-            status=201,
-        )
-    )
+    mock_image_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
     entity.table_name = "entity"
 
-    mask, score, out_image_embedding, out_high_resolution_features = image_mask_generation(
+    mask, score, out_image_embedding, out_high_resolution_features = await image_mask_generation(
         client=simple_pixano_inference_client,
         media_dir=Path("."),
         image=image_url,

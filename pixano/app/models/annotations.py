@@ -9,11 +9,11 @@ import json
 from pydantic import ConfigDict, field_validator
 from typing_extensions import Self, TypeVar
 
-from pixano.app.models.table_info import TableInfo
-from pixano.features import Annotation
-from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets import Dataset
+from pixano.features import Annotation, SchemaGroup, is_annotation
 
 from .base_schema import BaseSchemaModel
+from .table_info import TableInfo
 
 
 T = TypeVar("T", bound=Annotation)
@@ -55,11 +55,11 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
             raise ValueError(f"Table info group must be {SchemaGroup.ANNOTATION.value}.")
         return value
 
-    def to_row(self, schema_type: type[T]) -> T:
+    def to_row(self, dataset: Dataset) -> Annotation:
         """Create an [Annotation][pixano.features.Annotation] from the model."""
-        if not issubclass(schema_type, Annotation):
+        if not is_annotation(dataset.schema.schemas[self.table_info.name]):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
-        row = super().to_row(schema_type)
+        row = super().to_row(dataset)
         row.inference_metadata = json.dumps(self.data["inference_metadata"])
         return row
 

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
 import { Image, type ImageType } from "./Image";
-import { type ViewType } from "./View";
+import { View, type ViewType } from "./View";
 
 export const sequenceFrameSchema = z
   .object({
@@ -35,3 +35,14 @@ export class SequenceFrame extends Image {
     return super.nonFeaturesFields().concat(["timestamp", "frame_index"]);
   }
 }
+
+export const isSequenceFrameArray = (view: View | View[]): view is SequenceFrame[] =>
+  Array.isArray(view) && view.every((v) => v.table_info.base_schema === BaseSchema.SequenceFrame);
+
+// Defined here to avoid circular dependency
+export const isMediaView = (view: View | View[]): view is Image | SequenceFrame[] => {
+  if (Array.isArray(view)) {
+    return view.every((v) => v.table_info.base_schema === BaseSchema.SequenceFrame);
+  }
+  return view.table_info.base_schema === BaseSchema.Image;
+};

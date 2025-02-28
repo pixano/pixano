@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
+  import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
 
   import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
@@ -16,6 +16,7 @@ License: CECILL-C
   export let currentItemId: string;
   export let isLoading: boolean;
   export let goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
+  export let handleReturnToPreviousPage: () => void;
   export let handleSave: () => void;
   export let navigateTo: (route: string) => Promise<string | undefined>;
 
@@ -43,7 +44,12 @@ License: CECILL-C
     <Loader2Icon class="animate-spin" />
   {:else}
     <div class="flex items-center gap-4">
-      <IconButton on:click={() => navigateTo("/")}><Home /></IconButton>
+      <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
+        <Home />
+      </IconButton>
+      <IconButton on:click={handleReturnToPreviousPage} tooltipContent={"Back to dataset"}>
+        <ArrowLeftCircleIcon />
+      </IconButton>
       {currentItemId}
       <IconButton
         on:click={() => goToNeighborItem("previous")}
@@ -58,7 +64,6 @@ License: CECILL-C
         <ArrowRight />
       </IconButton>
     </div>
-
     <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
   {/if}
 {/if}

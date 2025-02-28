@@ -8,9 +8,9 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
-import responses
 from fastapi.encoders import jsonable_encoder
 from pixano_inference.client import PixanoInferenceClient
 from pixano_inference.pydantic import (
@@ -18,7 +18,6 @@ from pixano_inference.pydantic import (
     TextImageConditionalGenerationResponse,
     UsageConditionalGeneration,
 )
-from responses import Response
 
 from pixano.features import Conversation, EntityRef, Image, ItemRef, Message, Source, SourceRef, ViewRef
 from pixano.inference.text_image_conditional_generation import messages_to_prompt, text_image_conditional_generation
@@ -226,13 +225,16 @@ def test_messages_to_prompt(
         assert p == e
 
 
-@responses.activate
+@pytest.mark.asyncio
+@patch("pixano_inference.client.PixanoInferenceClient.text_image_conditional_generation")
 @pytest.mark.parametrize(
     "num_messages,response,expected_output",
     [
         (
             1,
             TextImageConditionalGenerationResponse(
+                id="id",
+                status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -265,6 +267,8 @@ def test_messages_to_prompt(
         (
             2,
             TextImageConditionalGenerationResponse(
+                id="id",
+                status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -297,6 +301,8 @@ def test_messages_to_prompt(
         (
             3,
             TextImageConditionalGenerationResponse(
+                id="id",
+                status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -328,7 +334,8 @@ def test_messages_to_prompt(
         ),
     ],
 )
-def test_text_image_conditional_generation(
+async def test_text_image_conditional_generation(
+    mock_text_image_conditional_generation,
     num_messages: int,
     response: TextImageConditionalGenerationResponse,
     expected_output: Message,
@@ -337,16 +344,9 @@ def test_text_image_conditional_generation(
     simple_pixano_inference_client: PixanoInferenceClient,
     vqa_sources: tuple[Source, Source, Source],
 ):
-    responses.add(
-        Response(
-            method="POST",
-            url=f"{simple_pixano_inference_client.url}/tasks/multimodal/image-text/conditional_generation/",
-            json=jsonable_encoder(response),
-            status=201,
-        )
-    )
+    mock_text_image_conditional_generation.return_value = response
 
-    message = text_image_conditional_generation(
+    message = await text_image_conditional_generation(
         client=simple_pixano_inference_client,
         source=vqa_sources[1],
         media_dir=ASSETS_PATH,

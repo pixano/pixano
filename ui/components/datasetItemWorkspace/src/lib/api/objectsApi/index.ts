@@ -4,11 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Annotation, Entity, View } from "@pixano/core";
+import type { Annotation, Entity, Image, SequenceFrame } from "@pixano/core";
 
 import { PRE_ANNOTATION } from "../../constants";
 
-export type MView = Record<string, View | View[]>;
+export type MView = Record<string, Image | SequenceFrame[]>;
 
 export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
   return entities.find((entity) => entity.id === ann.data.entity_ref.id);

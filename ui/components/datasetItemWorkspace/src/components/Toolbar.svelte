@@ -42,7 +42,7 @@ License: CECILL-C
   export let isVideo: boolean = false;
 
   let previousSelectedTool: SelectionTool | null = null;
-  let showSmartTools: boolean = false;
+  $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
   const cleanFusion = () => {
     //deselect everything = unhighlight all
@@ -70,7 +70,6 @@ License: CECILL-C
       selectTool(addSmartPointTool);
       modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     } else selectTool(panTool);
-    showSmartTools = !showSmartTools;
   };
 
   interactiveSegmenterModel.subscribe((segmenter) => {

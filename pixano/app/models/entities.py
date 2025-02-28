@@ -7,11 +7,11 @@
 from pydantic import ConfigDict, field_validator
 from typing_extensions import TypeVar
 
-from pixano.app.models.table_info import TableInfo
-from pixano.features import Entity
-from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets import Dataset
+from pixano.features import Entity, SchemaGroup, is_entity
 
 from .base_schema import BaseSchemaModel
+from .table_info import TableInfo
 
 
 T = TypeVar("T", bound=Entity)
@@ -46,8 +46,8 @@ class EntityModel(BaseSchemaModel[Entity]):
             raise ValueError(f"Table info group must be {SchemaGroup.ENTITY.value}.")
         return value
 
-    def to_row(self, schema_type: type[T]) -> T:
+    def to_row(self, dataset: Dataset) -> Entity:
         """Create an [Entity][pixano.features.Entity] from the model."""
-        if not issubclass(schema_type, Entity):
+        if not is_entity(dataset.schema.schemas[self.table_info.name]):
             raise ValueError(f"Schema type must be a subclass of {Entity.__name__}.")
-        return super().to_row(schema_type)
+        return super().to_row(dataset)
