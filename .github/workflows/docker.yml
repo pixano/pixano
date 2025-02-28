@@ -86,7 +86,6 @@ jobs:
               exit 1
           fi
 
-
       - name: Build and push latest
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
