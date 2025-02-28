@@ -7,7 +7,7 @@ License: CECILL-C
 // Imports
 import { writable } from "svelte/store";
 
-import type { DatasetInfo, DatasetSchema, Source, PixanoInferenceInfo } from "@pixano/core";
+import type { DatasetInfo, DatasetSchema, PixanoInferenceInfo, Source } from "@pixano/core";
 
 import {
   DEFAULT_DATASET_TABLE_PAGE,
