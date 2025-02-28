@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { type ModelConfig } from "../../lib/types";
 
-export async function instantiateModel(model_config: ModelConfig): Promise<void> {
+export async function instantiateModel(model_config: ModelConfig): Promise<boolean> {
   try {
     const response = await fetch(`/inference/models/instantiate`, {
       headers: {
@@ -19,9 +19,12 @@ export async function instantiateModel(model_config: ModelConfig): Promise<void>
 
     if (!response.ok) {
       console.log("api.instantiateModel -", response.status, response.statusText);
-      return;
+      return false;
     }
+
+    return true;
   } catch (e) {
     console.log("api.instantiateModel -", e);
+    return false;
   }
 }

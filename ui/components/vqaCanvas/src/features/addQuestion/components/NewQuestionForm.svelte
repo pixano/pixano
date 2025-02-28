@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
 
   import { QuestionTypeEnum } from "@pixano/core";
+  import { AutoResizeTextarea } from "@pixano/core/src/components/ui/autoresize-textarea";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
   import type { StoreQuestionEvent } from "../types";
@@ -19,20 +20,6 @@ License: CECILL-C
   export let questionContent: string;
 
   const dispatch = createEventDispatcher();
-
-  let textarea: HTMLTextAreaElement | null = null;
-
-  $: if (questionContent) {
-    void adjustHeight();
-  }
-
-  const adjustHeight = async () => {
-    if (textarea) {
-      textarea.style.height = "auto";
-      await tick();
-      textarea.style.height = textarea.scrollHeight + "px";
-    }
-  };
 
   const handleStoreQuestion = () => {
     const eventDetail: StoreQuestionEvent = {
@@ -46,12 +33,7 @@ License: CECILL-C
 
 <div class="px-3 flex flex-col gap-2">
   <h5 class="font-medium">Question</h5>
-  <textarea
-    placeholder="What is the main object ?"
-    class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
-    bind:this={textarea}
-    bind:value={questionContent}
-  />
+  <AutoResizeTextarea placeholder="What is the main object ?" bind:value={questionContent} />
 
   {#if questionType !== QuestionTypeEnum.OPEN}
     <div class="flex flex-col gap-2">

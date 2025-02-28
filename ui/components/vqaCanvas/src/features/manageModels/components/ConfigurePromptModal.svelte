@@ -5,34 +5,42 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
 
   import { PrimaryButton, QuestionTypeEnum } from "@pixano/core";
+  import { AutoResizeTextarea } from "@pixano/core/src/components/ui/autoresize-textarea";
 
   import { completionModelsStore } from "../../../stores/completionModels";
 
   export let vqaSectionWidth: number;
 
   let question_type = QuestionTypeEnum.OPEN; //TODO selector to choose question type
-  let textarea: HTMLTextAreaElement | null = null;
 
   let completionPrompt =
-    $completionModelsStore.find((m) => m.selected)?.prompts[question_type] ?? "";
+    $completionModelsStore.find((m) => m.selected)?.prompts[question_type] ?? null;
 
-  onMount(() => resizeTextarea());
-
-  const resizeTextarea = async () => {
-    if (textarea) {
-      textarea.style.height = "auto";
-      await tick();
-      textarea.style.height = textarea.scrollHeight + "px";
-    }
-  };
+  let newPromptContent = completionPrompt?.content ?? "";
 
   const dispatch = createEventDispatcher();
 
   function handleSavePrompt() {
-    console.log("Save prompt", completionPrompt);
+    completionModelsStore.update((models) =>
+      models.map((model) =>
+        model.selected
+          ? {
+              ...model,
+              prompts: {
+                ...model.prompts,
+                [question_type]: {
+                  content: newPromptContent,
+                  as_system: completionPrompt?.as_system ?? false,
+                },
+              },
+            }
+          : model,
+      ),
+    );
+
     dispatch("cancelPrompt"); //also close modal
   }
 
@@ -54,16 +62,11 @@ License: CECILL-C
   </div>
 
   <div class="px-3 pb-3 flex flex-col gap-2">
-    <textarea
-      placeholder="Enter your prompt here"
-      class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
-      bind:this={textarea}
-      bind:value={completionPrompt}
-    />
+    <AutoResizeTextarea placeholder="Enter your prompt here" bind:value={newPromptContent} />
 
     <div class="flex flex-row gap-2 px-3 justify-center">
       <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
-      <PrimaryButton on:click={handleSavePrompt} isSelected disabled={completionPrompt === ""}>
+      <PrimaryButton on:click={handleSavePrompt} isSelected disabled={newPromptContent === ""}>
         Save
       </PrimaryButton>
     </div>

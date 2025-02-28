@@ -7,8 +7,9 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { IconButton, QuestionTypeEnum } from "@pixano/core";
-  
+  import { PrimaryButton, QuestionTypeEnum } from "@pixano/core";
+
+  // To refacto : Cross module imports
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
   import { completionModelsStore } from "../../../stores/completionModels";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
@@ -48,12 +49,12 @@ License: CECILL-C
   <QuestionTypeSelect bind:questionType />
 
   <div class="flex flex-col gap-2 px-3">
-    <IconButton
+    <PrimaryButton
       disabled={questionType === undefined || completionModel === ""}
       on:click={handleGenerateQuestion}
     >
       <Sparkles size={20} />Generate
-    </IconButton>
+    </PrimaryButton>
   </div>
 
   {#if questionType !== undefined}

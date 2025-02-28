@@ -42,7 +42,7 @@ License: CECILL-C
     }
   };
 
-  const handleAddModel = () => {
+  const handleAddModel = async () => {
     isAddingModelRequestPending = true;
     const model_config: ModelConfig = {
       config: {
@@ -54,19 +54,19 @@ License: CECILL-C
       },
       provider: formData.provider,
     };
-    console.log("XXX Model config:", model_config);
-    api
-      .instantiateModel(model_config) //NOTE: take some time (~40sec)
-      .then(() => {
-        isAddingModelRequestPending = false;
-        console.log(`Model '${model_config.config.name}' added.`);
-        dispatch("listModels");
-      })
-      .catch((err) => {
-        isAddingModelRequestPending = false;
-        console.error(`Couldn't instantiate model '${model_config.config.name}'`, err);
-        dispatch("cancelAddModel");
-      });
+
+    const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
+
+    if (!success) {
+      console.error(`Couldn't instantiate model '${model_config.config.name}'`);
+      return;
+    }
+
+    isAddingModelRequestPending = false;
+    console.log(`Model '${model_config.config.name}' added.`);
+
+    dispatch("listModels");
+    dispatch("cancelAddModel");
   };
 </script>
 
