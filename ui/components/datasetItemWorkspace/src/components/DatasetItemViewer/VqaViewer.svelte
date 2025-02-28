@@ -20,7 +20,6 @@ License: CECILL-C
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
-    type GenerateAnswerEvent,
   } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -43,14 +42,11 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
   import { addQuestion } from "../../lib/stores/mutations/addQuestion";
-  import { generateAnswer } from "../../lib/stores/mutations/generateAnswer";
   import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-
-  let completionModel: string;
 
   // utility vars for resizing with slide bar
   let vqaAreaMaxWidth = 450; //default width
@@ -177,17 +173,6 @@ License: CECILL-C
     addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
   };
 
-  const handleGenerateAnswer = (event: CustomEvent<GenerateAnswerEvent>) => {
-    const question = $messages.find((m) => m.id === event.detail.questionId);
-
-    if (question === undefined) {
-      console.error("ERROR: Message not found");
-      return;
-    }
-
-    generateAnswer(completionModel, question);
-  };
-
   const startExpand = (e: MouseEvent) => {
     expanding = true;
     initialVqaAreaX = e.clientX;
@@ -219,10 +204,8 @@ License: CECILL-C
       <VqaArea
         messages={$messages}
         width={vqaAreaMaxWidth}
-        bind:completionModel
         on:answerContentChange={handleAnswerContentChange}
         on:storeQuestion={handleStoreQuestion}
-        on:generateAnswer={handleGenerateAnswer}
       />
     </div>
     <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />

@@ -6,21 +6,30 @@ License: CECILL-C
 
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
-  import { createEventDispatcher } from "svelte";
 
+  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { messages } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
+  import { generateAnswer } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateAnswer";
   import CompletedQuestion from "../assets/icons/completed-question.png";
   import PendingQuestion from "../assets/icons/pending-question.png";
-  import type { GenerateAnswerEvent } from "../types";
 
   export let questionId: string;
   export let questionNumber: number;
   export let isQuestionCompleted: boolean;
 
-  const dispatch = createEventDispatcher();
-
   const handleGenerateAnswer = () => {
-    const eventDetail: GenerateAnswerEvent = { questionId };
-    dispatch("generateAnswer", eventDetail);
+    const question = $messages.find((m) => m.id === questionId);
+    if (question === undefined) {
+      console.error("ERROR: Message not found");
+      return;
+    }
+
+    const completionModel = $pixanoInferenceStore.filter((pi) => pi.selected)[0]?.name ?? undefined;
+    if (completionModel === undefined) {
+      console.error("ERROR: No model selected");
+      return;
+    }
+    generateAnswer(completionModel, question);
   };
 </script>
 

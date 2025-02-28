@@ -34,7 +34,7 @@ async def instantiate_model(
     config: Annotated[ModelConfig, Body(embed=True)],
     provider: Annotated[str, Body(embed=True)],
     settings: Annotated[Settings, Depends(get_settings)],
-) -> ModelInfo:
+) -> None:
     """Instantiate a model from pixano inference client."""
     client = get_client_from_settings(settings)
     return await client.instantiate_model(provider=provider, config=config)

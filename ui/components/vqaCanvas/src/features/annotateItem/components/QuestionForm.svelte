@@ -35,7 +35,6 @@ License: CECILL-C
     {questionId}
     {questionNumber}
     isQuestionCompleted={questionCompleted}
-    on:generateAnswer
   />
   <QuestionContent content={question.data.content} />
 

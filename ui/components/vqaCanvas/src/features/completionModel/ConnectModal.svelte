@@ -11,7 +11,7 @@ License: CECILL-C
   import type { InputEvents } from "@pixano/core/src/components/ui/input";
   import Input from "@pixano/core/src/components/ui/input/input.svelte";
 
-  import { connect } from "./connect";
+  import { connect } from "../../utils/connect";
 
   export let isConnected = false;
   export let defaultURL: string;
@@ -24,8 +24,9 @@ License: CECILL-C
   const dispatch = createEventDispatcher();
 
   async function handleConnect() {
-    isConnected = await connect(formData.pi_url);
-    if (isConnected) {
+    const newConnection = await connect(formData.pi_url);
+    if (!isConnected && newConnection) isConnected = newConnection;
+    if (newConnection) {
       dispatch("listModels");
       dispatch("cancelConnect"); //also close modal
     }
@@ -55,6 +56,15 @@ License: CECILL-C
     <p>Pixano Inference connection</p>
   </div>
   <div class="p-3 flex flex-col gap-2">
+    <span>
+      <i>
+        Please note that the last active
+        <br />
+        connection will be used, even
+        <br />
+        after a failed connect attempt.
+      </i>
+    </span>
     <h5 class="font-medium">Pixano Inference provider URL</h5>
     <div class="flex items-center justify-between">
       <Input

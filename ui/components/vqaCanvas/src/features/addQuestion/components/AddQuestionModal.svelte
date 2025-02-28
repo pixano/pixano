@@ -7,19 +7,28 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { QuestionTypeEnum } from "@pixano/core";
+  import { MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
+  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
-  export let completionModel: string;
   export let width: number;
 
   let questionType: QuestionTypeEnum;
   let questionChoices: string[] = [];
   let questionContent: string = "";
+
+  let completionModel: string;
+
+  pixanoInferenceStore.subscribe((pis) => {
+    let model = pis.filter(
+      (pi) => pi.selected && pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION,
+    );
+    if (model && model.length === 1) completionModel = model[0].name;
+  });
 
   const handleGenerateQuestion = () => {
     if (!completionModel || completionModel.length === 0) return;
@@ -45,7 +54,6 @@ License: CECILL-C
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>QA editor</p>
   </div>
-
   <QuestionTypeSelect bind:questionType />
 
   <div class="flex flex-col gap-2 px-3">

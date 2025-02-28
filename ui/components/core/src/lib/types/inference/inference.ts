@@ -4,15 +4,28 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Conversation, Message } from "../dataset";
+import { Conversation, Message, QuestionTypeEnum } from "../dataset";
 
 export enum MultimodalImageNLPTask {
   //Multimodal tasks
   CAPTIONING = "image_captioning",
-  CONDITIONAL_GENERATION = "image_text_conditional_generation",
+  CONDITIONAL_GENERATION = "text_image_conditional_generation",
   EMBEDDING = "image_text_embedding",
   MATCHING = "image_text_matching",
   QUESTION_ANSWERING = "image_question_answering",
+}
+
+export interface PixanoInferenceInfo {
+  selected: boolean;
+  name: string;
+  task: MultimodalImageNLPTask;
+  prompts: SystemPrompt[];
+}
+
+export interface SystemPrompt {
+  content: string;
+  question_type: QuestionTypeEnum;
+  as_system: boolean;
 }
 
 interface ModelConfigConfig {
@@ -30,7 +43,7 @@ export interface ModelConfig {
 
 export interface ModelList {
   name: string;
-  task: string;
+  task: MultimodalImageNLPTask;
 }
 
 export interface CondititionalGenerationTextImageInput {
