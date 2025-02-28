@@ -24,7 +24,7 @@ License: CECILL-C
     provider: "vllm",
     model_name: "llava-qwen",
     model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-    dtype: "bfloat16",
+    dtype: "float32",
   };
 
   let isAddingModelRequestPending = false;

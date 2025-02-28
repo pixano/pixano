@@ -33,6 +33,11 @@ License: CECILL-C
     ),
   );
 
+  //reactive: when no model selected and model available, select first one
+  $: if (!selectedModel && inferenceModels.length >= 1) {
+    selectedModel = inferenceModels[0].id;
+  }
+
   //Try to connect with default URL at startup
   onMount(() => {
     api
@@ -57,6 +62,7 @@ License: CECILL-C
       .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
       .map((model) => model.name);
 
+    inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
       mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
     );
