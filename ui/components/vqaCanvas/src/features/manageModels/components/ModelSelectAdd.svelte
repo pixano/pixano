@@ -8,36 +8,30 @@ License: CECILL-C
   import { Plus, Sparkles } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  import {
-    api,
-    IconButton,
-    MultimodalImageNLPTask,
-    QuestionTypeEnum,
-    type SystemPrompt,
-  } from "@pixano/core";
+  import { api, IconButton, MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
 
-  import { pixanoInferenceStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { updatedPixanoInferenceStore } from "../../utils/updatePixInfStore";
+  import {
+    completionModelsStore,
+    type QuestionGenerationSystemPrompts,
+  } from "../../../stores/completionModels";
+  import { mergeModelLists } from "../../../utils/mergeModelsList";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
   export let vqaSectionWidth: number;
-  export let selectedModel: string;
+
+  let selectedModel: string;
 
   let defaultURL = "http://localhost:9152";
   let isInferenceApiConnected = false;
   let inferenceModels: { id: string; value: string }[] = [];
 
   //reactive: when model selected, update store
-  $: if (selectedModel) {
-    pixanoInferenceStore.update((pis) =>
-      pis.map((pi) =>
-        pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && pi.name === selectedModel
-          ? { ...pi, selected: true }
-          : { ...pi, selected: false },
-      ),
-    );
-  }
+  $: completionModelsStore.update((models) =>
+    models.map((model) =>
+      model.name === selectedModel ? { ...model, selected: true } : { ...model, selected: false },
+    ),
+  );
 
   //Try to connect with default URL at startup
   onMount(() => {
@@ -53,26 +47,23 @@ License: CECILL-C
   const listModels = () => {
     api
       .listModels()
-      .then((available_models) => {
-        const defaultPrompts: SystemPrompt[] = Object.values(QuestionTypeEnum).map(
-          (qtype) => ({ content: "", question_type: qtype, as_system: true }), //TODO? give a default system prompt ?
-        );
+      .then((availableModels) => {
+        const defaultPrompts = Object.fromEntries(
+          Object.values(QuestionTypeEnum).map(
+            (questionType) => [questionType, { content: "", as_system: true }], //TODO? give a default system prompt ?
+          ),
+        ) as QuestionGenerationSystemPrompts;
 
-        pixanoInferenceStore.update((currentList) =>
-          updatedPixanoInferenceStore(available_models, currentList, defaultPrompts),
-        );
-
-        inferenceModels = available_models
+        const completionAvailableModelsName = availableModels
           .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
-          .map((model) => ({ id: model.name, value: model.name }));
+          .map((model) => model.name);
 
-        if (inferenceModels.length > 0) {
-          selectedModel = inferenceModels[0].value;
-        }
+        completionModelsStore.update((currentList) =>
+          mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
+        );
       })
       .catch((err) => {
         console.error("Can't list models", err);
-        models = [];
       });
   };
 
@@ -138,14 +129,6 @@ License: CECILL-C
           : "text-red-500"}
       />
     </IconButton>
-    {#if showConnectModal}
-      <ConnectModal
-        bind:isConnected={isInferenceApiConnected}
-        {defaultURL}
-        on:cancelConnect={handleCloseConnectModal}
-        on:listModels={listModels}
-      />
-    {/if}
   </div>
   <div class="flex flex-col grow">
     <!-- For some reason, some tailwind classes don't work on select -->
@@ -170,13 +153,24 @@ License: CECILL-C
     >
       <Plus />
     </IconButton>
-    {#if showAddModelModal}
-      <AddModelModal
-        {vqaSectionWidth}
-        on:listModels={listModels}
-        on:cancelAddModel={handleCloseAddModelModal}
-      />
-    {/if}
   </div>
 </div>
 <svelte:window on:keydown={handleKeyDown} />
+
+{#if showConnectModal}
+  <ConnectModal
+    {vqaSectionWidth}
+    {defaultURL}
+    bind:isConnected={isInferenceApiConnected}
+    on:cancelConnect={handleCloseConnectModal}
+    on:listModels={listModels}
+  />
+{/if}
+
+{#if showAddModelModal}
+  <AddModelModal
+    {vqaSectionWidth}
+    on:listModels={listModels}
+    on:cancelAddModel={handleCloseAddModelModal}
+  />
+{/if}

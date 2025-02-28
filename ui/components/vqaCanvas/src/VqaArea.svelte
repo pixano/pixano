@@ -18,7 +18,6 @@ License: CECILL-C
   export let messages: Message[];
   export let vqaSectionWidth: number;
 
-  let completionModel: string;
   let showPromptModal = false;
 
   $: messagesByNumber = groupMessagesByNumber(messages);
@@ -42,18 +41,23 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
-  <ModelSelectAdd {vqaSectionWidth} bind:selectedModel={completionModel} />
+  <ModelSelectAdd {vqaSectionWidth} />
+
   <div class="flex flex-row gap-2 justify-between">
-    <AddQuestionButton {vqaSectionWidth} {completionModel} on:storeQuestion />
-    <IconButton tooltipContent="Settings (configure prompts)" on:click={handleOpenPromptModal}>
+    <AddQuestionButton {vqaSectionWidth} on:storeQuestion />
+    <IconButton
+      tooltipContent="Configure question generation prompt"
+      on:click={handleOpenPromptModal}
+    >
       <Settings />
     </IconButton>
-    {#each messagesByNumber as messages}
-      <QuestionForm bind:messages on:answerContentChange on:generateAnswer />
-    {/each}
   </div>
+
+  {#each messagesByNumber as messages}
+    <QuestionForm bind:messages on:answerContentChange on:generateAnswer />
+  {/each}
 </div>
 
 {#if showPromptModal}
-  <ConfigurePromptModal on:cancelPrompt={handleClosePromptModal} />
+  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={handleClosePromptModal} />
 {/if}

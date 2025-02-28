@@ -15,13 +15,6 @@ export enum MultimodalImageNLPTask {
   QUESTION_ANSWERING = "image_question_answering",
 }
 
-export interface PixanoInferenceInfo {
-  selected: boolean;
-  name: string;
-  task: MultimodalImageNLPTask;
-  prompts: SystemPrompt[];
-}
-
 export interface SystemPrompt {
   content: string;
   question_type: QuestionTypeEnum;
@@ -39,11 +32,6 @@ interface ModelConfigConfig {
 export interface ModelConfig {
   config: ModelConfigConfig;
   provider: string;
-}
-
-export interface ModelList {
-  name: string;
-  task: MultimodalImageNLPTask;
 }
 
 export interface CondititionalGenerationTextImageInput {

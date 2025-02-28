@@ -13,6 +13,7 @@ License: CECILL-C
 
   export let isConnected = false;
   export let defaultURL: string;
+  export let vqaSectionWidth: number;
 
   // default values
   let formData = {
@@ -49,36 +50,32 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] left-[calc(300px+5px+315px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3"
+  style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Pixano Inference connection</p>
   </div>
-  <div class="p-3 flex flex-col gap-2">
-    <span>
-      <i>
-        Please note that the last active
-        <br />
-        connection will be used, even
-        <br />
-        after a failed connect attempt.
-      </i>
-    </span>
+
+  <div class="px-3 pb-3 flex flex-col gap-3">
     <h5 class="font-medium">Pixano Inference provider URL</h5>
-    <div class="flex items-center justify-between">
-      <Input
-        name="pi_url"
-        value={formData.pi_url}
-        type="string"
-        on:change={handleChange}
-        on:keyup={(e) => e.stopPropagation()}
-      />
-    </div>
-    <div class="flex flex-row gap-2 px-3 justify-center">
-      <PrimaryButton on:click={handleConnect} isSelected disabled={formData.pi_url === ""}>
-        OK
-      </PrimaryButton>
+    <Input
+      name="pi_url"
+      value={formData.pi_url}
+      type="string"
+      on:change={handleChange}
+      on:keyup={(e) => e.stopPropagation()}
+    />
+
+    <p class="italic text-justify text-sm">
+      Note that the last active connection will be used, even after a failed connect attempt.
+    </p>
+
+    <div class="flex flex-row gap-4 justify-center">
       <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
+      <PrimaryButton on:click={handleConnect} isSelected disabled={formData.pi_url === ""}>
+        Connect
+      </PrimaryButton>
     </div>
   </div>
 </div>

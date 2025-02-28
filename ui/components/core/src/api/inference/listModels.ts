@@ -4,9 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { MultimodalImageNLPTask, type ModelList } from "../../lib/types";
+import { MultimodalImageNLPTask } from "../../lib/types";
 
-export async function listModels(task: MultimodalImageNLPTask | null = null): Promise<ModelList[]> {
+interface Model {
+  name: string;
+  task: MultimodalImageNLPTask;
+}
+
+export async function listModels(task: MultimodalImageNLPTask | null = null): Promise<Model[]> {
   const url =
     task === null
       ? "/inference/models/list"
@@ -26,7 +31,7 @@ export async function listModels(task: MultimodalImageNLPTask | null = null): Pr
       return [];
     }
 
-    return (await response.json()) as ModelList[];
+    return (await response.json()) as Model[];
   } catch (e) {
     console.log("api.listModels -", e);
     return [];

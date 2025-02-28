@@ -7,27 +7,21 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
+  import { QuestionTypeEnum } from "@pixano/core";
   import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
 
-  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
+  import { completionModelsStore } from "../../../stores/completionModels";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
-  export let completionModel: string;
   export let vqaSectionWidth: number;
 
   let questionType: QuestionTypeEnum;
   let questionChoices: string[] = [];
   let questionContent: string = "";
 
-  pixanoInferenceStore.subscribe((pis) => {
-    let model = pis.filter(
-      (pi) => pi.selected && pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION,
-    );
-    if (model && model.length === 1) completionModel = model[0].name;
-  });
+  $: completionModel = $completionModelsStore.find((m) => m.selected)?.name;
 
   const handleGenerateQuestion = async () => {
     if (!completionModel || completionModel.length === 0) return;

@@ -8,8 +8,8 @@ License: CECILL-C
   import { Sparkles } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
-  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { messages } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
+  import { completionModelsStore } from "../../../stores/completionModels";
   import CompletedQuestion from "../assets/icons/completed-question.png";
   import PendingQuestion from "../assets/icons/pending-question.png";
 
@@ -26,7 +26,8 @@ License: CECILL-C
       return;
     }
 
-    const completionModel = $pixanoInferenceStore.filter((pi) => pi.selected)[0]?.name ?? undefined;
+    const completionModel =
+      $completionModelsStore.filter((model) => model.selected)[0]?.name ?? undefined;
     if (completionModel === undefined) {
       console.error("ERROR: No model selected");
       return;
