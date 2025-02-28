@@ -31,7 +31,13 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-2">
-  <QuestionHeader {questionId} {questionNumber} isQuestionCompleted={questionCompleted} />
+  <QuestionHeader
+    {questionId}
+    {questionNumber}
+    isQuestionCompleted={questionCompleted}
+    on:generateAnswer
+  />
+
   <QuestionContent content={question.data.content} />
 
   {#each answers as answer}

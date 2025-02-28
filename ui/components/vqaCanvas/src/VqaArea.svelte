@@ -11,14 +11,15 @@ License: CECILL-C
 
   import { AddQuestionButton } from "./features/addQuestion/components";
   import { QuestionForm } from "./features/annotateItem/components";
-  import ConfigurePromptModal from "./features/completionModel/ConfigurePromptModal.svelte";
-  import ModelSelectAdd from "./features/completionModel/ModelSelectAdd.svelte";
+  import { ModelSelectAdd } from "./features/manageModels/components";
+  import ConfigurePromptModal from "./features/manageModels/components/ConfigurePromptModal.svelte";
   import { groupMessagesByNumber } from "./utils";
 
   export let messages: Message[];
-  export let width: number;
+  export let vqaSectionWidth: number;
 
   let showPromptModal = false;
+
   $: messagesByNumber = groupMessagesByNumber(messages);
 
   const handleOpenPromptModal = (event: MouseEvent) => {
@@ -40,18 +41,23 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
-  <ModelSelectAdd />
+  <ModelSelectAdd {vqaSectionWidth} />
+
   <div class="flex flex-row gap-2 justify-between">
-    <AddQuestionButton {width} on:storeQuestion />
-    <IconButton tooltipContent="Settings (configure prompts)" on:click={handleOpenPromptModal}>
+    <AddQuestionButton {vqaSectionWidth} on:storeQuestion />
+    <IconButton
+      tooltipContent="Configure question generation prompt"
+      on:click={handleOpenPromptModal}
+    >
       <Settings />
     </IconButton>
-    {#if showPromptModal}
-      <ConfigurePromptModal on:cancelPrompt={handleClosePromptModal} />
-    {/if}
   </div>
 
   {#each messagesByNumber as messages}
-    <QuestionForm bind:messages on:answerContentChange />
+    <QuestionForm bind:messages on:answerContentChange on:generateAnswer />
   {/each}
 </div>
+
+{#if showPromptModal}
+  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={handleClosePromptModal} />
+{/if}

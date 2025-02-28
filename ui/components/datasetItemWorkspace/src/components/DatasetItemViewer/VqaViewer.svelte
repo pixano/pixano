@@ -20,6 +20,7 @@ License: CECILL-C
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
+    type GenerateAnswerEvent,
   } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -42,6 +43,7 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
   import { addQuestion } from "../../lib/stores/mutations/addQuestion";
+  import { generateAnswer } from "../../lib/stores/mutations/generateAnswer";
   import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
@@ -173,6 +175,19 @@ License: CECILL-C
     addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
   };
 
+  const handleGenerateAnswer = async (event: CustomEvent<GenerateAnswerEvent>) => {
+    const { questionId, completionModel } = event.detail;
+
+    const question = $messages.find((m) => m.id === questionId);
+
+    if (question === undefined) {
+      console.error("ERROR: Message not found");
+      return;
+    }
+
+    await generateAnswer(completionModel, question);
+  };
+
   const startExpand = (e: MouseEvent) => {
     expanding = true;
     initialVqaAreaX = e.clientX;
@@ -193,19 +208,14 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div
-    class="h-full flex flex-cols"
-    on:mouseup={stopExpand}
-    on:mousemove={expand}
-    role="tab"
-    tabindex="0"
-  >
+  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
     <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
       <VqaArea
         messages={$messages}
-        width={vqaAreaMaxWidth}
+        vqaSectionWidth={vqaAreaMaxWidth}
         on:answerContentChange={handleAnswerContentChange}
         on:storeQuestion={handleStoreQuestion}
+        on:generateAnswer={handleGenerateAnswer}
       />
     </div>
     <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />

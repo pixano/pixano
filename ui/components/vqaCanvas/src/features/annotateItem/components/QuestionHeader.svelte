@@ -6,16 +6,20 @@ License: CECILL-C
 
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
+  import { createEventDispatcher } from "svelte";
 
-  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { IconButton } from "@pixano/core";
+
   import { messages } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
-  import { generateAnswer } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateAnswer";
+  import { completionModelsStore } from "../../../stores/completionModels";
   import CompletedQuestion from "../assets/icons/completed-question.png";
   import PendingQuestion from "../assets/icons/pending-question.png";
 
   export let questionId: string;
   export let questionNumber: number;
   export let isQuestionCompleted: boolean;
+
+  const dispatch = createEventDispatcher();
 
   const handleGenerateAnswer = () => {
     const question = $messages.find((m) => m.id === questionId);
@@ -24,12 +28,17 @@ License: CECILL-C
       return;
     }
 
-    const completionModel = $pixanoInferenceStore.filter((pi) => pi.selected)[0]?.name ?? undefined;
+    const completionModel =
+      $completionModelsStore.filter((model) => model.selected)[0]?.name ?? undefined;
     if (completionModel === undefined) {
       console.error("ERROR: No model selected");
       return;
     }
-    generateAnswer(completionModel, question);
+
+    dispatch("generateAnswer", {
+      questionId: question.id,
+      completionModel,
+    });
   };
 </script>
 
@@ -43,10 +52,7 @@ License: CECILL-C
     <h3 class="font-medium">Question #{questionNumber}</h3>
   </div>
 
-  <button
-    on:click={handleGenerateAnswer}
-    class="p-2 rounded-full hover:bg-primary-light transition duration-300"
-  >
+  <IconButton tooltipContent="Generate answer" on:click={handleGenerateAnswer}>
     <Sparkles size={20} class="text-slate-700" />
-  </button>
+  </IconButton>
 </div>

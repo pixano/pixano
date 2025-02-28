@@ -4,7 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export interface GenerateAnswerEvent {
-  questionId: string;
-  completionModel: string;
-}
+export { default as AutoResizeTextarea } from "./autoresize-textarea.svelte";

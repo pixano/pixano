@@ -7,39 +7,31 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
-  import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
+  import { PrimaryButton, QuestionTypeEnum } from "@pixano/core";
 
-  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+  // To refacto : Cross module imports
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
+  import { completionModelsStore } from "../../../stores/completionModels";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
-  export let width: number;
+  export let vqaSectionWidth: number;
 
   let questionType: QuestionTypeEnum;
   let questionChoices: string[] = [];
   let questionContent: string = "";
 
-  let completionModel: string;
+  $: completionModel = $completionModelsStore.find((m) => m.selected)?.name;
 
-  pixanoInferenceStore.subscribe((pis) => {
-    let model = pis.filter(
-      (pi) => pi.selected && pi.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION,
-    );
-    if (model && model.length === 1) completionModel = model[0].name;
-  });
-
-  const handleGenerateQuestion = () => {
+  const handleGenerateQuestion = async () => {
     if (!completionModel || completionModel.length === 0) return;
-    generateQuestion(completionModel)
-      .then(([resQuestionContent, resQuestionChoices]) => {
-        questionContent = resQuestionContent;
-        questionChoices = resQuestionChoices;
-      })
-      .catch((err) => {
-        console.error("Error while generating question:", err);
-      });
+
+    const generatedQuestion = await generateQuestion(completionModel);
+
+    if (!generatedQuestion) return;
+
+    questionContent = generatedQuestion.content;
+    questionChoices = generatedQuestion.choices;
   };
 </script>
 
@@ -49,7 +41,7 @@ License: CECILL-C
 <div
   on:click|stopPropagation={() => {}}
   class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
-  style={`left: calc(${width}px + 5px);`}
+  style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>QA editor</p>
@@ -58,7 +50,6 @@ License: CECILL-C
 
   <div class="flex flex-col gap-2 px-3">
     <PrimaryButton
-      isSelected
       disabled={questionType === undefined || completionModel === ""}
       on:click={handleGenerateQuestion}
     >
