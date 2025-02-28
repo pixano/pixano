@@ -21,10 +21,10 @@ on:
       - main
     paths:
       - "Dockerfile"
-      - "pixano/**"
-      - "ui/**"
+      # - "pixano/**"
+      # - "ui/**"
       - ".github/workflows/docker.yml"
-      - "pyproject.toml"
+      # - "pyproject.toml"
 
 env:
   TEST_TAG: pixano/pixano:test
