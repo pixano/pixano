@@ -8,6 +8,8 @@ License: CECILL-C
   import { Sparkles } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
+  import { IconButton } from "@pixano/core";
+
   import { messages } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
   import { completionModelsStore } from "../../../stores/completionModels";
   import CompletedQuestion from "../assets/icons/completed-question.png";
@@ -50,10 +52,7 @@ License: CECILL-C
     <h3 class="font-medium">Question #{questionNumber}</h3>
   </div>
 
-  <button
-    on:click={handleGenerateAnswer}
-    class="p-2 rounded-full hover:bg-primary-light transition duration-300"
-  >
+  <IconButton tooltipContent="Generate answer" on:click={handleGenerateAnswer}>
     <Sparkles size={20} class="text-slate-700" />
-  </button>
+  </IconButton>
 </div>

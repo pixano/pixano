@@ -44,27 +44,22 @@ License: CECILL-C
       .catch(() => console.error("Cannot connect to inference API"));
   });
 
-  const listModels = () => {
-    api
-      .listModels()
-      .then((availableModels) => {
-        const defaultPrompts = Object.fromEntries(
-          Object.values(QuestionTypeEnum).map(
-            (questionType) => [questionType, { content: "", as_system: true }], //TODO? give a default system prompt ?
-          ),
-        ) as QuestionGenerationSystemPrompts;
+  const listModels = async () => {
+    const availableModels = await api.listModels();
 
-        const completionAvailableModelsName = availableModels
-          .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
-          .map((model) => model.name);
+    const defaultPrompts = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map(
+        (questionType) => [questionType, { content: "", as_system: true }], //TODO? give a default system prompt ?
+      ),
+    ) as QuestionGenerationSystemPrompts;
 
-        completionModelsStore.update((currentList) =>
-          mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
-        );
-      })
-      .catch((err) => {
-        console.error("Can't list models", err);
-      });
+    const completionAvailableModelsName = availableModels
+      .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
+      .map((model) => model.name);
+
+    completionModelsStore.update((currentList) =>
+      mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
+    );
   };
 
   let showConnectModal = false;
@@ -117,43 +112,38 @@ License: CECILL-C
   };
 </script>
 
-<div class="px-3 flex flex-row gap-2">
-  <div class="flex-none content-center">
-    <IconButton tooltipContent="Pixano Inference connection" on:click={handleOpenConnectModal}>
-      <Sparkles
-        size={20}
-        class={isInferenceApiConnected
-          ? selectedModel
-            ? "text-green-500"
-            : "text-yellow-500"
-          : "text-red-500"}
-      />
-    </IconButton>
-  </div>
-  <div class="flex flex-col grow">
-    <!-- For some reason, some tailwind classes don't work on select -->
-    <!-- Use style instead -->
-    <select
-      class="py-3 px-2 border rounded-lg border-gray-200 outline-none text-slate-800"
-      style="color: #1e293b; border-color: #e5e7eb;"
-      bind:value={selectedModel}
-    >
-      <option value="" selected disabled>Select a model</option>
-      {#each inferenceModels as { id, value }}
-        <option value={id}>{value}</option>
-      {/each}
-    </select>
-  </div>
+<div class="flex flex-row gap-2">
+  <IconButton tooltipContent="Pixano Inference connection" on:click={handleOpenConnectModal}>
+    <Sparkles
+      size={20}
+      class={isInferenceApiConnected
+        ? selectedModel
+          ? "text-green-500"
+          : "text-yellow-500"
+        : "text-red-500"}
+    />
+  </IconButton>
 
-  <div class="flex-none content-center">
-    <IconButton
-      tooltipContent="Instantiate a model"
-      disabled={!isInferenceApiConnected}
-      on:click={handleOpenAddModelModal}
-    >
-      <Plus />
-    </IconButton>
-  </div>
+  <!-- For some reason, some tailwind classes don't work on select -->
+  <!-- Use style instead -->
+  <select
+    class="py-3 px-2 border rounded-lg border-gray-200 outline-none text-slate-800 grow"
+    style="color: #1e293b; border-color: #e5e7eb;"
+    bind:value={selectedModel}
+  >
+    <option value="" selected disabled>Select a model</option>
+    {#each inferenceModels as { id, value }}
+      <option value={id}>{value}</option>
+    {/each}
+  </select>
+
+  <IconButton
+    tooltipContent="Instantiate a model"
+    disabled={!isInferenceApiConnected}
+    on:click={handleOpenAddModelModal}
+  >
+    <Plus />
+  </IconButton>
 </div>
 <svelte:window on:keydown={handleKeyDown} />
 

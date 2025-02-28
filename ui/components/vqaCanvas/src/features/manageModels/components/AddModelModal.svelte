@@ -116,6 +116,7 @@ License: CECILL-C
     />
   </div>
   <div class="flex flex-row gap-2 px-3 justify-center">
+    <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
     <PrimaryButton
       on:click={handleAddModel}
       isSelected
@@ -123,9 +124,9 @@ License: CECILL-C
     >
       Add Model
     </PrimaryButton>
-    <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
   </div>
-  {#if isAddingModelRequestPending}
-    <LoadingModal />
-  {/if}
 </div>
+
+{#if isAddingModelRequestPending}
+  <LoadingModal />
+{/if}

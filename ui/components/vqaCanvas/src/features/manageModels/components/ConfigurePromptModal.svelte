@@ -46,26 +46,26 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3"
   style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Prompt settings</p>
   </div>
-  <div class="p-3 flex flex-col gap-2">
-    <div class="flex items-center justify-between">
-      <textarea
-        placeholder="Enter your prompt here"
-        class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
-        bind:this={textarea}
-        bind:value={completionPrompt}
-      />
-    </div>
+
+  <div class="px-3 pb-3 flex flex-col gap-2">
+    <textarea
+      placeholder="Enter your prompt here"
+      class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
+      bind:this={textarea}
+      bind:value={completionPrompt}
+    />
+
     <div class="flex flex-row gap-2 px-3 justify-center">
-      <PrimaryButton on:click={handleSavePrompt} isSelected disabled={completionPrompt === ""}>
-        OK
-      </PrimaryButton>
       <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
+      <PrimaryButton on:click={handleSavePrompt} isSelected disabled={completionPrompt === ""}>
+        Save
+      </PrimaryButton>
     </div>
   </div>
 </div>

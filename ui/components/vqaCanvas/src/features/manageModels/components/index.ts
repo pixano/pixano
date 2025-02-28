@@ -4,4 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export { default as ModelSelectAdd } from "./ModelSelectAdd.svelte";
+export { default as ModelSelectAdd } from "./ModelManagerForm.svelte";
