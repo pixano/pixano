@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { MultimodalImageNLPTask, PrimaryButton, QuestionTypeEnum } from "@pixano/core";
 
-  import { pixanoInferenceStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { pixanoInferenceStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   let question_type = QuestionTypeEnum.OPEN; //TODO selector to choose question type
 

@@ -22,7 +22,9 @@ License: CECILL-C
   const dispatch = createEventDispatcher();
 
   async function handleConnect() {
+    console.log("handleConnect");
     isConnected = await api.isInferenceApiHealthy(formData.pi_url);
+    console.log("handleConnect end", isConnected);
     if (isConnected) {
       dispatch("listModels");
       dispatch("cancelConnect"); //also close modal

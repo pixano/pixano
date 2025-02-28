@@ -21,6 +21,7 @@ License: CECILL-C
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
+  export let vqaSectionWidth: number;
   export let selectedModel: string;
 
   let defaultURL = "http://localhost:9152";
@@ -170,7 +171,11 @@ License: CECILL-C
       <Plus />
     </IconButton>
     {#if showAddModelModal}
-      <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
+      <AddModelModal
+        {vqaSectionWidth}
+        on:listModels={listModels}
+        on:cancelAddModel={handleCloseAddModelModal}
+      />
     {/if}
   </div>
 </div>
