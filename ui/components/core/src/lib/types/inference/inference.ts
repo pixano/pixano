@@ -36,8 +36,8 @@ export interface ModelConfig {
 
 export interface CondititionalGenerationTextImageInput {
   dataset_id: string;
-  conversation: Conversation;
-  messages: Message[];
+  conversation: Omit<Conversation, "ui">;
+  messages: Omit<Message, "ui">[];
   model: string;
   max_new_tokens?: number;
   temperature?: number;

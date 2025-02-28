@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   import { Plus, Sparkles } from "lucide-svelte";
-  import { onMount } from "svelte";
 
   import { api, IconButton, MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
 
@@ -33,16 +32,12 @@ License: CECILL-C
     ),
   );
 
-  //Try to connect with default URL at startup
-  onMount(() => {
-    api
-      .isInferenceApiHealthy(defaultURL)
-      .then((status) => {
-        isInferenceApiConnected = status;
-        if (isInferenceApiConnected) listModels();
-      })
-      .catch(() => console.error("Cannot connect to inference API"));
-  });
+  async function connectToPixanoInference() {
+    isInferenceApiConnected = await api.isInferenceApiHealthy(defaultURL);
+    if (isInferenceApiConnected) {
+      await listModels();
+    }
+  }
 
   const listModels = async () => {
     const availableModels = await api.listModels();
@@ -61,6 +56,10 @@ License: CECILL-C
       mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
     );
   };
+
+  connectToPixanoInference().catch(() => {
+    console.error("Can't connect to Pixano Inference API");
+  });
 
   let showConnectModal = false;
   let showAddModelModal = false;
