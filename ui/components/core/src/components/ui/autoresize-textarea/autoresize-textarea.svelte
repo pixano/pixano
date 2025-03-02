@@ -5,6 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { tick } from "svelte";
+
   export let placeholder: string;
   export let value: string;
 
@@ -12,11 +14,13 @@ License: CECILL-C
 
   // We have to include value to trigger the resize
   /* eslint-disable @typescript-eslint/no-unused-expressions */
-  $: value !== undefined && resizeTextarea();
+  $: value !== undefined && void resizeTextarea();
 
-  const resizeTextarea = () => {
+  const resizeTextarea = async () => {
+    await tick();
     if (textarea) {
       textarea.style.height = "auto";
+      await tick();
       textarea.style.height = textarea.scrollHeight + "px";
     }
   };

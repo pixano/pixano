@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { Plus, Sparkles } from "lucide-svelte";
   import { onMount } from "svelte";
+
   import { api, IconButton, MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
 
   import {
@@ -45,7 +46,7 @@ License: CECILL-C
   }
 
   //Try to connect with default URL at startup
-  onMount(() => connectToPixanoInference());
+  onMount(connectToPixanoInference);
 
   const listModels = async () => {
     const availableModels = await api.listModels();

@@ -18,10 +18,7 @@ import { createNewMessage } from "../../utils/createNewMessage";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
 
-const prompt = `
-  You have to formulate a QUESTION in relation to the given image <image 1>. 
-  If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict): 
-`;
+const prompt = "You have to formulate a QUESTION in relation to the given image <image 1>.";
 
 // const prompt = `
 //   You have to formulate a QUESTION in relation to the given image <image 1>.

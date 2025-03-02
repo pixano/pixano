@@ -6,7 +6,14 @@ License: CECILL-C
 
 import { get } from "svelte/store";
 
-import { Entity, Message, MessageTypeEnum, type SaveItem } from "@pixano/core";
+import {
+  Annotation,
+  BaseSchema,
+  Entity,
+  Message,
+  MessageTypeEnum,
+  type SaveItem,
+} from "@pixano/core";
 import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
 
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
@@ -20,7 +27,17 @@ export const addQuestion = ({
   newQuestionData: StoreQuestionEvent;
   parentEntity: Entity;
 }) => {
-  const messages = get<Message[]>(messagesStore);
+  let messages = get<Message[]>(messagesStore);
+  const anns = get<Annotation[]>(annotations);
+  const msg_anns = anns.filter((ann) => ann.is_type(BaseSchema.Message)) as Message[];
+  console.log(
+    "WEIRD BUG: derived store does not contain all messages !?!??",
+    messages,
+    anns,
+    msg_anns,
+  );
+  //TMP because bug: use msg_anns
+  messages = msg_anns;
 
   // In case a question was deleted
   // Find the number of the last question instead of using messages.length

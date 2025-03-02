@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { CondititionalGenerationTextImageInput, Message } from "../../lib/types";
+import { createTypedAnnotation } from "../../lib/utils/annotations";
 
 export async function conditional_generation_text_image(
   input: CondititionalGenerationTextImageInput,
@@ -28,8 +29,7 @@ export async function conditional_generation_text_image(
       // );
       return null;
     }
-
-    return (await response.json()) as Message;
+    return createTypedAnnotation(await response.json()) as Message;
   } catch (e) {
     console.error("api.conditional_generation_text_image -", e);
     return null;
