@@ -19,21 +19,19 @@ from .annotation import Annotation
 @_register_schema_internal
 class TextSpan(Annotation):
     """Designation of a Text-Span in a text, especially in the
-       use-case of Named-Entity Recognition on a textual annotation
+       use-case of Named-Entity Recognition on a Text view
        having a str 'content' attribute .
 
     Attributes:
         mention: text-span assembled mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
-        annotation_ref: Annotation reference toward an textual Annotation having a
           str 'content' attribute
     """
 
     mention: str
     spans_start: list[int]
     spans_end: list[int]
-    annotation_ref: AnnotationRef
 
     @model_validator(mode="after")
     def _validate_fields(self) -> Self:
@@ -63,7 +61,6 @@ class TextSpan(Annotation):
             mention="",
             spans_start=[],
             spans_end=[],
-            annotation_ref=AnnotationRef.none(),
         )
 
     @property
@@ -130,7 +127,6 @@ def create_text_span(
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
     source_ref: SourceRef = SourceRef.none(),
-    annotation_ref: AnnotationRef = AnnotationRef.none(),
 ) -> TextSpan:
     """Create a TextSpan instance.
 
@@ -140,11 +136,9 @@ def create_text_span(
         spans_end: List of end offsets of the spans in the text.
         id: TextSpan ID.
         item_ref: Item reference.
-        view_ref: View reference.
+        view_ref: View reference toward a Text view having a str 'content' attribute.
         entity_ref: Entity reference.
         source_ref: Source reference.
-        annotation_ref: Annotation reference toward an textual Annotation having a
-          str 'content' attribute
 
     Returns:
         The created `TextSpan` instance.
@@ -153,7 +147,6 @@ def create_text_span(
         mention=mention,
         spans_start=spans_start,
         spans_end=spans_end,
-        annotation_ref=annotation_ref,
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
