@@ -28,7 +28,10 @@ License: CECILL-C
       activeElement?.getAttribute("contenteditable") === "true" ||
       (event.target as Element)?.tagName === "INPUT"
     ) {
-      return event.preventDefault(); // Ignore shortcut when typing text
+      // Ignore shortcut when typing text
+      event.preventDefault();
+      event.stopPropagation();
+      return;
     }
     if (event.shiftKey && event.key === "ArrowLeft") {
       await goToNeighborItem("previous");
