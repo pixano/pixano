@@ -57,7 +57,7 @@ License: CECILL-C
   <!-- Dataset Thumbnail -->
   <div class="m-4 bg-slate-50">
     <img
-      src={dataset.preview ?? pixanoLogo}
+      src={dataset.preview ? dataset.preview : pixanoLogo}
       alt="{dataset.name} thumbnail"
       class="w-[350px] h-[176px] rounded-sm object-contain object-center"
     />

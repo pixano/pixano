@@ -111,7 +111,7 @@ class DatasetInfo(BaseModel):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
             try:
                 info.preview = Image.open_url(
-                    str(json_fp.parent / "previews/dataset_preview.jpg"),
+                    str(json_fp.parent.resolve() / "previews/dataset_preview.jpg"),
                     Path("/"),
                 )  # TODO choose correct preview name / path / extension
             except Exception:  # TODO: specify exception URL and Value
