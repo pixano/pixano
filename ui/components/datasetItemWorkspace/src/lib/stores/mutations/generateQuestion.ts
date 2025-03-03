@@ -36,9 +36,10 @@ export const generateQuestion = async (
     return null;
   }
 
-  const lastMessageOfConversation = get(messages)
-    .sort((a, b) => a.data.number - b.data.number) // Check order
-    .pop();
+  const messagesStore = get(messages);
+  const lastMessageOfConversation = messagesStore.sort((a, b) => a.data.number - b.data.number)[ // Check order
+    messagesStore.length - 1
+  ];
 
   const systemMessage = createNewMessage({
     item_ref: conversation.data.item_ref,
