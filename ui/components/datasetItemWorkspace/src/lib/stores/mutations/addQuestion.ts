@@ -20,7 +20,7 @@ export const addQuestion = ({
   newQuestionData: StoreQuestionEvent;
   parentEntity: Entity;
 }) => {
-  let messages = get<Message[]>(messagesStore);
+  const messages = get<Message[]>(messagesStore);
 
   // In case a question was deleted
   // Find the number of the last question instead of using messages.length
