@@ -8,6 +8,7 @@ License: CECILL-C
   import { createEventDispatcher } from "svelte";
 
   import type { Message } from "@pixano/core";
+  import { AutoResizeTextarea } from "@pixano/core/src/components/ui/autoresize-textarea";
 
   import { ContentChangeEventType, type ContentChangeEvent } from "../types";
 
@@ -15,26 +16,20 @@ License: CECILL-C
   export let questionId: string;
 
   const answerId = answer?.id ?? null;
-
+  let answerContent = answer?.data.content ?? "";
   const dispatch = createEventDispatcher();
 
-  const handleBlur = (
-    e: FocusEvent & {
-      currentTarget: EventTarget & HTMLInputElement;
-    },
-  ) => {
+  const validateChange = () => {
     const eventDetail: ContentChangeEvent = answerId
-      ? { content: e.currentTarget.value, type: ContentChangeEventType.UPDATE, answerId }
-      : { content: e.currentTarget.value, type: ContentChangeEventType.NEW_ANSWER, questionId };
+      ? { content: answerContent, type: ContentChangeEventType.UPDATE, answerId }
+      : { content: answerContent, type: ContentChangeEventType.NEW_ANSWER, questionId };
 
     dispatch("answerContentChange", eventDetail);
   };
 </script>
 
-<input
-  type="text"
-  value={answer?.data.content ?? ""}
+<AutoResizeTextarea
   placeholder="Your answer here"
-  class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
-  on:blur={handleBlur}
+  bind:value={answerContent}
+  on:blur={validateChange}
 />

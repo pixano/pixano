@@ -50,6 +50,13 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  // utility vars for resizing with slide bar
+  let vqaAreaMaxWidth = 450; //default width
+  const minVqaAreaWidth = 260; //minimum width for VqaArea (less may hide some elements)
+  let expanding = false;
+  let initialVqaAreaX = 0;
+  let initialVqaAreaWidth = 0;
+
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
@@ -168,41 +175,69 @@ License: CECILL-C
     addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
   };
 
-  const handleGenerateAnswer = (event: CustomEvent<GenerateAnswerEvent>) => {
-    const question = $messages.find((m) => m.id === event.detail.questionId);
+  const handleGenerateAnswer = async (event: CustomEvent<GenerateAnswerEvent>) => {
+    const { questionId, completionModel } = event.detail;
+
+    const question = $messages.find((m) => m.id === questionId);
 
     if (question === undefined) {
       console.error("ERROR: Message not found");
       return;
     }
 
-    generateAnswer(question);
+    await generateAnswer(completionModel, question);
+  };
+
+  const startExpand = (e: MouseEvent) => {
+    expanding = true;
+    initialVqaAreaX = e.clientX;
+    initialVqaAreaWidth = vqaAreaMaxWidth;
+  };
+
+  const stopExpand = () => {
+    expanding = false;
+  };
+
+  const expand = (e: MouseEvent) => {
+    if (expanding) {
+      const delta = e.clientX - initialVqaAreaX;
+      vqaAreaMaxWidth = Math.max(minVqaAreaWidth, initialVqaAreaWidth + delta);
+    }
   };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full grid grid-cols-[300px_auto]">
-    <VqaArea
-      messages={$messages}
-      on:answerContentChange={handleAnswerContentChange}
-      on:storeQuestion={handleStoreQuestion}
-      on:generateAnswer={handleGenerateAnswer}
-    />
-    <Canvas2D
-      {imagesPerView}
-      selectedItemId={selectedItem.item.id}
-      colorScale={$colorScale[1]}
-      bboxes={$itemBboxes}
-      masks={$itemMasks}
-      keypoints={$itemKeypoints}
-      selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-      {filters}
-      imageSmoothing={$imageSmoothing}
-      bind:selectedTool={$selectedTool}
-      bind:currentAnn
-      bind:newShape={$newShape}
-    />
+  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
+    <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
+      <VqaArea
+        messages={$messages}
+        vqaSectionWidth={vqaAreaMaxWidth}
+        on:answerContentChange={handleAnswerContentChange}
+        on:storeQuestion={handleStoreQuestion}
+        on:generateAnswer={handleGenerateAnswer}
+      />
+    </div>
+    <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />
+    <div class="overflow-hidden grow">
+      <Canvas2D
+        {imagesPerView}
+        selectedItemId={selectedItem.item.id}
+        colorScale={$colorScale[1]}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        keypoints={$itemKeypoints}
+        selectedKeypointTemplate={templates.find(
+          (t) => t.template_id === $selectedKeypointsTemplate,
+        )}
+        {filters}
+        canvasSize={vqaAreaMaxWidth}
+        imageSmoothing={$imageSmoothing}
+        bind:selectedTool={$selectedTool}
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    </div>
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">

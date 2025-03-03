@@ -15,5 +15,6 @@ export * from "./getDatasetsInfo";
 export * from "./getModels";
 export * from "./getSources";
 export * from "./getViewEmbeddings";
+export * from "./inference";
 export * from "./updateSchema";
 export * from "./updateSchemas";
