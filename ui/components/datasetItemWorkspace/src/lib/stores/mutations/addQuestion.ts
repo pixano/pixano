@@ -6,14 +6,7 @@ License: CECILL-C
 
 import { get } from "svelte/store";
 
-import {
-  Annotation,
-  BaseSchema,
-  Entity,
-  Message,
-  MessageTypeEnum,
-  type SaveItem,
-} from "@pixano/core";
+import { Entity, Message, MessageTypeEnum, type SaveItem } from "@pixano/core";
 import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
 
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
