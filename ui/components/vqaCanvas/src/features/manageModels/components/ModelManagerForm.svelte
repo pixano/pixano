@@ -12,7 +12,8 @@ License: CECILL-C
 
   import {
     completionModelsStore,
-    type QuestionGenerationSystemPrompts,
+    type AllPrompts,
+    type GenerationSystemPrompts,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
   import AddModelModal from "./AddModelModal.svelte";
@@ -53,9 +54,15 @@ License: CECILL-C
 
     const defaultPrompts = Object.fromEntries(
       Object.values(QuestionTypeEnum).map(
-        (questionType) => [questionType, { content: "", as_system: true }], //TODO? give a default system prompt ?
+        (questionType) => [questionType, ""], //TODO? give a default system prompt ?
       ),
-    ) as QuestionGenerationSystemPrompts;
+    ) as GenerationSystemPrompts;
+
+    const allPrompts: AllPrompts = {
+      question: defaultPrompts,
+      answer: defaultPrompts,
+      as_system: true,
+    };
 
     const completionAvailableModelsName = availableModels
       .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
@@ -63,7 +70,7 @@ License: CECILL-C
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, defaultPrompts),
+      mergeModelLists(completionAvailableModelsName, currentList, allPrompts),
     );
   };
 

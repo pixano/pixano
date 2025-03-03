@@ -15,11 +15,12 @@ License: CECILL-C
   export let vqaSectionWidth: number;
 
   let question_type = QuestionTypeEnum.OPEN; //TODO selector to choose question type
+  let message_type: "question" | "answer" = "question";
 
   let completionPrompt =
-    $completionModelsStore.find((m) => m.selected)?.prompts[question_type] ?? null;
+    $completionModelsStore.find((m) => m.selected)?.prompts[message_type][question_type] ?? null;
 
-  let newPromptContent = completionPrompt?.content ?? "";
+  let newPromptContent = completionPrompt ?? "";
 
   const dispatch = createEventDispatcher();
 
@@ -31,9 +32,10 @@ License: CECILL-C
               ...model,
               prompts: {
                 ...model.prompts,
-                [question_type]: {
-                  content: newPromptContent,
-                  as_system: completionPrompt?.as_system ?? false,
+                [message_type]: {
+                  ...model.prompts[message_type],
+                  as_system: true,
+                  [question_type]: newPromptContent,
                 },
               },
             }

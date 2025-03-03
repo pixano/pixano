@@ -20,12 +20,6 @@ import { conversations, messages } from "../datasetItemWorkspaceStores";
 
 const prompt = "You have to formulate a QUESTION in relation to the given image <image 1>.";
 
-// const prompt = `
-//   You have to formulate a QUESTION in relation to the given image <image 1>.
-//   If you find it helpfull, you can get inspiration from the following metadata (as a JSON dict):
-//   ${JSON.stringify(feats)}
-// `;
-
 export const generateQuestion = async (
   completionModel: string,
 ): Promise<{ content: string; choices: string[] } | null> => {
@@ -36,10 +30,7 @@ export const generateQuestion = async (
     return null;
   }
 
-  const messagesStore = get(messages);
-  const lastMessageOfConversation = messagesStore.sort((a, b) => a.data.number - b.data.number)[ // Check order
-    messagesStore.length - 1
-  ];
+  const lastMessageOfConversation = get(messages).sort((a, b) => b.data.number - a.data.number)[0];
 
   const systemMessage = createNewMessage({
     item_ref: conversation.data.item_ref,
