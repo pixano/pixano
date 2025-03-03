@@ -12,8 +12,8 @@ License: CECILL-C
 
   import {
     completionModelsStore,
-    type AllPrompts,
-    type GenerationSystemPrompts,
+    type MessageGenerationPrompts,
+    type PromptByQuestionType,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
   import AddModelModal from "./AddModelModal.svelte";
@@ -56,9 +56,9 @@ License: CECILL-C
       Object.values(QuestionTypeEnum).map(
         (questionType) => [questionType, ""], //TODO? give a default system prompt ?
       ),
-    ) as GenerationSystemPrompts;
+    ) as PromptByQuestionType;
 
-    const allPrompts: AllPrompts = {
+    const prompts: MessageGenerationPrompts = {
       question: defaultPrompts,
       answer: defaultPrompts,
       as_system: true,
@@ -70,7 +70,7 @@ License: CECILL-C
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, allPrompts),
+      mergeModelLists(completionAvailableModelsName, currentList, prompts),
     );
   };
 

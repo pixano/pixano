@@ -11,15 +11,15 @@ import type { QuestionTypeEnum } from "@pixano/core";
 export interface PixanoInferenceCompletionModel {
   selected: boolean;
   name: string;
-  prompts: AllPrompts;
+  prompts: MessageGenerationPrompts;
 }
 
-export type AllPrompts = {
-  question: GenerationSystemPrompts;
-  answer: GenerationSystemPrompts;
+export type MessageGenerationPrompts = {
+  question: PromptByQuestionType;
+  answer: PromptByQuestionType;
   as_system: boolean;
 };
 
-export type GenerationSystemPrompts = Record<QuestionTypeEnum, string>;
+export type PromptByQuestionType = Record<QuestionTypeEnum, string>;
 
 export const completionModelsStore = writable<PixanoInferenceCompletionModel[]>([]);

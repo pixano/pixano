@@ -4,12 +4,15 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AllPrompts, PixanoInferenceCompletionModel } from "../stores/completionModels";
+import type {
+  MessageGenerationPrompts,
+  PixanoInferenceCompletionModel,
+} from "../stores/completionModels";
 
 export function mergeModelLists(
   newModelsName: string[],
   existingModels: PixanoInferenceCompletionModel[],
-  defaultPrompts: AllPrompts,
+  defaultPrompts: MessageGenerationPrompts,
 ): PixanoInferenceCompletionModel[] {
   const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
 
