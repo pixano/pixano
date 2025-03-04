@@ -114,7 +114,6 @@ License: CECILL-C
     api
       .getDataset(dataset.id)
       .then((ds) => {
-        console.log("XXX handleSelectIem - Dataset:", ds);
         datasetSchema.set(ds.dataset_schema);
         featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
         api
@@ -178,7 +177,6 @@ License: CECILL-C
             } else {
               noItemFound = false;
             }
-            console.log("XXX handleSelectIem - selectedItem:", selectedItem);
           })
           .then(() => isLoadingNewItemStore.set(false))
           .catch((err) => console.error(err));
