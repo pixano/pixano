@@ -65,7 +65,7 @@ License: CECILL-C
   type backFVS = Record<string, Record<string, backFV[]>>;
 
   const mapBackFeaturesValues2FrontFeaturesValues = (feature_values: backFVS) => {
-    console.log("--- back feature_values", feature_values);
+    //console.log("--- back feature_values", feature_values);
     /*
     --- current back format for features values (most probably to be changed)
     {
@@ -105,7 +105,7 @@ License: CECILL-C
       }
     }
 
-    console.log("--- front feature_values", frontFV);
+    //console.log("--- front feature_values", frontFV);
     return frontFV;
   };
 
@@ -114,7 +114,6 @@ License: CECILL-C
     api
       .getDataset(dataset.id)
       .then((ds) => {
-        console.log("XXX handleSelectIem - Dataset:", ds);
         datasetSchema.set(ds.dataset_schema);
         featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
         api
@@ -178,7 +177,6 @@ License: CECILL-C
             } else {
               noItemFound = false;
             }
-            console.log("XXX handleSelectIem - selectedItem:", selectedItem);
           })
           .then(() => isLoadingNewItemStore.set(false))
           .catch((err) => console.error(err));

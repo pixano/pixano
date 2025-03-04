@@ -95,7 +95,6 @@ export const mediaViews = derived(views, ($views) => {
   // Do not use Object.entries().filter because it loses the type information
   const mediaViews: MView = {};
   for (const [key, view] of Object.entries($views)) {
-    console.log(view);
     if (isMediaView(view)) {
       mediaViews[key] = view;
     }
