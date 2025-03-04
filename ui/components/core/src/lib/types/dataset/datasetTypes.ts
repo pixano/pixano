@@ -201,7 +201,7 @@ export interface Dataset {
   media_dir: string;
   thumbnail: string;
   dataset_schema: DatasetSchema;
-  features_values: object; //not used right now, maybe we will make a real type if needed
+  feature_values: object; //not used right now, maybe we will make a real type if needed
   info: DatasetInfo;
 }
 
