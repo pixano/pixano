@@ -12,11 +12,13 @@ License: CECILL-C
 
   export let tooltipContent: string = "";
   export let selected: boolean = false;
+  export let disabled: boolean = false;
 </script>
 
 <Tooltip.Root>
   <Tooltip.Trigger tabindex={-1}>
     <Button
+      {disabled}
       size="icon"
       class={cn("bg-transparent text-slate-800 hover:bg-primary-light relative", {
         "bg-primary text-white": selected,

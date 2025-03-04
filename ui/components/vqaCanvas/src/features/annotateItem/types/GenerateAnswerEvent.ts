@@ -6,4 +6,5 @@ License: CECILL-C
 
 export interface GenerateAnswerEvent {
   questionId: string;
+  completionModel: string;
 }

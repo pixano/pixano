@@ -12,6 +12,8 @@ License: CECILL-C
   import type { StoreQuestionEvent } from "../types";
   import AddQuestionModal from "./AddQuestionModal.svelte";
 
+  export let vqaSectionWidth: number;
+
   let showAddQuestionModal = false;
 
   const dispatch = createEventDispatcher();
@@ -47,9 +49,8 @@ License: CECILL-C
 
 <div class="relative h-fit">
   <PrimaryButton on:click={handleOpenModal}>Add question</PrimaryButton>
-
   {#if showAddQuestionModal}
-    <AddQuestionModal on:storeQuestion={handleStoreQuestion} />
+    <AddQuestionModal {vqaSectionWidth} on:storeQuestion={handleStoreQuestion} />
   {/if}
 </div>
 

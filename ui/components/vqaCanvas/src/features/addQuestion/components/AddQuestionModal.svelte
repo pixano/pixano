@@ -7,27 +7,31 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import type { QuestionTypeEnum } from "@pixano/core";
-  import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
+  import { PrimaryButton, QuestionTypeEnum } from "@pixano/core";
 
-  import { default as ModelSelect } from "./AddQuestionModalModelSelect.svelte";
+  // To refacto : Cross module imports
+  import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
+  import { completionModelsStore } from "../../../stores/completionModels";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
+  export let vqaSectionWidth: number;
+
   let questionType: QuestionTypeEnum;
-  let completionModel: string;
   let questionChoices: string[] = [];
   let questionContent: string = "";
 
-  const handleGenerateQuestion = () => {
-    // TODO: generate question
-    const mockResponse = {
-      question: "What is the main object?",
-      choices: ["A", "B", "C"],
-    };
+  $: completionModel = $completionModelsStore.find((m) => m.selected)?.name;
 
-    questionChoices = mockResponse.choices;
-    questionContent = mockResponse.question;
+  const handleGenerateQuestion = async () => {
+    if (!completionModel || completionModel.length === 0) return;
+
+    const generatedQuestion = await generateQuestion(completionModel);
+
+    if (!generatedQuestion) return;
+
+    questionContent = generatedQuestion.content;
+    questionChoices = generatedQuestion.choices;
   };
 </script>
 
@@ -36,18 +40,16 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] left-[calc(300px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>QA editor</p>
   </div>
-
   <QuestionTypeSelect bind:questionType />
-  <ModelSelect bind:selectedModel={completionModel} />
 
   <div class="flex flex-col gap-2 px-3">
     <PrimaryButton
-      isSelected
       disabled={questionType === undefined || completionModel === ""}
       on:click={handleGenerateQuestion}
     >

@@ -4,13 +4,23 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { isQuestionData, QuestionTypeEnum, type Message, type SaveItem } from "@pixano/core";
+import { get } from "svelte/store";
 
+import {
+  api,
+  isQuestionData,
+  QuestionTypeEnum,
+  type CondititionalGenerationTextImageInput,
+  type Message,
+  type SaveItem,
+} from "@pixano/core";
+
+import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
-import { createNewAnswer } from "../../utils/createNewAnswer";
-import { annotations, saveData } from "../datasetItemWorkspaceStores";
+import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
+import { annotations, conversations, saveData } from "../datasetItemWorkspaceStores";
 
-export const generateAnswer = (question: Message) => {
+export const generateAnswer = async (completionModel: string, question: Message) => {
   const questionData = question.data;
 
   if (!isQuestionData(questionData)) {
@@ -18,29 +28,46 @@ export const generateAnswer = (question: Message) => {
     return;
   }
 
-  const newAnswer = createAnswer({ question, questionType: questionData.question_type });
+  if (question.data.question_type !== QuestionTypeEnum.OPEN) {
+    console.warn("Sorry, generation is only available for Open questions for now.");
+    return;
+  }
 
-  annotations.update((prevAnnotations) => [...prevAnnotations, newAnswer]);
+  const [conversation] = get(conversations);
 
-  const save_item: SaveItem = {
-    change_type: "add",
-    object: newAnswer,
+  if (conversation === undefined) {
+    // There is no conversation on this item to link the message to
+    return null;
+  }
+
+  const input: CondititionalGenerationTextImageInput = {
+    dataset_id: get(currentDatasetStore).id,
+    conversation: removeFieldFromObject(conversation, "ui"),
+    messages: [removeFieldFromObject(question, "ui")],
+    model: completionModel,
   };
 
-  saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-};
+  try {
+    const generatedAnswer = await api.conditional_generation_text_image(input);
 
-const createAnswer = ({
-  question,
-  questionType,
-}: {
-  question: Message;
-  questionType: QuestionTypeEnum;
-}) => {
-  const answerContent =
-    questionType === QuestionTypeEnum.OPEN
-      ? "This is a mock answer"
-      : "[[A]] This is a mock answer";
+    if (!generatedAnswer || !("data" in generatedAnswer)) {
+      console.error(
+        "Model generation error: Unexpected error, please look at Pixano-Inference logs for more information.",
+      );
+      return null;
+    }
 
-  return createNewAnswer({ question, content: answerContent });
+    annotations.update((prevAnnotations) => [...prevAnnotations, generatedAnswer]);
+
+    const save_item: SaveItem = {
+      change_type: "add",
+      object: generatedAnswer,
+    };
+
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+
+    return generatedAnswer;
+  } catch {
+    return null;
+  }
 };
