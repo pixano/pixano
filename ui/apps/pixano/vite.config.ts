@@ -12,8 +12,8 @@ const proxies_list = [
   "embeddings",
   "sources",
   "media",
-  "models",
   "app_models",
+  "models",
   "inference",
 ];
 
@@ -21,7 +21,7 @@ export default defineConfig({
   plugins: [sveltekit()],
   server: {
     proxy: {
-      [`^/(${proxies_list.join("|")})/.*`]: {
+      [`^/(?:${proxies_list.map((s) => `${s}`).join("|")})(?:/|$).*`]: {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
         secure: false,

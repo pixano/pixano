@@ -65,7 +65,7 @@ License: CECILL-C
   type backFVS = Record<string, Record<string, backFV[]>>;
 
   const mapBackFeaturesValues2FrontFeaturesValues = (feature_values: backFVS) => {
-    console.log("--- back feature_values", feature_values);
+    //console.log("--- back feature_values", feature_values);
     /*
     --- current back format for features values (most probably to be changed)
     {
@@ -105,7 +105,7 @@ License: CECILL-C
       }
     }
 
-    console.log("--- front feature_values", frontFV);
+    //console.log("--- front feature_values", frontFV);
     return frontFV;
   };
 
