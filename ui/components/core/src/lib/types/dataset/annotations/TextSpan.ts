@@ -5,10 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { BaseSchema } from "../BaseSchema";
 import { referenceSchema, type BaseDataFields } from "../datasetTypes";
-import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 import { WorkspaceType } from "../workspaceType";
+import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
 export const textSpanSchema = z
   .object({
@@ -30,7 +31,6 @@ export class TextSpan extends Annotation {
   } = { datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING };
 
   constructor(obj: BaseDataFields<TextSpanType>) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (obj.table_info.base_schema !== BaseSchema.TextSpan) throw new Error("Not a TextSpan");
     textSpanSchema.parse(obj.data);
     super(obj as unknown as BaseDataFields<AnnotationType>);

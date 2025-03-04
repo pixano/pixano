@@ -8,10 +8,11 @@ License: CECILL-C
   // Imports
   import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
   import { Check } from "lucide-svelte";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.CheckboxItemProps;
-  type $$Events = ContextMenuPrimitive.CheckboxItemEvents;
+  type $$Events = ContextMenuPrimitive.CheckboxItemEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = undefined;

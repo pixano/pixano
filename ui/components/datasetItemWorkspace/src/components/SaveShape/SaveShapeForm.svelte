@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { derived } from "svelte/store";
+
   import {
     Annotation,
     BaseSchema,
@@ -19,7 +21,7 @@ License: CECILL-C
     type SaveTrackletShape,
   } from "@pixano/core";
   import { Button, SaveShapeType, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
-  import { derived } from "svelte/store";
+
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
@@ -32,9 +34,9 @@ License: CECILL-C
     annotations,
     entities,
     itemMetas,
+    mediaViews,
     newShape,
     saveData,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type {
@@ -42,6 +44,7 @@ License: CECILL-C
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+
   export let currentTab: "scene" | "objects";
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
@@ -260,11 +263,11 @@ License: CECILL-C
 
     if (isVideo) {
       endFrameIndex = $currentFrameIndex + NEWTRACKLET_LENGTH + 1; //+1 for the first while loop
-      const seqs = $views[$newShape.viewRef.name];
+      const seqs = $mediaViews[$newShape.viewRef.name];
       if (Array.isArray(seqs)) {
         while (!endView) {
           endFrameIndex = endFrameIndex - 1;
-          endView = (seqs as SequenceFrame[]).find(
+          endView = seqs.find(
             (view) =>
               view.data.frame_index === endFrameIndex &&
               view.table_info.name === ($newShape as SaveShape).viewRef.name,
@@ -452,8 +455,10 @@ License: CECILL-C
     <div class="flex gap-4">
       <Button
         class="text-white"
-        on:click={() => newShape.set({ status: "none", shouldReset: true })}>Cancel</Button
+        on:click={() => newShape.set({ status: "none", shouldReset: true })}
       >
+        Cancel
+      </Button>
       <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>

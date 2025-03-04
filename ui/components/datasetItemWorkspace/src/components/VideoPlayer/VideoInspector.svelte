@@ -6,23 +6,22 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { annotations, entities, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { onMount } from "svelte";
 
-  import ObjectTrack from "./ObjectTrack.svelte";
-  import TimeTrack from "./TimeTrack.svelte";
-  import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import VideoControls from "./VideoControls.svelte";
+  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { BBox, SliderRoot, Track, type KeypointsTemplate } from "@pixano/core";
 
+  import { panTool } from "../../lib/settings/selectionTools";
+  import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot, Track, BBox, type KeypointsTemplate } from "@pixano/core";
-  import { onMount } from "svelte";
-  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { panTool } from "../../lib/settings/selectionTools";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import ObjectTrack from "./ObjectTrack.svelte";
+  import TimeTrack from "./TimeTrack.svelte";
+  import VideoControls from "./VideoControls.svelte";
+  import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
   export let updateView: (frameIndex: number) => void;
   export let bboxes: BBox[];
@@ -49,19 +48,10 @@ License: CECILL-C
       updateView($currentFrameIndex);
     }
   };
-
-  annotations.subscribe((value) => {
-    const highlightedObject = value.find((item) => item.ui.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#video-object-${highlightedObject.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  });
 </script>
 
 {#if $videoControls.isLoaded}
-  <div class="h-full bg-white overflow-x-auto relative flex flex-col">
+  <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
         <TimeTrack slot="timeTrack" {updateView} {resetTool} />
@@ -74,7 +64,7 @@ License: CECILL-C
             <ObjectTrack
               slot="timeTrack"
               {track}
-              views={$views}
+              views={$mediaViews}
               {onTimeTrackClick}
               {bboxes}
               {keypoints}

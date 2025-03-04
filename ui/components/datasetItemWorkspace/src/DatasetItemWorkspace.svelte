@@ -6,25 +6,28 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Loader2Icon } from "lucide-svelte";
+
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import {
     Annotation,
     BaseSchema,
     DatasetItem,
     Entity,
+    isSequenceFrameArray,
     Mask,
     Tracklet,
     WorkspaceType,
     type SaveItem,
   } from "@pixano/core";
-  import { videoControls } from "./lib/stores/videoViewerStores";
-  import { Loader2Icon } from "lucide-svelte";
+
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
-  import Toolbar from "./components/Toolbar.svelte";
+
   import "./index.css";
+
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
@@ -32,10 +35,13 @@ License: CECILL-C
     canSave,
     entities,
     itemMetas,
+    mediaViews,
     newShape,
     saveData,
     views,
   } from "./lib/stores/datasetItemWorkspaceStores";
+  import { videoControls } from "./lib/stores/videoViewerStores";
+
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
@@ -43,7 +49,6 @@ License: CECILL-C
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
-  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
 
@@ -57,7 +62,7 @@ License: CECILL-C
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       //add frame_index to annotation
       if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
-        const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
+        const seqframe = ($mediaViews[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
         if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
@@ -71,8 +76,8 @@ License: CECILL-C
 
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       for (const view in selectedItem.views) {
-        if (Array.isArray(selectedItem.views[view])) {
-          const video = selectedItem.views[view] as SequenceFrame[];
+        if (isSequenceFrameArray(selectedItem.views[view])) {
+          const video = selectedItem.views[view];
           const vspeed = Math.round(
             (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
           );
@@ -120,7 +125,7 @@ License: CECILL-C
     //add tracklets childs & all annotations top_entity
     annotations.update((anns) =>
       anns.map((ann) => {
-        const top_entity = getTopEntity(ann, $entities);
+        const top_entity = getTopEntity(ann);
         if (ann.is_type(BaseSchema.Tracklet)) {
           const tracklet = ann as Tracklet;
           if (top_entity) {
@@ -195,7 +200,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
+<div class="flex-1 grid grid-cols-[calc(100%-380px)_380px]">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -203,8 +208,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar isVideo={selectedItem.ui.type === WorkspaceType.VIDEO} />
-  <DatasetItemViewer {selectedItem} {isLoading} {headerHeight} />
+  <DatasetItemViewer {selectedItem} {isLoading} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal {models} />
 </div>

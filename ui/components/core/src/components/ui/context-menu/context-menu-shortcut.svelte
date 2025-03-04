@@ -6,8 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { cn } from "../../../lib/utils/styleUtils";
   import type { HTMLAttributes } from "svelte/elements";
+
+  import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = HTMLAttributes<HTMLSpanElement>;
 

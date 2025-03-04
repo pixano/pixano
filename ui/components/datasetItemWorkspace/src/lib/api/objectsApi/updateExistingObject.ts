@@ -10,12 +10,13 @@ import {
   BBox,
   Keypoints,
   Mask,
-  type SaveItem,
   SaveShapeType,
-  type Shape,
-  Tracklet,
   WorkspaceType,
+  type SaveItem,
+  type Shape,
 } from "@pixano/core";
+
+import { getTopEntity, highlightObject } from ".";
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
@@ -26,8 +27,11 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     newShape.status === "editing" &&
     !objects.find((ann) => ann.id === newShape.shapeId) &&
     newShape.highlighted === "self"
-  )
+  ) {
+    //it is an interpolated object. Highlight anyway
+    if (newShape.top_entity_id) highlightObject(newShape.top_entity_id, false);
     return objects;
+  }
   return objects.map((ann) => {
     if (newShape?.status !== "editing") return ann;
     if (newShape.highlighted === "all") {
@@ -39,22 +43,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     }
     if (newShape.highlighted === "self") {
       if (newShape.shapeId === ann.id) {
-        ann.ui.highlighted = "self";
-        ann.ui.displayControl = { ...ann.ui.displayControl, editing: true };
-      } else {
-        if (ann.is_type(BaseSchema.Tracklet)) {
-          //NOTE TODO: it works, but the states with 1 tracklet highlighted in a track with several tracklet leads to bug with icon click
-          const tracklet_childs_ids = (ann as Tracklet).ui.childs.map((c_ann) => c_ann.id);
-          if (tracklet_childs_ids.includes(newShape.shapeId)) {
-            ann.ui.highlighted = "self";
-          } else {
-            ann.ui.highlighted = "none";
-          }
-        } else {
-          //NOTE: maybe we want to keep all ann of tracklet/track highlighted ? (only one in edition, but all highlighted ?)
-          ann.ui.highlighted = "none";
-          ann.ui.displayControl = { ...ann.ui.displayControl, editing: false };
-        }
+        highlightObject(getTopEntity(ann).id, false);
       }
     }
 

@@ -10,6 +10,7 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel, ConfigDict, field_validator
 from typing_extensions import Self
 
+from pixano.datasets import Dataset
 from pixano.features import BaseSchema
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
@@ -17,7 +18,6 @@ from .table_info import TableInfo
 
 
 T = TypeVar("T", bound=BaseSchema)
-SUB_T = TypeVar("SUB_T", bound=BaseSchema)
 
 
 class BaseSchemaModel(BaseModel, Generic[T]):
@@ -118,17 +118,18 @@ class BaseSchemaModel(BaseModel, Generic[T]):
         """
         return [cls.from_row(row, table_info) for row in rows]
 
-    def to_row(self, schema: type[SUB_T]) -> SUB_T:
+    def to_row(self, dataset: Dataset) -> T:
         """Create a row from the model.
 
         Args:
-            schema: The schema type of the row.
+            dataset: The dataset of the row.
 
         Returns:
             The created row.
         """
         schema_dict = self.model_dump()
-        return schema.model_validate(
+        schema = dataset.schema.schemas[self.table_info.name]
+        row = schema.model_validate(
             {
                 "id": schema_dict["id"],
                 "created_at": schema_dict["created_at"],
@@ -136,16 +137,19 @@ class BaseSchemaModel(BaseModel, Generic[T]):
                 **schema_dict["data"],
             }
         )
+        row.dataset = dataset
+        row.table_name = self.table_info.name
+        return row
 
     @staticmethod
-    def to_rows(models: list["BaseSchemaModel"], schema: type[SUB_T]) -> list[SUB_T]:
+    def to_rows(models: list["BaseSchemaModel"], dataset: Dataset) -> list[T]:
         """Create a list of rows from a list of models.
 
         Args:
             models: The models to create the rows from.
-            schema: The schema type of the rows.
+            dataset: The dataset of the row.
 
         Returns:
             The list of created rows.
         """
-        return [model.to_row(schema) for model in models]
+        return [model.to_row(dataset) for model in models]

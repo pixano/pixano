@@ -5,10 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";
 import { BaseSchema } from "../BaseSchema";
-import { BaseData, type BaseDataFields, referenceSchema } from "../datasetTypes";
+import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
 
 export const entitySchema = z
   .object({

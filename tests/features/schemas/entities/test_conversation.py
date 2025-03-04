@@ -16,14 +16,12 @@ def test_is_conversation():
 def test_create_conversation():
     # Test 1: Default references
     conversation = create_conversation(
-        kind="question",
-        with_model=SourceRef(id="source_id", name="source"),
+        kind="name",
     )
 
     assert isinstance(conversation, Conversation)
-    assert conversation.kind == "question"
+    assert conversation.kind == "name"
     assert conversation.id == ""
-    assert conversation.with_model == SourceRef(id="source_id", name="source")
     assert conversation.item_ref == ItemRef.none()
     assert conversation.view_ref == ViewRef.none()
     assert conversation.parent_ref == EntityRef.none()
@@ -31,17 +29,15 @@ def test_create_conversation():
     # Test 2: Custom references
     conversation_object = create_conversation(
         kind="name",
-        id="id",
+        id="id123",
         item_ref=ItemRef(id="item_id"),
         view_ref=ViewRef(id="view_id", name="view"),
         parent_ref=EntityRef(id="entity_id", name="entity"),
-        with_model=SourceRef(id="source_id", name="source"),
     )
 
     assert isinstance(conversation_object, Conversation)
     assert conversation_object.kind == "name"
-    assert conversation_object.id == "id"
+    assert conversation_object.id == "id123"
     assert conversation_object.item_ref == ItemRef(id="item_id")
     assert conversation_object.view_ref == ViewRef(id="view_id", name="view")
     assert conversation_object.parent_ref == EntityRef(id="entity_id", name="entity")
-    assert conversation_object.with_model == SourceRef(id="source_id", name="source")

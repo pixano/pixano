@@ -30,6 +30,7 @@ def two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image():
                     "is_normalized": False,
                     "confidence": 1.0,
                     "is_difficult": True,
+                    "inference_metadata": {},
                 },
             }
         ),
@@ -49,6 +50,7 @@ def two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image():
                     "is_normalized": False,
                     "confidence": 0.8,
                     "is_difficult": False,
+                    "inference_metadata": {},
                 },
             }
         ),

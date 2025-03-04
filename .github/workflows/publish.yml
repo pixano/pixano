@@ -30,15 +30,15 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Setup Node.js 18
+      - name: Setup Node.js 23
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 23
 
-      - name: Setup pnpm 9
-        uses: pnpm/action-setup@v3
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10.4.1
 
       - name: Install dependencies
         run: |
@@ -119,6 +119,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             pixano/pixano:${{ env.VERSION }}

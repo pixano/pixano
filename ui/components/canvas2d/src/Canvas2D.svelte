@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Annotation, SaveShapeType, WarningModal, type ImagesPerView } from "@pixano/core";
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import * as ort from "onnxruntime-web";
@@ -15,8 +14,12 @@ License: CECILL-C
   import { writable, type Writable } from "svelte/store";
 
   import {
+    Annotation,
     BBox,
     Mask,
+    SaveShapeType,
+    WarningModal,
+    type ImagesPerView,
     type KeypointsTemplate,
     type LabeledPointTool,
     type Reference,
@@ -25,9 +28,9 @@ License: CECILL-C
     type Vertex,
   } from "@pixano/core";
   import { cn } from "@pixano/core/src";
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
 
-  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
@@ -535,7 +538,7 @@ License: CECILL-C
         // Enable box creation or change cursor style
         break;
       case ToolType.Keypoint:
-        // Enable key point creation or change cursor style
+        // Enable keypoint creation or change cursor style
         break;
       case ToolType.Delete:
         clearAnnotationAndInputs();
@@ -779,7 +782,6 @@ License: CECILL-C
 
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     timerId = setTimeout(() => updateCurrentMask(viewRef), 50); // delay before predict to spare CPU
   }
 
@@ -938,7 +940,9 @@ License: CECILL-C
               imageHeight: getCurrentImage(viewRef.name).height,
             };
           }
-          selectedTool.isSmart && (await updateCurrentMask(viewRef));
+          if (selectedTool.isSmart) {
+            await updateCurrentMask(viewRef);
+          }
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");

@@ -12,7 +12,7 @@ import pytest
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import BBox, Entity, Image, Source
+from pixano.features import BBox, Conversation, Entity, Image, Message, Source
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 
@@ -75,6 +75,86 @@ def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, it
             ),
             "entities": entities,
             "bboxes": bboxes,
+        }
+
+
+def generate_data_item_vqa(num_rows: int, item_schema_name, item_schema):
+    yield {
+        "source": [
+            Source(id="source_0", name="source_0", kind="model", metadata={"key_0": "value_0"}),
+            Source(id="source_1", name="source_1", kind="human", metadata={"key_1": "value_1"}),
+        ],
+    }
+    for i in range(num_rows):
+        item_id = str(i)
+        image = Image(
+            id=f"image_{i}",
+            item_ref=ItemRef(id=item_id),
+            url=f"image_{i}.jpg",
+            width=100 - i,
+            height=100 + i,
+            format="jpg",
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
+        conversations = []
+        messages = []
+        conversations.append(
+            Conversation(
+                id=f"conversation_{i}",
+                kind="Math",
+                item_ref=ItemRef(id=item_id),
+                view_ref=ViewRef(id=f"image_{i}", name="image"),
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            )
+        )
+        messages.append(
+            Message(
+                number=0,
+                user="tester",
+                content="What is the greatest number ?",
+                type="QUESTION",
+                question_type="MULTI_CHOICE",
+                choices=["0", "15", "-14", "3.14", "58"],
+                id=f"message_{i}",
+                item_ref=ItemRef(id=item_id),
+                view_ref=ViewRef(id=f"image_{i}", name="image"),
+                entity_ref=EntityRef(id=f"conversation_{i}", name="conversations"),
+                source_ref=SourceRef(id=f"source_{i % 2}", name="source"),
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            )
+        )
+        if i % 2 != 0:
+            messages.append(
+                Message(
+                    number=0,
+                    user="tester",
+                    content="[58]",
+                    type="ANSWER",
+                    question_type="MULTI_CHOICE",
+                    choices=[],
+                    id=f"message_{i}_answer",
+                    item_ref=ItemRef(id=item_id),
+                    view_ref=ViewRef(id=f"image_{i}", name="image"),
+                    entity_ref=EntityRef(id=f"conversation_{i}", name="conversations"),
+                    source_ref=SourceRef(id=f"source_{i % 2}", name="source"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                )
+            )
+
+        yield {
+            "image": image,
+            item_schema_name: item_schema(
+                id=item_id,
+                split="train" if i % 2 else "test",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            "conversations": conversations,
+            "messages": messages,
         }
 
 
@@ -281,8 +361,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
                 entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
-                size=[100 * i, 100 * i],
-                counts=b"\x01\x02\x03",
+                size=[10, 10],
+                counts=bytes(b";37000k1"),
                 source_ref=SourceRef(id=(f"source_{i % 3}") if i % 3 != 2 else "ground_truth"),
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
@@ -343,12 +423,21 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
 
 
 class DatasetBuilderImageBboxesKeypoint(DatasetBuilder):
-    def __init__(self, num_rows=5, *args, **kwargs):
+    def __init__(self, num_rows: int = 5, *args, **kwargs):
         self.num_rows = num_rows
         super().__init__(*args, **kwargs)
 
     def generate_data(self):
         return generate_data_item_image_bboxes_keypoint(self.num_rows, self.item_schema_name, self.item_schema)
+
+
+class DatasetBuilderVQA(DatasetBuilder):
+    def __init__(self, num_rows: int = 4, *args, **kwargs):
+        self.num_rows = num_rows
+        super().__init__(*args, **kwargs)
+
+    def generate_data(self):
+        return generate_data_item_vqa(self.num_rows, self.item_schema_name, self.item_schema)
 
 
 class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
@@ -371,6 +460,20 @@ def dataset_builder_image_bboxes_keypoint(
         tempfile.mkdtemp(),
         dataset_item_image_bboxes_keypoint,
         info_dataset_image_bboxes_keypoint,
+    )
+
+
+@pytest.fixture()
+def dataset_builder_vqa(
+    dataset_item_vqa,
+    info_dataset_vqa,
+    num_rows=4,
+):
+    return DatasetBuilderVQA(
+        num_rows,
+        tempfile.mkdtemp(),
+        dataset_item_vqa,
+        info_dataset_vqa,
     )
 
 

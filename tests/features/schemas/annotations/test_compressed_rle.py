@@ -11,6 +11,7 @@ import numpy as np
 from pixano.features import CompressedRLE, create_compressed_rle, is_compressed_rle
 from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from pixano.features.utils import (
+    mask_area,
     mask_to_rle,
     polygons_to_rle,
     rle_to_mask,
@@ -82,6 +83,14 @@ class TestCompressedRLE:
 
         assert rle.size == expected_rle.size
         assert rle.counts == expected_rle.counts
+
+    def test_area(self):
+        urle = {"counts": [1, 2, 3, 2, 4, 1], "size": [10, 10]}
+        rle = CompressedRLE.from_urle(urle)
+        expected_area = mask_area(urle_to_rle(urle))
+        area = rle.area
+
+        assert area == expected_area
 
     def test_encode(self):
         mask = np.ndarray((10, 10), dtype=bool).tolist()

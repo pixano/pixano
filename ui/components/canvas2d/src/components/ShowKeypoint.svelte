@@ -6,9 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { type KeypointsTemplate, type Reference, SaveShapeType, type Shape } from "@pixano/core";
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
+
+  import { SaveShapeType, type KeypointsTemplate, type Reference, type Shape } from "@pixano/core";
 
   import { findRectBoundaries } from "../api/keypointsApi";
   import KeyPoints from "./keypoints/Keypoint.svelte";
@@ -20,12 +21,13 @@ License: CECILL-C
   export let colorScale: (id: string) => string;
   export let viewRef: Reference;
 
-  const onDoubleClick = (keyPointsId: string) => {
+  const onClick = (keypoint: KeypointsTemplate) => {
     newShape = {
       status: "editing",
-      shapeId: keyPointsId,
+      shapeId: keypoint.id,
       viewRef,
       highlighted: "self",
+      top_entity_id: keypoint.ui.top_entities ? keypoint.ui.top_entities[0].id : "",
       type: "none",
     };
   };
@@ -77,7 +79,7 @@ License: CECILL-C
             id: "move-keyPoints-group",
             opacity: keypointStructure.ui.displayControl?.editing ? 0.3 : 0,
           }}
-          on:dblclick={() => onDoubleClick(keypointStructure.id)}
+          on:click={() => onClick(keypointStructure)}
         />
       </KeyPoints>
     {/if}

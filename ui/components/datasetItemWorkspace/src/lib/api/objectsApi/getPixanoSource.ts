@@ -4,8 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, Source, type SaveItem } from "@pixano/core";
 import { get, type Writable } from "svelte/store";
+
+import { BaseSchema, Source, type SaveItem } from "@pixano/core";
+
 import { saveData } from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 
@@ -21,7 +23,7 @@ export const getPixanoSource = (srcStore: Writable<Source[]>): Source => {
       created_at: now,
       updated_at: now,
       table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-      data: { name: "Pixano", kind: "other", metadata: "{}" },
+      data: { name: "Pixano", kind: "other", metadata: {} },
     });
     srcStore.update((sources) => {
       sources.push(pixanoSource!);

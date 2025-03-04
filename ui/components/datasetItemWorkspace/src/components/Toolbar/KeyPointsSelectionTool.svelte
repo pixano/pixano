@@ -8,17 +8,16 @@ License: CECILL-C
   // Imports
   import { TangentIcon } from "lucide-svelte";
 
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
 
+  import { templates } from "../../lib/settings/keyPointsTemplates";
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
-    selectedTool,
-    selectedKeypointsTemplate,
     newShape,
+    selectedKeypointsTemplate,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-
-  import { templates } from "../../lib/settings/keyPointsTemplates";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
 
   export let selectTool: (tool: SelectionTool) => void;
 
@@ -42,7 +41,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center flex-col gap-4 mt-4", {
+  class={cn("flex items-center gap-4", {
     "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Keypoint,
   })}
 >
@@ -57,10 +56,12 @@ License: CECILL-C
         selected={$selectedKeypointsTemplate === template.template_id}
       >
         {#each template.vertices as vertex}
-          <div
-            class="w-1 h-1 bg-primary rounded-full absolute"
-            style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.template_id === $selectedKeypointsTemplate)}`}
-          />
+          <div>
+            <div
+              class="w-1 h-1 bg-primary rounded-full absolute"
+              style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.template_id === $selectedKeypointsTemplate)}`}
+            />
+          </div>
         {/each}
       </IconButton>
     {/each}

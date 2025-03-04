@@ -421,6 +421,7 @@ class TestDataset:
                         "confidence": 0.25,
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
+                        "inference_metadata": "{}",
                     },
                     {
                         "id": "bbox_2_1_0_0",
@@ -434,6 +435,7 @@ class TestDataset:
                         "confidence": 0.0,
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
+                        "inference_metadata": "{}",
                     },
                     {
                         "id": "bbox_2_1_0_1",
@@ -447,6 +449,7 @@ class TestDataset:
                         "confidence": 0.25,
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
+                        "inference_metadata": "{}",
                     },
                 ],
             )
@@ -588,6 +591,7 @@ class TestDataset:
                                 "source_ref": {"id": "source_0", "name": "source"},
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                             {
                                 "id": "bbox_1_1",
@@ -601,6 +605,7 @@ class TestDataset:
                                 "source_ref": {"id": "source_1", "name": "source"},
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                         ],
                         "keypoint": None,
@@ -702,6 +707,7 @@ class TestDataset:
                                 "confidence": 0.9,
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                             {
                                 "id": "bbox_3_1",
@@ -715,6 +721,7 @@ class TestDataset:
                                 "confidence": 0.9,
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                         ],
                         "keypoint": None,
@@ -816,6 +823,7 @@ class TestDataset:
                                 "confidence": 0.9,
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                             {
                                 "id": "bbox_1_1",
@@ -829,6 +837,7 @@ class TestDataset:
                                 "confidence": 0.9,
                                 "created_at": datetime(2021, 1, 1, 0, 0),
                                 "updated_at": datetime(2021, 1, 1, 0, 0),
+                                "inference_metadata": "{}",
                             },
                         ],
                         "keypoint": None,
@@ -1117,7 +1126,7 @@ class TestDataset:
         path = dataset_image_bboxes_keypoint.path.parent
 
         datasets_info = Dataset.list(path)
-        assert len(datasets_info) == 2
+        assert len(datasets_info) == 3
         assert dataset_image_bboxes_keypoint.info in datasets_info
 
     def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):

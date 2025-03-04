@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
+from pixano_inference.client import PixanoInferenceClient
 
 from pixano.app.main import create_app
 from pixano.app.settings import Settings, get_settings
@@ -24,9 +25,13 @@ MEDIA_DIR = ASSETS_DIRECTORY / "sample_data"
 
 @pytest.fixture(scope="session")
 def app_and_settings(
-    dataset_image_bboxes_keypoint: Dataset, dataset_multi_view_tracking_and_image: Dataset
+    dataset_image_bboxes_keypoint: Dataset,
+    dataset_multi_view_tracking_and_image: Dataset,
+    simple_pixano_inference_client,
 ) -> tuple[FastAPI, Settings]:  # args to ensure the fixture is called before the app fixture
-    settings = Settings(library_dir=str(LIBRARY_DIR), media_dir=str(MEDIA_DIR))
+    settings = Settings(
+        library_dir=str(LIBRARY_DIR), media_dir=str(MEDIA_DIR), pixano_inference_client=simple_pixano_inference_client
+    )
 
     @lru_cache
     def get_settings_override():
@@ -39,18 +44,26 @@ def app_and_settings(
 
 
 @pytest.fixture(scope="session")
-def app_and_settings_with_client(app_and_settings):
+def app_and_settings_with_client(app_and_settings: tuple[FastAPI, Settings]) -> tuple[FastAPI, Settings, TestClient]:
     return *app_and_settings, TestClient(app_and_settings[0])
 
 
 @pytest.fixture()
 def app_and_settings_copy(
-    dataset_image_bboxes_keypoint_copy: Dataset, dataset_multi_view_tracking_and_image_copy: Dataset
+    dataset_image_bboxes_keypoint_copy: Dataset,
+    dataset_multi_view_tracking_and_image_copy: Dataset,
+    dataset_vqa_copy: Dataset,
+    simple_pixano_inference_client_fn_scope: PixanoInferenceClient,
 ) -> tuple[FastAPI, Settings]:
     library_dir = Path(tempfile.mkdtemp())
-    settings = Settings(library_dir=str(library_dir), media_dir=str(MEDIA_DIR), models_dir=str(library_dir))
+    settings = Settings(
+        library_dir=str(library_dir),
+        media_dir=str(MEDIA_DIR),
+        models_dir=str(library_dir),
+        pixano_inference_client=simple_pixano_inference_client_fn_scope,
+    )
 
-    for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy]:
+    for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy, dataset_vqa_copy]:
         dataset.info.id = dataset.info.name
         dataset.info.to_json(dataset._info_file)
         dataset._move_dataset(library_dir / dataset.info.name)
@@ -66,7 +79,9 @@ def app_and_settings_copy(
 
 
 @pytest.fixture()
-def app_and_settings_with_client_copy(app_and_settings_copy):
+def app_and_settings_with_client_copy(
+    app_and_settings_copy: tuple[FastAPI, Settings],
+) -> tuple[FastAPI, Settings, TestClient]:
     return *app_and_settings_copy, TestClient(app_and_settings_copy[0])
 
 

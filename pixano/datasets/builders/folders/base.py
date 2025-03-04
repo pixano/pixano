@@ -13,7 +13,7 @@ import shortuuid
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces import WorkspaceType
-from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
+from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_annotation, is_bbox, is_entity, is_view
 from pixano.features.schemas.annotations.annotation import Annotation
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.source import SourceKind
@@ -77,13 +77,14 @@ class FolderBaseBuilder(DatasetBuilder):
     METADATA_FILENAME: str = "metadata.jsonl"
     EXTENSIONS: list[str]
     WORKSPACE_TYPE = WorkspaceType.UNDEFINED
+    DEFAULT_SCHEMA: type[DatasetItem] | None = None
 
     def __init__(
         self,
         source_dir: Path | str,
         target_dir: Path | str,
-        dataset_item: type[DatasetItem],
         info: DatasetInfo,
+        dataset_item: type[DatasetItem] | None = None,
         url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `FolderBaseBuilder`.
@@ -97,6 +98,10 @@ class FolderBaseBuilder(DatasetBuilder):
                 relative path from the media directory.
         """
         info.workspace = self.WORKSPACE_TYPE
+        if self.DEFAULT_SCHEMA is not None and dataset_item is None:
+            dataset_item = self.DEFAULT_SCHEMA
+        if dataset_item is None:
+            raise ValueError("A schema is required.")
         super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
         self.source_dir = Path(source_dir)
         if url_prefix is None:
@@ -105,25 +110,29 @@ class FolderBaseBuilder(DatasetBuilder):
             url_prefix = Path(url_prefix)
         self.url_prefix = url_prefix
 
-        view_name = None
-        entity_name = None
+        self.views_schema: dict[str, type[View]] = {}
+        self.entities_schema: dict[str, type[Entity]] = {}
+        self.annotations_schema: dict[str, type[Annotation]] = {}
+
         for k, s in self.schemas.items():
-            if issubclass(s, View):
-                if view_name is not None:
-                    raise ValueError("Only one view schema is supported in folder based builders.")
-                view_name = k
-                view_schema = s
-            if issubclass(s, Entity):
-                if entity_name is not None:
-                    raise ValueError("Only one entity schema is supported in folder based builders.")
-                entity_name = k
-                entity_schema = s
-        if view_name is None or entity_name is None:
-            raise ValueError("View and entity schemas must be defined in the schemas argument.")
-        self.view_name = view_name
-        self.view_schema: type[View] = view_schema
-        self.entity_name = entity_name
-        self.entity_schema: type[Entity] = entity_schema
+            if is_view(s):
+                self.views_schema.update({k: s})
+            elif is_entity(s):
+                self.entities_schema.update({k: s})
+            elif is_annotation(s):
+                self.annotations_schema.update({k: s})
+        if not self.views_schema or not self.entities_schema:
+            raise ValueError("At least one View and one Entity schema must be defined in the schemas argument.")
+
+        # for compatibility with actual ImageFolderBuilder that allows only one view and one entity
+        # TODO - allow multiview and multi entities in base FolderBuilder
+        # Note: technically VQA also allow only one view, so for now we keep the ValueError
+        if len(self.views_schema) == 1:
+            self.view_name, self.view_schema = list(self.views_schema.items())[0]
+        else:
+            raise ValueError("Only one view schema is supported in folder based builders.")
+        if len(self.entities_schema) == 1:
+            self.entity_name, self.entity_schema = list(self.entities_schema.items())[0]
 
     def generate_data(
         self,
@@ -140,28 +149,30 @@ class FolderBaseBuilder(DatasetBuilder):
                     metadata = self._read_metadata(split / self.METADATA_FILENAME)
                 except FileNotFoundError:
                     metadata = None
-                    entities_data = None
-
-                for view_file in split.glob("*"):
-                    # only consider {split}/{item}.{ext} files
-                    if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                        # retrieve item metadata in metadata file
-                        item_metadata = {}
-                        if metadata is not None:
-                            for m in metadata:
-                                if m[self.view_name] == view_file.name:
-                                    item_metadata = m
-                                    break
-                            if not item_metadata:
-                                raise ValueError(f"Metadata not found for {view_file}")
-
-                            # extract entity metadata from item metadata
-                            entities_data = item_metadata.pop(self.entity_name, None)
+                if metadata is None:
+                    for view_file in split.glob("*"):
+                        # only consider {split}/{item}.{ext} files
+                        if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
+                            continue
+                        # create item
+                        item = self._create_item(split.name, **{})
+                        # create view
+                        view = self._create_view(item, view_file, self.view_schema)
+                        yield {
+                            self.item_schema_name: item,
+                            self.view_name: view,
+                        }
+                else:  # metadata not None
+                    # retrieve item metadata in metadata file
+                    for item_metadata in metadata:
+                        # extract entity metadata from item metadata
+                        entities_data = item_metadata.pop(self.entity_name, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)
 
                         # create view
+                        view_file = split / item_metadata[self.view_name]
                         view = self._create_view(item, view_file, self.view_schema)
 
                         if entities_data is None:
@@ -184,8 +195,9 @@ class FolderBaseBuilder(DatasetBuilder):
                         }
 
     def _create_item(self, split: str, **item_metadata) -> BaseSchema:
+        if "id" not in item_metadata:
+            item_metadata["id"] = shortuuid.uuid()
         return self.item_schema(
-            id=shortuuid.uuid(),
             split=split,
             **item_metadata,
         )

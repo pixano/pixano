@@ -7,11 +7,12 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Check, ChevronsUpDown } from "lucide-svelte";
+  import { tick } from "svelte";
+
+  import { cn } from "../../../lib/utils/styleUtils";
+  import { Button } from "../button";
   import * as Command from "../command";
   import * as Popover from "../popover";
-  import { Button } from "../button";
-  import { cn } from "../../../lib/utils/styleUtils";
-  import { tick } from "svelte";
 
   export let listItems: { value: string; label: string }[] = [];
   export let placeholder: string = "Select an item";
@@ -61,7 +62,7 @@ License: CECILL-C
           <Command.Item
             value={listItem.value}
             onSelect={(currentValue) => {
-              value = currentValue;
+              value = currentValue; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
               closeAndFocusTrigger(ids.trigger);
             }}
           >

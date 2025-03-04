@@ -7,12 +7,13 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
+
   import { cn } from "../../../lib/utils/styleUtils";
 
   type $$Props = ContextMenuPrimitive.ItemProps & {
     inset?: boolean;
   };
-  type $$Events = ContextMenuPrimitive.ItemEvents;
+  type $$Events = ContextMenuPrimitive.ItemEvents; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   let className: $$Props["class"] = undefined;
   export let inset: $$Props["inset"] = undefined;

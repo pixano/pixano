@@ -6,33 +6,36 @@ License: CECILL-C
 
 <script lang="ts">
   // External library imports
-  import RangeSlider from "svelte-range-slider-pips";
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
-  import { IconButton, Switch } from "@pixano/core/src";
-  import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
+  import RangeSlider from "svelte-range-slider-pips";
 
-  // Local imports
-  import {
-    saveData,
-    views,
-    itemMetas,
-    filters,
-    imageSmoothing,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
+  import { IconButton, Switch } from "@pixano/core/src";
+
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { createFeature } from "../../lib/api/featuresApi";
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  // Local imports
+  import {
+    filters,
+    imageSmoothing,
+    itemMetas,
+    mediaViews,
+    saveData,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   type ViewMeta = {
-    fileName: string | undefined;
+    url: string | undefined;
     width: number;
     height: number;
     format: string;
     id: string;
+    view: string;
   };
 
   // Component state variables
@@ -42,22 +45,32 @@ License: CECILL-C
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
-  views.subscribe((views) => {
+  $: mediaViews.subscribe((views) => {
     viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {
         isVideo = true;
-        image = view[0] as SequenceFrame;
+        image = view[$currentFrameIndex] as SequenceFrame;
       } else {
         image = view as Image;
       }
-      return {
-        fileName: image.data.url.split("/").at(-1),
-        width: image.data.width,
-        height: image.data.height,
-        format: image.data.format,
-        id: image.id,
-      };
+      return image
+        ? {
+            url: image.data.url,
+            width: image.data.width,
+            height: image.data.height,
+            format: image.data.format,
+            id: image.id,
+            view: image.table_info.name,
+          }
+        : {
+            url: undefined,
+            width: 0,
+            height: 0,
+            format: "",
+            id: "",
+            view: "",
+          };
     });
     features = createFeature($itemMetas.item, $datasetSchema);
   });
@@ -91,7 +104,7 @@ License: CECILL-C
 </script>
 
 <!-- Features Section -->
-<div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
+<div class="p-4 pb-8 text-slate-800">
   <h3 class="uppercase font-medium h-10">
     <span>Features</span>
     <IconButton
@@ -114,22 +127,25 @@ License: CECILL-C
 
 <!-- Item Meta Information Section -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
+  <h3 class="uppercase font-medium h-10 flex items-center">Views</h3>
   {#each viewMeta as meta}
-    <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
-    <div class="mx-4 mb-4">
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-        <p class="font-medium">File name</p>
-        <p class="truncate" title={meta.fileName}>{meta.fileName}</p>
+    <h2 class="font-medium h-10 flex items-center truncate" title="{meta.id} ({meta.view})">
+      {meta.id} ({meta.view})
+    </h2>
+    <div class="mx-4">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
+        <p class="font-medium">URL</p>
+        <p class="truncate" title={meta.url}>{meta.url}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Width</p>
         <p>{meta.width}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Height</p>
         <p>{meta.height}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+      <div class="grid gap-4 grid-cols-[150px_auto]">
         <p class="font-medium">Format</p>
         <p>{meta.format}</p>
       </div>
@@ -138,7 +154,7 @@ License: CECILL-C
 </div>
 
 <!-- Filters Section -->
-<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
+<div class="p-4 pb-8 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
 
   <!-- General Filters -->
@@ -146,19 +162,19 @@ License: CECILL-C
     <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
     <!-- Image Smoothing -->
     <div class="w-full my-1 flex items-center justify-between">
-      <label for="smoothing" class="select-none cursor-pointer"> Image smoothing </label>
+      <label for="smoothing" class="select-none cursor-pointer">Image smoothing</label>
       <Switch id="smoothing" bind:checked={$imageSmoothing} onChange={() => {}}></Switch>
     </div>
 
     {#if !isVideo}
       <!-- Histogram Equalizer -->
       <div class="w-full my-1 flex items-center justify-between">
-        <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
+        <label for="equalizer" class="select-none cursor-pointer">Equalize histogram</label>
         <Switch id="equalizer" bind:checked={$filters.equalizeHistogram} onChange={() => {}} />
       </div>
       <!-- Brightness -->
       <div class="flex items-center">
-        <label for="brightness" class="w-20 pb-1">Brightness </label>
+        <label for="brightness" class="w-20 pb-1">Brightness</label>
         <div class="grow text-xs">
           <RangeSlider
             range="min"
@@ -177,7 +193,7 @@ License: CECILL-C
 
       <!-- Contrast -->
       <div class="flex items-center text-sm">
-        <label for="contrast" class="w-20 pb-1">Contrast </label>
+        <label for="contrast" class="w-20 pb-1">Contrast</label>
         <div class="grow text-xs">
           <RangeSlider
             range="min"
@@ -191,7 +207,7 @@ License: CECILL-C
             }}
           />
         </div>
-        <span class="w-8">{Math.round($filters.contrast + 50)}% </span>
+        <span class="w-8">{Math.round($filters.contrast + 50)}%</span>
       </div>
     {/if}
   </div>
@@ -212,8 +228,8 @@ License: CECILL-C
       {#if combineChannels || $itemMetas.color === "grayscale"}
         <!-- Grayscale -->
         <div class="flex items-center text-sm text-center">
-          <span class="text-left w-4"> G </span>
-          <span class="w-8"> {$filters.redRange[0]} </span>
+          <span class="text-left w-4">G</span>
+          <span class="w-8">{$filters.redRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -230,13 +246,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.redRange[1]} </span>
+          <span class="w-8">{$filters.redRange[1]}</span>
         </div>
       {:else}
         <!-- Red -->
         <div class="flex items-center text-sm text-center text-red-500">
-          <span class="text-left w-4"> R </span>
-          <span class="w-8"> {$filters.redRange[0]} </span>
+          <span class="text-left w-4">R</span>
+          <span class="w-8">{$filters.redRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -251,13 +267,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.redRange[1]} </span>
+          <span class="w-8">{$filters.redRange[1]}</span>
         </div>
 
         <!-- Green -->
         <div class="flex items-center text-sm text-center text-green-500">
-          <span class="text-left w-4"> G </span>
-          <span class="w-8"> {$filters.greenRange[0]} </span>
+          <span class="text-left w-4">G</span>
+          <span class="w-8">{$filters.greenRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -272,13 +288,13 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.greenRange[1]} </span>
+          <span class="w-8">{$filters.greenRange[1]}</span>
         </div>
 
         <!-- Blue -->
         <div class="flex items-center text-sm text-center text-blue-500">
-          <span class="text-left w-4"> B </span>
-          <span class="w-8"> {$filters.blueRange[0]} </span>
+          <span class="text-left w-4">B</span>
+          <span class="w-8">{$filters.blueRange[0]}</span>
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -293,7 +309,7 @@ License: CECILL-C
               }}
             />
           </div>
-          <span class="w-8"> {$filters.blueRange[1]} </span>
+          <span class="w-8">{$filters.blueRange[1]}</span>
         </div>
       {/if}
     </div>

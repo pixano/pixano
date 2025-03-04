@@ -7,7 +7,8 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import type { SaveItem, TrackletItem } from "@pixano/core";
-  import { BaseSchema, ContextMenu, Tracklet, cn } from "@pixano/core";
+  import { BaseSchema, cn, ContextMenu, Tracklet } from "@pixano/core";
+
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
   import { annotations, entities, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -186,9 +187,9 @@ License: CECILL-C
       <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(itemFrameIndex)}
-        >Edit item</ContextMenu.Item
-      >
+      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(itemFrameIndex)}>
+        Edit item
+      </ContextMenu.Item>
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

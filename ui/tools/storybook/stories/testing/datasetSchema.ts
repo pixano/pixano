@@ -51,7 +51,6 @@ export const datasetSchema: DatasetSchema = {
         parent_ref: { type: "EntityRef", collection: false },
         updated_at: { type: "datetime", collection: false },
         view_ref: { type: "ViewRef", collection: false },
-        with_model: { type: "SourceRef", collection: false },
       },
       schema: "Conversation",
     },

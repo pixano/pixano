@@ -6,21 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Bar } from "svelte-chartjs";
   import {
-    Chart,
-    Title,
-    Tooltip,
-    Legend,
     BarElement,
     CategoryScale,
+    Chart,
+    Legend,
     LinearScale,
+    Title,
+    Tooltip,
     type ChartDataset,
   } from "chart.js";
   import zoomPlugin from "chartjs-plugin-zoom";
+  import { Bar } from "svelte-chartjs";
+
   import type { DatasetStat } from "../../..";
   import { colors } from "./colors";
-  import { min } from "d3";
 
   // Define props
   export let hist: DatasetStat;

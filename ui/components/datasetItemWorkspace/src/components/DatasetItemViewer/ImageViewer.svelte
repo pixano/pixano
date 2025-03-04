@@ -6,14 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
   // Import stores and API functions
   import { afterUpdate } from "svelte";
+
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+
   import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -58,6 +60,10 @@ License: CECILL-C
       )
         .then((results) => {
           embeddings = results;
+          modelsUiStore.update((store) => ({
+            ...store,
+            currentModalOpen: "none",
+          }));
         })
         .catch((err) => {
           modelsUiStore.update((store) => ({
@@ -161,6 +167,7 @@ License: CECILL-C
   // Reactive statement to update item objects when new shape is being edited and pre-annotation is not active
   $: if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
     annotations.update((objects) => updateExistingObject(objects, $newShape));
+    newShape.set({ status: "none" });
   }
 
   // Reactive statement to set the selected tool

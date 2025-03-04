@@ -6,22 +6,22 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
+  import { ArrowLeft, ArrowRight, Loader2Icon } from "lucide-svelte";
 
+  import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { IconButton, PrimaryButton, ConfirmModal } from "@pixano/core/src";
-
+  import DatasetItemHeader from "./DatasetItemHeader.svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
+  import { navItems } from "$lib/constants/headerConstants";
   import {
     currentDatasetStore,
     datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
-  import { navItems } from "$lib/constants/headerConstants";
 
   export let pageId: string | null;
   export let datasetItemsIds: string[];
@@ -31,6 +31,8 @@ License: CECILL-C
   let canSaveCurrentItem: boolean;
   let showConfirmModal: string = "none";
   let newItemId: string = "none";
+
+  const DATASET_ITEM_ROUTE = `/[dataset]/dataset/[itemId]`;
 
   saveCurrentItemStore.subscribe((value) => (canSaveCurrentItem = value.canSave));
 
@@ -63,18 +65,12 @@ License: CECILL-C
     }
   };
 
-  const onKeyUp = async (event: KeyboardEvent) => {
-    if ((event.target as Element)?.tagName === "INPUT") return event.preventDefault();
-    if (event.shiftKey && event.key === "ArrowLeft") {
-      await goToNeighborItem("previous");
-    } else if (event.shiftKey && event.key === "ArrowRight") {
-      await goToNeighborItem("next");
-    }
-    return event.key;
+  const handleSave = () => {
+    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
   };
 
   const handleSaveAndContinue = async () => {
-    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
+    handleSave();
     await handleContinue();
   };
 
@@ -126,40 +122,31 @@ License: CECILL-C
       },
     };
   }
-
-  // this one is bugged... disabled for now
-  // require:  import { beforeNavigate } from "$app/navigation";
-  //
-  // beforeNavigate(({to, cancel}) => {
-  //   if (to) {
-  //     cancel();
-  //     navigateTo(to.url.toString())
-  //   }
-  //   // if (to && canSaveCurrentItem) {
-  //   //   showConfirmModal = to.url.toString()
-  //   //   cancel()
-  //   // }
-  // });
 </script>
 
-<header class="w-full fixed z-40 font-Montserrat">
-  <div
-    class="h-20 p-5 flex justify-between items-center shrink-0
+<header
+  class="w-full fixed z-40 font-Montserrat h-20 p-5 flex justify-between items-center shrink-0
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
-    use:preventUnsavedUnload
-  >
+  use:preventUnsavedUnload
+>
+  {#if $page.route.id === DATASET_ITEM_ROUTE}
+    <DatasetItemHeader
+      {currentItemId}
+      {isLoading}
+      {handleSave}
+      {goToNeighborItem}
+      {handleReturnToPreviousPage}
+      {navigateTo}
+    />
+  {:else}
     {#if $currentDatasetStore}
       <div class="h-10 flex items-center font-semibold text-2xl">
         <div class="flex gap-4 items-center font-light">
-          <button on:click={() => navigateTo("/")} class="h-10 w-10">
-            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-          </button>
-          <IconButton
-            on:click={handleReturnToPreviousPage}
-            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-          >
-            <ArrowLeftCircleIcon />
-          </IconButton>
+          <div class="h-10 w-10">
+            <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
+              <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+            </IconButton>
+          </div>
           {$currentDatasetStore.name}
         </div>
       </div>
@@ -196,7 +183,7 @@ License: CECILL-C
         </PrimaryButton>
       {/each}
     </div>
-  </div>
+  {/if}
 </header>
 {#if showConfirmModal !== "none"}
   <ConfirmModal
@@ -208,4 +195,3 @@ License: CECILL-C
     on:cancel={() => (showConfirmModal = "none")}
   />
 {/if}
-<svelte:window on:keyup={onKeyUp} />

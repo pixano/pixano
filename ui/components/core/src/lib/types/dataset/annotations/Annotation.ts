@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { createTypedAnnotation } from "../../../utils/annotations";
 import { BaseSchema } from "../BaseSchema";
 import {
@@ -22,6 +23,7 @@ export const annotationSchema = z
     view_ref: referenceSchema,
     entity_ref: referenceSchema,
     source_ref: referenceSchema,
+    inference_metadata: z.record(z.string(), z.any()),
   })
   .passthrough();
 
@@ -47,7 +49,9 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref"]);
+    return super
+      .nonFeaturesFields()
+      .concat(["item_ref", "view_ref", "entity_ref", "source_ref", "inference_metadata"]);
   }
 
   static deepCreateInstanceArray(
@@ -71,7 +75,6 @@ export abstract class Annotation extends BaseData<AnnotationType> {
       console.error("ERROR: do not use 'is_*' on uninitialized object");
       return false;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     return this.table_info.base_schema === type;
   }
 }

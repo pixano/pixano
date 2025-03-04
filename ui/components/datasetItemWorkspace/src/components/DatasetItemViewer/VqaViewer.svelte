@@ -6,19 +6,29 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, type ImagesPerView, type SaveItem } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { VqaArea } from "@pixano/vqa-canvas";
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
+
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { BaseSchema, DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import { VqaArea } from "@pixano/vqa-canvas";
+  import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
   // Import stores and API functions
-  import type { ContentChangeEvent } from "@pixano/vqa-canvas/src/lib/types";
-  import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
+
+  import {
+    isNewAnswerEvent,
+    isUpdatedMessageEvent,
+    type ContentChangeEvent,
+    type GenerateAnswerEvent,
+  } from "@pixano/vqa-canvas/src/features/annotateItem/types";
+
+  import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
     colorScale,
+    entities,
     filters,
     imageSmoothing,
     itemBboxes,
@@ -28,11 +38,13 @@ License: CECILL-C
     messages,
     newShape,
     preAnnotationIsActive,
-    saveData,
     selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { createUpdatedMessage } from "../../lib/utils/createUpdatedMessage";
+  import { addAnswer } from "../../lib/stores/mutations/addAnswer";
+  import { addQuestion } from "../../lib/stores/mutations/addQuestion";
+  import { generateAnswer } from "../../lib/stores/mutations/generateAnswer";
+  import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
   // Attributes
   export let selectedItem: DatasetItem;
@@ -138,42 +150,45 @@ License: CECILL-C
 
   const handleAnswerContentChange = (event: CustomEvent<ContentChangeEvent>) => {
     event.preventDefault();
+    if (isNewAnswerEvent(event)) {
+      addAnswer(event.detail);
+    } else if (isUpdatedMessageEvent(event)) {
+      updateMessageContent(event.detail);
+    }
+  };
 
-    const { answerId, newContent, newChoices, explanation } = event.detail;
-    const prevMessage = $messages.find((message) => message.id === answerId);
+  const handleStoreQuestion = (event: CustomEvent<StoreQuestionEvent>) => {
+    const conversationEntities = $entities.filter((e) => e.is_type(BaseSchema.Conversation));
 
-    if (!prevMessage) {
+    if (conversationEntities.length === 0) {
+      console.error("ERROR: No conversation entity found");
       return;
     }
 
-    const updatedMessage = createUpdatedMessage({
-      message: prevMessage,
-      newContent,
-      newChoices,
-      explanation,
-    });
+    addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
+  };
 
-    annotations.update((prevAnnotations) =>
-      prevAnnotations.map((annotation) =>
-        annotation.is_type(BaseSchema.Message) && annotation.id === answerId
-          ? updatedMessage
-          : annotation,
-      ),
-    );
+  const handleGenerateAnswer = (event: CustomEvent<GenerateAnswerEvent>) => {
+    const question = $messages.find((m) => m.id === event.detail.questionId);
 
-    const save_item: SaveItem = {
-      change_type: "update",
-      object: updatedMessage,
-    };
+    if (question === undefined) {
+      console.error("ERROR: Message not found");
+      return;
+    }
 
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    generateAnswer(question);
   };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
-    <VqaArea messages={$messages} on:answerContentChange={handleAnswerContentChange} />
+  <div class="h-full grid grid-cols-[300px_auto]">
+    <VqaArea
+      messages={$messages}
+      on:answerContentChange={handleAnswerContentChange}
+      on:storeQuestion={handleStoreQuestion}
+      on:generateAnswer={handleGenerateAnswer}
+    />
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}

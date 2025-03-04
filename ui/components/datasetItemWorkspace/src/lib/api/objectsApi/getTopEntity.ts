@@ -4,9 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { get } from "svelte/store";
+
 import type { Annotation, Entity } from "@pixano/core";
 
-export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
+import { entities } from "../../stores/datasetItemWorkspaceStores";
+
+export const getTopEntity = (ann: Annotation): Entity => {
   if (ann.ui.top_entities && ann.ui.top_entities.length > 0) {
     return ann.ui.top_entities[0];
   }
@@ -14,11 +18,12 @@ export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
   //first will be the top level entity, followed by sub entities in descending order
   //(last one is the direct annotation parent entity)
   ann.ui.top_entities = [];
-  let entity = entities.find((entity) => entity.id === ann.data.entity_ref.id);
+  const local_entities = get(entities);
+  let entity = local_entities.find((entity) => entity.id === ann.data.entity_ref.id);
   while (entity && entity.data.parent_ref.id !== "") {
     //store entity
     ann.ui.top_entities.unshift(entity);
-    entity = entities.find(
+    entity = local_entities.find(
       (parent_entity) => entity && parent_entity.id === entity.data.parent_ref.id,
     );
   }

@@ -6,9 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onDestroy, tick } from "svelte";
   import Konva from "konva";
-  import { Rect, Group } from "svelte-konva";
+  import { onDestroy, tick } from "svelte";
+  import { Group, Rect } from "svelte-konva";
+
   import {
     Annotation,
     SaveShapeType,
@@ -17,15 +18,15 @@ License: CECILL-C
     type Shape,
   } from "@pixano/core";
 
-  import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
     getNewRectangleDimensions,
     onDragMove,
     stickLabelsToRectangle,
     toggleIsEditingBBox,
   } from "../api/rectangleApi";
-  import LabelTag from "./LabelTag.svelte";
+  import { BBOX_STROKEWIDTH } from "../lib/constants";
   import { ToolType } from "../tools";
+  import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;
   export let bbox: BBox;
@@ -67,23 +68,14 @@ License: CECILL-C
     stickLabelsToRectangle(tooltip, currentRect);
   };
 
-  const onDoubleClick = () => {
-    newShape = {
-      status: "editing",
-      shapeId: bbox.id,
-      viewRef: bbox.data.view_ref,
-      highlighted: "self",
-      type: "none",
-    };
-  };
-
   const onClick = () => {
     if (bbox.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: bbox.id,
+        top_entity_id: bbox.ui.top_entities[0].id,
         viewRef: bbox.data.view_ref,
-        highlighted: "all",
+        highlighted: "self",
         type: "none",
       };
     }
@@ -121,11 +113,10 @@ License: CECILL-C
     }
   };
 
-  $: bbox.ui.displayControl?.editing, void handleEditing();
+  $: bbox.ui.displayControl?.editing, void handleEditing(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 </script>
 
 <Group
-  on:dblclick={onDoubleClick}
   on:click={onClick}
   config={{
     listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Fusion,

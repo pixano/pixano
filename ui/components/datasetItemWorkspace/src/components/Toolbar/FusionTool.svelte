@@ -10,6 +10,7 @@ License: CECILL-C
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { Annotation, cn, IconButton, type SaveItem } from "@pixano/core/src";
+
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import { fusionTool } from "../../lib/settings/selectionTools";
   import {
@@ -19,6 +20,7 @@ License: CECILL-C
     saveData,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+
   export let cleanFusion: () => void;
 
   const onFusionClick = () => {
@@ -119,7 +121,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center flex-col gap-4 mt-4", {
+  class={cn("flex items-center gap-4", {
     "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Fusion,
   })}
 >

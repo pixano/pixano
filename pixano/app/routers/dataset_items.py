@@ -88,7 +88,7 @@ async def create_dataset_items(
     dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
-        rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+        rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset))
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset items")
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
@@ -137,7 +137,7 @@ async def update_dataset_items(
     dataset = get_dataset(dataset_id, settings.library_dir, None)
 
     try:
-        rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+        rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset))
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset items")
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)

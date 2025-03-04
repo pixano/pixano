@@ -10,12 +10,13 @@ License: CECILL-C
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
   import {
+    SaveShapeType,
     type Mask,
     type Reference,
-    SaveShapeType,
     type SelectionTool,
     type Shape,
   } from "@pixano/core";
+
   import {
     convertPointToSvg,
     hexToRGBA,
@@ -101,23 +102,14 @@ License: CECILL-C
     handlePolygonPointsDragEnd(svg);
   };
 
-  const onDoubleClick = () => {
-    newShape = {
-      status: "editing",
-      shapeId: mask.id,
-      viewRef,
-      highlighted: "self",
-      type: "none",
-    };
-  };
-
   const onClick = () => {
     if (mask.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: mask.id,
         viewRef,
-        highlighted: "all",
+        top_entity_id: mask.ui.top_entities[0].id,
+        highlighted: "self",
         type: "none",
       };
     }
@@ -156,7 +148,6 @@ License: CECILL-C
     />
   {:else}
     <KonvaShape
-      on:dblclick={onDoubleClick}
       on:click={onClick}
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.ui.svg),

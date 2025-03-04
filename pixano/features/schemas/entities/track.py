@@ -8,11 +8,11 @@ from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal
-from .entity import Entity
+from .named_entity import NamedEntity
 
 
 @_register_schema_internal
-class Track(Entity):
+class Track(NamedEntity):
     """A `Track` entity.
 
     A track represents an entity that is shared among multiple view across time.
@@ -21,7 +21,7 @@ class Track(Entity):
         name: The name of the track.
     """
 
-    name: str
+    pass
 
 
 def is_track(cls: type, strict: bool = False) -> bool:

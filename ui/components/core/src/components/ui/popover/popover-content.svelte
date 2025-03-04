@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Popover as PopoverPrimitive } from "bits-ui";
+
   import { cn, flyAndScale } from "../../../lib/utils/styleUtils";
 
   type $$Props = PopoverPrimitive.ContentProps;

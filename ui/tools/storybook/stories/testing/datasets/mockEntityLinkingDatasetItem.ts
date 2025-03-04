@@ -22,6 +22,7 @@ import {
   type MessageType,
   type TextSpanType,
 } from "@pixano/core";
+
 import { mockAnnotationType, mockEntityType, mockImage, mockMessageType } from "../shared";
 
 const bboxData: BBoxType = {
@@ -123,7 +124,6 @@ const conversation = new Conversation({
   updated_at: new Date().toISOString(),
   data: {
     kind: "conversation",
-    with_model: { id: "model_id", name: "model_name" },
     ...mockEntityType,
   },
 });

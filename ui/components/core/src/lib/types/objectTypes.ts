@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { SegmentationResult } from ".";
-import type { BBox, DisplayControl, Mask, Entity, Reference } from "./dataset";
+import type { BBox, DisplayControl, Entity, Mask, Reference } from "./dataset";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -166,6 +166,7 @@ export type EditShape = {
   shapeId: string;
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
+  top_entity_id?: string;
 } & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;

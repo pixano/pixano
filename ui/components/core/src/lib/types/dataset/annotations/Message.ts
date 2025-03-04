@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+
 import { Annotation, type AnnotationType, type AnnotationUIFields } from ".";
 import { BaseSchema } from "../BaseSchema";
 import type { BaseDataFields } from "../datasetTypes";
@@ -41,8 +42,6 @@ const questionSchema = baseMessageSchema.extend({
 
 const answerSchema = baseMessageSchema.extend({
   type: z.literal(MessageTypeEnum.ANSWER),
-  answers: z.string().array(),
-  explanations: z.string().array(),
 });
 
 const systemSchema = baseMessageSchema.extend({
@@ -55,6 +54,7 @@ export const messageSchema = z.discriminatedUnion("type", [
   systemSchema,
 ]);
 
+export type QuestionType = z.infer<typeof questionSchema>;
 export type MessageType = z.infer<typeof messageSchema>;
 
 export class Message extends Annotation {
@@ -85,3 +85,7 @@ export class Message extends Annotation {
       ]);
   }
 }
+
+export const isQuestionData = (messageType: MessageType): messageType is QuestionType => {
+  return messageType.type === MessageTypeEnum.QUESTION;
+};

@@ -5,17 +5,16 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import { derived, writable } from "svelte/store";
+
 import {
-  type InteractiveImageSegmenter,
-  type KeypointsTemplate,
-  type SaveItem,
-  type SelectionTool,
-  type Shape,
   Annotation,
   BaseSchema,
   BBox,
   Conversation,
   Entity,
+  isMediaView,
+  isTextView,
   Keypoints,
   Mask,
   Message,
@@ -23,10 +22,19 @@ import {
   Tracklet,
   utils,
   View,
+  type InteractiveImageSegmenter,
+  type KeypointsTemplate,
+  type SaveItem,
+  type SelectionTool,
+  type Shape,
 } from "@pixano/core";
-import { derived, writable } from "svelte/store";
 
-import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
+import {
+  mapObjectToBBox,
+  mapObjectToKeypoints,
+  mapObjectToMasks,
+  type MView,
+} from "../api/objectsApi";
 import type {
   Filters,
   ItemsMeta,
@@ -83,19 +91,32 @@ export const colorScale = derived(
   initialColorScale,
 );
 
-export const itemBboxes = derived(
-  [annotations, views, entities],
-  ([$annotations, $views, $entities]) => {
-    const bboxes: BBox[] = [];
-    for (const ann of $annotations) {
-      if (ann.is_type(BaseSchema.BBox)) {
-        const box = mapObjectToBBox(ann as BBox, $views, $entities);
-        if (box) bboxes.push(box);
-      }
+export const mediaViews = derived(views, ($views) => {
+  // Do not use Object.entries().filter because it loses the type information
+  const mediaViews: MView = {};
+  for (const [key, view] of Object.entries($views)) {
+    console.log(view);
+    if (isMediaView(view)) {
+      mediaViews[key] = view;
     }
-    return bboxes;
-  },
+  }
+  return mediaViews;
+});
+
+export const textViews = derived(views, ($views) =>
+  Object.values($views).filter((view) => isTextView(view)),
 );
+
+export const itemBboxes = derived([annotations, mediaViews], ([$annotations, $mediaViews]) => {
+  const bboxes: BBox[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_type(BaseSchema.BBox)) {
+      const box = mapObjectToBBox(ann as BBox, $mediaViews);
+      if (box) bboxes.push(box);
+    }
+  }
+  return bboxes;
+});
 
 export const itemMasks = derived(annotations, ($annotations) => {
   const masks: Mask[] = [];
@@ -108,7 +129,7 @@ export const itemMasks = derived(annotations, ($annotations) => {
   return masks;
 });
 
-export const itemKeypoints = derived([annotations, views], ([$annotations, $views]) => {
+export const itemKeypoints = derived([annotations, mediaViews], ([$annotations, $views]) => {
   const m_keypoints: KeypointsTemplate[] = [];
   for (const ann of $annotations) {
     if (ann.is_type(BaseSchema.Keypoints)) {

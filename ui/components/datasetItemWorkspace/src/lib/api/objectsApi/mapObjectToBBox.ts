@@ -4,14 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  BaseSchema,
-  WorkspaceType,
-  type BBox,
-  type Entity,
-  type Image,
-  type SequenceFrame,
-} from "@pixano/core";
+import { BaseSchema, WorkspaceType, type BBox } from "@pixano/core";
+
 import type { MView } from ".";
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
@@ -21,7 +15,7 @@ import {
 import { defineTooltip } from "./defineTooltip";
 import { getTopEntity } from "./getTopEntity";
 
-export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
+export const mapObjectToBBox = (bbox: BBox, views: MView): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
   if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl?.hidden) return;
@@ -38,7 +32,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
   }
   if (bbox.data.is_normalized) {
     const view = views[bbox.data.view_ref.name];
-    const image = Array.isArray(view) ? (view[0] as SequenceFrame) : (view as Image);
+    const image = Array.isArray(view) ? view[0] : view;
     const imageHeight = image.data.height || 1;
     const imageWidth = image.data.width || 1;
     //TODO: manage correctly format -- here we will change user format if save
@@ -49,7 +43,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
       bbox_ui_coords[3] * imageHeight,
     ];
   }
-  const entity = getTopEntity(bbox, entities);
+  const entity = getTopEntity(bbox);
   const tooltip = entity ? defineTooltip(bbox, entity) : "";
 
   return {

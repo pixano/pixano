@@ -25,6 +25,7 @@ class DumbDatasetExporter(DatasetExporter):
 
     def export_dataset_item(self, export_data, dataset_item):
         export_data[dataset_item.id] = dataset_item
+        return export_data
 
     def save_data(self, export_data, split, file_name, file_num):
         split_folder = self.export_dir / split

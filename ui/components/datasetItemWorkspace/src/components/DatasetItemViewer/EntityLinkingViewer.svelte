@@ -6,12 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Image as ImageJS } from "image-js";
+  import { Loader2Icon } from "lucide-svelte";
+
   import { Canvas2D } from "@pixano/canvas2d";
   import { DatasetItem, Image, Message, type ImagesPerView, type SaveItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
-  import { Image as ImageJS } from "image-js";
-  import { Loader2Icon } from "lucide-svelte";
+
   // Import stores and API functions
   import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -153,7 +155,7 @@ License: CECILL-C
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full ml-4 grid grid-cols-[300px_auto]">
+  <div class="h-full grid grid-cols-[300px_auto]">
     <TextSpanArea
       {imagesPerView}
       selectedItemId={selectedItem.item.id}

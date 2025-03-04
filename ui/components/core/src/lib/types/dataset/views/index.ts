@@ -6,5 +6,6 @@ License: CECILL-C
 
 export * from "./Image";
 export * from "./SequenceFrame";
+export * from "./TextView";
 export * from "./View";
 export * from "./ViewEmbedding";

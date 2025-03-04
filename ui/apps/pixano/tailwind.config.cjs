@@ -11,6 +11,7 @@ export default {
     "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
+    "../../components/vqaCanvas/src/**/*.{svelte,js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {

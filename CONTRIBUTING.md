@@ -34,7 +34,7 @@ The `-e` argument install the repository in dev mode so that your local changes 
 
 ##### Dependencies
 
-You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, run this to install all the pnpm dependencies:
+You will need `node ~= 23.8` and `pnpm ~= 10.4.1`. Then, run this to install all the pnpm dependencies:
 
 ```bash
 cd ui/

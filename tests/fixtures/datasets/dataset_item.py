@@ -10,7 +10,9 @@ from pixano.datasets.dataset_schema import DatasetItem
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
 from pixano.features.schemas.annotations.keypoints import KeyPoints
+from pixano.features.schemas.annotations.text_generation import Message
 from pixano.features.schemas.annotations.tracklet import Tracklet
+from pixano.features.schemas.entities.conversation import Conversation
 from pixano.features.schemas.entities.entity import Entity
 from pixano.features.schemas.entities.track import Track
 from pixano.features.schemas.views.image import Image
@@ -25,6 +27,16 @@ def dataset_item_image_bboxes_keypoint():
         entities: list[Entity]
         bboxes: list[BBox]
         keypoint: KeyPoints
+
+    return Schema
+
+
+@pytest.fixture(scope="session")
+def dataset_item_vqa():
+    class Schema(DatasetItem):
+        image: Image
+        conversations: list[Conversation]
+        messages: list[Message]
 
     return Schema
 

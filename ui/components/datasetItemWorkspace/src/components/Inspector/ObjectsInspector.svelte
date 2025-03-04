@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { afterUpdate } from "svelte";
+
   import { Thumbnail } from "@pixano/canvas2d";
   import { BaseSchema, Entity, Source, type ObjectThumbnail } from "@pixano/core";
 
@@ -14,13 +16,12 @@ License: CECILL-C
     annotations,
     entities,
     itemMetas,
+    mediaViews,
     preAnnotationIsActive,
-    views,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
-  import { afterUpdate } from "svelte";
 
   let allTopEntities: Entity[];
   let selectedEntitiesId: string[];
@@ -35,16 +36,17 @@ License: CECILL-C
     created_at: now,
     updated_at: now,
     table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-    data: { name: "All", kind: "Global", metadata: "{}" },
+    data: { name: "All", kind: "Global", metadata: {} },
   });
 
-  $: $annotations, $entities, handleAnnotationSortedByModel();
+  $: $annotations, $entities, handleAnnotationSortedByModel(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 
   const handleAnnotationSortedByModel = () => {
     //svelte hack: use a temp Set to set the whole list once
     const allTopEntitiesSet = new Set<Entity>();
     $annotations.forEach((ann) => {
-      allTopEntitiesSet.add(getTopEntity(ann, $entities));
+      const top_entity = getTopEntity(ann);
+      if (!top_entity.is_conversation) allTopEntitiesSet.add(top_entity);
     });
     allTopEntities = Array.from(allTopEntitiesSet);
     selectedEntitiesId = [];
@@ -56,24 +58,20 @@ License: CECILL-C
     if (highlightedBoxes.length > 0) {
       const highlightedBoxesByEntityId = Object.groupBy(
         highlightedBoxes,
-        ({ data }) => data.entity_ref.id,
+        (ann) => getTopEntity(ann).id,
       );
       selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
       for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
         if (entityBoxes) {
           const selectedBox = entityBoxes[Math.floor(entityBoxes.length / 2)];
           if (selectedBox) {
-            const selectedThumbnail = defineObjectThumbnail($itemMetas, $views, selectedBox);
+            const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, selectedBox);
             if (selectedThumbnail) {
               thumbnails[entityId] = selectedThumbnail;
             }
           }
         }
       }
-    }
-    const element = document.querySelector("#preAnnotationThumbnail");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -82,37 +80,35 @@ License: CECILL-C
   });
 </script>
 
-<div class="p-2 h-[calc(100vh-200px)] w-full">
+<div class="p-2 w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
-    <div id="preAnnotationThumbnail">
-      {#if selectedEntitiesId.length > 0}
-        <span class="flex justify-center font-medium text-slate-800">
-          Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
-        </span>
-        {#each selectedEntitiesId as selectedEntity}
-          <span class="flex justify-center text-slate-800">{selectedEntity}</span>
-          {#if thumbnails[selectedEntity]}
-            {#key thumbnails[selectedEntity].coords[0]}
-              <Thumbnail
-                imageDimension={thumbnails[selectedEntity].baseImageDimensions}
-                coords={thumbnails[selectedEntity].coords}
-                imageUrl={`/${thumbnails[selectedEntity].uri}`}
-                minSide={150}
-                maxHeight={200}
-                maxWidth={200}
-              />
-            {/key}
-          {/if}
+    {#if selectedEntitiesId.length > 0}
+      <span class="flex justify-center font-medium text-slate-800">
+        Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
+      </span>
+      {#each selectedEntitiesId as selectedEntity}
+        <span class="flex justify-center text-slate-800">{selectedEntity}</span>
+        {#if thumbnails[selectedEntity]}
+          {#key thumbnails[selectedEntity].coords[0]}
+            <Thumbnail
+              imageDimension={thumbnails[selectedEntity].baseImageDimensions}
+              coords={thumbnails[selectedEntity].coords}
+              imageUrl={`/${thumbnails[selectedEntity].uri}`}
+              minSide={150}
+              maxHeight={200}
+              maxWidth={200}
+            />
+          {/key}
+        {/if}
+      {/each}
+    {/if}
+    <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
+      {#key allTopEntities.length}
+        {#each allTopEntities as entity}
+          <ObjectCard {entity} />
         {/each}
-      {/if}
-      <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-        {#key allTopEntities.length}
-          {#each allTopEntities as entity}
-            <ObjectCard {entity} />
-          {/each}
-        {/key}
-      </ObjectsModelSection>
-    </div>
+      {/key}
+    </ObjectsModelSection>
   {/if}
 </div>

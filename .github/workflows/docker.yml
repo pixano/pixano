@@ -11,10 +11,20 @@ on:
     branches:
       - main
     paths:
+      - "Dockerfile"
       - "pixano/**"
       - "ui/**"
       - ".github/workflows/docker.yml"
       - "pyproject.toml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Dockerfile"
+      # - "pixano/**"
+      # - "ui/**"
+      - ".github/workflows/docker.yml"
+      # - "pyproject.toml"
 
 env:
   TEST_TAG: pixano/pixano:test
@@ -24,6 +34,17 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -39,6 +60,7 @@ jobs:
       - name: Build and push test
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           load: true
           tags: ${{ env.TEST_TAG }}
 
@@ -65,7 +87,9 @@ jobs:
           fi
 
       - name: Build and push latest
+        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.LATEST_TAG }}

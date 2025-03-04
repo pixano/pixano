@@ -12,6 +12,7 @@ from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.schemas.annotations.tracklet import Tracklet
 from pixano.features.schemas.entities.track import Track
+from pixano.features.schemas.items.item import Item
 
 
 @pytest.fixture()
@@ -100,6 +101,7 @@ def json_dataset_schema_item_categories_image_bbox():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
         },
@@ -234,6 +236,7 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "embeddings": {
@@ -260,11 +263,15 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
 
 @pytest.fixture()
 def dataset_schema_multi_view_tracking_and_image(
-    item_categories, sequence_frame_category, bbox_difficult, entity_category, view_embedding_8
+    sequence_frame_category, bbox_difficult, entity_category, view_embedding_8
 ):
+    class ItemCategories(Item):
+        categories: list[str]
+        other_categories: list[int]
+
     return DatasetSchema(
         schemas={
-            "item": item_categories,
+            "item": ItemCategories,
             "video": sequence_frame_category,
             "image": Image,
             "entity_image": entity_category,
@@ -471,6 +478,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "mask_image": {
@@ -486,6 +494,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_image": {
@@ -502,6 +511,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "bboxes_video": {
@@ -519,6 +529,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_video": {
@@ -535,6 +546,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "tracklets": {
@@ -552,6 +564,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                     "source_ref": {"type": "SourceRef", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "image_embedding": {
@@ -680,6 +693,7 @@ def json_dataset_image_bboxes_keypoint():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoint": {
@@ -693,6 +707,7 @@ def json_dataset_image_bboxes_keypoint():
                     "template_id": {"type": "str", "collection": False},
                     "coords": {"type": "float", "collection": True},
                     "states": {"type": "str", "collection": True},
+                    "inference_metadata": {"type": "str", "collection": False},
                 },
             },
             "item": {
