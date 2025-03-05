@@ -9,7 +9,7 @@ License: CECILL-C
   import { onMount } from "svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { BBox, SliderRoot, Track, type KeypointsTemplate } from "@pixano/core";
+  import { BBox, Entity, SliderRoot, type KeypointsTemplate } from "@pixano/core";
 
   import { panTool } from "../../lib/settings/selectionTools";
   import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -27,7 +27,7 @@ License: CECILL-C
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
 
-  let tracks: Track[] = [];
+  let tracks: Entity[] = [];
   entities.subscribe((entities) => {
     tracks = entities.filter((entity) => entity.is_track);
   });
