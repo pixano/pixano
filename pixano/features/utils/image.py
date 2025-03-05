@@ -11,7 +11,7 @@ from itertools import groupby
 
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from pycocotools import mask as mask_api
 
 
@@ -328,3 +328,63 @@ def get_image_thumbnail(image: Image.Image, size: tuple[int, int]) -> Image.Imag
     thumbnail = image.copy()
     thumbnail.thumbnail(size)
     return thumbnail
+
+
+def generate_text_image_base64(text: str, width: int = 128, height: int = 128, font_size: int = 16) -> str:
+    """Generate a thumbnail displaying given text.
+
+    Args:
+        text: input text
+        width: thumbnail width
+        height: thumbnail height
+        font_size: font size
+
+    Returns:
+        base64 image of given text.
+    """
+    image = Image.new("RGB", (width, height), "white")
+
+    try:
+        font = ImageFont.truetype("arial.ttf", size=font_size)
+    except IOError:
+        font = ImageFont.load_default(size=font_size)
+
+    draw = ImageDraw.Draw(image)
+
+    # Set text boundaries
+    max_text_width = width - 10  # 5px margin on both sides
+    x_start = 5  # Left margin
+    y_start = 5  # Top margin
+    line_height = font.size + 2  # Line spacing
+
+    # Manually wrap text based on actual pixel width
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        text_width = bbox[2] - bbox[0]
+
+        if text_width <= max_text_width:
+            current_line = test_line  # Word fits, add it to the line
+        else:
+            lines.append(current_line)  # Save current line
+            current_line = word  # Start new line with this word
+
+    if current_line:
+        lines.append(current_line)  # Add last line
+
+    # Calculate vertical centering
+    total_text_height = len(lines) * line_height
+    y_position = y_start + (height - total_text_height) // 2
+
+    # Draw text aligned to the left
+    for line in lines:
+        draw.text((x_start, y_position), line, fill="black", font=font)
+        y_position += line_height
+
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffered.getvalue()).decode("utf-8")

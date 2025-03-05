@@ -19,6 +19,7 @@ from pixano.features.utils.image import (
     depth_array_to_gray,
     depth_file_to_binary,
     encode_rle,
+    generate_text_image_base64,
     get_image_thumbnail,
     image_to_base64,
     image_to_binary,
@@ -142,3 +143,10 @@ def test_get_image_thumbnail():
         match_regex = "Invalid thumbnail size: " + str(size)
         with pytest.raises(ValueError, match=r"".format(match_regex)):  # noqa: F523
             get_image_thumbnail(image, size)
+
+
+def test_generate_text_image_base64():
+    text = "This is indeed a wonderfull piece of text to put in a thumbnail!"
+    text_thumbnail_b64 = generate_text_image_base64(text)
+    assert isinstance(text_thumbnail_b64, str)
+    assert text_thumbnail_b64.startswith("data:image/png;base64,")

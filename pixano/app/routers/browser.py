@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.utils.errors import DatasetAccessError
-from pixano.features import SchemaGroup, is_view_embedding
-from pixano.features.utils.image import get_image_thumbnail, image_to_base64
+from pixano.features import SchemaGroup, is_image, is_text, is_view_embedding
+from pixano.features.utils.image import generate_text_image_base64, get_image_thumbnail, image_to_base64
 
 from .utils import get_dataset, get_rows
 
@@ -105,13 +105,15 @@ async def get_browser(
         for view in tables_view:
             curr_view = item_first_media[view][item.id]
             if curr_view is not None:
-                try:
-                    row_view = curr_view.open(settings.media_dir, output_type="image")
-                    row_view = get_image_thumbnail(row_view, (128, 128))
-                    row_view_base64 = image_to_base64(row_view, curr_view.format)
-                except ValueError:
-                    row_view_base64 = ""
-
+                if is_image(type(curr_view)):
+                    try:
+                        row_view = curr_view.open(settings.media_dir, output_type="image")
+                        row_view = get_image_thumbnail(row_view, (128, 128))
+                        row_view_base64 = image_to_base64(row_view, curr_view.format)
+                    except ValueError:
+                        row_view_base64 = ""
+                elif is_text(type(curr_view)):
+                    row_view_base64 = generate_text_image_base64(curr_view.content[:80])
                 row[view] = row_view_base64
 
         # ITEM features
