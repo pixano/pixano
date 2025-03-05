@@ -10,6 +10,7 @@ import {
   BaseSchema,
   Conversation,
   Entity,
+  MultiModalEntity,
   Track,
   type DatasetSchema,
   type DS_NamedSchema,
@@ -60,5 +61,13 @@ export const defineCreatedEntity = (
       data: { ...entity.data, kind: "name" }, //TODO kind ??
     };
     return new Conversation(conversation);
-  } else return new Entity(entity);
+  } else if (entitySchema.base_schema === BaseSchema.MultiModalEntity) {
+    const multimodalEntity = {
+      ...entity,
+      data: { ...entity.data, name: "name" in features ? (features["name"].value as string) : "" },
+    };
+    return new MultiModalEntity(multimodalEntity);
+  } else {
+    return new Entity(entity);
+  }
 };
