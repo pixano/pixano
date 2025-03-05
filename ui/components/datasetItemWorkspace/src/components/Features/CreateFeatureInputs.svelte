@@ -15,7 +15,6 @@ License: CECILL-C
     Input,
     Keypoints,
     Mask,
-    Track,
     Tracklet,
   } from "@pixano/core/src";
 
@@ -53,11 +52,8 @@ License: CECILL-C
       let nonFeatsFields: string[] = [];
       let group = "entities";
       if ([BaseSchema.Entity, BaseSchema.Track, baseSchema].includes(sch.base_schema)) {
-        if (sch.base_schema === BaseSchema.Entity) {
+        if (sch.base_schema === BaseSchema.Entity || sch.base_schema === BaseSchema.Track) {
           nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
-        }
-        if (sch.base_schema === BaseSchema.Track) {
-          nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
         }
         if (baseSchema === sch.base_schema) {
           group = "annotations";

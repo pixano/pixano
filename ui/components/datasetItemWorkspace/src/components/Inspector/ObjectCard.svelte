@@ -15,7 +15,6 @@ License: CECILL-C
     Annotation,
     Entity,
     Item,
-    Track,
     WorkspaceType,
     type DisplayControl,
     type ObjectThumbnail,
@@ -59,7 +58,7 @@ License: CECILL-C
   let keypointsIsVisible: boolean = true;
   let textSpansIsVisible: boolean = true;
 
-  let hiddenTrack = entity.is_track ? (entity as Track).ui.hidden : false;
+  let hiddenTrack = entity.is_track ? entity.ui.hidden : false;
 
   $: displayName =
     (entity.data.name
@@ -263,8 +262,8 @@ License: CECILL-C
 
   const onTrackVisClick = () => {
     if (entity.is_track) {
-      (entity as Track).ui.hidden = !(entity as Track).ui.hidden;
-      hiddenTrack = (entity as Track).ui.hidden;
+      entity.ui.hidden = !entity.ui.hidden;
+      hiddenTrack = entity.ui.hidden;
       //svelte hack to refresh
       entities.set($entities);
     }

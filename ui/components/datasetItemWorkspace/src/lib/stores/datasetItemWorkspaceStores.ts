@@ -11,7 +11,6 @@ import {
   Annotation,
   BaseSchema,
   BBox,
-  Conversation,
   Entity,
   isMediaView,
   isTextView,
@@ -152,7 +151,5 @@ export const messages = derived(annotations, ($annotations) => {
 });
 
 export const conversations = derived(entities, ($entities) => {
-  return $entities.filter((entities) =>
-    entities.is_type(BaseSchema.Conversation),
-  ) as Conversation[];
+  return $entities.filter((entities) => entities.is_type(BaseSchema.Conversation));
 });

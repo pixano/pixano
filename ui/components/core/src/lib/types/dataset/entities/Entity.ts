@@ -23,11 +23,12 @@ export type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export type EntityUIFields = {
   childs?: Annotation[];
+  hidden?: boolean;
 };
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  ui: EntityUIFields = { childs: [] };
+  ui: EntityUIFields = { childs: [], hidden: false };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);

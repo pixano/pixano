@@ -21,7 +21,6 @@ License: CECILL-C
     ContextMenu,
     Entity,
     Keypoints,
-    Track,
     Tracklet,
   } from "@pixano/core";
 
@@ -49,7 +48,7 @@ License: CECILL-C
 
   type MView = Record<string, View | View[]>;
 
-  export let track: Track;
+  export let track: Entity;
   export let views: MView;
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let bboxes: BBox[];
