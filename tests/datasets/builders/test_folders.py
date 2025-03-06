@@ -68,8 +68,7 @@ class TestFolderBaseBuilder:
         assert vqa_folder_builder.target_dir.is_dir()
         assert vqa_folder_builder.view_name == "image"
         assert vqa_folder_builder.view_schema == Image
-        assert vqa_folder_builder.entity_name == "conversations"
-        assert vqa_folder_builder.entity_schema == Conversation
+        assert list(vqa_folder_builder.entities_schema.keys()) == ["conversations", "objects"]
         assert vqa_folder_builder.url_prefix == Path(".")
 
     def test_url_prefix_init(self, dataset_item_bboxes_metadata):
