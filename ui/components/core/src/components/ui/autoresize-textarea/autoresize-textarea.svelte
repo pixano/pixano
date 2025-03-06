@@ -31,5 +31,5 @@ License: CECILL-C
   class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
   bind:this={textarea}
   bind:value
-  {...$$restProps}
+  on:blur
 />
