@@ -26,12 +26,10 @@ class DefaultVQADatasetItem(DatasetItem):
     image: Image
     conversations: list[Conversation]
     messages: list[Message]
-
-    # TODO will be added soon... (but need some rework to allow both Conversation and Entity)
-    # bboxes: list[BBox]
-    # masks: list[CompressedRLE]
-    # keypoints: list[KeyPoints]
-    # objects: list[Entity]
+    objects: list[Entity]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
+    keypoints: list[KeyPoints]
 
 
 class DefaultVideoDatasetItem(DatasetItem):
