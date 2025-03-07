@@ -195,18 +195,19 @@ class TestFolderBaseBuilder:
             metadata="metadata",
         )
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
+        entity_name = "entities"
 
         # test 1: one bbox infered
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
         )
 
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -218,7 +219,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
@@ -231,13 +232,13 @@ class TestFolderBaseBuilder:
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
         )
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -248,7 +249,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
@@ -264,21 +265,21 @@ class TestFolderBaseBuilder:
             ]
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
         )
-        assert len(entities) == 2
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[1], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert isinstance(entities[1].id, str) and len(entities[1].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert len(entities[entity_name]) == 2
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][1], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert isinstance(entities[entity_name][1].id, str) and len(entities[entity_name][1].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
         ).model_dump(exclude_timestamps=True)
-        assert entities[1].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[1].id,
+        assert entities[entity_name][1].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -289,7 +290,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
@@ -300,7 +301,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[1].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][1].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0.1, 0.1, 0.2, 0.2],
             format="xywh",
@@ -321,13 +322,13 @@ class TestFolderBaseBuilder:
             "category": "person",
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
         )
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="person",
@@ -339,7 +340,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
@@ -350,7 +351,7 @@ class TestFolderBaseBuilder:
             id=annotations["keypoint"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             template_id="template_0",
             coords=[10, 10, 20, 20, 30, 30],
@@ -361,7 +362,7 @@ class TestFolderBaseBuilder:
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
         with pytest.raises(ValueError, match="not supported for infered entity creation."):
             entities = image_folder_builder._create_objects_entities(
-                item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+                item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
             )
 
         # test 6: error attribute not found in entity schema

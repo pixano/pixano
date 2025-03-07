@@ -239,10 +239,9 @@ class FolderBaseBuilder(DatasetBuilder):
                                 item, views_data, entity_name, entity_schema, raw_entities_data, source_id
                             )
                         else:  # classic entity
-                            obj_entities, annotations_data = self._create_objects_entities(
+                            entities_data, annotations_data = self._create_objects_entities(
                                 item, views_data, entity_name, entity_schema, raw_entities_data, source_id
                             )
-                            entities_data = {entity_name: obj_entities}
 
                         for name, entities in entities_data.items():
                             all_entities_data[name].extend(entities)
@@ -396,9 +395,9 @@ class FolderBaseBuilder(DatasetBuilder):
         entity_schema: type[Entity],
         entities_data: dict[str, Any],
         source_id: str,
-    ) -> tuple[list[Entity], dict[str, list[Annotation]]]:
-        entities: list[Entity] = []
-        annotations: dict[str, list[Annotation]] = {}
+    ) -> tuple[dict[str, list[Entity]], dict[str, list[Annotation]]]:
+        entities: dict[str, list[Entity]] = defaultdict(list)
+        annotations: dict[str, list[Annotation]] = defaultdict(list)
 
         # only one view
         view_name, view = views_data[0]
@@ -413,7 +412,7 @@ class FolderBaseBuilder(DatasetBuilder):
         if len(nums_entities) > 1:
             raise ValueError("All list of entities data must have same length")
         elif len(nums_entities) == 0:
-            return [], {}
+            return {}, {}
 
         num_entities = nums_entities.pop()
         entities_data = {k: v if isinstance(v, list) else [v] for k, v in entities_data.items() if v is not None}
@@ -467,7 +466,7 @@ class FolderBaseBuilder(DatasetBuilder):
                     entity_annotations[attr].append(annotation)
                 else:
                     entity[attr] = entities_data[attr][i]
-            entities.append(
+            entities[entity_name].append(
                 entity_schema(
                     id=entity_id,
                     item_ref=ItemRef(id=item.id),
@@ -477,8 +476,6 @@ class FolderBaseBuilder(DatasetBuilder):
             )
 
             for key, entity_annotation in entity_annotations.items():
-                if key not in annotations:
-                    annotations[key] = []
                 annotations[key].extend(entity_annotation)
         return entities, annotations
 
