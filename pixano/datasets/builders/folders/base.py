@@ -211,7 +211,9 @@ class FolderBaseBuilder(DatasetBuilder):
                             if len(v) > 1:
                                 # create a mosaic from item images
                                 mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
-                                view_file = self.source_dir / split / mosaic_file
+                                view_file = self.source_dir / mosaic_file
+                                if not view_file.is_file():  # no split path in metadata.jsonl
+                                    view_file = self.source_dir / split / mosaic_file
                             else:
                                 view_file = self.source_dir / Path(v[0])
                                 if not view_file.is_file():  # no split path in metadata.jsonl
