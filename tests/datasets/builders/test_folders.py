@@ -77,7 +77,7 @@ class TestFolderBaseBuilder:
             url_prefix=urls_relative_path,
         )
 
-    def test_no_jsonl(self):
+    def test_no_jsonl(self, edge_case_folder_builder: VQAFolderBuilder):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
         builder = ImageFolderBuilder(
@@ -89,6 +89,10 @@ class TestFolderBaseBuilder:
         ds = builder.build(mode="create")
         assert ds.num_rows == 0
         assert set(ds.open_tables().keys()) == {"item", "image", "objects", "bboxes", "masks", "keypoints"}
+
+        # test edges cases
+        ds_ec = edge_case_folder_builder.build()
+        assert ds_ec.num_rows == 4
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())

@@ -17,9 +17,9 @@ from pixano.datasets.dataset_info import DatasetInfo
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
 
-def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_per_split: list[int]):
-    for split, num_items in zip(splits, num_items_per_split):
-        metadata = []
+def _metadata_content(mode: str, num_items: int):
+    metadata = []
+    if mode == "image":
         for item in range(num_items):
             metadata.append(
                 {
@@ -40,17 +40,7 @@ def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_p
                     * item,
                     "category": [("person" if item % 4 == 0 else "cat") if item % 2 else None] * item,
                 }
-
-        metadata_path = source_dir / split / "metadata.jsonl"
-        metadata_path.parent.mkdir(parents=True, exist_ok=True)
-        with metadata_path.open("w+") as f:
-            for item in metadata:
-                f.write(json.dumps(item) + "\n")
-
-
-def _create_metadata_file_vqa(source_dir: Path, splits: list[str], num_items_per_split: list[int]):
-    for split, num_items in zip(splits, num_items_per_split):
-        metadata = []
+    elif mode == "vqa":
         for item in range(num_items):
             metadata.append(
                 {
@@ -67,7 +57,20 @@ def _create_metadata_file_vqa(source_dir: Path, splits: list[str], num_items_per
                     ],
                 }
             )
+    elif mode == "view_mosaic_and_empty_list":
+        for item in range(num_items):
+            metadata.append(
+                {
+                    "view": [f"item_{item}.jpg", f"item_{item + 1}.jpg"] if item % 2 == 0 else [],
+                }
+            )
 
+    return metadata
+
+
+def _create_metadata_file(source_dir: Path, splits: list[str], num_items_per_split: list[int], mode: str):
+    for split, num_items in zip(splits, num_items_per_split):
+        metadata = _metadata_content(mode, num_items)
         metadata_path = source_dir / split / "metadata.jsonl"
         metadata_path.parent.mkdir(parents=True, exist_ok=True)
         with metadata_path.open("w+") as f:
@@ -76,7 +79,11 @@ def _create_metadata_file_vqa(source_dir: Path, splits: list[str], num_items_per
 
 
 def _create_folder(
-    samples_path: list[Path], splits: list[str], num_items_per_split: list[int], with_jsonl: bool = True
+    samples_path: list[Path],
+    splits: list[str],
+    num_items_per_split: list[int],
+    with_jsonl: bool = True,
+    mode: str = "image",
 ):
     source_dir = Path(tempfile.mkdtemp())
     for split, num_items in zip(splits, num_items_per_split):
@@ -86,19 +93,7 @@ def _create_folder(
             item_path.parent.mkdir(parents=True, exist_ok=True)
             item_path.symlink_to(sample_path)
     if with_jsonl:
-        _create_metadata_file_image(source_dir, splits, num_items_per_split)
-    return source_dir
-
-
-def _create_vqa_folder(samples_path: list[Path], splits: list[str], num_items_per_split: list[int]):
-    source_dir = Path(tempfile.mkdtemp())
-    for split, num_items in zip(splits, num_items_per_split):
-        for item in range(num_items):
-            sample_path = samples_path[item % len(samples_path)]
-            item_path = source_dir / split / f"item_{item}{sample_path.suffix}"
-            item_path.parent.mkdir(parents=True, exist_ok=True)
-            item_path.symlink_to(sample_path)
-    _create_metadata_file_vqa(source_dir, splits, num_items_per_split)
+        _create_metadata_file(source_dir, splits, num_items_per_split, mode)
     return source_dir
 
 
@@ -126,8 +121,19 @@ def video_folder():
 
 @pytest.fixture
 def vqa_folder():
-    source_dir = _create_vqa_folder(
-        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [2, 2]
+    source_dir = _create_folder(
+        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [2, 2], mode="vqa"
+    )
+    return source_dir
+
+
+@pytest.fixture
+def edge_case_folder():
+    source_dir = _create_folder(
+        [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]],
+        ["train", "val"],
+        [2, 2],
+        mode="view_mosaic_and_empty_list",
     )
     return source_dir
 
@@ -155,6 +161,15 @@ def image_folder_builder_no_jsonl(image_folder_no_jsonl):
 def vqa_folder_builder(vqa_folder):
     return VQAFolderBuilder(
         source_dir=vqa_folder,
+        target_dir=tempfile.mkdtemp(),
+        info=DatasetInfo(name="test", description="test"),
+    )
+
+
+@pytest.fixture
+def edge_case_folder_builder(edge_case_folder):
+    return VQAFolderBuilder(
+        source_dir=edge_case_folder,
         target_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
     )
