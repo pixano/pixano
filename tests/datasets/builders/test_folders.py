@@ -80,11 +80,15 @@ class TestFolderBaseBuilder:
     def test_no_jsonl(self):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
-        ImageFolderBuilder(
+        builder = ImageFolderBuilder(
             source_dir=source_dir,
             target_dir=target_dir,
             info=DatasetInfo(name="test", description="test"),
         )
+        # also test build with no jsonl
+        ds = builder.build(mode="create")
+        assert ds.num_rows == 0
+        assert set(ds.open_tables().keys()) == {"item", "image", "objects", "bboxes", "masks", "keypoints"}
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
@@ -392,7 +396,7 @@ class TestFolderBaseBuilder:
             final_list.append(temp_dict)
         return final_list
 
-    def test_generate_items(self, image_folder_builder: ImageFolderBuilder, entity_category):
+    def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
         with patch(
             "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
         ):
