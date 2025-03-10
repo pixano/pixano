@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { PrimaryButton, QuestionTypeEnum } from "@pixano/core";
+  import { LoadingModal, PrimaryButton, QuestionTypeEnum } from "@pixano/core";
 
   // To refacto : Cross module imports
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
@@ -20,13 +20,15 @@ License: CECILL-C
   let questionType: QuestionTypeEnum;
   let questionChoices: string[] = [];
   let questionContent: string = "";
+  let isGenerating: boolean = false;
 
   $: completionModel = $completionModelsStore.find((m) => m.selected)?.name;
 
   const handleGenerateQuestion = async () => {
     if (!completionModel || completionModel.length === 0) return;
-
+    isGenerating = true;
     const generatedQuestion = await generateQuestion(completionModel);
+    isGenerating = false;
 
     if (!generatedQuestion) return;
 
@@ -61,3 +63,6 @@ License: CECILL-C
     <NewQuestionForm {questionType} bind:questionChoices bind:questionContent on:storeQuestion />
   {/if}
 </div>
+{#if isGenerating}
+  <LoadingModal />
+{/if}

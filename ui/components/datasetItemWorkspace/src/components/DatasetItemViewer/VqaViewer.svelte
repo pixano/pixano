@@ -10,7 +10,7 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import { BaseSchema, DatasetItem, Image, LoadingModal, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
@@ -60,6 +60,8 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
+
+  let isGenerating: boolean = false;
 
   /**
    * Normalize the pixel values of an image to a specified range.
@@ -184,8 +186,9 @@ License: CECILL-C
       console.error("ERROR: Message not found");
       return;
     }
-
+    isGenerating = true;
     await generateAnswer(completionModel, question);
+    isGenerating = false;
   };
 
   const startExpand = (e: MouseEvent) => {
@@ -243,4 +246,7 @@ License: CECILL-C
   <div class="w-full h-full flex items-center justify-center">
     <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
   </div>
+{/if}
+{#if isGenerating}
+  <LoadingModal />
 {/if}
