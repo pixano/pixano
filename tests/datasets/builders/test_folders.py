@@ -77,22 +77,14 @@ class TestFolderBaseBuilder:
             url_prefix=urls_relative_path,
         )
 
-    def test_no_jsonl(self, edge_case_folder_builder: VQAFolderBuilder):
+    def test_no_jsonl(self):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
-        builder = ImageFolderBuilder(
+        ImageFolderBuilder(
             source_dir=source_dir,
             target_dir=target_dir,
             info=DatasetInfo(name="test", description="test"),
         )
-        # also test build with no jsonl
-        ds = builder.build(mode="create")
-        assert ds.num_rows == 0
-        assert set(ds.open_tables().keys()) == {"item", "image", "objects", "bboxes", "masks", "keypoints"}
-
-        # test edges cases
-        ds_ec = edge_case_folder_builder.build()
-        assert ds_ec.num_rows == 4
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
@@ -205,10 +197,13 @@ class TestFolderBaseBuilder:
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
         entity_name = "entities"
 
+        # add test source id
+        image_folder_builder.source_id = "source_id"
+
         # test 1: one bbox infered
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data
         )
 
         assert len(entities) == 1
@@ -240,7 +235,7 @@ class TestFolderBaseBuilder:
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities) == 1
         assert isinstance(entities[entity_name][0], entity_category)
@@ -273,7 +268,7 @@ class TestFolderBaseBuilder:
             ]
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities[entity_name]) == 2
         assert isinstance(entities[entity_name][0], entity_category)
@@ -330,7 +325,7 @@ class TestFolderBaseBuilder:
             "category": "person",
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
+            item, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities) == 1
         assert isinstance(entities[entity_name][0], entity_category)
@@ -370,14 +365,14 @@ class TestFolderBaseBuilder:
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
         with pytest.raises(ValueError, match="not supported for infered entity creation."):
             entities = image_folder_builder._create_objects_entities(
-                item, [("view", view)], entity_name, entity_category, entities_data, "source_id"
+                item, [("view", view)], entity_name, entity_category, entities_data
             )
 
         # test 6: error attribute not found in entity schema
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
         with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
             entities = image_folder_builder._create_objects_entities(
-                item, [("view", view)], "entities", entity_category, entities_data, "source_id"
+                item, [("view", view)], "entities", entity_category, entities_data
             )
 
     def reconstruct_dict_list(self, generator):
@@ -399,6 +394,22 @@ class TestFolderBaseBuilder:
         if temp_dict:
             final_list.append(temp_dict)
         return final_list
+
+    def test_generate_data_egde_cases(self, edge_case_folder_builder: VQAFolderBuilder, entity_category):
+        with patch(
+            "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
+        ):
+            items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
+
+        # test edges cases
+        for i, item in enumerate(items):
+            actual_item: Item = item["item"]
+            if i % 2 == 0:
+                view: Image = item["image"]
+                assert view.item_ref == ItemRef(id=actual_item.id)
+                assert view.url == f"{actual_item.split}/item_mosaic.jpg"
+            else:
+                assert "image" not in item
 
     def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
         with patch(

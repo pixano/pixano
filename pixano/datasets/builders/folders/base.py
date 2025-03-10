@@ -152,7 +152,7 @@ class FolderBaseBuilder(DatasetBuilder):
         Returns:
             An iterator over the data following the dataset schemas.
         """
-        source_id = self.add_source("Builder", SourceKind.OTHER)
+        self.source_id = self.add_source("Builder", SourceKind.OTHER)
         for split in self.source_dir.glob("*"):
             if not split.is_dir() or split.name.startswith("."):
                 continue
@@ -211,7 +211,7 @@ class FolderBaseBuilder(DatasetBuilder):
                             if len(v) > 1:
                                 # create a mosaic from item images
                                 mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
-                                view_file = self.source_dir / mosaic_file
+                                view_file = self.source_dir / split / mosaic_file
                             else:
                                 view_file = self.source_dir / Path(v[0])
                                 if not view_file.is_file():  # no split path in metadata.jsonl
@@ -236,11 +236,11 @@ class FolderBaseBuilder(DatasetBuilder):
 
                         if is_conversation(entity_schema):
                             entities_data, annotations_data = self._create_vqa_entities(
-                                item, views_data, entity_name, entity_schema, raw_entities_data, source_id
+                                item, views_data, entity_name, entity_schema, raw_entities_data
                             )
                         else:  # classic entity
                             entities_data, annotations_data = self._create_objects_entities(
-                                item, views_data, entity_name, entity_schema, raw_entities_data, source_id
+                                item, views_data, entity_name, entity_schema, raw_entities_data
                             )
 
                         for name, entities in entities_data.items():
@@ -292,7 +292,6 @@ class FolderBaseBuilder(DatasetBuilder):
         entity_name: str,
         entity_schema: type[Entity],
         raw_entities_data: list[Any],
-        source_id: str,
     ) -> tuple[dict[str, list[Entity]], dict[str, list[Annotation]]]:
         def update_viewref(content, views_data, view_ref):
             match = re.match(r".*<image (\d)>.*", content)
@@ -347,7 +346,7 @@ class FolderBaseBuilder(DatasetBuilder):
                     type="QUESTION",
                     item_ref=ItemRef(id=item.id),
                     entity_ref=EntityRef(id=conversation.id, name=entity_name),
-                    source_ref=SourceRef(id=source_id),
+                    source_ref=SourceRef(id=self.source_id),
                     view_ref=view_ref,
                     timestamp=datetime.now(),
                     **question,
@@ -380,7 +379,7 @@ class FolderBaseBuilder(DatasetBuilder):
                         question_type=query_msg.question_type,
                         item_ref=ItemRef(id=item.id),
                         entity_ref=EntityRef(id=conversation.id, name=entity_name),
-                        source_ref=SourceRef(id=source_id),
+                        source_ref=SourceRef(id=self.source_id),
                         timestamp=datetime.now(),
                         **response,
                     )
@@ -394,7 +393,6 @@ class FolderBaseBuilder(DatasetBuilder):
         entity_name: str,
         entity_schema: type[Entity],
         entities_data: dict[str, Any],
-        source_id: str,
     ) -> tuple[dict[str, list[Entity]], dict[str, list[Annotation]]]:
         entities: dict[str, list[Entity]] = defaultdict(list)
         annotations: dict[str, list[Annotation]] = defaultdict(list)
@@ -444,7 +442,7 @@ class FolderBaseBuilder(DatasetBuilder):
                             item_ref=ItemRef(id=item.id),
                             view_ref=ViewRef(id=view.id, name=view_name),
                             entity_ref=EntityRef(id=entity_id, name=entity_name),
-                            source_ref=SourceRef(id=source_id),
+                            source_ref=SourceRef(id=self.source_id),
                             **entities_data[attr][i],
                         )
                     else:
@@ -455,7 +453,7 @@ class FolderBaseBuilder(DatasetBuilder):
                                 item_ref=ItemRef(id=item.id),
                                 view_ref=ViewRef(id=view.id, name=view_name),
                                 entity_ref=EntityRef(id=entity_id, name=entity_name),
-                                source_ref=SourceRef(id=source_id),
+                                source_ref=SourceRef(id=self.source_id),
                                 coords=entities_data[attr][i],
                                 format="xywh",
                                 is_normalized=all(0 <= x <= 1 for x in entities_data[attr][i]),

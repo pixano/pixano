@@ -61,7 +61,7 @@ def _metadata_content(mode: str, num_items: int):
         for item in range(num_items):
             metadata.append(
                 {
-                    "view": [f"item_{item}.jpg", f"item_{item + 1}.jpg"] if item % 2 == 0 else [],
+                    "image": [f"item_{item}.jpg", f"item_{item + 1}.png"] if item % 2 == 0 else [],
                 }
             )
 
@@ -168,7 +168,7 @@ def vqa_folder_builder(vqa_folder):
 
 @pytest.fixture
 def edge_case_folder_builder(edge_case_folder):
-    return VQAFolderBuilder(
+    return ImageFolderBuilder(
         source_dir=edge_case_folder,
         target_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
