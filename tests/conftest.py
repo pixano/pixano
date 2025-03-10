@@ -32,6 +32,8 @@ from tests.fixtures.datasets.builders.builder import (
     dataset_builder_vqa,
 )
 from tests.fixtures.datasets.builders.folder import (
+    edge_case_folder,
+    edge_case_folder_builder,
     image_folder,
     image_folder_builder,
     image_folder_builder_no_jsonl,
