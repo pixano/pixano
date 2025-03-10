@@ -163,7 +163,7 @@ class FolderBaseBuilder(DatasetBuilder):
                 dataset_pieces = None
 
             if dataset_pieces is None:
-                for view_file in split.glob("*"):
+                for view_file in sorted(split.glob("*")):
                     # only consider {split}/{item}.{ext} files
                     if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
                         continue

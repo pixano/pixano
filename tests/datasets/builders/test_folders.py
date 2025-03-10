@@ -395,14 +395,17 @@ class TestFolderBaseBuilder:
             final_list.append(temp_dict)
         return final_list
 
-    def test_generate_data_egde_cases(self, edge_case_folder_builder: VQAFolderBuilder, entity_category):
+    def test_generate_data_egde_cases(
+        self, edge_case_folder_builder: ImageFolderBuilder, image_folder_builder_no_jsonl: ImageFolderBuilder
+    ):
         with patch(
             "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
         ):
-            items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
+            ec_items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
+            nj_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl.generate_data())
 
         # test edges cases
-        for i, item in enumerate(items):
+        for i, item in enumerate(ec_items):
             actual_item: Item = item["item"]
             if i % 2 == 0:
                 view: Image = item["image"]
@@ -410,6 +413,18 @@ class TestFolderBaseBuilder:
                 assert view.url == f"{actual_item.split}/item_mosaic.jpg"
             else:
                 assert "image" not in item
+
+        # test no jsonl
+        split_counts = {}
+        for item in nj_items:
+            actual_item: Item = item["item"]
+            if actual_item.split not in split_counts:
+                split_counts[actual_item.split] = 0
+            sc = split_counts[actual_item.split]
+            view: Image = item["image"]
+            assert view.item_ref == ItemRef(id=actual_item.id)
+            assert view.url == f"{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
+            split_counts[actual_item.split] += 1
 
     def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
         with patch(
