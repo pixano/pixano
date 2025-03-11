@@ -10,7 +10,7 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, Message, type ImagesPerView, type SaveItem } from "@pixano/core";
+  import { DatasetItem, Message, View, type ImagesPerView, type SaveItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
 
@@ -26,13 +26,13 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     itemMetas,
-    messages,
     newShape,
     preAnnotationIsActive,
     saveData,
     selectedKeypointsTemplate,
     selectedTool,
     textSpans,
+    textViews,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
@@ -82,26 +82,26 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, Image | Image[]>): Promise<ImagesPerView> => {
-    const images: ImagesPerView = {};
-    const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
-      let imageObject = Array.isArray(value) ? value[0] : value;
-      const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
-      const bitDepth = img.bitDepth as number;
-      $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
-      $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
+  const loadImages = async (views: Record<string, View | View[]>): Promise<ImagesPerView> => {
+    const promises = Object.entries(views)
+      .filter(([key]) => key === "image")
+      .map(async ([key, value]) => {
+        const imageObject = Array.isArray(value) ? value[0] : value;
+        const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
 
-      if ($itemMetas.format === "16bit") {
-        normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
-      }
+        $itemMetas.format = img.bitDepth === 1 ? "1bit" : img.bitDepth === 8 ? "8bit" : "16bit";
+        $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
-      const image: HTMLImageElement = document.createElement("img");
-      image.src = img.toDataURL();
-      images[key] = [{ id: imageObject.id, element: image }];
-    });
+        if ($itemMetas.format === "16bit") {
+          normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
+        }
 
-    await Promise.all(promises);
-    return images;
+        const image: HTMLImageElement = document.createElement("img");
+        image.src = img.toDataURL();
+        return [key, [{ id: imageObject.id, element: image }]];
+      });
+
+    return Object.fromEntries(await Promise.all(promises));
   };
 
   /**
@@ -110,7 +110,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
+      imagesPerView = await loadImages(selectedItem.views);
       loaded = true;
     }
   };
@@ -157,9 +157,8 @@ License: CECILL-C
 {#if loaded}
   <div class="h-full grid grid-cols-[300px_auto]">
     <TextSpanArea
-      {imagesPerView}
+      textViews={$textViews}
       selectedItemId={selectedItem.item.id}
-      messages={$messages}
       colorScale={$colorScale[1]}
       textSpans={$textSpans}
       bind:newShape={$newShape}

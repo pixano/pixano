@@ -5,31 +5,23 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import {
-    Message,
-    SaveShapeType,
-    TextSpan,
-    type ImagesPerView,
-    type Shape,
-    type TextSpanType,
-  } from "@pixano/core";
+  import { SaveShapeType, TextSpan, TextView, type Shape, type TextSpanType } from "@pixano/core";
 
-  import { SpannableMessage } from "./components";
-  import { groupTextSpansByMessageId } from "./lib";
+  import { SpannableTextView } from "./components";
+  import { groupTextSpansByViewId } from "./lib";
 
   // Exports
   export let selectedItemId: string;
   export let newShape: Shape;
   export let colorScale: (value: string) => string;
   export let textSpans: TextSpan[];
-  export let messages: Message[];
-  export let imagesPerView: ImagesPerView;
+  export let textViews: TextView[];
 
-  const viewRef = { id: imagesPerView.image[0].id, name: "images" };
+  const viewRef = { id: textViews[0].id, name: "text" };
 
   let textSpanAttributes: TextSpanType | null = null;
 
-  $: spansByMessageId = groupTextSpansByMessageId(textSpans);
+  $: spansByViewId = groupTextSpansByViewId(textSpans);
 
   const onTagText = () => {
     if (!textSpanAttributes) return;
@@ -52,11 +44,11 @@ License: CECILL-C
   <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton">
     Tag Selected Text
   </button>
-  {#each messages as message}
-    <SpannableMessage
-      {message}
+  {#each textViews as textView}
+    <SpannableTextView
+      {textView}
       {colorScale}
-      textSpans={spansByMessageId[message.id]}
+      textSpans={spansByViewId[textView.id]}
       bind:textSpanAttributes
     />
   {/each}
