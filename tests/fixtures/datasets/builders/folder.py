@@ -48,7 +48,7 @@ def _metadata_content(mode: str, num_items: int):
                     "conversations": [
                         {
                             "question": {
-                                "content": "What is the greatest number ?",
+                                "content": "What is the greatest number ? <image 1>",
                                 "question_type": "multi_choice",
                                 "choices": ["0", "15", "3.14", "58"],
                             },

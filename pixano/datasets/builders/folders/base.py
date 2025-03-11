@@ -170,11 +170,11 @@ class FolderBaseBuilder(DatasetBuilder):
                     # create item
                     item = self._create_item(split.name, **{})
                     # create view
-                    view_name, view_schema = list(self.views_schema.items())[0]  # only one view
-                    view = self._create_view(item, view_file, view_schema)
+                    view_name_nojsonl, view_schema_nojsonl = list(self.views_schema.items())[0]  # only one view
+                    view = self._create_view(item, view_file, view_schema_nojsonl)
                     yield {
                         self.item_schema_name: item,
-                        view_name: view,
+                        view_name_nojsonl: view,
                     }
                 continue
 
@@ -200,56 +200,52 @@ class FolderBaseBuilder(DatasetBuilder):
                 for k, v in dataset_piece.items():
                     if k in self.views_schema:
                         view_name = k
-                        s = self.views_schema.get(view_name)
-                        if s is None:
-                            raise ValueError("View schema must be defined in the schemas argument.")
-                        view_schema = s
-
-                        if isinstance(v, list):
-                            if len(v) == 0:
-                                continue
-                            if len(v) > 1:
-                                # create a mosaic from item images
-                                mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
-                                view_file = self.source_dir / mosaic_file
-                                if not view_file.is_file():  # no split path in metadata.jsonl
-                                    view_file = self.source_dir / split / mosaic_file
+                        view_schema = self.views_schema.get(view_name)
+                        if view_schema is not None:
+                            if isinstance(v, list):
+                                if len(v) == 0:
+                                    continue
+                                if len(v) > 1:
+                                    # create a mosaic from item images
+                                    mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
+                                    view_file = self.source_dir / mosaic_file
+                                    if not view_file.is_file():  # no split path in metadata.jsonl
+                                        view_file = self.source_dir / split / mosaic_file
+                                else:
+                                    view_file = self.source_dir / Path(v[0])
+                                    if not view_file.is_file():  # no split path in metadata.jsonl
+                                        view_file = self.source_dir / split / Path(v[0])
+                                if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
+                                    view = self._create_view(item, view_file, view_schema)
+                                    views_data.append((view_name, view))
                             else:
-                                view_file = self.source_dir / Path(v[0])
-                                if not view_file.is_file():  # no split path in metadata.jsonl
-                                    view_file = self.source_dir / split / Path(v[0])
-                            if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                                view = self._create_view(item, view_file, view_schema)
-                                views_data.append((view_name, view))
-                        else:
-                            view_file = self.source_dir / (Path(v) if split.name in Path(v).parts else split / Path(v))
-                            if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                                view = self._create_view(item, view_file, view_schema)
-                                views_data.append((view_name, view))
+                                view_file = self.source_dir / (
+                                    Path(v) if split.name in Path(v).parts else split / Path(v)
+                                )
+                                if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
+                                    view = self._create_view(item, view_file, view_schema)
+                                    views_data.append((view_name, view))
 
                 for k, v in dataset_piece.items():
                     if k in self.entities_schema and v is not None:
                         entity_name = k
                         raw_entities_data = v
-                        s = self.entities_schema.get(entity_name)
-                        if s is None:
-                            raise ValueError("Entity schema must be defined in the schemas argument.")
-                        entity_schema: type[Entity] = s
+                        entity_schema = self.entities_schema.get(entity_name)
+                        if entity_schema is not None:
+                            if is_conversation(entity_schema):
+                                entities_data, annotations_data = self._create_vqa_entities(
+                                    item, views_data, entity_name, entity_schema, raw_entities_data
+                                )
+                            else:  # classic entity
+                                entities_data, annotations_data = self._create_objects_entities(
+                                    item, views_data, entity_name, entity_schema, raw_entities_data
+                                )
 
-                        if is_conversation(entity_schema):
-                            entities_data, annotations_data = self._create_vqa_entities(
-                                item, views_data, entity_name, entity_schema, raw_entities_data
-                            )
-                        else:  # classic entity
-                            entities_data, annotations_data = self._create_objects_entities(
-                                item, views_data, entity_name, entity_schema, raw_entities_data
-                            )
+                            for name, entities in entities_data.items():
+                                all_entities_data[name].extend(entities)
 
-                        for name, entities in entities_data.items():
-                            all_entities_data[name].extend(entities)
-
-                        for name, annotations in annotations_data.items():
-                            all_annotations_data[name].extend(annotations)
+                            for name, annotations in annotations_data.items():
+                                all_annotations_data[name].extend(annotations)
 
                 yield {self.item_schema_name: item}
                 for view_name, view in views_data:
@@ -296,7 +292,7 @@ class FolderBaseBuilder(DatasetBuilder):
         raw_entities_data: list[Any],
     ) -> tuple[dict[str, list[Entity]], dict[str, list[Annotation]]]:
         def update_viewref(content, views_data, view_ref):
-            match = re.match(r".*<image (\d)>.*", content)
+            match = re.match(r".*<image (\d)>.*", content)  # TODO image_regex as parameter
             if match is None:
                 return view_ref
             for m in match.groups():
