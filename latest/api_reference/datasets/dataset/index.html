@@ -4458,6 +4458,7 @@
 
 
 
+
   <div class="doc doc-children">
 
 
@@ -4482,7 +4483,7 @@
 
         <p>The Pixano Dataset.</p>
 <p>It is a collection of tables that can be queried and manipulated with LanceDB.</p>
-<p>The tables are defined by the <a class="autorefs autorefs-internal" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a> which allows the dataset to return
+<p>The tables are defined by the <a class="autorefs autorefs-internal" title="DatasetSchema(**data)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a> which allows the dataset to return
 the data in the form of <a class="autorefs autorefs-external" href="https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel">LanceModel</a> instances.</p>
 
 
@@ -4510,7 +4511,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.dataset.Dataset.info">info</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetInfo (pixano.datasets.dataset_info.DatasetInfo)" href="../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetInfo(**data) (pixano.datasets.dataset_info.DatasetInfo)" href="../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4521,7 +4522,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.dataset.Dataset.schema">schema</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4532,7 +4533,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.dataset.Dataset.features_values">features_values</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetFeaturesValues (pixano.datasets.dataset_features_values.DatasetFeaturesValues)" href="../dataset_features_values/#pixano.datasets.dataset_features_values.DatasetFeaturesValues">DatasetFeaturesValues</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetFeaturesValues(**data) (pixano.datasets.dataset_features_values.DatasetFeaturesValues)" href="../dataset_features_values/#pixano.datasets.dataset_features_values.DatasetFeaturesValues">DatasetFeaturesValues</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4543,7 +4544,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.dataset.Dataset.stats">stats</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetStatistic (pixano.datasets.dataset_stat.DatasetStatistic)" href="../dataset_stat/#pixano.datasets.dataset_stat.DatasetStatistic">DatasetStatistic</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetStatistic(**data) (pixano.datasets.dataset_stat.DatasetStatistic)" href="../dataset_stat/#pixano.datasets.dataset_stat.DatasetStatistic">DatasetStatistic</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4623,6 +4628,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -4712,6 +4718,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
     <div class="doc doc-contents ">
 
         <p>Return the dataset ID.</p>
+
     </div>
 
 </div>
@@ -4756,6 +4763,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
     </div>
 
 </div>
@@ -4797,6 +4805,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -4862,6 +4871,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -4952,6 +4962,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-150">150</a></span>
@@ -5022,7 +5033,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5032,6 +5043,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5106,7 +5118,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>data</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5122,7 +5138,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ignore_integrity_checks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="IntegrityCheck (pixano.datasets.utils.integrity.IntegrityCheck)" href="../utils/integrity/#pixano.datasets.utils.integrity.IntegrityCheck">IntegrityCheck</a>] | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="IntegrityCheck (pixano.datasets.utils.integrity.IntegrityCheck)" href="../utils/integrity/#pixano.datasets.utils.integrity.IntegrityCheck">IntegrityCheck</a>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5151,6 +5171,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5276,7 +5297,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>dataset_items</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5289,6 +5314,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5388,7 +5414,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 
     <div class="doc doc-contents ">
 
-        <p>Compute the <a class="autorefs autorefs-internal" title="ViewEmbedding" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">view embeddings</a> via the
+        <p>Compute the <a class="autorefs autorefs-internal" title="ViewEmbedding(created_at=None, updated_at=None, **data)" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.ViewEmbedding">view embeddings</a> via the
     <a class="autorefs autorefs-external" href="https://lancedb.github.io/lancedb/python/python/#lancedb.embeddings.base.EmbeddingFunction">Embedding Function</a> stored in the table metadata.</p>
 
 
@@ -5424,7 +5450,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>data</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5437,6 +5467,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5537,7 +5568,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>schema</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5669,6 +5700,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5803,7 +5835,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ids</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5829,7 +5865,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5839,6 +5879,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -5929,7 +5970,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ids</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5955,7 +6000,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5965,6 +6014,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -6136,6 +6186,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-848">848</a></span>
@@ -6272,6 +6323,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-494">494</a></span>
@@ -6365,7 +6417,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6375,6 +6431,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -6470,7 +6527,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ids</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6518,7 +6579,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>item_ids</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6544,7 +6609,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6554,6 +6623,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -6735,7 +6805,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ids</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6793,7 +6867,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6803,6 +6881,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -6983,7 +7062,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetInfo (pixano.datasets.dataset_info.DatasetInfo)" href="../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetInfo(**data) (pixano.datasets.dataset_info.DatasetInfo)" href="../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6993,6 +7076,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -7096,6 +7180,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-284">284</a></span>
@@ -7181,7 +7266,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>names</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7233,6 +7322,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -7343,7 +7433,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-internal" title="Item (pixano.features.Item)" href="../../features/schemas/items/item/#pixano.features.schemas.items.item.Item">Item</a> | <a class="autorefs autorefs-internal" title="View (pixano.features.View)" href="../../features/schemas/views/view/#pixano.features.schemas.views.view.View">View</a> | <a class="autorefs autorefs-internal" title="Embedding (pixano.features.Embedding)" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.Embedding">Embedding</a> | <a class="autorefs autorefs-internal" title="Entity (pixano.features.Entity)" href="../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a> | <a class="autorefs autorefs-internal" title="Annotation (pixano.features.Annotation)" href="../../features/schemas/annotations/annotation/#pixano.features.schemas.annotations.annotation.Annotation">Annotation</a> | <a class="autorefs autorefs-internal" title="Source (pixano.features.Source)" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
+                  <code><a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-internal" title="Item(created_at=None, updated_at=None, **data) (pixano.features.Item)" href="../../features/schemas/items/item/#pixano.features.schemas.items.item.Item">Item</a> | <a class="autorefs autorefs-internal" title="View(created_at=None, updated_at=None, **data) (pixano.features.View)" href="../../features/schemas/views/view/#pixano.features.schemas.views.view.View">View</a> | <a class="autorefs autorefs-internal" title="Embedding(created_at=None, updated_at=None, **data) (pixano.features.Embedding)" href="../../features/schemas/embeddings/embedding/#pixano.features.schemas.embeddings.embedding.Embedding">Embedding</a> | <a class="autorefs autorefs-internal" title="Entity(created_at=None, updated_at=None, **data) (pixano.features.Entity)" href="../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a> | <a class="autorefs autorefs-internal" title="Annotation(created_at=None, updated_at=None, **data) (pixano.features.Annotation)" href="../../features/schemas/annotations/annotation/#pixano.features.schemas.annotations.annotation.Annotation">Annotation</a> | <a class="autorefs autorefs-internal" title="Source(created_at=None, updated_at=None, **data) (pixano.features.Source)" href="../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7353,6 +7443,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -7498,7 +7589,15 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#float">float</a>]]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#float">float</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7508,6 +7607,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -7656,7 +7756,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>data</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7688,7 +7792,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>ignore_integrity_checks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="IntegrityCheck (pixano.datasets.utils.integrity.IntegrityCheck)" href="../utils/integrity/#pixano.datasets.utils.integrity.IntegrityCheck">IntegrityCheck</a>] | None</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="IntegrityCheck (pixano.datasets.utils.integrity.IntegrityCheck)" href="../utils/integrity/#pixano.datasets.utils.integrity.IntegrityCheck">IntegrityCheck</a>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7730,7 +7838,19 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7740,7 +7860,19 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7750,6 +7882,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
@@ -7931,7 +8064,11 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
                 <code>dataset_items</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7973,7 +8110,19 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>], <a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7983,7 +8132,19 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>], <a class="autorefs autorefs-internal" title="list (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]]</code>
+                  <code><a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7993,6 +8154,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>

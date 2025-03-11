@@ -4334,6 +4334,7 @@
 
 
 
+
   <div class="doc doc-children">
 
 
@@ -4397,7 +4398,7 @@
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.builders.dataset_builder.DatasetBuilder.info">info</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetInfo (pixano.datasets.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetInfo(**data) (pixano.datasets.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4408,7 +4409,7 @@
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.builders.dataset_builder.DatasetBuilder.dataset_schema">dataset_schema</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.DatasetSchema)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.DatasetSchema)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4419,7 +4420,7 @@
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.builders.dataset_builder.DatasetBuilder.schemas">schemas</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4475,7 +4476,7 @@
                 <code>dataset_item</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.DatasetItem)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.DatasetItem)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4491,7 +4492,7 @@
                 <code>info</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetInfo (pixano.datasets.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetInfo(**data) (pixano.datasets.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4504,6 +4505,7 @@
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -4583,6 +4585,7 @@
     <div class="doc doc-contents ">
 
         <p>The item schema for the dataset.</p>
+
     </div>
 
 </div>
@@ -4604,6 +4607,7 @@
     <div class="doc doc-contents ">
 
         <p>The item schema name for the dataset.</p>
+
     </div>
 
 </div>
@@ -4676,6 +4680,7 @@
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -4822,6 +4827,7 @@
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -4993,7 +4999,7 @@ If None, the dataset is compacted only at the end.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.Dataset)" href="../../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset(path, media_dir=None) (pixano.datasets.Dataset)" href="../../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5003,6 +5009,7 @@ If None, the dataset is compacted only at the end.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -5244,6 +5251,7 @@ If None, the dataset is compacted only at the end.</p>
 
         <p>Compact the dataset by calling <code>compact_table</code> for each table in the database.</p>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-234">234</a></span>
@@ -5302,6 +5310,7 @@ If None, the dataset is compacted only at the end.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -5367,6 +5376,7 @@ If None, the dataset is compacted only at the end.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -5442,7 +5452,7 @@ If None, the dataset is compacted only at the end.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" title="typing.Iterator" href="https://docs.python.org/3.12/library/typing.html#typing.Iterator">Iterator</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]]</code>
+                  <code><a class="autorefs autorefs-external" title="typing.Iterator" href="https://docs.python.org/3.12/library/typing.html#typing.Iterator">Iterator</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5452,6 +5462,7 @@ If None, the dataset is compacted only at the end.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>
@@ -5519,6 +5530,7 @@ If None, the dataset is compacted only at the end.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/builders/dataset_builder.py</code></summary>

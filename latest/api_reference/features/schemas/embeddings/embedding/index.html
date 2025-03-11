@@ -4333,6 +4333,7 @@
 
 
 
+
   <div class="doc doc-children">
 
 
@@ -4354,7 +4355,7 @@
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.schemas.base_schema.BaseSchema)" href="../../base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a></code>, <code><a class="autorefs autorefs-external" title="abc.ABC" href="https://docs.python.org/3.12/library/abc.html#abc.ABC">ABC</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.schemas.base_schema.BaseSchema)" href="../../base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a></code>, <code><a class="autorefs autorefs-external" title="abc.ABC" href="https://docs.python.org/3.12/library/abc.html#abc.ABC">ABC</a></code></p>
 
 
         <p>Embeddings are used to define an embedding vector for an item in a dataset.</p>
@@ -4394,6 +4395,7 @@
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -4463,6 +4465,7 @@
     <div class="doc doc-contents ">
 
         <p>Get the embedding's item.</p>
+
     </div>
 
 </div>
@@ -4558,6 +4561,7 @@ data with auto-vectorization.</p>
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-67">67</a></span>
@@ -4633,7 +4637,7 @@ data with auto-vectorization.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="Embedding (pixano.features.schemas.embeddings.embedding.Embedding)" href="#pixano.features.schemas.embeddings.embedding.Embedding">Embedding</a></code>, <code><a class="autorefs autorefs-external" title="abc.ABC" href="https://docs.python.org/3.12/library/abc.html#abc.ABC">ABC</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="Embedding(created_at=None, updated_at=None, **data) (pixano.features.schemas.embeddings.embedding.Embedding)" href="#pixano.features.schemas.embeddings.embedding.Embedding">Embedding</a></code>, <code><a class="autorefs autorefs-external" title="abc.ABC" href="https://docs.python.org/3.12/library/abc.html#abc.ABC">ABC</a></code></p>
 
 
         <p>ViewEmbeddings are used to define an embedding vector for a view in a dataset.</p>
@@ -4662,6 +4666,7 @@ data with auto-vectorization.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -4731,6 +4736,7 @@ data with auto-vectorization.</p>
     <div class="doc doc-contents ">
 
         <p>Get the embedding's view.</p>
+
     </div>
 
 </div>
@@ -4803,7 +4809,7 @@ data with auto-vectorization.</p>
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.dataset.Dataset)" href="../../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset(path, media_dir=None) (pixano.datasets.dataset.Dataset)" href="../../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4845,7 +4851,7 @@ data with auto-vectorization.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="ViewEmbedding (pixano.features.schemas.embeddings.embedding.ViewEmbedding)" href="#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="ViewEmbedding(created_at=None, updated_at=None, **data) (pixano.features.schemas.embeddings.embedding.ViewEmbedding)" href="#pixano.features.schemas.embeddings.embedding.ViewEmbedding">ViewEmbedding</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4855,6 +4861,7 @@ data with auto-vectorization.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
@@ -4983,7 +4990,7 @@ data with auto-vectorization.</p>
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.dataset.Dataset)" href="../../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset(path, media_dir=None) (pixano.datasets.dataset.Dataset)" href="../../../../datasets/dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5051,6 +5058,7 @@ data with auto-vectorization.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
@@ -5132,6 +5140,7 @@ data with auto-vectorization.</p>
         <p>Create a <code>ViewEmbeddingFunction</code> based on an
 <a class="autorefs autorefs-external" href="https://lancedb.github.io/lancedb/python/python/#lancedb.embeddings.base.EmbeddingFunction">EmbeddingFunction</a>.</p>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-189">189</a></span>
@@ -5204,6 +5213,7 @@ data with auto-vectorization.</p>
 
         <p>Check if a class is an <code>Embedding</code> or subclass of <code>Embedding</code>.</p>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-179">179</a></span>
@@ -5229,6 +5239,7 @@ data with auto-vectorization.</p>
     <div class="doc doc-contents ">
 
         <p>Check if a class is an <code>ViewEmbedding</code> or subclass of <code>ViewEmbedding</code>.</p>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/features/schemas/embeddings/embedding.py</code></summary>

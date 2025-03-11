@@ -4401,6 +4401,7 @@
 
 
 
+
   <div class="doc doc-children">
 
 
@@ -4558,6 +4559,7 @@ validated to form a valid model.</p>
 
 
 
+
                   <details class="quote">
                     <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
                     <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-371">371</a></span>
@@ -4640,7 +4642,7 @@ validated to form a valid model.</p>
                 <code>dataset_schema</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4682,7 +4684,7 @@ validated to form a valid model.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4692,6 +4694,7 @@ validated to form a valid model.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -4804,7 +4807,7 @@ validated to form a valid model.</p>
                 <code>cls</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4820,7 +4823,7 @@ validated to form a valid model.</p>
                 <code>schemas_data</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | None]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | None]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4846,7 +4849,7 @@ validated to form a valid model.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4856,6 +4859,7 @@ validated to form a valid model.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -4983,6 +4987,7 @@ dataset item.</p>
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-516">516</a></span>
@@ -5100,7 +5105,7 @@ dataset item.</p>
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.dataset.Dataset)" href="../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset(path, media_dir=None) (pixano.datasets.dataset.Dataset)" href="../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5151,6 +5156,7 @@ dataset item.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -5287,6 +5293,7 @@ comparing models without timestamps.</p>
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-426">426</a></span>
@@ -5361,6 +5368,7 @@ comparing models without timestamps.</p>
 
         <p>Convert a DatasetItem to a DatasetSchema.</p>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-475">475</a></span>
@@ -5406,7 +5414,7 @@ comparing models without timestamps.</p>
                 <code>dataset_schema</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5432,7 +5440,7 @@ comparing models without timestamps.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | None]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>] | None]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5442,6 +5450,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -5525,7 +5534,7 @@ comparing models without timestamps.</p>
           <tr class="doc-section-item">
             <td><code><span title="pixano.datasets.dataset_schema.DatasetSchema.schemas">schemas</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5557,6 +5566,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -5661,7 +5671,7 @@ comparing models without timestamps.</p>
                 <code>schema</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="BaseSchema(created_at=None, updated_at=None, **data) (pixano.features.BaseSchema)" href="../../features/schemas/base_schema/#pixano.features.schemas.base_schema.BaseSchema">BaseSchema</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5713,6 +5723,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -5861,7 +5872,7 @@ comparing models without timestamps.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5871,6 +5882,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -5993,6 +6005,7 @@ comparing models without timestamps.</p>
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-169">169</a></span>
@@ -6041,7 +6054,7 @@ comparing models without timestamps.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Create a dataset schema from a <a class="autorefs autorefs-internal" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>.</p>
+        <p>Create a dataset schema from a <a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -6060,7 +6073,7 @@ comparing models without timestamps.</p>
                 <code>dataset_item</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#type">type</a>[<a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6086,7 +6099,7 @@ comparing models without timestamps.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6096,6 +6109,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -6272,7 +6286,7 @@ comparing models without timestamps.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetSchema (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetSchema(**data) (pixano.datasets.dataset_schema.DatasetSchema)" href="#pixano.datasets.dataset_schema.DatasetSchema">DatasetSchema</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6282,6 +6296,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -6387,6 +6402,7 @@ comparing models without timestamps.</p>
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-183">183</a></span>
@@ -6481,6 +6497,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -6591,6 +6608,7 @@ comparing models without timestamps.</p>
     <div class="doc doc-contents ">
 
         <p>Save DatasetSchema to json file.</p>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset_schema.py</code></summary>
@@ -6710,6 +6728,7 @@ comparing models without timestamps.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 

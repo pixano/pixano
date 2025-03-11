@@ -4289,6 +4289,7 @@
 
 
 
+
   <div class="doc doc-children">
 
 
@@ -4310,7 +4311,7 @@
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="DatasetExporter (pixano.datasets.exporters.dataset_exporter.DatasetExporter)" href="../dataset_exporter/#pixano.datasets.exporters.dataset_exporter.DatasetExporter">DatasetExporter</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="DatasetExporter(dataset, export_dir, overwrite=False) (pixano.datasets.exporters.dataset_exporter.DatasetExporter)" href="../dataset_exporter/#pixano.datasets.exporters.dataset_exporter.DatasetExporter">DatasetExporter</a></code></p>
 
 
         <p>Default JSON dataset exporter.</p>
@@ -4333,7 +4334,7 @@
                 <code>dataset</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Dataset (pixano.datasets.dataset.Dataset)" href="../../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Dataset(path, media_dir=None) (pixano.datasets.dataset.Dataset)" href="../../dataset/#pixano.datasets.dataset.Dataset">Dataset</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4410,6 +4411,7 @@
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -4524,7 +4526,7 @@
                 <code>dataset_item</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetItem (pixano.datasets.dataset_schema.DatasetItem)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetItem(created_at=None, updated_at=None, **data) (pixano.datasets.dataset_schema.DatasetItem)" href="../../dataset_schema/#pixano.datasets.dataset_schema.DatasetItem">DatasetItem</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4560,6 +4562,7 @@
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/exporters/coco_dataset_exporter.py</code></summary>
@@ -4678,7 +4681,7 @@
                 <code>info</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="DatasetInfo (pixano.datasets.dataset_info.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
+                  <code><a class="autorefs autorefs-internal" title="DatasetInfo(**data) (pixano.datasets.dataset_info.DatasetInfo)" href="../../dataset_info/#pixano.datasets.dataset_info.DatasetInfo">DatasetInfo</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4694,7 +4697,7 @@
                 <code>sources</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="Source (pixano.features.Source)" href="../../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a>]</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="Source(created_at=None, updated_at=None, **data) (pixano.features.Source)" href="../../../features/schemas/source/#pixano.features.schemas.source.Source">Source</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4730,6 +4733,7 @@
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/exporters/coco_dataset_exporter.py</code></summary>
@@ -4905,6 +4909,7 @@
       </tbody>
     </table>
 
+
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/exporters/coco_dataset_exporter.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-132">132</a></span>
@@ -4989,7 +4994,7 @@
                 <code>ann</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="BBox (pixano.features.schemas.BBox)" href="../../../features/schemas/annotations/bbox/#pixano.features.schemas.annotations.bbox.BBox">BBox</a> | <a class="autorefs autorefs-internal" title="CompressedRLE (pixano.features.schemas.CompressedRLE)" href="../../../features/schemas/annotations/compressed_rle/#pixano.features.schemas.annotations.compressed_rle.CompressedRLE">CompressedRLE</a> | <a class="autorefs autorefs-internal" title="Entity (pixano.features.schemas.Entity)" href="../../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a></code>
+                  <code><a class="autorefs autorefs-internal" title="BBox(created_at=None, updated_at=None, **data) (pixano.features.schemas.BBox)" href="../../../features/schemas/annotations/bbox/#pixano.features.schemas.annotations.bbox.BBox">BBox</a> | <a class="autorefs autorefs-internal" title="CompressedRLE(created_at=None, updated_at=None, **data) (pixano.features.schemas.CompressedRLE)" href="../../../features/schemas/annotations/compressed_rle/#pixano.features.schemas.annotations.compressed_rle.CompressedRLE">CompressedRLE</a> | <a class="autorefs autorefs-internal" title="Entity(created_at=None, updated_at=None, **data) (pixano.features.schemas.Entity)" href="../../../features/schemas/entities/entity/#pixano.features.schemas.entities.entity.Entity">Entity</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5036,6 +5041,7 @@
     </table>
         <p>Returns:
     Annotation in COCO format</p>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/exporters/coco_dataset_exporter.py</code></summary>
@@ -5170,7 +5176,7 @@
                 <code>image</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="Image (pixano.features.schemas.Image)" href="../../../features/schemas/views/image/#pixano.features.schemas.views.image.Image">Image</a></code>
+                  <code><a class="autorefs autorefs-internal" title="Image(created_at=None, updated_at=None, **data) (pixano.features.schemas.Image)" href="../../../features/schemas/views/image/#pixano.features.schemas.views.image.Image">Image</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5222,6 +5228,7 @@
           </tr>
       </tbody>
     </table>
+
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/exporters/coco_dataset_exporter.py</code></summary>
