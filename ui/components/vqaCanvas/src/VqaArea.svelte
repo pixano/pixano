@@ -46,7 +46,7 @@ License: CECILL-C
   <div class="flex flex-row gap-2 justify-between">
     <AddQuestionButton {vqaSectionWidth} on:storeQuestion />
     <IconButton
-      tooltipContent="Configure question generation prompt"
+      tooltipContent="Configure generation prompts and tags"
       on:click={handleOpenPromptModal}
     >
       <Settings />
