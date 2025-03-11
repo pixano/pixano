@@ -48,26 +48,19 @@ class TestFolderBaseBuilder:
         assert image_folder_builder_no_jsonl.target_dir.is_dir()
         assert video_folder_builder.source_dir.is_dir()
         assert video_folder_builder.target_dir.is_dir()
-        assert image_folder_builder.view_name == "view"
-        assert image_folder_builder_no_jsonl.view_name == "image"
-        assert video_folder_builder.view_name == "view"
-        assert image_folder_builder.view_schema == Image
-        assert image_folder_builder_no_jsonl.view_schema == Image
-        assert video_folder_builder.view_schema == Video
-        assert image_folder_builder.entity_name == "entities"
-        assert image_folder_builder_no_jsonl.entity_name == "objects"
-        assert video_folder_builder.entity_name == "entities"
-        assert image_folder_builder.entity_schema == entity_category
-        assert image_folder_builder_no_jsonl.entity_schema == Entity
-        assert video_folder_builder.entity_schema == entity_category
+        assert image_folder_builder.views_schema == {"view": Image}
+        assert image_folder_builder_no_jsonl.views_schema == {"image": Image}
+        assert video_folder_builder.views_schema == {"view": Video}
+        assert image_folder_builder.entities_schema == {"entities": entity_category}
+        assert image_folder_builder_no_jsonl.entities_schema == {"objects": Entity}
+        assert video_folder_builder.entities_schema == {"entities": entity_category}
         assert image_folder_builder.url_prefix == Path(".")
 
     def test_vqa_init(self, vqa_folder_builder):
         assert isinstance(vqa_folder_builder, VQAFolderBuilder)
         assert vqa_folder_builder.source_dir.is_dir()
         assert vqa_folder_builder.target_dir.is_dir()
-        assert vqa_folder_builder.view_name == "image"
-        assert vqa_folder_builder.view_schema == Image
+        assert vqa_folder_builder.views_schema == {"image": Image}
         assert list(vqa_folder_builder.entities_schema.keys()) == ["conversations", "objects"]
         assert vqa_folder_builder.url_prefix == Path(".")
 
@@ -202,16 +195,22 @@ class TestFolderBaseBuilder:
             metadata="metadata",
         )
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
+        entity_name = "entities"
+
+        # add test source id
+        image_folder_builder.source_id = "source_id"
 
         # test 1: one bbox infered
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
+        entities, annotations = image_folder_builder._create_objects_entities(
+            item, [("view", view)], entity_name, entity_category, entities_data
+        )
 
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -223,7 +222,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
@@ -235,12 +234,14 @@ class TestFolderBaseBuilder:
         entities_data = {
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
+        entities, annotations = image_folder_builder._create_objects_entities(
+            item, [("view", view)], entity_name, entity_category, entities_data
+        )
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -251,7 +252,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
@@ -266,20 +267,22 @@ class TestFolderBaseBuilder:
                 [0.1, 0.1, 0.2, 0.2],
             ]
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
-        assert len(entities) == 2
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[1], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert isinstance(entities[1].id, str) and len(entities[1].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        entities, annotations = image_folder_builder._create_objects_entities(
+            item, [("view", view)], entity_name, entity_category, entities_data
+        )
+        assert len(entities[entity_name]) == 2
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][1], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert isinstance(entities[entity_name][1].id, str) and len(entities[entity_name][1].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
         ).model_dump(exclude_timestamps=True)
-        assert entities[1].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[1].id,
+        assert entities[entity_name][1].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
@@ -290,7 +293,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
@@ -301,7 +304,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[1].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][1].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0.1, 0.1, 0.2, 0.2],
             format="xywh",
@@ -321,12 +324,14 @@ class TestFolderBaseBuilder:
             ],
             "category": "person",
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
+        entities, annotations = image_folder_builder._create_objects_entities(
+            item, [("view", view)], entity_name, entity_category, entities_data
+        )
         assert len(entities) == 1
-        assert isinstance(entities[0], entity_category)
-        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
-            id=entities[0].id,
+        assert isinstance(entities[entity_name][0], entity_category)
+        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
+        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+            id=entities[entity_name][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="person",
@@ -338,7 +343,7 @@ class TestFolderBaseBuilder:
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
@@ -349,7 +354,7 @@ class TestFolderBaseBuilder:
             id=annotations["keypoint"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
             source_ref=SourceRef(id="source_id"),
             template_id="template_0",
             coords=[10, 10, 20, 20, 30, 30],
@@ -359,18 +364,73 @@ class TestFolderBaseBuilder:
         # test 5: error infer keypoints
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
         with pytest.raises(ValueError, match="not supported for infered entity creation."):
-            entities = image_folder_builder._create_entities(item, view, entities_data, "source_id")
+            entities = image_folder_builder._create_objects_entities(
+                item, [("view", view)], entity_name, entity_category, entities_data
+            )
 
         # test 6: error attribute not found in entity schema
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
         with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
-            entities = image_folder_builder._create_entities(item, view, entities_data, "source_id")
+            entities = image_folder_builder._create_objects_entities(
+                item, [("view", view)], "entities", entity_category, entities_data
+            )
 
-    def test_generate_items(self, image_folder_builder: ImageFolderBuilder, entity_category):
+    def reconstruct_dict_list(self, generator):
+        """VQA generate data by chunks, not complete dict,
+        so we rebuild a list of complete dicts, knowing that "item" key
+        is always first."""
+        final_list = []
+        temp_dict = {}
+        no_finalize_for_first_one = True
+        for i, piece in enumerate(generator):
+            if "item" in piece:
+                if no_finalize_for_first_one:
+                    no_finalize_for_first_one = False
+                else:
+                    # "item" appears AGAIN - finalize current dict
+                    final_list.append(temp_dict.copy())
+                    temp_dict.clear()
+            temp_dict.update(piece)
+        if temp_dict:
+            final_list.append(temp_dict)
+        return final_list
+
+    def test_generate_data_egde_cases(
+        self, edge_case_folder_builder: ImageFolderBuilder, image_folder_builder_no_jsonl: ImageFolderBuilder
+    ):
         with patch(
             "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
         ):
-            items = list(image_folder_builder.generate_data())
+            ec_items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
+            nj_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl.generate_data())
+
+        # test edges cases
+        for i, item in enumerate(ec_items):
+            actual_item: Item = item["item"]
+            if i % 2 == 0:
+                view: Image = item["image"]
+                assert view.item_ref == ItemRef(id=actual_item.id)
+                assert view.url == f"{actual_item.split}/item_mosaic.jpg"
+            else:
+                assert "image" not in item
+
+        # test no jsonl
+        split_counts = {}
+        for item in nj_items:
+            actual_item: Item = item["item"]
+            if actual_item.split not in split_counts:
+                split_counts[actual_item.split] = 0
+            sc = split_counts[actual_item.split]
+            view: Image = item["image"]
+            assert view.item_ref == ItemRef(id=actual_item.id)
+            assert view.url == f"{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
+            split_counts[actual_item.split] += 1
+
+    def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
+        with patch(
+            "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
+        ):
+            items = self.reconstruct_dict_list(image_folder_builder.generate_data())
         assert len(items) == 15
         assert len([item for item in items if item["item"].split == "train"]) == 10
         assert len([item for item in items if item["item"].split == "val"]) == 5
@@ -417,30 +477,10 @@ class TestFolderBaseBuilder:
                 assert "bbox" not in item
 
     def test_generate_vqa_items(self, vqa_folder_builder: VQAFolderBuilder):
-        def reconstruct_dict_list(generator):
-            """VQA generate data by chunks, not complete dict,
-            so we rebuild a list of complete dicts, knowing that "item" key
-            is always first."""
-            final_list = []
-            temp_dict = {}
-            no_finalize_for_first_one = True
-            for i, piece in enumerate(generator):
-                if "item" in piece:
-                    if no_finalize_for_first_one:
-                        no_finalize_for_first_one = False
-                    else:
-                        # "item" appears AGAIN - finalize current dict
-                        final_list.append(temp_dict.copy())
-                        temp_dict.clear()
-                temp_dict.update(piece)
-            if temp_dict:
-                final_list.append(temp_dict)
-            return final_list
-
         with patch(
             "pixano.datasets.builders.folders.VQAFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
         ):
-            items = reconstruct_dict_list(vqa_folder_builder.generate_data())
+            items = self.reconstruct_dict_list(vqa_folder_builder.generate_data())
         assert len(items) == 4
         assert len([item for item in items if item["item"].split == "train"]) == 2
         assert len([item for item in items if item["item"].split == "val"]) == 2
