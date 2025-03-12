@@ -21,8 +21,9 @@ import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
 
 const prompt =
-  get(completionModelsStore).find((m) => m.selected)?.prompts["question"][QuestionTypeEnum.OPEN] ??
-  "";
+  get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
+    QuestionTypeEnum.OPEN
+  ] ?? "";
 
 export const generateQuestion = async (
   completionModel: string,
