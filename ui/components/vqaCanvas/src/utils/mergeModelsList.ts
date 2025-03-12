@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type {
   MessageGenerationPrompts,
+  MessageGenerationRegex,
   PixanoInferenceCompletionModel,
 } from "../stores/completionModels";
 
@@ -13,6 +14,7 @@ export function mergeModelLists(
   newModelsName: string[],
   existingModels: PixanoInferenceCompletionModel[],
   defaultPrompts: MessageGenerationPrompts,
+  defaultRegex: MessageGenerationRegex,
 ): PixanoInferenceCompletionModel[] {
   const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
 
@@ -22,6 +24,7 @@ export function mergeModelLists(
         name: model,
         selected: false,
         prompts: defaultPrompts,
+        regex: defaultRegex,
       },
   );
 }

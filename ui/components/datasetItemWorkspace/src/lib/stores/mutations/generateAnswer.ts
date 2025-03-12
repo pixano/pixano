@@ -45,6 +45,7 @@ export const generateAnswer = async (completionModel: string, question: Message)
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(question, "ui")],
     model: completionModel,
+    //TODO image_regex: ??
   };
 
   try {

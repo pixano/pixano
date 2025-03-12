@@ -7,9 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
 
-  import { QuestionTypeEnum } from "@pixano/core";
-  import { AutoResizeTextarea } from "@pixano/core/src/components/ui/autoresize-textarea";
-  import PrimaryButton from "@pixano/core/src/components/ui/molecules/PrimaryButton.svelte";
+  import { AutoResizeTextarea, QuestionTypeEnum, PrimaryButton } from "@pixano/core";
 
   import type { StoreQuestionEvent } from "../types";
   import AddChoiceButton from "./AddChoiceButton.svelte";

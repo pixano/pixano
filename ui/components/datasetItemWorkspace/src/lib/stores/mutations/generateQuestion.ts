@@ -10,15 +10,19 @@ import {
   api,
   BaseSchema,
   MessageTypeEnum,
+  QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
 } from "@pixano/core";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
 import { createNewMessage } from "../../utils/createNewMessage";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
 
-const prompt = "You have to formulate a QUESTION in relation to the given image <image 1>.";
+const prompt =
+  get(completionModelsStore).find((m) => m.selected)?.prompts["question"][QuestionTypeEnum.OPEN] ??
+  "";
 
 export const generateQuestion = async (
   completionModel: string,
@@ -49,6 +53,7 @@ export const generateQuestion = async (
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
+    //TODO image_regex: ??
   };
 
   try {

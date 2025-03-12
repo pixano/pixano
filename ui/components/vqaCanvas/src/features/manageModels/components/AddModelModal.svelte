@@ -9,22 +9,22 @@ License: CECILL-C
 
   import {
     api,
+    Input,
     LoadingModal,
     MultimodalImageNLPTask,
     PrimaryButton,
+    type InputEvents,
     type ModelConfig,
   } from "@pixano/core";
-  import type { InputEvents } from "@pixano/core/src/components/ui/input";
-  import Input from "@pixano/core/src/components/ui/input/input.svelte";
 
   export let vqaSectionWidth: number;
 
-  //TMP: default values
+  //default values
   let formData = {
     provider: "vllm",
     model_name: "llava-qwen",
     model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-    dtype: "float32",
+    dtype: "float16",
   };
 
   let isAddingModelRequestPending = false;

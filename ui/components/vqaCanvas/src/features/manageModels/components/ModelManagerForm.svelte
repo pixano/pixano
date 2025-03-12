@@ -8,14 +8,27 @@ License: CECILL-C
   import { Plus, Sparkles } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  import { api, IconButton, MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
+  import {
+    api,
+    IconButton,
+    MessageTypeEnum,
+    MultimodalImageNLPTask,
+    QuestionTypeEnum,
+  } from "@pixano/core";
 
   import {
     completionModelsStore,
     type MessageGenerationPrompts,
+    type MessageGenerationRegex,
     type PromptByQuestionType,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
+  import {
+    DEFAULT_IMAGE_REGEX,
+    DEFAULT_OBJECT_REGEX,
+    DEFAULT_QUESTION_PROMPT,
+    DEFAULT_URL,
+  } from "../defaults";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
@@ -23,7 +36,7 @@ License: CECILL-C
 
   let selectedModel: string;
 
-  let defaultURL = "http://localhost:9152";
+  let url = DEFAULT_URL;
   let isInferenceApiConnected = false;
   let inferenceModels: { id: string; value: string }[] = [];
 
@@ -40,7 +53,7 @@ License: CECILL-C
   }
 
   async function connectToPixanoInference() {
-    isInferenceApiConnected = await api.isInferenceApiHealthy(defaultURL);
+    isInferenceApiConnected = await api.isInferenceApiHealthy(url);
     if (isInferenceApiConnected) {
       await listModels();
     }
@@ -52,16 +65,30 @@ License: CECILL-C
   const listModels = async () => {
     const availableModels = await api.listModels();
 
-    const defaultPrompts = Object.fromEntries(
-      Object.values(QuestionTypeEnum).map(
-        (questionType) => [questionType, ""], //TODO? give a default system prompt ?
-      ),
+    const defaultPromptsQuestion = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [
+        questionType,
+        DEFAULT_QUESTION_PROMPT,
+      ]),
     ) as PromptByQuestionType;
 
+    const defaultPromptOthers = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [questionType, ""]),
+    ) as PromptByQuestionType;
+
+    //default prompts
     const prompts: MessageGenerationPrompts = {
-      question: defaultPrompts,
-      answer: defaultPrompts,
+      ...Object.fromEntries(
+        Object.values(MessageTypeEnum).map((key) => [key, defaultPromptOthers]),
+      ),
+      [MessageTypeEnum.QUESTION]: defaultPromptsQuestion, // Manually set AFTER to avoid overwrite
       as_system: true,
+    } as MessageGenerationPrompts;
+
+    //default regex
+    const regex: MessageGenerationRegex = {
+      image: DEFAULT_IMAGE_REGEX,
+      object: DEFAULT_OBJECT_REGEX,
     };
 
     const completionAvailableModelsName = availableModels
@@ -70,7 +97,7 @@ License: CECILL-C
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, prompts),
+      mergeModelLists(completionAvailableModelsName, currentList, prompts, regex),
     );
   };
 
@@ -166,7 +193,7 @@ License: CECILL-C
 {#if showConnectModal}
   <ConnectModal
     {vqaSectionWidth}
-    {defaultURL}
+    {url}
     bind:isConnected={isInferenceApiConnected}
     on:cancelConnect={handleCloseConnectModal}
     on:listModels={listModels}
