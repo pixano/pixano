@@ -339,7 +339,7 @@ License: CECILL-C
 
 {#if track && tracklets}
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
-    <div class="w-fit sticky left-5 m-1 px-1" style={`background: ${color}1a;`}>
+    <div class="w-fit sticky left-5 m-1 px-1 rounded-sm" style={`background: ${color}1a;`}>
       <button
         class="rounded-full border w-3 h-3"
         style="background:{color}"
@@ -351,7 +351,7 @@ License: CECILL-C
   </div>
   <div
     id={`video-object-${track.id}`}
-    class="flex gap-5 relative my-auto z-20 border-2"
+    class="flex gap-5 relative my-auto z-20 border-2 rounded-sm"
     style={`
       width: ${$videoControls.zoomLevel[0]}%;
       height: ${Object.keys(views).length * 10}px;
