@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Plus, Sparkles } from "lucide-svelte";
+  import { Plus, Settings, Sparkles } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import {
@@ -30,6 +30,7 @@ License: CECILL-C
     DEFAULT_URL,
   } from "../defaults";
   import AddModelModal from "./AddModelModal.svelte";
+  import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
   export let vqaSectionWidth: number;
@@ -39,6 +40,10 @@ License: CECILL-C
   let url = DEFAULT_URL;
   let isInferenceApiConnected = false;
   let inferenceModels: { id: string; value: string }[] = [];
+
+  let showConnectModal = false;
+  let showAddModelModal = false;
+  let showPromptModal = false;
 
   //reactive: when model selected, update store
   $: completionModelsStore.update((models) =>
@@ -105,9 +110,6 @@ License: CECILL-C
     console.error("Can't connect to Pixano Inference API");
   });
 
-  let showConnectModal = false;
-  let showAddModelModal = false;
-
   const handleOpenConnectModal = (event: MouseEvent) => {
     // stopPropgation is not called as event modifier
     // because event modifiers can only be used on DOM elements
@@ -140,6 +142,23 @@ License: CECILL-C
   const handleCloseAddModelModal = () => {
     showAddModelModal = false;
     document.body.removeEventListener("click", handleCloseAddModelModal);
+  };
+
+  const handleOpenPromptModal = (event: MouseEvent) => {
+    // stopPropgation is not called as event modifier
+    // because event modifiers can only be used on DOM elements
+    event.stopPropagation();
+    if (showPromptModal) {
+      handleClosePromptModal();
+    } else {
+      showPromptModal = true;
+      document.body.addEventListener("click", handleClosePromptModal);
+    }
+  };
+
+  const handleClosePromptModal = () => {
+    showPromptModal = false;
+    document.body.removeEventListener("click", handleClosePromptModal);
   };
 
   const handleKeyDown = (
@@ -187,6 +206,13 @@ License: CECILL-C
   >
     <Plus />
   </IconButton>
+  <IconButton
+    tooltipContent="Configure generation prompts and tags"
+    disabled={$completionModelsStore.length === 0}
+    on:click={handleOpenPromptModal}
+  >
+    <Settings />
+  </IconButton>
 </div>
 <svelte:window on:keydown={handleKeyDown} />
 
@@ -206,4 +232,8 @@ License: CECILL-C
     on:listModels={listModels}
     on:cancelAddModel={handleCloseAddModelModal}
   />
+{/if}
+
+{#if showPromptModal}
+  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={handleClosePromptModal} />
 {/if}
