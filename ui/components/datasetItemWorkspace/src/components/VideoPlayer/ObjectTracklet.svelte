@@ -144,7 +144,7 @@ License: CECILL-C
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("absolute scale-y-90", {
+    class={cn("video-tracklet absolute scale-y-90", {
       "opacity-100": tracklet.ui.highlighted === "self",
       "opacity-30": tracklet.ui.highlighted === "none",
     })}

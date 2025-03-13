@@ -9,8 +9,12 @@ export const scrollIntoView = (entity_id: string) => {
   if (cardElement) {
     cardElement.scrollIntoView({ block: "center" });
   }
-  const trackElement = document.querySelector(`#video-object-${entity_id}`);
+  const trackElement = document
+    .querySelector(`#video-object-${entity_id}`)
+    ?.getElementsByClassName("video-tracklet");
   if (trackElement) {
-    trackElement.scrollIntoView({ block: "center", inline: "center" });
+    if (trackElement.length > 0) {
+      trackElement[0].scrollIntoView({ block: "center", inline: "center" });
+    }
   }
 };
