@@ -158,11 +158,9 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
-      Add a point
-    </ContextMenu.Item>
-    <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
-    <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+    <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+    <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#if showKeyframes}

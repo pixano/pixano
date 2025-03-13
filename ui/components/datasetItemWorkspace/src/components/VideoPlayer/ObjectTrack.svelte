@@ -372,7 +372,7 @@ License: CECILL-C
       <!--  //TODO we don't allow adding a point outside of a tracklet right now
             //you can extend tracket to add a point inside, and split if needed
       <ContextMenu.Content>
-        <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
+        <ContextMenu.Item on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
       </ContextMenu.Content>
       -->
     </ContextMenu.Root>
