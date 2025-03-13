@@ -45,7 +45,6 @@ License: CECILL-C
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import FusionTool from "../Toolbar/FusionTool.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
 
   export let entity: Entity;
