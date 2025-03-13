@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ToolType } from "@pixano/canvas2d/src/tools";
   import type {
     KeypointsTemplate,
     SaveItem,
@@ -37,7 +36,6 @@ License: CECILL-C
     colorScale,
     entities,
     saveData,
-    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -331,7 +329,6 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    if ($selectedTool.type === ToolType.Fusion) return;
     const newFrameIndex = highlightObject(track.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);

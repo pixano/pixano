@@ -252,7 +252,6 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    if ($selectedTool.type === ToolType.Fusion) return;
     const newFrameIndex = highlightObject(entity.id, isHighlighted);
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
@@ -270,8 +269,7 @@ License: CECILL-C
   };
 
   const onEditIconClick = () => {
-    if ($selectedTool.type === ToolType.Fusion) return;
-    highlightObject(entity.id, isHighlighted);
+    onColoredDotClick();
     handleSetAnnotationDisplayControl("editing", !isEditing);
     if (!isEditing) selectedTool.set(panTool);
   };
