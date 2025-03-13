@@ -13,6 +13,7 @@ export interface PixanoInferenceCompletionModel {
   name: string;
   prompts: MessageGenerationPrompts;
   regex: MessageGenerationRegex;
+  temperature: number;
 }
 
 export type MessageGenerationPrompts = {

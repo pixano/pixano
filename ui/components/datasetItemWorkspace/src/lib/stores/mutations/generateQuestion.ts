@@ -20,15 +20,15 @@ import { createNewMessage } from "../../utils/createNewMessage";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
 
-const prompt =
-  get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
-    QuestionTypeEnum.OPEN
-  ] ?? "";
-
 export const generateQuestion = async (
   completionModel: string,
 ): Promise<{ content: string; choices: string[] } | null> => {
-  const [conversation] = get(conversations);
+  let [conversation] = get(conversations);
+  const prompt =
+    get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
+      QuestionTypeEnum.OPEN
+    ] ?? "";
+  const temperature = get(completionModelsStore).find((m) => m.selected)?.temperature ?? 1.0;
 
   if (conversation === undefined) {
     // There is no conversation on this item to link the message to
@@ -41,7 +41,8 @@ export const generateQuestion = async (
     item_ref: conversation.data.item_ref,
     view_ref: conversation.data.view_ref,
     entity_ref: { name: BaseSchema.Conversation, id: conversation.id },
-    type: MessageTypeEnum.SYSTEM,
+    type: MessageTypeEnum.QUESTION, //MessageTypeEnum.SYSTEM,
+    question_type: QuestionTypeEnum.OPEN,
     user: "system",
     inference_metadata: {},
     choices: [],
@@ -54,6 +55,7 @@ export const generateQuestion = async (
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
+    temperature,
     //TODO image_regex: ??
   };
 

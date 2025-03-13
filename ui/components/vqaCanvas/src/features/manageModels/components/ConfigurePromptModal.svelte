@@ -13,7 +13,7 @@ License: CECILL-C
     MessageTypeEnum,
     PrimaryButton,
     QuestionTypeEnum,
-    type InputEvents,
+    //type InputEvents,
   } from "@pixano/core";
 
   import { completionModelsStore } from "../../../stores/completionModels";
@@ -39,8 +39,10 @@ License: CECILL-C
     completionPrompt = $completionModelsStore.find((m) => m.selected)?.prompts[mtype][qtype] ?? "";
   };
 
-  let completionImageRegex = $completionModelsStore.find((m) => m.selected)?.regex.image ?? null;
-  let completionObjectRegex = $completionModelsStore.find((m) => m.selected)?.regex.object ?? null;
+  // let completionImageRegex = $completionModelsStore.find((m) => m.selected)?.regex.image ?? null;
+  // let completionObjectRegex = $completionModelsStore.find((m) => m.selected)?.regex.object ?? null;
+
+  let temperature = $completionModelsStore.find((m) => m.selected)?.temperature ?? 1.0;
 
   const dispatch = createEventDispatcher();
 
@@ -58,10 +60,11 @@ License: CECILL-C
                   [question_type]: completionPrompt,
                 },
               },
-              regex: {
-                image: completionImageRegex ?? "",
-                object: completionObjectRegex ?? "",
-              },
+              // regex: {
+              //   image: completionImageRegex ?? "",
+              //   object: completionObjectRegex ?? "",
+              // },
+              temperature,
             }
           : model,
       ),
@@ -69,6 +72,7 @@ License: CECILL-C
     dispatch("cancelPrompt"); //also close modal
   }
 
+  /**
   const handleChangeRegex = (event: InputEvents["change"]) => {
     if (event.target && "name" in event.target && "value" in event.target) {
       const name: string = event.target.name as string;
@@ -83,6 +87,7 @@ License: CECILL-C
       }
     }
   };
+  */
 
   function handleCancel() {
     dispatch("cancelPrompt");
@@ -94,9 +99,10 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3"
+  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3 pb-3"
   style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
+  <!--
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Regex settings</p>
   </div>
@@ -119,12 +125,11 @@ License: CECILL-C
       on:keyup={(e) => e.stopPropagation()}
     />
   </div>
-
+  -->
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Prompt settings</p>
   </div>
-
-  <div class="px-3 pb-3 flex flex-col gap-2">
+  <div class="px-3 flex flex-col gap-2">
     <h5 class="font-medium">Question type</h5>
     <select
       class="z-50 w-full rounded-md border bg-popover p-2 text-popover-foreground shadow-md outline-none"
@@ -153,12 +158,18 @@ License: CECILL-C
     </select>
     <h5 class="font-medium">Prompt</h5>
     <AutoResizeTextarea placeholder="Enter your prompt here" bind:value={completionPrompt} />
-
-    <div class="flex flex-row gap-2 px-3 justify-center">
-      <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
-      <PrimaryButton on:click={handleSavePrompt} isSelected disabled={completionPrompt === ""}>
-        Save
-      </PrimaryButton>
-    </div>
+  </div>
+  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
+    <p>Model settings</p>
+  </div>
+  <div class="px-3 flex flex-col gap-2">
+    <h5 class="font-medium">Temperature</h5>
+    <Input bind:value={temperature} type="string" on:keyup={(e) => e.stopPropagation()} />
+  </div>
+  <div class="flex flex-row gap-2 px-3 justify-center">
+    <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
+    <PrimaryButton on:click={handleSavePrompt} isSelected disabled={completionPrompt === ""}>
+      Save
+    </PrimaryButton>
   </div>
 </div>

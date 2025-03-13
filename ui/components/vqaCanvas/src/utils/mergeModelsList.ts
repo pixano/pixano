@@ -25,6 +25,7 @@ export function mergeModelLists(
         selected: false,
         prompts: defaultPrompts,
         regex: defaultRegex,
+        temperature: 1.0,
       },
   );
 }
