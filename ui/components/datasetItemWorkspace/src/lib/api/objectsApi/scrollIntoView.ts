@@ -11,6 +11,6 @@ export const scrollIntoView = (entity_id: string) => {
   }
   const trackElement = document.querySelector(`#video-object-${entity_id}`);
   if (trackElement) {
-    trackElement.scrollIntoView({ block: "center" });
+    trackElement.scrollIntoView({ block: "center", inline: "center" });
   }
 };
