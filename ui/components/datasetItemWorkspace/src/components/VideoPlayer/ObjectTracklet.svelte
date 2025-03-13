@@ -153,7 +153,7 @@ License: CECILL-C
     style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      on:contextmenu|preventDefault={(e) => onContextMenu(tracklet)}
+      on:contextmenu|preventDefault={() => onContextMenu(tracklet)}
       class="absolute h-full w-full"
       bind:this={trackletElement}
       on:click={(e) => onClick(e.button, e.clientX)}

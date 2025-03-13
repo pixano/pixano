@@ -368,7 +368,7 @@ License: CECILL-C
     />
     <ContextMenu.Root>
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
-        <p on:contextmenu|preventDefault={(e) => onContextMenu()} class="h-full w-full" />
+        <p on:contextmenu|preventDefault={() => onContextMenu()} class="h-full w-full" />
       </ContextMenu.Trigger>
       <!--  //TODO we don't allow adding a point outside of a tracklet right now
             //you can extend tracket to add a point inside, and split if needed
