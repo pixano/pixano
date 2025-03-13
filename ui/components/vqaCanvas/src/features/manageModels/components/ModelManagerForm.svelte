@@ -207,7 +207,7 @@ License: CECILL-C
     <Plus />
   </IconButton>
   <IconButton
-    tooltipContent="Configure generation prompts and tags"
+    tooltipContent="Configure generation prompts and temperature"
     disabled={$completionModelsStore.length === 0}
     on:click={handleOpenPromptModal}
   >
