@@ -38,14 +38,13 @@ License: CECILL-C
   export let resetTool: () => void;
   const showKeyframes: boolean = false; //later this flag could be controled somewhere
 
-  const getLeft = (tracklet: Tracklet) =>
-    (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
-  const getWidth = (tracklet: Tracklet) => {
-    let start = tracklet.data.start_timestep;
-    let end = tracklet.data.end_timestep;
-    if (end <= start) end = start + 1;
-    if (end > $lastFrameIndex) end = $lastFrameIndex;
-    return ((end - start) / ($lastFrameIndex + 1)) * 100;
+  const getLeft = (tracklet: Tracklet) => {
+    let start = Math.max(0, tracklet.data.start_timestep - 0.5);
+    return (start / ($lastFrameIndex + 1)) * 100;
+  };
+  const getRight = (tracklet: Tracklet) => {
+    let end = Math.max(tracklet.data.start_timestep, tracklet.data.end_timestep) + 0.5;
+    return (end / ($lastFrameIndex + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
   const getTop = (tracklet: Tracklet, views: MView) => {
@@ -55,8 +54,8 @@ License: CECILL-C
     );
   };
 
-  let width: number = getWidth(tracklet);
   let left: number = getLeft(tracklet);
+  let right: number = getRight(tracklet);
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
@@ -81,11 +80,11 @@ License: CECILL-C
     if (isStart) {
       if (newFrameIndex >= tracklet.data.end_timestep) return false;
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
-      width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+      right = (tracklet.data.end_timestep / ($lastFrameIndex + 1)) * 100;
     }
     if (isEnd) {
       if (newFrameIndex <= tracklet.data.start_timestep) return false;
-      width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
+      right = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
     }
     return true;
   };
@@ -144,11 +143,11 @@ License: CECILL-C
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("absolute scale-y-90", {
+    class={cn("absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
       "opacity-30": tracklet.ui.highlighted === "none",
     })}
-    style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
+    style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
       on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
