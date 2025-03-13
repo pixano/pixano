@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import type {
     KeypointsTemplate,
     SaveItem,
@@ -17,6 +18,7 @@ License: CECILL-C
     Annotation,
     BaseSchema,
     BBox,
+    cn,
     ContextMenu,
     Entity,
     Keypoints,
@@ -36,6 +38,7 @@ License: CECILL-C
     colorScale,
     entities,
     saveData,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -56,7 +59,7 @@ License: CECILL-C
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
-  let isHighlighted: boolean = false;
+  let highlightState: string = "all";
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);
@@ -68,7 +71,13 @@ License: CECILL-C
   }
 
   annotations.subscribe(() => {
-    isHighlighted = track.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
+    if (track.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
+      highlightState = "self";
+    } else if (track.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
+      highlightState = "none";
+    } else {
+      highlightState = "all";
+    }
   });
 
   const moveCursorToPosition = (clientX: number) => {
@@ -329,7 +338,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightObject(track.id, isHighlighted);
+    const newFrameIndex = highlightObject(track.id, highlightState === "self");
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
       updateView($currentFrameIndex);
@@ -339,7 +348,23 @@ License: CECILL-C
 
 {#if track && tracklets}
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
-    <div class="w-fit sticky left-5 m-1 px-1 rounded-sm" style={`background: ${color}1a;`}>
+    <div
+      class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
+        "text-slate-800": highlightState !== "none",
+        "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
+        "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+      })}
+      style={`
+        background: ${
+          highlightState === "self"
+            ? `${color}8a`
+            : highlightState === "none" && $selectedTool.type === ToolType.Fusion
+              ? "white"
+              : `${color}3a`
+        };
+        border-color:${highlightState === "self" ? color : "transparent"}
+      `}
+    >
       <button
         class="rounded-full border w-3 h-3"
         style="background:{color}"
@@ -355,8 +380,14 @@ License: CECILL-C
     style={`
       width: ${$videoControls.zoomLevel[0]}%;
       height: ${Object.keys(views).length * 10}px;
-      background: ${color}1a;
-      border-color:${isHighlighted ? color : "transparent"}
+      background: ${
+        highlightState === "self"
+          ? `${color}8a`
+          : highlightState === "none" && $selectedTool.type === ToolType.Fusion
+            ? `${color}0a`
+            : `${color}3a`
+      };
+      border-color:${highlightState === "self" ? color : "transparent"}
     `}
     bind:this={objectTimeTrack}
     role="complementary"

@@ -45,12 +45,13 @@ License: CECILL-C
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import FusionTool from "../Toolbar/FusionTool.svelte";
   import DisplayCheckbox from "./DisplayCheckbox.svelte";
 
   export let entity: Entity;
   let open: boolean = false;
   let showIcons: boolean = false;
-  let isHighlighted: boolean = false;
+  let highlightState: string = "all";
   let isEditing: boolean = false;
   let isVisible: boolean = true;
   let boxIsVisible: boolean = true;
@@ -115,7 +116,13 @@ License: CECILL-C
   );
 
   annotations.subscribe(() => {
-    isHighlighted = entity.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
+    if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
+      highlightState = "self";
+    } else if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
+      highlightState = "none";
+    } else {
+      highlightState = "all";
+    }
     isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
     isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl?.hidden) || false;
     boxIsVisible =
@@ -252,7 +259,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightObject(entity.id, isHighlighted);
+    const newFrameIndex = highlightObject(entity.id, highlightState === "self");
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
       updateView($currentFrameIndex);
@@ -301,10 +308,11 @@ License: CECILL-C
   id={`card-object-${entity.id}`}
 >
   <div
-    class={cn(
-      "flex items-center mt-1 rounded justify-between text-slate-800 bg-white border-2 overflow-hidden",
-    )}
-    style="border-color:{isHighlighted ? color : 'transparent'}"
+    class={cn("flex items-center mt-1 rounded justify-between bg-white border-2 overflow-hidden")}
+    style={`
+      background: ${highlightState === "self" ? `${color}8a` : "white"};
+      border-color: ${highlightState === "self" ? color : "transparent"}
+    `}
   >
     <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
       <IconButton
@@ -323,7 +331,13 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap">
+      <span
+        class={cn("truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap", {
+          "text-slate-800": highlightState !== "none",
+          "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
+          "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+        })}
+      >
         {displayName}
       </span>
     </div>
