@@ -498,20 +498,6 @@ class FolderBaseBuilder(DatasetBuilder):
         custom_item_metadata: dict[str, Any] = {}
         custom_fields = list(set(self.item_schema.field_names()) - set(Item.field_names()))
         for field in custom_fields:
-            field_type = self.item_schema.model_json_schema()["properties"][field]["type"]
-            match field_type:
-                case "string":
-                    custom_item_metadata[field] = ""
-                case "boolean":
-                    custom_item_metadata[field] = False
-                case "integer":
-                    custom_item_metadata[field] = 0
-                case "number":
-                    custom_item_metadata[field] = 0.0
-                case "array":
-                    custom_item_metadata[field] = []
-                case "object":
-                    custom_item_metadata[field] = {}
-                case _:
-                    custom_item_metadata[field] = None
+            field_type = self.item_schema.__annotations__[field]
+            custom_item_metadata[field] = field_type()
         return custom_item_metadata
