@@ -23,7 +23,7 @@ import { conversations, messages } from "../datasetItemWorkspaceStores";
 export const generateQuestion = async (
   completionModel: string,
 ): Promise<{ content: string; choices: string[] } | null> => {
-  let [conversation] = get(conversations);
+  const [conversation] = get(conversations);
   const prompt =
     get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
       QuestionTypeEnum.OPEN
@@ -41,9 +41,9 @@ export const generateQuestion = async (
     item_ref: conversation.data.item_ref,
     view_ref: conversation.data.view_ref,
     entity_ref: { name: BaseSchema.Conversation, id: conversation.id },
-    type: MessageTypeEnum.QUESTION, //MessageTypeEnum.SYSTEM,
+    type: MessageTypeEnum.QUESTION,
     question_type: QuestionTypeEnum.OPEN,
-    user: "system",
+    user: "user",
     inference_metadata: {},
     choices: [],
     number: lastMessageOfConversation ? lastMessageOfConversation.data.number + 1 : 0,
