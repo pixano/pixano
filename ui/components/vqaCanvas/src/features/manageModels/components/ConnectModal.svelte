@@ -7,17 +7,15 @@ License: CECILL-C
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
 
-  import { api, PrimaryButton } from "@pixano/core";
-  import type { InputEvents } from "@pixano/core/src/components/ui/input";
-  import Input from "@pixano/core/src/components/ui/input/input.svelte";
+  import { api, Input, PrimaryButton, type InputEvents } from "@pixano/core";
 
   export let isConnected = false;
-  export let defaultURL: string;
+  export let url: string;
   export let vqaSectionWidth: number;
 
   // default values
   let formData = {
-    pi_url: defaultURL,
+    pi_url: url,
   };
 
   const dispatch = createEventDispatcher();

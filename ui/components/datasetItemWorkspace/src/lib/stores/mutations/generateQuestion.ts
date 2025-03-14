@@ -10,20 +10,25 @@ import {
   api,
   BaseSchema,
   MessageTypeEnum,
+  QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
 } from "@pixano/core";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
 import { createNewMessage } from "../../utils/createNewMessage";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
-
-const prompt = "You have to formulate a QUESTION in relation to the given image <image 1>.";
 
 export const generateQuestion = async (
   completionModel: string,
 ): Promise<{ content: string; choices: string[] } | null> => {
   const [conversation] = get(conversations);
+  const prompt =
+    get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
+      QuestionTypeEnum.OPEN
+    ] ?? "";
+  const temperature = get(completionModelsStore).find((m) => m.selected)?.temperature ?? 1.0;
 
   if (conversation === undefined) {
     // There is no conversation on this item to link the message to
@@ -36,8 +41,9 @@ export const generateQuestion = async (
     item_ref: conversation.data.item_ref,
     view_ref: conversation.data.view_ref,
     entity_ref: { name: BaseSchema.Conversation, id: conversation.id },
-    type: MessageTypeEnum.SYSTEM,
-    user: "system",
+    type: MessageTypeEnum.QUESTION,
+    question_type: QuestionTypeEnum.OPEN,
+    user: "user",
     inference_metadata: {},
     choices: [],
     number: lastMessageOfConversation ? lastMessageOfConversation.data.number + 1 : 0,
@@ -49,6 +55,7 @@ export const generateQuestion = async (
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
+    temperature,
   };
 
   try {

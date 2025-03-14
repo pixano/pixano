@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Conversation, Message, QuestionTypeEnum } from "../dataset";
+import { Entity, Message, QuestionTypeEnum } from "../dataset";
 
 export enum MultimodalImageNLPTask {
   //Multimodal tasks
@@ -36,12 +36,11 @@ export interface ModelConfig {
 
 export interface CondititionalGenerationTextImageInput {
   dataset_id: string;
-  conversation: Omit<Conversation, "ui">;
+  conversation: Omit<Entity, "ui">;
   messages: Omit<Message, "ui">[];
   model: string;
   max_new_tokens?: number;
   temperature?: number;
-  image_regex?: string;
   role_system?: string;
   role_user?: string;
   role_assistant?: string;

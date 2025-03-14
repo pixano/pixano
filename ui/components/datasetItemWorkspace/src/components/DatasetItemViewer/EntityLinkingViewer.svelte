@@ -10,7 +10,14 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Message, View, type ImagesPerView, type SaveItem } from "@pixano/core";
+  import {
+    DatasetItem,
+    isImage,
+    Message,
+    View,
+    type ImagesPerView,
+    type SaveItem,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
 
@@ -83,23 +90,21 @@ License: CECILL-C
    * @returns A promise that resolves to the loaded images per view.
    */
   const loadImages = async (views: Record<string, View | View[]>): Promise<ImagesPerView> => {
-    const promises = Object.entries(views)
-      .filter(([key]) => key === "image")
-      .map(async ([key, value]) => {
-        const imageObject = Array.isArray(value) ? value[0] : value;
-        const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
+    const promises = Object.entries(views).map(async ([key, value]) => {
+      const imageObject = Array.isArray(value) ? value[0] : value;
+      const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
 
-        $itemMetas.format = img.bitDepth === 1 ? "1bit" : img.bitDepth === 8 ? "8bit" : "16bit";
-        $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
+      $itemMetas.format = img.bitDepth === 1 ? "1bit" : img.bitDepth === 8 ? "8bit" : "16bit";
+      $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
-        if ($itemMetas.format === "16bit") {
-          normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
-        }
+      if ($itemMetas.format === "16bit") {
+        normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
+      }
 
-        const image: HTMLImageElement = document.createElement("img");
-        image.src = img.toDataURL();
-        return [key, [{ id: imageObject.id, element: image }]];
-      });
+      const image: HTMLImageElement = document.createElement("img");
+      image.src = img.toDataURL();
+      return [key, [{ id: imageObject.id, element: image }]];
+    });
 
     return Object.fromEntries(await Promise.all(promises));
   };
@@ -110,7 +115,10 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      imagesPerView = await loadImages(selectedItem.views);
+      const image_views = Object.fromEntries(
+        Object.entries(selectedItem.views).filter(([_, value]) => isImage(value)),
+      );
+      imagesPerView = await loadImages(image_views);
       loaded = true;
     }
   };

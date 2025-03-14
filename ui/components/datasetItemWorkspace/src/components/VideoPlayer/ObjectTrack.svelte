@@ -18,10 +18,10 @@ License: CECILL-C
     Annotation,
     BaseSchema,
     BBox,
+    cn,
     ContextMenu,
     Entity,
     Keypoints,
-    Track,
     Tracklet,
   } from "@pixano/core";
 
@@ -49,17 +49,16 @@ License: CECILL-C
 
   type MView = Record<string, View | View[]>;
 
-  export let track: Track;
+  export let track: Entity;
   export let views: MView;
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
   export let resetTool: () => void;
 
-  let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
-  let isHighlighted: boolean = false;
+  let highlightState: string = "all";
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);
@@ -71,17 +70,23 @@ License: CECILL-C
   }
 
   annotations.subscribe(() => {
-    isHighlighted = track.ui.childs?.some((ann) => ann.ui.highlighted === "self") || false;
+    if (track.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
+      highlightState = "self";
+    } else if (track.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
+      highlightState = "none";
+    } else {
+      highlightState = "all";
+    }
   });
 
   const moveCursorToPosition = (clientX: number) => {
-    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
-    rightClickFrameIndex = Math.round(rightClickFrame * ($lastFrameIndex + 1));
-    onTimeTrackClick(rightClickFrameIndex);
+    const newPosition = objectTimeTrack.getBoundingClientRect();
+    const newRelativePosition = (clientX - newPosition.left) / newPosition.width;
+    const newFrameIndex = Math.round(newRelativePosition * ($lastFrameIndex + 1));
+    onTimeTrackClick(newFrameIndex);
   };
 
-  const onContextMenu = (event: MouseEvent, tracklet: Tracklet | null = null) => {
+  const onContextMenu = (tracklet: Tracklet | null = null) => {
     if (tracklet) {
       const tracklet_childs_ids = tracklet.ui.childs.map((ann) => ann.id);
       annotations.update((oldObjects) =>
@@ -92,12 +97,11 @@ License: CECILL-C
         }),
       );
     }
-    moveCursorToPosition(event.clientX);
     resetTool();
   };
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
-    onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
+    onTimeTrackClick(frameIndex);
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
@@ -122,7 +126,7 @@ License: CECILL-C
     //an interpolated obj should exist: use it
     const interpolatedBox = bboxes.find(
       (box) =>
-        box.ui.frame_index === rightClickFrameIndex &&
+        box.ui.frame_index === $currentFrameIndex &&
         tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
     );
     if (interpolatedBox) {
@@ -152,7 +156,7 @@ License: CECILL-C
     }
     const interpolatedKpt = keypoints.find(
       (kpt) =>
-        kpt.ui!.frame_index === rightClickFrameIndex &&
+        kpt.ui!.frame_index === $currentFrameIndex &&
         tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
     );
     if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
@@ -229,11 +233,11 @@ License: CECILL-C
         }),
       );
     }
-    onEditKeyItemClick(rightClickFrameIndex);
+    onEditKeyItemClick($currentFrameIndex);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
-  const findPreviousAndNext = (tracklet: Tracklet, targetIndex: number): [number, number] => {
+  const findPreviousAndNext = (tracklet: Tracklet): [number, number] => {
     let low = 0;
     let high = tracklet.ui.childs.length - 1;
     let mid;
@@ -242,7 +246,7 @@ License: CECILL-C
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (tracklet.ui.childs[mid].ui.frame_index! <= targetIndex) {
+      if (tracklet.ui.childs[mid].ui.frame_index! <= $currentFrameIndex) {
         previousItem = tracklet.ui.childs[mid];
         low = mid + 1;
       } else {
@@ -251,13 +255,13 @@ License: CECILL-C
       }
     }
     return [
-      previousItem ? previousItem.ui.frame_index! : targetIndex,
-      nextItem ? nextItem.ui.frame_index! : targetIndex + 1,
+      previousItem ? previousItem.ui.frame_index! : $currentFrameIndex,
+      nextItem ? nextItem.ui.frame_index! : $currentFrameIndex + 1,
     ];
   };
 
   const onSplitTrackletClick = (tracklet: Tracklet) => {
-    const [prev, next] = findPreviousAndNext(tracklet, rightClickFrameIndex);
+    const [prev, next] = findPreviousAndNext(tracklet);
     const newOnRight = splitTrackletInTwo(tracklet, prev, next);
     //add Entity child
     entities.update((objects) =>
@@ -332,8 +336,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    if ($selectedTool.type === ToolType.Fusion) return;
-    const newFrameIndex = highlightObject(track.id, isHighlighted);
+    const newFrameIndex = highlightObject(track.id, highlightState === "self");
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
       updateView($currentFrameIndex);
@@ -343,7 +346,23 @@ License: CECILL-C
 
 {#if track && tracklets}
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
-    <div class="w-fit sticky left-5 m-1 px-1" style={`background: ${color}1a;`}>
+    <div
+      class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
+        "text-slate-800": highlightState !== "none",
+        "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
+        "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+      })}
+      style={`
+        background: ${
+          highlightState === "self"
+            ? `${color}8a`
+            : highlightState === "none" && $selectedTool.type === ToolType.Fusion
+              ? "white"
+              : `${color}3a`
+        };
+        border-color:${highlightState === "self" ? color : "transparent"}
+      `}
+    >
       <button
         class="rounded-full border w-3 h-3"
         style="background:{color}"
@@ -355,12 +374,18 @@ License: CECILL-C
   </div>
   <div
     id={`video-object-${track.id}`}
-    class="flex gap-5 relative my-auto z-20 border-2"
+    class="flex gap-5 relative my-auto z-20 border-2 rounded-sm"
     style={`
       width: ${$videoControls.zoomLevel[0]}%;
       height: ${Object.keys(views).length * 10}px;
-      background: ${color}1a;
-      border-color:${isHighlighted ? color : "transparent"}
+      background: ${
+        highlightState === "self"
+          ? `${color}8a`
+          : highlightState === "none" && $selectedTool.type === ToolType.Fusion
+            ? `${color}0a`
+            : `${color}3a`
+      };
+      border-color:${highlightState === "self" ? color : "transparent"}
     `}
     bind:this={objectTimeTrack}
     role="complementary"
@@ -371,12 +396,12 @@ License: CECILL-C
     />
     <ContextMenu.Root>
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
-        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+        <p on:contextmenu|preventDefault={() => onContextMenu()} class="h-full w-full" />
       </ContextMenu.Trigger>
       <!--  //TODO we don't allow adding a point outside of a tracklet right now
             //you can extend tracket to add a point inside, and split if needed
       <ContextMenu.Content>
-        <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
+        <ContextMenu.Item on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
       </ContextMenu.Content>
       -->
     </ContextMenu.Root>

@@ -13,7 +13,6 @@ License: CECILL-C
     BaseSchema,
     Entity,
     SequenceFrame,
-    Track,
     Tracklet,
     WorkspaceType,
     type SaveItem,
@@ -98,7 +97,7 @@ License: CECILL-C
     endView: SequenceFrame | undefined,
     features: Record<string, Record<string, ItemFeature>>,
   ): {
-    topEntity: Entity | Track;
+    topEntity: Entity;
     subEntity: Entity | undefined;
     secondSubEntity: Entity | undefined;
   } => {
@@ -108,7 +107,7 @@ License: CECILL-C
     //TMP: we should rely on "table relations" from $datasetSchema, but it's not available yet
     //TMP: so, we will make the assumption that the only case with subentity is : 1 Track + 1 Entity (sub)
     //TMP: -> we take trackSchemas[0] and entitySchemas[0]
-    let topEntity: Entity | Track | undefined = undefined;
+    let topEntity: Entity | undefined = undefined;
     let subEntity: Entity | undefined = undefined;
     let secondSubEntity: Entity | undefined = undefined;
     let topEntitySchema: DS_NamedSchema | undefined = undefined;

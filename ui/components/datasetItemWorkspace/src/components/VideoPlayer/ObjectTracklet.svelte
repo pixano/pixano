@@ -28,7 +28,7 @@ License: CECILL-C
   export let trackId: string;
   export let tracklet: Tracklet;
   export let views: MView;
-  export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
+  export let onContextMenu: (tracklet: Tracklet) => void;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
@@ -38,14 +38,13 @@ License: CECILL-C
   export let resetTool: () => void;
   const showKeyframes: boolean = false; //later this flag could be controled somewhere
 
-  const getLeft = (tracklet: Tracklet) =>
-    (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
-  const getWidth = (tracklet: Tracklet) => {
-    let start = tracklet.data.start_timestep;
-    let end = tracklet.data.end_timestep;
-    if (end <= start) end = start + 1;
-    if (end > $lastFrameIndex) end = $lastFrameIndex;
-    return ((end - start) / ($lastFrameIndex + 1)) * 100;
+  const getLeft = (tracklet: Tracklet) => {
+    let start = Math.max(0, tracklet.data.start_timestep - 0.5);
+    return (start / ($lastFrameIndex + 1)) * 100;
+  };
+  const getRight = (tracklet: Tracklet) => {
+    let end = Math.max(tracklet.data.start_timestep, tracklet.data.end_timestep) + 0.5;
+    return (end / ($lastFrameIndex + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
   const getTop = (tracklet: Tracklet, views: MView) => {
@@ -55,8 +54,8 @@ License: CECILL-C
     );
   };
 
-  let width: number = getWidth(tracklet);
   let left: number = getLeft(tracklet);
+  let right: number = getRight(tracklet);
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
@@ -81,11 +80,11 @@ License: CECILL-C
     if (isStart) {
       if (newFrameIndex >= tracklet.data.end_timestep) return false;
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
-      width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+      right = (tracklet.data.end_timestep / ($lastFrameIndex + 1)) * 100;
     }
     if (isEnd) {
       if (newFrameIndex <= tracklet.data.start_timestep) return false;
-      width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
+      right = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
     }
     return true;
   };
@@ -136,33 +135,37 @@ License: CECILL-C
     currentFrameIndex.set(newFrameIndex);
   };
 
-  const onClick = (clientX: number) => {
-    moveCursorToPosition(clientX);
-    resetTool();
+  const onClick = (button: number, clientX: number) => {
+    if (button === 0) {
+      moveCursorToPosition(clientX);
+      resetTool();
+    }
   };
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("absolute scale-y-90", {
+    class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-30": tracklet.ui.highlighted === "none",
+      "opacity-10": tracklet.ui.highlighted === "none",
     })}
-    style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
+    style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
+      on:contextmenu|preventDefault={() => onContextMenu(tracklet)}
       class="absolute h-full w-full"
       bind:this={trackletElement}
-      on:click={(e) => onClick(e.clientX)}
+      on:click={(e) => onClick(e.button, e.clientX)}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
-      Add a point
-    </ContextMenu.Item>
-    <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
-    <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+    {#if $currentFrameIndex > tracklet.data.start_timestep && $currentFrameIndex < tracklet.data.end_timestep}
+      <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
+        Add a point
+      </ContextMenu.Item>
+      <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+    {/if}
+    <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#if showKeyframes}

@@ -16,12 +16,14 @@ import {
 } from "@pixano/core";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
+import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { annotations, conversations, saveData } from "../datasetItemWorkspaceStores";
 
 export const generateAnswer = async (completionModel: string, question: Message) => {
   const questionData = question.data;
+  const temperature = get(completionModelsStore).find((m) => m.selected)?.temperature ?? 1.0;
 
   if (!isQuestionData(questionData)) {
     console.error("ERROR: Message is not a question");
@@ -45,6 +47,7 @@ export const generateAnswer = async (completionModel: string, question: Message)
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(question, "ui")],
     model: completionModel,
+    temperature,
   };
 
   try {

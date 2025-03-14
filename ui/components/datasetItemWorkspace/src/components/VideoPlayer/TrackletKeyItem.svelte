@@ -23,7 +23,7 @@ License: CECILL-C
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  export let onClick: (clientX: number) => void;
+  export let onClick: (button: number, clientX: number) => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -179,15 +179,15 @@ License: CECILL-C
       class="w-full h-full rounded-full absolute"
       style={`background-color: ${color}`}
       use:dragMe
-      on:click={(e) => onClick(e.clientX)}
+      on:click={(e) => onClick(e.button, e.clientX)}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.ui.childs?.length > 2}
-      <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
+      <ContextMenu.Item on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(itemFrameIndex)}>
+      <ContextMenu.Item on:click={() => onEditKeyItemClick(itemFrameIndex)}>
         Edit item
       </ContextMenu.Item>
     {/if}

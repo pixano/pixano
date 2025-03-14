@@ -4,7 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./Conversation";
 export * from "./Entity";
-export * from "./MultimodalEntity";
-export * from "./Track";

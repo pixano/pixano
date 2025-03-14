@@ -7,7 +7,6 @@ License: CECILL-C
 import {
   BaseSchema,
   BBox,
-  Conversation,
   DatasetItem,
   Entity,
   Item,
@@ -117,7 +116,7 @@ const entity = new Entity({
   data: mockEntityType,
 });
 
-const conversation = new Conversation({
+const conversation = new Entity({
   id: `conversation_id`,
   table_info: { name: "conversation", group: "entity", base_schema: BaseSchema.Conversation },
   created_at: new Date().toISOString(),

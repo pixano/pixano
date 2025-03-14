@@ -32,14 +32,16 @@ from tests.fixtures.datasets.builders.builder import (
     dataset_builder_vqa,
 )
 from tests.fixtures.datasets.builders.folder import (
+    edge_case_folder,
+    edge_case_folder_builder,
+    folder_no_jsonl,
     image_folder,
     image_folder_builder,
-    image_folder_builder_no_jsonl,
-    image_folder_no_jsonl,
     video_folder,
     video_folder_builder,
     vqa_folder,
     vqa_folder_builder,
+    vqa_folder_builder_no_jsonl,
 )
 from tests.fixtures.datasets.dataset import (
     dataset_image_bboxes_keypoint,

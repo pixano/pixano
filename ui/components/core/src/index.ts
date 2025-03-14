@@ -19,12 +19,13 @@ export { default as PromptModal } from "./components/modals/PromptModal.svelte";
 export { default as SelectModal } from "./components/modals/SelectModal.svelte";
 export { default as WarningModal } from "./components/modals/WarningModal.svelte";
 // ui
+export { AutoResizeTextarea } from "./components/ui/autoresize-textarea";
 export { Button } from "./components/ui/button";
 export { Checkbox } from "./components/ui/checkbox";
 export { default as Combobox } from "./components/ui/combobox/combobox.svelte";
 export * as Command from "./components/ui/command";
 export * as ContextMenu from "./components/ui/context-menu";
-export { Input } from "./components/ui/input";
+export { Input, type InputEvents } from "./components/ui/input";
 export { default as PrimaryButton } from "./components/ui/molecules/PrimaryButton.svelte";
 export { default as IconButton } from "./components/ui/molecules/TooltipIconButton.svelte";
 export * as Popover from "./components/ui/popover";
