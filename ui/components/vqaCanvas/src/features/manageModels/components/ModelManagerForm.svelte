@@ -5,10 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Plus, Sparkles } from "lucide-svelte";
+  import { Plus, Settings, Sparkles } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  import { api, IconButton, MultimodalImageNLPTask, QuestionTypeEnum } from "@pixano/core";
+  import {
+    api,
+    IconButton,
+    MessageTypeEnum,
+    MultimodalImageNLPTask,
+    QuestionTypeEnum,
+  } from "@pixano/core";
 
   import {
     completionModelsStore,
@@ -16,16 +22,22 @@ License: CECILL-C
     type PromptByQuestionType,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
+  import { DEFAULT_QUESTION_PROMPT, DEFAULT_TEMPERATURE, DEFAULT_URL } from "../defaults";
   import AddModelModal from "./AddModelModal.svelte";
+  import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
 
   export let vqaSectionWidth: number;
 
   let selectedModel: string;
 
-  let defaultURL = "http://localhost:9152";
+  let url = DEFAULT_URL;
   let isInferenceApiConnected = false;
   let inferenceModels: { id: string; value: string }[] = [];
+
+  let showConnectModal = false;
+  let showAddModelModal = false;
+  let showPromptModal = false;
 
   //reactive: when model selected, update store
   $: completionModelsStore.update((models) =>
@@ -40,7 +52,7 @@ License: CECILL-C
   }
 
   async function connectToPixanoInference() {
-    isInferenceApiConnected = await api.isInferenceApiHealthy(defaultURL);
+    isInferenceApiConnected = await api.isInferenceApiHealthy(url);
     if (isInferenceApiConnected) {
       await listModels();
     }
@@ -52,17 +64,25 @@ License: CECILL-C
   const listModels = async () => {
     const availableModels = await api.listModels();
 
-    const defaultPrompts = Object.fromEntries(
-      Object.values(QuestionTypeEnum).map(
-        (questionType) => [questionType, ""], //TODO? give a default system prompt ?
-      ),
+    const defaultPromptsQuestion = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [
+        questionType,
+        DEFAULT_QUESTION_PROMPT,
+      ]),
     ) as PromptByQuestionType;
 
+    const defaultPromptOthers = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [questionType, ""]),
+    ) as PromptByQuestionType;
+
+    //default prompts
     const prompts: MessageGenerationPrompts = {
-      question: defaultPrompts,
-      answer: defaultPrompts,
+      ...Object.fromEntries(
+        Object.values(MessageTypeEnum).map((key) => [key, defaultPromptOthers]),
+      ),
+      [MessageTypeEnum.QUESTION]: defaultPromptsQuestion, // Manually set AFTER to avoid overwrite
       as_system: true,
-    };
+    } as MessageGenerationPrompts;
 
     const completionAvailableModelsName = availableModels
       .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
@@ -70,16 +90,13 @@ License: CECILL-C
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, prompts),
+      mergeModelLists(completionAvailableModelsName, currentList, prompts, DEFAULT_TEMPERATURE),
     );
   };
 
   connectToPixanoInference().catch(() => {
     console.error("Can't connect to Pixano Inference API");
   });
-
-  let showConnectModal = false;
-  let showAddModelModal = false;
 
   const handleOpenConnectModal = (event: MouseEvent) => {
     // stopPropgation is not called as event modifier
@@ -113,6 +130,23 @@ License: CECILL-C
   const handleCloseAddModelModal = () => {
     showAddModelModal = false;
     document.body.removeEventListener("click", handleCloseAddModelModal);
+  };
+
+  const handleOpenPromptModal = (event: MouseEvent) => {
+    // stopPropgation is not called as event modifier
+    // because event modifiers can only be used on DOM elements
+    event.stopPropagation();
+    if (showPromptModal) {
+      handleClosePromptModal();
+    } else {
+      showPromptModal = true;
+      document.body.addEventListener("click", handleClosePromptModal);
+    }
+  };
+
+  const handleClosePromptModal = () => {
+    showPromptModal = false;
+    document.body.removeEventListener("click", handleClosePromptModal);
   };
 
   const handleKeyDown = (
@@ -160,13 +194,20 @@ License: CECILL-C
   >
     <Plus />
   </IconButton>
+  <IconButton
+    tooltipContent="Configure generation prompts and temperature"
+    disabled={$completionModelsStore.length === 0}
+    on:click={handleOpenPromptModal}
+  >
+    <Settings />
+  </IconButton>
 </div>
 <svelte:window on:keydown={handleKeyDown} />
 
 {#if showConnectModal}
   <ConnectModal
     {vqaSectionWidth}
-    {defaultURL}
+    {url}
     bind:isConnected={isInferenceApiConnected}
     on:cancelConnect={handleCloseConnectModal}
     on:listModels={listModels}
@@ -179,4 +220,8 @@ License: CECILL-C
     on:listModels={listModels}
     on:cancelAddModel={handleCloseAddModelModal}
   />
+{/if}
+
+{#if showPromptModal}
+  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={handleClosePromptModal} />
 {/if}

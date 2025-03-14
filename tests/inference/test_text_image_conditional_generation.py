@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.encoders import jsonable_encoder
@@ -19,7 +19,18 @@ from pixano_inference.pydantic import (
     UsageConditionalGeneration,
 )
 
-from pixano.features import Conversation, EntityRef, Image, ItemRef, Message, Source, SourceRef, ViewRef
+from pixano.features import (
+    BBox,
+    Conversation,
+    EntityRef,
+    Image,
+    ItemRef,
+    Message,
+    SchemaGroup,
+    Source,
+    SourceRef,
+    ViewRef,
+)
 from pixano.inference.text_image_conditional_generation import messages_to_prompt, text_image_conditional_generation
 
 
@@ -110,7 +121,7 @@ def vqa_messages(
             type="SYSTEM",
             user=system_source.name,
         ),
-        MessageImage(
+        Message(
             id="message_1",
             number=1,
             content="Décris cette image: <image 1>",
@@ -129,7 +140,7 @@ def vqa_messages(
             type="ANSWER",
             user=model_source.name,
         ),
-        MessageImageURL(
+        Message(
             id="message_3",
             number=2,
             content="Décris maintenant cette image: <image>",
@@ -152,19 +163,83 @@ def vqa_messages(
     return messages
 
 
+@pytest.fixture(scope="module")
+def mock_conversation():
+    mock_conversation = MagicMock()
+    mock_conversation.item_ref.id = "item_123"
+    return mock_conversation
+
+
+@pytest.fixture(scope="module")
+def mock_dataset():
+    mock_dataset = MagicMock()
+    mock_dataset.schema.groups = {
+        SchemaGroup.VIEW: ["image"],
+        SchemaGroup.ENTITY: ["objects"],
+    }
+    mock_dataset.schema.schemas = {"bboxes": BBox}
+    mock_image = MagicMock()
+    mock_image.url = "http://www.fake_url.com/coco_dataset/image/val/000000000139.png"
+    mock_entity = MagicMock()
+    mock_entity.id = "entity_456"
+    mock_entity.name = "car"
+    mock_bbox = MagicMock()
+    mock_bbox.coords = "[10, 20, 30, 40]"
+    mock_dataset.get_data.side_effect = lambda table, item_ids, where=None: {
+        "image": [mock_image] if item_ids == ["item_123"] else [],
+        "objects": [mock_entity] if item_ids == ["item_123"] else [],
+        "bboxes": [mock_bbox] if item_ids == ["item_123"] and where else [],
+    }.get(table, [])
+    return mock_dataset
+
+
 @pytest.mark.parametrize(
     "num_messages,expected_output",
     [
-        (1, [{"role": "system", "content": [{"type": "text", "text": "Vous êtes une IA serviable"}]}]),
+        (
+            1,
+            [
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "image_url": {
+                                "url": "vqa_image_url",
+                            },
+                            "type": "image_url",
+                        },
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Vous êtes une IA serviable"},
+                    ],
+                }
+            ],
+        ),
         (
             2,
             [
-                {"role": "system", "content": [{"type": "text", "text": "Vous êtes une IA serviable"}]},
+                {
+                    "role": "system",
+                    "content": [
+                        {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Vous êtes une IA serviable"},
+                    ],
+                },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "image_url", "image_url": "vqa_image"},
-                        {"type": "text", "text": "Décris cette image: "},
+                        {"type": "image_url", "image_url": "vqa_image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Décris cette image: <image 1>"},
                     ],
                 },
             ],
@@ -172,34 +247,86 @@ def vqa_messages(
         (
             3,
             [
-                {"role": "system", "content": [{"type": "text", "text": "Vous êtes une IA serviable"}]},
+                {
+                    "role": "system",
+                    "content": [
+                        {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Vous êtes une IA serviable"},
+                    ],
+                },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "image_url", "image_url": "vqa_image"},
-                        {"type": "text", "text": "Décris cette image: "},
+                        {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Décris cette image: <image 1>"},
                     ],
                 },
-                {"role": "assistant", "content": [{"type": "text", "text": "C'est une image d'un salon."}]},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "C'est une image d'un salon."},
+                    ],
+                },
             ],
         ),
         (
             4,
             [
-                {"role": "system", "content": [{"type": "text", "text": "Vous êtes une IA serviable"}]},
                 {
-                    "role": "user",
+                    "role": "system",
                     "content": [
-                        {"type": "image_url", "image_url": "vqa_image"},
-                        {"type": "text", "text": "Décris cette image: "},
+                        {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Vous êtes une IA serviable"},
                     ],
                 },
-                {"role": "assistant", "content": [{"type": "text", "text": "C'est une image d'un salon."}]},
                 {
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": "vqa_image_url"},
-                        {"type": "text", "text": "Décris maintenant cette image: "},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Décris cette image: <image 1>"},
+                    ],
+                },
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "image_url", "image_url": "vqa_image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "C'est une image d'un salon."},
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": "vqa_image_url"},
+                        {
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
+                            "type": "text",
+                        },
+                        {"type": "text", "text": "Décris maintenant cette image: <image>"},
                     ],
                 },
             ],
@@ -208,20 +335,20 @@ def vqa_messages(
 )
 def test_messages_to_prompt(
     num_messages: int,
+    mock_dataset: MagicMock,
+    mock_conversation: MagicMock,
     expected_output: list[dict[str, Any]],
     vqa_messages: list[Message],
     vqa_image: Image,
     vqa_image_url: Image,
 ):
     media_dir = ASSETS_PATH
-    prompt = messages_to_prompt(vqa_messages[:num_messages], media_dir=media_dir)
+
+    prompt = messages_to_prompt(mock_dataset, mock_conversation, vqa_messages[:num_messages], media_dir=media_dir)
     for i, (p, e) in enumerate(zip(prompt, expected_output, strict=True)):
         for c in e["content"]:
             if c.get("type") == "image_url":
-                if c["image_url"] == "vqa_image_url":
-                    c["image_url"] = {"url": vqa_image_url.url}
-                else:
-                    c["image_url"] = {"url": vqa_image.open(media_dir, "base64")}
+                c["image_url"] = {"url": vqa_image_url.url}
         assert p == e
 
 
@@ -336,6 +463,7 @@ def test_messages_to_prompt(
 )
 async def test_text_image_conditional_generation(
     mock_text_image_conditional_generation,
+    mock_dataset: MagicMock,
     num_messages: int,
     response: TextImageConditionalGenerationResponse,
     expected_output: Message,
@@ -349,6 +477,7 @@ async def test_text_image_conditional_generation(
     message = await text_image_conditional_generation(
         client=simple_pixano_inference_client,
         source=vqa_sources[1],
+        dataset=mock_dataset,
         media_dir=ASSETS_PATH,
         messages=vqa_messages[:num_messages],
         conversation=vqa_conversation,

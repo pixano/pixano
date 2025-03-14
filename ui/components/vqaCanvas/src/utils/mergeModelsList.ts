@@ -13,6 +13,7 @@ export function mergeModelLists(
   newModelsName: string[],
   existingModels: PixanoInferenceCompletionModel[],
   defaultPrompts: MessageGenerationPrompts,
+  default_temperature: number,
 ): PixanoInferenceCompletionModel[] {
   const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
 
@@ -22,6 +23,7 @@ export function mergeModelLists(
         name: model,
         selected: false,
         prompts: defaultPrompts,
+        temperature: default_temperature,
       },
   );
 }

@@ -7,8 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
 
-  import type { Message } from "@pixano/core";
-  import { AutoResizeTextarea } from "@pixano/core/src/components/ui/autoresize-textarea";
+  import { AutoResizeTextarea, type Message } from "@pixano/core";
 
   import { ContentChangeEventType, type ContentChangeEvent } from "../types";
 
