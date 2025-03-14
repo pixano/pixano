@@ -184,10 +184,10 @@ License: CECILL-C
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.ui.childs?.length > 2}
-      <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
+      <ContextMenu.Item on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(itemFrameIndex)}>
+      <ContextMenu.Item on:click={() => onEditKeyItemClick(itemFrameIndex)}>
         Edit item
       </ContextMenu.Item>
     {/if}

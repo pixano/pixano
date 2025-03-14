@@ -145,9 +145,9 @@ License: CECILL-C
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("absolute scale-y-90 rounded-sm", {
+    class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-30": tracklet.ui.highlighted === "none",
+      "opacity-10": tracklet.ui.highlighted === "none",
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
@@ -160,12 +160,12 @@ License: CECILL-C
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if $currentFrameIndex > tracklet.data.start_timestep && $currentFrameIndex < tracklet.data.end_timestep}
-      <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
+      <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
         Add a point
       </ContextMenu.Item>
-      <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+      <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     {/if}
-    <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+    <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#if showKeyframes}
