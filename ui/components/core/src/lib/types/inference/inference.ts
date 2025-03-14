@@ -41,7 +41,6 @@ export interface CondititionalGenerationTextImageInput {
   model: string;
   max_new_tokens?: number;
   temperature?: number;
-  image_regex?: string;
   role_system?: string;
   role_user?: string;
   role_assistant?: string;

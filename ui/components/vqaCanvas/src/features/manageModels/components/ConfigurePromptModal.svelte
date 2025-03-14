@@ -13,7 +13,6 @@ License: CECILL-C
     MessageTypeEnum,
     PrimaryButton,
     QuestionTypeEnum,
-    //type InputEvents,
   } from "@pixano/core";
 
   import { completionModelsStore } from "../../../stores/completionModels";
@@ -39,9 +38,6 @@ License: CECILL-C
     completionPrompt = $completionModelsStore.find((m) => m.selected)?.prompts[mtype][qtype] ?? "";
   };
 
-  // let completionImageRegex = $completionModelsStore.find((m) => m.selected)?.regex.image ?? null;
-  // let completionObjectRegex = $completionModelsStore.find((m) => m.selected)?.regex.object ?? null;
-
   let temperature = $completionModelsStore.find((m) => m.selected)?.temperature ?? 1.0;
 
   const dispatch = createEventDispatcher();
@@ -60,10 +56,6 @@ License: CECILL-C
                   [question_type]: completionPrompt,
                 },
               },
-              // regex: {
-              //   image: completionImageRegex ?? "",
-              //   object: completionObjectRegex ?? "",
-              // },
               temperature,
             }
           : model,
@@ -71,23 +63,6 @@ License: CECILL-C
     );
     dispatch("cancelPrompt"); //also close modal
   }
-
-  /**
-  const handleChangeRegex = (event: InputEvents["change"]) => {
-    if (event.target && "name" in event.target && "value" in event.target) {
-      const name: string = event.target.name as string;
-      const value: string = event.target.value as string;
-      switch (name) {
-        case "image_regex":
-          completionImageRegex = value;
-          break;
-        case "object_regex":
-          completionObjectRegex = value;
-          break;
-      }
-    }
-  };
-  */
 
   function handleCancel() {
     dispatch("cancelPrompt");
@@ -102,30 +77,6 @@ License: CECILL-C
   class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3 pb-3"
   style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
-  <!--
-  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Regex settings</p>
-  </div>
-
-  <div class="px-3 pb-3 flex flex-col gap-2">
-    <h5 class="font-medium">Image regex</h5>
-    <Input
-      name="image_regex"
-      value={completionImageRegex}
-      type="string"
-      on:change={handleChangeRegex}
-      on:keyup={(e) => e.stopPropagation()}
-    />
-    <h5 class="font-medium">Object regex</h5>
-    <Input
-      name="object_regex"
-      value={completionObjectRegex}
-      type="string"
-      on:change={handleChangeRegex}
-      on:keyup={(e) => e.stopPropagation()}
-    />
-  </div>
-  -->
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Prompt settings</p>
   </div>

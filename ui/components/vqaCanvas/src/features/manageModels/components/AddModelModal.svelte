@@ -19,13 +19,26 @@ License: CECILL-C
 
   export let vqaSectionWidth: number;
 
-  //default values
-  let formData = {
+  //TMP: default values
+  const formDataQwen = {
     provider: "vllm",
     model_name: "llava-qwen",
     model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
     dtype: "float16",
   };
+  let formDataLMistral = {
+    provider: "vllm",
+    model_name: "llava-mistral",
+    model_path: "llava-hf/llava-v1.6-mistral-7b-hf",
+    dtype: "float16",
+  };
+  let formDataSpatialRGPT = {
+    provider: "transformers",
+    model_name: "spatialRGPT",
+    model_path: "a8cheng/SpatialRGPT-VILA1.5-8B",
+    dtype: "float16",
+  };
+  let formData = formDataLMistral;
 
   let isAddingModelRequestPending = false;
   const dispatch = createEventDispatcher();

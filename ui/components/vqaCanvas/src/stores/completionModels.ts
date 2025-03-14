@@ -12,18 +12,12 @@ export interface PixanoInferenceCompletionModel {
   selected: boolean;
   name: string;
   prompts: MessageGenerationPrompts;
-  regex: MessageGenerationRegex;
   temperature: number;
 }
 
 export type MessageGenerationPrompts = {
   [key in MessageTypeEnum]: PromptByQuestionType;
 } & { as_system: boolean };
-
-export type MessageGenerationRegex = {
-  image: string;
-  object: string;
-};
 
 export type PromptByQuestionType = Record<QuestionTypeEnum, string>;
 

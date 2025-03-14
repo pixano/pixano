@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-import re
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +16,10 @@ from pixano_inference.pydantic.tasks import (
 )
 from pixano_inference.utils import is_url
 
-from pixano.features import Conversation, EntityRef, Image, Message, Source, SourceRef
+from pixano.datasets import Dataset
+from pixano.features import Conversation, EntityRef, Message, SchemaGroup, Source, SourceRef, is_bbox
 
 
-DEFAULT_IMAGE_REGEX = r"<image(\s\d+)?>"
 DEFAULT_ROLE_SYSTEM = "system"
 DEFAULT_ROLE_USER = "user"
 DEFAULT_ROLE_ASSISTANT = "assistant"
@@ -29,9 +28,10 @@ DEFAULT_MAX_NEW_TOKENS = 100
 
 
 def messages_to_prompt(
+    dataset: Dataset,
+    conversation: Conversation,
     messages: list[Message],
     media_dir: Path,
-    image_regex: str = DEFAULT_IMAGE_REGEX,
     role_system: str = DEFAULT_ROLE_SYSTEM,
     role_user: str = DEFAULT_ROLE_USER,
     role_assistant: str = DEFAULT_ROLE_ASSISTANT,
@@ -39,9 +39,10 @@ def messages_to_prompt(
     """Convert a list of messages to a prompt.
 
     Args:
+        dataset: The Pixano dtaset.
+        conversation: The conversation entity of the messages.
         messages: List of messages.
         media_dir: The directory containing the images.
-        image_regex: The tag used to represent an image in the messages.
         role_system: The role to use for the system.
         role_user: The role to use for the user.
         role_assistant: The role to use for the assistant.
@@ -50,8 +51,6 @@ def messages_to_prompt(
         List of dictionaries representing the prompt.
     """
     prompt = []
-    image_regex = rf"{image_regex}"
-    used_images = 0
     for message in messages:
         message_prompt: dict[str, Any] = {"content": []}
         match message.type:
@@ -63,20 +62,37 @@ def messages_to_prompt(
                 message_prompt["role"] = role_assistant
             case _:
                 raise ValueError(f"Unknown message type {message.type}")
-        find_all = re.findall(image_regex, message.content)
-        num_images = len(find_all)
-        if num_images > 0:
-            image: Image = message.view
-        for i in range(num_images):
-            message_prompt["content"].append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": image.url if is_url(image.url) else image.open(media_dir, "base64")},
-                }
-            )
-        used_images += num_images
-        message_content = message.content if num_images == 0 else re.sub(image_regex, "", message.content)
-        message_prompt["content"].append({"type": "text", "text": message_content})
+
+        ## add images to prompt
+        tables_view = sorted(dataset.schema.groups[SchemaGroup.VIEW])
+        for table_view in tables_view:
+            images = dataset.get_data(table_view, item_ids=[conversation.item_ref.id])
+            if len(images) > 0:
+                image = images[0]  # there should be only one image per view, except for video (out of scope now)
+                message_prompt["content"].append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": image.url if is_url(image.url) else image.open(media_dir, "base64")},
+                    }
+                )
+
+        ## add objects (bbox) to prompt
+        tables_entities = sorted(dataset.schema.groups[SchemaGroup.ENTITY])
+        tables_bbox = [k for k, v in dataset.schema.schemas.items() if is_bbox(v)]
+        if len(tables_bbox) > 0:
+            table_bbox = tables_bbox[0]  # assume there is only one bbox table
+            for table_entity in tables_entities:
+                entities = dataset.get_data(table_entity, item_ids=[conversation.item_ref.id])
+                for entity in entities:
+                    if not isinstance(entity, Conversation):
+                        bboxes = dataset.get_data(
+                            table_bbox, item_ids=[conversation.item_ref.id], where=f"entity_ref.id == '{entity.id}'"
+                        )
+                        message_prompt["content"].append(
+                            {"type": "text", "text": f"a bounding box {bboxes[0].coords} with name {entity.name}"}
+                        )
+
+        message_prompt["content"].append({"type": "text", "text": message.content})
         prompt.append(message_prompt)
     return prompt
 
@@ -84,12 +100,12 @@ def messages_to_prompt(
 async def text_image_conditional_generation(
     client: PixanoInferenceClient,
     source: Source,
+    dataset: Dataset,
     media_dir: Path,
     messages: list[Message],
     conversation: Conversation,
     max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
     temperature: float = DEFAULT_TEMPERATURE,
-    image_regex: str = DEFAULT_IMAGE_REGEX,
     role_system: str = DEFAULT_ROLE_SYSTEM,
     role_user: str = DEFAULT_ROLE_USER,
     role_assistant: str = DEFAULT_ROLE_ASSISTANT,
@@ -100,12 +116,12 @@ async def text_image_conditional_generation(
     Args:
         client: The Pixano-Inference client to use.
         source: The source refering to the model.
+        dataset: The Pixano dataset.
         media_dir: The directory containing the input media files.
         messages: A list of Message objects representing the input messages.
         conversation: The conversation entity of the messages.
         max_new_tokens: The maximum number of tokens to generate.
         temperature: The temperature to use for sampling.
-        image_regex: The tag used to represent an image in the messages.
         role_system: The role of the system in the prompt.
         role_user: The role of the user in the prompt.
         role_assistant: The role of the assistant in the prompt.
@@ -115,9 +131,10 @@ async def text_image_conditional_generation(
         The response message and its source.
     """
     prompt = messages_to_prompt(
+        dataset=dataset,
+        conversation=conversation,
         messages=messages,
         media_dir=media_dir,
-        image_regex=image_regex,
         role_system=role_system,
         role_user=role_user,
         role_assistant=role_assistant,

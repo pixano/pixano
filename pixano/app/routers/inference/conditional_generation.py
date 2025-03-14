@@ -17,7 +17,6 @@ from pixano.features import Conversation, Message
 from pixano.features.schemas.annotations.text_generation import is_message
 from pixano.features.schemas.entities.conversation import is_conversation
 from pixano.inference.text_image_conditional_generation import (
-    DEFAULT_IMAGE_REGEX,
     DEFAULT_MAX_NEW_TOKENS,
     DEFAULT_ROLE_ASSISTANT,
     DEFAULT_ROLE_SYSTEM,
@@ -44,7 +43,6 @@ async def call_text_image_conditional_generation(
     settings: Annotated[Settings, Depends(get_settings)],
     max_new_tokens: Annotated[int, Body(embed=True)] = DEFAULT_MAX_NEW_TOKENS,
     temperature: Annotated[float, Body(embed=True)] = DEFAULT_TEMPERATURE,
-    image_regex: Annotated[str, Body(embed=True)] = DEFAULT_IMAGE_REGEX,
     role_system: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_SYSTEM,
     role_user: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_USER,
     role_assistant: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_ASSISTANT,
@@ -59,7 +57,6 @@ async def call_text_image_conditional_generation(
         settings: App settings.
         max_new_tokens: The maximum number of tokens to generate.
         temperature: The temperature to use.
-        image_regex: The regular expression to use to extract images from the text.
         role_system: The role of the system.
         role_user: The role of the user.
         role_assistant: The role of the assistant.
@@ -91,12 +88,12 @@ async def call_text_image_conditional_generation(
         infered_message = await text_image_conditional_generation(
             client=client,
             source=source,
+            dataset=dataset,
             media_dir=settings.media_dir,
             messages=messages_rows,
             conversation=conversation_row,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
-            image_regex=image_regex,
             role_system=role_system,
             role_user=role_user,
             role_assistant=role_assistant,

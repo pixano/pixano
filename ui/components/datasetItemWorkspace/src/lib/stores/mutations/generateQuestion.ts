@@ -56,7 +56,6 @@ export const generateQuestion = async (
     messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
     temperature,
-    //TODO image_regex: ??
   };
 
   try {

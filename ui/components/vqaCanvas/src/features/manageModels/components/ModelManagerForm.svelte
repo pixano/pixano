@@ -19,13 +19,10 @@ License: CECILL-C
   import {
     completionModelsStore,
     type MessageGenerationPrompts,
-    type MessageGenerationRegex,
     type PromptByQuestionType,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
   import {
-    DEFAULT_IMAGE_REGEX,
-    DEFAULT_OBJECT_REGEX,
     DEFAULT_QUESTION_PROMPT,
     DEFAULT_URL,
   } from "../defaults";
@@ -90,19 +87,13 @@ License: CECILL-C
       as_system: true,
     } as MessageGenerationPrompts;
 
-    //default regex
-    const regex: MessageGenerationRegex = {
-      image: DEFAULT_IMAGE_REGEX,
-      object: DEFAULT_OBJECT_REGEX,
-    };
-
     const completionAvailableModelsName = availableModels
       .filter((model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION)
       .map((model) => model.name);
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, prompts, regex),
+      mergeModelLists(completionAvailableModelsName, currentList, prompts),
     );
   };
 

@@ -5,4 +5,3 @@ License: CECILL-C
 -------------------------------------*/
 
 export * from "./groupMessagesByNumber";
-export * from "./buildRegexPattern";
