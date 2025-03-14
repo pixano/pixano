@@ -90,7 +90,7 @@ License: CECILL-C
 
     inferenceModels = completionAvailableModelsName.map((name) => ({ id: name, value: name }));
     completionModelsStore.update((currentList) =>
-      mergeModelLists(completionAvailableModelsName, currentList, prompts,DEFAULT_TEMPERATURE),
+      mergeModelLists(completionAvailableModelsName, currentList, prompts, DEFAULT_TEMPERATURE),
     );
   };
 
