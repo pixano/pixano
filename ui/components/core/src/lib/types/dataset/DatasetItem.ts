@@ -15,7 +15,10 @@ import { WorkspaceType } from "./workspaceType";
 
 export const datasetItemSchema = z.object({
   item: baseDataFieldsSchema(itemSchema),
-  entities: z.record(z.string(), z.array(baseDataFieldsSchema(entitySchema))),
+  entities: z.record(
+    z.string(),
+    baseDataFieldsSchema(entitySchema).or(z.array(baseDataFieldsSchema(entitySchema))),
+  ),
   annotations: z.record(z.string(), z.array(baseDataFieldsSchema(annotationSchema))),
   views: z.record(
     z.string(),
@@ -40,7 +43,7 @@ export class DatasetItem implements DatasetItemType {
     datasetItemSchema.parse(obj);
     this.item = new Item(obj.item);
 
-    this.entities = Entity.deepCreateInstanceArray(obj.entities);
+    this.entities = Entity.deepCreateInstanceArrayOrPlain(obj.entities);
     this.annotations = Annotation.deepCreateInstanceArray(obj.annotations);
     this.views = View.deepCreateInstanceArrayOrPlain(
       obj.views as unknown as Record<string, BaseDataFields<View> | BaseDataFields<View>[]>,

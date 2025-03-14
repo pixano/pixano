@@ -39,14 +39,19 @@ export class Entity extends BaseData<EntityType> {
     return super.nonFeaturesFields().concat(["item_ref", "view_ref", "parent_ref"]);
   }
 
-  static deepCreateInstanceArray(
-    objs: Record<string, BaseDataFields<EntityType>[]>,
+  static deepCreateInstanceArrayOrPlain(
+    objs: Record<string, BaseDataFields<EntityType> | BaseDataFields<EntityType>[]>,
   ): Record<string, Entity[]> {
     const newObj: Record<string, Entity[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
       newObj[k] = [];
-      for (const v of vs) {
-        newObj[k].push(createTypedEntity(v));
+
+      if (Array.isArray(vs)) {
+        for (const v of vs) {
+          newObj[k].push(createTypedEntity(v));
+        }
+      } else {
+        newObj[k].push(createTypedEntity(vs));
       }
     }
     return newObj;

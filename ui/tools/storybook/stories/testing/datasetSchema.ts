@@ -128,7 +128,6 @@ export const datasetSchema: DatasetSchema = {
     text_spans: {
       base_schema: BaseSchema.TextSpan,
       fields: {
-        annotation_ref: { type: "AnnotationRef", collection: false },
         created_at: { type: "datetime", collection: false },
         entity_ref: { type: "EntityRef", collection: false },
         id: { type: "str", collection: false },

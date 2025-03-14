@@ -38,3 +38,6 @@ export class Image extends View {
     return super.nonFeaturesFields().concat(["url"]);
   }
 }
+
+export const isImage = (view: View | View[]): view is Image =>
+  Array.isArray(view) === false && view.table_info.base_schema === BaseSchema.Image;

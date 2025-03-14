@@ -154,11 +154,7 @@ License: CECILL-C
                   throw Error("Video workspace without SequenceFrames.");
                 }
               }
-            }
-            if (
-              dataset.workspace === WorkspaceType.IMAGE ||
-              dataset.workspace === WorkspaceType.IMAGE_VQA
-            ) {
+            } else {
               for (const viewname in item.views) {
                 let view = item.views[viewname];
                 if (Array.isArray(view)) {

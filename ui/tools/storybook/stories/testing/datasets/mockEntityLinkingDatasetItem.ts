@@ -154,10 +154,6 @@ const textSpanData: TextSpanType = {
   spans_start: [span_start],
   spans_end: [span_end],
   mention: messageData.content.slice(span_start, span_end + 1),
-  annotation_ref: {
-    id: "message_id",
-    name: "messages",
-  },
 };
 
 const textSpan = new TextSpan({

@@ -19,6 +19,10 @@ export const editorSelectionToTextSpan = ({
     return null;
   }
 
+  //TMP for lint -- should be used later (?) but not yet -- lint is quite boring sometimes...
+  if (messageId == "") console.log();
+  ////
+
   const selectedText = selection.toString();
 
   if (!selectedText) {
@@ -37,6 +41,5 @@ export const editorSelectionToTextSpan = ({
     spans_start: [span_start],
     spans_end: [span_start + selectedText.length - 1],
     mention: selectedText,
-    annotation_ref: { id: messageId, name: "messages" },
   };
 };
