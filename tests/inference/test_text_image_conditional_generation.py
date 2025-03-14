@@ -209,7 +209,7 @@ def mock_dataset():
                             "type": "image_url",
                         },
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Vous êtes une IA serviable"},
@@ -225,7 +225,7 @@ def mock_dataset():
                     "content": [
                         {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Vous êtes une IA serviable"},
@@ -236,7 +236,7 @@ def mock_dataset():
                     "content": [
                         {"type": "image_url", "image_url": "vqa_image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Décris cette image: <image 1>"},
@@ -252,7 +252,7 @@ def mock_dataset():
                     "content": [
                         {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Vous êtes une IA serviable"},
@@ -263,7 +263,7 @@ def mock_dataset():
                     "content": [
                         {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Décris cette image: <image 1>"},
@@ -274,7 +274,7 @@ def mock_dataset():
                     "content": [
                         {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "C'est une image d'un salon."},
@@ -290,7 +290,7 @@ def mock_dataset():
                     "content": [
                         {"image_url": {"url": "vqa_image_url"}, "type": "image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Vous êtes une IA serviable"},
@@ -301,7 +301,7 @@ def mock_dataset():
                     "content": [
                         {"type": "image_url", "image_url": "vqa_image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Décris cette image: <image 1>"},
@@ -312,7 +312,7 @@ def mock_dataset():
                     "content": [
                         {"type": "image_url", "image_url": "vqa_image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "C'est une image d'un salon."},
@@ -323,7 +323,7 @@ def mock_dataset():
                     "content": [
                         {"type": "image_url", "image_url": "vqa_image_url"},
                         {
-                            "text": "a bounding box [10, 20, 30, 40] with name car",
+                            "text": "a normalized bounding box [10, 20, 30, 40] with the name 'car'",
                             "type": "text",
                         },
                         {"type": "text", "text": "Décris maintenant cette image: <image>"},
