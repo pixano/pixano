@@ -20,25 +20,27 @@ License: CECILL-C
   export let vqaSectionWidth: number;
 
   //TMP: default values
-  const formDataQwen = {
-    provider: "vllm",
-    model_name: "llava-qwen",
-    model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-    dtype: "float16",
+  const modelChoices = {
+    "llava-qwen": {
+      provider: "vllm",
+      model_name: "llava-qwen",
+      model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+      dtype: "float16",
+    },
+    "llava-mistral": {
+      provider: "vllm",
+      model_name: "llava-mistral",
+      model_path: "llava-hf/llava-v1.6-mistral-7b-hf",
+      dtype: "float16",
+    },
+    spatialRGPT: {
+      provider: "transformers",
+      model_name: "spatialRGPT",
+      model_path: "a8cheng/SpatialRGPT-VILA1.5-8B",
+      dtype: "float16",
+    },
   };
-  let formDataLMistral = {
-    provider: "vllm",
-    model_name: "llava-mistral",
-    model_path: "llava-hf/llava-v1.6-mistral-7b-hf",
-    dtype: "float16",
-  };
-  let formDataSpatialRGPT = {
-    provider: "transformers",
-    model_name: "spatialRGPT",
-    model_path: "a8cheng/SpatialRGPT-VILA1.5-8B",
-    dtype: "float16",
-  };
-  let formData = formDataLMistral;
+  let formData = modelChoices["llava-mistral"];
 
   let isAddingModelRequestPending = false;
   const dispatch = createEventDispatcher();
