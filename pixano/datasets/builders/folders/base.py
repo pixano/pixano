@@ -24,6 +24,7 @@ from pixano.features import (
     Message,
     View,
     create_bbox,
+    create_conversation,
     is_annotation,
     is_bbox,
     is_conversation,
@@ -167,8 +168,9 @@ class FolderBaseBuilder(DatasetBuilder):
                     # only consider {split}/{item}.{ext} files
                     if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
                         continue
-                    # create item
-                    item = self._create_item(split.name, **{})
+                    # create item with default values for custom fields
+                    custom_item_metadata = self._build_default_custom_metadata_item()
+                    item = self._create_item(split.name, **custom_item_metadata)
                     # create view
                     view_name_nojsonl, view_schema_nojsonl = list(self.views_schema.items())[0]  # only one view
                     view = self._create_view(item, view_file, view_schema_nojsonl)
@@ -176,6 +178,18 @@ class FolderBaseBuilder(DatasetBuilder):
                         self.item_schema_name: item,
                         view_name_nojsonl: view,
                     }
+                    # if schema contain a Conversation, add one
+                    for entity_name, entity_schema_nojsonl in self.entities_schema.items():
+                        if entity_schema_nojsonl is not None and is_conversation(entity_schema_nojsonl):
+                            default_view_ref = ViewRef(id=view.id, name=view_name_nojsonl)
+                            conversation = create_conversation(
+                                id=shortuuid.uuid(),
+                                kind="vqa",
+                                item_ref=ItemRef(id=item.id),
+                                view_ref=default_view_ref,
+                            )
+                            yield {"conversations": conversation}
+
                 continue
 
             for dataset_piece in dataset_pieces:
@@ -479,3 +493,11 @@ class FolderBaseBuilder(DatasetBuilder):
         if not metadata_file.exists():
             raise FileNotFoundError(f"Metadata file {metadata_file} not found")
         return pa_json.read_json(metadata_file).to_pylist()
+
+    def _build_default_custom_metadata_item(self) -> dict[str, Any]:
+        custom_item_metadata: dict[str, Any] = {}
+        custom_fields = list(set(self.item_schema.field_names()) - set(Item.field_names()))
+        for field in custom_fields:
+            field_type = self.item_schema.__annotations__[field]
+            custom_item_metadata[field] = field_type()
+        return custom_item_metadata

@@ -106,7 +106,7 @@ def image_folder():
 
 
 @pytest.fixture
-def image_folder_no_jsonl():
+def folder_no_jsonl():
     source_dir = _create_folder(
         [SAMPLE_DATA_PATHS["image_jpg"], SAMPLE_DATA_PATHS["image_png"]], ["train", "val"], [10, 5], with_jsonl=False
     )
@@ -149,9 +149,9 @@ def image_folder_builder(image_folder, dataset_item_image_bboxes_keypoints):
 
 
 @pytest.fixture
-def image_folder_builder_no_jsonl(image_folder_no_jsonl):
-    return ImageFolderBuilder(
-        source_dir=image_folder_no_jsonl,
+def vqa_folder_builder_no_jsonl(folder_no_jsonl):
+    return VQAFolderBuilder(
+        source_dir=folder_no_jsonl,
         target_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
     )

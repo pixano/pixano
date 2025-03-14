@@ -18,6 +18,7 @@ from pixano.datasets.builders.folders import (
 )
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
+from pixano.datasets.workspaces.dataset_items import DefaultImageDatasetItem
 from pixano.features import Conversation, Entity, Image, Item, Message, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
@@ -36,32 +37,30 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_image_video_init(
-        self, image_folder_builder, image_folder_builder_no_jsonl, video_folder_builder, entity_category
-    ):
+    def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
-        assert isinstance(image_folder_builder_no_jsonl, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
         assert image_folder_builder.target_dir.is_dir()
-        assert image_folder_builder_no_jsonl.source_dir.is_dir()
-        assert image_folder_builder_no_jsonl.target_dir.is_dir()
         assert video_folder_builder.source_dir.is_dir()
         assert video_folder_builder.target_dir.is_dir()
         assert image_folder_builder.views_schema == {"view": Image}
-        assert image_folder_builder_no_jsonl.views_schema == {"image": Image}
         assert video_folder_builder.views_schema == {"view": Video}
         assert image_folder_builder.entities_schema == {"entities": entity_category}
-        assert image_folder_builder_no_jsonl.entities_schema == {"objects": Entity}
         assert video_folder_builder.entities_schema == {"entities": entity_category}
         assert image_folder_builder.url_prefix == Path(".")
 
-    def test_vqa_init(self, vqa_folder_builder):
+    def test_vqa_init(self, vqa_folder_builder, vqa_folder_builder_no_jsonl):
         assert isinstance(vqa_folder_builder, VQAFolderBuilder)
+        assert isinstance(vqa_folder_builder_no_jsonl, VQAFolderBuilder)
         assert vqa_folder_builder.source_dir.is_dir()
         assert vqa_folder_builder.target_dir.is_dir()
+        assert vqa_folder_builder_no_jsonl.source_dir.is_dir()
+        assert vqa_folder_builder_no_jsonl.target_dir.is_dir()
         assert vqa_folder_builder.views_schema == {"image": Image}
-        assert list(vqa_folder_builder.entities_schema.keys()) == ["conversations", "objects"]
+        assert vqa_folder_builder_no_jsonl.views_schema == {"image": Image}
+        assert vqa_folder_builder.entities_schema == {"objects": Entity, "conversations": Conversation}
+        assert vqa_folder_builder_no_jsonl.entities_schema == {"objects": Entity, "conversations": Conversation}
         assert vqa_folder_builder.url_prefix == Path(".")
 
     def test_url_prefix_init(self, dataset_item_bboxes_metadata):
@@ -396,13 +395,31 @@ class TestFolderBaseBuilder:
         return final_list
 
     def test_generate_data_egde_cases(
-        self, edge_case_folder_builder: ImageFolderBuilder, image_folder_builder_no_jsonl: ImageFolderBuilder
+        self,
+        edge_case_folder_builder: ImageFolderBuilder,
+        vqa_folder_builder_no_jsonl: ImageFolderBuilder,
+        folder_no_jsonl,
     ):
+        class CustomSchema(DefaultImageDatasetItem):
+            metadata_str: str
+            metadata_bool: bool
+            metadata_int: int
+            metadata_float: float
+            meatadata_list: list
+
+        image_folder_builder_no_jsonl_custom_schema = ImageFolderBuilder(
+            source_dir=folder_no_jsonl,
+            target_dir=tempfile.mkdtemp(),
+            info=DatasetInfo(name="test", description="test"),
+            dataset_item=CustomSchema,
+        )
+
         with patch(
             "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
         ):
             ec_items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
-            nj_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl.generate_data())
+            nj_items = self.reconstruct_dict_list(vqa_folder_builder_no_jsonl.generate_data())
+            nj_cs_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl_custom_schema.generate_data())
 
         # test edges cases
         for i, item in enumerate(ec_items):
@@ -425,6 +442,14 @@ class TestFolderBaseBuilder:
             assert view.item_ref == ItemRef(id=actual_item.id)
             assert view.url == f"{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
             split_counts[actual_item.split] += 1
+
+        # test no json with custom item fields
+        for item in nj_cs_items:
+            actual_item = item["item"]
+            fields = list(set(actual_item.field_names()) - set(Item.field_names()))
+            for field in fields:
+                assert field in CustomSchema.__annotations__
+                assert getattr(actual_item, field) == CustomSchema.__annotations__[field]()
 
     def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
         with patch(
