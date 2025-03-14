@@ -163,6 +163,36 @@ def vqa_messages(
     return messages
 
 
+@pytest.fixture(scope="module")
+def mock_conversation():
+    mock_conversation = MagicMock()
+    mock_conversation.item_ref.id = "item_123"
+    return mock_conversation
+
+
+@pytest.fixture(scope="module")
+def mock_dataset():
+    mock_dataset = MagicMock()
+    mock_dataset.schema.groups = {
+        SchemaGroup.VIEW: ["image"],
+        SchemaGroup.ENTITY: ["objects"],
+    }
+    mock_dataset.schema.schemas = {"bboxes": BBox}
+    mock_image = MagicMock()
+    mock_image.url = "http://www.fake_url.com/coco_dataset/image/val/000000000139.png"
+    mock_entity = MagicMock()
+    mock_entity.id = "entity_456"
+    mock_entity.name = "car"
+    mock_bbox = MagicMock()
+    mock_bbox.coords = "[10, 20, 30, 40]"
+    mock_dataset.get_data.side_effect = lambda table, item_ids, where=None: {
+        "image": [mock_image] if item_ids == ["item_123"] else [],
+        "objects": [mock_entity] if item_ids == ["item_123"] else [],
+        "bboxes": [mock_bbox] if item_ids == ["item_123"] and where else [],
+    }.get(table, [])
+    return mock_dataset
+
+
 @pytest.mark.parametrize(
     "num_messages,expected_output",
     [
@@ -305,34 +335,14 @@ def vqa_messages(
 )
 def test_messages_to_prompt(
     num_messages: int,
+    mock_dataset: MagicMock,
+    mock_conversation: MagicMock,
     expected_output: list[dict[str, Any]],
     vqa_messages: list[Message],
     vqa_image: Image,
     vqa_image_url: Image,
 ):
     media_dir = ASSETS_PATH
-
-    mock_conversation = MagicMock()
-    mock_conversation.item_ref.id = "item_123"
-
-    mock_dataset = MagicMock()
-    mock_dataset.schema.groups = {
-        SchemaGroup.VIEW: ["image"],
-        SchemaGroup.ENTITY: ["objects"],
-    }
-    mock_dataset.schema.schemas = {"bboxes": BBox}
-    mock_image = MagicMock()
-    mock_image.url = "http://www.fake_url.com/coco_dataset/image/val/000000000139.png"
-    mock_entity = MagicMock()
-    mock_entity.id = "entity_456"
-    mock_entity.name = "car"
-    mock_bbox = MagicMock()
-    mock_bbox.coords = "[10, 20, 30, 40]"
-    mock_dataset.get_data.side_effect = lambda table, item_ids, where=None: {
-        "image": [mock_image] if item_ids == ["item_123"] else [],
-        "objects": [mock_entity] if item_ids == ["item_123"] else [],
-        "bboxes": [mock_bbox] if item_ids == ["item_123"] and where else [],
-    }.get(table, [])
 
     prompt = messages_to_prompt(mock_dataset, mock_conversation, vqa_messages[:num_messages], media_dir=media_dir)
     for i, (p, e) in enumerate(zip(prompt, expected_output, strict=True)):
@@ -456,6 +466,7 @@ def test_messages_to_prompt(
 )
 async def test_text_image_conditional_generation(
     mock_text_image_conditional_generation,
+    mock_dataset: MagicMock,
     num_messages: int,
     response: TextImageConditionalGenerationResponse,
     expected_output: Message,
@@ -469,6 +480,7 @@ async def test_text_image_conditional_generation(
     message = await text_image_conditional_generation(
         client=simple_pixano_inference_client,
         source=vqa_sources[1],
+        dataset=mock_dataset,
         media_dir=ASSETS_PATH,
         messages=vqa_messages[:num_messages],
         conversation=vqa_conversation,
