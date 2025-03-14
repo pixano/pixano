@@ -88,8 +88,17 @@ def messages_to_prompt(
                         bboxes = dataset.get_data(
                             table_bbox, item_ids=[conversation.item_ref.id], where=f"entity_ref.id == '{entity.id}'"
                         )
+                        if len(bboxes) == 0:
+                            continue
+                        bbox = bboxes[0]  # assume only one bbox per entity
+                        bbox_text = f"a {'normalized ' if bbox.is_normalized else ''}bounding box {bbox.coords}"
+                        if "name" in entity:
+                            bbox_text = bbox_text + f" with the name '{entity.name}'"
                         message_prompt["content"].append(
-                            {"type": "text", "text": f"a bounding box {bboxes[0].coords} with name {entity.name}"}
+                            {
+                                "type": "text",
+                                "text": bbox_text,
+                            }
                         )
 
         message_prompt["content"].append({"type": "text", "text": message.content})

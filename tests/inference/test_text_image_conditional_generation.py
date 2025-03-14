@@ -348,10 +348,7 @@ def test_messages_to_prompt(
     for i, (p, e) in enumerate(zip(prompt, expected_output, strict=True)):
         for c in e["content"]:
             if c.get("type") == "image_url":
-                if c["image_url"] == "vqa_image_url":
-                    c["image_url"] = {"url": vqa_image_url.url}
-                else:
-                    c["image_url"] = {"url": vqa_image_url.url}  # {"url": vqa_image.open(media_dir, "base64")}
+                c["image_url"] = {"url": vqa_image_url.url}
         assert p == e
 
 
