@@ -92,7 +92,7 @@ def messages_to_prompt(
                             continue
                         bbox = bboxes[0]  # assume only one bbox per entity
                         bbox_text = f"a {'normalized ' if bbox.is_normalized else ''}bounding box {bbox.coords}"
-                        if "name" in entity:
+                        if hasattr(entity, "name"):
                             bbox_text = bbox_text + f" with the name '{entity.name}'"
                         message_prompt["content"].append(
                             {
