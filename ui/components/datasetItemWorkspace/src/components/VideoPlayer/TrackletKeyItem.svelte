@@ -23,7 +23,7 @@ License: CECILL-C
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  export let onClick: (clientX: number) => void;
+  export let onClick: (button: number, clientX: number) => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -179,7 +179,7 @@ License: CECILL-C
       class="w-full h-full rounded-full absolute"
       style={`background-color: ${color}`}
       use:dragMe
-      on:click={(e) => onClick(e.clientX)}
+      on:click={(e) => onClick(e.button, e.clientX)}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>

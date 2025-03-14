@@ -28,7 +28,7 @@ License: CECILL-C
   export let trackId: string;
   export let tracklet: Tracklet;
   export let views: MView;
-  export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
+  export let onContextMenu: (tracklet: Tracklet) => void;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
@@ -135,9 +135,11 @@ License: CECILL-C
     currentFrameIndex.set(newFrameIndex);
   };
 
-  const onClick = (clientX: number) => {
-    moveCursorToPosition(clientX);
-    resetTool();
+  const onClick = (button: number, clientX: number) => {
+    if (button === 0) {
+      moveCursorToPosition(clientX);
+      resetTool();
+    }
   };
 </script>
 
@@ -150,17 +152,19 @@ License: CECILL-C
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
+      on:contextmenu|preventDefault={() => onContextMenu(tracklet)}
       class="absolute h-full w-full"
       bind:this={trackletElement}
-      on:click={(e) => onClick(e.clientX)}
+      on:click={(e) => onClick(e.button, e.clientX)}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
-      Add a point
-    </ContextMenu.Item>
-    <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+    {#if $currentFrameIndex > tracklet.data.start_timestep && $currentFrameIndex < tracklet.data.end_timestep}
+      <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>
+        Add a point
+      </ContextMenu.Item>
+      <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+    {/if}
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>

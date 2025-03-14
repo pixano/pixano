@@ -55,7 +55,6 @@ License: CECILL-C
   export let keypoints: KeypointsTemplate[];
   export let resetTool: () => void;
 
-  let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
   let isHighlighted: boolean = false;
@@ -74,13 +73,13 @@ License: CECILL-C
   });
 
   const moveCursorToPosition = (clientX: number) => {
-    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
-    rightClickFrameIndex = Math.round(rightClickFrame * ($lastFrameIndex + 1));
-    onTimeTrackClick(rightClickFrameIndex);
+    const newPosition = objectTimeTrack.getBoundingClientRect();
+    const newRelativePosition = (clientX - newPosition.left) / newPosition.width;
+    const newFrameIndex = Math.round(newRelativePosition * ($lastFrameIndex + 1));
+    onTimeTrackClick(newFrameIndex);
   };
 
-  const onContextMenu = (event: MouseEvent, tracklet: Tracklet | null = null) => {
+  const onContextMenu = (tracklet: Tracklet | null = null) => {
     if (tracklet) {
       const tracklet_childs_ids = tracklet.ui.childs.map((ann) => ann.id);
       annotations.update((oldObjects) =>
@@ -91,12 +90,11 @@ License: CECILL-C
         }),
       );
     }
-    moveCursorToPosition(event.clientX);
     resetTool();
   };
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
-    onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
+    onTimeTrackClick(frameIndex);
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
@@ -121,7 +119,7 @@ License: CECILL-C
     //an interpolated obj should exist: use it
     const interpolatedBox = bboxes.find(
       (box) =>
-        box.ui.frame_index === rightClickFrameIndex &&
+        box.ui.frame_index === $currentFrameIndex &&
         tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
     );
     if (interpolatedBox) {
@@ -151,7 +149,7 @@ License: CECILL-C
     }
     const interpolatedKpt = keypoints.find(
       (kpt) =>
-        kpt.ui!.frame_index === rightClickFrameIndex &&
+        kpt.ui!.frame_index === $currentFrameIndex &&
         tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
     );
     if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
@@ -228,11 +226,11 @@ License: CECILL-C
         }),
       );
     }
-    onEditKeyItemClick(rightClickFrameIndex);
+    onEditKeyItemClick($currentFrameIndex);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
-  const findPreviousAndNext = (tracklet: Tracklet, targetIndex: number): [number, number] => {
+  const findPreviousAndNext = (tracklet: Tracklet): [number, number] => {
     let low = 0;
     let high = tracklet.ui.childs.length - 1;
     let mid;
@@ -241,7 +239,7 @@ License: CECILL-C
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (tracklet.ui.childs[mid].ui.frame_index! <= targetIndex) {
+      if (tracklet.ui.childs[mid].ui.frame_index! <= $currentFrameIndex) {
         previousItem = tracklet.ui.childs[mid];
         low = mid + 1;
       } else {
@@ -250,13 +248,13 @@ License: CECILL-C
       }
     }
     return [
-      previousItem ? previousItem.ui.frame_index! : targetIndex,
-      nextItem ? nextItem.ui.frame_index! : targetIndex + 1,
+      previousItem ? previousItem.ui.frame_index! : $currentFrameIndex,
+      nextItem ? nextItem.ui.frame_index! : $currentFrameIndex + 1,
     ];
   };
 
   const onSplitTrackletClick = (tracklet: Tracklet) => {
-    const [prev, next] = findPreviousAndNext(tracklet, rightClickFrameIndex);
+    const [prev, next] = findPreviousAndNext(tracklet);
     const newOnRight = splitTrackletInTwo(tracklet, prev, next);
     //add Entity child
     entities.update((objects) =>
@@ -370,7 +368,7 @@ License: CECILL-C
     />
     <ContextMenu.Root>
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
-        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+        <p on:contextmenu|preventDefault={() => onContextMenu()} class="h-full w-full" />
       </ContextMenu.Trigger>
       <!--  //TODO we don't allow adding a point outside of a tracklet right now
             //you can extend tracket to add a point inside, and split if needed
