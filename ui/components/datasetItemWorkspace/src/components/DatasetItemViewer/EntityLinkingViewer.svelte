@@ -12,9 +12,9 @@ License: CECILL-C
   import { Canvas2D } from "@pixano/canvas2d";
   import {
     DatasetItem,
+    Image,
     isImage,
     Message,
-    View,
     type ImagesPerView,
     type SaveItem,
   } from "@pixano/core";
@@ -89,12 +89,13 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, View | View[]>): Promise<ImagesPerView> => {
-    const promises = Object.entries(views).map(async ([key, value]) => {
-      const imageObject = Array.isArray(value) ? value[0] : value;
-      const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
-
-      $itemMetas.format = img.bitDepth === 1 ? "1bit" : img.bitDepth === 8 ? "8bit" : "16bit";
+  const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
+    const images: ImagesPerView = {};
+    const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
+      if (!isImage(value)) return;
+      const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
+      const bitDepth = img.bitDepth as number;
+      $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
       if ($itemMetas.format === "16bit") {
@@ -103,10 +104,11 @@ License: CECILL-C
 
       const image: HTMLImageElement = document.createElement("img");
       image.src = img.toDataURL();
-      return [key, [{ id: imageObject.id, element: image }]];
+      images[key] = [{ id: value.id, element: image }];
     });
 
-    return Object.fromEntries(await Promise.all(promises));
+    await Promise.all(promises);
+    return images;
   };
 
   /**
@@ -116,8 +118,8 @@ License: CECILL-C
     if (selectedItem.views) {
       loaded = false;
       const image_views = Object.fromEntries(
-        Object.entries(selectedItem.views).filter(([_, value]) => isImage(value)),
-      );
+        Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
+      ) as Record<string, Image>;
       imagesPerView = await loadImages(image_views);
       loaded = true;
     }

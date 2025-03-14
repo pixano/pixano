@@ -19,6 +19,10 @@ export const editorSelectionToTextSpan = ({
     return null;
   }
 
+  //TMP for lint -- should be used somwhere but not yet
+  messageId;
+  ////
+
   const selectedText = selection.toString();
 
   if (!selectedText) {
