@@ -22,7 +22,7 @@ License: CECILL-C
     type PromptByQuestionType,
   } from "../../../stores/completionModels";
   import { mergeModelLists } from "../../../utils/mergeModelsList";
-  import { DEFAULT_QUESTION_PROMPT, DEFAULT_URL } from "../defaults";
+  import { DEFAULT_QUESTION_PROMPT, DEFAULT_TEMPERATURE, DEFAULT_URL } from "../defaults";
   import AddModelModal from "./AddModelModal.svelte";
   import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
