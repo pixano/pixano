@@ -50,6 +50,12 @@ License: CECILL-C
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
 
+  // utility vars for resizing with slide bar
+  let entityLinkingAreaWidth = 300; //default width
+  let expanding = false;
+  let initialAreaX = 0;
+  let initialAreaWidth = 0;
+
   /**
    * Normalize the pixel values of an image to a specified range.
    * @param image The image to normalize.
@@ -161,33 +167,58 @@ License: CECILL-C
 
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
   };
+
+  const startExpand = (e: MouseEvent) => {
+    expanding = true;
+    initialAreaX = e.clientX;
+    initialAreaWidth = entityLinkingAreaWidth;
+  };
+
+  const stopExpand = () => {
+    expanding = false;
+  };
+
+  const expand = (e: MouseEvent) => {
+    if (expanding) {
+      const delta = e.clientX - initialAreaX;
+      entityLinkingAreaWidth = Math.max(180, initialAreaWidth + delta);
+    }
+  };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full grid grid-cols-[300px_auto]">
-    <TextSpanArea
-      textViews={$textViews}
-      selectedItemId={selectedItem.item.id}
-      colorScale={$colorScale[1]}
-      textSpans={$textSpans}
-      bind:newShape={$newShape}
-      on:messageContentChange={handleMessageContentChange}
-    />
-    <Canvas2D
-      {imagesPerView}
-      selectedItemId={selectedItem.item.id}
-      colorScale={$colorScale[1]}
-      bboxes={$itemBboxes}
-      masks={$itemMasks}
-      keypoints={$itemKeypoints}
-      selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-      {filters}
-      imageSmoothing={$imageSmoothing}
-      bind:selectedTool={$selectedTool}
-      bind:currentAnn
-      bind:newShape={$newShape}
-    />
+  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
+    <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
+      <TextSpanArea
+        textViews={$textViews}
+        selectedItemId={selectedItem.item.id}
+        colorScale={$colorScale[1]}
+        textSpans={$textSpans}
+        bind:newShape={$newShape}
+        on:messageContentChange={handleMessageContentChange}
+      />
+    </div>
+    <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />
+    <div class="overflow-hidden grow">
+      <Canvas2D
+        {imagesPerView}
+        selectedItemId={selectedItem.item.id}
+        colorScale={$colorScale[1]}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        keypoints={$itemKeypoints}
+        selectedKeypointTemplate={templates.find(
+          (t) => t.template_id === $selectedKeypointsTemplate,
+        )}
+        {filters}
+        canvasSize={entityLinkingAreaWidth}
+        imageSmoothing={$imageSmoothing}
+        bind:selectedTool={$selectedTool}
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    </div>
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">
