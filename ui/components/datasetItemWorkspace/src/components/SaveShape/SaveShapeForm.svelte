@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
   import { derived } from "svelte/store";
 
   import {
@@ -449,11 +450,22 @@ License: CECILL-C
       newShape.set({ status: "none", shouldReset: true });
     }
   }
+
+  //set specific header text for different kind of shape
+  let saveText = "Save";
+  onMount(() => {
+    if ($newShape.status === "saving") {
+      saveText = saveText + " " + $newShape.type;
+      if ($newShape.type === "textSpan") {
+        saveText = saveText + " <i>" + $newShape.attrs.mention + "</i>";
+      }
+    }
+  });
 </script>
 
 {#if $newShape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-    <p>Save {$newShape.type}</p>
+    <p>{@html saveText}</p>
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
       <CreateFeatureInputs
         bind:isFormValid
