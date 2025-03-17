@@ -113,17 +113,30 @@ License: CECILL-C
     let topEntitySchema: DS_NamedSchema | undefined = undefined;
     let subEntitySchema: DS_NamedSchema | undefined = undefined;
     let trackSchemas: DS_NamedSchema[] = [];
+    let multiModalSchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
       if (sch.base_schema === BaseSchema.Track) {
         trackSchemas.push({ ...sch, name });
       }
     });
+    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
+      if (sch.base_schema === BaseSchema.MultiModalEntity) {
+        multiModalSchemas.push({ ...sch, name });
+      }
+    });
     let entitySchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
-      if (sch.base_schema === BaseSchema.Entity) entitySchemas.push({ ...sch, name });
+      if (sch.base_schema === BaseSchema.Entity) {
+        entitySchemas.push({ ...sch, name });
+      }
     });
     if (trackSchemas.length > 0) {
       topEntitySchema = trackSchemas[0];
+      if (entitySchemas.length > 0) {
+        subEntitySchema = entitySchemas[0];
+      }
+    } else if (multiModalSchemas.length > 0) {
+      topEntitySchema = multiModalSchemas[0];
       if (entitySchemas.length > 0) {
         subEntitySchema = entitySchemas[0];
       }
