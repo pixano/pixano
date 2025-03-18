@@ -456,7 +456,7 @@ License: CECILL-C
   onMount(() => {
     if ($newShape.status === "saving") {
       saveText = saveText + " " + $newShape.type;
-      if ($newShape.type === "textSpan") {
+      if ($newShape.type === SaveShapeType.textSpan) {
         saveText = saveText + " <i>" + $newShape.attrs.mention + "</i>";
       }
     }
