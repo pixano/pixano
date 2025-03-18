@@ -103,6 +103,7 @@ class FolderBaseBuilder(DatasetBuilder):
         info: DatasetInfo,
         dataset_path: Path | str,
         dataset_item: type[DatasetItem] | None = None,
+        use_image_name_as_id: bool = False,
     ) -> None:
         """Initialize the `FolderBaseBuilder`.
 
@@ -112,12 +113,19 @@ class FolderBaseBuilder(DatasetBuilder):
             dataset_item: The dataset item schema.
             info: User informations (name, description, ...) for the dataset.
             dataset_path: Path to dataset, relative to media_dir.
+            use_image_name_as_id: If True, use image base name as image id.
+                                  Images MUST have unique base names.
+                                  When no metadata file exists, also use it as item id,
+                                  else, use 'item_#'
+                                  This allows to reuse image embeddings after dataset overwrite.
         """
         info.workspace = self.WORKSPACE_TYPE
         if self.DEFAULT_SCHEMA is not None and dataset_item is None:
             dataset_item = self.DEFAULT_SCHEMA
         if dataset_item is None:
             raise ValueError("A schema is required.")
+
+        self.use_image_name_as_id = use_image_name_as_id
 
         self.media_dir = Path(media_dir)
         dataset_path = Path(dataset_path)
@@ -171,7 +179,7 @@ class FolderBaseBuilder(DatasetBuilder):
                         continue
                     # create item with default values for custom fields
                     custom_item_metadata = self._build_default_custom_metadata_item()
-                    item = self._create_item(split.name, **custom_item_metadata)
+                    item = self._create_item(split.name, view_file.stem, **custom_item_metadata)
                     # create view
                     view_name_nojsonl, view_schema_nojsonl = list(self.views_schema.items())[0]  # only one view
                     view = self._create_view(item, view_file, view_schema_nojsonl)
@@ -193,7 +201,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
                 continue
 
-            for dataset_piece in dataset_pieces:
+            for i, dataset_piece in enumerate(dataset_pieces):
                 item_metadata = {}
                 for k in dataset_piece.keys():
                     if (
@@ -206,7 +214,9 @@ class FolderBaseBuilder(DatasetBuilder):
                     dataset_piece.pop(k, None)
 
                 # create item
-                item = self._create_item(split.name, **item_metadata)
+                item = self._create_item(
+                    split.name, id=f"item_{i}" if self.use_image_name_as_id else None, **item_metadata
+                )
 
                 # create view
                 views_data: list[tuple[str, View]] = []
@@ -272,9 +282,9 @@ class FolderBaseBuilder(DatasetBuilder):
                 yield all_entities_data
                 yield all_annotations_data
 
-    def _create_item(self, split: str, **item_metadata) -> BaseSchema:
+    def _create_item(self, split: str, id: str | None = None, **item_metadata) -> BaseSchema:
         if "id" not in item_metadata:
-            item_metadata["id"] = shortuuid.uuid()
+            item_metadata["id"] = id if self.use_image_name_as_id else shortuuid.uuid()
         return self.item_schema(
             split=split,
             **item_metadata,
@@ -290,7 +300,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
         view = create_instance_of_schema(
             view_schema,
-            id=shortuuid.uuid(),
+            id=view_file.stem if self.use_image_name_as_id else shortuuid.uuid(),
             item_ref=ItemRef(id=item.id),
             url=view_file,
             url_relative_path=self.media_dir,
