@@ -125,7 +125,8 @@ class FolderBaseBuilder(DatasetBuilder):
         if not self.source_dir.is_dir():
             raise ValueError("A source path (media_dir / dataset_path) is required.")
 
-        super().__init__(target_dir=Path(library_dir) / dataset_path, dataset_item=dataset_item, info=info)
+        target_dir = Path(library_dir) / "_".join(dataset_path.parts)
+        super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
 
         self.views_schema: dict[str, type[View]] = {}
         self.entities_schema: dict[str, type[Entity]] = {}
@@ -164,8 +165,8 @@ class FolderBaseBuilder(DatasetBuilder):
                 dataset_pieces = None
 
             if dataset_pieces is None:
-                for view_file in sorted(split.glob("*")):
-                    # only consider {split}/{item}.{ext} files
+                for view_file in sorted(split.glob("**/*")):
+                    # only consider {split}/**/{item}.{ext} files
                     if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
                         continue
                     # create item with default values for custom fields
