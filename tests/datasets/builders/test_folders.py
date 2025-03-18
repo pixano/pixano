@@ -148,6 +148,15 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
+        # test 5: invalid dataset_path
+        with pytest.raises(ValueError, match=r"A source path \(media_dir / dataset_path\) is required."):
+            ImageFolderBuilder(
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_path="wrong_dataset_path",
+            )
+
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
             split="train",
