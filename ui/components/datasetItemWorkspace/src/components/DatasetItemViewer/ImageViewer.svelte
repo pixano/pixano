@@ -9,14 +9,13 @@ License: CECILL-C
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
+
   // Import stores and API functions
-  import { afterUpdate } from "svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
   import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
-  import { loadViewEmbeddings } from "../../lib/api/modelsApi";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
@@ -38,44 +37,11 @@ License: CECILL-C
   // Attributes
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let embeddings: Record<string, ort.Tensor> = {};
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
-
-  let embeddings: Record<string, ort.Tensor> = {};
-
-  afterUpdate(() => {
-    if (
-      selectedItem &&
-      $modelsUiStore.yetToLoadEmbedding &&
-      $modelsUiStore.selectedModelName !== "" &&
-      $modelsUiStore.selectedTableName !== ""
-    ) {
-      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: false }));
-      loadViewEmbeddings(
-        selectedItem.item.id,
-        $modelsUiStore.selectedTableName,
-        selectedItem.ui.datasetId,
-      )
-        .then((results) => {
-          embeddings = results;
-          modelsUiStore.update((store) => ({
-            ...store,
-            currentModalOpen: "none",
-          }));
-        })
-        .catch((err) => {
-          modelsUiStore.update((store) => ({
-            ...store,
-            selectedTableName: "",
-            currentModalOpen: "noEmbeddings",
-          }));
-          console.error("cannot load Embeddings", err);
-          embeddings = {};
-        });
-    }
-  });
 
   /**
    * Normalize the pixel values of an image to a specified range.

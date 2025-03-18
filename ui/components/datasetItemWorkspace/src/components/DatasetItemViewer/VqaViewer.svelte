@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
+  import * as ort from "onnxruntime-web";
 
   import { Canvas2D } from "@pixano/canvas2d";
   import { BaseSchema, DatasetItem, Image, LoadingModal, type ImagesPerView } from "@pixano/core";
@@ -36,6 +37,7 @@ License: CECILL-C
     itemMasks,
     itemMetas,
     messages,
+    modelsUiStore,
     newShape,
     preAnnotationIsActive,
     selectedKeypointsTemplate,
@@ -49,6 +51,7 @@ License: CECILL-C
   // Attributes
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let embeddings: Record<string, ort.Tensor> = {};
 
   // utility vars for resizing with slide bar
   let vqaAreaMaxWidth = 450; //default width
@@ -130,6 +133,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }
@@ -233,6 +237,7 @@ License: CECILL-C
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
+        {embeddings}
         {filters}
         canvasSize={vqaAreaMaxWidth}
         imageSmoothing={$imageSmoothing}
