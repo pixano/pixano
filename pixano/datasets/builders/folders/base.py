@@ -98,34 +98,34 @@ class FolderBaseBuilder(DatasetBuilder):
 
     def __init__(
         self,
-        source_dir: Path | str,
-        target_dir: Path | str,
+        media_dir: Path | str,
+        library_dir: Path | str,
         info: DatasetInfo,
+        dataset_path: Path | str,
         dataset_item: type[DatasetItem] | None = None,
-        url_prefix: Path | str | None = None,
     ) -> None:
         """Initialize the `FolderBaseBuilder`.
 
         Args:
-            source_dir: The source directory for the dataset.
-            target_dir: The target directory for the dataset.
+            media_dir: The global media directory.
+            library_dir: The global directory for Pixano datasets library.
             dataset_item: The dataset item schema.
             info: User informations (name, description, ...) for the dataset.
-            url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
-                relative path from the media directory.
+            dataset_path: Path to dataset, relative to media_dir.
         """
         info.workspace = self.WORKSPACE_TYPE
         if self.DEFAULT_SCHEMA is not None and dataset_item is None:
             dataset_item = self.DEFAULT_SCHEMA
         if dataset_item is None:
             raise ValueError("A schema is required.")
-        super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
-        self.source_dir = Path(source_dir)
-        if url_prefix is None:
-            url_prefix = Path(".")
-        else:
-            url_prefix = Path(url_prefix)
-        self.url_prefix = url_prefix
+
+        self.media_dir = Path(media_dir)
+        dataset_path = Path(dataset_path)
+        self.source_dir = self.media_dir / dataset_path
+        if not self.source_dir.is_dir():
+            raise ValueError("A source path (media_dir / dataset_path) is required.")
+
+        super().__init__(target_dir=Path(library_dir) / dataset_path, dataset_item=dataset_item, info=info)
 
         self.views_schema: dict[str, type[View]] = {}
         self.entities_schema: dict[str, type[Entity]] = {}
@@ -292,9 +292,8 @@ class FolderBaseBuilder(DatasetBuilder):
             id=shortuuid.uuid(),
             item_ref=ItemRef(id=item.id),
             url=view_file,
-            url_relative_path=self.source_dir,
+            url_relative_path=self.media_dir,
         )
-        view.url = str(self.url_prefix / view.url)
         return view
 
     def _create_vqa_entities(
