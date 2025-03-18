@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  /* eslint-disable svelte/no-at-html-tags */
   // Imports
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
