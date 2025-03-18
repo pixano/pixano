@@ -66,6 +66,7 @@ License: CECILL-C
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
     const isTopEntity = entity.data.parent_ref.id === "";
     if (!isTopEntity) return false;
+    if (entity.is_conversation) return false;
     const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
     const sameKindInSameView = annsNotTracklets?.some(
       (ann) =>
