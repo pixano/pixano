@@ -46,6 +46,7 @@ class HealthDatasetItem(DatasetItem):
 Notice that when multiple elements are attached to an item we use the `list` type.
 
 Another possibility is to use a predefined `DatasetItem` for image datasets:
+
 ```python
 class DefaultImageDatasetItem(DatasetItem):
     """Default Image DatasetItem Schema."""
@@ -56,9 +57,11 @@ class DefaultImageDatasetItem(DatasetItem):
     masks: list[CompressedRLE]
     keypoints: list[KeyPoints]
 ```
+
 This is the one used by `ImageFolderBuilder` if no schema is provided.
 
 We can override it to add or modify attributes, as shown in the following example, which is functionally equivalent:
+
 ```python
 class EntityWithCategory(Entity):
     category: str
