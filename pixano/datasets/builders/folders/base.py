@@ -220,8 +220,6 @@ class FolderBaseBuilder(DatasetBuilder):
 
                 # create view
                 views_data: list[tuple[str, View]] = []
-                all_entities_data: dict[str, list[Entity]] = defaultdict(list)
-                all_annotations_data: dict[str, list[Annotation]] = defaultdict(list)
                 for k, v in dataset_piece.items():
                     if k in self.views_schema:
                         view_name = k
@@ -245,12 +243,14 @@ class FolderBaseBuilder(DatasetBuilder):
                                     views_data.append((view_name, view))
                             else:
                                 view_file = self.source_dir / (
-                                    Path(v) if split.name in Path(v).parts else split / Path(v)
+                                    Path(v) if split.name == Path(v).parts[0] else split / Path(v)
                                 )
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
 
+                all_entities_data: dict[str, list[Entity]] = defaultdict(list)
+                all_annotations_data: dict[str, list[Annotation]] = defaultdict(list)
                 for k, v in dataset_piece.items():
                     if k in self.entities_schema and v is not None:
                         entity_name = k

@@ -21,29 +21,52 @@ In our case we have:
 - `image_type`: a string metadata.
 - `image`: the unique view of the item that is an Image.
 - `objects`: the entites of an item. Think of it as a common identifier for multiple annotations.
-- `bbox`: the bounding boxes of an item.
+- `bboxes`: the bounding boxes of an item.
+- `masks`: the masks of an item.
 - `keypoints`: the keypoints of an item.
 
 This is how it can be defined in code:
 
 ```python
 from pixano.datasets import DatasetItem
-from pixano.features import BBox, Entity, Image, KeyPoints
-
+from pixano.features import BBox, CompressedRLE, Entity, Image, KeyPoints
 
 class EntityWithCategory(Entity):
     category: str
 
-
 class HealthDatasetItem(DatasetItem):
     image: Image
     objects: list[EntityWithCategory]
-    bbox: list[BBox]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
     keypoints: list[KeyPoints]
     image_type: str
 ```
 
 Notice that when multiple elements are attached to an item we use the `list` type.
+
+Another possibility is to use a predefined `DatasetItem` for image datasets:
+```python
+class DefaultImageDatasetItem(DatasetItem):
+    """Default Image DatasetItem Schema."""
+
+    image: Image
+    objects: list[Entity]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
+    keypoints: list[KeyPoints]
+```
+This is the one used by `ImageFolderBuilder` if no schema is provided.
+
+We can override it to add or modify attributes, as shown in the following example, which is functionally equivalent:
+```python
+class EntityWithCategory(Entity):
+    category: str
+
+class HealthDatasetItem(DefaultImageDatasetItem):
+    objects: list[EntityWithCategory]
+    image_type: str
+```
 
 ### Initialize a DatasetBuilder
 
@@ -63,6 +86,8 @@ root_folder/
         ...
 ```
 
+<!--TODO explain metadata.jsonl, better describe FolderBuilder usage/possibility ?-->
+
 Therefore the `pixano.datasets.builders.ImageFolderBuilder` can be used to construct the Pixano dataset as follows:
 
 ```python
@@ -72,113 +97,123 @@ from pixano.datasets.builders import ImageFolderBuilder
 
 
 builder = ImageFolderBuilder(
-    source_dir=Path("./assets/health_images"),
-    target_dir=Path("./pixano_library/health_dataset"),
+    media_dir=Path("./assets"),
+    library_dir=Path("./pixano_library"),
     dataset_item=HealthDatasetItem,
     info=DatasetInfo(
-        id="health_images",
         name="Health Images",
         description="A dataset of health images",
     ),
-    url_prefix="/health_images"
-    # By default, the images' URLs are relative to the health_images folder.
-    # We assume Pixano will be launched with the "assets/" directory as media_dir.
+    dataset_path="/health_images"
 )
 
 dataset = builder.build(mode="create")
 ```
 
+`media_dir` and `library_dir` should be the same you provide to [launch Pixano](https://pixano.github.io/pixano/latest/getting_started/launching_the_app).
+
 #### Write your own builder
 
 While it is convenient to use built-in dataset builders, Pixano do not cover all your use-cases. Fortunatly it is possible to design your own builder by subclassing the `pixano.datasets.builders.DatasetBuilder` class and implementing the `generate_data` method.
 
-Here is roughly the code for the `ImageFolderBuilder`:
+Here is roughly the code for a custom `HealthFolderBuilder`. It is a simplified version of FolderBuilder.
 
 ```python
-from pixano.datasets.builders import DatasetBuilder
-from pixano.features import BaseSchema
+from collections import defaultdict
+from pathlib import Path
+from typing import Iterator
 
-class ImageFolderBuilder(DatasetBuilder):
-    def __init__(
-        self,
-        source_dir: Path | str,
-        target_dir: Path | str,
-        dataset_item: type[DatasetItem],
-        info: DatasetInfo,
-        url_prefix: str,
-    ) -> None:
-        super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
-        self.source_dir = Path(source_dir)
-        self.url_prefix = url_prefix
+from pixano.datasets.dataset_info import DatasetInfo
+from pixano.features import (
+    Annotation,
+    BaseSchema,
+    Entity,
+    Image,
+    SourceKind,
+)
 
-        self.view_name = "image"
-        self.view_schema: type[View] = Image
-        self.entity_name = objects
-        self.entity_schema: type[Entity] = EntityWithCategory
+
+class TestFolderBuilder(ImageFolderBuilder):
 
     def generate_data(
         self,
     ) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
-        source_id = None
+        self.source_id = self.add_source("Builder", SourceKind.OTHER)
         for split in self.source_dir.glob("*"):
-            if split.is_dir() and not split.name.startswith("."):
-                metadata = self._read_metadata(split / "metadata.jsonl")
+            if not split.is_dir() or split.name.startswith("."):
+                continue
+            try:
+                dataset_pieces = self._read_metadata(split / self.METADATA_FILENAME)
+            except FileNotFoundError:
+                raise ValueError(f"Metadata not found in {str(split)}")
 
-                for view_file in split.glob("*"):
-                    # only consider {split}/{item}.{ext} files
+            for i, dataset_piece in enumerate(dataset_pieces):
+                # split metadata in different kind
+                item_metadata = {}
+                view_metadata = {}
+                obj_metadata = {}
+                for k in dataset_piece.keys():
+                    if k in self.views_schema:
+                        view_metadata.update({k: dataset_piece.get(k, None)})
+                    elif k in self.entities_schema:
+                        obj_metadata.update({k: dataset_piece.get(k, None)})
+                    else:
+                        item_metadata.update({k: dataset_piece.get(k, None)})
+
+                # create item
+                item = self._create_item(split.name, **item_metadata)
+
+                # create view
+                views_data: list[tuple[str, Image]] = []
+                for view_name, im in view_metadata.items():
+                    # in case split is or is not in given filename
+                    view_file = self.source_dir / Path(im) if split.name == Path(im).parts[0] else split / Path(im)
                     if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
-                        # retrieve item metadata in metadata file
-                        item_metadata = {}
-                        for m in metadata:
-                            if m[self.view_name] == view_file.name:
-                                item_metadata = m
-                                break
-                        if not item_metadata:
-                            raise ValueError(f"Metadata not found for {view_file}")
+                        view = self._create_view(item, view_file, Image)
+                        views_data.append((view_name, view))
 
-                        # extract entity metadata from item metadata
-                        entities_data = item_metadata.pop(self.entity_name, None)
+                # create entities and annotations
+                all_entities_data: dict[str, list[Entity]] = defaultdict(list)
+                all_annotations_data: dict[str, list[Annotation]] = defaultdict(list)
+                for k, v in obj_metadata.items():
+                    if k in self.entities_schema and v is not None:
+                        entity_name = k
+                        raw_entities_data = v
+                        entity_schema = self.entities_schema.get(entity_name)
+                        if entity_schema is not None:
+                            entities_data, annotations_data = self._create_objects_entities(
+                                item, views_data, entity_name, entity_schema, raw_entities_data
+                            )
 
-                        # create item
-                        item = self._create_item(split.name, **item_metadata)
+                            for name, entities in entities_data.items():
+                                all_entities_data[name].extend(entities)
 
-                        # create view
-                        view = self._create_view(item, view_file, self.view_schema)
+                            for name, annotations in annotations_data.items():
+                                all_annotations_data[name].extend(annotations)
 
-                        if entities_data is None:
-                            yield {
-                                self.item_schema_name: item,
-                                self.view_name: view,
-                            }
-                            continue
-                        elif source_id is None:
-                            source_id = self.add_source("Builder", SourceKind.OTHER)
+                yield {self.item_schema_name: item}
+                for view_name, view in views_data:
+                    yield {view_name: view}
 
-                        # create entities and their annotations
-                        entities, annotations = self._create_entities(item, view, entities_data, source_id)
+                if all_entities_data is None:
+                    continue
 
-                        yield {
-                            self.item_schema_name: item,
-                            self.view_name: view,
-                            self.entity_name: entities,
-                            **annotations,
-                        }
+                yield all_entities_data
+                yield all_annotations_data
 
-builder = ImageFolderBuilder(
-    source_dir=Path("./assets/health_images"),
-    target_dir=Path("./pixano_library/health_dataset"),
-    dataset_item=HealthDatasetItem,
+
+builder = TestFolderBuilder(
+    media_dir=media_dir,
+    library_dir=library_dir,
+    dataset_item=CustomDatasetItem,
     info=DatasetInfo(
-        id="health_images",
-        name="Health Images",
-        description="A dataset of health images",
+        name=dataset_name,
+        description=dataset_description
     ),
-    url_prefix="/health_images"
-    # By default, the images' URLs are relative to the health_images folder.
-    # We assume Pixano will be launched with the "assets/" directory as media_dir.
+    dataset_path=dataset_dirname,
 )
 
-dataset = builder.build(mode="create")
+builder.build(mode="overwrite")
 ```
 
 We recommend that you take a look at the implementation of the class `pixano.datasets.builders.FolderBaseBuilder` for the complete code to understand how to construct your own builder.
