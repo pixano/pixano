@@ -10,7 +10,14 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, Message, type ImagesPerView, type SaveItem } from "@pixano/core";
+  import {
+    DatasetItem,
+    Image,
+    isImage,
+    Message,
+    type ImagesPerView,
+    type SaveItem,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
 
@@ -26,13 +33,13 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     itemMetas,
-    messages,
     newShape,
     preAnnotationIsActive,
     saveData,
     selectedKeypointsTemplate,
     selectedTool,
     textSpans,
+    textViews,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   // Attributes
@@ -42,6 +49,12 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
+
+  // utility vars for resizing with slide bar
+  let entityLinkingAreaWidth = 300; //default width
+  let expanding = false;
+  let initialAreaX = 0;
+  let initialAreaWidth = 0;
 
   /**
    * Normalize the pixel values of an image to a specified range.
@@ -82,11 +95,11 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, Image | Image[]>): Promise<ImagesPerView> => {
+  const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
-      let imageObject = Array.isArray(value) ? value[0] : value;
-      const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
+      if (!isImage(value)) return;
+      const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
@@ -97,7 +110,7 @@ License: CECILL-C
 
       const image: HTMLImageElement = document.createElement("img");
       image.src = img.toDataURL();
-      images[key] = [{ id: imageObject.id, element: image }];
+      images[key] = [{ id: value.id, element: image }];
     });
 
     await Promise.all(promises);
@@ -110,7 +123,10 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
+      const image_views = Object.fromEntries(
+        Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
+      ) as Record<string, Image>;
+      imagesPerView = await loadImages(image_views);
       loaded = true;
     }
   };
@@ -151,34 +167,58 @@ License: CECILL-C
 
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
   };
+
+  const startExpand = (e: MouseEvent) => {
+    expanding = true;
+    initialAreaX = e.clientX;
+    initialAreaWidth = entityLinkingAreaWidth;
+  };
+
+  const stopExpand = () => {
+    expanding = false;
+  };
+
+  const expand = (e: MouseEvent) => {
+    if (expanding) {
+      const delta = e.clientX - initialAreaX;
+      entityLinkingAreaWidth = Math.max(180, initialAreaWidth + delta);
+    }
+  };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full grid grid-cols-[300px_auto]">
-    <TextSpanArea
-      {imagesPerView}
-      selectedItemId={selectedItem.item.id}
-      messages={$messages}
-      colorScale={$colorScale[1]}
-      textSpans={$textSpans}
-      bind:newShape={$newShape}
-      on:messageContentChange={handleMessageContentChange}
-    />
-    <Canvas2D
-      {imagesPerView}
-      selectedItemId={selectedItem.item.id}
-      colorScale={$colorScale[1]}
-      bboxes={$itemBboxes}
-      masks={$itemMasks}
-      keypoints={$itemKeypoints}
-      selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-      {filters}
-      imageSmoothing={$imageSmoothing}
-      bind:selectedTool={$selectedTool}
-      bind:currentAnn
-      bind:newShape={$newShape}
-    />
+  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
+    <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
+      <TextSpanArea
+        textViews={$textViews}
+        selectedItemId={selectedItem.item.id}
+        colorScale={$colorScale[1]}
+        textSpans={$textSpans}
+        bind:newShape={$newShape}
+        on:messageContentChange={handleMessageContentChange}
+      />
+    </div>
+    <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />
+    <div class="overflow-hidden grow">
+      <Canvas2D
+        {imagesPerView}
+        selectedItemId={selectedItem.item.id}
+        colorScale={$colorScale[1]}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        keypoints={$itemKeypoints}
+        selectedKeypointTemplate={templates.find(
+          (t) => t.template_id === $selectedKeypointsTemplate,
+        )}
+        {filters}
+        canvasSize={entityLinkingAreaWidth}
+        imageSmoothing={$imageSmoothing}
+        bind:selectedTool={$selectedTool}
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    </div>
   </div>
 {:else}
   <div class="w-full h-full flex items-center justify-center">

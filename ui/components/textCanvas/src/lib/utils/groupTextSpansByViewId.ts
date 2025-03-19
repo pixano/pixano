@@ -6,12 +6,12 @@ License: CECILL-C
 
 import type { TextSpan } from "@pixano/core";
 
-export const groupTextSpansByMessageId = (textSpans: TextSpan[]) =>
+export const groupTextSpansByViewId = (textSpans: TextSpan[]) =>
   textSpans.reduce(
     (acc, span) => {
-      const messageId = span.data.annotation_ref.id;
-      if (!acc[messageId]) acc[messageId] = [];
-      acc[messageId].push(span);
+      const viewId = span.data.view_ref.id;
+      if (!acc[viewId]) acc[viewId] = [];
+      acc[viewId].push(span);
       return acc;
     },
     {} as Record<string, TextSpan[]>,

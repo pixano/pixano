@@ -5,7 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  /* eslint-disable svelte/no-at-html-tags */
   // Imports
+  import { onMount } from "svelte";
   import { derived } from "svelte/store";
 
   import {
@@ -64,6 +66,7 @@ License: CECILL-C
   const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
     const isTopEntity = entity.data.parent_ref.id === "";
     if (!isTopEntity) return false;
+    if (entity.is_conversation) return false;
     const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
     const sameKindInSameView = annsNotTracklets?.some(
       (ann) =>
@@ -113,17 +116,30 @@ License: CECILL-C
     let topEntitySchema: DS_NamedSchema | undefined = undefined;
     let subEntitySchema: DS_NamedSchema | undefined = undefined;
     let trackSchemas: DS_NamedSchema[] = [];
+    let multiModalSchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
       if (sch.base_schema === BaseSchema.Track) {
         trackSchemas.push({ ...sch, name });
       }
     });
+    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
+      if (sch.base_schema === BaseSchema.MultiModalEntity) {
+        multiModalSchemas.push({ ...sch, name });
+      }
+    });
     let entitySchemas: DS_NamedSchema[] = [];
     Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
-      if (sch.base_schema === BaseSchema.Entity) entitySchemas.push({ ...sch, name });
+      if (sch.base_schema === BaseSchema.Entity) {
+        entitySchemas.push({ ...sch, name });
+      }
     });
     if (trackSchemas.length > 0) {
       topEntitySchema = trackSchemas[0];
+      if (entitySchemas.length > 0) {
+        subEntitySchema = entitySchemas[0];
+      }
+    } else if (multiModalSchemas.length > 0) {
+      topEntitySchema = multiModalSchemas[0];
       if (entitySchemas.length > 0) {
         subEntitySchema = entitySchemas[0];
       }
@@ -436,11 +452,22 @@ License: CECILL-C
       newShape.set({ status: "none", shouldReset: true });
     }
   }
+
+  //set specific header text for different kind of shape
+  let saveText = "Save";
+  onMount(() => {
+    if ($newShape.status === "saving") {
+      saveText = saveText + " " + $newShape.type;
+      if ($newShape.type === SaveShapeType.textSpan) {
+        saveText = saveText + " <i>" + $newShape.attrs.mention + "</i>";
+      }
+    }
+  });
 </script>
 
 {#if $newShape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-    <p>Save {$newShape.type}</p>
+    <p>{@html saveText}</p>
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
       <CreateFeatureInputs
         bind:isFormValid
