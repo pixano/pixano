@@ -4,24 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { TextSpanType } from "@pixano/core";
+import type { Reference, TextSpanTypeWithViewRef } from "@pixano/core";
 
-export const editorSelectionToTextSpan = ({
-  editableDiv,
-  messageId,
-}: {
-  editableDiv: HTMLElement;
-  messageId: string;
-}): TextSpanType | null => {
+export const editorSelectionToTextSpan = (
+  editableDiv: HTMLElement,
+  viewRef: Reference,
+): TextSpanTypeWithViewRef | null => {
   const selection = window.getSelection();
 
   if (!selection?.rangeCount) {
     return null;
   }
-
-  //TMP for lint -- should be used later (?) but not yet -- lint is quite boring sometimes...
-  if (messageId == "") console.log();
-  ////
 
   const selectedText = selection.toString();
 
@@ -41,5 +34,6 @@ export const editorSelectionToTextSpan = ({
     spans_start: [span_start],
     spans_end: [span_start + selectedText.length - 1],
     mention: selectedText,
-  };
+    view_ref: viewRef,
+  } as TextSpanTypeWithViewRef;
 };

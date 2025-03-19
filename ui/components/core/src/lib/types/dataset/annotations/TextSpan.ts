@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import { type BaseDataFields } from "../datasetTypes";
+import type { BaseDataFields, Reference } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -20,6 +20,9 @@ export const textSpanSchema = z
   .passthrough();
 
 export type TextSpanType = z.infer<typeof textSpanSchema>;
+export type TextSpanTypeWithViewRef = TextSpanType & {
+  view_ref: Reference;
+};
 
 export class TextSpan extends Annotation {
   declare data: TextSpanType & AnnotationType;

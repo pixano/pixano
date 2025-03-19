@@ -16,8 +16,6 @@ License: CECILL-C
   export let textSpanAttributes: TextSpanType | null = null;
   export let textView: TextView;
 
-  const messageId = textView.id;
-
   $: richEditorContent = textSpansToHtml({ text: textView.data.content, textSpans, colorScale });
 
   const mouseupListener = (
@@ -25,7 +23,10 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLDivElement;
     },
   ) => {
-    textSpanAttributes = editorSelectionToTextSpan({ editableDiv: e.currentTarget, messageId });
+    textSpanAttributes = editorSelectionToTextSpan(e.currentTarget, {
+      id: textView.id,
+      name: textView.table_info.name,
+    });
   };
 </script>
 

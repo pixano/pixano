@@ -5,7 +5,14 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { SaveShapeType, TextSpan, TextView, type Shape, type TextSpanType } from "@pixano/core";
+  import {
+    SaveShapeType,
+    TextSpan,
+    TextView,
+    type Shape,
+    type TextSpanAttributes,
+    type TextSpanTypeWithViewRef,
+  } from "@pixano/core";
 
   import { SpannableTextView } from "./components";
   import { groupTextSpansByViewId } from "./lib";
@@ -17,25 +24,24 @@ License: CECILL-C
   export let textSpans: TextSpan[];
   export let textViews: TextView[];
 
-  const viewRef = { id: textViews[0].id, name: "text" };
-
-  let textSpanAttributes: TextSpanType | null = null;
+  let textSpanAttributes: TextSpanTypeWithViewRef | null = null;
 
   $: spansByViewId = groupTextSpansByViewId(textSpans);
 
   const onTagText = () => {
     if (!textSpanAttributes) return;
 
+    const { view_ref, ...textSpanAttrs } = textSpanAttributes;
     // Changing newShape opens the window for customizing and saving a new
     // anotation in the object inspector
     newShape = {
-      viewRef,
+      viewRef: view_ref,
       itemId: selectedItemId,
       imageWidth: 0,
       imageHeight: 0,
       status: "saving",
       type: SaveShapeType.textSpan,
-      attrs: textSpanAttributes,
+      attrs: textSpanAttrs as TextSpanAttributes,
     };
   };
 </script>
