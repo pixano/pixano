@@ -72,7 +72,7 @@ print(num_images)
 2. Create the SAM embeddings table.
 
 ```python
-from pixano.features import ViewEmbedding, NDArrayFloat
+from pixano.features import ViewEmbedding
 from pixano.datasets.dataset_schema import SchemaRelation
 from lancedb.pydantic import Vector
 

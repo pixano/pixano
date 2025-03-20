@@ -85,7 +85,7 @@ def _create_folder(
     with_jsonl: bool = True,
     mode: str = "image",
 ):
-    source_dir = Path(tempfile.mkdtemp())
+    source_dir = Path(tempfile.mkdtemp()) / "test_dataset"
     for split, num_items in zip(splits, num_items_per_split):
         for item in range(num_items):
             sample_path = samples_path[item % len(samples_path)]
@@ -141,45 +141,50 @@ def edge_case_folder():
 @pytest.fixture
 def image_folder_builder(image_folder, dataset_item_image_bboxes_keypoints):
     return ImageFolderBuilder(
-        source_dir=image_folder,
-        target_dir=tempfile.mkdtemp(),
+        media_dir=image_folder.parent,
+        library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
         dataset_item=dataset_item_image_bboxes_keypoints,
+        dataset_path=image_folder.name,
     )
 
 
 @pytest.fixture
 def vqa_folder_builder_no_jsonl(folder_no_jsonl):
     return VQAFolderBuilder(
-        source_dir=folder_no_jsonl,
-        target_dir=tempfile.mkdtemp(),
+        media_dir=folder_no_jsonl.parent,
+        library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
+        dataset_path=folder_no_jsonl.name,
     )
 
 
 @pytest.fixture
 def vqa_folder_builder(vqa_folder):
     return VQAFolderBuilder(
-        source_dir=vqa_folder,
-        target_dir=tempfile.mkdtemp(),
+        media_dir=vqa_folder.parent,
+        library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
+        dataset_path=vqa_folder.name,
     )
 
 
 @pytest.fixture
 def edge_case_folder_builder(edge_case_folder):
     return ImageFolderBuilder(
-        source_dir=edge_case_folder,
-        target_dir=tempfile.mkdtemp(),
+        media_dir=edge_case_folder.parent,
+        library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
+        dataset_path=edge_case_folder.name,
     )
 
 
 @pytest.fixture
 def video_folder_builder(video_folder, dataset_item_video_bboxes_keypoint):
     return VideoFolderBuilder(
-        source_dir=video_folder,
-        target_dir=tempfile.mkdtemp(),
+        media_dir=video_folder.parent,
+        library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
         dataset_item=dataset_item_video_bboxes_keypoint,
+        dataset_path=video_folder.name,
     )
