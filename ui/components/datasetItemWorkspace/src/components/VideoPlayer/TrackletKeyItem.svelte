@@ -38,7 +38,7 @@ License: CECILL-C
 
   $: {
     const currentObjectBeingEdited = $annotations.find(
-      (object) => object.ui.displayControl?.editing,
+      (object) => object.ui.displayControl.editing,
     );
     isItemBeingEdited =
       itemFrameIndex === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;

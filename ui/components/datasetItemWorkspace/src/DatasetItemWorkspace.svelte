@@ -53,7 +53,10 @@ License: CECILL-C
   let isSaving: boolean = false;
 
   const back2front = (ann: Annotation): Annotation => {
-    ann.ui = { datasetItemType: selectedItem.ui.type };
+    ann.ui = {
+      datasetItemType: selectedItem.ui.type,
+      displayControl: { hidden: false, editing: false },
+    };
     if (ann.table_info.base_schema === BaseSchema.Mask) {
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;

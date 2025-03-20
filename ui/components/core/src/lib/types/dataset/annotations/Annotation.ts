@@ -32,7 +32,7 @@ export type AnnotationType = z.infer<typeof annotationSchema>; //export if neede
 export type AnnotationUIFields = {
   datasetItemType: WorkspaceType;
   //features: Record<string, ItemFeature>;
-  displayControl?: DisplayControl;
+  displayControl: DisplayControl;
   highlighted?: "none" | "self" | "all";
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
@@ -41,7 +41,10 @@ export type AnnotationUIFields = {
 
 export abstract class Annotation extends BaseData<AnnotationType> {
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);

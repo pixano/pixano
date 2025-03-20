@@ -28,7 +28,10 @@ export class Mask extends Annotation {
     opacity?: number;
     strokeFactor?: number;
     svg?: string[];
-  } = { datasetItemType: WorkspaceType.UNDEFINED };
+  } = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== BaseSchema.Mask) throw new Error("Not a Mask");
