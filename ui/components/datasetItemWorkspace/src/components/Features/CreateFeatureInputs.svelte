@@ -51,10 +51,11 @@ License: CECILL-C
     Object.entries(schema?.schemas ?? {}).forEach(([tname, sch]) => {
       let nonFeatsFields: string[] = [];
       let group = "entities";
-      if ([BaseSchema.Entity, BaseSchema.Track, baseSchema].includes(sch.base_schema)) {
-        if (sch.base_schema === BaseSchema.Entity || sch.base_schema === BaseSchema.Track) {
-          nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
-        }
+      if (
+        [BaseSchema.Entity, BaseSchema.Track, BaseSchema.MultiModalEntity, baseSchema].includes(
+          sch.base_schema,
+        )
+      ) {
         if (baseSchema === sch.base_schema) {
           group = "annotations";
           if (baseSchema === BaseSchema.BBox)
@@ -69,6 +70,8 @@ License: CECILL-C
             nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
           if (baseSchema === BaseSchema.Message)
             nonFeatsFields = nonFeatsFields.concat(Message.nonFeaturesFields());
+        } else {
+          nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
         }
         //TODO: custom fields from other types
         for (const feat in sch.fields) {

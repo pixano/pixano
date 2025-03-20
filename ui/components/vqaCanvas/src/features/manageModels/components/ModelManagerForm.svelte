@@ -188,7 +188,9 @@ License: CECILL-C
   </select>
 
   <IconButton
-    tooltipContent="Instantiate a model"
+    tooltipContent={isInferenceApiConnected
+      ? "Instantiate a model"
+      : "Pixano Inference is not connected"}
     disabled={!isInferenceApiConnected}
     on:click={handleOpenAddModelModal}
   >

@@ -13,7 +13,7 @@ License: CECILL-C
   // Import stores and API functions
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
+  import { DatasetItem, Image, isImage, type ImagesPerView } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -85,6 +85,7 @@ License: CECILL-C
   const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
+      if (!isImage(value)) return;
       const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";

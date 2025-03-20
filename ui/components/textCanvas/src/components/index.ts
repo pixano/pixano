@@ -4,4 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export { default as SpannableMessage } from "./SpannableMessage.svelte";
+export { default as SpannableTextView } from "./SpannableTextView.svelte";

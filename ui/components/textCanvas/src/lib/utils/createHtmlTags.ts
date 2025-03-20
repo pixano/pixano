@@ -29,6 +29,7 @@ export const createHtmlTags = ({
 
   if (hidden) {
     element.style.backgroundColor = "transparent";
+    element.style.color = "black";
   }
 
   for (const [key, value] of Object.entries(metadata)) {

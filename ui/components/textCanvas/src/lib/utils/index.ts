@@ -6,6 +6,6 @@ License: CECILL-C
 
 export * from "./createHtmlTags";
 export * from "./editorSelectionToTextSpan";
-export * from "./groupTextSpansByMessageId";
+export * from "./groupTextSpansByViewId";
 export * from "./htmlToTextSpans";
 export * from "./textSpansToHtml";
