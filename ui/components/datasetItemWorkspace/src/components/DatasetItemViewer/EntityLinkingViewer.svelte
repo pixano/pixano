@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
+  import * as ort from "onnxruntime-web";
 
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -33,6 +34,7 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     itemMetas,
+    modelsUiStore,
     newShape,
     preAnnotationIsActive,
     saveData,
@@ -45,6 +47,7 @@ License: CECILL-C
   // Attributes
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let embeddings: Record<string, ort.Tensor> = {};
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -123,6 +126,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       const image_views = Object.fromEntries(
         Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
       ) as Record<string, Image>;
@@ -211,6 +215,7 @@ License: CECILL-C
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
+        {embeddings}
         {filters}
         canvasSize={entityLinkingAreaWidth}
         imageSmoothing={$imageSmoothing}
