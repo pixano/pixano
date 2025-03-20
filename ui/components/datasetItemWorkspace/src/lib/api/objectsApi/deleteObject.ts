@@ -56,7 +56,7 @@ const deleteEntity = (entity: Entity) => {
   );
 };
 
-export const deleteObject = (entity, child: Annotation | null = null) => {
+export const deleteObject = (entity: Entity, child: Annotation | null = null) => {
   //if no child, child is the only child, or child is last tracklet, delete full entity
   if (
     !child ||

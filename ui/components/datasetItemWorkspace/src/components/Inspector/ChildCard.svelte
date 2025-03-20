@@ -48,7 +48,11 @@ License: CECILL-C
         <Pencil class="h-4" />
       </IconButton>
     {/if}
-    <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity, child)}>
+    <IconButton
+      tooltipContent="Delete object"
+      redconfirm
+      on:click={() => deleteObject(entity, child)}
+    >
       <Trash2 class="h-4" />
     </IconButton>
   </div>
