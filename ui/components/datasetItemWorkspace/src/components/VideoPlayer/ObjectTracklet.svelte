@@ -147,7 +147,7 @@ License: CECILL-C
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-10": tracklet.ui.highlighted === "none",
+      "opacity-30": tracklet.ui.highlighted === "none" || tracklet.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >

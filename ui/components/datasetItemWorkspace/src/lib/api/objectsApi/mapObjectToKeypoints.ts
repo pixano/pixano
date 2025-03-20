@@ -16,7 +16,7 @@ export const mapObjectToKeypoints = (
   if (
     !keypoints ||
     !keypoints.data.view_ref.name ||
-    (keypoints.ui.datasetItemType === WorkspaceType.VIDEO && keypoints.ui.displayControl?.hidden)
+    (keypoints.ui.datasetItemType === WorkspaceType.VIDEO && keypoints.ui.displayControl.hidden)
   )
     return;
   const template = templates.find((t) => t.template_id === keypoints.data.template_id);

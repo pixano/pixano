@@ -25,7 +25,10 @@ export class Keypoints extends Annotation {
   declare data: KeypointsType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== BaseSchema.Keypoints) throw new Error("Not a Keypoints");

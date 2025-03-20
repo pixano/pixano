@@ -69,7 +69,10 @@ License: CECILL-C
     clearInterval($videoControls.intervalId);
     $videoControls.intervalId = 0;
     currentFrameIndex.set(
-      Math.round((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
+      Math.min(
+        Math.round((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
+        imageFilesLength - 1,
+      ),
     );
     updateView($currentFrameIndex);
     resetTool();

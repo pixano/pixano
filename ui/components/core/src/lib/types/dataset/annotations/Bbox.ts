@@ -31,7 +31,10 @@ export class BBox extends Annotation {
     strokeFactor?: number;
     tooltip?: string;
     startRef?: BBox; //for interpolated box
-  } = { datasetItemType: WorkspaceType.UNDEFINED };
+  } = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== BaseSchema.BBox) throw new Error("Not a BBox");

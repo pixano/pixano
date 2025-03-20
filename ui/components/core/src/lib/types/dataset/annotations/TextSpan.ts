@@ -30,7 +30,10 @@ export class TextSpan extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     bgColor?: string;
-  } = { datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING };
+  } = {
+    datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<TextSpanType>) {
     if (obj.table_info.base_schema !== BaseSchema.TextSpan) throw new Error("Not a TextSpan");

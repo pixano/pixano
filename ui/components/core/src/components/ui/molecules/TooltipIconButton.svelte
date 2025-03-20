@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { createEventDispatcher } from "svelte";
+
   import { cn } from "../../../lib/utils/styleUtils";
   import { Button } from "../button";
   import * as Tooltip from "../tooltip";
@@ -13,6 +15,23 @@ License: CECILL-C
   export let tooltipContent: string = "";
   export let selected: boolean = false;
   export let disabled: boolean = false;
+  export let redconfirm: boolean = false;
+
+  let redConfirmState = false; // Internal state for double confirmation
+  const dispatch = createEventDispatcher();
+
+  function handleClick(event: Event) {
+    if (redconfirm && !redConfirmState) {
+      // First click -> activate confirmation mode (turns red)
+      redConfirmState = true;
+      event.stopPropagation(); // Prevent immediate action execution
+      setTimeout(() => (redConfirmState = false), 3000); // Auto-reset after 3s
+    } else {
+      // Second click OR normal behavior (redconfirm=false) -> propagate event
+      redConfirmState = false;
+      dispatch("click", event); // Manually trigger original on:click
+    }
+  }
 </script>
 
 <Tooltip.Root>
@@ -21,9 +40,10 @@ License: CECILL-C
       {disabled}
       size="icon"
       class={cn("bg-transparent text-slate-800 hover:bg-primary-light relative", {
+        "bg-red-500 hover:bg-red-500": redConfirmState,
         "bg-primary text-white": selected,
       })}
-      on:click
+      on:click={handleClick}
       on:mouseover
     >
       <slot />

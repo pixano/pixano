@@ -27,7 +27,11 @@ export class Tracklet extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     childs: Annotation[];
-  } = { datasetItemType: WorkspaceType.VIDEO, childs: [] };
+  } = {
+    datasetItemType: WorkspaceType.VIDEO,
+    childs: [],
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<TrackletType>) {
     if (obj.table_info.base_schema !== BaseSchema.Tracklet) throw new Error("Not a Tracklet");

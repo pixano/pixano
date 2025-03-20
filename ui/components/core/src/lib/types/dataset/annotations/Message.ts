@@ -63,7 +63,10 @@ export class Message extends Annotation {
   declare data: MessageType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.IMAGE_VQA };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.IMAGE_VQA,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<MessageType>) {
     if (obj.table_info.base_schema !== BaseSchema.Message) throw new Error("Not a Message");

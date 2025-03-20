@@ -87,11 +87,11 @@ export const boxLinearInterpolation = (
   interpolatedBox.id = nanoid(10);
   interpolatedBox.ui.frame_index = imageIndex;
   interpolatedBox.ui.displayControl = {
-    hidden: startBox.ui.displayControl?.hidden,
+    hidden: startBox.ui.displayControl.hidden,
     editing: false,
   };
   //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-  interpolatedBox.ui.highlighted = startBox.ui.displayControl?.editing
+  interpolatedBox.ui.highlighted = startBox.ui.displayControl.editing
     ? "none"
     : startBox.ui.highlighted;
   interpolatedBox.data.view_ref.id = view_id;
