@@ -14,7 +14,6 @@ License: CECILL-C
   import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let child: Annotation;
-  export let color: string;
   export let handleSetDisplayControl: (
     displayControlProperty: keyof DisplayControl,
     new_value: boolean,
@@ -24,11 +23,7 @@ License: CECILL-C
   export let deleteObject: (child: Annotation | null) => void;
 </script>
 
-<div
-  class="flex justify-between border-2"
-  style={`background: ${child.ui.highlighted === "self" ? `${color}8a` : "white"};
-        border-color: ${child.ui.highlighted === "self" ? color : "transparent"}`}
->
+<div class="flex justify-between border-2 bg-transparent border-transparent">
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
       on:click={() => handleSetDisplayControl("hidden", !child.ui.displayControl.hidden, child)}

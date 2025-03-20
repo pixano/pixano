@@ -68,10 +68,7 @@ License: CECILL-C
 
   $: if (isEditing) {
     open = true;
-  } else {
-    open = false;
   }
-
   const isAllowedChild = (child: Annotation): boolean => {
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
@@ -443,13 +440,7 @@ License: CECILL-C
               {#key $currentFrameIndex}
                 {#if entity.ui.childs}
                   {#each entity.ui.childs.filter((ann) => isAllowedChild(ann)) as child}
-                    <ChildCard
-                      {child}
-                      {color}
-                      {handleSetDisplayControl}
-                      {onEditIconClick}
-                      {deleteObject}
-                    />
+                    <ChildCard {child} {handleSetDisplayControl} {onEditIconClick} {deleteObject} />
                   {/each}
                 {/if}
               {/key}

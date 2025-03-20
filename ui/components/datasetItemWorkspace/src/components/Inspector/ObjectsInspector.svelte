@@ -19,6 +19,7 @@ License: CECILL-C
     mediaViews,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { sortEntites } from "../../lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
@@ -48,7 +49,7 @@ License: CECILL-C
       const top_entity = getTopEntity(ann);
       if (!top_entity.is_conversation) allTopEntitiesSet.add(top_entity);
     });
-    allTopEntities = Array.from(allTopEntitiesSet);
+    allTopEntities = Array.from(allTopEntitiesSet).sort(sortEntites);
     selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
