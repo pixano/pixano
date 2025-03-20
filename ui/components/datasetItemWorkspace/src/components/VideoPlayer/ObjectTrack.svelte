@@ -28,6 +28,7 @@ License: CECILL-C
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     addOrUpdateSaveItem,
+    deleteObject,
     getPixanoSource,
     getTopEntity,
     highlightObject,
@@ -276,48 +277,6 @@ License: CECILL-C
     annotations.update((objects) => objects.concat(newOnRight));
   };
 
-  const onDeleteTrackletClick = (tracklet: Tracklet) => {
-    const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
-    let entitiesToDelete: Entity[] = [];
-    entities.update((objects) =>
-      objects
-        .map((entity) => {
-          if (entity.is_track && entity.id === track.id) {
-            entity.ui.childs = entity.ui.childs?.filter(
-              (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
-            );
-          }
-          if (entity.ui.childs?.length == 0) {
-            entitiesToDelete.push(entity);
-          }
-          return entity;
-        })
-        .filter((entity) => !entitiesToDelete.includes(entity)),
-    );
-    annotations.update((anns) =>
-      anns.filter((ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id),
-    );
-    tracklet.ui.childs?.forEach((ann) => {
-      const save_del_ann: SaveItem = {
-        change_type: "delete",
-        object: ann,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
-    });
-    const save_del_tracklet: SaveItem = {
-      change_type: "delete",
-      object: tracklet,
-    };
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_tracklet));
-    entitiesToDelete.forEach((entityToDelete) => {
-      const save_del_entity: SaveItem = {
-        change_type: "delete",
-        object: entityToDelete,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_entity));
-    });
-  };
-
   const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
     let previous: number = 0;
     let next: number = $lastFrameIndex;
@@ -414,7 +373,7 @@ License: CECILL-C
         {onContextMenu}
         {onEditKeyItemClick}
         onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
-        onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
+        onDeleteTrackletClick={() => deleteObject(track, tracklet)}
         {findNeighborItems}
         {moveCursorToPosition}
         {resetTool}

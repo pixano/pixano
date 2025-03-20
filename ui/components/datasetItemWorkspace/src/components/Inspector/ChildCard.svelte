@@ -9,10 +9,12 @@ License: CECILL-C
   import { Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { Annotation, IconButton, type DisplayControl } from "@pixano/core";
+  import { Annotation, Entity, IconButton, type DisplayControl } from "@pixano/core";
 
+  import { deleteObject } from "../../lib/api/objectsApi";
   import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
 
+  export let entity: Entity;
   export let child: Annotation;
   export let handleSetDisplayControl: (
     displayControlProperty: keyof DisplayControl,
@@ -20,7 +22,6 @@ License: CECILL-C
     child: Annotation | null,
   ) => void;
   export let onEditIconClick: (child: Annotation | null) => void;
-  export let deleteObject: (child: Annotation | null) => void;
 </script>
 
 <div class="flex justify-between border-2 bg-transparent border-transparent">
@@ -47,7 +48,7 @@ License: CECILL-C
         <Pencil class="h-4" />
       </IconButton>
     {/if}
-    <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(child)}>
+    <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity, child)}>
       <Trash2 class="h-4" />
     </IconButton>
   </div>

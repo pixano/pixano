@@ -23,6 +23,7 @@ export * from "./addOrUpdateSaveItem";
 export * from "./defineCreatedEntity";
 export * from "./defineCreatedObject";
 export * from "./defineObjectThumbnail";
+export * from "./deleteObject";
 export * from "./getPixanoSource";
 export * from "./getTable";
 export * from "./getTopEntity";

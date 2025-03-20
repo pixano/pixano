@@ -13,7 +13,10 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
+    BaseSchema,
+    cn,
     Entity,
+    IconButton,
     Item,
     Tracklet,
     WorkspaceType,
@@ -21,13 +24,13 @@ License: CECILL-C
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
-  import { BaseSchema, cn, IconButton } from "@pixano/core/src";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { createFeature } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
     defineObjectThumbnail,
+    deleteObject,
     getTopEntity,
     highlightObject,
     toggleObjectDisplayControl,
@@ -197,59 +200,6 @@ License: CECILL-C
   };
   */
 
-  const deleteObject = (child: Annotation | null = null) => {
-    //if child is not the only child, delete child only (with tracklet childs if child is a tracklet)
-    if (child && entity.ui.childs && entity.ui.childs.length > 1) {
-      const save_item: SaveItem = {
-        change_type: "delete",
-        object: child,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      const to_delete_id = [child.id];
-      if (child.is_type(BaseSchema.Tracklet)) {
-        to_delete_id.push(...(child as Tracklet).ui.childs.map((ann) => ann.id));
-      }
-      annotations.update((oldObjects) => oldObjects.filter((ann) => ann.id !== child.id));
-      entities.update((oldObjects) =>
-        oldObjects.map((ent) => {
-          if (ent.id === entity.id) {
-            ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== child.id);
-          }
-          return ent;
-        }),
-      );
-    } else {
-      const save_item: SaveItem = {
-        change_type: "delete",
-        object: entity,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      //delete eventual sub entities
-      const subentities = $entities.filter((ent) => ent.data.parent_ref.id === entity.id);
-      for (const subent of subentities) {
-        const save_item: SaveItem = {
-          change_type: "delete",
-          object: subent,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      }
-      for (const ann of entity.ui.childs || []) {
-        const save_item: SaveItem = {
-          change_type: "delete",
-          object: ann,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-      }
-      const subent_ids = subentities.map((subent) => subent.id);
-      annotations.update((oldObjects) =>
-        oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_ref.id)),
-      );
-      entities.update((oldObjects) =>
-        oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
-      );
-    }
-  };
-
   const saveInputChange = (
     value: string | boolean | number,
     propertyName: string,
@@ -407,7 +357,7 @@ License: CECILL-C
             <Pencil class="h-4" />
           </IconButton>
         {/if}
-        <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject()}>
+        <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity)}>
           <Trash2 class="h-4" />
         </IconButton>
       {/if}
@@ -440,7 +390,7 @@ License: CECILL-C
               {#key $currentFrameIndex}
                 {#if entity.ui.childs}
                   {#each entity.ui.childs.filter((ann) => isAllowedChild(ann)) as child}
-                    <ChildCard {child} {handleSetDisplayControl} {onEditIconClick} {deleteObject} />
+                    <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
                   {/each}
                 {/if}
               {/key}
