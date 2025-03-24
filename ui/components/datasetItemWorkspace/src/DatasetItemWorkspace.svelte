@@ -102,7 +102,10 @@ License: CECILL-C
     Object.values(selectedItem.entities).forEach((item_entities) => {
       item_entities.forEach((entity) => {
         //build childs list
-        entity.ui = { childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id) };
+        entity.ui = {
+          ...entity.ui,
+          childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id),
+        };
         newEntities.push(entity);
         if (entity.data.parent_ref.id !== "" && entity.ui.childs) {
           if (entity.data.parent_ref.id in subEntitiesChilds) {

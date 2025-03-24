@@ -40,6 +40,7 @@ License: CECILL-C
     data: { name: "All", kind: "Global", metadata: {} },
   });
 
+  let somethingChanged = 0;
   $: $annotations, $entities, handleAnnotationSortedByModel(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 
   const handleAnnotationSortedByModel = () => {
@@ -74,6 +75,8 @@ License: CECILL-C
         }
       }
     }
+    //hack to refresh ObjectInspector every time this function is call
+    somethingChanged = (somethingChanged + 1) % 2;
   };
 
   afterUpdate(() => {
@@ -105,7 +108,7 @@ License: CECILL-C
       {/each}
     {/if}
     <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-      {#key allTopEntities.length}
+      {#key somethingChanged}
         {#each allTopEntities as entity}
           <ObjectCard {entity} />
         {/each}

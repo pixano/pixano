@@ -32,6 +32,7 @@ License: CECILL-C
     getPixanoSource,
     getTopEntity,
     highlightObject,
+    relink,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo, updateView } from "../../lib/api/videoApi";
   import {
@@ -261,6 +262,11 @@ License: CECILL-C
     ];
   };
 
+  const relinkTracklet = (track: Entity, tracklet: Tracklet) => {
+    console.log("RELINK from VideoInspector: not implemented yet !", track, tracklet);
+    relink(tracklet, track, "new");
+  };
+
   const onSplitTrackletClick = (tracklet: Tracklet) => {
     const [prev, next] = findPreviousAndNext(tracklet);
     const newOnRight = splitTrackletInTwo(tracklet, prev, next);
@@ -374,6 +380,7 @@ License: CECILL-C
         {onEditKeyItemClick}
         onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
         onDeleteTrackletClick={() => deleteObject(track, tracklet)}
+        onRelinkTrackletClick={() => relinkTracklet(track, tracklet)}
         {findNeighborItems}
         {moveCursorToPosition}
         {resetTool}

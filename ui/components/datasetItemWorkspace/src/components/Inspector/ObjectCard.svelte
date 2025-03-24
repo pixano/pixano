@@ -55,10 +55,9 @@ License: CECILL-C
   let open: boolean = false;
   let showIcons: boolean = false;
   let highlightState: string = "all";
-  let isEditing: boolean = false;
   let isVisible: boolean = true;
 
-  let hiddenTrack = entity.is_track ? entity.ui.hidden : false;
+  let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
   $: displayName =
     (entity.data.name
@@ -69,7 +68,11 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (isEditing) {
+  $: if (
+    entity.ui.displayControl.editing ||
+    entity.ui.childs?.some((ann) => ann.ui.displayControl.editing) ||
+    highlightState === "self"
+  ) {
     open = true;
   }
   const isAllowedChild = (child: Annotation): boolean => {
@@ -130,7 +133,6 @@ License: CECILL-C
     } else {
       highlightState = "all";
     }
-    //isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl.editing) || false;
     isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false;
   });
 
@@ -138,9 +140,10 @@ License: CECILL-C
     displayControlProperty: keyof DisplayControl,
     new_value: boolean,
     child: Annotation | null = null,
+    other_anns_value: boolean | null = null,
   ) => {
     if (!child && displayControlProperty === "editing") {
-      isEditing = new_value;
+      entity.ui.displayControl.editing = new_value;
     } else {
       let tracklet_childs_ids: string[] = [];
       if (child && child.is_type(BaseSchema.Tracklet)) {
@@ -154,6 +157,8 @@ License: CECILL-C
             (!child && getTopEntity(ann).id === entity.id)
           ) {
             ann = toggleObjectDisplayControl(ann, displayControlProperty, new_value);
+          } else if (other_anns_value !== null) {
+            ann = toggleObjectDisplayControl(ann, displayControlProperty, other_anns_value);
           }
           return ann;
         }),
@@ -255,21 +260,21 @@ License: CECILL-C
 
   const onTrackVisClick = () => {
     if (entity.is_track) {
-      entity.ui.hidden = !entity.ui.hidden;
-      hiddenTrack = entity.ui.hidden;
+      entity.ui.displayControl.hidden = !entity.ui.displayControl.hidden;
+      hiddenTrack = entity.ui.displayControl.hidden;
       //svelte hack to refresh
       entities.set($entities);
     }
   };
 
   const onEditIconClick = (child: Annotation | null = null) => {
-    if (!child) onColoredDotClick();
-    handleSetDisplayControl(
-      "editing",
-      child ? (child.ui.displayControl.editing ?? false) : !isEditing,
-      child,
-    );
-    if (!isEditing) selectedTool.set(panTool);
+    if (child) {
+      handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
+    } else {
+      onColoredDotClick();
+      handleSetDisplayControl("editing", !entity.ui.displayControl.editing);
+    }
+    if (!entity.ui.displayControl.editing) selectedTool.set(panTool);
   };
 
   let thumbnails: ObjectThumbnail[] = [];
@@ -335,7 +340,7 @@ License: CECILL-C
     <div
       class={cn(
         "flex-shrink-0 flex items-center justify-end",
-        showIcons || isEditing
+        showIcons || entity.ui.displayControl.editing
           ? entity.is_track
             ? $selectedTool.type !== ToolType.Fusion
               ? "basis-[160px]"
@@ -347,11 +352,11 @@ License: CECILL-C
       )}
       style="min-width: 40px;"
     >
-      {#if showIcons || isEditing}
+      {#if showIcons || entity.ui.displayControl.editing}
         {#if $selectedTool.type !== ToolType.Fusion}
           <IconButton
             tooltipContent="Edit object"
-            selected={isEditing}
+            selected={entity.ui.displayControl.editing}
             on:click={() => onEditIconClick()}
           >
             <Pencil class="h-4" />
@@ -361,7 +366,7 @@ License: CECILL-C
           <Trash2 class="h-4" />
         </IconButton>
       {/if}
-      {#if entity.is_track && (showIcons || isEditing || hiddenTrack)}
+      {#if entity.is_track && (showIcons || entity.ui.displayControl.editing || hiddenTrack)}
         <IconButton
           tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
           on:click={onTrackVisClick}
@@ -399,7 +404,7 @@ License: CECILL-C
           <UpdateFeatureInputs
             featureClass="objects"
             features={$features}
-            {isEditing}
+            isEditing={entity.ui.displayControl.editing ?? false}
             {saveInputChange}
           />
           {#each thumbnails as thumbnail}

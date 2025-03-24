@@ -6,13 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Eye, EyeOff, Pencil, Trash2 } from "lucide-svelte";
+  import { Eye, EyeOff, Link, Pencil, Trash2 } from "lucide-svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { Annotation, Entity, IconButton, type DisplayControl } from "@pixano/core";
+  import { Annotation, Button, Entity, IconButton, type DisplayControl } from "@pixano/core";
 
-  import { deleteObject } from "../../lib/api/objectsApi";
+  import { deleteObject, relink } from "../../lib/api/objectsApi";
   import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
 
   export let entity: Entity;
   export let child: Annotation;
@@ -22,6 +23,14 @@ License: CECILL-C
     child: Annotation | null,
   ) => void;
   export let onEditIconClick: (child: Annotation | null) => void;
+
+  let showRelink = false;
+  let selectedEntityId: string = "new";
+
+  const handleRelink = () => {
+    relink(child, entity, selectedEntityId);
+    showRelink = false;
+  };
 </script>
 
 <div class="flex justify-between border-2 bg-transparent border-transparent">
@@ -49,6 +58,15 @@ License: CECILL-C
       </IconButton>
     {/if}
     <IconButton
+      tooltipContent="Re-link object"
+      selected={showRelink}
+      on:click={() => {
+        showRelink = true;
+      }}
+    >
+      <Link class="h-4" />
+    </IconButton>
+    <IconButton
       tooltipContent="Delete object"
       redconfirm
       on:click={() => deleteObject(entity, child)}
@@ -57,3 +75,13 @@ License: CECILL-C
     </IconButton>
   </div>
 </div>
+{#if showRelink}
+  <div class="flex flex-row gap-4 items-center mr-4">
+    <RelinkAnnotation
+      bind:selectedEntityId
+      baseSchema={child.table_info.base_schema}
+      viewRef={child.data.view_ref}
+    />
+    <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
+  </div>
+{/if}

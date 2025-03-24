@@ -9,7 +9,12 @@ import { z } from "zod";
 import { createTypedEntity } from "../../../utils/entities";
 import type { Annotation } from "../annotations";
 import { BaseSchema } from "../BaseSchema";
-import { BaseData, referenceSchema, type BaseDataFields } from "../datasetTypes";
+import {
+  BaseData,
+  referenceSchema,
+  type BaseDataFields,
+  type DisplayControl,
+} from "../datasetTypes";
 
 export const entitySchema = z
   .object({
@@ -23,12 +28,12 @@ export type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export type EntityUIFields = {
   childs?: Annotation[];
-  hidden?: boolean;
+  displayControl: DisplayControl;
 };
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  ui: EntityUIFields = { childs: [], hidden: false };
+  ui: EntityUIFields = { childs: [], displayControl: { hidden: false, editing: false } };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);

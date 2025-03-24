@@ -60,7 +60,7 @@ License: CECILL-C
     </div>
     <div class="flex flex-col grow z-10">
       {#each tracks as track (track.ui.childs)}
-        {#if !track.ui.hidden}
+        {#if !track.ui.displayControl.hidden}
           <VideoPlayerRow>
             <ObjectTrack
               slot="timeTrack"

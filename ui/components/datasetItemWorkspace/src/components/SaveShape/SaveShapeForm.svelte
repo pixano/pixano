@@ -8,12 +8,11 @@ License: CECILL-C
   /* eslint-disable svelte/no-at-html-tags */
   // Imports
   import { onMount } from "svelte";
-  import { derived } from "svelte/store";
 
   import {
     Annotation,
-    BaseSchema,
-    Entity,
+    Button,
+    SaveShapeType,
     SequenceFrame,
     Tracklet,
     WorkspaceType,
@@ -21,16 +20,16 @@ License: CECILL-C
     type SaveShape,
     type SaveTrackletShape,
   } from "@pixano/core";
-  import { Button, SaveShapeType, type DS_NamedSchema, type ItemFeature } from "@pixano/core/src";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
-    defineCreatedEntity,
     defineCreatedObject,
+    findOrCreateSubAndTopEntities,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex } from "../../lib/api/videoApi";
+  import { mapShapeType2BaseSchema, NEWTRACKLET_LENGTH } from "../../lib/constants";
   import {
     annotations,
     entities,
@@ -45,6 +44,7 @@ License: CECILL-C
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import RelinkAnnotation from "./RelinkAnnotation.svelte";
 
   export let currentTab: "scene" | "objects";
   let isFormValid: boolean = false;
@@ -52,213 +52,6 @@ License: CECILL-C
 
   let objectProperties: ObjectProperties = {};
   let selectedEntityId: string = "";
-
-  const NEWTRACKLET_LENGTH = 5;
-
-  const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
-    bbox: BaseSchema.BBox,
-    keypoints: BaseSchema.Keypoints,
-    mask: BaseSchema.Mask,
-    tracklet: BaseSchema.Tracklet,
-    textSpan: BaseSchema.TextSpan,
-  };
-
-  const isEntityAllowedAsTop = (entity: Entity, shape: SaveShape) => {
-    const isTopEntity = entity.data.parent_ref.id === "";
-    if (!isTopEntity) return false;
-    if (entity.is_conversation) return false;
-    const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
-    const sameKindInSameView = annsNotTracklets?.some(
-      (ann) =>
-        ann.data.view_ref.id === shape.viewRef.id &&
-        mapShapeType2BaseSchema[shape.type] === ann.table_info.base_schema,
-    );
-    const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
-    const overlap = tracklets?.some(
-      (ann) =>
-        (ann as Tracklet).data.view_ref.name === shape.viewRef.name &&
-        (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
-        (ann as Tracklet).data.end_timestep > $currentFrameIndex,
-    );
-    return !sameKindInSameView && !overlap;
-  };
-
-  let entitiesCombo = derived([entities, newShape], ([$entities, $newShape]) => {
-    const res: { id: string; name: string }[] = [{ id: "new", name: "New" }];
-    if ($newShape.status === "saving")
-      $entities.forEach((entity) => {
-        //check if there is no annotation of same kind & view_id for this entity
-        if (isEntityAllowedAsTop(entity, $newShape))
-          res.push({ id: entity.id, name: (entity.data.name as string) + " - " + entity.id });
-      });
-    selectedEntityId = res[0].id;
-    return res;
-  });
-
-  const findOrCreateSubAndTopEntities = (
-    shape: SaveShape,
-    endView: SequenceFrame | undefined,
-    features: Record<string, Record<string, ItemFeature>>,
-  ): {
-    topEntity: Entity;
-    subEntity: Entity | undefined;
-    secondSubEntity: Entity | undefined;
-  } => {
-    //Manage sub-entity: check if there is some subentity table(s)
-    //For video (if endView is set), we also find/create the 2nd sub-entity
-    //if so, choose the correct one, and separate topEntity from subEntity ...
-    //TMP: we should rely on "table relations" from $datasetSchema, but it's not available yet
-    //TMP: so, we will make the assumption that the only case with subentity is : 1 Track + 1 Entity (sub)
-    //TMP: -> we take trackSchemas[0] and entitySchemas[0]
-    let topEntity: Entity | undefined = undefined;
-    let subEntity: Entity | undefined = undefined;
-    let secondSubEntity: Entity | undefined = undefined;
-    let topEntitySchema: DS_NamedSchema | undefined = undefined;
-    let subEntitySchema: DS_NamedSchema | undefined = undefined;
-    let trackSchemas: DS_NamedSchema[] = [];
-    let multiModalSchemas: DS_NamedSchema[] = [];
-    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
-      if (sch.base_schema === BaseSchema.Track) {
-        trackSchemas.push({ ...sch, name });
-      }
-    });
-    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
-      if (sch.base_schema === BaseSchema.MultiModalEntity) {
-        multiModalSchemas.push({ ...sch, name });
-      }
-    });
-    let entitySchemas: DS_NamedSchema[] = [];
-    Object.entries($datasetSchema?.schemas ?? {}).forEach(([name, sch]) => {
-      if (sch.base_schema === BaseSchema.Entity) {
-        entitySchemas.push({ ...sch, name });
-      }
-    });
-    if (trackSchemas.length > 0) {
-      topEntitySchema = trackSchemas[0];
-      if (entitySchemas.length > 0) {
-        subEntitySchema = entitySchemas[0];
-      }
-    } else if (multiModalSchemas.length > 0) {
-      topEntitySchema = multiModalSchemas[0];
-      if (entitySchemas.length > 0) {
-        subEntitySchema = entitySchemas[0];
-      }
-    } else if (entitySchemas.length > 0) {
-      topEntitySchema = entitySchemas[0];
-    } else {
-      console.error("ERROR: No available schema Entity", $datasetSchema?.schemas ?? {});
-      throw new Error("ERROR: No available schema Entity");
-    }
-
-    if (selectedEntityId === "new") {
-      topEntity = defineCreatedEntity(
-        shape,
-        features[topEntitySchema.name],
-        $datasetSchema,
-        topEntitySchema,
-      );
-      topEntity.ui.childs = [];
-      if (subEntitySchema) {
-        subEntity = defineCreatedEntity(
-          shape,
-          features[subEntitySchema.name],
-          $datasetSchema,
-          subEntitySchema,
-          {
-            id: topEntity.id,
-            name: topEntity.table_info.name,
-          },
-        );
-        subEntity.ui.childs = [];
-        if (endView) {
-          secondSubEntity = defineCreatedEntity(
-            shape,
-            features[subEntitySchema.name],
-            $datasetSchema,
-            subEntitySchema,
-            {
-              id: topEntity.id,
-              name: topEntity.table_info.name,
-            },
-            { id: endView.id, name: shape.viewRef.name },
-          );
-          secondSubEntity.ui.childs = [];
-        }
-      }
-    } else {
-      topEntity = $entities.find((entity) => entity.id === selectedEntityId);
-      if (!topEntity) {
-        topEntity = defineCreatedEntity(
-          shape,
-          features[topEntitySchema.name],
-          $datasetSchema,
-          topEntitySchema,
-        );
-        topEntity.ui.childs = [];
-      }
-      if (subEntitySchema) {
-        //need to find entity with corresponding parent_ref.id and table_info.name, and view name
-        subEntity = $entities.find(
-          (entity) =>
-            //need to find entity with corresponding parent_ref.id and table_info.name, and view name
-            entity.table_info.name === subEntitySchema.name &&
-            entity.table_info.base_schema === subEntitySchema.base_schema &&
-            entity.data.parent_ref.id === topEntity!.id &&
-            //badly, *sub*entity.data.view_ref (id, or at least name) is not always set (it should!)
-            (entity.data.view_ref.id !== ""
-              ? entity.data.view_ref.id === shape.viewRef.id
-              : entity.data.view_ref.name !== ""
-                ? entity.data.view_ref.name === shape.viewRef.name
-                : entity.ui.childs?.every((ann) => ann.data.view_ref.name === shape.viewRef.name)),
-        );
-        if (!subEntity) {
-          subEntity = defineCreatedEntity(
-            shape,
-            features[subEntitySchema.name],
-            $datasetSchema,
-            subEntitySchema,
-            {
-              id: topEntity.id,
-              name: topEntity.table_info.name,
-            },
-          );
-          subEntity.ui.childs = [];
-        }
-        if (endView) {
-          secondSubEntity = $entities.find(
-            (entity) =>
-              //need to find entity with corresponding parent_ref.id and table_info.name, and view name
-              entity.table_info.name === subEntitySchema.name &&
-              entity.table_info.base_schema === subEntitySchema.base_schema &&
-              entity.data.parent_ref.id === topEntity!.id &&
-              //badly, *sub*entity.data.view_ref (id, or at least name) is not always set (it should!)
-              (entity.data.view_ref.id !== ""
-                ? entity.data.view_ref.id === endView.id
-                : entity.data.view_ref.name !== ""
-                  ? entity.data.view_ref.name === shape.viewRef.name
-                  : entity.ui.childs?.every(
-                      (ann) => ann.data.view_ref.name === shape.viewRef.name,
-                    )),
-          );
-          if (!secondSubEntity) {
-            secondSubEntity = defineCreatedEntity(
-              shape,
-              features[subEntitySchema.name],
-              $datasetSchema,
-              subEntitySchema,
-              {
-                id: topEntity.id,
-                name: topEntity.table_info.name,
-              },
-              { id: endView.id, name: shape.viewRef.name },
-            );
-            secondSubEntity.ui.childs = [];
-          }
-        }
-      }
-    }
-    return { topEntity, subEntity, secondSubEntity };
-  };
 
   const handleFormSubmit = () => {
     currentTab = "objects";
@@ -294,6 +87,7 @@ License: CECILL-C
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
     const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
+      selectedEntityId,
       $newShape,
       endView,
       features,
@@ -468,13 +262,16 @@ License: CECILL-C
 {#if $newShape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>{@html saveText}</p>
+    <RelinkAnnotation
+      bind:selectedEntityId
+      baseSchema={mapShapeType2BaseSchema[$newShape.type]}
+      viewRef={$newShape.viewRef}
+    />
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
       <CreateFeatureInputs
         bind:isFormValid
         bind:formInputs
         bind:objectProperties
-        entitiesCombo={$entitiesCombo}
-        bind:selectedEntityId
         baseSchema={mapShapeType2BaseSchema[$newShape.type]}
       />
     </div>
