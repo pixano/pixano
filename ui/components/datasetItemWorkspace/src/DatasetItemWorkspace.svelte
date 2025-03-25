@@ -68,7 +68,8 @@ License: CECILL-C
         const seqframe = ($mediaViews[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
-        if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
+        if (seqframe?.data.frame_index !== undefined)
+          ann.ui.frame_index = seqframe.data.frame_index;
       }
     }
     return ann;

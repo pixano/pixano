@@ -78,10 +78,31 @@ License: CECILL-C
     return false;
   };
 
-  let allowedChilds: Annotation[] = entity.ui.childs?.filter((ann) => isAllowedChild(ann)) ?? [];
+  const sortChilds = (a: Annotation, b: Annotation): number => {
+    // first sort by BaseSchema -- convenient because lexical order is quite good:
+    // BBox, CompressedRLE, KeyPoints, TextSpan, Tracklet
+    let res = a.table_info.base_schema.localeCompare(b.table_info.base_schema);
+    if (res === 0) {
+      if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
+        //sort by view -- we know there is only one tracklet per view
+        const orderMap = new Map(Object.keys($mediaViews).map((val, index) => [val, index]));
+        res =
+          (orderMap.get(a.data.view_ref.name) ?? Infinity) -
+          (orderMap.get(b.data.view_ref.name) ?? Infinity);
+      } else {
+        if ("name" in a.data && "name" in b.data) {
+          res = (a.data["name"] as string).localeCompare(b.data["name"] as string);
+        } else {
+          res = a.id.localeCompare(b.id);
+        }
+      }
+    }
+    return res;
+  };
+  let allowedChilds: Annotation[];
 
-  $: if ($currentFrameIndex) {
-    allowedChilds = entity.ui.childs?.filter((ann) => isAllowedChild(ann)) ?? [];
+  $: if ($currentFrameIndex !== undefined) {
+    allowedChilds = entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   }
 
   const features = derived(
