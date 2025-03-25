@@ -91,7 +91,7 @@ License: CECILL-C
           (orderMap.get(b.data.view_ref.name) ?? Infinity);
       } else {
         if ("name" in a.data && "name" in b.data) {
-          res = (a.data["name"] as string).localeCompare(b.data["name"] as string);
+          res = `${a.data["name"]}`.localeCompare(`${b.data["name"]}`);
         } else {
           res = a.id.localeCompare(b.id);
         }
