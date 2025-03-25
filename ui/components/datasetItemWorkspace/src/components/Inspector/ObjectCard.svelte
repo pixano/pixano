@@ -52,7 +52,6 @@ License: CECILL-C
   import ChildCard from "./ChildCard.svelte";
 
   export let entity: Entity;
-  let open: boolean = false;
   let showIcons: boolean = false;
   let highlightState: string = "all";
   let isVisible: boolean = true;
@@ -68,13 +67,6 @@ License: CECILL-C
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (
-    entity.ui.displayControl.editing ||
-    entity.ui.childs?.some((ann) => ann.ui.displayControl.editing) ||
-    highlightState === "self"
-  ) {
-    open = true;
-  }
   const isAllowedChild = (child: Annotation): boolean => {
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
@@ -85,6 +77,12 @@ License: CECILL-C
       return true;
     return false;
   };
+
+  let allowedChilds: Annotation[] = entity.ui.childs?.filter((ann) => isAllowedChild(ann)) ?? [];
+
+  $: if ($currentFrameIndex) {
+    allowedChilds = entity.ui.childs?.filter((ann) => isAllowedChild(ann)) ?? [];
+  }
 
   const features = derived(
     [currentFrameIndex, entities, annotations],
@@ -166,45 +164,6 @@ License: CECILL-C
     }
   };
 
-  /* TODO remove, but keep just because of the "editing" sub logic I didn't reproduce yet (if needed ?)
-  const OLDhandleSetAnnotationDisplayControl = (
-    displayControlProperty: keyof DisplayControl,
-    isVisible: boolean,
-    child: Annotation | null = null,
-  ) => {
-    annotations.update((anns) =>
-      anns.map((ann) => {
-        if (child && child.id !== ann.id) return ann;
-        if (displayControlProperty === "editing") {
-          //no change on non current anns for video
-          if (ann.ui.datasetItemType === WorkspaceType.VIDEO) {
-            if (ann.ui.frame_index !== $currentFrameIndex) return ann;
-          }
-
-          if (getTopEntity(ann).id === entity.id) {
-            if (isVisible) {
-              ann.ui.highlighted = "self";
-            } else {
-              ann.ui.highlighted = "all";
-            }
-          } else {
-            ann.ui.highlighted = "none";
-          }
-
-          ann.ui.displayControl = {
-            ...ann.ui.displayControl,
-            editing: false,
-          };
-        }
-        if (getTopEntity(ann).id === entity.id && (!child || ann.id === child.id)) {
-          ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);
-        }
-        return ann;
-      }),
-    );
-  };
-  */
-
   const saveInputChange = (
     value: string | boolean | number,
     propertyName: string,
@@ -227,6 +186,8 @@ License: CECILL-C
           return object;
         }),
       );
+      //for canvas to reflect a name change, we need to refresh annotations store too
+      annotations.update((anns) => anns);
     } else if (obj.table_info.base_schema === BaseSchema.Item) {
       console.warn("This should never happen, we don't have 'item' features in Objects Inspector.");
     } else {
@@ -251,6 +212,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
+    entity.ui.displayControl.open = true;
     const newFrameIndex = highlightObject(entity.id, highlightState === "self");
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
@@ -271,7 +233,7 @@ License: CECILL-C
     if (child) {
       handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
     } else {
-      onColoredDotClick();
+      if (!entity.ui.displayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entity.ui.displayControl.editing);
     }
     if (!entity.ui.displayControl.editing) selectedTool.set(panTool);
@@ -300,7 +262,7 @@ License: CECILL-C
 
 <article
   on:mouseenter={() => (showIcons = true)}
-  on:mouseleave={() => (showIcons = open)}
+  on:mouseleave={() => (showIcons = entity.ui.displayControl.open ?? false)}
   id={`card-object-${entity.id}`}
 >
   <div
@@ -333,6 +295,7 @@ License: CECILL-C
           "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
           "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
+        title={displayName}
       >
         {displayName}
       </span>
@@ -375,14 +338,17 @@ License: CECILL-C
         </IconButton>
       {/if}
       <IconButton
-        on:click={() => (open = !open)}
-        tooltipContent={open ? "Hide features" : "Show features"}
+        on:click={() => (entity.ui.displayControl.open = !entity.ui.displayControl.open)}
+        tooltipContent={entity.ui.displayControl.open ? "Hide features" : "Show features"}
       >
-        <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
+        <ChevronRight
+          class={cn("transition", { "rotate-90": entity.ui.displayControl.open })}
+          strokeWidth={1}
+        />
       </IconButton>
     </div>
   </div>
-  {#if open}
+  {#if entity.ui.displayControl.open}
     <div class="pl-5 text-slate-800 bg-white">
       <div
         class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
@@ -390,23 +356,26 @@ License: CECILL-C
       >
         <div class="flex flex-col gap-2">
           <div>
-            <p class="font-medium">Display</p>
+            <p class="font-medium">
+              {allowedChilds.length} Object{allowedChilds.length > 1 ? "s" : ""}
+              {entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)
+                ? ` on frame ${$currentFrameIndex}`
+                : ""}
+            </p>
             <div class="flex flex-col">
-              {#key $currentFrameIndex}
-                {#if entity.ui.childs}
-                  {#each entity.ui.childs.filter((ann) => isAllowedChild(ann)) as child}
-                    <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-                  {/each}
-                {/if}
-              {/key}
+              {#each allowedChilds as child}
+                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+              {/each}
             </div>
           </div>
-          <UpdateFeatureInputs
-            featureClass="objects"
-            features={$features}
-            isEditing={entity.ui.displayControl.editing ?? false}
-            {saveInputChange}
-          />
+          <div class="w-full block">
+            <UpdateFeatureInputs
+              featureClass="objects"
+              features={$features}
+              isEditing={entity.ui.displayControl.editing ?? false}
+              {saveInputChange}
+            />
+          </div>
           {#each thumbnails as thumbnail}
             <Thumbnail
               imageDimension={thumbnail.baseImageDimensions}

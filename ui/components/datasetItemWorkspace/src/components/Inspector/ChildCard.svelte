@@ -6,13 +6,31 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Eye, EyeOff, Link, Pencil, Trash2 } from "lucide-svelte";
+  import {
+    Eye,
+    EyeOff,
+    Link,
+    Minus,
+    Pencil,
+    Share2,
+    Square,
+    TangentIcon,
+    Trash2,
+    Type,
+  } from "lucide-svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { Annotation, Button, Entity, IconButton, type DisplayControl } from "@pixano/core";
+  import {
+    Annotation,
+    BaseSchema,
+    Button,
+    Entity,
+    IconButton,
+    type DisplayControl,
+  } from "@pixano/core";
 
   import { deleteObject, relink } from "../../lib/api/objectsApi";
-  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
 
   export let entity: Entity;
@@ -27,6 +45,7 @@ License: CECILL-C
   let showRelink = false;
   let selectedEntityId: string = "new";
 
+  const isMulitView = Object.keys($mediaViews).length > 1;
   const handleRelink = () => {
     relink(child, entity, selectedEntityId);
     showRelink = false;
@@ -45,7 +64,32 @@ License: CECILL-C
         <EyeOff class="h-4" />
       {/if}
     </IconButton>
-    <span class="flex-auto">{child.table_info.base_schema}</span>
+    <IconButton
+      disabled
+      tooltipContent={child.table_info.base_schema + (isMulitView ? " (" + child.id + ")" : "")}
+    >
+      {#if child.is_type(BaseSchema.BBox)}
+        <Square class="h-4" />
+      {/if}
+      {#if child.is_type(BaseSchema.Mask)}
+        <Share2 class="h-4" />
+      {/if}
+      {#if child.is_type(BaseSchema.Keypoints)}
+        <TangentIcon class="h-4" />
+      {/if}
+      {#if child.is_type(BaseSchema.Tracklet)}
+        <Minus class="h-4" />
+      {/if}
+      {#if child.is_type(BaseSchema.TextSpan)}
+        <Type class="h-4" />
+      {/if}
+    </IconButton>
+    <span
+      class="flex-auto block w-full truncate italic"
+      title={isMulitView ? child.data.view_ref.name : child.id}
+    >
+      {isMulitView ? child.data.view_ref.name : child.id}
+    </span>
   </div>
   <div class="flex-shrink-0 flex items-center justify-end">
     {#if $selectedTool.type !== ToolType.Fusion}
@@ -61,7 +105,7 @@ License: CECILL-C
       tooltipContent="Re-link object"
       selected={showRelink}
       on:click={() => {
-        showRelink = true;
+        showRelink = !showRelink;
       }}
     >
       <Link class="h-4" />
@@ -81,6 +125,7 @@ License: CECILL-C
       bind:selectedEntityId
       baseSchema={child.table_info.base_schema}
       viewRef={child.data.view_ref}
+      tracklet={child}
     />
     <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
   </div>

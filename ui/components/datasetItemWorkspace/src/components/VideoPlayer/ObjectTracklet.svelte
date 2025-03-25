@@ -193,6 +193,7 @@ License: CECILL-C
           bind:selectedEntityId
           baseSchema={tracklet.table_info.base_schema}
           viewRef={tracklet.data.view_ref}
+          {tracklet}
         />
         <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
       </div>

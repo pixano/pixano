@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { derived } from "svelte/store";
 
-  import { BaseSchema, Entity, Tracklet, type Reference } from "@pixano/core";
+  import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "@pixano/core";
 
   import { NEWTRACKLET_LENGTH } from "../../lib/constants";
   import { entities } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -17,23 +17,34 @@ License: CECILL-C
   export let selectedEntityId: string = "new";
   export let baseSchema: BaseSchema;
   export let viewRef: Reference;
+  export let tracklet: Annotation | null = null;
 
   const isEntityAllowedAsTop = (entity: Entity) => {
     const isTopEntity = entity.data.parent_ref.id === "";
     if (!isTopEntity) return false;
     if (entity.is_conversation) return false;
-    const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
-    const sameKindInSameView = annsNotTracklets?.some(
-      (ann) => ann.data.view_ref.id === viewRef.id && baseSchema === ann.table_info.base_schema,
-    );
     const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
-    const overlap = tracklets?.some(
-      (ann) =>
-        (ann as Tracklet).data.view_ref.name === viewRef.name &&
-        (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
-        (ann as Tracklet).data.end_timestep > $currentFrameIndex,
-    );
-    return !sameKindInSameView && !overlap;
+    if (tracklet && tracklet.is_type(BaseSchema.Tracklet)) {
+      const overlap = tracklets?.some(
+        (ann) =>
+          (ann as Tracklet).data.view_ref.name === viewRef.name &&
+          (ann as Tracklet).data.start_timestep < (tracklet as Tracklet).data.end_timestep &&
+          (ann as Tracklet).data.end_timestep > (tracklet as Tracklet).data.start_timestep,
+      );
+      return !overlap;
+    } else {
+      const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+      const sameKindInSameView = annsNotTracklets?.some(
+        (ann) => ann.data.view_ref.id === viewRef.id && baseSchema === ann.table_info.base_schema,
+      );
+      const overlap = tracklets?.some(
+        (ann) =>
+          (ann as Tracklet).data.view_ref.name === viewRef.name &&
+          (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
+          (ann as Tracklet).data.end_timestep > $currentFrameIndex,
+      );
+      return !sameKindInSameView && !overlap;
+    }
   };
 
   let entitiesCombo = derived([entities], ([$entities]) => {
