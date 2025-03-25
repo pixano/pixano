@@ -9,8 +9,8 @@ License: CECILL-C
   import {
     Eye,
     EyeOff,
+    GitCommitHorizontal,
     Link,
-    Minus,
     Pencil,
     Share2,
     Square,
@@ -78,7 +78,7 @@ License: CECILL-C
         <TangentIcon class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Tracklet)}
-        <Minus class="h-4" />
+        <GitCommitHorizontal class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.TextSpan)}
         <Type class="h-4" />
