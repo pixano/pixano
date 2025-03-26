@@ -215,7 +215,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
                 # create item
                 item = self._create_item(
-                    split.name, id=f"item_{i}" if self.use_image_name_as_id else None, **item_metadata
+                    split.name, id=f"item_{split.name}_{i}" if self.use_image_name_as_id else None, **item_metadata
                 )
 
                 # create view
@@ -284,7 +284,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
     def _create_item(self, split: str, id: str | None = None, **item_metadata) -> BaseSchema:
         if "id" not in item_metadata:
-            item_metadata["id"] = id if self.use_image_name_as_id else shortuuid.uuid()
+            item_metadata["id"] = id if id is not None else shortuuid.uuid()
         return self.item_schema(
             split=split,
             **item_metadata,
