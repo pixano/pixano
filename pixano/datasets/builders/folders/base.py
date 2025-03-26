@@ -233,11 +233,11 @@ class FolderBaseBuilder(DatasetBuilder):
                                     mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
                                     view_file = self.source_dir / mosaic_file
                                     if not view_file.is_file():  # no split path in metadata.jsonl
-                                        view_file = self.source_dir / split / mosaic_file
+                                        view_file = self.source_dir / split.name / mosaic_file
                                 else:
                                     view_file = self.source_dir / Path(v[0])
                                     if not view_file.is_file():  # no split path in metadata.jsonl
-                                        view_file = self.source_dir / split / Path(v[0])
+                                        view_file = self.source_dir / split.name / Path(v[0])
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
