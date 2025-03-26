@@ -59,9 +59,9 @@ License: CECILL-C
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
   $: displayName = entity.data.name
-    ? `${entity.data.name} (${entity.id})`
+    ? `${entity.data.name as string} (${entity.id})`
     : entity.data.category
-      ? `${entity.data.category} (${entity.id})`
+      ? `${entity.data.category as string} (${entity.id})`
       : entity.id;
 
   $: color = $colorScale[1](entity.id);

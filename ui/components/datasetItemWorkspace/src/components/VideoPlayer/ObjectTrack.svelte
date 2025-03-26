@@ -62,9 +62,9 @@ License: CECILL-C
   let highlightState: string = "all";
 
   $: displayName = track.data.name
-    ? `${track.data.name} (${track.id})`
+    ? `${track.data.name as string} (${track.id})`
     : track.data.category
-      ? `${track.data.category} (${track.id})`
+      ? `${track.data.category as string} (${track.id})`
       : track.id;
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
