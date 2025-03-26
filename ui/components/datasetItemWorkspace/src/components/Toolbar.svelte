@@ -49,6 +49,7 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.map((ann) => {
         ann.ui.highlighted = "all";
+        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false };
         return ann;
       }),
     );
@@ -57,10 +58,7 @@ License: CECILL-C
 
   const selectTool = (tool: SelectionTool) => {
     if (tool !== $selectedTool) {
-      if (previousSelectedTool?.type === ToolType.Fusion) {
-        //abort fusion
-        cleanFusion();
-      }
+      cleanFusion();
       selectedTool.set(tool);
     }
   };
@@ -117,7 +115,7 @@ License: CECILL-C
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}
-      <FusionTool {cleanFusion} />
+      <FusionTool {selectTool} {cleanFusion} />
     {/if}
   </div>
   <div
