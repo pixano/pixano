@@ -11,7 +11,7 @@ License: CECILL-C
   import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "@pixano/core";
 
   import { NEWTRACKLET_LENGTH } from "../../lib/constants";
-  import { entities } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { colorScale, entities } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let selectedEntityId: string = "new";
@@ -48,11 +48,17 @@ License: CECILL-C
   };
 
   let entitiesCombo = derived([entities], ([$entities]) => {
-    const res: { id: string; name: string }[] = [{ id: "new", name: "New" }];
+    const res: { id: string; name: string; color: string }[] = [
+      { id: "new", name: "New", color: "" },
+    ];
     $entities.forEach((entity) => {
       //check if there is no annotation of same kind & view_id for this entity
       if (isEntityAllowedAsTop(entity))
-        res.push({ id: entity.id, name: (entity.data.name as string) + " - " + entity.id });
+        res.push({
+          id: entity.id,
+          name: (entity.data.name as string) + " - " + entity.id,
+          color: `${$colorScale[1](entity.id)}3a`,
+        });
     });
     selectedEntityId = res[0].id;
     return res;
@@ -67,8 +73,8 @@ License: CECILL-C
 bg-slate-100 border-slate-300 focus:border-main"
       bind:value={selectedEntityId}
     >
-      {#each $entitiesCombo as { id, name }}
-        <option value={id}>
+      {#each $entitiesCombo as { id, name, color }}
+        <option value={id} style="background: {color};">
           {name}
         </option>
       {/each}
