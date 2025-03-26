@@ -102,7 +102,7 @@ License: CECILL-C
       </IconButton>
     {/if}
     <IconButton
-      tooltipContent="Re-link object"
+      tooltipContent="Relink object"
       selected={showRelink}
       on:click={() => {
         showRelink = !showRelink;

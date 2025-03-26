@@ -84,7 +84,7 @@ export const relink = (child: Annotation, entity: Entity, selectedEntityId: stri
   // -- not really sure about how they are really handled (created or found)
   if (linkEntity.id !== topEntity.id) {
     console.warn(
-      "WARNING: sub-entities may not be correctly managed for re-link. Use with caution...",
+      "WARNING: sub-entities may not be correctly managed for relink. Use with caution...",
     );
   }
 
