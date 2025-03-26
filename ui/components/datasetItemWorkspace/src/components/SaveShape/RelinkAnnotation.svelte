@@ -56,7 +56,11 @@ License: CECILL-C
       if (isEntityAllowedAsTop(entity))
         res.push({
           id: entity.id,
-          name: (entity.data.name as string) + " - " + entity.id,
+          name: entity.data.name
+            ? `${entity.data.name} (${entity.id})`
+            : entity.data.category
+              ? `${entity.data.category} (${entity.id})`
+              : entity.id,
           color: `${$colorScale[1](entity.id)}3a`,
         });
     });

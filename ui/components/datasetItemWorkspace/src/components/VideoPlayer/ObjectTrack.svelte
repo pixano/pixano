@@ -61,6 +61,12 @@ License: CECILL-C
   let tracklets: Tracklet[];
   let highlightState: string = "all";
 
+  $: displayName = track.data.name
+    ? `${track.data.name} (${track.id})`
+    : track.data.category
+      ? `${track.data.category} (${track.id})`
+      : track.id;
+
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);
 
@@ -328,7 +334,9 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="">{track.data.name} ({track.id})</span>
+      <span title="{track.table_info.base_schema} ({track.id})">
+        {displayName}
+      </span>
     </div>
   </div>
   <div

@@ -58,12 +58,11 @@ License: CECILL-C
 
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
-  $: displayName =
-    (entity.data.name
-      ? (entity.data.name as string) + " "
-      : entity.data.category
-        ? (entity.data.category as string) + " "
-        : "") + `(${entity.id})`;
+  $: displayName = entity.data.name
+    ? `${entity.data.name} (${entity.id})`
+    : entity.data.category
+      ? `${entity.data.category} (${entity.id})`
+      : entity.id;
 
   $: color = $colorScale[1](entity.id);
 
@@ -324,7 +323,7 @@ License: CECILL-C
           "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
           "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
-        title={displayName}
+        title="{entity.table_info.base_schema} ({entity.id})"
       >
         {displayName}
       </span>
