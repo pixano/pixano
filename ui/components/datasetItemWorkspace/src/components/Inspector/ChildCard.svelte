@@ -64,10 +64,7 @@ License: CECILL-C
         <EyeOff class="h-4" />
       {/if}
     </IconButton>
-    <IconButton
-      disabled
-      tooltipContent={child.table_info.base_schema + (isMultiView ? " (" + child.id + ")" : "")}
-    >
+    <IconButton disabled tooltipContent={child.table_info.base_schema}>
       {#if child.is_type(BaseSchema.BBox)}
         <Square class="h-4" />
       {/if}
