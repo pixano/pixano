@@ -18,7 +18,7 @@ export const highlightObject = (entity_id: string, isHighlighted: boolean): numb
   let highlightFrameIndex = get(lastFrameIndex) + 1;
   annotations.update((objects) =>
     objects.map((ann) => {
-      if (get(selectedTool).type !== ToolType.Fusion) {
+      if (get(selectedTool).type === ToolType.Pan) {
         ann.ui.highlighted = isHighlighted
           ? "all"
           : getTopEntity(ann).id === entity_id
