@@ -49,8 +49,8 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
 
     if (newShape.shapeId !== ann.id) return ann;
 
-    // Check if the object is an image Annotation
-    if (ann.ui.datasetItemType === WorkspaceType.IMAGE) {
+    // Check if the object is an image Annotation (not a video -- shouldn't video don't go here)
+    if (ann.ui.datasetItemType !== WorkspaceType.VIDEO) {
       let changed = false;
       if (newShape.type === SaveShapeType.mask && ann.is_type(BaseSchema.Mask)) {
         (ann as Mask).data.counts = newShape.counts;

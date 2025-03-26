@@ -24,7 +24,10 @@ export class Classification extends Annotation {
   declare data: ClassificationType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: { hidden: false, editing: false },
+  };
 
   constructor(obj: BaseDataFields<ClassificationType>) {
     if (obj.table_info.base_schema !== BaseSchema.Classification)

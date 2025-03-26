@@ -4,10 +4,19 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ItemFeature } from "@pixano/core";
+import type { Entity, ItemFeature } from "@pixano/core";
 
-// default features used to display tooltip, in this order
-export const DEFAULT_FEATURES = ["name", "category", "category_name"];
+// default entity features used to display tooltip, in this order
+const DEFAULT_FEATURES = ["name", "category", "category_name"];
+
+export const getDefaultDisplayFeat = (entity: Entity): string | null => {
+  for (const default_feature of DEFAULT_FEATURES) {
+    if (default_feature in entity.data) {
+      return String(entity.data[default_feature]);
+    }
+  }
+  return null;
+};
 
 export const defaultObjectFeatures = {
   [DEFAULT_FEATURES[0]]: {

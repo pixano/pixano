@@ -47,7 +47,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex justify-start items-center gap-4">
+<div class="flex justify-start items-center gap-4 overflow-hidden">
   {#if isEditing}
     {#if feature.type === "str"}
       <AutocompleteTextFeature
@@ -72,8 +72,8 @@ License: CECILL-C
       </span>
     {/if}
   {:else if feature.value || feature.value === 0}
-    <p class="first-letter:uppercase">
+    <span class="block w-full truncate" title={`${feature.value}`}>
       {feature.value}
-    </p>
+    </span>
   {/if}
 </div>

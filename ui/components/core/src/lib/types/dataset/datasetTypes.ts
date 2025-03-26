@@ -222,6 +222,7 @@ export type ImagesPerView = Record<string, HTMLImage[]>;
 export interface DisplayControl {
   hidden?: boolean;
   editing?: boolean;
+  open?: boolean;
 }
 
 export interface ObjectThumbnail {

@@ -10,13 +10,18 @@ import {
   type Annotation,
   type BBox,
   type Image,
+  type ObjectThumbnail,
   type SequenceFrame,
 } from "@pixano/core";
 
 import type { MView } from ".";
 import type { ItemsMeta } from "../../types/datasetItemWorkspaceTypes";
 
-export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: Annotation) => {
+export const defineObjectThumbnail = (
+  metas: ItemsMeta,
+  views: MView,
+  object: Annotation,
+): ObjectThumbnail | null => {
   let box: BBox | undefined = undefined;
   if (object.is_type(BaseSchema.BBox)) {
     box = object as BBox;

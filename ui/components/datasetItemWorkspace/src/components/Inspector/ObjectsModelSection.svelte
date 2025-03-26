@@ -23,8 +23,8 @@ License: CECILL-C
 
   let visibilityStatus = derived([annotations], ([$annotations]) =>
     //Note: as we removed grouping by model, we don't filter by source anymore
-    //$annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl?.hidden)
-    $annotations.every((ann) => ann.ui.displayControl?.hidden) ? "hidden" : "shown",
+    //$annotations.filter((ann) => isAnnFromSource(ann)).every((ann) => ann.ui.displayControl.hidden)
+    $annotations.every((ann) => ann.ui.displayControl.hidden) ? "hidden" : "shown",
   );
 
   onMount(() => {

@@ -11,6 +11,7 @@ import {
   type DatasetSchema,
   type DS_NamedSchema,
   type ItemFeature,
+  type Reference,
   type SaveShape,
 } from "@pixano/core";
 
@@ -19,8 +20,8 @@ export const defineCreatedEntity = (
   features: Record<string, ItemFeature>,
   dataset_schema: DatasetSchema,
   entitySchema: DS_NamedSchema,
-  parentOfSub: { id: string; name: string } | undefined = undefined,
-  alternateViewRef: { id: string; name: string } | undefined = undefined,
+  parentOfSub: Reference | undefined = undefined,
+  alternateViewRef: Reference | undefined = undefined,
 ): Entity => {
   const table = entitySchema.name;
   const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
@@ -31,14 +32,12 @@ export const defineCreatedEntity = (
     table_info: { name: table, group: "entities", base_schema: entitySchema.base_schema },
     data: {
       item_ref: { name: "item", id: shape.itemId },
-      view_ref: parentOfSub
-        ? alternateViewRef
-          ? alternateViewRef
-          : shape.viewRef
-        : { name: "", id: "" },
+      view_ref:
+        parentOfSub && alternateViewRef ? alternateViewRef : shape.viewRef || { name: "", id: "" },
       parent_ref: parentOfSub ? parentOfSub : { name: "", id: "" },
     },
   };
+
   if (features) {
     for (const feat of Object.values(features)) {
       entity.data = { ...entity.data, [feat.name]: feat.value };

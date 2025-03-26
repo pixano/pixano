@@ -53,7 +53,10 @@ License: CECILL-C
   let isSaving: boolean = false;
 
   const back2front = (ann: Annotation): Annotation => {
-    ann.ui = { datasetItemType: selectedItem.ui.type };
+    ann.ui = {
+      datasetItemType: selectedItem.ui.type,
+      displayControl: { hidden: false, editing: false },
+    };
     if (ann.table_info.base_schema === BaseSchema.Mask) {
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;
@@ -65,7 +68,8 @@ License: CECILL-C
         const seqframe = ($mediaViews[ann.data.view_ref.name] as SequenceFrame[]).find(
           (sf) => sf.id === ann.data.view_ref.id,
         );
-        if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
+        if (seqframe?.data.frame_index !== undefined)
+          ann.ui.frame_index = seqframe.data.frame_index;
       }
     }
     return ann;
@@ -99,7 +103,10 @@ License: CECILL-C
     Object.values(selectedItem.entities).forEach((item_entities) => {
       item_entities.forEach((entity) => {
         //build childs list
-        entity.ui = { childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id) };
+        entity.ui = {
+          ...entity.ui,
+          childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id),
+        };
         newEntities.push(entity);
         if (entity.data.parent_ref.id !== "" && entity.ui.childs) {
           if (entity.data.parent_ref.id in subEntitiesChilds) {

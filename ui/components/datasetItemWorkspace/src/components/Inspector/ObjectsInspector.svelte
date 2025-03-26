@@ -19,6 +19,7 @@ License: CECILL-C
     mediaViews,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { sortEntites } from "../../lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
@@ -39,6 +40,7 @@ License: CECILL-C
     data: { name: "All", kind: "Global", metadata: {} },
   });
 
+  let somethingChanged = 0;
   $: $annotations, $entities, handleAnnotationSortedByModel(); // eslint-disable-line @typescript-eslint/no-unused-expressions
 
   const handleAnnotationSortedByModel = () => {
@@ -48,7 +50,7 @@ License: CECILL-C
       const top_entity = getTopEntity(ann);
       if (!top_entity.is_conversation) allTopEntitiesSet.add(top_entity);
     });
-    allTopEntities = Array.from(allTopEntitiesSet);
+    allTopEntities = Array.from(allTopEntitiesSet).sort(sortEntites);
     selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
@@ -73,6 +75,8 @@ License: CECILL-C
         }
       }
     }
+    //hack to refresh ObjectInspector every time this function is call
+    somethingChanged = (somethingChanged + 1) % 2;
   };
 
   afterUpdate(() => {
@@ -104,7 +108,7 @@ License: CECILL-C
       {/each}
     {/if}
     <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-      {#key allTopEntities.length}
+      {#key somethingChanged}
         {#each allTopEntities as entity}
           <ObjectCard {entity} />
         {/each}

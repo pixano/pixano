@@ -18,7 +18,7 @@ import { getTopEntity } from "./getTopEntity";
 export const mapObjectToBBox = (bbox: BBox, views: MView): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
-  if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl?.hidden) return;
+  if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl.hidden) return;
   if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.highlighted !== "self") return;
   if (!bbox.data.view_ref.name) return;
   let bbox_ui_coords = bbox.data.coords;

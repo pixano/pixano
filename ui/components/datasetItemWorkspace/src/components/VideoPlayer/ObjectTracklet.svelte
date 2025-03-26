@@ -16,11 +16,18 @@ License: CECILL-C
     type SaveItem,
     type TrackletItem,
   } from "@pixano/core";
+  import Button from "@pixano/core/src/components/ui/button/button.svelte";
 
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
+  import {
+    addOrUpdateSaveItem,
+    getPixanoSource,
+    getTopEntity,
+    relink,
+  } from "../../lib/api/objectsApi";
   import { annotations, colorScale, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
 
   type MView = Record<string, View | View[]>;
@@ -33,6 +40,7 @@ License: CECILL-C
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
+  //export let onRelinkTrackletClick: () => void;
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;
@@ -141,13 +149,25 @@ License: CECILL-C
       resetTool();
     }
   };
+
+  //WIP TEST
+  let showRelink = false;
+  let selectedEntityId = "new";
+  const onRelinkTrackletClick = (event: MouseEvent) => {
+    event.preventDefault(); //avoid context menu close
+    showRelink = true;
+  };
+  const handleRelink = () => {
+    relink(tracklet, getTopEntity(tracklet), selectedEntityId);
+    showRelink = false;
+  };
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-10": tracklet.ui.highlighted === "none",
+      "opacity-30": tracklet.ui.highlighted === "none" || tracklet.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
@@ -166,6 +186,18 @@ License: CECILL-C
       <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     {/if}
     <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+    <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
+    {#if showRelink}
+      <div class="flex flex-row gap-4 items-center mr-4">
+        <RelinkAnnotation
+          bind:selectedEntityId
+          baseSchema={tracklet.table_info.base_schema}
+          viewRef={tracklet.data.view_ref}
+          {tracklet}
+        />
+        <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
+      </div>
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#if showKeyframes}

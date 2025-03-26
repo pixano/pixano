@@ -9,7 +9,7 @@ import { get } from "svelte/store";
 import { BaseSchema, type BBox, type Entity, type Source } from "@pixano/core";
 
 import { sourcesStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
-import { DEFAULT_FEATURES } from "../../settings/defaultFeatures";
+import { getDefaultDisplayFeat } from "../../settings/defaultFeatures";
 
 export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   if (!(bbox && bbox.is_type(BaseSchema.BBox))) return null;
@@ -24,12 +24,6 @@ export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
       ? " " + bbox.data.confidence.toFixed(2)
       : "";
 
-  for (const default_feature of DEFAULT_FEATURES) {
-    if (default_feature in entity.data) {
-      return typeof entity.data[default_feature] === "string"
-        ? entity.data[default_feature] + confidence
-        : null;
-    }
-  }
-  return null;
+  const displayFeat = getDefaultDisplayFeat(entity);
+  return displayFeat ? displayFeat + confidence : null;
 };
