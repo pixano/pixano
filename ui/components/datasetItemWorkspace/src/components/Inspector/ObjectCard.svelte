@@ -36,6 +36,7 @@ License: CECILL-C
     toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
   import { updateView } from "../../lib/api/videoApi";
+  import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
@@ -58,11 +59,11 @@ License: CECILL-C
 
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
-  $: displayName = entity.data.name
-    ? `${entity.data.name as string} (${entity.id})`
-    : entity.data.category
-      ? `${entity.data.category as string} (${entity.id})`
-      : entity.id;
+  let displayName: string;
+  $: if (entity) {
+    const displayFeat = getDefaultDisplayFeat(entity);
+    displayName = displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
+  }
 
   $: color = $colorScale[1](entity.id);
 
@@ -392,14 +393,13 @@ License: CECILL-C
               {saveInputChange}
             />
           </div>
-          <p class="font-medium">Objects</p>
+          <p class="font-medium">Objects ({allowableChilds.length})</p>
           <div class="flex flex-col">
-            <p class="text-center italic">
-              {allowedChilds.length} out of {allowableChilds.length}
-              {entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)
-                ? `visible on frame ${$currentFrameIndex}`
-                : ""}
-            </p>
+            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+              <p class="text-center italic">
+                {allowedChilds.length} objects visible on frame {$currentFrameIndex}
+              </p>
+            {/if}
             {#each allowedChilds as child}
               <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
             {/each}

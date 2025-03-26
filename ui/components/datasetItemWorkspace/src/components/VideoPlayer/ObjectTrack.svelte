@@ -34,6 +34,7 @@ License: CECILL-C
     highlightObject,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo, updateView } from "../../lib/api/videoApi";
+  import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import {
     annotations,
     colorScale,
@@ -61,11 +62,11 @@ License: CECILL-C
   let tracklets: Tracklet[];
   let highlightState: string = "all";
 
-  $: displayName = track.data.name
-    ? `${track.data.name as string} (${track.id})`
-    : track.data.category
-      ? `${track.data.category as string} (${track.id})`
-      : track.id;
+  let displayName: string;
+  $: if (track) {
+    const displayFeat = getDefaultDisplayFeat(track);
+    displayName = displayFeat ? `${displayFeat} (${track.id})` : track.id;
+  }
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);

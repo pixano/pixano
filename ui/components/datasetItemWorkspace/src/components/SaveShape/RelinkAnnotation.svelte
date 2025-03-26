@@ -11,6 +11,7 @@ License: CECILL-C
   import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "@pixano/core";
 
   import { NEWTRACKLET_LENGTH } from "../../lib/constants";
+  import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import { colorScale, entities } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
@@ -53,16 +54,14 @@ License: CECILL-C
     ];
     $entities.forEach((entity) => {
       //check if there is no annotation of same kind & view_id for this entity
-      if (isEntityAllowedAsTop(entity))
+      if (isEntityAllowedAsTop(entity)) {
+        const displayFeat = getDefaultDisplayFeat(entity);
         res.push({
           id: entity.id,
-          name: entity.data.name
-            ? `${entity.data.name as string} (${entity.id})`
-            : entity.data.category
-              ? `${entity.data.category as string} (${entity.id})`
-              : entity.id,
+          name: displayFeat ? `${displayFeat} (${entity.id})` : entity.id,
           color: `${$colorScale[1](entity.id)}3a`,
         });
+      }
     });
     selectedEntityId = res[0].id;
     return res;

@@ -84,10 +84,7 @@ License: CECILL-C
         <Type class="h-4" />
       {/if}
     </IconButton>
-    <span
-      class="flex-auto block w-full truncate"
-      title={child.table_info.base_schema + (isMultiView ? " (" + child.id + ")" : "")}
-    >
+    <span class="flex-auto block w-full truncate" title={child.id}>
       {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>
