@@ -45,7 +45,7 @@ License: CECILL-C
   let showRelink = false;
   let selectedEntityId: string = "new";
 
-  const isMulitView = Object.keys($mediaViews).length > 1;
+  const isMultiView = Object.keys($mediaViews).length > 1;
   const handleRelink = () => {
     relink(child, entity, selectedEntityId);
     showRelink = false;
@@ -66,7 +66,7 @@ License: CECILL-C
     </IconButton>
     <IconButton
       disabled
-      tooltipContent={child.table_info.base_schema + (isMulitView ? " (" + child.id + ")" : "")}
+      tooltipContent={child.table_info.base_schema + (isMultiView ? " (" + child.id + ")" : "")}
     >
       {#if child.is_type(BaseSchema.BBox)}
         <Square class="h-4" />
@@ -86,9 +86,9 @@ License: CECILL-C
     </IconButton>
     <span
       class="flex-auto block w-full truncate"
-      title={isMulitView ? child.data.view_ref.name : child.id}
+      title={child.table_info.base_schema + (isMultiView ? " (" + child.id + ")" : "")}
     >
-      {isMulitView ? child.data.view_ref.name : child.id}
+      {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>
   <div class="flex-shrink-0 flex items-center justify-end">
