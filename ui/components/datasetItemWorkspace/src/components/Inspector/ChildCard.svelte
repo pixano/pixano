@@ -52,7 +52,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex justify-between border-2 bg-transparent border-transparent">
+<div class="flex justify-between bg-transparent border-transparent">
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
       on:click={() => handleSetDisplayControl("hidden", !child.ui.displayControl.hidden, child)}
@@ -85,7 +85,7 @@ License: CECILL-C
       {/if}
     </IconButton>
     <span
-      class="flex-auto block w-full truncate italic"
+      class="flex-auto block w-full truncate"
       title={isMulitView ? child.data.view_ref.name : child.id}
     >
       {isMulitView ? child.data.view_ref.name : child.id}

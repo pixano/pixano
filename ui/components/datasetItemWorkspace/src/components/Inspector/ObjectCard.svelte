@@ -78,6 +78,12 @@ License: CECILL-C
     return false;
   };
 
+  const isAllowableChild = (child: Annotation): boolean => {
+    if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
+    if (child.is_type(BaseSchema.Tracklet)) return true;
+    return false;
+  };
+
   const sortChilds = (a: Annotation, b: Annotation): number => {
     // first sort by BaseSchema -- convenient because lexical order is quite good:
     // BBox, CompressedRLE, KeyPoints, TextSpan, Tracklet
@@ -100,6 +106,8 @@ License: CECILL-C
     return res;
   };
   let allowedChilds: Annotation[];
+  let allowableChilds: Annotation[] =
+    entity.ui.childs?.filter((ann) => isAllowableChild(ann)) ?? [];
 
   $: if ($currentFrameIndex !== undefined) {
     allowedChilds = entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
@@ -372,24 +380,12 @@ License: CECILL-C
   {#if entity.ui.displayControl.open}
     <div class="pl-5 text-slate-800 bg-white">
       <div
-        class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
+        class="border-l-4 border-dashed border-red-400 pl-4 flex flex-col gap-4 pb-2"
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          <div>
-            <p class="font-medium">
-              {allowedChilds.length} Object{allowedChilds.length > 1 ? "s" : ""}
-              {entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)
-                ? ` on frame ${$currentFrameIndex}`
-                : ""}
-            </p>
-            <div class="flex flex-col">
-              {#each allowedChilds as child}
-                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-              {/each}
-            </div>
-          </div>
           <div class="w-full block">
+            <p class="font-medium">Features</p>
             <UpdateFeatureInputs
               featureClass="objects"
               features={$features}
@@ -397,6 +393,19 @@ License: CECILL-C
               {saveInputChange}
             />
           </div>
+          <p class="font-medium">Objects</p>
+          <div class="flex flex-col">
+            <p class="text-center italic">
+              {allowedChilds.length} out of {allowableChilds.length}
+              {entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)
+                ? `visible on frame ${$currentFrameIndex}`
+                : ""}
+            </p>
+            {#each allowedChilds as child}
+              <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+            {/each}
+          </div>
+          <p class="font-medium">Thumbnails</p>
           {#each thumbnails as thumbnail}
             <Thumbnail
               imageDimension={thumbnail.baseImageDimensions}
