@@ -145,7 +145,7 @@ class Image(View):
 
         Args:
             url_relative_path (Path): The path to convert the URL to a relative path,
-              eg for images to be later searchable in the media_dir.
+                eg for images to be later searchable in the media_dir.
 
         Returns:
             str: shorten image url
@@ -182,7 +182,7 @@ def create_image(
         height: The image height. If None, the height is extracted from the image file.
         format: The image format. If None, the format is extracted from the image file.
         url_relative_path: The path to convert the URL to a relative path,
-           eg for images to be searchable in the media_dir.
+            eg for images to be searchable in the media_dir.
 
     Returns:
         The created `Image` instance.

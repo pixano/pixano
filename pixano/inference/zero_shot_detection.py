@@ -5,6 +5,7 @@
 # =====================================
 
 from pathlib import Path
+from typing import Any
 
 import shortuuid
 from fastapi.encoders import jsonable_encoder
@@ -26,7 +27,7 @@ async def image_zero_shot_detection(
     classes: list[str] | str,
     box_threshold: float = 0.5,
     text_threshold: float = 0.5,
-    **client_kwargs,
+    **client_kwargs: Any,
 ) -> list[tuple[BBox, Classification]]:
     """Image zero shot task.
 
