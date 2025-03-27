@@ -28,11 +28,13 @@ License: CECILL-C
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
     addOrUpdateSaveItem,
+    deleteObject,
     getPixanoSource,
     getTopEntity,
     highlightObject,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex, splitTrackletInTwo, updateView } from "../../lib/api/videoApi";
+  import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import {
     annotations,
     colorScale,
@@ -59,6 +61,12 @@ License: CECILL-C
   let objectTimeTrack: HTMLElement;
   let tracklets: Tracklet[];
   let highlightState: string = "all";
+
+  let displayName: string;
+  $: if (track) {
+    const displayFeat = getDefaultDisplayFeat(track);
+    displayName = displayFeat ? `${displayFeat} (${track.id})` : track.id;
+  }
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
   $: color = $colorScale[1](track.id);
@@ -268,48 +276,6 @@ License: CECILL-C
     annotations.update((objects) => objects.concat(newOnRight));
   };
 
-  const onDeleteTrackletClick = (tracklet: Tracklet) => {
-    const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
-    let entitiesToDelete: Entity[] = [];
-    entities.update((objects) =>
-      objects
-        .map((entity) => {
-          if (entity.is_track && entity.id === track.id) {
-            entity.ui.childs = entity.ui.childs?.filter(
-              (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
-            );
-          }
-          if (entity.ui.childs?.length == 0) {
-            entitiesToDelete.push(entity);
-          }
-          return entity;
-        })
-        .filter((entity) => !entitiesToDelete.includes(entity)),
-    );
-    annotations.update((anns) =>
-      anns.filter((ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id),
-    );
-    tracklet.ui.childs?.forEach((ann) => {
-      const save_del_ann: SaveItem = {
-        change_type: "delete",
-        object: ann,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
-    });
-    const save_del_tracklet: SaveItem = {
-      change_type: "delete",
-      object: tracklet,
-    };
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_tracklet));
-    entitiesToDelete.forEach((entityToDelete) => {
-      const save_del_entity: SaveItem = {
-        change_type: "delete",
-        object: entityToDelete,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_entity));
-    });
-  };
-
   const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
     let previous: number = 0;
     let next: number = $lastFrameIndex;
@@ -341,7 +307,6 @@ License: CECILL-C
     <div
       class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
         "text-slate-800": highlightState !== "none",
-        "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
         "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
       })}
       style={`
@@ -361,7 +326,9 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="">{track.data.name} ({track.id})</span>
+      <span title="{track.table_info.base_schema} ({track.id})">
+        {displayName}
+      </span>
     </div>
   </div>
   <div
@@ -406,7 +373,7 @@ License: CECILL-C
         {onContextMenu}
         {onEditKeyItemClick}
         onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
-        onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
+        onDeleteTrackletClick={() => deleteObject(track, tracklet)}
         {findNeighborItems}
         {moveCursorToPosition}
         {resetTool}

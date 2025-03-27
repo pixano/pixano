@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Build and Publish latest Documentation
+name: Documentation
 
 on:
   push:
@@ -17,7 +17,7 @@ on:
 
 jobs:
   deploy_docs:
-    name: Publish documentation website
+    name: Publish
     runs-on: ubuntu-latest
 
     steps:

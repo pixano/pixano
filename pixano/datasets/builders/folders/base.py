@@ -98,34 +98,43 @@ class FolderBaseBuilder(DatasetBuilder):
 
     def __init__(
         self,
-        source_dir: Path | str,
-        target_dir: Path | str,
+        media_dir: Path | str,
+        library_dir: Path | str,
         info: DatasetInfo,
+        dataset_path: Path | str,
         dataset_item: type[DatasetItem] | None = None,
-        url_prefix: Path | str | None = None,
+        use_image_name_as_id: bool = False,
     ) -> None:
         """Initialize the `FolderBaseBuilder`.
 
         Args:
-            source_dir: The source directory for the dataset.
-            target_dir: The target directory for the dataset.
+            media_dir: The global media directory.
+            library_dir: The global directory for Pixano datasets library.
             dataset_item: The dataset item schema.
             info: User informations (name, description, ...) for the dataset.
-            url_prefix: The path to build relative URLs for the views. Useful to build dataset libraries to pass the
-                relative path from the media directory.
+            dataset_path: Path to dataset, relative to media_dir.
+            use_image_name_as_id: If True, use image base name as image id.
+                                  Images MUST have unique base names.
+                                  When no metadata file exists, also use it as item id,
+                                  else, use 'item_#'
+                                  This allows to reuse image embeddings after dataset overwrite.
         """
         info.workspace = self.WORKSPACE_TYPE
         if self.DEFAULT_SCHEMA is not None and dataset_item is None:
             dataset_item = self.DEFAULT_SCHEMA
         if dataset_item is None:
             raise ValueError("A schema is required.")
+
+        self.use_image_name_as_id = use_image_name_as_id
+
+        self.media_dir = Path(media_dir)
+        dataset_path = Path(dataset_path)
+        self.source_dir = self.media_dir / dataset_path
+        if not self.source_dir.is_dir():
+            raise ValueError("A source path (media_dir / dataset_path) is required.")
+
+        target_dir = Path(library_dir) / "_".join(dataset_path.parts)
         super().__init__(target_dir=target_dir, dataset_item=dataset_item, info=info)
-        self.source_dir = Path(source_dir)
-        if url_prefix is None:
-            url_prefix = Path(".")
-        else:
-            url_prefix = Path(url_prefix)
-        self.url_prefix = url_prefix
 
         self.views_schema: dict[str, type[View]] = {}
         self.entities_schema: dict[str, type[Entity]] = {}
@@ -164,13 +173,13 @@ class FolderBaseBuilder(DatasetBuilder):
                 dataset_pieces = None
 
             if dataset_pieces is None:
-                for view_file in sorted(split.glob("*")):
-                    # only consider {split}/{item}.{ext} files
+                for view_file in sorted(split.glob("**/*")):
+                    # only consider {split}/**/{item}.{ext} files
                     if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
                         continue
                     # create item with default values for custom fields
                     custom_item_metadata = self._build_default_custom_metadata_item()
-                    item = self._create_item(split.name, **custom_item_metadata)
+                    item = self._create_item(split.name, view_file.stem, **custom_item_metadata)
                     # create view
                     view_name_nojsonl, view_schema_nojsonl = list(self.views_schema.items())[0]  # only one view
                     view = self._create_view(item, view_file, view_schema_nojsonl)
@@ -192,7 +201,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
                 continue
 
-            for dataset_piece in dataset_pieces:
+            for i, dataset_piece in enumerate(dataset_pieces):
                 item_metadata = {}
                 for k in dataset_piece.keys():
                     if (
@@ -205,12 +214,12 @@ class FolderBaseBuilder(DatasetBuilder):
                     dataset_piece.pop(k, None)
 
                 # create item
-                item = self._create_item(split.name, **item_metadata)
+                item = self._create_item(
+                    split.name, id=f"item_{split.name}_{i}" if self.use_image_name_as_id else None, **item_metadata
+                )
 
                 # create view
                 views_data: list[tuple[str, View]] = []
-                all_entities_data: dict[str, list[Entity]] = defaultdict(list)
-                all_annotations_data: dict[str, list[Annotation]] = defaultdict(list)
                 for k, v in dataset_piece.items():
                     if k in self.views_schema:
                         view_name = k
@@ -224,22 +233,24 @@ class FolderBaseBuilder(DatasetBuilder):
                                     mosaic_file = mosaic(self.source_dir, split.name, v, view_name)
                                     view_file = self.source_dir / mosaic_file
                                     if not view_file.is_file():  # no split path in metadata.jsonl
-                                        view_file = self.source_dir / split / mosaic_file
+                                        view_file = self.source_dir / split.name / mosaic_file
                                 else:
                                     view_file = self.source_dir / Path(v[0])
                                     if not view_file.is_file():  # no split path in metadata.jsonl
-                                        view_file = self.source_dir / split / Path(v[0])
+                                        view_file = self.source_dir / split.name / Path(v[0])
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
                             else:
                                 view_file = self.source_dir / (
-                                    Path(v) if split.name in Path(v).parts else split / Path(v)
+                                    Path(v) if split.name == Path(v).parts[0] else split / Path(v)
                                 )
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_view(item, view_file, view_schema)
                                     views_data.append((view_name, view))
 
+                all_entities_data: dict[str, list[Entity]] = defaultdict(list)
+                all_annotations_data: dict[str, list[Annotation]] = defaultdict(list)
                 for k, v in dataset_piece.items():
                     if k in self.entities_schema and v is not None:
                         entity_name = k
@@ -271,9 +282,9 @@ class FolderBaseBuilder(DatasetBuilder):
                 yield all_entities_data
                 yield all_annotations_data
 
-    def _create_item(self, split: str, **item_metadata) -> BaseSchema:
+    def _create_item(self, split: str, id: str | None = None, **item_metadata) -> BaseSchema:
         if "id" not in item_metadata:
-            item_metadata["id"] = shortuuid.uuid()
+            item_metadata["id"] = id if id is not None else shortuuid.uuid()
         return self.item_schema(
             split=split,
             **item_metadata,
@@ -289,12 +300,11 @@ class FolderBaseBuilder(DatasetBuilder):
 
         view = create_instance_of_schema(
             view_schema,
-            id=shortuuid.uuid(),
+            id=view_file.stem if self.use_image_name_as_id else shortuuid.uuid(),
             item_ref=ItemRef(id=item.id),
             url=view_file,
-            url_relative_path=self.source_dir,
+            url_relative_path=self.media_dir,
         )
-        view.url = str(self.url_prefix / view.url)
         return view
 
     def _create_vqa_entities(

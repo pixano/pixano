@@ -223,6 +223,7 @@ export interface DisplayControl {
   hidden: boolean;
   editing: boolean;
   highlighted: "all" | "self" | "none";
+  open?: boolean;
 }
 
 export const initDisplayControl: DisplayControl = {

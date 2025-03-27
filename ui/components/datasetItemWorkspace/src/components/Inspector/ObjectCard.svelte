@@ -13,25 +13,30 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
+    BaseSchema,
+    cn,
     Entity,
+    IconButton,
     Item,
+    Tracklet,
     WorkspaceType,
     type DisplayControl,
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
-  import { BaseSchema, cn, IconButton } from "@pixano/core/src";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { createFeature } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
     defineObjectThumbnail,
+    deleteObject,
     getTopEntity,
     highlightObject,
     toggleObjectDisplayControl,
   } from "../../lib/api/objectsApi";
   import { updateView } from "../../lib/api/videoApi";
+  import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
@@ -45,34 +50,67 @@ License: CECILL-C
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import DisplayCheckbox from "./DisplayCheckbox.svelte";
+  import ChildCard from "./ChildCard.svelte";
 
   export let entity: Entity;
-  let open: boolean = false;
   let showIcons: boolean = false;
   let highlightState: string = "all";
-  let isEditing: boolean = false;
   let isVisible: boolean = true;
-  let boxIsVisible: boolean = true;
-  let maskIsVisible: boolean = true;
-  let keypointsIsVisible: boolean = true;
-  let textSpansIsVisible: boolean = true;
 
-  let hiddenTrack = entity.is_track ? entity.ui.hidden : false;
+  let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
-  $: displayName =
-    (entity.data.name
-      ? (entity.data.name as string) + " "
-      : entity.data.category
-        ? (entity.data.category as string) + " "
-        : "") + `(${entity.id})`;
+  let displayName: string;
+  $: if (entity) {
+    const displayFeat = getDefaultDisplayFeat(entity);
+    displayName = displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
+  }
 
   $: color = $colorScale[1](entity.id);
 
-  $: if (isEditing) {
-    open = true;
-  } else {
-    open = false;
+  const isAllowedChild = (child: Annotation): boolean => {
+    if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
+    if (
+      child.is_type(BaseSchema.Tracklet) &&
+      (child as Tracklet).data.start_timestep <= $currentFrameIndex &&
+      (child as Tracklet).data.end_timestep >= $currentFrameIndex
+    )
+      return true;
+    return false;
+  };
+
+  const isAllowableChild = (child: Annotation): boolean => {
+    if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
+    if (child.is_type(BaseSchema.Tracklet)) return true;
+    return false;
+  };
+
+  const sortChilds = (a: Annotation, b: Annotation): number => {
+    // first sort by BaseSchema -- convenient because lexical order is quite good:
+    // BBox, CompressedRLE, KeyPoints, TextSpan, Tracklet
+    let res = a.table_info.base_schema.localeCompare(b.table_info.base_schema);
+    if (res === 0) {
+      if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
+        //sort by view -- we know there is only one tracklet per view
+        const orderMap = new Map(Object.keys($mediaViews).map((val, index) => [val, index]));
+        res =
+          (orderMap.get(a.data.view_ref.name) ?? Infinity) -
+          (orderMap.get(b.data.view_ref.name) ?? Infinity);
+      } else {
+        if ("name" in a.data && "name" in b.data) {
+          res = String(a.data["name"]).localeCompare(String(b.data["name"]));
+        } else {
+          res = a.id.localeCompare(b.id);
+        }
+      }
+    }
+    return res;
+  };
+  let allowedChilds: Annotation[];
+  let allowableChilds: Annotation[] =
+    entity.ui.childs?.filter((ann) => isAllowableChild(ann)) ?? [];
+
+  $: if ($currentFrameIndex !== undefined) {
+    allowedChilds = entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   }
 
   const features = derived(
@@ -122,94 +160,37 @@ License: CECILL-C
     } else {
       highlightState = "all";
     }
-    isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl.editing) || false;
     isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false;
-    boxIsVisible =
-      entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.BBox) && !ann.ui.displayControl.hidden,
-      ) || false;
-    maskIsVisible =
-      entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.Mask) && !ann.ui.displayControl.hidden,
-      ) || false;
-    keypointsIsVisible =
-      entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.Keypoints) && !ann.ui.displayControl.hidden,
-      ) || false;
-    textSpansIsVisible =
-      entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.TextSpan) && !ann.ui.displayControl.hidden,
-      ) || false;
   });
 
-  const handleSetAnnotationDisplayControl = (
+  const handleSetDisplayControl = (
     displayControlProperty: keyof DisplayControl,
-    isVisible: boolean,
-    base_schema: BaseSchema | null = null,
+    new_value: boolean,
+    child: Annotation | null = null,
+    other_anns_value: boolean | null = null,
   ) => {
-    annotations.update((anns) =>
-      anns.map((ann) => {
-        if (displayControlProperty === "editing") {
-          //no change on non current anns for video
-          if (ann.ui.datasetItemType === WorkspaceType.VIDEO) {
-            if (ann.ui.frame_index !== $currentFrameIndex) return ann;
+    if (!child && displayControlProperty === "editing") {
+      entity.ui.displayControl.editing = new_value;
+    } else {
+      let tracklet_childs_ids: string[] = [];
+      if (child && child.is_type(BaseSchema.Tracklet)) {
+        tracklet_childs_ids = (child as Tracklet).ui.childs.map((ann) => ann.id);
+      }
+      annotations.update((anns) =>
+        anns.map((ann) => {
+          if (
+            (child && ann.id === child.id) ||
+            tracklet_childs_ids.includes(ann.id) ||
+            (!child && getTopEntity(ann).id === entity.id)
+          ) {
+            ann = toggleObjectDisplayControl(ann, displayControlProperty, new_value);
+          } else if (other_anns_value !== null) {
+            ann = toggleObjectDisplayControl(ann, displayControlProperty, other_anns_value);
           }
-
-          if (getTopEntity(ann).id === entity.id) {
-            if (isVisible) {
-              ann.ui.displayControl.highlighted = "self";
-            } else {
-              ann.ui.displayControl.highlighted = "all";
-            }
-          } else {
-            ann.ui.displayControl.highlighted = "none";
-          }
-
-          ann.ui.displayControl = {
-            ...ann.ui.displayControl,
-            editing: false,
-          };
-        }
-        if (
-          getTopEntity(ann).id === entity.id &&
-          (!base_schema || (base_schema && ann.table_info.base_schema === base_schema))
-        ) {
-          ann = toggleObjectDisplayControl(ann, displayControlProperty, isVisible);
-        }
-        return ann;
-      }),
-    );
-  };
-
-  const deleteObject = () => {
-    const save_item: SaveItem = {
-      change_type: "delete",
-      object: entity,
-    };
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-    //delete eventual sub entities
-    const subentities = $entities.filter((ent) => ent.data.parent_ref.id === entity.id);
-    for (const subent of subentities) {
-      const save_item: SaveItem = {
-        change_type: "delete",
-        object: subent,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          return ann;
+        }),
+      );
     }
-    for (const ann of entity.ui.childs || []) {
-      const save_item: SaveItem = {
-        change_type: "delete",
-        object: ann,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-    }
-    const subent_ids = subentities.map((subent) => subent.id);
-    annotations.update((oldObjects) =>
-      oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_ref.id)),
-    );
-    entities.update((oldObjects) =>
-      oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
-    );
   };
 
   const saveInputChange = (
@@ -234,6 +215,8 @@ License: CECILL-C
           return object;
         }),
       );
+      //for canvas to reflect a name change, we need to refresh annotations store too
+      annotations.update((anns) => anns);
     } else if (obj.table_info.base_schema === BaseSchema.Item) {
       console.warn("This should never happen, we don't have 'item' features in Objects Inspector.");
     } else {
@@ -258,6 +241,7 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
+    entity.ui.displayControl.open = true;
     const newFrameIndex = highlightObject(entity.id, highlightState === "self");
     if (newFrameIndex != $currentFrameIndex) {
       currentFrameIndex.set(newFrameIndex);
@@ -267,17 +251,21 @@ License: CECILL-C
 
   const onTrackVisClick = () => {
     if (entity.is_track) {
-      entity.ui.hidden = !entity.ui.hidden;
-      hiddenTrack = entity.ui.hidden;
+      entity.ui.displayControl.hidden = !entity.ui.displayControl.hidden;
+      hiddenTrack = entity.ui.displayControl.hidden;
       //svelte hack to refresh
       entities.set($entities);
     }
   };
 
-  const onEditIconClick = () => {
-    onColoredDotClick();
-    handleSetAnnotationDisplayControl("editing", !isEditing);
-    if (!isEditing) selectedTool.set(panTool);
+  const onEditIconClick = (child: Annotation | null = null) => {
+    if (child) {
+      handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
+    } else {
+      if (!entity.ui.displayControl.editing && highlightState !== "self") onColoredDotClick();
+      handleSetDisplayControl("editing", !entity.ui.displayControl.editing);
+    }
+    if (!entity.ui.displayControl.editing) selectedTool.set(panTool);
   };
 
   let thumbnails: ObjectThumbnail[] = [];
@@ -303,7 +291,7 @@ License: CECILL-C
 
 <article
   on:mouseenter={() => (showIcons = true)}
-  on:mouseleave={() => (showIcons = open)}
+  on:mouseleave={() => (showIcons = entity.ui.displayControl.open ?? false)}
   id={`card-object-${entity.id}`}
 >
   <div
@@ -315,7 +303,7 @@ License: CECILL-C
   >
     <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
       <IconButton
-        on:click={() => handleSetAnnotationDisplayControl("hidden", isVisible)}
+        on:click={() => handleSetDisplayControl("hidden", isVisible)}
         tooltipContent={isVisible ? "Hide object" : "Show object"}
       >
         {#if isVisible}
@@ -333,9 +321,9 @@ License: CECILL-C
       <span
         class={cn("truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap", {
           "text-slate-800": highlightState !== "none",
-          "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
           "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
+        title="{entity.table_info.base_schema} ({entity.id})"
       >
         {displayName}
       </span>
@@ -343,7 +331,7 @@ License: CECILL-C
     <div
       class={cn(
         "flex-shrink-0 flex items-center justify-end",
-        showIcons || isEditing
+        showIcons || entity.ui.displayControl.editing
           ? entity.is_track
             ? $selectedTool.type !== ToolType.Fusion
               ? "basis-[160px]"
@@ -355,17 +343,21 @@ License: CECILL-C
       )}
       style="min-width: 40px;"
     >
-      {#if showIcons || isEditing}
+      {#if showIcons || entity.ui.displayControl.editing}
         {#if $selectedTool.type !== ToolType.Fusion}
-          <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}>
+          <IconButton
+            tooltipContent="Edit object"
+            selected={entity.ui.displayControl.editing}
+            on:click={() => onEditIconClick()}
+          >
             <Pencil class="h-4" />
           </IconButton>
         {/if}
-        <IconButton tooltipContent="Delete object" on:click={deleteObject}>
+        <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity)}>
           <Trash2 class="h-4" />
         </IconButton>
       {/if}
-      {#if entity.is_track && (showIcons || isEditing || hiddenTrack)}
+      {#if entity.is_track && (showIcons || entity.ui.displayControl.editing || hiddenTrack)}
         <IconButton
           tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
           on:click={onTrackVisClick}
@@ -374,63 +366,46 @@ License: CECILL-C
         </IconButton>
       {/if}
       <IconButton
-        on:click={() => (open = !open)}
-        tooltipContent={open ? "Hide features" : "Show features"}
+        on:click={() => (entity.ui.displayControl.open = !entity.ui.displayControl.open)}
+        tooltipContent={entity.ui.displayControl.open ? "Hide features" : "Show features"}
       >
-        <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
+        <ChevronRight
+          class={cn("transition", { "rotate-90": entity.ui.displayControl.open })}
+          strokeWidth={1}
+        />
       </IconButton>
     </div>
   </div>
-  {#if open}
+  {#if entity.ui.displayControl.open}
     <div class="pl-5 text-slate-800 bg-white">
       <div
-        class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
+        class="border-l-4 border-dashed border-red-400 pl-4 flex flex-col gap-4 pb-2"
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          <div>
-            <p class="font-medium">Display</p>
-            <div class="flex gap-4">
-              <DisplayCheckbox
-                isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.BBox))}
-                {handleSetAnnotationDisplayControl}
-                annotationIsVisible={boxIsVisible}
-                annotationName="Bounding box"
-                base_schema={BaseSchema.BBox}
-              />
-              <DisplayCheckbox
-                isAnnotationEmpty={!entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Mask))}
-                {handleSetAnnotationDisplayControl}
-                annotationIsVisible={maskIsVisible}
-                annotationName="Segmentation mask"
-                base_schema={BaseSchema.Mask}
-              />
-              <DisplayCheckbox
-                isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                  ann.is_type(BaseSchema.Keypoints),
-                )}
-                {handleSetAnnotationDisplayControl}
-                annotationIsVisible={keypointsIsVisible}
-                annotationName="Keypoints"
-                base_schema={BaseSchema.Keypoints}
-              />
-              <DisplayCheckbox
-                isAnnotationEmpty={!entity.ui.childs?.some((ann) =>
-                  ann.is_type(BaseSchema.TextSpan),
-                )}
-                {handleSetAnnotationDisplayControl}
-                annotationIsVisible={textSpansIsVisible}
-                annotationName="Text span"
-                base_schema={BaseSchema.TextSpan}
-              />
-            </div>
+          <div class="w-full block">
+            <p class="font-medium">Features</p>
+            <UpdateFeatureInputs
+              featureClass="objects"
+              features={$features}
+              isEditing={entity.ui.displayControl.editing ?? false}
+              {saveInputChange}
+            />
           </div>
-          <UpdateFeatureInputs
-            featureClass="objects"
-            features={$features}
-            {isEditing}
-            {saveInputChange}
-          />
+          <p class="font-medium">Objects ({allowableChilds.length})</p>
+          <div class="flex flex-col">
+            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+              <p class="text-center italic">
+                {allowedChilds.length > 0 ? allowableChilds.length : "No"}
+                object{allowedChilds.length === 1 ? "" : "s"}
+                visible on frame {$currentFrameIndex}
+              </p>
+            {/if}
+            {#each allowedChilds as child}
+              <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+            {/each}
+          </div>
+          <p class="font-medium">Thumbnails</p>
           {#each thumbnails as thumbnail}
             <Thumbnail
               imageDimension={thumbnail.baseImageDimensions}

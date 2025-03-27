@@ -141,7 +141,7 @@ export const textSpansToHtml = ({
   textSpans: TextSpan[];
   colorScale: (value: string) => string;
 }): string => {
-  if (!text || !textSpans.length) {
+  if (!text || !textSpans || !textSpans.length) {
     return text;
   }
 
