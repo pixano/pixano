@@ -321,7 +321,6 @@ License: CECILL-C
       <span
         class={cn("truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap", {
           "text-slate-800": highlightState !== "none",
-          "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
           "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
         title="{entity.table_info.base_schema} ({entity.id})"
