@@ -1,28 +1,26 @@
-# Semantic Search
+# Semantic search
 
 ## Context
 
 The Pixano's app support **semantic search** which allows a user to search for a view based on a text content.
 
-To do that Pixano requires that the embeddings of the views are pre-computed with the model used for Semantic search. For now, we rely on the [Embeddings functions](https://lancedb.github.io/lancedb/embeddings/embedding_functions/) from LanceDB.
+To do that, Pixano requires that the embeddings of the views are pre-computed with the model used for semantic search, using the [embeddings functions](https://lancedb.github.io/lancedb/embeddings/embedding_functions/) from LanceDB.
 
-## Open-clip example
+In this tutorial, we will go through the process of semantic search using the OpenCLIP model.
 
-We will go through the process of semantic search based on the Open-clip model.
+## Pre-compute the embeddings
 
-### Pre-compute the embeddings
+First, we need to pre-compute the embeddings using LanceDB and Pixano. We will use the Health Images dataset defined in the [Build and query a dataset](./dataset.md) tutorial.
 
-First, we need to pre-compute the embeddings using LanceDB and Pixano. We will use the Health Images dataset defined in the [library](./create_your_first_library.md) tutorial.
+1. Install OpenCLIP
 
-0. Install open-clip
-
-For this tutorial, we will use open-clip embedding function and therefore need it to be installed.
+For this tutorial, we will use OpenCLIP embedding function and therefore need it to be installed.
 
 ```bash
 pip install open_clip_torch
 ```
 
-1. Create the Image View Embedding table:
+2. Create the Image View Embedding table:
 
 ```python
 from pathlib import Path
@@ -53,7 +51,7 @@ dataset.create_table( # Create the table
 
 The `pixano.features.ViewEmbedding`'s method `create_schema` create a schema that contains a LanceDB embedding function compatible with Pixano.
 
-2. Compute the embeddings
+3. Compute the embeddings
 
 To compute the embeddings, Pixano needs to access the references to the views. Then, based on these information, it can use the LanceDB embedding function on the views.
 
@@ -81,7 +79,17 @@ for view in views:
 dataset.compute_view_embeddings(table_name=table_name, data=data)
 ```
 
-3. Perform semantic search (Python API)
+## Use the semantic search
+
+### With the app
+
+Now you are all set to use the semantic search, follow the [using the app](../getting_started/using_the_app.md) guide!
+
+The semantic search bar will appear on the dataset page.
+
+### With the API
+
+#### Python API
 
 To perform semantic search, simply call the dataset's `semantic_search` method with the text query. It will return the items with the closest view semantically to the query and the distance.
 
@@ -102,9 +110,9 @@ dataset.semantic_search(query, table_name, limit=5, skip=0)
 )
 ```
 
-4. Use the REST API or the UI to browse through your items with semantic search.
+#### REST API
 
-You first need to launch the Pixano's app to interact with the UI or the REST API.
+You first need to launch the Pixano's app to interact with the REST API.
 
 Then you can curl the REST API to navigate through your items:
 

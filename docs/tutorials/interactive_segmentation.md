@@ -1,4 +1,4 @@
-# Segmentation powered by SAM
+# Interactive segmentation
 
 ## Context
 
@@ -8,9 +8,9 @@ Pixano's web app integrates SAM to quickly annotate your images. It first requir
 
 This tutorial will help you unlock this feature.
 
-## Create image embeddings for SAM
+## Create the image embeddings
 
-### Install requirements
+### Install the requirements
 
 1. Pip dependencies
 
@@ -41,7 +41,7 @@ cp sam_h.onnx /path/to/pixano/models/
 
 ### Create the embeddings
 
-The following suppose the [library tutorial](./create_your_first_library.md) has been followed previously to initialize the library containing the `health_dataset`.
+We will use the Health Images dataset defined in the [Build and query a dataset](./dataset.md) tutorial.
 
 1. Load the model and the dataset.
 
@@ -117,6 +117,8 @@ for i, image in enumerate(images):
 dataset.add_data("sam_embedding", embeddings)
 ```
 
-### Use the app !
+## Use the interactive segmentation
 
-Now you are all set to use SAM, follow the [using the app](../getting_started/using_the_app.md) guide !
+### With the app
+
+Now you are all set to use SAM, check the "Smart segmentation tool" section of the [using the app](../getting_started/using_the_app.md) guide!

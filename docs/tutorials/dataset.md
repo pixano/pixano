@@ -1,4 +1,4 @@
-# Build a Pixano library
+# Build and query a dataset
 
 ## Context
 
@@ -6,7 +6,7 @@ In this tutorial, we will build a library consisting of one dataset from a folde
 
 It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images.
 
-## Build the Dataset
+## Build your dataset
 
 ### Describe your dataset
 
@@ -45,9 +45,7 @@ class HealthDatasetItem(DatasetItem):
 
 Notice that when multiple elements are attached to an item we use the `list` type.
 
-### Initialize a DatasetBuilder
-
-#### Use a built-in builder
+### Use one of the provided DatasetBuilder
 
 The Health dataset follows a **folder** structure that can be handled by Pixano:
 
@@ -88,7 +86,7 @@ builder = ImageFolderBuilder(
 dataset = builder.build(mode="create")
 ```
 
-#### Write your own builder
+### Write your own DatasetBuilder
 
 While it is convenient to use built-in dataset builders, Pixano do not cover all your use-cases. Fortunatly it is possible to design your own builder by subclassing the `pixano.datasets.builders.DatasetBuilder` class and implementing the `generate_data` method.
 
@@ -187,7 +185,7 @@ Notice that the `generate_data` is a generator of dictionaries whose keys are th
 
 ## Query your dataset
 
-### Python API
+### Use the Python API
 
 To interact with your dataset you can use CRUD (create, read, update, and delete) operations either on a table level or on a complete dataset item with the following methods:
 
@@ -220,7 +218,7 @@ dataset.get_dataset_items("iyA4tHmGeHPP4N6diSuUXi")
 >>> DatasetItem(id='iyA4tHmGeHPP4N6diSuUXi', split='all', created_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 363831), updated_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 363831), image=Image(id='QmmM6LhwB4uMMCRUjgXejY', created_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 364059), updated_at=datetime.datetime(2024, 11, 7, 10, 14, 5, 364059), item_ref=ItemRef(name='item', id='iyA4tHmGeHPP4N6diSuUXi'), parent_ref=ViewRef(name='', id=''), url='/health_images/all/microcope-red_blood_cells.jpg', width=2560, height=1920, format='JPEG'), objects=[], bbox=[], keypoints=[], image_type='microcope')
 ```
 
-### REST API
+### Use the REST API
 
 To use the REST API, we first need to launch the Pixano's app.
 

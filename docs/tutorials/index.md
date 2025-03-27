@@ -2,6 +2,6 @@
 
 In this section, we provide guides to cover Pixano functionalities.
 
-- [Create your first library](./create_your_first_library.md)
-- [Semantic Search](./semantic_search.md)
-- [Segmentation powered by SAM](./segmentation_powered_by_sam.md)
+- [Build a Pixano dataset and query it using the API](./dataset.md)
+- [Use semantic search with models like OpenCLIP to browse your data efficiently](./semantic_search.md)
+- [Use interactive segmentation with models like SAM to annotate your data efficiently](./interactive_segmentation.md)

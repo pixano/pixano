@@ -121,9 +121,9 @@ nav:
           - "Using the app": getting_started/using_the_app.md
       - "Tutorials":
           - tutorials/index.md
-          - "Create your first library": tutorials/create_your_first_library.md
+          - "Build and query a dataset": tutorials/dataset.md
           - "Semantic search": tutorials/semantic_search.md
-          - "Segmentation powered by SAM": tutorials/segmentation_powered_by_sam.md
+          - "Interactive segmentation": tutorials/interactive_segmentation.md
       - "API reference": api_reference/
 
   - "Pixano-Inference": https://pixano.github.io/pixano-inference/latest/
