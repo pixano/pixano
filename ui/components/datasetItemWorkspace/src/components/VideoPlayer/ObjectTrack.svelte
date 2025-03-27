@@ -70,9 +70,9 @@ License: CECILL-C
   }
 
   annotations.subscribe(() => {
-    if (track.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
+    if (track.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "self")) {
       highlightState = "self";
-    } else if (track.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
+    } else if (track.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "none")) {
       highlightState = "none";
     } else {
       highlightState = "all";
@@ -91,7 +91,7 @@ License: CECILL-C
       const tracklet_childs_ids = tracklet.ui.childs.map((ann) => ann.id);
       annotations.update((oldObjects) =>
         oldObjects.map((ann) => {
-          ann.ui.highlighted =
+          ann.ui.displayControl.highlighted =
             ann.id === tracklet.id || tracklet_childs_ids.includes(ann.id) ? "self" : "none";
           return ann;
         }),
@@ -109,7 +109,7 @@ License: CECILL-C
             getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
           (ann.is_type(BaseSchema.Tracklet) && ann.id === track.id);
-        ann.ui.highlighted = to_highlight ? "self" : "none";
+        ann.ui.displayControl.highlighted = to_highlight ? "self" : "none";
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
           editing: to_highlight,
@@ -159,9 +159,9 @@ License: CECILL-C
         kpt.ui!.frame_index === $currentFrameIndex &&
         tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
     );
-    if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
+    if (interpolatedKpt && interpolatedKpt.ui?.startRef) {
       const keypointsRef = $annotations.find(
-        (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_type(BaseSchema.Keypoints),
+        (ann) => ann.id === interpolatedKpt.ui?.startRef!.id && ann.is_type(BaseSchema.Keypoints),
       ) as Keypoints;
       if (keypointsRef) {
         const newItemOrig = structuredClone(keypointsRef);
@@ -170,21 +170,13 @@ License: CECILL-C
         newItemKpt = new Keypoints(noUIfieldsBBox);
         newItemKpt.ui = ui;
         newItemKpt.ui.top_entities = top_entities;
-        if (interpolatedKpt.ui!.displayControl)
-          newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
-        if (interpolatedKpt.ui!.highlighted)
-          newItemKpt.ui.highlighted = interpolatedKpt.ui!.highlighted;
-        if (interpolatedKpt.ui!.displayControl)
-          newItemKpt.ui.displayControl = {
-            hidden: interpolatedKpt.ui!.displayControl.hidden,
-            editing: interpolatedKpt.ui!.displayControl.editing, //TODO maybe we should just set it to true ?
-          };
+        newItemKpt.ui.displayControl = interpolatedKpt.ui.displayControl;
         newItemKpt.id = interpolatedKpt.id;
-        newItemKpt.ui.frame_index = interpolatedKpt.ui!.frame_index;
+        newItemKpt.ui.frame_index = interpolatedKpt.ui.frame_index;
         newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
         //coords are denormalized: normalize them (??is that so ? to check)
         const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
-          interpolatedKpt.ui!.frame_index!
+          interpolatedKpt.ui.frame_index!
         ];
         const coords = [];
         const states = [];

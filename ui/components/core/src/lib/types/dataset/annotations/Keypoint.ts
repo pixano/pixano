@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -25,7 +25,10 @@ export class Keypoints extends Annotation {
   declare data: KeypointsType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: initDisplayControl,
+  };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== BaseSchema.Keypoints) throw new Error("Not a Keypoints");

@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -31,7 +31,7 @@ export class BBox extends Annotation {
     strokeFactor?: number;
     tooltip?: string;
     startRef?: BBox; //for interpolated box
-  } = { datasetItemType: WorkspaceType.UNDEFINED };
+  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
 
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== BaseSchema.BBox) throw new Error("Not a BBox");

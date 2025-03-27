@@ -146,8 +146,8 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
-      "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-10": tracklet.ui.highlighted === "none",
+      "opacity-100": tracklet.ui.displayControl.highlighted === "self",
+      "opacity-10": tracklet.ui.displayControl.highlighted === "none",
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >

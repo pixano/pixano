@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -24,7 +24,10 @@ export class Classification extends Annotation {
   declare data: ClassificationType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: initDisplayControl,
+  };
 
   constructor(obj: BaseDataFields<ClassificationType>) {
     if (obj.table_info.base_schema !== BaseSchema.Classification)

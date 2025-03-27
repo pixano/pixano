@@ -35,7 +35,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
   return objects.map((ann) => {
     if (newShape?.status !== "editing") return ann;
     if (newShape.highlighted === "all") {
-      ann.ui.highlighted = "all";
+      ann.ui.displayControl.highlighted = "all";
       ann.ui.displayControl = {
         ...ann.ui.displayControl,
         editing: false,

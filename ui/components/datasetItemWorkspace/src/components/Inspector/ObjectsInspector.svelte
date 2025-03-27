@@ -52,7 +52,7 @@ License: CECILL-C
     selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
-      (ann) => ann.ui.highlighted === "self" && ann.is_type(BaseSchema.BBox),
+      (ann) => ann.ui.displayControl.highlighted === "self" && ann.is_type(BaseSchema.BBox),
     );
 
     if (highlightedBoxes.length > 0) {

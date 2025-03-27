@@ -18,8 +18,9 @@ import { getTopEntity } from "./getTopEntity";
 export const mapObjectToBBox = (bbox: BBox, views: MView): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
-  if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl?.hidden) return;
-  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.highlighted !== "self") return;
+  if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl.hidden) return;
+  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.displayControl.highlighted !== "self")
+    return;
   if (!bbox.data.view_ref.name) return;
   let bbox_ui_coords = bbox.data.coords;
   if (bbox.data.format === "xyxy") {
@@ -56,8 +57,9 @@ export const mapObjectToBBox = (bbox: BBox, views: MView): BBox | undefined => {
     ui: {
       ...bbox.ui,
       tooltip,
-      opacity: bbox.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-      strokeFactor: bbox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+      opacity: bbox.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      strokeFactor:
+        bbox.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     },
   } as BBox;
 };

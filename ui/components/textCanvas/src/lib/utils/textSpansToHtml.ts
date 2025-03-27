@@ -47,7 +47,7 @@ const getTextSpanPosition = (
     content,
     metadata: getMetadataOfTextSpan(textSpan),
     bgColor: colorScale(textSpan.data.entity_ref.id),
-    hidden: textSpan.ui.displayControl?.hidden ?? false,
+    hidden: textSpan.ui.displayControl.hidden ?? false,
   });
 
   const spanEnd = spanHtml.length - CLOSING_TAG.length;

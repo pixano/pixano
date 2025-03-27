@@ -45,11 +45,10 @@ License: CECILL-C
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
   const clearHighlighting = () => {
-    //deselect everything = unhighlight all
+    //deselect everything = unhighlight all and stop editing
     annotations.update((anns) =>
       anns.map((ann) => {
-        ann.ui.highlighted = "all";
-        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false };
+        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false, highlighted: "all" };
         return ann;
       }),
     );
@@ -79,7 +78,8 @@ License: CECILL-C
   });
 
   onMount(() => {
-    selectTool(panTool);
+    if ($selectedTool === undefined) selectedTool.set(panTool);
+    clearHighlighting();
   });
 
   $: {

@@ -115,30 +115,30 @@ License: CECILL-C
   );
 
   annotations.subscribe(() => {
-    if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
+    if (entity.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "self")) {
       highlightState = "self";
-    } else if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
+    } else if (entity.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "none")) {
       highlightState = "none";
     } else {
       highlightState = "all";
     }
-    isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
-    isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl?.hidden) || false;
+    isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl.editing) || false;
+    isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false;
     boxIsVisible =
       entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.BBox) && !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.BBox) && !ann.ui.displayControl.hidden,
       ) || false;
     maskIsVisible =
       entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.Mask) && !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.Mask) && !ann.ui.displayControl.hidden,
       ) || false;
     keypointsIsVisible =
       entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.Keypoints) && !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.Keypoints) && !ann.ui.displayControl.hidden,
       ) || false;
     textSpansIsVisible =
       entity.ui.childs?.some(
-        (ann) => ann.is_type(BaseSchema.TextSpan) && !ann.ui.displayControl?.hidden,
+        (ann) => ann.is_type(BaseSchema.TextSpan) && !ann.ui.displayControl.hidden,
       ) || false;
   });
 
@@ -157,12 +157,12 @@ License: CECILL-C
 
           if (getTopEntity(ann).id === entity.id) {
             if (isVisible) {
-              ann.ui.highlighted = "self";
+              ann.ui.displayControl.highlighted = "self";
             } else {
-              ann.ui.highlighted = "all";
+              ann.ui.displayControl.highlighted = "all";
             }
           } else {
-            ann.ui.highlighted = "none";
+            ann.ui.displayControl.highlighted = "none";
           }
 
           ann.ui.displayControl = {

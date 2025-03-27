@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -27,7 +27,7 @@ export class Tracklet extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     childs: Annotation[];
-  } = { datasetItemType: WorkspaceType.VIDEO, childs: [] };
+  } = { datasetItemType: WorkspaceType.VIDEO, childs: [], displayControl: initDisplayControl };
 
   constructor(obj: BaseDataFields<TrackletType>) {
     if (obj.table_info.base_schema !== BaseSchema.Tracklet) throw new Error("Not a Tracklet");

@@ -10,6 +10,7 @@ import { createTypedAnnotation } from "../../../utils/annotations";
 import { BaseSchema } from "../BaseSchema";
 import {
   BaseData,
+  initDisplayControl,
   referenceSchema,
   type BaseDataFields,
   type DisplayControl,
@@ -32,8 +33,7 @@ export type AnnotationType = z.infer<typeof annotationSchema>; //export if neede
 export type AnnotationUIFields = {
   datasetItemType: WorkspaceType;
   //features: Record<string, ItemFeature>;
-  displayControl?: DisplayControl;
-  highlighted?: "none" | "self" | "all";
+  displayControl: DisplayControl;
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
   top_entities?: Entity[];
@@ -41,7 +41,10 @@ export type AnnotationUIFields = {
 
 export abstract class Annotation extends BaseData<AnnotationType> {
   //UI only fields
-  ui: AnnotationUIFields = { datasetItemType: WorkspaceType.UNDEFINED };
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: initDisplayControl,
+  };
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);

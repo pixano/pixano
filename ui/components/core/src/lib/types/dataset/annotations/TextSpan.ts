@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields, Reference } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields, type Reference } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -30,7 +30,10 @@ export class TextSpan extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     bgColor?: string;
-  } = { datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING };
+  } = {
+    datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+    displayControl: initDisplayControl,
+  };
 
   constructor(obj: BaseDataFields<TextSpanType>) {
     if (obj.table_info.base_schema !== BaseSchema.TextSpan) throw new Error("Not a TextSpan");

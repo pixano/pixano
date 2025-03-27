@@ -110,8 +110,7 @@ export type KeypointsTemplate = {
   vertices: Required<Vertex>[];
   ui?: {
     frame_index?: number;
-    displayControl?: DisplayControl;
-    highlighted?: "all" | "self" | "none";
+    displayControl: DisplayControl;
     startRef?: KeypointsTemplate;
     top_entities?: Entity[];
   };

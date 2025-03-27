@@ -19,7 +19,7 @@ export const highlightObject = (entity_id: string, isHighlighted: boolean): numb
   annotations.update((objects) =>
     objects.map((ann) => {
       if (get(selectedTool).type === ToolType.Pan) {
-        ann.ui.highlighted = isHighlighted
+        ann.ui.displayControl.highlighted = isHighlighted
           ? "all"
           : getTopEntity(ann).id === entity_id
             ? "self"

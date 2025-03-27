@@ -220,9 +220,16 @@ export type ImagesPerView = Record<string, HTMLImage[]>;
 
 // ITEM OBJECT
 export interface DisplayControl {
-  hidden?: boolean;
-  editing?: boolean;
+  hidden: boolean;
+  editing: boolean;
+  highlighted: "all" | "self" | "none";
 }
+
+export const initDisplayControl: DisplayControl = {
+  hidden: false,
+  editing: false,
+  highlighted: "all",
+};
 
 export interface ObjectThumbnail {
   uri: string;
