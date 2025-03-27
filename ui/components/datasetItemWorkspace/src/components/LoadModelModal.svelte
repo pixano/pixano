@@ -63,7 +63,6 @@ License: CECILL-C
   }
 
   const closeModal = () => {
-    console.log("RESET MoDEL!");
     modelsUiStore.set({
       currentModalOpen: "none",
       selectedModelName: "",
