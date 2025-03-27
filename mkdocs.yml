@@ -115,8 +115,9 @@ nav:
   - "Pixano":
       - "Getting started":
           - getting_started/index.md
+          - "Key concepts": getting_started/key_concepts.md
           - "Installing Pixano": getting_started/installing_pixano.md
-          - "Key Concepts": getting_started/key_concepts.md
+          - "Creating a dataset": getting_started/creating_a_dataset.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
       - "Tutorials":
