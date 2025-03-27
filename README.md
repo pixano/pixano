@@ -10,11 +10,12 @@
 **_Under active development, subject to API change_**
 
 [![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
-[![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
-[![Tests](https://img.shields.io/github/actions/workflow/status/pixano/pixano/test_back.yml?branch=develop)](https://github.com/pixano/pixano/actions/workflows/test_back.yml)
-[![Coverage](https://codecov.io/github/pixano/pixano/graph/badge.svg?token=4BJY43YQ6L)](https://codecov.io/github/pixano/pixano)
+[![PyPI version](https://img.shields.io/pypi/v/pixano?label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
+[![Docker](https://img.shields.io/docker/v/pixano/pixano?sort=semver&label=release&logo=docker&logoColor=white)](https://hub.docker.com/r/pixano/pixano/)
+[![Coverage](https://img.shields.io/codecov/c/github/pixano/pixano/main?logo=codecov&logoColor=white)](https://codecov.io/github/pixano/pixano)
+[![Tests](https://img.shields.io/github/actions/workflow/status/pixano/pixano/backend.yml?label=tests&branch=main)](https://github.com/pixano/pixano/actions/workflows/backend.yml)
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fpixano.github.io%2F&up_message=online&down_message=offline&label=docs)](https://pixano.github.io)
-[![Python version](https://img.shields.io/pypi/pyversions/pixano?color=important&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Python version](https://img.shields.io/pypi/pyversions/pixano?color=blue&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-CeCILL--C-blue.svg)](LICENSE)
 
 </div>

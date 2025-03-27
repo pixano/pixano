@@ -48,7 +48,6 @@ class TestFolderBaseBuilder:
         assert video_folder_builder.views_schema == {"view": Video}
         assert image_folder_builder.entities_schema == {"entities": entity_category}
         assert video_folder_builder.entities_schema == {"entities": entity_category}
-        assert image_folder_builder.url_prefix == Path(".")
 
     def test_vqa_init(self, vqa_folder_builder, vqa_folder_builder_no_jsonl):
         assert isinstance(vqa_folder_builder, VQAFolderBuilder)
@@ -61,28 +60,28 @@ class TestFolderBaseBuilder:
         assert vqa_folder_builder_no_jsonl.views_schema == {"image": Image}
         assert vqa_folder_builder.entities_schema == {"objects": Entity, "conversations": Conversation}
         assert vqa_folder_builder_no_jsonl.entities_schema == {"objects": Entity, "conversations": Conversation}
-        assert vqa_folder_builder.url_prefix == Path(".")
 
     def test_url_prefix_init(self, dataset_item_bboxes_metadata):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
-        urls_relative_path = source_dir.parent.parent
+        urls_relative_path = source_dir.name
 
         ImageFolderBuilder(
-            source_dir=source_dir,
-            target_dir=target_dir,
+            media_dir=source_dir.parent,
+            library_dir=target_dir,
             info=DatasetInfo(name="test", description="test"),
             dataset_item=dataset_item_bboxes_metadata,
-            url_prefix=urls_relative_path,
+            dataset_path=urls_relative_path,
         )
 
     def test_no_jsonl(self):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
         ImageFolderBuilder(
-            source_dir=source_dir,
-            target_dir=target_dir,
+            media_dir=source_dir.parent,
+            library_dir=target_dir,
             info=DatasetInfo(name="test", description="test"),
+            dataset_path=source_dir.name,
         )
 
     def test_error_init(self, entity_category) -> None:
@@ -92,9 +91,10 @@ class TestFolderBaseBuilder:
         # test 1: no schema with FolderBaseBuilder
         with pytest.raises(ValueError, match="A schema is required."):
             FolderBaseBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
+                dataset_path=source_dir.name,
             )
 
         # test 2: schema without view
@@ -107,9 +107,10 @@ class TestFolderBaseBuilder:
             ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
         ):
             ImageFolderBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
+                dataset_path=source_dir.name,
                 dataset_item=Schema,
             )
 
@@ -123,9 +124,10 @@ class TestFolderBaseBuilder:
             ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
         ):
             ImageFolderBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
+                dataset_path=source_dir.name,
                 dataset_item=Schema,
             )
 
@@ -139,10 +141,20 @@ class TestFolderBaseBuilder:
 
         with pytest.raises(ValueError, match="Only one view schema is supported in folder based builders."):
             ImageFolderBuilder(
-                source_dir=source_dir,
-                target_dir=target_dir,
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
+                dataset_path=source_dir.name,
                 dataset_item=Schema,
+            )
+
+        # test 5: invalid dataset_path
+        with pytest.raises(ValueError, match=r"A source path \(media_dir / dataset_path\) is required."):
+            ImageFolderBuilder(
+                media_dir=source_dir.parent,
+                library_dir=target_dir,
+                info=DatasetInfo(name="test", description="test"),
+                dataset_path="wrong_dataset_path",
             )
 
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
@@ -164,7 +176,7 @@ class TestFolderBaseBuilder:
         assert isinstance(view, Image)
         assert view.item_ref == ItemRef(id=item.id)
         assert isinstance(view.id, str) and len(view.id) == 22
-        assert view.url == "train/item_0.jpg"
+        assert view.url == "test_dataset/train/item_0.jpg"
         assert view.width == 586
         assert view.height == 640
         assert view.format == "JPEG"
@@ -180,7 +192,7 @@ class TestFolderBaseBuilder:
         assert isinstance(view, Video)
         assert isinstance(view.id, str) and len(view.id) == 22
         assert view.item_ref == ItemRef(id=item.id)
-        assert view.url == "train/item_0.mp4"
+        assert view.url == "test_dataset/train/item_0.mp4"
         assert view.num_frames == 209
         assert round(view.fps, 2) == 29.97
         assert view.width == 320
@@ -408,10 +420,11 @@ class TestFolderBaseBuilder:
             meatadata_list: list
 
         image_folder_builder_no_jsonl_custom_schema = ImageFolderBuilder(
-            source_dir=folder_no_jsonl,
-            target_dir=tempfile.mkdtemp(),
+            media_dir=folder_no_jsonl.parent,
+            library_dir=tempfile.mkdtemp(),
             info=DatasetInfo(name="test", description="test"),
             dataset_item=CustomSchema,
+            dataset_path=folder_no_jsonl.name,
         )
 
         with patch(
@@ -427,7 +440,7 @@ class TestFolderBaseBuilder:
             if i % 2 == 0:
                 view: Image = item["image"]
                 assert view.item_ref == ItemRef(id=actual_item.id)
-                assert view.url == f"{actual_item.split}/item_mosaic.jpg"
+                assert view.url == f"test_dataset/{actual_item.split}/item_mosaic.jpg"
             else:
                 assert "image" not in item
 
@@ -440,7 +453,7 @@ class TestFolderBaseBuilder:
             sc = split_counts[actual_item.split]
             view: Image = item["image"]
             assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
+            assert view.url == f"test_dataset/{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
             split_counts[actual_item.split] += 1
 
         # test no json with custom item fields
@@ -467,7 +480,7 @@ class TestFolderBaseBuilder:
             assert actual_item.metadata == f"metadata_{i}"
 
             assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
+            assert view.url == f"test_dataset/{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
 
             if i % 2:  # has entities
                 entities: list[entity_category] = item["entities"]
@@ -514,7 +527,7 @@ class TestFolderBaseBuilder:
             view: Image = item["image"]
 
             assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"{actual_item.split}/item_{i % 2}.{'png' if i % 2 else 'jpg'}"
+            assert view.url == f"test_dataset/{actual_item.split}/item_{i % 2}.{'png' if i % 2 else 'jpg'}"
 
             conversations: list[Conversation] = item["conversations"]
             messages: list[Message] = item["messages"]
