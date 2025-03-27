@@ -44,7 +44,7 @@ License: CECILL-C
   let previousSelectedTool: SelectionTool | null = null;
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
-  const cleanFusion = () => {
+  const clearHighlighting = () => {
     //deselect everything = unhighlight all
     annotations.update((anns) =>
       anns.map((ann) => {
@@ -58,7 +58,7 @@ License: CECILL-C
 
   const selectTool = (tool: SelectionTool) => {
     if (tool !== $selectedTool) {
-      cleanFusion();
+      clearHighlighting();
       selectedTool.set(tool);
     }
   };
@@ -115,7 +115,7 @@ License: CECILL-C
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}
-      <FusionTool {selectTool} {cleanFusion} />
+      <FusionTool {selectTool} {clearHighlighting} />
     {/if}
   </div>
   <div

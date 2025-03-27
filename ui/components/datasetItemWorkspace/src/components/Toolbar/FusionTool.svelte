@@ -22,7 +22,7 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let selectTool: (tool: SelectionTool) => void;
-  export let cleanFusion: () => void;
+  export let clearHighlighting: () => void;
 
   const onValidate = () => {
     let reassoc_anns: Annotation[] = [];
@@ -78,11 +78,11 @@ License: CECILL-C
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       });
     }
-    cleanFusion();
+    clearHighlighting();
   };
 
   const onAbort = () => {
-    cleanFusion();
+    clearHighlighting();
   };
 
   function shortcutHandler(event: KeyboardEvent) {
