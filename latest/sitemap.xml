@@ -385,6 +385,10 @@
          <lastmod>2025-03-27</lastmod>
     </url>
     <url>
+         <loc>https://pixano.github.io/pixano/latest/getting_started/creating_a_dataset/</loc>
+         <lastmod>2025-03-27</lastmod>
+    </url>
+    <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/installing_pixano/</loc>
          <lastmod>2025-03-27</lastmod>
     </url>
@@ -405,11 +409,11 @@
          <lastmod>2025-03-27</lastmod>
     </url>
     <url>
-         <loc>https://pixano.github.io/pixano/latest/tutorials/create_your_first_library/</loc>
+         <loc>https://pixano.github.io/pixano/latest/tutorials/dataset/</loc>
          <lastmod>2025-03-27</lastmod>
     </url>
     <url>
-         <loc>https://pixano.github.io/pixano/latest/tutorials/segmentation_powered_by_sam/</loc>
+         <loc>https://pixano.github.io/pixano/latest/tutorials/interactive_segmentation/</loc>
          <lastmod>2025-03-27</lastmod>
     </url>
     <url>

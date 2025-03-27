@@ -426,6 +426,8 @@
       
         
       
+        
+      
     
     
       
@@ -475,6 +477,28 @@
   
   
     <li class="md-nav__item">
+      <a href="../../../../../getting_started/key_concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Key concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../../../../getting_started/installing_pixano/" class="md-nav__link">
         
   
@@ -497,11 +521,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../../getting_started/key_concepts/" class="md-nav__link">
+      <a href="../../../../../getting_started/creating_a_dataset/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Key Concepts
+    Creating a dataset
     
   </span>
   
@@ -632,11 +656,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../../tutorials/create_your_first_library/" class="md-nav__link">
+      <a href="../../../../../tutorials/dataset/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Create your first library
+    Build and query a dataset
     
   </span>
   
@@ -676,11 +700,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../../tutorials/segmentation_powered_by_sam/" class="md-nav__link">
+      <a href="../../../../../tutorials/interactive_segmentation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Segmentation powered by SAM
+    Interactive segmentation
     
   </span>
   
@@ -4592,6 +4616,7 @@
       <tbody>
           <tr class="doc-section-item">
             <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4601,6 +4626,7 @@
           </tr>
           <tr class="doc-section-item">
             <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4610,6 +4636,7 @@
           </tr>
           <tr class="doc-section-item">
             <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4648,7 +4675,7 @@
 <span class="normal"><a href="#__codelineno-0-55">55</a></span>
 <span class="normal"><a href="#__codelineno-0-56">56</a></span>
 <span class="normal"><a href="#__codelineno-0-57">57</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34"></a><span class="k">def</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34"></a><span class="k">def</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
 </span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Utility function that parses a str content into the 3 fields of the Answer object.</span>
 </span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36"></a>
 </span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37"></a><span class="sd">    The input should be formated as follow &quot;[[A;B;C]] this is a justification.&quot;</span>

@@ -11,10 +11,10 @@
         <link rel="canonical" href="https://pixano.github.io/pixano/latest/tutorials/semantic_search/">
       
       
-        <link rel="prev" href="../create_your_first_library/">
+        <link rel="prev" href="../dataset/">
       
       
-        <link rel="next" href="../segmentation_powered_by_sam/">
+        <link rel="next" href="../interactive_segmentation/">
       
       
       <link rel="icon" href="../../assets/pixano.png">
@@ -426,6 +426,8 @@
       
         
       
+        
+      
     
     
       
@@ -475,6 +477,28 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting_started/key_concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Key concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting_started/installing_pixano/" class="md-nav__link">
         
   
@@ -497,11 +521,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting_started/key_concepts/" class="md-nav__link">
+      <a href="../../getting_started/creating_a_dataset/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Key Concepts
+    Creating a dataset
     
   </span>
   
@@ -634,11 +658,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../create_your_first_library/" class="md-nav__link">
+      <a href="../dataset/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Create your first library
+    Build and query a dataset
     
   </span>
   
@@ -713,21 +737,63 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#open-clip-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Open-clip example
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Open-clip example">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#pre-compute-the-embeddings" class="md-nav__link">
     <span class="md-ellipsis">
       Pre-compute the embeddings
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-the-semantic-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      Use the semantic search
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Use the semantic search">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-the-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      With the app
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-the-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      With the API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="With the API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Python API
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST API
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -752,11 +818,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../segmentation_powered_by_sam/" class="md-nav__link">
+      <a href="../interactive_segmentation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Segmentation powered by SAM
+    Interactive segmentation
     
   </span>
   
@@ -4239,18 +4305,17 @@
   
 
 
-<h1 id="semantic-search">Semantic Search</h1>
+<h1 id="semantic-search">Semantic search</h1>
 <h2 id="context">Context</h2>
 <p>The Pixano's app support <strong>semantic search</strong> which allows a user to search for a view based on a text content.</p>
-<p>To do that Pixano requires that the embeddings of the views are pre-computed with the model used for Semantic search. For now, we rely on the <a href="https://lancedb.github.io/lancedb/embeddings/embedding_functions/">Embeddings functions</a> from LanceDB.</p>
-<h2 id="open-clip-example">Open-clip example</h2>
-<p>We will go through the process of semantic search based on the Open-clip model.</p>
-<h3 id="pre-compute-the-embeddings">Pre-compute the embeddings</h3>
-<p>First, we need to pre-compute the embeddings using LanceDB and Pixano. We will use the Health Images dataset defined in the <a href="../create_your_first_library/">library</a> tutorial.</p>
+<p>To do that, Pixano requires that the embeddings of the views are pre-computed with the model used for semantic search, using the <a href="https://lancedb.github.io/lancedb/embeddings/embedding_functions/">embeddings functions</a> from LanceDB.</p>
+<p>In this tutorial, we will go through the process of semantic search using the OpenCLIP model.</p>
+<h2 id="pre-compute-the-embeddings">Pre-compute the embeddings</h2>
+<p>First, we need to pre-compute the embeddings using LanceDB and Pixano. We will use the Health Images dataset defined in the <a href="../dataset/">Build and query a dataset</a> tutorial.</p>
 <ol>
-<li>Install open-clip</li>
+<li>Install OpenCLIP</li>
 </ol>
-<p>For this tutorial, we will use open-clip embedding function and therefore need it to be installed.</p>
+<p>For this tutorial, we will use OpenCLIP embedding function and therefore need it to be installed.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>open_clip_torch
 </span></code></pre></div>
 <ol>
@@ -4308,9 +4373,12 @@
 </span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
 </span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="n">dataset</span><span class="o">.</span><span class="n">compute_view_embeddings</span><span class="p">(</span><span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 </span></code></pre></div>
-<ol>
-<li>Perform semantic search (Python API)</li>
-</ol>
+<h2 id="use-the-semantic-search">Use the semantic search</h2>
+<h3 id="with-the-app">With the app</h3>
+<p>Now you are all set to use the semantic search, follow the <a href="../../getting_started/using_the_app/">using the app</a> guide!</p>
+<p>The semantic search bar will appear on the dataset page.</p>
+<h3 id="with-the-api">With the API</h3>
+<h4 id="python-api">Python API</h4>
 <p>To perform semantic search, simply call the dataset's <code>semantic_search</code> method with the text query. It will return the items with the closest view semantically to the query and the distance.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;microscope&quot;</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
@@ -4327,10 +4395,8 @@
 </span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="p">[</span><span class="mf">1.5589371919631958</span><span class="p">,</span> <span class="mf">1.5611850023269653</span><span class="p">,</span> <span class="mf">1.5707159042358398</span><span class="p">,</span> <span class="mf">1.5987659692764282</span><span class="p">,</span> <span class="mf">1.605470895767212</span><span class="p">]</span>
 </span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">)</span>
 </span></code></pre></div>
-<ol>
-<li>Use the REST API or the UI to browse through your items with semantic search.</li>
-</ol>
-<p>You first need to launch the Pixano's app to interact with the UI or the REST API.</p>
+<h4 id="rest-api">REST API</h4>
+<p>You first need to launch the Pixano's app to interact with the REST API.</p>
 <p>Then you can curl the REST API to navigate through your items:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-X<span class="w"> </span><span class="s1">&#39;GET&#39;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="s1">&#39;http://localhost:8000/browser/health_images?limit=5&amp;skip=0&amp;query=microscope&amp;embedding_table=emb_open-clip&#39;</span><span class="w"> </span><span class="se">\</span>

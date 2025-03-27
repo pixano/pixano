@@ -8,7 +8,7 @@
       
       
       
-        <link rel="canonical" href="https://pixano.github.io/pixano/latest/tutorials/create_your_first_library/">
+        <link rel="canonical" href="https://pixano.github.io/pixano/latest/tutorials/dataset/">
       
       
         <link rel="prev" href="../">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Create your first library - Pixano Documentation</title>
+        <title>Build and query a dataset - Pixano Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#build-a-pixano-library" class="md-skip">
+        <a href="#build-and-query-a-dataset" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Create your first library
+              Build and query a dataset
             
           </span>
         </div>
@@ -426,6 +426,8 @@
       
         
       
+        
+      
     
     
       
@@ -475,6 +477,28 @@
   
   
     <li class="md-nav__item">
+      <a href="../../getting_started/key_concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Key concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../getting_started/installing_pixano/" class="md-nav__link">
         
   
@@ -497,11 +521,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting_started/key_concepts/" class="md-nav__link">
+      <a href="../../getting_started/creating_a_dataset/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Key Concepts
+    Creating a dataset
     
   </span>
   
@@ -647,7 +671,7 @@
           
   
   <span class="md-ellipsis">
-    Create your first library
+    Build and query a dataset
     
   </span>
   
@@ -659,7 +683,7 @@
         
   
   <span class="md-ellipsis">
-    Create your first library
+    Build and query a dataset
     
   </span>
   
@@ -691,13 +715,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#build-the-dataset" class="md-nav__link">
+  <a href="#build-your-dataset" class="md-nav__link">
     <span class="md-ellipsis">
-      Build the Dataset
+      Build your dataset
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Build the Dataset">
+    <nav class="md-nav" aria-label="Build your dataset">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -710,35 +734,20 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#initialize-a-datasetbuilder" class="md-nav__link">
+  <a href="#use-one-of-the-provided-datasetbuilder" class="md-nav__link">
     <span class="md-ellipsis">
-      Initialize a DatasetBuilder
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Initialize a DatasetBuilder">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#use-a-built-in-builder" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use a built-in builder
+      Use one of the provided DatasetBuilder
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#write-your-own-builder" class="md-nav__link">
+  <a href="#write-your-own-datasetbuilder" class="md-nav__link">
     <span class="md-ellipsis">
-      Write your own builder
+      Write your own DatasetBuilder
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -758,18 +767,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#python-api" class="md-nav__link">
+  <a href="#use-the-python-api" class="md-nav__link">
     <span class="md-ellipsis">
-      Python API
+      Use the Python API
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#rest-api" class="md-nav__link">
+  <a href="#use-the-rest-api" class="md-nav__link">
     <span class="md-ellipsis">
-      REST API
+      Use the REST API
     </span>
   </a>
   
@@ -818,11 +827,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../segmentation_powered_by_sam/" class="md-nav__link">
+      <a href="../interactive_segmentation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Segmentation powered by SAM
+    Interactive segmentation
     
   </span>
   
@@ -4305,11 +4314,11 @@
   
 
 
-<h1 id="build-a-pixano-library">Build a Pixano library</h1>
+<h1 id="build-and-query-a-dataset">Build and query a dataset</h1>
 <h2 id="context">Context</h2>
 <p>In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the <code>./assets/health_images/</code> folder with a unique subfolder <code>all/</code> which will later be considered as a split.</p>
 <p>It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A <code>metadata.jsonl</code> also provides annotations, bounding boxes and keypoints, associated to these images.</p>
-<h2 id="build-the-dataset">Build the Dataset</h2>
+<h2 id="build-your-dataset">Build your dataset</h2>
 <h3 id="describe-your-dataset">Describe your dataset</h3>
 <p>To create a Pixano <code>Dataset</code>, a <code>DatasetBuilder</code> needs a pythonic description of the dataset item based on a Pydantic's <a href="https://docs.pydantic.dev/latest/api/base_model/">BaseModel</a>.</p>
 <p>To do so, Pixano provides the <code>pixano.datasets.DatasetItem</code> class that already has the attributes <code>id</code> and <code>split</code> to uniquely identify an item and categorize the items respectively.</p>
@@ -4358,8 +4367,7 @@
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">objects</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EntityWithCategory</span><span class="p">]</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">image_type</span><span class="p">:</span> <span class="nb">str</span>
 </span></code></pre></div>
-<h3 id="initialize-a-datasetbuilder">Initialize a DatasetBuilder</h3>
-<h4 id="use-a-built-in-builder">Use a built-in builder</h4>
+<h3 id="use-one-of-the-provided-datasetbuilder">Use one of the provided DatasetBuilder</h3>
 <p>The Health dataset follows a <strong>folder</strong> structure that can be handled by Pixano:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>root_folder/
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    split1/
@@ -4393,7 +4401,7 @@
 </span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;create&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>media_dir</code> and <code>library_dir</code> should be the same you provide to <a href="https://pixano.github.io/pixano/latest/getting_started/launching_the_app">launch Pixano</a>.</p>
-<h4 id="write-your-own-builder">Write your own builder</h4>
+<h3 id="write-your-own-datasetbuilder">Write your own DatasetBuilder</h3>
 <p>While it is convenient to use built-in dataset builders, Pixano do not cover all your use-cases. Fortunatly it is possible to design your own builder by subclassing the <code>pixano.datasets.builders.DatasetBuilder</code> class and implementing the <code>generate_data</code> method.</p>
 <p>Here is roughly the code for a custom <code>HealthFolderBuilder</code>. It is a simplified version of FolderBuilder.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
@@ -4495,7 +4503,7 @@
 <p>We recommend that you take a look at the implementation of the class <code>pixano.datasets.builders.FolderBaseBuilder</code> for the complete code to understand how to construct your own builder.</p>
 <p>Notice that the <code>generate_data</code> is a generator of dictionaries whose keys are the names of the tables to fill and the values one example or a list of <code>pixano.features.BaseSchema</code> to fill these tables. The builder flushes data by chunks of a size configured for every table with the argument <code>flush_every_n_samples</code> in the <code>build</code> method. This offers a trade-off between speed and memory footprint.</p>
 <h2 id="query-your-dataset">Query your dataset</h2>
-<h3 id="python-api">Python API</h3>
+<h3 id="use-the-python-api">Use the Python API</h3>
 <p>To interact with your dataset you can use CRUD (create, read, update, and delete) operations either on a table level or on a complete dataset item with the following methods:</p>
 <table>
 <thead>
@@ -4544,7 +4552,7 @@
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">DatasetItem</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s1">&#39;iyA4tHmGeHPP4N6diSuUXi&#39;</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">created_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">363831</span><span class="p">),</span> <span class="n">updated_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">363831</span><span class="p">),</span> <span class="n">image</span><span class="o">=</span><span class="n">Image</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s1">&#39;QmmM6LhwB4uMMCRUjgXejY&#39;</span><span class="p">,</span> <span class="n">created_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">364059</span><span class="p">),</span> <span class="n">updated_at</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">364059</span><span class="p">),</span> <span class="n">item_ref</span><span class="o">=</span><span class="n">ItemRef</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;item&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;iyA4tHmGeHPP4N6diSuUXi&#39;</span><span class="p">),</span> <span class="n">parent_ref</span><span class="o">=</span><span class="n">ViewRef</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">),</span> <span class="n">url</span><span class="o">=</span><span class="s1">&#39;/health_images/all/microcope-red_blood_cells.jpg&#39;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2560</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;JPEG&#39;</span><span class="p">),</span> <span class="n">objects</span><span class="o">=</span><span class="p">[],</span> <span class="n">bbox</span><span class="o">=</span><span class="p">[],</span> <span class="n">keypoints</span><span class="o">=</span><span class="p">[],</span> <span class="n">image_type</span><span class="o">=</span><span class="s1">&#39;microcope&#39;</span><span class="p">)</span>
 </span></code></pre></div>
-<h3 id="rest-api">REST API</h3>
+<h3 id="use-the-rest-api">Use the REST API</h3>
 <p>To use the REST API, we first need to launch the Pixano's app.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pixano<span class="w"> </span>./pixano_library<span class="w"> </span>./assets<span class="w"> </span>--host<span class="w"> </span>localhost<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
 </span></code></pre></div>
