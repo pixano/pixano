@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../../assets/pixano.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.8">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.9">
     
     
       
@@ -26,7 +26,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.8608ea7d.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4af4bdda.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.06af60db.min.css">
@@ -1173,15 +1173,6 @@
   
     <nav class="md-nav" aria-label="ItemModel">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pixano.app.models.items.ItemModel._validate_table_info" class="md-nav__link">
-    <span class="md-ellipsis">
-      _validate_table_info
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#pixano.app.models.items.ItemModel.to_row" class="md-nav__link">
@@ -4342,45 +4333,6 @@
 
 
 
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="pixano.app.models.items.ItemModel._validate_table_info" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">_validate_table_info</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-</h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Validate table info.</p>
-
-
-            <details class="quote">
-              <summary>Source code in <code>pixano/app/models/items.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-32">32</a></span>
-<span class="normal"><a href="#__codelineno-0-33">33</a></span>
-<span class="normal"><a href="#__codelineno-0-34">34</a></span>
-<span class="normal"><a href="#__codelineno-0-35">35</a></span>
-<span class="normal"><a href="#__codelineno-0-36">36</a></span>
-<span class="normal"><a href="#__codelineno-0-37">37</a></span>
-<span class="normal"><a href="#__codelineno-0-38">38</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;table_info&quot;</span><span class="p">)</span>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34"></a><span class="k">def</span><span class="w"> </span><span class="nf">_validate_table_info</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">TableInfo</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TableInfo</span><span class="p">:</span>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate table info.&quot;&quot;&quot;</span>
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36"></a>    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">group</span> <span class="o">!=</span> <span class="n">SchemaGroup</span><span class="o">.</span><span class="n">ITEM</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Table info group must be </span><span class="si">{</span><span class="n">SchemaGroup</span><span class="o">.</span><span class="n">ITEM</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a>    <span class="k">return</span> <span class="n">value</span>
-</span></code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
 
 <div class="doc doc-object doc-function">
 
