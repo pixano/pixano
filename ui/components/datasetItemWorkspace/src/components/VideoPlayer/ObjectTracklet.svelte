@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     BaseSchema,
     cn,
@@ -25,7 +26,12 @@ License: CECILL-C
     getTopEntity,
     relink,
   } from "../../lib/api/objectsApi";
-  import { annotations, colorScale, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    annotations,
+    colorScale,
+    saveData,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
@@ -167,7 +173,9 @@ License: CECILL-C
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.highlighted === "self",
-      "opacity-30": tracklet.ui.highlighted === "none" || tracklet.ui.displayControl.hidden,
+      "opacity-30":
+        (tracklet.ui.highlighted === "none" && $selectedTool.type === ToolType.Fusion) ||
+        tracklet.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >

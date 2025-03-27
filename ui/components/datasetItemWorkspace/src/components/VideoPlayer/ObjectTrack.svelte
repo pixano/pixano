@@ -315,7 +315,6 @@ License: CECILL-C
     <div
       class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
         "text-slate-800": highlightState !== "none",
-        "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
         "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
       })}
       style={`

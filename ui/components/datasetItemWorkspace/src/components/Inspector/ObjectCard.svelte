@@ -321,7 +321,6 @@ License: CECILL-C
       <span
         class={cn("truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap", {
           "text-slate-800": highlightState !== "none",
-          "text-slate-500": highlightState === "none" && $selectedTool.type !== ToolType.Fusion,
           "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
         title="{entity.table_info.base_schema} ({entity.id})"
@@ -397,7 +396,9 @@ License: CECILL-C
           <div class="flex flex-col">
             {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
               <p class="text-center italic">
-                {allowedChilds.length} objects visible on frame {$currentFrameIndex}
+                {allowedChilds.length > 0 ? allowableChilds.length : "No"}
+                object{allowedChilds.length === 1 ? "" : "s"}
+                visible on frame {$currentFrameIndex}
               </p>
             {/if}
             {#each allowedChilds as child}
