@@ -4,13 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-name: Lint and format front
+name: Frontend
 
 on:
   push:
     paths:
       - "ui/**"
-      - ".github/workflows/lint_and_format_front.yml"
+      - ".github/workflows/frontend.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
@@ -18,7 +18,7 @@ on:
   pull_request:
     paths:
       - "ui/**"
-      - ".github/workflows/lint_and_format_front.yml"
+      - ".github/workflows/frontend.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
@@ -28,9 +28,8 @@ permissions:
   contents: read
 
 jobs:
-  # This workflow will format frontend code (Svelte, Typescript) and project files (Markdown, YAML) with Prettier
   lint_front:
-    name: Frontend
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,9 +51,8 @@ jobs:
         run: |
           cd ui
           pnpm lint
-
   format_front:
-    name: Frontend
+    name: Format
     runs-on: ubuntu-latest
 
     steps:

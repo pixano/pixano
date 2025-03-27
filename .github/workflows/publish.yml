@@ -14,8 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  deploy_pypi:
-    name: Build and publish to PyPI
+  publish_pypi:
+    name: PyPI
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -59,8 +59,8 @@ jobs:
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  deploy_docs:
-    name: Publish documentation website
+  publish_docs:
+    name: Documentation
     runs-on: ubuntu-latest
 
     steps:
@@ -100,7 +100,8 @@ jobs:
       - name: Publish documentation website
         run: mike deploy --push --update-aliases ${{ env.VERSION }} stable
 
-  docker:
+  publish_docker:
+    name: Docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
