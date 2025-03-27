@@ -174,7 +174,8 @@ License: CECILL-C
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
       "opacity-100": tracklet.ui.displayControl.highlighted === "self",
       "opacity-30":
-        (tracklet.ui.displayControl.highlighted === "none" && $selectedTool.type === ToolType.Fusion) ||
+        (tracklet.ui.displayControl.highlighted === "none" &&
+          $selectedTool.type === ToolType.Fusion) ||
         tracklet.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
