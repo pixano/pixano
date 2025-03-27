@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Check License Header
+name: License header
 
 on:
   push:
@@ -16,6 +16,7 @@ on:
 
 jobs:
   check_license_header:
+    name: Check
     runs-on: ubuntu-latest
 
     steps:

@@ -1,4 +1,4 @@
-name: Update versions triggered by VERSION file
+name: Version
 
 on:
   pull_request:
@@ -11,7 +11,9 @@ permissions:
   contents: write
 
 jobs:
-  change_version:
+  # Update backend and frontend versions triggered by VERSION file
+  update_version:
+    name: Update
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
