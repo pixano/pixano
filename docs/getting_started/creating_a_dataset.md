@@ -2,7 +2,7 @@
 
 ## Defining a dataset
 
-A dataset is a collection of tables from different `SchemaGroup`s. To generate this collection, you provide a `DatasetItem`, which is essentially a [BaseModel](https://docs.pydantic.dev/latest/api/base_model/). The attributes of this DatasetItem must be [features](#features) and are organized as follows:
+A dataset is a collection of tables from different `SchemaGroup`s. To generate this collection, you provide a `DatasetItem`, which is essentially a [BaseModel](https://docs.pydantic.dev/latest/api/base_model/). The attributes of this DatasetItem must be features (see our [key concepts](./key_concepts.md) page) and are organized as follows:
 
 - **Schemas** are stored in their respective tables.
 - **Types** are stored in the `'item'` table.
