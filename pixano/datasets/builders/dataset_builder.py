@@ -149,6 +149,20 @@ class DatasetBuilder(ABC):
                 f"compact_every_n_transactions should be greater than 0 but got {compact_every_n_transactions}"
             )
 
+        # save info.json
+        self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
+        self.info.to_json(self.target_dir / Dataset._INFO_FILE)
+
+        # save features_values.json
+        # TMP: empty now
+        DatasetFeaturesValues().to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
+
+        # remove previous schema.json if any
+        if (self.target_dir / Dataset._SCHEMA_FILE).exists():
+            (self.target_dir / Dataset._SCHEMA_FILE).unlink()
+        # save schema.json
+        self.dataset_schema.to_json(self.target_dir / Dataset._SCHEMA_FILE)
+
         if mode == "add":
             tables = self.open_tables()
         else:
@@ -157,7 +171,7 @@ class DatasetBuilder(ABC):
         # accumulate items to insert in tables
         accumulate_data_tables: dict[str, list] = {table_name: [] for table_name in tables.keys()}
         # count transactions per table
-        transactions_per_table: dict[str, int] = {table_name: 0 for table_name in tables.keys()}
+        transactions_per_table: dict[str, int] = dict.fromkeys(tables.keys(), 0)
 
         logger.info(f"Building dataset {self.info.name}")
         for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
@@ -194,21 +208,7 @@ class DatasetBuilder(ABC):
                 table.add(accumulate_data_tables[table_name])
         self.compact_dataset()
 
-        # save info.json
-        self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
-        self.info.to_json(self.target_dir / Dataset._INFO_FILE)
-
         logger.info(f"Dataset {self.info.name} built in {self.target_dir} with id {self.info.id}")
-
-        # save features_values.json
-        # TMP: empty now
-        DatasetFeaturesValues().to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
-
-        # remove previous schema.json if any
-        if (self.target_dir / Dataset._SCHEMA_FILE).exists():
-            (self.target_dir / Dataset._SCHEMA_FILE).unlink()
-        # save schema.json
-        self.dataset_schema.to_json(self.target_dir / Dataset._SCHEMA_FILE)
 
         dataset = Dataset(self.target_dir)
 
