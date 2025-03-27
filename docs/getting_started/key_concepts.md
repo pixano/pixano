@@ -1,16 +1,10 @@
-# Key Concepts
+# Key concepts
 
 ## Context
 
 Pixano is a data-centric tool that provides multiple functionalities:
 
-1. **Dataset management** in a fast, columnar data format based on the [Lance](https://lancedb.github.io/lance/) format and the [LanceDB](https://lancedb.github.io/lancedb/) vector database. The dataset is split into various Lance tables to separate features of each dataset item:
-   - metadata
-   - views
-   - entities
-   - annotations
-   - embeddings
-   - sources
+1. **Dataset management** in a fast, columnar data format based on the [Lance](https://lancedb.github.io/lance/) format and the [LanceDB](https://lancedb.github.io/lancedb/) vector database. The dataset is split into various Lance tables to separate features of each dataset item (metadata, views, entities, annotations, embeddings, sources).
 2. **An annotation web platform** powered by AI.
 
 ## Pixano Layers
@@ -28,11 +22,9 @@ Datasets are specific [LanceDB](https://lancedb.github.io/lancedb/) databases. T
 - **Top-level features**, or **schemas**, which are tables containing comprehensive information on a part of a dataset item, such as a view, an annotation, or an entity.
 - **Bottom-level features**, or **types**, which contain atomic information. They can be standard Python types or complex types allowed by LanceDB, which are BaseModels with constraints.
 
-### Features
+### Schemas
 
-#### Schemas
-
-**Schemas** contain information related to a specific part of an item in dedicated tables. They are defined using the Python API from a `BaseSchema`, which inherits from [LanceModel](https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel).
+Schemas contain information related to a specific part of an item in dedicated tables. They are defined using the Python API from a `BaseSchema`, which inherits from [LanceModel](https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel).
 
 We strongly suggest reviewing [LanceModel](https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel) before proceeding further.
 
@@ -101,7 +93,7 @@ class MyEntity(Entity):
     metadata_int: int
 ```
 
-#### Types
+### Types
 
 Types hold atomic information within a schema, forming the **columns** of the table that implements the schema.
 
@@ -119,74 +111,6 @@ class ViewRef(BaseModel):
 ```
 
 Currently, it is not possible to register new types for the app. If you need a new type, please open an [issue](https://github.com/pixano/pixano/issues).
-
-### Creating a Dataset
-
-#### Defining Your Dataset
-
-A dataset is a collection of tables from different `SchemaGroup`s. To generate this collection, you provide a `DatasetItem`, which is essentially a [BaseModel](https://docs.pydantic.dev/latest/api/base_model/). The attributes of this DatasetItem must be [features](#features) and are organized as follows:
-
-- **Schemas** are stored in their respective tables.
-- **Types** are stored in the `'item'` table.
-
-Features can be a single element or a list.
-
-Example:
-
-```python
-from pixano.features import BBox, Classification, Entity, Image, Text
-from pixano.datasets import DatasetItem
-
-
-class MyEntity(Entity):
-    category: str
-    metadata_int: int
-
-
-class MyDatasetItem(DatasetItem):
-    item_metadata: str # will be stored in table 'item'
-    image: Image # will be stored in table 'image'
-    texts: list[Text] # will be stored in table 'texts'
-    image_entities: list[MyEntity] # will be stored in table 'image_entities'
-    bboxes: list[BBox] # will be stored in table 'bboxes'
-    text_entities: list[Entity] # will be stored in table 'text_entities'
-    text_classifs: list[Classification] # will be stored in table 'text_classifs'
-```
-
-#### Building the Dataset
-
-To build the dataset, Pixano provides a generic class `DatasetBuilder` and specific classes detailed in the [api reference](../api_reference/index.md).
-
-To construct a dataset builder, derive from `DatasetBuilder` to properly handle your data and implement the `generate_data` method. This method returns an iterator of dictionnary whose keys are table_names and values one `BaseSchema` or a list of `BaseSchema` to insert into that table.
-
-```python
-from pixano.datasets.builders import DatasetBuilder
-
-
-info = DatasetInfo(
-    name="My super dataset",
-    description="This dataset tracks reference to super stuff."
-)
-
-class MyDatasetBuilder(DatasetBuilder):
-    def __init__(
-        target_dir: Path | str,
-    ):
-        super().__init__(
-            target_dir=target_dir,
-            schemas=MyDatasetItem,
-            info=info
-        )
-
-    def generate_data() -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
-        ...
-
-        return {
-            "item": ...,
-            "bboxes": ...,
-            ...
-        }
-```
 
 ## Library, media and models
 

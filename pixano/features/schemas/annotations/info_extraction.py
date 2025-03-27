@@ -20,13 +20,12 @@ from .annotation import Annotation
 class TextSpan(Annotation):
     """Designation of a Text-Span in a text, especially in the
        use-case of Named-Entity Recognition on a Text view
-       having a str 'content' attribute .
+       having a str 'content' attribute.
 
     Attributes:
         mention: text-span assembled mention.
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
-          str 'content' attribute
     """
 
     mention: str

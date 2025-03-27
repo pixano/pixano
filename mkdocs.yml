@@ -115,15 +115,16 @@ nav:
   - "Pixano":
       - "Getting started":
           - getting_started/index.md
+          - "Key concepts": getting_started/key_concepts.md
           - "Installing Pixano": getting_started/installing_pixano.md
-          - "Key Concepts": getting_started/key_concepts.md
+          - "Creating a dataset": getting_started/creating_a_dataset.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
       - "Tutorials":
           - tutorials/index.md
-          - "Create your first library": tutorials/create_your_first_library.md
+          - "Build and query a dataset": tutorials/dataset.md
           - "Semantic search": tutorials/semantic_search.md
-          - "Segmentation powered by SAM": tutorials/segmentation_powered_by_sam.md
+          - "Interactive segmentation": tutorials/interactive_segmentation.md
       - "API reference": api_reference/
 
   - "Pixano-Inference": https://pixano.github.io/pixano-inference/latest/

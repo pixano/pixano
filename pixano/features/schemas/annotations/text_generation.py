@@ -31,7 +31,7 @@ class Answer:
     _explanation: str
 
     @classmethod
-    def parse(cls, content: str):
+    def parse(cls, content: str) -> tuple[str, list[str], str]:
         """Utility function that parses a str content into the 3 fields of the Answer object.
 
         The input should be formated as follow "[[A;B;C]] this is a justification."

@@ -449,7 +449,7 @@ class DatasetItem(BaseModel):
                             item.pop("updated_at", None)
         return model_dump
 
-    def model_copy(self, *, dataset: "Dataset", deep=False) -> Self:
+    def model_copy(self, *, dataset: "Dataset", deep: bool = False) -> Self:
         """Returns a copy of the model.
 
         Args:

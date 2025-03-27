@@ -25,14 +25,12 @@
 Pixano is an open-source tool by CEA List for exploring and annotating your dataset using AI features:
 
 - **Fast dataset navigation** using the the modern storage format _Lance_
-- **Multi-view datasets** support for images, and soon for _3D point clouds_ and _videos_
+- **Multi-view datasets** support for _text_, _images_ and _videos_, and soon for _3D point clouds_
 - **Import and export** support for dataset formats like _COCO_
 - **Semantic search** using models like _CLIP_
 - **Smart segmentation** using models like _SAM_
 
-# Getting started
-
-## Installing Pixano
+# Installing Pixano
 
 As Pixano requires specific versions for its dependencies, we recommend creating a new Python virtual environment to install it.
 
@@ -49,17 +47,19 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
-## Using your datasets
+Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano), you can also install it as follows:
 
-Please refer to our Jupyter notebooks for <a href="https://github.com/pixano/pixano/blob/main/notebooks/datasets/import_dataset.ipynb" target="_blank">importing</a> and <a href="https://github.com/pixano/pixano/blob/main/notebooks/datasets/export_dataset.ipynb" target="_blank">exporting</a> your datasets.
+```shell
+docker pull pixano/pixano:stable
+```
 
-## Using the Pixano app
+# Using Pixano
 
-Please refer to this link for using the <a href="https://github.com/pixano/pixano/tree/main/pixano/app/README.md" target="_blank">Pixano app</a>.
+Please refer to our <a href="https://pixano.github.io/pixano/latest/getting_started/" target="_blank">Getting started</a> guide for information on how to launch and use the Pixano app, and how to create and use Pixano datasets.
 
 # Contributing
 
-Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) for information on running Pixano locally and guidelines on how to publish your contributions.
+Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for information on running Pixano locally and guidelines on how to publish your contributions.
 
 # License
 
