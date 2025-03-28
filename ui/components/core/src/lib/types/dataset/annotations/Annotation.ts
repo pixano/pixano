@@ -10,6 +10,7 @@ import { createTypedAnnotation } from "../../../utils/annotations";
 import { BaseSchema } from "../BaseSchema";
 import {
   BaseData,
+  initDisplayControl,
   referenceSchema,
   type BaseDataFields,
   type DisplayControl,
@@ -33,7 +34,6 @@ export type AnnotationUIFields = {
   datasetItemType: WorkspaceType;
   //features: Record<string, ItemFeature>;
   displayControl: DisplayControl;
-  highlighted?: "none" | "self" | "all";
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
   top_entities?: Entity[];
@@ -43,7 +43,7 @@ export abstract class Annotation extends BaseData<AnnotationType> {
   //UI only fields
   ui: AnnotationUIFields = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: { hidden: false, editing: false },
+    displayControl: initDisplayControl,
   };
 
   constructor(obj: BaseDataFields<AnnotationType>) {

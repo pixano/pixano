@@ -153,12 +153,15 @@ License: CECILL-C
   );
 
   annotations.subscribe(() => {
-    if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "self")) {
-      highlightState = "self";
-    } else if (entity.ui.childs?.some((ann) => ann.ui.highlighted === "none")) {
-      highlightState = "none";
-    } else {
-      highlightState = "all";
+    highlightState = "all";
+    for (const ann of entity.ui.childs ?? []) {
+      if (ann.ui.displayControl.highlighted === "self") {
+        highlightState = "self";
+        break;
+      }
+      if (ann.ui.displayControl.highlighted === "none") {
+        highlightState = "none";
+      }
     }
     isVisible = entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false;
   });

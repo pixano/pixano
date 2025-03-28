@@ -89,17 +89,17 @@ export const boxLinearInterpolation = (
   interpolatedBox.ui.displayControl = {
     hidden: startBox.ui.displayControl.hidden,
     editing: false,
+    //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
+    highlighted: startBox.ui.displayControl.editing
+      ? "none"
+      : startBox.ui.displayControl.highlighted,
   };
-  //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-  interpolatedBox.ui.highlighted = startBox.ui.displayControl.editing
-    ? "none"
-    : startBox.ui.highlighted;
   interpolatedBox.data.view_ref.id = view_id;
   //we also need to adapt opacity & strokeFactor accordingly
   interpolatedBox.ui.opacity =
-    interpolatedBox.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0;
+    interpolatedBox.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0;
   interpolatedBox.ui.strokeFactor =
-    interpolatedBox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1;
+    interpolatedBox.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1;
   // for convenience, we store ref to start boxes
   interpolatedBox.ui.startRef = startBox;
   // top_entities (if exist) lost class with structuredClone: replace it
@@ -142,13 +142,13 @@ export const keypointsLinearInterpolation = (
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.ui!.frame_index = imageIndex;
     interpolatedKpt.ui!.displayControl = {
-      hidden: startKpt.ui!.displayControl?.hidden,
+      hidden: startKpt.ui!.displayControl.hidden,
       editing: false,
+      //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
+      highlighted: startKpt.ui!.displayControl.editing
+        ? "none"
+        : startKpt.ui!.displayControl.highlighted,
     };
-    //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-    interpolatedKpt.ui!.highlighted = startKpt.ui!.displayControl?.editing
-      ? "none"
-      : startKpt.ui!.highlighted;
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.ui!.startRef = startKpt;

@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -28,10 +28,7 @@ export class Mask extends Annotation {
     opacity?: number;
     strokeFactor?: number;
     svg?: string[];
-  } = {
-    datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: { hidden: false, editing: false },
-  };
+  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== BaseSchema.Mask) throw new Error("Not a Mask");

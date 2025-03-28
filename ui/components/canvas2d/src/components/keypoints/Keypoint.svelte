@@ -55,7 +55,7 @@ License: CECILL-C
     return [vertexX, vertexY];
   };
 
-  $: opacity = keypointStructure.ui.highlighted === "none" ? 0.5 : 1;
+  $: opacity = keypointStructure.ui.displayControl.highlighted === "none" ? 0.5 : 1;
 </script>
 
 <slot />
@@ -64,7 +64,7 @@ License: CECILL-C
     config={{
       points: [...findVertex(line[0]), ...findVertex(line[1])],
       stroke: color,
-      strokeWidth: keypointStructure.ui.highlighted === "self" ? 4 : 2 / zoomFactor,
+      strokeWidth: keypointStructure.ui.displayControl.highlighted === "self" ? 4 : 2 / zoomFactor,
       shadowForStrokeEnabled: false,
       opacity,
     }}

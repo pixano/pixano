@@ -9,7 +9,7 @@ License: CECILL-C
   import { Check, ReplaceAll, X } from "lucide-svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { Annotation, cn, IconButton, type SaveItem } from "@pixano/core/src";
+  import { Annotation, cn, IconButton, type SaveItem, type SelectionTool } from "@pixano/core/src";
 
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import { fusionTool } from "../../lib/settings/selectionTools";
@@ -21,20 +21,8 @@ License: CECILL-C
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
-  export let cleanFusion: () => void;
-
-  const onFusionClick = () => {
-    merges.set({ to_fuse: [], forbids: [] }); //should not be needed, but for safety...
-    selectedTool.set(fusionTool);
-    //deselect everything = unhighlight all
-    annotations.update((anns) =>
-      anns.map((ann) => {
-        ann.ui.highlighted = "all";
-        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false };
-        return ann;
-      }),
-    );
-  };
+  export let selectTool: (tool: SelectionTool) => void;
+  export let clearHighlighting: () => void;
 
   const onValidate = () => {
     let reassoc_anns: Annotation[] = [];
@@ -90,11 +78,11 @@ License: CECILL-C
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       });
     }
-    cleanFusion();
+    clearHighlighting();
   };
 
   const onAbort = () => {
-    cleanFusion();
+    clearHighlighting();
   };
 
   function shortcutHandler(event: KeyboardEvent) {
@@ -127,7 +115,7 @@ License: CECILL-C
 >
   <IconButton
     tooltipContent={fusionTool.name}
-    on:click={onFusionClick}
+    on:click={() => selectTool(fusionTool)}
     selected={$selectedTool?.type === ToolType.Fusion}
   >
     <ReplaceAll />

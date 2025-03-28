@@ -49,7 +49,7 @@ License: CECILL-C
       preAnnotationIsActive.set(false);
       annotations.update((objects) =>
         objects.map((object) => {
-          object.ui.highlighted = "all";
+          object.ui.displayControl.highlighted = "all";
           return object;
         }),
       );
@@ -58,7 +58,7 @@ License: CECILL-C
 
   const onAcceptItem = () => {
     objectToAnnotate.review_state = "accepted";
-    objectToAnnotate.ui.highlighted = "none";
+    objectToAnnotate.ui.displayControl.highlighted = "none";
 
     annotations.update((objects) => [
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
@@ -82,9 +82,9 @@ License: CECILL-C
         $currentFrameIndex,
       );
       return objects.map((object) => {
-        object.ui.highlighted = $preAnnotationIsActive ? "none" : "all";
+        object.ui.displayControl.highlighted = $preAnnotationIsActive ? "none" : "all";
         if (object.id === tempObjects[0]?.id && $preAnnotationIsActive) {
-          object.ui.highlighted = "self";
+          object.ui.displayControl.highlighted = "self";
         }
         return object;
       });

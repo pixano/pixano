@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -27,7 +27,7 @@ export class Keypoints extends Annotation {
   //UI only fields
   ui: AnnotationUIFields = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: { hidden: false, editing: false },
+    displayControl: initDisplayControl,
   };
 
   constructor(obj: BaseDataFields<KeypointsType>) {

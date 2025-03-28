@@ -44,11 +44,12 @@ License: CECILL-C
   let previousSelectedTool: SelectionTool | null = null;
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
-  const cleanFusion = () => {
-    //deselect everything = unhighlight all
+  const clearHighlighting = () => {
+    //deselect everything = unhighlight all and stop editing
+    newShape.set({ status: "none" });
     annotations.update((anns) =>
       anns.map((ann) => {
-        ann.ui.highlighted = "all";
+        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false, highlighted: "all" };
         return ann;
       }),
     );
@@ -57,10 +58,7 @@ License: CECILL-C
 
   const selectTool = (tool: SelectionTool) => {
     if (tool !== $selectedTool) {
-      if (previousSelectedTool?.type === ToolType.Fusion) {
-        //abort fusion
-        cleanFusion();
-      }
+      clearHighlighting();
       selectedTool.set(tool);
     }
   };
@@ -81,7 +79,8 @@ License: CECILL-C
   });
 
   onMount(() => {
-    selectTool(panTool);
+    if ($selectedTool === undefined) selectedTool.set(panTool);
+    clearHighlighting();
   });
 
   $: {
@@ -117,7 +116,7 @@ License: CECILL-C
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}
-      <FusionTool {cleanFusion} />
+      <FusionTool {selectTool} {clearHighlighting} />
     {/if}
   </div>
   <div

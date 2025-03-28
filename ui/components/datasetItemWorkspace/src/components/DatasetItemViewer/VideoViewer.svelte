@@ -278,8 +278,10 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.map((ann) => {
         const top_ent = getTopEntity(ann);
-        if (forbids.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "none";
-        else if (!to_fuse.map((ent) => ent.id).includes(top_ent.id)) ann.ui.highlighted = "all";
+        if (forbids.map((ent) => ent.id).includes(top_ent.id))
+          ann.ui.displayControl.highlighted = "none";
+        else if (!to_fuse.map((ent) => ent.id).includes(top_ent.id))
+          ann.ui.displayControl.highlighted = "all";
         return ann;
       }),
     );
@@ -300,7 +302,7 @@ License: CECILL-C
         annotations.update((anns) =>
           anns.map((ann) => {
             if (top_entity.ui.childs?.includes(ann) /*&& !ann.is_type(BaseSchema.Tracklet)*/) {
-              ann.ui.highlighted = "self";
+              ann.ui.displayControl.highlighted = "self";
             }
             return ann;
           }),
@@ -316,7 +318,7 @@ License: CECILL-C
         annotations.update((anns) =>
           anns.map((ann) => {
             if (top_entity.ui.childs?.includes(ann) /*&& !ann.is_type(BaseSchema.Tracklet)*/) {
-              ann.ui.highlighted = "all";
+              ann.ui.displayControl.highlighted = "all";
             }
             return ann;
           }),

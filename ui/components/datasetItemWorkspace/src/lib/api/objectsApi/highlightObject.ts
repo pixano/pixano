@@ -19,12 +19,11 @@ export const highlightObject = (entity_id: string, isHighlighted: boolean): numb
   let trackEnd = 0;
   annotations.update((objects) =>
     objects.map((ann) => {
-      if (get(selectedTool).type !== ToolType.Fusion) {
-        ann.ui.highlighted = isHighlighted
-          ? "all"
-          : getTopEntity(ann).id === entity_id
-            ? "self"
-            : "none";
+      if (get(selectedTool).type === ToolType.Pan) {
+        ann.ui.displayControl = {
+          ...ann.ui.displayControl,
+          highlighted: isHighlighted ? "all" : getTopEntity(ann).id === entity_id ? "self" : "none",
+        };
       }
       if (getTopEntity(ann).id === entity_id && ann.is_type(BaseSchema.Tracklet)) {
         trackStart = Math.min(trackStart, (ann as Tracklet).data.start_timestep);

@@ -31,8 +31,9 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
       ui: {
         ...obj.ui,
         svg: masksSVG,
-        opacity: obj.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-        strokeFactor: obj.ui.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+        opacity: obj.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+        strokeFactor:
+          obj.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       },
     } as Mask;
   }

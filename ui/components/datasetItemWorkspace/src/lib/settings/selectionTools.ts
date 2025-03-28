@@ -8,7 +8,7 @@ import { ToolType } from "@pixano/canvas2d/src/tools";
 import type { SelectionTool } from "@pixano/core";
 
 export const panTool: SelectionTool = {
-  name: "Move image",
+  name: "Selection & Move image",
   type: ToolType.Pan,
   cursor: "move",
 };

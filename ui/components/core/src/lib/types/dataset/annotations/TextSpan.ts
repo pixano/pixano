@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 
 import { BaseSchema } from "../BaseSchema";
-import type { BaseDataFields, Reference } from "../datasetTypes";
+import { initDisplayControl, type BaseDataFields, type Reference } from "../datasetTypes";
 import { WorkspaceType } from "../workspaceType";
 import { Annotation, type AnnotationType, type AnnotationUIFields } from "./Annotation";
 
@@ -32,7 +32,7 @@ export class TextSpan extends Annotation {
     bgColor?: string;
   } = {
     datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
-    displayControl: { hidden: false, editing: false },
+    displayControl: initDisplayControl,
   };
 
   constructor(obj: BaseDataFields<TextSpanType>) {

@@ -105,8 +105,7 @@ License: CECILL-C
 
     if (!newObject) return;
 
-    newObject.ui.highlighted = "self";
-    newObject.ui.displayControl = { editing: false };
+    newObject.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
     topEntity.ui.childs?.push(newObject);
 
     if (subEntity) subEntity.ui.childs?.push(newObject);
@@ -124,8 +123,7 @@ License: CECILL-C
         endFrameIndex,
       );
       if (!newObject2) return;
-      newObject2.ui.highlighted = "self";
-      newObject2.ui.displayControl = { editing: false };
+      newObject2.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
       //TODO: It is possible that a tracklet already exist (used for a different kind of shape)
       //For now, it always create a tracklet...
       //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
@@ -155,8 +153,7 @@ License: CECILL-C
         $currentFrameIndex,
       );
       if (!newTracklet) return;
-      newTracklet.ui.highlighted = "none";
-      newTracklet.ui.displayControl = { editing: false };
+      newTracklet.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
       (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
 
       if (secondSubEntity) {
@@ -217,7 +214,7 @@ License: CECILL-C
     //push new annotations
     annotations.update((oldObjects) => {
       const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
-        object.ui.highlighted = "none";
+        object.ui.displayControl.highlighted = "none";
         object.ui.displayControl = { ...object.ui.displayControl, editing: false };
         return object;
       });
