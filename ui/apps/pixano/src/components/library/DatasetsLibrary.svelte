@@ -13,6 +13,7 @@ License: CECILL-C
   import { panTool } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
   import {
     modelsUiStore,
+    resetColorScale,
     selectedTool,
   } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
@@ -28,6 +29,7 @@ License: CECILL-C
   };
 
   onMount(() => {
+    resetColorScale();
     //reset interactive segmentation model & table
     modelsUiStore.set({
       currentModalOpen: "none",

@@ -74,11 +74,15 @@ export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);
 type ColorScale = [Array<string>, (id: string) => string];
 
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
-
+const resetColorScaleTrigger = writable(0);
 export const colorScale = derived(
-  entities,
-  ($entities, _, update) => {
+  [entities, resetColorScaleTrigger],
+  ([$entities, $resetColorScale], _, update) => {
     update((old) => {
+      if ($resetColorScale > 0) {
+        resetColorScaleTrigger.set(0);
+        return initialColorScale;
+      }
       let allIds = $entities.filter((ent) => ent.data.parent_ref.id === "").map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
@@ -89,6 +93,9 @@ export const colorScale = derived(
   },
   initialColorScale,
 );
+export function resetColorScale() {
+  resetColorScaleTrigger.set(1);
+}
 
 export const mediaViews = derived(views, ($views) => {
   // Do not use Object.entries().filter because it loses the type information
