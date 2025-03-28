@@ -78,12 +78,15 @@ License: CECILL-C
   }
 
   annotations.subscribe(() => {
-    if (track.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "self")) {
-      highlightState = "self";
-    } else if (track.ui.childs?.some((ann) => ann.ui.displayControl.highlighted === "none")) {
-      highlightState = "none";
-    } else {
-      highlightState = "all";
+    highlightState = "all";
+    for (const ann of track.ui.childs ?? []) {
+      if (ann.ui.displayControl.highlighted === "self") {
+        highlightState = "self";
+        break;
+      }
+      if (ann.ui.displayControl.highlighted === "none") {
+        highlightState = "none";
+      }
     }
   });
 
@@ -117,9 +120,9 @@ License: CECILL-C
             getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
           (ann.is_type(BaseSchema.Tracklet) && ann.id === track.id);
-        ann.ui.displayControl.highlighted = to_highlight ? "self" : "none";
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
+          highlighted: to_highlight ? "self" : "none",
           editing: to_highlight,
         };
         return ann;

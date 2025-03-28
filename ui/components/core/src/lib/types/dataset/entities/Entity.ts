@@ -34,7 +34,7 @@ export type EntityUIFields = {
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  ui: EntityUIFields = { childs: [], displayControl: initDisplayControl };
+  ui: EntityUIFields = { childs: [], displayControl: { ...initDisplayControl, open: false } };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
