@@ -68,7 +68,8 @@ License: CECILL-C
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
-      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
+      if ($modelsUiStore.selectedModelName === "" || $modelsUiStore.selectedTableName === "")
+        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     } else selectTool(panTool);
   };
 
