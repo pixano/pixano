@@ -61,7 +61,7 @@ dataset = Dataset(
     media_dir=Path("./assets/")
 )
 
-images: list[Image] = dataset.get_data("image", limit=100)
+images: list[Image] = dataset.get_data("image")
 num_images  = len(images)
 
 print(num_images)

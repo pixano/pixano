@@ -58,7 +58,7 @@ To compute the embeddings, Pixano needs to access the references to the views. T
 ```python
 import shortuuid
 
-views = dataset.get_data(table_name="image", limit=100) # Get all views from the dataset's table "image".
+views = dataset.get_data(table_name="image") # Get all views from the dataset's table "image".
 
 data = [] # List of dictionnary of ViewEmbedding's model dump without the vector field.
 for view in views:

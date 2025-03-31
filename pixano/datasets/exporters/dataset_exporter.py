@@ -108,7 +108,7 @@ class DatasetExporter(ABC):
             raise ValueError("Batch size must be a positive integer")
 
         info = self.dataset.info
-        sources = self.dataset.get_data(SchemaGroup.SOURCE.value, limit=int(1e9))
+        sources = self.dataset.get_data(SchemaGroup.SOURCE.value)
 
         item_table = self.dataset.open_table(SchemaGroup.ITEM.value)
         item_table_lance = item_table.to_lance()  # noqa: F841
