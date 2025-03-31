@@ -495,7 +495,6 @@ class TestDataset:
         [
             ("item", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
             ("image", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
-            ("item", None, None, None, 0, "limit must be set if ids is None and item_ids is None"),
             ("item", ["0"], None, 1, 0, "ids and limit cannot be set at the same time"),
             ("item", None, ["0"], 1, 0, "ids and limit cannot be set at the same time"),
             ("item", [0], None, None, 0, "ids must be a list of strings"),

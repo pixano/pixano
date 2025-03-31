@@ -66,9 +66,7 @@ def _validate_ids_item_ids_and_limit_and_skip(
 ) -> None:
     if ids is not None and item_ids is not None:
         raise DatasetPaginationError("ids and item_ids cannot be set at the same time")
-    if ids is None and item_ids is None and limit is None:
-        raise DatasetPaginationError("limit must be set if ids is None and item_ids is None")
-    elif ids is not None and limit is not None:
+    if ids is not None and limit is not None:
         raise DatasetPaginationError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
         raise DatasetPaginationError("ids must be a list of strings")
@@ -375,7 +373,7 @@ class Dataset:
             table_name: Table name.
             where: Where clause.
             ids: ids to read.
-            limit: Amount of items to read.
+            limit: Amount of items to read. If not set, will default to table size.
             skip: The number of data to skip.
             item_ids: Item ids to read.
 
@@ -398,6 +396,10 @@ class Dataset:
         if item_ids is not None:
             sql_item_ids = to_sql_list(item_ids)
         table = self.open_table(table_name)
+
+        if ids is None and item_ids is None and limit is None:
+            limit = table.count_rows()
+
         if ids is None:
             if item_ids is None:
                 if where is not None:
