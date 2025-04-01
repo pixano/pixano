@@ -7,8 +7,15 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
+  import { onMount } from "svelte";
 
   import type { DatasetInfo } from "@pixano/core/src";
+  import { panTool } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
+  import {
+    modelsUiStore,
+    resetColorScale,
+    selectedTool,
+  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { goto } from "$app/navigation";
@@ -20,6 +27,19 @@ License: CECILL-C
     currentDatasetStore.set(dataset);
     await goto(`${dataset.id}/dataset`);
   };
+
+  onMount(() => {
+    resetColorScale();
+    //reset interactive segmentation model & table
+    modelsUiStore.set({
+      currentModalOpen: "none",
+      selectedModelName: "",
+      selectedTableName: "",
+      yetToLoadEmbedding: true,
+    });
+    //reset Tool
+    selectedTool.set(panTool);
+  });
 </script>
 
 <div class="flex flex-wrap justify-center gap-6 py-12">
