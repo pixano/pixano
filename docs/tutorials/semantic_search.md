@@ -17,7 +17,7 @@ First, we need to pre-compute the embeddings using LanceDB and Pixano. We will u
 For this tutorial, we will use OpenCLIP embedding function and therefore need it to be installed.
 
 ```bash
-pip install open_clip_torch
+pip install open-clip-torch
 ```
 
 2. Create the Image View Embedding table:
@@ -57,6 +57,7 @@ To compute the embeddings, Pixano needs to access the references to the views. T
 
 ```python
 import shortuuid
+from datetime import datetime
 
 views = dataset.get_data(table_name="image") # Get all views from the dataset's table "image".
 
@@ -65,6 +66,8 @@ for view in views:
     data.append(
         {
             "id": shortuuid.uuid(),
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
             "item_ref": {
                 "id": view.item_ref.id,
                 "name": view.item_ref.name,
