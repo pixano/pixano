@@ -51,6 +51,14 @@ License: CECILL-C
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
 
+  // utility vars for resizing with slide bar
+  const defaultOIWidth = 450;
+  let objectInspectorAreaMaxWidth = defaultOIWidth; //default width
+  const minOIAreaWidth = 0; //minimum width for ObjectInspector area
+  let isDragging = false;
+  let initialOIAreaX = 0;
+  let initialOIAreaWidth = 0;
+
   let isSaving: boolean = false;
 
   const back2front = (ann: Annotation): Annotation => {
@@ -203,9 +211,34 @@ License: CECILL-C
       onSave().catch((err) => console.error(err));
     }
   }
+  const startExpand = (e: MouseEvent) => {
+    isDragging = false;
+    initialOIAreaX = e.clientX;
+    initialOIAreaWidth = objectInspectorAreaMaxWidth;
+    window.addEventListener("mousemove", expand, true);
+    window.addEventListener("mouseup", stopExpand, true);
+  };
+
+  const stopExpand = () => {
+    window.removeEventListener("mousemove", expand, true);
+    window.removeEventListener("mouseup", stopExpand, true);
+  };
+
+  const expand = (e: MouseEvent) => {
+    isDragging = true;
+    const delta = e.clientX - initialOIAreaX;
+    objectInspectorAreaMaxWidth = Math.max(minOIAreaWidth, initialOIAreaWidth - delta);
+  };
+
+  const shrink = () => {
+    if (!isDragging) {
+      objectInspectorAreaMaxWidth =
+        objectInspectorAreaMaxWidth < defaultOIWidth ? defaultOIWidth : 0;
+    }
+  };
 </script>
 
-<div class="flex-1 grid grid-cols-[calc(100%-380px)_380px]">
+<div class="w-full h-full flex" role="tab" tabindex="0">
   {#if isSaving}
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
@@ -213,7 +246,21 @@ License: CECILL-C
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <DatasetItemViewer {selectedItem} {isLoading} />
-  <Inspector on:click={onSave} {isLoading} />
+  <div
+    id="datasetItemViewerDiv"
+    class="flex w-full overflow-hidden"
+    style={`max-width: calc(100%  - ${objectInspectorAreaMaxWidth}px);`}
+  >
+    <!-- 'resize' prop is used to trigger redraw on value change, value itself is not used, but shouldn't be 0, so we add '+1' -->
+    <DatasetItemViewer {selectedItem} {isLoading} resize={objectInspectorAreaMaxWidth + 1} />
+  </div>
+  <button
+    class="w-1 bg-primary-light cursor-col-resize h-full"
+    on:mousedown={startExpand}
+    on:click={shrink}
+  />
+  <div class="grow overflow-hidden" style={`width: ${objectInspectorAreaMaxWidth}px`}>
+    <Inspector on:click={onSave} {isLoading} />
+  </div>
   <LoadModelModal {models} />
 </div>

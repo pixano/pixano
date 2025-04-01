@@ -38,6 +38,7 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let embeddings: Record<string, ort.Tensor> = {};
+  export let resize: number;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -153,6 +154,7 @@ License: CECILL-C
     selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
     {embeddings}
     {filters}
+    canvasSize={resize}
     imageSmoothing={$imageSmoothing}
     bind:selectedTool={$selectedTool}
     bind:currentAnn
