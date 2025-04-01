@@ -11,6 +11,7 @@ import type { Annotation } from "../annotations";
 import { BaseSchema } from "../BaseSchema";
 import {
   BaseData,
+  initDisplayControl,
   referenceSchema,
   type BaseDataFields,
   type DisplayControl,
@@ -33,7 +34,7 @@ export type EntityUIFields = {
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  ui: EntityUIFields = { childs: [], displayControl: { hidden: false, editing: false } };
+  ui: EntityUIFields = { childs: [], displayControl: { ...initDisplayControl, open: false } };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);

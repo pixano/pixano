@@ -6,10 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { afterUpdate } from "svelte";
-
   import { Thumbnail } from "@pixano/canvas2d";
-  import { BaseSchema, Entity, Source, type ObjectThumbnail } from "@pixano/core";
+  import { BaseSchema, Source, type ObjectThumbnail } from "@pixano/core";
 
   import { defineObjectThumbnail, getTopEntity } from "../../lib/api/objectsApi";
   import {
@@ -24,7 +22,6 @@ License: CECILL-C
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
 
-  let allTopEntities: Entity[];
   let selectedEntitiesId: string[];
   const thumbnails: Record<string, ObjectThumbnail | null> = {};
 
@@ -40,21 +37,17 @@ License: CECILL-C
     data: { name: "All", kind: "Global", metadata: {} },
   });
 
-  let somethingChanged = 0;
-  $: $annotations, $entities, handleAnnotationSortedByModel(); // eslint-disable-line @typescript-eslint/no-unused-expressions
+  $: allTopEntities = $entities
+    .filter((ent) => !ent.is_conversation && ent.data.parent_ref.id === "")
+    .sort(sortEntites);
 
-  const handleAnnotationSortedByModel = () => {
-    //svelte hack: use a temp Set to set the whole list once
-    const allTopEntitiesSet = new Set<Entity>();
-    $annotations.forEach((ann) => {
-      const top_entity = getTopEntity(ann);
-      if (!top_entity.is_conversation) allTopEntitiesSet.add(top_entity);
-    });
-    allTopEntities = Array.from(allTopEntitiesSet).sort(sortEntites);
+  $: if ($annotations) handleSelectedEntitiesBBoxThumbnails();
+  const handleSelectedEntitiesBBoxThumbnails = () => {
+    //selected entities thumbnails on top of ObjectsInspector
     selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
-      (ann) => ann.ui.highlighted === "self" && ann.is_type(BaseSchema.BBox),
+      (ann) => ann.ui.displayControl.highlighted === "self" && ann.is_type(BaseSchema.BBox),
     );
 
     if (highlightedBoxes.length > 0) {
@@ -75,13 +68,7 @@ License: CECILL-C
         }
       }
     }
-    //hack to refresh ObjectInspector every time this function is call
-    somethingChanged = (somethingChanged + 1) % 2;
   };
-
-  afterUpdate(() => {
-    handleAnnotationSortedByModel();
-  });
 </script>
 
 <div class="p-2 w-full">
@@ -108,11 +95,9 @@ License: CECILL-C
       {/each}
     {/if}
     <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-      {#key somethingChanged}
-        {#each allTopEntities as entity}
-          <ObjectCard {entity} />
-        {/each}
-      {/key}
+      {#each allTopEntities as entity}
+        <ObjectCard {entity} />
+      {/each}
     </ObjectsModelSection>
   {/if}
 </div>

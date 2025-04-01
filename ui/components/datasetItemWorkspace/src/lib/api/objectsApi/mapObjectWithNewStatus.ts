@@ -20,9 +20,9 @@ export const mapObjectWithNewStatus = (
   // const nextObjectId = objectsToAnnotate[1]?.id;
   // return allObjects.map((object) => {
   //   if (object.id === nextObjectId) {
-  //     object.ui.highlighted = "self";
+  //     object.ui.displayControl.highlighted = "self";
   //   } else {
-  //     object.ui.highlighted = "none";
+  //     object.ui.displayControl.highlighted = "none";
   //   }
   //   if (object.id === objectsToAnnotate[0]?.id) {
   //     object.review_state = status;

@@ -69,7 +69,7 @@ License: CECILL-C
   };
 
   const onClick = () => {
-    if (bbox.ui.highlighted !== "self") {
+    if (bbox.ui.displayControl.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: bbox.id,

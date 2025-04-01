@@ -103,7 +103,7 @@ License: CECILL-C
   };
 
   const onClick = () => {
-    if (mask.ui.highlighted !== "self") {
+    if (mask.ui.displayControl.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: mask.id,
