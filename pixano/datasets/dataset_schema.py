@@ -66,7 +66,7 @@ class DatasetSchema(BaseModel):
         """
         table_name = self.format_table_name(table_name)
         if table_name in self.schemas:
-            raise ValueError(f"Table {table_name} already exists in the schemas.")
+            print(f"WARNING: Table {table_name} already exists in the schemas. It will be replaced.")
         elif not issubclass(schema, BaseSchema):
             raise ValueError(f"Schema {schema} should be a subclass of BaseSchema.")
         elif not isinstance(relation_item, SchemaRelation):

@@ -402,9 +402,6 @@ class TestDatasetSchema:
         assert schema.relations["item"]["new_table"] == item_relation
 
     def test_add_error(self, dataset_schema_item_categories_image_bbox):
-        with pytest.raises(ValueError, match="Table image already exists in the schemas."):
-            dataset_schema_item_categories_image_bbox.add_schema("image", Image, SchemaRelation.ONE_TO_ONE)
-
         with pytest.raises(ValueError, match="Schema <class 'str'> should be a subclass of BaseSchema."):
             dataset_schema_item_categories_image_bbox.add_schema("new_table", str, SchemaRelation.ONE_TO_ONE)
 
