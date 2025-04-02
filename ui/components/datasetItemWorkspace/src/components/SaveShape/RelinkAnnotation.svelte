@@ -16,7 +16,6 @@ License: CECILL-C
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let selectedEntityId: string = "new";
-  export let baseSchema: BaseSchema;
   export let viewRef: Reference;
   export let tracklet: Annotation | null = null;
 
@@ -34,17 +33,13 @@ License: CECILL-C
       );
       return !overlap;
     } else {
-      const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
-      const sameKindInSameView = annsNotTracklets?.some(
-        (ann) => ann.data.view_ref.id === viewRef.id && baseSchema === ann.table_info.base_schema,
-      );
       const overlap = tracklets?.some(
         (ann) =>
           (ann as Tracklet).data.view_ref.name === viewRef.name &&
           (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
           (ann as Tracklet).data.end_timestep > $currentFrameIndex,
       );
-      return !sameKindInSameView && !overlap;
+      return !overlap;
     }
   };
 

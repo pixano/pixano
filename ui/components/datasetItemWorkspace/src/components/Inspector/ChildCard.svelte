@@ -115,12 +115,7 @@ License: CECILL-C
 </div>
 {#if showRelink}
   <div class="flex flex-row gap-4 items-center mr-4">
-    <RelinkAnnotation
-      bind:selectedEntityId
-      baseSchema={child.table_info.base_schema}
-      viewRef={child.data.view_ref}
-      tracklet={child}
-    />
+    <RelinkAnnotation bind:selectedEntityId viewRef={child.data.view_ref} tracklet={child} />
     <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
   </div>
 {/if}
