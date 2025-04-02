@@ -255,7 +255,7 @@ class Dataset:
             fill_value=fill_value,
             embedding_functions=None,
         )
-        self.schema.add_schema(name, schema, relation_item, exist_ok and mode == "overwrite")
+        self.schema.add_schema(name, schema, relation_item, exist_ok or mode == "overwrite")
         self.schema.to_json(self._schema_file)
         self._reload_schema()
         return table
