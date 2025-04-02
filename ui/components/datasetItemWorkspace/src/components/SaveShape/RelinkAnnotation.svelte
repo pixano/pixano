@@ -16,7 +16,6 @@ License: CECILL-C
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let selectedEntityId: string = "new";
-  export let baseSchema: BaseSchema;
   export let viewRef: Reference;
   export let tracklet: Annotation | null = null;
 

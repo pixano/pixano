@@ -198,12 +198,7 @@ License: CECILL-C
     <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
     {#if showRelink}
       <div class="flex flex-row gap-4 items-center mr-4">
-        <RelinkAnnotation
-          bind:selectedEntityId
-          baseSchema={tracklet.table_info.base_schema}
-          viewRef={tracklet.data.view_ref}
-          {tracklet}
-        />
+        <RelinkAnnotation bind:selectedEntityId viewRef={tracklet.data.view_ref} {tracklet} />
         <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
       </div>
     {/if}

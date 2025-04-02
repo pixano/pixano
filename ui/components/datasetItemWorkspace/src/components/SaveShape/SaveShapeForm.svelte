@@ -259,11 +259,7 @@ License: CECILL-C
 {#if $newShape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>{@html saveText}</p>
-    <RelinkAnnotation
-      bind:selectedEntityId
-      baseSchema={mapShapeType2BaseSchema[$newShape.type]}
-      viewRef={$newShape.viewRef}
-    />
+    <RelinkAnnotation bind:selectedEntityId viewRef={$newShape.viewRef} />
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
       <CreateFeatureInputs
         bind:isFormValid
