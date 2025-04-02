@@ -5469,7 +5469,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Table mode ('create', 'overwrite'd).</p>
+                <p>Table mode ('create', 'overwrite').</p>
               </div>
             </td>
             <td>
@@ -5610,7 +5610,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 </span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">        schema: Table schema.</span>
 </span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">        relation_item: Relation with the `&#39;item&#39;` table (table to item).</span>
 </span><span id="__span-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="sd">        data: Table data.</span>
-</span><span id="__span-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="sd">        mode: Table mode (&#39;create&#39;, &#39;overwrite&#39;d).</span>
+</span><span id="__span-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="sd">        mode: Table mode (&#39;create&#39;, &#39;overwrite&#39;).</span>
 </span><span id="__span-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="sd">        exist_ok: If True, do not raise an error if the table already exists.</span>
 </span><span id="__span-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">        on_bad_vectors: Raise an error, drop or fill bad vectors (&quot;error&quot;, &quot;drop&quot;, &quot;fill&quot;).</span>
 </span><span id="__span-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="sd">        fill_value: Value to fill bad vectors.</span>
@@ -5628,7 +5628,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 </span><span id="__span-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="n">fill_value</span><span class="o">=</span><span class="n">fill_value</span><span class="p">,</span>
 </span><span id="__span-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="n">embedding_functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="p">)</span>
-</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">add_schema</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">relation_item</span><span class="p">)</span>
+</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">add_schema</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">relation_item</span><span class="p">,</span> <span class="n">exist_ok</span> <span class="ow">or</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;overwrite&quot;</span><span class="p">)</span>
 </span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_json</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema_file</span><span class="p">)</span>
 </span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_reload_schema</span><span class="p">()</span>
 </span><span id="__span-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="k">return</span> <span class="n">table</span>
