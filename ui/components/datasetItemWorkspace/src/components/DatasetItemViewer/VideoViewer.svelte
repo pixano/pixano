@@ -70,6 +70,7 @@ License: CECILL-C
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let resize: number;
 
   let embeddings: Record<string, ort.Tensor> = {};
 
@@ -456,14 +457,6 @@ License: CECILL-C
     }
   }
 
-  const startExpand = () => {
-    expanding = true;
-  };
-
-  const stopExpand = () => {
-    expanding = false;
-  };
-
   const expand = (e: MouseEvent) => {
     if (expanding) {
       inspectorMaxHeight = document.body.scrollHeight - e.pageY;
@@ -473,7 +466,9 @@ License: CECILL-C
 
 <section
   class="h-full w-full flex flex-col"
-  on:mouseup={stopExpand}
+  on:mouseup={() => {
+    expanding = false;
+  }}
   on:mousemove={expand}
   role="tab"
   tabindex="0"
@@ -490,7 +485,7 @@ License: CECILL-C
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
-        canvasSize={inspectorMaxHeight}
+        canvasSize={inspectorMaxHeight + resize}
         {embeddings}
         isVideo={true}
         imageSmoothing={$imageSmoothing}
@@ -500,7 +495,12 @@ License: CECILL-C
         {merge}
       />
     </div>
-    <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />
+    <button
+      class="h-1 bg-primary-light cursor-row-resize w-full"
+      on:mousedown={() => {
+        expanding = true;
+      }}
+    />
     <div
       class="h-full grow max-h-[25%] overflow-hidden"
       style={`max-height: ${inspectorMaxHeight}px`}

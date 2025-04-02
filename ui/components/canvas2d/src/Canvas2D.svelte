@@ -262,8 +262,8 @@ License: CECILL-C
       return;
     }
     // Calculate max dims for every image in the grid
-    const maxWidth = stage.width() / gridSize.cols;
-    const maxHeight = stage.height() / gridSize.rows;
+    const maxWidth = stageContainer.getBoundingClientRect().width / gridSize.cols;
+    const maxHeight = stageContainer.getBoundingClientRect().height / gridSize.rows;
 
     // Get view index
     const keys = Object.keys(imagesPerView);

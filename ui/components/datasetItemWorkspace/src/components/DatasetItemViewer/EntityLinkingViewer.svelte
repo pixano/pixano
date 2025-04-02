@@ -48,6 +48,7 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let embeddings: Record<string, ort.Tensor> = {};
+  export let resize: number;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -56,8 +57,6 @@ License: CECILL-C
   // utility vars for resizing with slide bar
   let entityLinkingAreaWidth = 300; //default width
   let expanding = false;
-  let initialAreaX = 0;
-  let initialAreaWidth = 0;
 
   /**
    * Normalize the pixel values of an image to a specified range.
@@ -172,27 +171,24 @@ License: CECILL-C
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
   };
 
-  const startExpand = (e: MouseEvent) => {
-    expanding = true;
-    initialAreaX = e.clientX;
-    initialAreaWidth = entityLinkingAreaWidth;
-  };
-
-  const stopExpand = () => {
-    expanding = false;
-  };
-
   const expand = (e: MouseEvent) => {
     if (expanding) {
-      const delta = e.clientX - initialAreaX;
-      entityLinkingAreaWidth = Math.max(180, initialAreaWidth + delta);
+      entityLinkingAreaWidth = Math.max(e.pageX, 180);
     }
   };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
+  <div
+    class="h-full flex"
+    on:mouseup={() => {
+      expanding = false;
+    }}
+    on:mousemove={expand}
+    role="tab"
+    tabindex="0"
+  >
     <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
       <TextSpanArea
         textViews={$textViews}
@@ -203,7 +199,12 @@ License: CECILL-C
         on:messageContentChange={handleMessageContentChange}
       />
     </div>
-    <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />
+    <button
+      class="w-1 bg-primary-light cursor-col-resize h-full"
+      on:mousedown={() => {
+        expanding = true;
+      }}
+    />
     <div class="overflow-hidden grow">
       <Canvas2D
         {imagesPerView}
@@ -217,7 +218,7 @@ License: CECILL-C
         )}
         {embeddings}
         {filters}
-        canvasSize={entityLinkingAreaWidth}
+        canvasSize={entityLinkingAreaWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn

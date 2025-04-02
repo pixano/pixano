@@ -52,13 +52,12 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let embeddings: Record<string, ort.Tensor> = {};
+  export let resize: number;
 
   // utility vars for resizing with slide bar
   let vqaAreaMaxWidth = 450; //default width
   const minVqaAreaWidth = 260; //minimum width for VqaArea (less may hide some elements)
   let expanding = false;
-  let initialVqaAreaX = 0;
-  let initialVqaAreaWidth = 0;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -195,27 +194,24 @@ License: CECILL-C
     isGenerating = false;
   };
 
-  const startExpand = (e: MouseEvent) => {
-    expanding = true;
-    initialVqaAreaX = e.clientX;
-    initialVqaAreaWidth = vqaAreaMaxWidth;
-  };
-
-  const stopExpand = () => {
-    expanding = false;
-  };
-
   const expand = (e: MouseEvent) => {
     if (expanding) {
-      const delta = e.clientX - initialVqaAreaX;
-      vqaAreaMaxWidth = Math.max(minVqaAreaWidth, initialVqaAreaWidth + delta);
+      vqaAreaMaxWidth = Math.max(e.pageX, minVqaAreaWidth);
     }
   };
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#if loaded}
-  <div class="h-full flex" on:mouseup={stopExpand} on:mousemove={expand} role="tab" tabindex="0">
+  <div
+    class="h-full flex"
+    on:mouseup={() => {
+      expanding = false;
+    }}
+    on:mousemove={expand}
+    role="tab"
+    tabindex="0"
+  >
     <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
       <VqaArea
         messages={$messages}
@@ -225,7 +221,12 @@ License: CECILL-C
         on:generateAnswer={handleGenerateAnswer}
       />
     </div>
-    <button class="w-1 bg-primary-light cursor-col-resize h-full" on:mousedown={startExpand} />
+    <button
+      class="w-1 bg-primary-light cursor-col-resize h-full"
+      on:mousedown={() => {
+        expanding = true;
+      }}
+    />
     <div class="overflow-hidden grow">
       <Canvas2D
         {imagesPerView}
@@ -239,7 +240,7 @@ License: CECILL-C
         )}
         {embeddings}
         {filters}
-        canvasSize={vqaAreaMaxWidth}
+        canvasSize={vqaAreaMaxWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn

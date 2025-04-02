@@ -24,6 +24,7 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
+  export let resize: number;
 
   let embeddings: Record<string, ort.Tensor> = {};
 
@@ -60,19 +61,19 @@ License: CECILL-C
   });
 </script>
 
-<div class="max-h-[calc(100vh-80px)] max-w-full bg-slate-800">
+<div class="max-h-[calc(100vh-80px)] w-full max-w-full bg-slate-800">
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.ui.type === WorkspaceType.VIDEO}
-    <VideoViewer {selectedItem} bind:currentAnn />
+    <VideoViewer {selectedItem} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_VQA}
-    <VqaViewer {selectedItem} {embeddings} bind:currentAnn />
+    <VqaViewer {selectedItem} {embeddings} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING}
-    <EntityLinkingViewer {selectedItem} {embeddings} bind:currentAnn />
+    <EntityLinkingViewer {selectedItem} {embeddings} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE || !selectedItem.ui.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
+    <ImageViewer {selectedItem} {embeddings} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.PCL_3D}
     <ThreeDimensionsViewer />
   {/if}
