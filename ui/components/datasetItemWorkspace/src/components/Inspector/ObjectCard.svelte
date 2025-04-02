@@ -399,7 +399,7 @@ License: CECILL-C
           <div class="flex flex-col">
             {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
               <p class="text-center italic">
-                {allowedChilds.length > 0 ? allowableChilds.length : "No"}
+                {allowedChilds.length > 0 ? allowedChilds.length : "No"}
                 object{allowedChilds.length === 1 ? "" : "s"}
                 visible on frame {$currentFrameIndex}
               </p>
