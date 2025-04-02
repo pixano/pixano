@@ -400,6 +400,8 @@ class TestDatasetSchema:
         assert schema.relations["new_table"] == {"item": relation}
         assert set(schema.groups[SchemaGroup.VIEW]) == {"image", "new_table"}
         assert schema.relations["item"]["new_table"] == item_relation
+        schema = dataset_schema_item_categories_image_bbox.add_schema("image", Image, relation, overwrite_schema=True)
+        assert schema.relations["item"]["image"] == item_relation
 
     def test_add_error(self, dataset_schema_item_categories_image_bbox):
         with pytest.raises(ValueError, match="Table image already exists in the schemas."):
