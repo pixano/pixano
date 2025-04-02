@@ -53,20 +53,23 @@ class DatasetSchema(BaseModel):
     relations: dict[str, dict[str, SchemaRelation]]
     groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup if key != SchemaGroup.SOURCE}
 
-    def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> Self:
+    def add_schema(
+        self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation, overwrite_schema: bool = False
+    ) -> Self:
         """Add a schema to the dataset schema.
 
         Args:
             table_name: Name of the table to add to the dataset schema.
             schema: Schema of the table.
             relation_item: Relationship with the item schema.
+            overwrite_schema: If True, existing schema will be overwritten, else raise ValueError.
 
         Returns:
             The dataset schema.
         """
         table_name = self.format_table_name(table_name)
-        if table_name in self.schemas:
-            print(f"WARNING: Table {table_name} already exists in the schemas. It will be replaced.")
+        if not overwrite_schema and table_name in self.schemas:
+            raise ValueError(f"Table {table_name} already exists in the schemas.")
         elif not issubclass(schema, BaseSchema):
             raise ValueError(f"Schema {schema} should be a subclass of BaseSchema.")
         elif not isinstance(relation_item, SchemaRelation):

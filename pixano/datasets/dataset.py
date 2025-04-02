@@ -237,7 +237,7 @@ class Dataset:
             schema: Table schema.
             relation_item: Relation with the `'item'` table (table to item).
             data: Table data.
-            mode: Table mode ('create', 'overwrite'd).
+            mode: Table mode ('create', 'overwrite').
             exist_ok: If True, do not raise an error if the table already exists.
             on_bad_vectors: Raise an error, drop or fill bad vectors ("error", "drop", "fill").
             fill_value: Value to fill bad vectors.
@@ -255,7 +255,7 @@ class Dataset:
             fill_value=fill_value,
             embedding_functions=None,
         )
-        self.schema.add_schema(name, schema, relation_item)
+        self.schema.add_schema(name, schema, relation_item, exist_ok and mode == "overwrite")
         self.schema.to_json(self._schema_file)
         self._reload_schema()
         return table
