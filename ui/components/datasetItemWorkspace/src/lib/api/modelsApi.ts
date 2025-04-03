@@ -24,7 +24,7 @@ export async function loadViewEmbeddings(
           if (shape.length === 3) {
             shape = [1, shape[0], shape[1], shape[2]];
           }
-          embeddings[view_embedding.data["view_ref"].name] = new ort.Tensor(
+          embeddings[view_embedding.data["view_ref"].id] = new ort.Tensor(
             "float32",
             view_embedding.data.vector,
             shape,

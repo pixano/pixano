@@ -75,7 +75,6 @@ License: CECILL-C
       ),
     );
     updateView($currentFrameIndex);
-    resetTool();
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {

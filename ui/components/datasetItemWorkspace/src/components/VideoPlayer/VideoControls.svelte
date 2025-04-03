@@ -17,7 +17,6 @@ License: CECILL-C
   } from "../../lib/stores/videoViewerStores";
 
   export let updateView: (frameIndex: number) => void;
-  export let resetTool: () => void;
 
   let currentTime: string;
 
@@ -42,7 +41,6 @@ License: CECILL-C
   $: currentTime = getCurrentImageTime($currentFrameIndex, $videoControls.videoSpeed);
 
   const onPlayStepClick = () => {
-    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -55,7 +53,6 @@ License: CECILL-C
   };
 
   const onPlayStepBackClick = () => {
-    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -71,7 +68,6 @@ License: CECILL-C
   };
 
   const onPlayClick = () => {
-    resetTool();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));

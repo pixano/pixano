@@ -125,6 +125,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      embeddings = {};
       modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       const image_views = Object.fromEntries(
         Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
