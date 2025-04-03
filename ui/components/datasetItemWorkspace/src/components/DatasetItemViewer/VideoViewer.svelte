@@ -19,6 +19,7 @@ License: CECILL-C
     DatasetItem,
     Entity,
     Keypoints,
+    Mask,
     SaveShapeType,
     SequenceFrame,
     Tracklet,
@@ -70,15 +71,35 @@ License: CECILL-C
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let embeddings: Record<string, ort.Tensor> = {};
   export let resize: number;
-
-  let embeddings: Record<string, ort.Tensor> = {};
 
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
     }
   }
+
+  const current_itemMasks = derived(
+    [itemMasks, currentFrameIndex, tracklets],
+    ([$itemMasks, $currentFrameIndex, $tracklets]) => {
+      const current_masks: Mask[] = [];
+      const current_tracklets = $tracklets.filter(
+        (tracklet) =>
+          tracklet.data.start_timestep <= $currentFrameIndex &&
+          tracklet.data.end_timestep >= $currentFrameIndex,
+      );
+      for (const tracklet of current_tracklets) {
+        const mask_childs_ids = new Set(
+          tracklet.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Mask)).map((mask) => mask.id),
+        );
+        const mask_childs = $itemMasks.filter((mask) => mask_childs_ids.has(mask.id));
+        const mask = mask_childs.find((mask) => mask.ui.frame_index === $currentFrameIndex);
+        if (mask) current_masks.push(mask);
+      }
+      return current_masks;
+    },
+  );
 
   const current_itemBBoxes = derived(
     [itemBboxes, currentFrameIndex, tracklets],
@@ -480,7 +501,7 @@ License: CECILL-C
         imagesPerView={$imagesPerView}
         colorScale={$colorScale[1]}
         bboxes={$current_itemBBoxes}
-        masks={$itemMasks}
+        masks={$current_itemMasks}
         keypoints={$current_itemKeypoints}
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
