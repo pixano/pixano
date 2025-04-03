@@ -20,6 +20,7 @@ License: CECILL-C
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
 
+  import { clearHighlighting } from "../lib/api/objectsApi/clearHighlighting";
   import {
     addSmartPointTool,
     panTool,
@@ -29,7 +30,6 @@ License: CECILL-C
     smartRectangleTool,
   } from "../lib/settings/selectionTools";
   import {
-    annotations,
     interactiveSegmenterModel,
     merges,
     modelsUiStore,
@@ -44,21 +44,14 @@ License: CECILL-C
   let previousSelectedTool: SelectionTool | null = null;
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
-  const clearHighlighting = () => {
-    //deselect everything = unhighlight all and stop editing
-    newShape.set({ status: "none" });
-    annotations.update((anns) =>
-      anns.map((ann) => {
-        ann.ui.displayControl = { ...ann.ui.displayControl, editing: false, highlighted: "all" };
-        return ann;
-      }),
-    );
+  const clearFusionHighlighting = () => {
+    clearHighlighting();
     merges.set({ to_fuse: [], forbids: [] });
   };
 
   const selectTool = (tool: SelectionTool) => {
     if (tool !== $selectedTool) {
-      clearHighlighting();
+      clearFusionHighlighting();
       selectedTool.set(tool);
     }
   };
@@ -81,7 +74,7 @@ License: CECILL-C
 
   onMount(() => {
     if ($selectedTool === undefined) selectedTool.set(panTool);
-    clearHighlighting();
+    clearFusionHighlighting();
   });
 
   $: {
@@ -117,7 +110,7 @@ License: CECILL-C
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}
-      <FusionTool {selectTool} {clearHighlighting} />
+      <FusionTool {selectTool} {clearFusionHighlighting} />
     {/if}
   </div>
   <div

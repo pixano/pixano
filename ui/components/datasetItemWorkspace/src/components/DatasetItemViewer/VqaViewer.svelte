@@ -132,6 +132,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
+      embeddings = {};
       modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;

@@ -29,8 +29,8 @@ License: CECILL-C
       const overlap = tracklets?.some(
         (ann) =>
           (ann as Tracklet).data.view_ref.name === viewRef.name &&
-          (ann as Tracklet).data.start_timestep < (tracklet as Tracklet).data.end_timestep &&
-          (ann as Tracklet).data.end_timestep > (tracklet as Tracklet).data.start_timestep,
+          (ann as Tracklet).data.start_timestep <= (tracklet as Tracklet).data.end_timestep &&
+          (ann as Tracklet).data.end_timestep >= (tracklet as Tracklet).data.start_timestep,
       );
       return !overlap;
     } else {
@@ -41,8 +41,8 @@ License: CECILL-C
       const overlap = tracklets?.some(
         (ann) =>
           (ann as Tracklet).data.view_ref.name === viewRef.name &&
-          (ann as Tracklet).data.start_timestep < $currentFrameIndex + NEWTRACKLET_LENGTH + 1 &&
-          (ann as Tracklet).data.end_timestep > $currentFrameIndex,
+          (ann as Tracklet).data.start_timestep <= $currentFrameIndex + NEWTRACKLET_LENGTH &&
+          (ann as Tracklet).data.end_timestep >= $currentFrameIndex,
       );
       return !sameKindInSameView && !overlap;
     }

@@ -67,7 +67,7 @@ License: CECILL-C
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.ui.type === WorkspaceType.VIDEO}
-    <VideoViewer {selectedItem} {resize} bind:currentAnn />
+    <VideoViewer {selectedItem} {embeddings} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_VQA}
     <VqaViewer {selectedItem} {embeddings} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING}

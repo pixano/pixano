@@ -20,6 +20,7 @@ export const getObjectsToPreAnnotate = (objects: Annotation[]): Annotation[] =>
   );
 
 export * from "./addOrUpdateSaveItem";
+export * from "./clearHighlighting";
 export * from "./defineCreatedEntity";
 export * from "./defineCreatedObject";
 export * from "./defineObjectThumbnail";
