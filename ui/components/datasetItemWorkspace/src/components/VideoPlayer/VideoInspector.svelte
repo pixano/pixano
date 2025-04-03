@@ -11,6 +11,7 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { BBox, Entity, SliderRoot, type KeypointsTemplate } from "@pixano/core";
 
+  import { clearHighlighting } from "../../lib/api/objectsApi/clearHighlighting";
   import { panTool } from "../../lib/settings/selectionTools";
   import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
@@ -37,6 +38,12 @@ License: CECILL-C
     videoControls.update((old) => ({ ...old, isLoaded: true }));
   });
 
+  const resetHighlight = () => {
+    if (![ToolType.Pan, ToolType.Fusion].includes($selectedTool.type)) {
+      clearHighlighting();
+    }
+  };
+
   const resetTool = () => {
     if (![ToolType.Pan, ToolType.Fusion].includes($selectedTool.type)) {
       selectedTool.set(panTool);
@@ -55,7 +62,7 @@ License: CECILL-C
   <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
-        <TimeTrack slot="timeTrack" {updateView} {resetTool} />
+        <TimeTrack slot="timeTrack" {updateView} {resetTool} {resetHighlight} />
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
@@ -76,7 +83,7 @@ License: CECILL-C
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
-      <VideoControls {updateView} />
+      <VideoControls {updateView} {resetHighlight} />
       <SliderRoot
         class="max-w-[250px]"
         bind:value={$videoControls.zoomLevel}
