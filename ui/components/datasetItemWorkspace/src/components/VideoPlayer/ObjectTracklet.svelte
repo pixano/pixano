@@ -50,7 +50,11 @@ License: CECILL-C
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;
-  const showKeyframes: boolean = false; //later this flag could be controled somewhere
+  const showKeyframes: boolean = true; //later this flag could be controled somewhere
+  let showRelink = false;
+  let selectedEntityId = "new";
+  let mustMerge: boolean = false;
+  let overlapTargetId: string = "";
 
   const getLeft = (tracklet: Tracklet) => {
     let start = Math.max(0, tracklet.data.start_timestep - 0.5);
@@ -68,8 +72,8 @@ License: CECILL-C
     );
   };
 
-  let left: number = getLeft(tracklet);
-  let right: number = getRight(tracklet);
+  $: left = getLeft(tracklet);
+  $: right = getRight(tracklet);
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
@@ -156,15 +160,12 @@ License: CECILL-C
     }
   };
 
-  //WIP TEST
-  let showRelink = false;
-  let selectedEntityId = "new";
   const onRelinkTrackletClick = (event: MouseEvent) => {
     event.preventDefault(); //avoid context menu close
     showRelink = true;
   };
   const handleRelink = () => {
-    relink(tracklet, getTopEntity(tracklet), selectedEntityId);
+    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
   };
 </script>
@@ -200,6 +201,8 @@ License: CECILL-C
       <div class="flex flex-row gap-4 items-center mr-4">
         <RelinkAnnotation
           bind:selectedEntityId
+          bind:mustMerge
+          bind:overlapTargetId
           baseSchema={tracklet.table_info.base_schema}
           viewRef={tracklet.data.view_ref}
           {tracklet}
@@ -210,20 +213,22 @@ License: CECILL-C
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#if showKeyframes}
-  {#each tracklet_annotations_frame_indexes as itemFrameIndex}
-    <TrackletKeyItem
-      {itemFrameIndex}
-      {tracklet}
-      {color}
-      {height}
-      {top}
-      {oneFrameInPixel}
-      {onEditKeyItemClick}
-      {onClick}
-      {trackId}
-      {canContinueDragging}
-      {updateTrackletWidth}
-      {resetTool}
-    />
-  {/each}
+  {#key tracklet_annotations_frame_indexes.length}
+    {#each tracklet_annotations_frame_indexes as itemFrameIndex}
+      <TrackletKeyItem
+        {itemFrameIndex}
+        {tracklet}
+        {color}
+        {height}
+        {top}
+        {oneFrameInPixel}
+        {onEditKeyItemClick}
+        {onClick}
+        {trackId}
+        {canContinueDragging}
+        {updateTrackletWidth}
+        {resetTool}
+      />
+    {/each}
+  {/key}
 {/if}

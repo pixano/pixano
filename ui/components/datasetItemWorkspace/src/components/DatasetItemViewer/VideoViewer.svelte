@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
-  import { derived } from "svelte/store";
 
   import { Canvas2D } from "@pixano/canvas2d";
   import { ToolType } from "@pixano/canvas2d/src/tools";
@@ -19,12 +18,10 @@ License: CECILL-C
     DatasetItem,
     Entity,
     Keypoints,
-    Mask,
     SaveShapeType,
     SequenceFrame,
     Tracklet,
     type EditShape,
-    type KeypointsTemplate,
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -37,28 +34,22 @@ License: CECILL-C
     scrollIntoView,
     updateExistingObject,
   } from "../../lib/api/objectsApi";
-  import {
-    boxLinearInterpolation,
-    keypointsLinearInterpolation,
-    setBufferSpecs,
-    updateView,
-  } from "../../lib/api/videoApi";
+  import { setBufferSpecs, updateView } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
     colorScale,
+    current_itemBBoxes,
+    current_itemKeypoints,
+    current_itemMasks,
     entities,
     imageSmoothing,
-    itemBboxes,
-    itemKeypoints,
     itemMasks,
-    mediaViews,
     merges,
     newShape,
     saveData,
     selectedKeypointsTemplate,
     selectedTool,
-    tracklets,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,
@@ -79,91 +70,6 @@ License: CECILL-C
       currentFrameIndex.set(0);
     }
   }
-
-  const current_itemMasks = derived(
-    [itemMasks, currentFrameIndex, tracklets],
-    ([$itemMasks, $currentFrameIndex, $tracklets]) => {
-      const current_masks: Mask[] = [];
-      const current_tracklets = $tracklets.filter(
-        (tracklet) =>
-          tracklet.data.start_timestep <= $currentFrameIndex &&
-          tracklet.data.end_timestep >= $currentFrameIndex,
-      );
-      for (const tracklet of current_tracklets) {
-        const mask_childs_ids = new Set(
-          tracklet.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Mask)).map((mask) => mask.id),
-        );
-        const mask_childs = $itemMasks.filter((mask) => mask_childs_ids.has(mask.id));
-        const mask = mask_childs.find((mask) => mask.ui.frame_index === $currentFrameIndex);
-        if (mask) current_masks.push(mask);
-      }
-      return current_masks;
-    },
-  );
-
-  const current_itemBBoxes = derived(
-    [itemBboxes, currentFrameIndex, tracklets],
-    ([$itemBboxes, $currentFrameIndex, $tracklets]) => {
-      const current_bboxes_and_interpolated: BBox[] = [];
-      const current_tracklets = $tracklets.filter(
-        (tracklet) =>
-          tracklet.data.start_timestep <= $currentFrameIndex &&
-          tracklet.data.end_timestep >= $currentFrameIndex,
-      );
-      for (const tracklet of current_tracklets) {
-        const bbox_childs_ids = new Set(
-          tracklet.ui.childs?.filter((ann) => ann.is_type(BaseSchema.BBox)).map((bbox) => bbox.id),
-        );
-        const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
-        const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
-        if (box) current_bboxes_and_interpolated.push(box);
-        else if (bbox_childs.length > 1) {
-          const sample_bbox = bbox_childs[0];
-          const view_id = ($mediaViews[sample_bbox.data.view_ref.name] as SequenceFrame[])[
-            $currentFrameIndex
-          ].id;
-          const interpolated_box = boxLinearInterpolation(bbox_childs, $currentFrameIndex, view_id);
-          if (interpolated_box) current_bboxes_and_interpolated.push(interpolated_box);
-        }
-      }
-      return current_bboxes_and_interpolated;
-    },
-  );
-
-  const current_itemKeypoints = derived(
-    [itemKeypoints, currentFrameIndex, tracklets],
-    ([$itemKeypoints, $currentFrameIndex, $tracklets]) => {
-      const current_kpts_and_interpolated: KeypointsTemplate[] = [];
-      const current_tracklets = $tracklets.filter(
-        (tracklet) =>
-          tracklet.data.start_timestep <= $currentFrameIndex &&
-          tracklet.data.end_timestep >= $currentFrameIndex,
-      );
-      for (const tracklet of current_tracklets) {
-        const kpt_childs_ids = new Set(
-          tracklet.ui.childs
-            ?.filter((ann) => ann.is_type(BaseSchema.Keypoints))
-            .map((kpt) => kpt.id),
-        );
-        const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
-        const kpt = kpt_childs.find((kpt) => kpt.ui!.frame_index === $currentFrameIndex);
-        if (kpt) current_kpts_and_interpolated.push(kpt);
-        else if (kpt_childs.length > 1) {
-          const sample_kpt = kpt_childs[0];
-          const view_id = ($mediaViews[sample_kpt.viewRef!.name] as SequenceFrame[])[
-            $currentFrameIndex
-          ].id;
-          const interpolated_kpt = keypointsLinearInterpolation(
-            kpt_childs,
-            $currentFrameIndex,
-            view_id,
-          );
-          if (interpolated_kpt) current_kpts_and_interpolated.push(interpolated_kpt);
-        }
-      }
-      return current_kpts_and_interpolated;
-    },
-  );
 
   let inspectorMaxHeight = 250;
   let expanding = false;
