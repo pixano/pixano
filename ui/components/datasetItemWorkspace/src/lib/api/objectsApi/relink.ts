@@ -15,7 +15,12 @@ import {
   type SaveShape,
 } from "@pixano/core";
 
-import { addOrUpdateSaveItem, findOrCreateSubAndTopEntities, getTopEntity } from ".";
+import {
+  addOrUpdateSaveItem,
+  clearHighlighting,
+  findOrCreateSubAndTopEntities,
+  getTopEntity,
+} from ".";
 import { datasetSchema } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { annotations, entities, saveData } from "../../stores/datasetItemWorkspaceStores";
 import type { ObjectProperties } from "../../types/datasetItemWorkspaceTypes";
@@ -26,14 +31,32 @@ import {
 } from "../featuresApi";
 import { sortByFrameIndex } from "../videoApi";
 
+// we need to pass a list of string as a 'dataset' attribute (dataset-overlap) of option choice of HTMLSelectElement
+// list is concatenated, so we try to choose a hopefully unlikely reproductible separator...
+// (default, ',' is too common, and we can't use too weirds chars in HTML attribute)
+export const OVERLAPIDS_SEPARATOR = "(!#!)";
+
 export const relink = (
   child: Annotation,
   entity: Entity,
   selectedEntityId: string,
   mustMerge: boolean,
-  overlapTargetId: string,
+  overlapTargetIds_string: string,
 ) => {
-  //let formInputs: CreateObjectInputs = [];
+  let to_relink: (Annotation | Entity)[] = [];
+  let to_move_anns: Annotation[] = [];
+  let to_remove_anns_ids: string[] = [];
+  let deleteEntity = false;
+  let deleteTracklet = false;
+
+  //get overlap target tracklets
+  const overlapTargetIds: string[] = overlapTargetIds_string.split(OVERLAPIDS_SEPARATOR);
+  // overlapping tracklets after first one will be fused, so mark them to delete
+  const to_fuse_tracklets = get(annotations).filter((ann) =>
+    overlapTargetIds.slice(1).includes(ann.id),
+  );
+  const to_fuse_tracklets_ids = to_fuse_tracklets.map((trklt) => trklt.id);
+
   let objectProperties: ObjectProperties = {};
 
   const { inputs: formInputs } = getValidationSchemaAndFormInputs(
@@ -52,12 +75,6 @@ export const relink = (
     imageHeight: 0,
     imageWidth: 0,
   } as SaveShape;
-
-  let to_relink: (Annotation | Entity)[] = [];
-  let to_move_anns: Annotation[] = [];
-  let to_remove_anns_ids: string[] = [];
-  let deleteEntity = false;
-  let deleteTracklet = false;
 
   if (child.is_type(BaseSchema.Tracklet)) {
     const tracklet_childs = (child as Tracklet).ui.childs;
@@ -85,7 +102,7 @@ export const relink = (
 
   const { topEntity } = findOrCreateSubAndTopEntities(selectedEntityId, shapeInfo, features);
 
-  const updated_entities = (ents: Entity[]) => {
+  entities.update((ents) => {
     if (isEntityNew) {
       ents.push(topEntity);
     }
@@ -97,9 +114,11 @@ export const relink = (
           deleteEntity = true;
         }
       }
-      // add to new/reaffected entity
+      // add to new/reaffected entity, and remove fused if any
       if (ent.id === topEntity.id) {
+        ent.ui.childs = ent.ui.childs?.filter((ann) => !to_fuse_tracklets_ids.includes(ann.id));
         ent.ui.childs?.push(...to_move_anns);
+        //ent.ui.childs?.sort (??)
       }
       //relink sub ents (change sub entity parent_ref)
       if (to_relink.includes(ent)) {
@@ -112,46 +131,50 @@ export const relink = (
       new_ents = new_ents.filter((ent) => ent.id !== entity.id);
     }
     return new_ents;
-  };
+  });
 
   // change child entity_ref
-  const updated_annotations = (anns: Annotation[]) => {
+  annotations.update((anns: Annotation[]) => {
     let new_anns = anns.map((ann) => {
       if (to_relink.includes(ann)) {
         ann.data.entity_ref = { id: topEntity.id, name: topEntity.table_info.name };
         ann.ui.top_entities = []; //reset top_entities
       }
-      if (deleteTracklet && overlapTargetId === ann.id && ann.is_type(BaseSchema.Tracklet)) {
-        //add childs to new target tracklet
-        (ann as Tracklet).ui.childs = [...(ann as Tracklet).ui.childs, ...to_move_anns].sort(
-          sortByFrameIndex,
-        );
-        //target tracklet range may change : union of current & target
-        (ann as Tracklet).data.start_timestep = Math.min(
-          (ann as Tracklet).data.start_timestep,
-          (child as Tracklet).data.start_timestep,
-        );
-        (ann as Tracklet).data.end_timestep = Math.max(
-          (ann as Tracklet).data.end_timestep,
-          (child as Tracklet).data.end_timestep,
-        );
-        //timestamps... TODO!
-        (ann as Tracklet).data.start_timestamp = (ann as Tracklet).data.start_timestep;
-        (ann as Tracklet).data.end_timestamp = (ann as Tracklet).data.end_timestep;
+      if (deleteTracklet && ann.is_type(BaseSchema.Tracklet)) {
+        if (overlapTargetIds[0] === ann.id) {
+          //add childs to new target tracklet (the first one, others are "fused" (deleted))
+          //also add childs from fused tracklets
+          (ann as Tracklet).ui.childs = [
+            ...(ann as Tracklet).ui.childs,
+            ...to_move_anns,
+            ...to_fuse_tracklets.flatMap((fann) => (fann as Tracklet).ui.childs),
+          ].sort(sortByFrameIndex);
+
+          //target tracklet range may change : union of current & targets
+          (ann as Tracklet).data.start_timestep = Math.min(
+            (ann as Tracklet).data.start_timestep,
+            (child as Tracklet).data.start_timestep,
+            ...to_fuse_tracklets.map((fann) => (fann as Tracklet).data.start_timestep),
+          );
+          (ann as Tracklet).data.end_timestep = Math.max(
+            (ann as Tracklet).data.end_timestep,
+            (child as Tracklet).data.end_timestep,
+            ...to_fuse_tracklets.map((fann) => (fann as Tracklet).data.end_timestep),
+          );
+          //timestamps... TODO!
+          (ann as Tracklet).data.start_timestamp = (ann as Tracklet).data.start_timestep;
+          (ann as Tracklet).data.end_timestamp = (ann as Tracklet).data.end_timestep;
+        }
       }
       return ann;
     });
-    if (deleteTracklet) new_anns = new_anns.filter((ann) => ann.id !== child.id);
+    //remove fused, and origin (=child) if deleteTracklet
+    new_anns = new_anns.filter(
+      (ann) =>
+        !to_fuse_tracklets_ids.includes(ann.id) && (deleteTracklet ? ann.id !== child.id : true),
+    );
     return new_anns;
-  };
-
-  const do_update = () => {
-    const upd_ents = updated_entities(get(entities));
-    const upd_anns = updated_annotations(get(annotations));
-    entities.set(upd_ents);
-    annotations.set(upd_anns);
-  };
-  do_update();
+  });
 
   //reset moved child(s) new top_entities + check
   to_move_anns.forEach((ann) => {
@@ -176,6 +199,15 @@ export const relink = (
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
   }
+  to_fuse_tracklets.forEach((trklt) => {
+    const save_item_fused_tracklet_delete: SaveItem = {
+      change_type: "delete",
+      object: trklt,
+    };
+    saveData.update((current_sd) =>
+      addOrUpdateSaveItem(current_sd, save_item_fused_tracklet_delete),
+    );
+  });
   if (deleteTracklet) {
     const save_item_tracklet_delete: SaveItem = {
       change_type: "delete",
@@ -190,4 +222,5 @@ export const relink = (
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity_delete));
   }
+  clearHighlighting();
 };

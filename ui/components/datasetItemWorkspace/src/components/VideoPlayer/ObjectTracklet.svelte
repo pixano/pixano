@@ -50,7 +50,7 @@ License: CECILL-C
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;
-  const showKeyframes: boolean = true; //later this flag could be controled somewhere
+
   let showRelink = false;
   let selectedEntityId = "new";
   let mustMerge: boolean = false;
@@ -212,7 +212,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if showKeyframes}
+{#if tracklet.ui.displayControl.highlighted === "self"}
   {#key tracklet_annotations_frame_indexes.length}
     {#each tracklet_annotations_frame_indexes as itemFrameIndex}
       <TrackletKeyItem

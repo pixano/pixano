@@ -10,7 +10,7 @@ License: CECILL-C
 
   import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "@pixano/core";
 
-  import { getTopEntity } from "../../lib/api/objectsApi";
+  import { getTopEntity, OVERLAPIDS_SEPARATOR } from "../../lib/api/objectsApi";
   import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
   import { colorScale, entities } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
@@ -28,7 +28,7 @@ License: CECILL-C
     hard_forbidden: boolean;
     overlap: boolean;
     numSameKindInSameView: number;
-    overlapTargetId: string;
+    overlapTargetIds: string[];
   } => {
     if (
       entity.data.parent_ref.id !== "" ||
@@ -39,13 +39,13 @@ License: CECILL-C
         hard_forbidden: true,
         overlap: false,
         numSameKindInSameView: 0,
-        overlapTargetId: "",
+        overlapTargetIds: [],
       };
     const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
     const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
     let numSameKindInSameView: number = 0;
     let overlap: boolean | undefined = undefined;
-    let overlapTargetId: string = "";
+    let overlapTargetIds: string[] = [];
     if (tracklet && tracklet.is_type(BaseSchema.Tracklet)) {
       const trackletBaseSchemaByFrameIndex = (tracklet as Tracklet).ui.childs.reduce(
         (acc, ann) => {
@@ -60,7 +60,8 @@ License: CECILL-C
         //NOTE we "miss" interpolated shapes. So we can "insert"
         (ann) =>
           ann.ui.frame_index
-            ? trackletBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
+            ? ann.data.view_ref.name === viewRef.name &&
+              trackletBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
             : false,
       );
       numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
@@ -73,7 +74,7 @@ License: CECILL-C
       );
       overlap = overlap_tracklets ? overlap_tracklets.length > 0 : false;
       if (overlap_tracklets && overlap_tracklets.length > 0)
-        overlapTargetId = overlap_tracklets[0].id;
+        overlapTargetIds = overlap_tracklets.map((ann) => ann.id);
     } else {
       const sameKindInSameView_anns = annsNotTracklets?.filter(
         //NOTE we "miss" interpolated shapes. So we can "insert"
@@ -91,7 +92,7 @@ License: CECILL-C
       );
       overlap = overlap_tracklets ? overlap_tracklets.length > 0 : false;
       if (overlap_tracklets && overlap_tracklets.length > 0)
-        overlapTargetId = overlap_tracklets[0].id;
+        overlapTargetIds = overlap_tracklets.map((ann) => ann.id);
     }
     // ! overlap --> Move
     // overlap && numSameKindInSameView === 0 --> Merge -- need to keep target tracklet
@@ -100,17 +101,17 @@ License: CECILL-C
       hard_forbidden: false,
       overlap: overlap ?? false,
       numSameKindInSameView,
-      overlapTargetId,
+      overlapTargetIds,
     };
   };
 
   let entitiesCombo = derived([entities], ([$entities]) => {
-    const res: { id: string; name: string; color: string; target: string }[] = [
-      { id: "new", name: "New", color: "", target: "" },
+    const res: { id: string; name: string; color: string; targets: string[] }[] = [
+      { id: "new", name: "New", color: "", targets: [] },
     ];
     $entities.forEach((entity) => {
       //check if there is no annotation of same kind & view_id for this entity
-      const { hard_forbidden, overlap, numSameKindInSameView, overlapTargetId } =
+      const { hard_forbidden, overlap, numSameKindInSameView, overlapTargetIds } =
         entityAllowInfo(entity);
       if (!hard_forbidden) {
         const displayFeat = getDefaultDisplayFeat(entity);
@@ -123,7 +124,7 @@ License: CECILL-C
           id: entity.id,
           name: prefixText + (displayFeat ? `${displayFeat} (${entity.id})` : entity.id),
           color: `${$colorScale[1](entity.id)}3a`,
-          target: overlapTargetId,
+          targets: overlapTargetIds,
         });
       }
     });
@@ -147,10 +148,10 @@ License: CECILL-C
 bg-slate-100 border-slate-300 focus:border-main"
       on:change={handleChange}
     >
-      {#each $entitiesCombo as { id, name, color, target }}
+      {#each $entitiesCombo as { id, name, color, targets }}
         <option
           value={id}
-          data-overlap={target}
+          data-overlap={targets.join(OVERLAPIDS_SEPARATOR)}
           style="background: {color};"
           disabled={name.startsWith("Forbidden")}
         >

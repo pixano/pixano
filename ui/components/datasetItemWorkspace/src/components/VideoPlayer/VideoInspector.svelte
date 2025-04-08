@@ -19,7 +19,7 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { sortEntites } from "../../lib/utils/sortEntities";
+  import { sortEntities } from "../../lib/utils/sortEntities";
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoControls from "./VideoControls.svelte";
@@ -31,7 +31,7 @@ License: CECILL-C
 
   let tracks: Entity[] = [];
   entities.subscribe((entities) => {
-    tracks = entities.filter((entity) => entity.is_track).sort(sortEntites);
+    tracks = entities.filter((entity) => entity.is_track).sort(sortEntities);
   });
 
   onMount(() => {

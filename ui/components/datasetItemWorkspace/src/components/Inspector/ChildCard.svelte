@@ -19,7 +19,6 @@ License: CECILL-C
     Trash2,
     Type,
   } from "lucide-svelte";
-  import { derived } from "svelte/store";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
@@ -37,6 +36,7 @@ License: CECILL-C
 
   import { deleteObject, relink } from "../../lib/api/objectsApi";
   import {
+    annotations,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
@@ -58,43 +58,45 @@ License: CECILL-C
   let selectedEntityId: string = "new";
   let mustMerge: boolean = false;
   let overlapTargetId: string = "";
-
-  const current_Anns = derived(
-    [current_itemBBoxes, current_itemKeypoints, current_itemMasks],
-    ([$current_itemBBoxes, $current_itemKeypoints, $current_itemMasks]) => {
-      return [...$current_itemBBoxes, ...$current_itemKeypoints, ...$current_itemMasks] as (
-        | BBox
-        | KeypointsTemplate
-        | Mask
-      )[];
-    },
-  );
-
   let currentTrackletChilds: { trackletChild: Annotation; displayName: string }[] = [];
-  $: if (child.is_type(BaseSchema.Tracklet)) {
-    currentTrackletChilds = [];
-    const trackletChilds = (child as Tracklet).ui.childs;
-    $current_Anns.forEach((cann) => {
-      const directMatch = trackletChilds.find((ann) => ann.id === cann.id);
 
-      if (directMatch) {
-        currentTrackletChilds.push({
-          trackletChild: directMatch,
-          displayName: cann.id,
-        });
-      } else if (
-        trackletChilds.some(
-          (ann) =>
-            cann.ui && "startRef" in cann.ui && cann.ui.startRef && ann.id === cann.ui.startRef.id,
-        )
-      ) {
-        currentTrackletChilds.push({
-          trackletChild: cann as Annotation,
-          displayName: `<i>interpolated</i> (${cann.id})`,
-        });
-      }
-    });
-  }
+  $: if ($annotations || child) buildCurrentTrackletChildList();
+
+  const buildCurrentTrackletChildList = () => {
+    if (child.is_type(BaseSchema.Tracklet)) {
+      currentTrackletChilds = [];
+      const trackletChilds = (child as Tracklet).ui.childs;
+      const current_Anns = [
+        ...$current_itemBBoxes,
+        ...$current_itemKeypoints,
+        ...$current_itemMasks,
+      ] as (BBox | KeypointsTemplate | Mask)[];
+
+      current_Anns.forEach((cann) => {
+        const directMatch = trackletChilds.find((ann) => ann.id === cann.id);
+
+        if (directMatch) {
+          currentTrackletChilds.push({
+            trackletChild: directMatch,
+            displayName: cann.id,
+          });
+        } else if (
+          trackletChilds.some(
+            (ann) =>
+              cann.ui &&
+              "startRef" in cann.ui &&
+              cann.ui.startRef &&
+              ann.id === cann.ui.startRef.id,
+          )
+        ) {
+          currentTrackletChilds.push({
+            trackletChild: cann as Annotation,
+            displayName: `<i>interpolated</i> (${cann.id})`,
+          });
+        }
+      });
+    }
+  };
 
   const isMultiView = Object.keys($mediaViews).length > 1;
   const handleRelink = () => {
