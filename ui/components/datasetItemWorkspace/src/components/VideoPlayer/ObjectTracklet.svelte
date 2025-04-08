@@ -80,6 +80,7 @@ License: CECILL-C
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
 
+  let resizeObs: ResizeObserver;
   let oneFrameInPixel: number;
   const calcOneFrameInPixel = () => {
     oneFrameInPixel =
@@ -88,8 +89,15 @@ License: CECILL-C
   };
   calcOneFrameInPixel();
 
+  $: if (resizeObs) {
+    if (tracklet.ui.displayControl.highlighted) {
+      resizeObs.observe(trackletElement);
+    } else {
+      resizeObs.unobserve(trackletElement);
+    }
+  }
   onMount(() => {
-    new ResizeObserver(calcOneFrameInPixel).observe(trackletElement);
+    resizeObs = new ResizeObserver(calcOneFrameInPixel);
   });
 
   $: color = $colorScale[1](trackId);
@@ -231,7 +239,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 10}
+{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
   {#key tracklet_annotations_frame_indexes.length}
     {#each tracklet_annotations_frame_indexes as itemFrameIndex}
       <TrackletKeyItem
