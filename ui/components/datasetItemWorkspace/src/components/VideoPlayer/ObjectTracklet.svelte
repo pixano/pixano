@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
+
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     BaseSchema,
@@ -78,12 +80,26 @@ License: CECILL-C
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
 
-  $: oneFrameInPixel =
-    trackletElement?.getBoundingClientRect().width /
-    (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  let oneFrameInPixel: number;
+  const calcOneFrameInPixel = () => {
+    oneFrameInPixel =
+      trackletElement?.getBoundingClientRect().width /
+      (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  };
+  calcOneFrameInPixel();
+
+  onMount(() => {
+    new ResizeObserver(calcOneFrameInPixel).observe(trackletElement);
+  });
+
   $: color = $colorScale[1](trackId);
 
   $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
+
+  $: canAddKeyFrame =
+    $currentFrameIndex > tracklet.data.start_timestep &&
+    $currentFrameIndex < tracklet.data.end_timestep &&
+    !tracklet.ui.childs.some((ann) => ann.ui.frame_index === $currentFrameIndex);
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
@@ -162,8 +178,9 @@ License: CECILL-C
 
   const onRelinkTrackletClick = (event: MouseEvent) => {
     event.preventDefault(); //avoid context menu close
-    showRelink = true;
+    showRelink = !showRelink;
   };
+
   const handleRelink = () => {
     relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
@@ -189,11 +206,13 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if $currentFrameIndex > tracklet.data.start_timestep && $currentFrameIndex < tracklet.data.end_timestep}
+    {#if canAddKeyFrame}
       <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
-        Add a point
+        Add a point at frame {$currentFrameIndex}
       </ContextMenu.Item>
-      <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+      <ContextMenu.Item on:click={onSplitTrackletClick}>
+        Split tracklet at frame {$currentFrameIndex}
+      </ContextMenu.Item>
     {/if}
     <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
     <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
@@ -212,7 +231,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if tracklet.ui.displayControl.highlighted === "self"}
+{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 10}
   {#key tracklet_annotations_frame_indexes.length}
     {#each tracklet_annotations_frame_indexes as itemFrameIndex}
       <TrackletKeyItem
