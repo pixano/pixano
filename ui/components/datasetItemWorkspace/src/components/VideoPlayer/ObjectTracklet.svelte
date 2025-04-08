@@ -10,6 +10,7 @@ License: CECILL-C
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
+    Annotation,
     BaseSchema,
     cn,
     ContextMenu,
@@ -28,9 +29,11 @@ License: CECILL-C
     getTopEntity,
     relink,
   } from "../../lib/api/objectsApi";
+  import { sortByFrameIndex } from "../../lib/api/videoApi";
   import {
     annotations,
     colorScale,
+    entities,
     saveData,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -104,10 +107,49 @@ License: CECILL-C
 
   $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
 
-  $: canAddKeyFrame =
+  $: canSplitOrAddKeyFrame =
     $currentFrameIndex > tracklet.data.start_timestep &&
     $currentFrameIndex < tracklet.data.end_timestep &&
     !tracklet.ui.childs.some((ann) => ann.ui.frame_index === $currentFrameIndex);
+
+  const getNeighborTracklet = (
+    annotations: Annotation[],
+    direction: "left" | "right",
+  ): Annotation | null => {
+    const isLeft = direction === "left";
+
+    const refCompareTimestep = isLeft ? tracklet.data.start_timestep : tracklet.data.end_timestep;
+
+    const tracklets = annotations.filter((ann) => {
+      if (!ann.is_type(BaseSchema.Tracklet)) return false;
+      const t = ann as Tracklet;
+      return (
+        t.data.view_ref.name === tracklet.data.view_ref.name &&
+        t.data.entity_ref.id === trackId &&
+        (isLeft
+          ? t.data.end_timestep < refCompareTimestep
+          : t.data.start_timestep > refCompareTimestep)
+      );
+    });
+
+    if (tracklets.length === 0) return null;
+
+    return tracklets.reduce((best, curr) => {
+      const tBest = best as Tracklet;
+      const tCurr = curr as Tracklet;
+
+      const bestVal = isLeft ? tBest.data.end_timestep : tBest.data.start_timestep;
+      const currVal = isLeft ? tCurr.data.end_timestep : tCurr.data.start_timestep;
+
+      return isLeft
+        ? currVal > bestVal
+          ? curr
+          : best // max for "left"
+        : currVal < bestVal
+          ? curr
+          : best; // min for "right"
+    });
+  };
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
@@ -177,6 +219,55 @@ License: CECILL-C
     currentFrameIndex.set(newFrameIndex);
   };
 
+  $: leftTracklet = getNeighborTracklet($annotations, "left");
+  $: rightTracklet = getNeighborTracklet($annotations, "right");
+
+  const onGlueTrackletClick = (direction: "left" | "right") => {
+    const neighbor = direction === "left" ? leftTracklet : rightTracklet;
+    if (!neighbor) return;
+
+    annotations.update((anns) => {
+      // Remove neighbor
+      let new_anns = anns.filter((ann) => ann.id !== neighbor.id);
+      return new_anns.map((ann) => {
+        if (ann.id === tracklet.id) {
+          const currentTracklet = ann as Tracklet;
+          const neighborTracklet = neighbor as Tracklet;
+
+          // Add neighbor's childs
+          currentTracklet.ui.childs = [
+            ...currentTracklet.ui.childs,
+            ...neighborTracklet.ui.childs,
+          ].sort(sortByFrameIndex);
+
+          // Update range
+          if (direction === "left") {
+            currentTracklet.data.start_timestep = neighborTracklet.data.start_timestep;
+          } else {
+            currentTracklet.data.end_timestep = neighborTracklet.data.end_timestep;
+          }
+        }
+        return ann;
+      });
+    });
+
+    entities.update((ents) =>
+      ents.map((ent) => {
+        if (ent.id === trackId) {
+          ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
+        }
+        return ent;
+      }),
+    );
+
+    saveData.update((current_sd) =>
+      addOrUpdateSaveItem(current_sd, {
+        change_type: "delete",
+        object: neighbor,
+      }),
+    );
+  };
+
   const onClick = (button: number, clientX: number) => {
     if (button === 0) {
       moveCursorToPosition(clientX);
@@ -214,12 +305,20 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if canAddKeyFrame}
+    {#if canSplitOrAddKeyFrame}
       <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
         Add a point at frame {$currentFrameIndex}
       </ContextMenu.Item>
       <ContextMenu.Item on:click={onSplitTrackletClick}>
         Split tracklet at frame {$currentFrameIndex}
+      </ContextMenu.Item>
+    {/if}
+    {#if leftTracklet}
+      <ContextMenu.Item on:click={() => onGlueTrackletClick("left")}>Glue to left</ContextMenu.Item>
+    {/if}
+    {#if rightTracklet}
+      <ContextMenu.Item on:click={() => onGlueTrackletClick("right")}>
+        Glue to right
       </ContextMenu.Item>
     {/if}
     <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
