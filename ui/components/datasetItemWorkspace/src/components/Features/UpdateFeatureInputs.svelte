@@ -27,7 +27,7 @@ License: CECILL-C
 {#each features as feature}
   <div class="flex w-full gap-4 mt-2 px-4">
     {#if isEditing || feature.value !== undefined}
-      <p class="capitalize flex items-center">
+      <p class="flex items-center">
         {feature.label.replace("_", " ")}
       </p>
     {/if}
