@@ -40,7 +40,7 @@ const getTextSpanPosition = (
   colorScale: (value: string) => string,
 ): SpanPosition => {
   const start = textSpan.data.spans_start[0];
-  const end = textSpan.data.spans_end[0] + 1;
+  const end = textSpan.data.spans_end[textSpan.data.spans_end.length - 1];
   const content = text.slice(start, end);
 
   const spanHtml = createHtmlTags({
