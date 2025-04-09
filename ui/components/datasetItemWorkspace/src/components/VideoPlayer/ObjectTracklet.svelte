@@ -107,10 +107,14 @@ License: CECILL-C
 
   $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
 
-  $: canSplitOrAddKeyFrame =
+  $: canAddKeyFrame =
     $currentFrameIndex > tracklet.data.start_timestep &&
     $currentFrameIndex < tracklet.data.end_timestep &&
     !tracklet.ui.childs.some((ann) => ann.ui.frame_index === $currentFrameIndex);
+
+  $: canSplit =
+    $currentFrameIndex >= tracklet.data.start_timestep &&
+    $currentFrameIndex < tracklet.data.end_timestep;
 
   const getNeighborTracklet = (
     annotations: Annotation[],
@@ -305,12 +309,14 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if canSplitOrAddKeyFrame}
+    {#if canAddKeyFrame}
       <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
         Add a point at frame {$currentFrameIndex}
       </ContextMenu.Item>
+    {/if}
+    {#if canSplit}
       <ContextMenu.Item on:click={onSplitTrackletClick}>
-        Split tracklet at frame {$currentFrameIndex}
+        Split tracklet after frame {$currentFrameIndex}
       </ContextMenu.Item>
     {/if}
     {#if leftTracklet}
