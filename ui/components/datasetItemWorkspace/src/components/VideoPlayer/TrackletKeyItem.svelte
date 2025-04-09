@@ -10,6 +10,7 @@ License: CECILL-C
   import { BaseSchema, cn, ContextMenu, Tracklet } from "@pixano/core";
 
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { isLuminanceHigh } from "../../../../core/src/lib/utils/colorUtils";
   import { addOrUpdateSaveItem, getPixanoSource } from "../../lib/api/objectsApi";
   import { annotations, entities, saveData } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
@@ -41,7 +42,8 @@ License: CECILL-C
       (object) => object.ui.displayControl.editing,
     );
     isItemBeingEdited =
-      itemFrameIndex === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;
+      itemFrameIndex === $currentFrameIndex &&
+      currentObjectBeingEdited?.data.entity_ref.id === trackId;
   }
 
   const onDeleteItemClick = () => {
@@ -164,16 +166,20 @@ License: CECILL-C
       );
     });
   };
+
+  function getDotColor(): string {
+    return isLuminanceHigh(color) ? "border-slate-500" : "border-slate-300";
+  }
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn(
-      "w-2 z-50 block border-2 border-slate-500 rounded-full absolute left-[-0.5rem] translate-x-[-50%]",
-      "hover:scale-150",
-      { "bg-primary !border-primary": isItemBeingEdited },
+      "w-2 z-50 block border-2 rounded-full absolute left-[-0.5rem] translate-x-[-50%]",
+      "hover:scale-150 ",
+      isItemBeingEdited ? "bg-primary !border-primary" : getDotColor(),
     )}
-    style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color}`}
+    style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color};`}
   >
     <button
       class="w-full h-full rounded-full absolute"
