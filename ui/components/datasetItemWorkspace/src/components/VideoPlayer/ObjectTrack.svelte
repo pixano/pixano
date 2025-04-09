@@ -119,7 +119,7 @@ License: CECILL-C
           (!ann.is_type(BaseSchema.Tracklet) &&
             getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
-          (ann.is_type(BaseSchema.Tracklet) && ann.id === track.id);
+          (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id);
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
           highlighted: to_highlight ? "self" : "none",
@@ -145,7 +145,9 @@ License: CECILL-C
       const top_entities = interpolatedBox.ui.top_entities; //need to keep it to keep class (lost by structured clone)
       const { ui, ...noUIfieldsBBox } = newItemOrig;
       newItemBBox = new BBox(noUIfieldsBBox);
-      newItemBBox.ui = ui;
+      //remove startRef now that it's not interpolated, it's a real BBox.
+      const { startRef, ...noStartRefUi } = ui; // eslint-disable-line @typescript-eslint/no-unused-vars
+      newItemBBox.ui = noStartRefUi;
       newItemBBox.ui.top_entities = top_entities;
       //coords are denormalized: normalize them
       const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[

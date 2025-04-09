@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import { Image as ImageJS } from "image-js";
   import { Loader2Icon } from "lucide-svelte";
-  import * as ort from "onnxruntime-web";
 
   // Import stores and API functions
 
@@ -21,6 +20,7 @@ License: CECILL-C
   import {
     annotations,
     colorScale,
+    embeddings,
     filters,
     imageSmoothing,
     itemBboxes,
@@ -37,7 +37,6 @@ License: CECILL-C
   // Attributes
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let embeddings: Record<string, ort.Tensor> = {};
   export let resize: number;
 
   // Images per view type
@@ -111,7 +110,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      embeddings = {};
+      embeddings.set({});
       modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
       imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
@@ -152,7 +151,7 @@ License: CECILL-C
     masks={$itemMasks}
     keypoints={$itemKeypoints}
     selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-    {embeddings}
+    embeddings={$embeddings}
     {filters}
     canvasSize={resize}
     imageSmoothing={$imageSmoothing}

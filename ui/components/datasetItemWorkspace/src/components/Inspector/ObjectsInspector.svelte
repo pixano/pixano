@@ -17,7 +17,7 @@ License: CECILL-C
     mediaViews,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { sortEntites } from "../../lib/utils/sortEntities";
+  import { sortEntities } from "../../lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
@@ -39,7 +39,7 @@ License: CECILL-C
 
   $: allTopEntities = $entities
     .filter((ent) => !ent.is_conversation && ent.data.parent_ref.id === "")
-    .sort(sortEntites);
+    .sort(sortEntities);
 
   $: if ($annotations) handleSelectedEntitiesBBoxThumbnails();
   const handleSelectedEntitiesBBoxThumbnails = () => {
@@ -95,9 +95,11 @@ License: CECILL-C
       {/each}
     {/if}
     <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
-      {#each allTopEntities as entity}
-        <ObjectCard {entity} />
-      {/each}
+      {#key allTopEntities.length}
+        {#each allTopEntities as entity}
+          <ObjectCard {entity} />
+        {/each}
+      {/key}
     </ObjectsModelSection>
   {/if}
 </div>

@@ -452,14 +452,14 @@ License: CECILL-C
     const currentImage = getCurrentImage(viewRef.name);
     const input = {
       image: currentImage,
-      embedding: viewRef.name in embeddings ? embeddings[viewRef.name] : null,
+      embedding: viewRef.id in embeddings ? embeddings[viewRef.id] : null,
       points: points,
       box: box,
     };
 
     if (selectedTool.postProcessor == null) {
       clearAnnotationAndInputs();
-    } else if (embeddings[viewRef.name] == null) {
+    } else if (embeddings[viewRef.id] == null) {
       viewEmbeddingModal = true;
       viewWithoutEmbeddings = viewRef.name;
       clearAnnotationAndInputs();
@@ -1310,9 +1310,9 @@ License: CECILL-C
                 bind:newShape
               />
             </Group>
+            <Group config={{ id: "currentAnnotation" }} />
           {/if}
         {/each}
-        <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "input" }} />
       </Layer>
     {/each}

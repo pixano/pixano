@@ -11,6 +11,8 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { BBox, Entity, SliderRoot, type KeypointsTemplate } from "@pixano/core";
 
+  import { clearHighlighting } from "../../lib/api/objectsApi/clearHighlighting";
+  import { updateView } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
   import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
@@ -18,24 +20,29 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { sortEntites } from "../../lib/utils/sortEntities";
+  import { sortEntities } from "../../lib/utils/sortEntities";
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoControls from "./VideoControls.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
-  export let updateView: (frameIndex: number) => void;
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[];
 
   let tracks: Entity[] = [];
   entities.subscribe((entities) => {
-    tracks = entities.filter((entity) => entity.is_track).sort(sortEntites);
+    tracks = entities.filter((entity) => entity.is_track).sort(sortEntities);
   });
 
   onMount(() => {
     videoControls.update((old) => ({ ...old, isLoaded: true }));
   });
+
+  const resetHighlight = () => {
+    if (![ToolType.Pan, ToolType.Fusion].includes($selectedTool.type)) {
+      clearHighlighting();
+    }
+  };
 
   const resetTool = () => {
     if (![ToolType.Pan, ToolType.Fusion].includes($selectedTool.type)) {
@@ -55,7 +62,7 @@ License: CECILL-C
   <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-white z-20">
       <VideoPlayerRow class="bg-white ">
-        <TimeTrack slot="timeTrack" {updateView} {resetTool} />
+        <TimeTrack slot="timeTrack" {resetTool} {resetHighlight} />
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
@@ -76,7 +83,7 @@ License: CECILL-C
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
-      <VideoControls {updateView} {resetTool} />
+      <VideoControls {resetHighlight} />
       <SliderRoot
         class="max-w-[250px]"
         bind:value={$videoControls.zoomLevel}

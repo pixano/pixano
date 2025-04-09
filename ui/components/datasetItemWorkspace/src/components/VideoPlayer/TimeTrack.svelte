@@ -8,15 +8,15 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
 
-  import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
+  import { getImageIndexFromMouseMove, updateView } from "../../lib/api/videoApi";
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
 
-  export let updateView: (imageIndex: number) => void;
   export let resetTool: () => void;
+  export let resetHighlight: () => void;
 
   let cursorElement: HTMLButtonElement;
   let timeTrackElement: HTMLElement;
@@ -75,7 +75,7 @@ License: CECILL-C
       ),
     );
     updateView($currentFrameIndex);
-    resetTool();
+    resetHighlight();
   };
 
   const shouldDisplayTime = (ms: number, density: number) => {

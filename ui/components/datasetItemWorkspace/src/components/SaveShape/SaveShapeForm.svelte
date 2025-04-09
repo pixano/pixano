@@ -11,13 +11,12 @@ License: CECILL-C
 
   import {
     Annotation,
+    BaseSchema,
     Button,
     SaveShapeType,
-    SequenceFrame,
     Tracklet,
     WorkspaceType,
     type SaveItem,
-    type SaveShape,
     type SaveTrackletShape,
   } from "@pixano/core";
 
@@ -29,12 +28,11 @@ License: CECILL-C
     findOrCreateSubAndTopEntities,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex } from "../../lib/api/videoApi";
-  import { mapShapeType2BaseSchema, NEWTRACKLET_LENGTH } from "../../lib/constants";
+  import { mapShapeType2BaseSchema } from "../../lib/constants";
   import {
     annotations,
     entities,
     itemMetas,
-    mediaViews,
     newShape,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -61,35 +59,15 @@ License: CECILL-C
     }
 
     let newObject: Annotation | undefined = undefined;
-    let newObject2: Annotation | undefined = undefined;
     let newTracklet: Annotation | undefined = undefined;
 
     const isVideo = $itemMetas.type === WorkspaceType.VIDEO;
 
-    let endView: SequenceFrame | undefined = undefined;
-    let endFrameIndex: number = -1;
-
-    if (isVideo) {
-      endFrameIndex = $currentFrameIndex + NEWTRACKLET_LENGTH + 1; //+1 for the first while loop
-      const seqs = $mediaViews[$newShape.viewRef.name];
-      if (Array.isArray(seqs)) {
-        while (!endView) {
-          endFrameIndex = endFrameIndex - 1;
-          endView = seqs.find(
-            (view) =>
-              view.data.frame_index === endFrameIndex &&
-              view.table_info.name === ($newShape as SaveShape).viewRef.name,
-          );
-        }
-      }
-    }
-
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
-    const { topEntity, subEntity, secondSubEntity } = findOrCreateSubAndTopEntities(
+    const { topEntity, subEntity } = findOrCreateSubAndTopEntities(
       selectedEntityId,
       $newShape,
-      endView,
       features,
     );
 
@@ -106,79 +84,65 @@ License: CECILL-C
     if (!newObject) return;
 
     newObject.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
+    newObject.ui.top_entities = subEntity ? [topEntity, subEntity] : [topEntity];
     topEntity.ui.childs?.push(newObject);
 
     if (subEntity) subEntity.ui.childs?.push(newObject);
 
     if (isVideo) {
-      // for video, there is 2 anns, 1 track (may have 1 sub entity per obj), 1 tracklet
-      // -> add obj2 (+ eventual 2nd sub entity) and tracklet
-      newObject2 = defineCreatedObject(
-        secondSubEntity ? secondSubEntity : topEntity,
-        features,
-        $newShape,
-        { id: endView!.id, name: $newShape.viewRef.name },
-        $datasetSchema,
-        isVideo,
-        endFrameIndex,
+      // for video, there is 1 anns, 1 track (may have 1 sub entity), 1 tracklet
+      // -> add tracklet
+      const candidate_tracklets = topEntity.ui.childs?.filter(
+        (ann) =>
+          ann.is_type(BaseSchema.Tracklet) &&
+          ann.data.view_ref.name === $newShape.viewRef.name &&
+          (ann as Tracklet).data.start_timestep <= $currentFrameIndex &&
+          (ann as Tracklet).data.end_timestep >= $currentFrameIndex,
       );
-      if (!newObject2) return;
-      newObject2.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
-      //TODO: It is possible that a tracklet already exist (used for a different kind of shape)
-      //For now, it always create a tracklet...
-      //if so, we should found it, use it, and maybe adapt it (size? but need many check with neighbours etc.)
-      //--> It would be far more easy to create 1 frame tracklet, and allow other means of tracklet edition
-      const trackletShape: SaveTrackletShape = {
-        type: SaveShapeType.tracklet,
-        status: $newShape.status,
-        itemId: "", //unused from SaveShapeBase
-        imageWidth: 0, //unused from SaveShapeBase
-        imageHeight: 0, //unused from SaveShapeBase
-        viewRef: { id: "", name: $newShape.viewRef.name },
-        attrs: {
-          start_timestep: $currentFrameIndex,
-          end_timestep: endFrameIndex,
-          //TODO timestamp management...
-          start_timestamp: $currentFrameIndex,
-          end_timestamp: endFrameIndex,
-        },
-      };
-      newTracklet = defineCreatedObject(
-        topEntity,
-        features,
-        trackletShape,
-        trackletShape.viewRef,
-        $datasetSchema,
-        isVideo,
-        $currentFrameIndex,
-      );
-      if (!newTracklet) return;
-      newTracklet.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-      (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
+      if (candidate_tracklets && candidate_tracklets.length === 1) {
+        const candidate_tracklet = candidate_tracklets[0] as Tracklet;
+        //NOTE: we add the new object "as it is" in the candidate tracklet
+        //it means that the tracklet may be wider than the new shape "range" (1 frame at creation)
+        //-- this is potentially dangerous... but *should* be fine --
+        candidate_tracklet.ui.childs.push(newObject);
+        candidate_tracklet.ui.childs.sort(sortByFrameIndex);
+      } else {
+        const trackletShape: SaveTrackletShape = {
+          type: SaveShapeType.tracklet,
+          status: $newShape.status,
+          itemId: "", //unused from SaveShapeBase
+          imageWidth: 0, //unused from SaveShapeBase
+          imageHeight: 0, //unused from SaveShapeBase
+          viewRef: { id: "", name: $newShape.viewRef.name },
+          attrs: {
+            start_timestep: $currentFrameIndex,
+            end_timestep: $currentFrameIndex,
+            //TODO timestamp management...
+            start_timestamp: $currentFrameIndex,
+            end_timestamp: $currentFrameIndex,
+          },
+        };
+        newTracklet = defineCreatedObject(
+          topEntity,
+          features,
+          trackletShape,
+          trackletShape.viewRef,
+          $datasetSchema,
+          isVideo,
+          $currentFrameIndex,
+        );
+        if (!newTracklet) return;
+        newTracklet.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
+        (newTracklet as Tracklet).ui.childs = [newObject];
 
-      if (secondSubEntity) {
-        secondSubEntity.ui.childs?.push(newObject2);
-        if (!$entities.includes(secondSubEntity)) {
-          const save_2ndSubEntity: SaveItem = {
-            change_type: "add",
-            object: secondSubEntity,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_2ndSubEntity));
-        }
+        const save_item_tracklet: SaveItem = {
+          change_type: "add",
+          object: newTracklet,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
+        //TODO Note: we may have to manage "spatial object" entity too...
+        topEntity.ui.childs?.push(newTracklet);
       }
-      const save_item2: SaveItem = {
-        change_type: "add",
-        object: newObject2,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
-      const save_item_tracklet: SaveItem = {
-        change_type: "add",
-        object: newTracklet,
-      };
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
-      //TODO Note: we may have to manage "spatial object" entity too...
-      topEntity.ui.childs?.push(newObject2);
-      topEntity.ui.childs?.push(newTracklet);
     }
 
     if (!$entities.includes(topEntity)) {
@@ -207,7 +171,6 @@ License: CECILL-C
     entities.update((ents) => {
       if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
       if (subEntity && !ents.includes(subEntity)) ents.push(subEntity);
-      if (secondSubEntity && !ents.includes(secondSubEntity)) ents.push(secondSubEntity);
       return ents;
     });
 
@@ -221,7 +184,6 @@ License: CECILL-C
       return [
         ...objectsWithoutHighlighted,
         ...(newObject ? [newObject] : []),
-        ...(newObject2 ? [newObject2] : []),
         ...(newTracklet ? [newTracklet] : []),
       ];
     });

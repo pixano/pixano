@@ -15,7 +15,6 @@ export const PRE_ANNOTATION = "Pre-annotation";
 
 export const EXISTING_SOURCE_IDS = [GROUND_TRUTH, PRE_ANNOTATION];
 
-export const NEWTRACKLET_LENGTH = 5;
 export const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
   bbox: BaseSchema.BBox,
   keypoints: BaseSchema.Keypoints,

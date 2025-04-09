@@ -9,15 +9,14 @@ License: CECILL-C
   import { PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
   import { onDestroy } from "svelte";
 
-  import { getCurrentImageTime } from "../../lib/api/videoApi";
+  import { getCurrentImageTime, updateView } from "../../lib/api/videoApi";
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
 
-  export let updateView: (frameIndex: number) => void;
-  export let resetTool: () => void;
+  export let resetHighlight: () => void;
 
   let currentTime: string;
 
@@ -42,7 +41,7 @@ License: CECILL-C
   $: currentTime = getCurrentImageTime($currentFrameIndex, $videoControls.videoSpeed);
 
   const onPlayStepClick = () => {
-    resetTool();
+    resetHighlight();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -55,7 +54,7 @@ License: CECILL-C
   };
 
   const onPlayStepBackClick = () => {
-    resetTool();
+    resetHighlight();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));
@@ -71,7 +70,7 @@ License: CECILL-C
   };
 
   const onPlayClick = () => {
-    resetTool();
+    resetHighlight();
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));

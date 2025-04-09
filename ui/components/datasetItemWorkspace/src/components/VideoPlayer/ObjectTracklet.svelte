@@ -6,8 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
+
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
+    Annotation,
     BaseSchema,
     cn,
     ContextMenu,
@@ -26,9 +29,11 @@ License: CECILL-C
     getTopEntity,
     relink,
   } from "../../lib/api/objectsApi";
+  import { sortByFrameIndex } from "../../lib/api/videoApi";
   import {
     annotations,
     colorScale,
+    entities,
     saveData,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -50,7 +55,11 @@ License: CECILL-C
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;
-  const showKeyframes: boolean = false; //later this flag could be controled somewhere
+
+  let showRelink = false;
+  let selectedEntityId = "new";
+  let mustMerge: boolean = false;
+  let overlapTargetId: string = "";
 
   const getLeft = (tracklet: Tracklet) => {
     let start = Math.max(0, tracklet.data.start_timestep - 0.5);
@@ -68,18 +77,83 @@ License: CECILL-C
     );
   };
 
-  let left: number = getLeft(tracklet);
-  let right: number = getRight(tracklet);
+  $: left = getLeft(tracklet);
+  $: right = getRight(tracklet);
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
 
-  $: oneFrameInPixel =
-    trackletElement?.getBoundingClientRect().width /
-    (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  let resizeObs: ResizeObserver;
+  let oneFrameInPixel: number;
+  const calcOneFrameInPixel = () => {
+    oneFrameInPixel =
+      trackletElement?.getBoundingClientRect().width /
+      (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  };
+  calcOneFrameInPixel();
+
+  $: if (resizeObs) {
+    if (tracklet.ui.displayControl.highlighted) {
+      resizeObs.observe(trackletElement);
+    } else {
+      resizeObs.unobserve(trackletElement);
+    }
+  }
+  onMount(() => {
+    resizeObs = new ResizeObserver(calcOneFrameInPixel);
+  });
+
   $: color = $colorScale[1](trackId);
 
   $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
+
+  $: canAddKeyFrame =
+    $currentFrameIndex > tracklet.data.start_timestep &&
+    $currentFrameIndex < tracklet.data.end_timestep &&
+    !tracklet.ui.childs.some((ann) => ann.ui.frame_index === $currentFrameIndex);
+
+  $: canSplit =
+    $currentFrameIndex >= tracklet.data.start_timestep &&
+    $currentFrameIndex < tracklet.data.end_timestep;
+
+  const getNeighborTracklet = (
+    annotations: Annotation[],
+    direction: "left" | "right",
+  ): Annotation | null => {
+    const isLeft = direction === "left";
+
+    const refCompareTimestep = isLeft ? tracklet.data.start_timestep : tracklet.data.end_timestep;
+
+    const tracklets = annotations.filter((ann) => {
+      if (!ann.is_type(BaseSchema.Tracklet)) return false;
+      const t = ann as Tracklet;
+      return (
+        t.data.view_ref.name === tracklet.data.view_ref.name &&
+        t.data.entity_ref.id === trackId &&
+        (isLeft
+          ? t.data.end_timestep < refCompareTimestep
+          : t.data.start_timestep > refCompareTimestep)
+      );
+    });
+
+    if (tracklets.length === 0) return null;
+
+    return tracklets.reduce((best, curr) => {
+      const tBest = best as Tracklet;
+      const tCurr = curr as Tracklet;
+
+      const bestVal = isLeft ? tBest.data.end_timestep : tBest.data.start_timestep;
+      const currVal = isLeft ? tCurr.data.end_timestep : tCurr.data.start_timestep;
+
+      return isLeft
+        ? currVal > bestVal
+          ? curr
+          : best // max for "left"
+        : currVal < bestVal
+          ? curr
+          : best; // min for "right"
+    });
+  };
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
@@ -149,6 +223,55 @@ License: CECILL-C
     currentFrameIndex.set(newFrameIndex);
   };
 
+  $: leftTracklet = getNeighborTracklet($annotations, "left");
+  $: rightTracklet = getNeighborTracklet($annotations, "right");
+
+  const onGlueTrackletClick = (direction: "left" | "right") => {
+    const neighbor = direction === "left" ? leftTracklet : rightTracklet;
+    if (!neighbor) return;
+
+    annotations.update((anns) => {
+      // Remove neighbor
+      let new_anns = anns.filter((ann) => ann.id !== neighbor.id);
+      return new_anns.map((ann) => {
+        if (ann.id === tracklet.id) {
+          const currentTracklet = ann as Tracklet;
+          const neighborTracklet = neighbor as Tracklet;
+
+          // Add neighbor's childs
+          currentTracklet.ui.childs = [
+            ...currentTracklet.ui.childs,
+            ...neighborTracklet.ui.childs,
+          ].sort(sortByFrameIndex);
+
+          // Update range
+          if (direction === "left") {
+            currentTracklet.data.start_timestep = neighborTracklet.data.start_timestep;
+          } else {
+            currentTracklet.data.end_timestep = neighborTracklet.data.end_timestep;
+          }
+        }
+        return ann;
+      });
+    });
+
+    entities.update((ents) =>
+      ents.map((ent) => {
+        if (ent.id === trackId) {
+          ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
+        }
+        return ent;
+      }),
+    );
+
+    saveData.update((current_sd) =>
+      addOrUpdateSaveItem(current_sd, {
+        change_type: "delete",
+        object: neighbor,
+      }),
+    );
+  };
+
   const onClick = (button: number, clientX: number) => {
     if (button === 0) {
       moveCursorToPosition(clientX);
@@ -156,15 +279,13 @@ License: CECILL-C
     }
   };
 
-  //WIP TEST
-  let showRelink = false;
-  let selectedEntityId = "new";
   const onRelinkTrackletClick = (event: MouseEvent) => {
     event.preventDefault(); //avoid context menu close
-    showRelink = true;
+    showRelink = !showRelink;
   };
+
   const handleRelink = () => {
-    relink(tracklet, getTopEntity(tracklet), selectedEntityId);
+    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
   };
 </script>
@@ -188,11 +309,23 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if $currentFrameIndex > tracklet.data.start_timestep && $currentFrameIndex < tracklet.data.end_timestep}
+    {#if canAddKeyFrame}
       <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
-        Add a point
+        Add a point at frame {$currentFrameIndex}
       </ContextMenu.Item>
-      <ContextMenu.Item on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
+    {/if}
+    {#if canSplit}
+      <ContextMenu.Item on:click={onSplitTrackletClick}>
+        Split tracklet after frame {$currentFrameIndex}
+      </ContextMenu.Item>
+    {/if}
+    {#if leftTracklet}
+      <ContextMenu.Item on:click={() => onGlueTrackletClick("left")}>Glue to left</ContextMenu.Item>
+    {/if}
+    {#if rightTracklet}
+      <ContextMenu.Item on:click={() => onGlueTrackletClick("right")}>
+        Glue to right
+      </ContextMenu.Item>
     {/if}
     <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
     <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
@@ -200,6 +333,8 @@ License: CECILL-C
       <div class="flex flex-row gap-4 items-center mr-4">
         <RelinkAnnotation
           bind:selectedEntityId
+          bind:mustMerge
+          bind:overlapTargetId
           baseSchema={tracklet.table_info.base_schema}
           viewRef={tracklet.data.view_ref}
           {tracklet}
@@ -209,21 +344,23 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if showKeyframes}
-  {#each tracklet_annotations_frame_indexes as itemFrameIndex}
-    <TrackletKeyItem
-      {itemFrameIndex}
-      {tracklet}
-      {color}
-      {height}
-      {top}
-      {oneFrameInPixel}
-      {onEditKeyItemClick}
-      {onClick}
-      {trackId}
-      {canContinueDragging}
-      {updateTrackletWidth}
-      {resetTool}
-    />
-  {/each}
+{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
+  {#key tracklet_annotations_frame_indexes.length}
+    {#each tracklet_annotations_frame_indexes as itemFrameIndex}
+      <TrackletKeyItem
+        {itemFrameIndex}
+        {tracklet}
+        {color}
+        {height}
+        {top}
+        {oneFrameInPixel}
+        {onEditKeyItemClick}
+        {onClick}
+        {trackId}
+        {canContinueDragging}
+        {updateTrackletWidth}
+        {resetTool}
+      />
+    {/each}
+  {/key}
 {/if}

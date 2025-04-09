@@ -15,7 +15,7 @@ const getFirstFrame = (track: Entity): number => {
       )
     : Infinity;
 };
-export const sortEntites = (a: Entity, b: Entity): number => {
+export const sortEntities = (a: Entity, b: Entity): number => {
   let result = 0;
   if (a.is_type(BaseSchema.Track) && b.is_type(BaseSchema.Track)) {
     result = getFirstFrame(a) - getFirstFrame(b);
