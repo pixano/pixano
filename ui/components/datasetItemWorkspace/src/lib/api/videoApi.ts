@@ -19,6 +19,7 @@ import {
   lastFrameIndex,
 } from "../../lib/stores/videoViewerStores";
 import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "../constants";
+import { loadViewEmbeddings } from "./modelsApi";
 import { addOrUpdateSaveItem, getPixanoSource } from "./objectsApi";
 
 let timerId: ReturnType<typeof setTimeout>;
@@ -305,4 +306,5 @@ export const updateView = (imageIndex: number) => {
       }
     }
   });
+  loadViewEmbeddings(true);
 };

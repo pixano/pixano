@@ -9,14 +9,13 @@ License: CECILL-C
   import { PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
   import { onDestroy } from "svelte";
 
-  import { getCurrentImageTime } from "../../lib/api/videoApi";
+  import { getCurrentImageTime, updateView } from "../../lib/api/videoApi";
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
 
-  export let updateView: (frameIndex: number) => void;
   export let resetHighlight: () => void;
 
   let currentTime: string;

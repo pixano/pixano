@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
+import * as ort from "onnxruntime-web";
 import { derived, writable } from "svelte/store";
 
 import {
@@ -60,6 +61,8 @@ export const modelsUiStore = writable<ModelSelection>({
   selectedTableName: "",
   yetToLoadEmbedding: true,
 });
+export const embeddings = writable<Record<string, ort.Tensor>>({});
+
 export const filters = writable<Filters>({
   brightness: 0,
   contrast: 0,

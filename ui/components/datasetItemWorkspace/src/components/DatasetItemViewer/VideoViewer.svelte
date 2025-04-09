@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
@@ -42,6 +41,7 @@ License: CECILL-C
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    embeddings,
     entities,
     imageSmoothing,
     itemMasks,
@@ -62,7 +62,6 @@ License: CECILL-C
 
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let embeddings: Record<string, ort.Tensor> = {};
   export let resize: number;
 
   $: {
@@ -413,8 +412,8 @@ License: CECILL-C
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
         canvasSize={inspectorMaxHeight + resize}
-        {embeddings}
         isVideo={true}
+        embeddings={$embeddings}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
@@ -432,11 +431,7 @@ License: CECILL-C
       class="h-full grow max-h-[25%] overflow-hidden"
       style={`max-height: ${inspectorMaxHeight}px`}
     >
-      <VideoInspector
-        {updateView}
-        bboxes={$current_itemBBoxes}
-        keypoints={$current_itemKeypoints}
-      />
+      <VideoInspector bboxes={$current_itemBBoxes} keypoints={$current_itemKeypoints} />
     </div>
   {/if}
 </section>
