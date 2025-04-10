@@ -34,26 +34,40 @@ const getMetadataOfTextSpan = (textSpan: TextSpan): HTMLTextSpanDataAttributes =
   id: textSpan.id,
 });
 
-const getTextSpanPosition = (
+const getTextSpanPositions = (
   text: string,
   textSpan: TextSpan,
   colorScale: (value: string) => string,
-): SpanPosition => {
-  const start = textSpan.data.spans_start[0];
-  const end = textSpan.data.spans_end[0] + 1;
-  const content = text.slice(start, end);
+): SpanPosition[] => {
+  const positions: SpanPosition[] = [];
+  for (let i = 0; i < textSpan.data.spans_start.length; i++) {
+    const start = textSpan.data.spans_start[i];
+    let end = textSpan.data.spans_end[i];
+    //glue next span if it's the next word
+    while (
+      textSpan.data.spans_start.length > i + 1 &&
+      textSpan.data.spans_start[i + 1] - end <= 2
+    ) {
+      end = textSpan.data.spans_end[i + 1];
+      i = i + 1; //jump over next word
+    }
 
-  const spanHtml = createHtmlTags({
-    content,
-    metadata: getMetadataOfTextSpan(textSpan),
-    bgColor: colorScale(textSpan.data.entity_ref.id),
-    hidden: textSpan.ui.displayControl.hidden ?? false,
-  });
+    const content = text.slice(start, end);
 
-  const spanEnd = spanHtml.length - CLOSING_TAG.length;
-  const spanStart = spanEnd - content.length;
+    const spanHtml = createHtmlTags({
+      content,
+      metadata: getMetadataOfTextSpan(textSpan),
+      bgColor: colorScale(textSpan.data.entity_ref.id),
+      hidden: textSpan.ui.displayControl.hidden ?? false,
+      highlighted: textSpan.ui.displayControl.highlighted === "self",
+    });
 
-  return { start, end, spanStart, spanEnd, html: spanHtml };
+    const spanEnd = spanHtml.length - CLOSING_TAG.length;
+    const spanStart = spanEnd - content.length;
+
+    positions.push({ start, end, spanStart, spanEnd, html: spanHtml });
+  }
+  return positions;
 };
 
 const getHtmlFromTree = (tree: SpanTree): string => {
@@ -102,19 +116,21 @@ const buildSpanTree = ({
   };
 
   for (const textSpan of textSpans) {
-    const spanPosition = getTextSpanPosition(text, textSpan, colorScale);
+    const spanPositions = getTextSpanPositions(text, textSpan, colorScale);
     let currentNode: SpanTree = tree;
 
-    while (true) {
-      const parentNode = currentNode.children.find(
-        (node) => node.start <= spanPosition.start && node.end >= spanPosition.end,
-      );
+    for (const spanPosition of spanPositions) {
+      while (true) {
+        const parentNode = currentNode.children.find(
+          (node) => node.start <= spanPosition.start && node.end >= spanPosition.end,
+        );
 
-      if (!parentNode) {
-        currentNode.children.push({ ...spanPosition, textSpan, children: [] });
-        break;
+        if (!parentNode) {
+          currentNode.children.push({ ...spanPosition, textSpan, children: [] });
+          break;
+        }
+        currentNode = parentNode;
       }
-      currentNode = parentNode;
     }
   }
 
@@ -155,5 +171,5 @@ export const textSpansToHtml = ({
 
   const html = getHtmlFromTree(spanTree);
 
-  return html;
+  return html.replaceAll("\n", "<br>");
 };
