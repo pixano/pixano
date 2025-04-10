@@ -46,16 +46,18 @@ License: CECILL-C
   };
 </script>
 
-<div class="bg-white p-2 flex flex-col gap-2 h-full overflow-y-auto">
+<div class="bg-white p-2 flex flex-col gap-2 h-full">
   <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton">
     Tag Selected Text
   </button>
-  {#each textViews as textView}
-    <SpannableTextView
-      {textView}
-      {colorScale}
-      textSpans={spansByViewId[textView.id]}
-      bind:textSpanAttributes
-    />
-  {/each}
+  <div class="overflow-y-auto">
+    {#each textViews as textView}
+      <SpannableTextView
+        {textView}
+        {colorScale}
+        textSpans={spansByViewId[textView.id]}
+        bind:textSpanAttributes
+      />
+    {/each}
+  </div>
 </div>
