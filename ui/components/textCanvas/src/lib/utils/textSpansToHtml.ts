@@ -170,5 +170,5 @@ export const textSpansToHtml = ({
 
   const html = getHtmlFromTree(spanTree);
 
-  return html;
+  return html.replaceAll("\n", "<br>");
 };
