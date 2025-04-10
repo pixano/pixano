@@ -9,6 +9,10 @@ License: CECILL-C
 
   import type { TextSpan, TextSpanType, TextView } from "@pixano/core";
 
+  import {
+    getTopEntity,
+    highlightObject,
+  } from "../../../datasetItemWorkspace/src/lib/api/objectsApi";
   import { editorSelectionToTextSpan, textSpansToHtml } from "../lib";
 
   export let textSpans: TextSpan[] = [];
@@ -28,8 +32,24 @@ License: CECILL-C
       name: textView.table_info.name,
     });
   };
+
+  const clickHandler = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target && target.dataset.id) {
+      const selectedTextSpan = textSpans.find((ts) => ts.id === target.dataset.id);
+      if (selectedTextSpan) {
+        highlightObject(getTopEntity(selectedTextSpan).id, false);
+      }
+    }
+  };
 </script>
 
-<div on:mouseup={mouseupListener} class="border rounded-lg p-2" role="textbox" tabindex="0">
+<div
+  on:mouseup={mouseupListener}
+  on:mousedown={clickHandler}
+  class="border rounded-lg p-2"
+  role="textbox"
+  tabindex="0"
+>
   {@html richEditorContent}
 </div>

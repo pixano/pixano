@@ -17,11 +17,13 @@ export const createHtmlTags = ({
   metadata,
   bgColor,
   hidden,
+  highlighted,
 }: {
   content: string;
   metadata: Record<string, string>;
   bgColor: string;
   hidden: boolean;
+  highlighted: boolean;
 }) => {
   const element = document.createElement(TAG_NAME);
 
@@ -36,6 +38,10 @@ export const createHtmlTags = ({
   if (hidden) {
     element.style.backgroundColor = "transparent";
     element.style.color = "black";
+  }
+  if (highlighted) {
+    // glow effect + small outline
+    element.style.boxShadow = `0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 10px ${bgColor}`;
   }
 
   for (const [key, value] of Object.entries(metadata)) {

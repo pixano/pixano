@@ -46,7 +46,7 @@ const getTextSpanPositions = (
     //glue next span if it's the next word
     while (
       textSpan.data.spans_start.length > i + 1 &&
-      (textSpan.data.spans_start[i + 1] === end + 1 || textSpan.data.spans_start[i + 1] === end + 2)
+      textSpan.data.spans_start[i + 1] - end <= 2
     ) {
       end = textSpan.data.spans_end[i + 1];
       i = i + 1; //jump over next word
@@ -59,6 +59,7 @@ const getTextSpanPositions = (
       metadata: getMetadataOfTextSpan(textSpan),
       bgColor: colorScale(textSpan.data.entity_ref.id),
       hidden: textSpan.ui.displayControl.hidden ?? false,
+      highlighted: textSpan.ui.displayControl.highlighted === "self",
     });
 
     const spanEnd = spanHtml.length - CLOSING_TAG.length;
