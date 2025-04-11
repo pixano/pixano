@@ -55,6 +55,14 @@ License: CECILL-C
       query,
     }));
   }
+
+  function handleFilter(where: string) {
+    datasetTableStore.update((value) => ({
+      ...value,
+      currentPage: 1,
+      where,
+    }));
+  }
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
@@ -76,6 +84,7 @@ License: CECILL-C
       <Table
         items={selectedDataset.table_data}
         on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:filter={(event) => handleFilter(event.detail)}
       />
     {:else}
       <div

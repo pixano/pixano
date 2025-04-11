@@ -17,6 +17,7 @@ License: CECILL-C
     currentDatasetStore,
     datasetsStore,
     datasetTableStore,
+    datasetTotalItemsCount,
     defaultDatasetTableValues,
     modelsStore,
   } from "../lib/stores/datasetStores";
@@ -47,9 +48,17 @@ License: CECILL-C
   // Get all the ids of the items of the selected dataset
   $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
 
+  datasetTableStore.subscribe(async (value) => {
+    if (value.where != undefined) {
+      currentDatasetItemsIds = await api.getDatasetItemsIds(currentDatasetId, value.where);
+      datasetTotalItemsCount.set(currentDatasetItemsIds.length);
+    }
+  });
+
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
     if (datasetId === undefined) return;
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
+    datasetTotalItemsCount.set(currentDatasetItemsIds.length);
   };
 
   $: page.subscribe((value) => {

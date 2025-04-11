@@ -11,6 +11,7 @@ export async function getBrowser(
   page: number = 1,
   size: number = 100,
   query: Record<string, string> | undefined,
+  where: string | undefined,
 ): Promise<DatasetBrowser> {
   let datasetItems: DatasetBrowser;
   let datasetItems_raw: DatasetBrowserType;
@@ -19,9 +20,13 @@ export async function getBrowser(
   if (query && query.model !== "" && query.search !== "") {
     query_qparams = `&query=${query.search}&embedding_table=${query.model}`;
   }
+  let where_qparams = "";
+  if (where && where !== "") {
+    where_qparams = `&where=${where}`;
+  }
   try {
     const response = await fetch(
-      `/browser/${datasetId}/?skip=${(page - 1) * size}&limit=${size}${query_qparams}`,
+      `/browser/${datasetId}/?skip=${(page - 1) * size}&limit=${size}${query_qparams}${where_qparams}`,
     );
     if (response.ok) {
       datasetItems_raw = (await response.json()) as DatasetBrowserType;
