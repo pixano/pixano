@@ -58,7 +58,7 @@ License: CECILL-C
   onMount(updateWidth);
 </script>
 
-<div class="flex justify-end gap-2">
+<div class="flex justify-end gap-2 mr-4">
   <!-- Hidden ghost element for measuring -->
   <span bind:this={ghostEl} class="invisible absolute whitespace-nowrap px-2 font-normal" />
   <select
