@@ -15,7 +15,7 @@ License: CECILL-C
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { datasetTableStore } from "$lib/stores/datasetStores";
+  import { datasetTableStore, datasetTotalItemsCount } from "$lib/stores/datasetStores";
 
   let selectedDatasetId: string;
   let selectedDataset: DatasetBrowser;
@@ -35,6 +35,8 @@ License: CECILL-C
         .then((datasetItems) => {
           if (datasetItems.id) {
             selectedDataset = datasetItems;
+            //$datasetTotalItemsCount is fetched before and have the real count (different if filtered)
+            selectedDataset.pagination.total_size = $datasetTotalItemsCount;
           } else {
             showNoRowModal = true;
             //do not change current selectedDataset if error / no row.
@@ -57,17 +59,8 @@ License: CECILL-C
   <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
 {/if}
 {#if showNoRowModal}
-  <!-- TODO Manage filtered row count !
-    -- but here we only have pagesize (20) rows, we don't know the real count.
-    -- And back doesn't know either because it seek with limit=page_size
-    -- Back should also launch a select COUNT() without limit to get the filtered count, and pass it in answer...
-    -- so for now, we provide a warning when we go too far in pagination...
-    -- At least, we should be able to avoid increasing the current page when it goes too far
-  -->
   <WarningModal
     message="No rows found. Keeping previous state."
-    details="Or no more rows in sub selelection."
-    moreDetails=" (WARNING - UNDER DEVELOPMENT) Actually we don't get the total number of rows in filtered list. The current page may be wrong after this message."
     on:confirm={() => {
       showNoRowModal = false;
     }}
