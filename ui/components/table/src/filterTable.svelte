@@ -62,6 +62,7 @@ License: CECILL-C
   <!-- Hidden ghost element for measuring -->
   <span bind:this={ghostEl} class="invisible absolute whitespace-nowrap px-2 font-normal" />
   <select
+    title="Select column to filter on (equality), or Free mode"
     class="rounded-lg"
     style="width: {selectWidth}px"
     bind:this={selectEl}
@@ -83,5 +84,7 @@ License: CECILL-C
     class="h-10 pl-10 pr-4 rounded-lg border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
     on:change={handleFilterText}
   />
-  <IconButton on:click={handleClearFilter}><CircleSlash2 /></IconButton>
+  <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>
+    <CircleSlash2 />
+  </IconButton>
 </div>
