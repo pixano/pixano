@@ -63,7 +63,7 @@ License: CECILL-C
   <span bind:this={ghostEl} class="invisible absolute whitespace-nowrap px-2 font-normal" />
   <select
     title="Select column to filter on (equality), or Free mode"
-    class="rounded-lg"
+    class="rounded-lg font-normal"
     style="width: {selectWidth}px"
     bind:this={selectEl}
     bind:value={selectedCol}
@@ -80,8 +80,8 @@ License: CECILL-C
   <input
     type="text"
     bind:value={filterText}
-    placeholder="filter"
-    class="h-10 pl-10 pr-4 rounded-lg border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
+    placeholder="filter value"
+    class="h-10 pl-10 pr-4 rounded-lg border font-normal text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
     on:change={handleFilterText}
   />
   <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>
