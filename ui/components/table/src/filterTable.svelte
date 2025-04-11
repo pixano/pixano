@@ -17,8 +17,10 @@ License: CECILL-C
   let ghostEl: HTMLSpanElement;
   let selectWidth = 50;
 
+  const allowedTypes = ["str", "int", "float"];
   let filterText: string = "";
-  let selectedCol: string = columns.find((col) => col.type === "str" && col.name).name ?? "";
+  let selectedCol: string =
+    columns.find((col) => allowedTypes.includes(col.type) && col.name).name ?? "";
 
   //Note: as we adjust select size depending on value, chars here are "important"
   //also, it should be something a user won't use as an attribute, hopefully
@@ -31,7 +33,9 @@ License: CECILL-C
       if (filterText === "") {
         handleFilter("");
       } else {
-        handleFilter(`${selectedCol} = '${filterText}'`);
+        const colType = columns.find((col) => col.name === selectedCol).type;
+        if (colType === "str") handleFilter(`${selectedCol} = '${filterText}'`);
+        else handleFilter(`${selectedCol} = ${filterText}`);
       }
     }
   };
@@ -64,7 +68,7 @@ License: CECILL-C
     bind:value={selectedCol}
   >
     {#each columns as { type, name }}
-      {#if type === "str" && name}
+      {#if allowedTypes.includes(type) && name}
         <option value={name}>
           {name}
         </option>
