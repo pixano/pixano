@@ -16,10 +16,9 @@ License: CECILL-C
 
   // Pixano Core Imports
   import type { TableData } from "@pixano/core";
-  import { icons } from "@pixano/core";
-  import Button from "@pixano/core/src/components/ui/button/button.svelte";
-  import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
+  import { Button, Checkbox, icons } from "@pixano/core";
 
+  import FilterTable from "./filterTable.svelte";
   import { TableCell } from "./TableCell";
 
   // Exports
@@ -90,6 +89,10 @@ License: CECILL-C
 
   // Settings popup status
   let popupOpened = false;
+
+  const handleFilter = (where: string) => {
+    dispatch("filter", where);
+  };
 </script>
 
 <!-- Settings popup -->
@@ -159,7 +162,7 @@ License: CECILL-C
                 </th>
               </Subscribe>
             {/each}
-            <th class="w-full"></th>
+            <th class="w-full"><FilterTable columns={items.columns} {handleFilter} /></th>
             <th class="pr-4">
               <!-- Settings button -->
               <Button

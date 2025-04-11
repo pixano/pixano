@@ -6,8 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowRight, Loader2Icon } from "lucide-svelte";
-
   import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
@@ -150,27 +148,6 @@ License: CECILL-C
           {$currentDatasetStore.name}
         </div>
       </div>
-    {/if}
-    {#if currentItemId}
-      {#if isLoading}
-        <Loader2Icon class="animate-spin" />
-      {:else}
-        <div class="flex items-center gap-4">
-          <IconButton
-            on:click={() => goToNeighborItem("previous")}
-            tooltipContent="Previous item (shift + left arrow)"
-          >
-            <ArrowLeft />
-          </IconButton>
-          {currentItemId}
-          <IconButton
-            on:click={() => goToNeighborItem("next")}
-            tooltipContent="Next item (shift + right arrow)"
-          >
-            <ArrowRight />
-          </IconButton>
-        </div>
-      {/if}
     {/if}
     <div class="flex gap-4">
       {#each navItems as { name, Icon }}

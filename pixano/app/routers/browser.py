@@ -28,6 +28,7 @@ async def get_browser(
     skip: int = 0,
     query: str = "",
     embedding_table: str = "",
+    where: str | None = None,
 ) -> DatasetBrowser:  # type: ignore
     """Load dataset items for the explorer page.
 
@@ -38,6 +39,7 @@ async def get_browser(
         skip: Skip number of items.
         query: Text query for semantic search.
         embedding_table: Table name for embeddings.
+        where: Where clause.
 
     Returns:
         Dataset explorer page.
@@ -69,7 +71,7 @@ async def get_browser(
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
-        item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip)
+        item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip, where=where)
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}

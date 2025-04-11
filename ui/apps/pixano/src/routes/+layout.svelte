@@ -47,6 +47,12 @@ License: CECILL-C
   // Get all the ids of the items of the selected dataset
   $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
 
+  datasetTableStore.subscribe(async (value) => {
+    if (value.where) {
+      currentDatasetItemsIds = await api.getDatasetItemsIds(currentDatasetId, value.where);
+    }
+  });
+
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
     if (datasetId === undefined) return;
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
