@@ -11,4 +11,5 @@ export type DatasetTableStore = {
     model: string;
     search: string;
   };
+  where?: string;
 };

@@ -7,12 +7,22 @@ License: CECILL-C
 import type { Item } from "../lib/types";
 
 // Request API to get all the items ids for a given dataset
-export async function getDatasetItemsIds(datasetId: string): Promise<Array<string>> {
+export async function getDatasetItemsIds(
+  datasetId: string,
+  where: string | undefined = undefined,
+): Promise<Array<string>> {
   const datasetItemsIds: string[] = [];
   const page_size = 1000;
+
+  let where_qparams = "";
+  if (where && where !== "") {
+    where_qparams = `&where=${where}`;
+  }
   for (let skip = 0; ; skip += page_size) {
     try {
-      const response = await fetch(`/items/${datasetId}/?limit=${page_size}&skip=${skip}`);
+      const response = await fetch(
+        `/items/${datasetId}/?limit=${page_size}&skip=${skip}${where_qparams}`,
+      );
       if (response.ok) {
         const res = (await response.json()) as Item[];
         datasetItemsIds.push(...res.map((item) => item.id));
