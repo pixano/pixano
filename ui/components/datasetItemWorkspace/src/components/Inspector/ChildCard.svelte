@@ -147,16 +147,16 @@ License: CECILL-C
       >
         <Pencil class="h-4" />
       </IconButton>
+      <IconButton
+        tooltipContent="Relink object"
+        selected={showRelink}
+        on:click={() => {
+          showRelink = !showRelink;
+        }}
+      >
+        <Link class="h-4" />
+      </IconButton>
     {/if}
-    <IconButton
-      tooltipContent="Relink object"
-      selected={showRelink}
-      on:click={() => {
-        showRelink = !showRelink;
-      }}
-    >
-      <Link class="h-4" />
-    </IconButton>
     <IconButton
       tooltipContent="Delete object"
       redconfirm

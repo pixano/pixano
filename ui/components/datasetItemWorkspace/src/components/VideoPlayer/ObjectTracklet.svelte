@@ -319,16 +319,20 @@ License: CECILL-C
         Split tracklet after frame {$currentFrameIndex}
       </ContextMenu.Item>
     {/if}
-    {#if leftTracklet}
-      <ContextMenu.Item on:click={() => onGlueTrackletClick("left")}>Glue to left</ContextMenu.Item>
-    {/if}
-    {#if rightTracklet}
-      <ContextMenu.Item on:click={() => onGlueTrackletClick("right")}>
-        Glue to right
-      </ContextMenu.Item>
+    {#if $selectedTool.type !== ToolType.Fusion}
+      {#if leftTracklet}
+        <ContextMenu.Item on:click={() => onGlueTrackletClick("left")}>
+          Glue to left
+        </ContextMenu.Item>
+      {/if}
+      {#if rightTracklet}
+        <ContextMenu.Item on:click={() => onGlueTrackletClick("right")}>
+          Glue to right
+        </ContextMenu.Item>
+      {/if}
+      <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
     {/if}
     <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
-    <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
     {#if showRelink}
       <div class="flex flex-row gap-4 items-center mr-4">
         <RelinkAnnotation
