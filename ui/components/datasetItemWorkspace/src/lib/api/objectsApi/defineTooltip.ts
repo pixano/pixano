@@ -18,12 +18,16 @@ export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
 
   const confidence =
     bbox.data.confidence !== 0.0 &&
-    source &&
-    source.data.kind !== "ground_truth" &&
-    source.data.name !== "Pixano"
-      ? " " + bbox.data.confidence.toFixed(2)
-      : "";
+    (!source || (source.data.kind !== "ground_truth" && source.data.name !== "Pixano"))
+      ? bbox.data.confidence.toFixed(2)
+      : null;
 
   const displayFeat = getDefaultDisplayFeat(entity);
-  return displayFeat ? displayFeat + confidence : confidence;
+  return displayFeat
+    ? confidence
+      ? displayFeat + " " + confidence
+      : displayFeat
+    : confidence
+      ? confidence
+      : "";
 };
