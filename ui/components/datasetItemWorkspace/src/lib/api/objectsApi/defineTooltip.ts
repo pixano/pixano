@@ -25,5 +25,5 @@ export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
       : "";
 
   const displayFeat = getDefaultDisplayFeat(entity);
-  return displayFeat ? displayFeat + confidence : null;
+  return displayFeat ? displayFeat + confidence : confidence;
 };
