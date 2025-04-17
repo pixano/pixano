@@ -10,7 +10,7 @@ License: CECILL-C
 
   import { IconButton } from "@pixano/core";
 
-  export let columns: { type?: string; name?: string }[] = [];
+  export let columns: { type: string; name: string }[] = [];
   export let handleFilter: (where: string) => void;
 
   let selectEl: HTMLSelectElement;
@@ -20,7 +20,7 @@ License: CECILL-C
   const allowedTypes = ["str", "int", "float"];
   let filterText: string = "";
   let selectedCol: string =
-    columns.find((col) => allowedTypes.includes(col.type) && col.name).name ?? "";
+    columns.find((col) => allowedTypes.includes(col.type) && col.name)?.name ?? "";
 
   //Note: as we adjust select size depending on value, chars here are "important"
   //also, it should be something a user won't use as an attribute, hopefully
@@ -33,7 +33,7 @@ License: CECILL-C
       if (filterText === "") {
         handleFilter("");
       } else {
-        const colType = columns.find((col) => col.name === selectedCol).type;
+        const colType = columns.find((col) => col.name === selectedCol)?.type;
         if (colType === "str") handleFilter(`${selectedCol} = '${filterText}'`);
         else handleFilter(`${selectedCol} = ${filterText}`);
       }
