@@ -24,7 +24,7 @@ License: CECILL-C
 
   //Note: as we adjust select size depending on value, chars here are "important"
   //also, it should be something a user won't use as an attribute, hopefully
-  const FREE = "!!!!-FREE-!!!!";
+  const FREE = "!!!!FREE!!!!";
 
   const handleFilterText = () => {
     if (selectedCol === FREE) {
