@@ -74,6 +74,7 @@ License: CECILL-C
       bind:searchInput
       on:search={handleSearch}
       on:clearSearch={handleClearSearch}
+      on:filter={(event) => handleFilter(event.detail)}
     />
 
     {#if isLoadingTableItems}
@@ -84,7 +85,6 @@ License: CECILL-C
       <Table
         items={selectedDataset.table_data}
         on:selectItem={(event) => handleSelectItem(event.detail)}
-        on:filter={(event) => handleFilter(event.detail)}
       />
     {:else}
       <div
