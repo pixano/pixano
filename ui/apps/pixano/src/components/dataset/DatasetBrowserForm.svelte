@@ -12,6 +12,8 @@ License: CECILL-C
   import type { DatasetBrowser } from "@pixano/core/src";
   import { svg_clear, svg_search } from "@pixano/core/src/icons";
 
+  import FilterTable from "./filterTable.svelte";
+
   // Exports
   export let selectedDataset: DatasetBrowser;
   export let selectedSearchModel: string | undefined;
@@ -37,9 +39,14 @@ License: CECILL-C
   const handleClearSearch = () => {
     dispatch("clearSearch");
   };
+
+  const handleFilter = (where: string) => {
+    dispatch("filter", where);
+  };
 </script>
 
 <div class="ml-auto relative flex items-center py-5 h-20">
+  <FilterTable columns={selectedDataset.table_data.columns} {handleFilter} />
   {#if searchModels.length > 0}
     <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
       {#each searchModels as model}
