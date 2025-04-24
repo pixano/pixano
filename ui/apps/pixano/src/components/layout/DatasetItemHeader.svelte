@@ -19,6 +19,7 @@ License: CECILL-C
   export let handleReturnToPreviousPage: () => void;
   export let handleSave: () => void;
   export let navigateTo: (route: string) => Promise<string | undefined>;
+  export let getDatasetItemDisplayCount: () => string;
 
   const onKeyUp = async (event: KeyboardEvent) => {
     const activeElement = document.activeElement;
@@ -66,6 +67,7 @@ License: CECILL-C
       >
         <ArrowRight />
       </IconButton>
+      <span>{getDatasetItemDisplayCount()}</span>
     </div>
     <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
   {/if}

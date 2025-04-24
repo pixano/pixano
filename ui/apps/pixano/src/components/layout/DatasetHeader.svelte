@@ -42,6 +42,11 @@ License: CECILL-C
     currentItemId = value.params.itemId;
   });
 
+  const getDatasetItemDisplayCount = () => {
+    const index = datasetItemsIds.indexOf(currentItemId);
+    return `${index + 1} of ${datasetItemsIds.length}`;
+  };
+
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
     // Find the neighbor item id
@@ -135,6 +140,7 @@ License: CECILL-C
       {goToNeighborItem}
       {handleReturnToPreviousPage}
       {navigateTo}
+      {getDatasetItemDisplayCount}
     />
   {:else}
     {#if $currentDatasetStore}
