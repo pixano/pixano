@@ -44,6 +44,7 @@ export const mapObjectToKeypoints = (
     vertices,
     edges: template.edges,
     ui: keypoints.ui,
+    table_info: keypoints.table_info,
   } as KeypointsTemplate;
   if ("frame_index" in keypoints.ui) kptTemplate.ui!.frame_index = keypoints.ui.frame_index;
   if ("top_entities" in keypoints.ui) kptTemplate.ui!.top_entities = keypoints.ui.top_entities;
