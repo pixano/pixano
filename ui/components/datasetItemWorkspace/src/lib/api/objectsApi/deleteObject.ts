@@ -6,9 +6,16 @@ License: CECILL-C
 
 import { get } from "svelte/store";
 
+import { ToolType } from "@pixano/canvas2d/src/tools";
 import { Annotation, BaseSchema, Entity, Tracklet, type SaveItem } from "@pixano/core";
 
-import { annotations, entities, saveData } from "../../stores/datasetItemWorkspaceStores";
+import {
+  annotations,
+  entities,
+  merges,
+  saveData,
+  selectedTool,
+} from "../../stores/datasetItemWorkspaceStores";
 import { addOrUpdateSaveItem } from "./addOrUpdateSaveItem";
 
 function listsAreEqual(list1: string[], list2: string[]): boolean {
@@ -54,6 +61,15 @@ const deleteEntity = (entity: Entity) => {
   entities.update((oldObjects) =>
     oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
   );
+
+  //in case we are in fusion mode, remove from to_fuse / forbids
+  if (get(selectedTool).type === ToolType.Fusion) {
+    merges.update((merge) => {
+      merge.forbids = merge.forbids.filter((ent) => ent.id !== entity.id);
+      merge.to_fuse = merge.to_fuse.filter((ent) => ent.id !== entity.id);
+      return merge;
+    });
+  }
 };
 
 export const deleteObject = (entity: Entity, child: Annotation | null = null) => {

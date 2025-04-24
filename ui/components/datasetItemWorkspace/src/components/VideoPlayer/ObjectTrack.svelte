@@ -98,7 +98,7 @@ License: CECILL-C
   };
 
   const onContextMenu = (tracklet: Tracklet | null = null) => {
-    if (tracklet) {
+    if (tracklet && $selectedTool.type !== ToolType.Fusion) {
       const tracklet_childs_ids = tracklet.ui.childs.map((ann) => ann.id);
       annotations.update((oldObjects) =>
         oldObjects.map((ann) => {
