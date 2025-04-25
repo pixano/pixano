@@ -9,7 +9,6 @@ License: CECILL-C
 
   import { AddQuestionButton } from "./features/addQuestion/components";
   import { QuestionForm } from "./features/annotateItem/components";
-  import { ModelSelectAdd } from "./features/manageModels/components";
   import { groupMessagesByNumber } from "./utils";
 
   export let messages: Message[];
@@ -19,7 +18,6 @@ License: CECILL-C
 </script>
 
 <div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
-  <ModelSelectAdd {vqaSectionWidth} />
   <AddQuestionButton {vqaSectionWidth} on:storeQuestion />
   {#each messagesByNumber as messages}
     <QuestionForm bind:messages on:answerContentChange on:generateAnswer />

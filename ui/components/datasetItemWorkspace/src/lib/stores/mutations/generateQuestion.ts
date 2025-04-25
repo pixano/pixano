@@ -10,12 +10,16 @@ import {
   api,
   BaseSchema,
   MessageTypeEnum,
+  MultimodalImageNLPTask,
   QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
 } from "@pixano/core";
+import {
+  pixanoInferenceModelsStore,
+  type PixanoInferenceCompletionModel,
+} from "@pixano/core/src/lib/types/inference/modelsStore";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
-import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
 import { createNewMessage } from "../../utils/createNewMessage";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { conversations, messages } from "../datasetItemWorkspaceStores";
@@ -24,11 +28,11 @@ export const generateQuestion = async (
   completionModel: string,
 ): Promise<{ content: string; choices: string[] } | null> => {
   const [conversation] = get(conversations);
-  const prompt =
-    get(completionModelsStore).find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
-      QuestionTypeEnum.OPEN
-    ] ?? "";
-  const temperature = get(completionModelsStore).find((m) => m.selected)?.temperature ?? 1.0;
+  const selectedModel = get(pixanoInferenceModelsStore).find(
+    (m) => m.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && m.selected,
+  ) as PixanoInferenceCompletionModel | undefined;
+  const prompt = selectedModel?.prompts[MessageTypeEnum.QUESTION][QuestionTypeEnum.OPEN] ?? "";
+  const temperature = selectedModel?.temperature ?? 1.0;
 
   if (conversation === undefined) {
     // There is no conversation on this item to link the message to

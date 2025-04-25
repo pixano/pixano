@@ -7,11 +7,10 @@ License: CECILL-C
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
 
-  import { api, Input, PrimaryButton, type InputEvents } from "@pixano/core";
+  import { api, Input, PrimaryButton, type InputEvents } from "../..";
 
   export let isConnected = false;
   export let url: string;
-  export let vqaSectionWidth: number;
 
   // default values
   let formData = {
@@ -48,8 +47,7 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3"
-  style={`left: calc(${vqaSectionWidth}px + 10px);`}
+  class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Pixano Inference connection</p>
@@ -66,7 +64,7 @@ License: CECILL-C
     />
 
     <p class="italic text-justify text-sm">
-      Note that the last active connection will be used, even after a failed connect attempt.
+      Note that the last active connection will be kept after a failed connect attempt.
     </p>
 
     <div class="flex flex-row gap-4 justify-center">

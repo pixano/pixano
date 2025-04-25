@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { ArrowLeft, ArrowLeftCircleIcon, ArrowRight, Home, Loader2Icon } from "lucide-svelte";
 
-  import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
+  import { IconButton, ModelManager, PrimaryButton, WorkspaceType } from "@pixano/core";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
 
   import { currentDatasetStore } from "$lib/stores/datasetStores";
@@ -70,6 +70,7 @@ License: CECILL-C
       <span>{getDatasetItemDisplayCount()}</span>
     </div>
     <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
+    <ModelManager />
   {/if}
 {/if}
 <PrimaryButton on:click={handleSave}>Save</PrimaryButton>

@@ -9,38 +9,54 @@ License: CECILL-C
 
   import {
     api,
+    ImageTask,
     Input,
     LoadingModal,
     MultimodalImageNLPTask,
     PrimaryButton,
     type InputEvents,
     type ModelConfig,
-  } from "@pixano/core";
+    type Task,
+  } from "../..";
 
-  export let vqaSectionWidth: number;
+  export let task: Task;
 
   //TMP: default values
-  const modelChoices = {
-    "llava-qwen": {
-      provider: "vllm",
-      model_name: "llava-qwen",
-      model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-      dtype: "float16",
+  const modelsChoices: { [task in Task]?: any } = {
+    [MultimodalImageNLPTask.CONDITIONAL_GENERATION]: {
+      "llava-qwen": {
+        provider: "vllm",
+        model_name: "llava-qwen",
+        model_path: "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+        dtype: "float16",
+      },
+      "llava-mistral": {
+        provider: "vllm",
+        model_name: "llava-mistral",
+        model_path: "llava-hf/llava-v1.6-mistral-7b-hf",
+        dtype: "float16",
+      },
+      spatialRGPT: {
+        provider: "transformers",
+        model_name: "spatialRGPT",
+        model_path: "a8cheng/SpatialRGPT-VILA1.5-8B",
+        dtype: "float16",
+      },
     },
-    "llava-mistral": {
-      provider: "vllm",
-      model_name: "llava-mistral",
-      model_path: "llava-hf/llava-v1.6-mistral-7b-hf",
-      dtype: "float16",
-    },
-    spatialRGPT: {
-      provider: "transformers",
-      model_name: "spatialRGPT",
-      model_path: "a8cheng/SpatialRGPT-VILA1.5-8B",
-      dtype: "float16",
+    [ImageTask.MASK_GENERATION]: {
+      sam2: {
+        provider: "sam2",
+        model_name: "SAM2",
+        model_path: "facebook/sam2-hiera-tiny",
+        dtype: "bfloat16",
+      },
     },
   };
-  let formData = modelChoices["llava-mistral"];
+  let defaultPerTask: { [task in Task]?: string } = {
+    [MultimodalImageNLPTask.CONDITIONAL_GENERATION]: "llava-qwen",
+    [ImageTask.MASK_GENERATION]: "sam2",
+  };
+  let formData = modelsChoices[task][defaultPerTask[task]!];
 
   let isAddingModelRequestPending = false;
   const dispatch = createEventDispatcher();
@@ -62,7 +78,7 @@ License: CECILL-C
     const model_config: ModelConfig = {
       config: {
         name: formData.model_name,
-        task: MultimodalImageNLPTask.CONDITIONAL_GENERATION,
+        task,
         path: formData.model_path,
         config: { dtype: formData.dtype },
         processor_config: {},
@@ -90,11 +106,14 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
-  style={`left: calc(${vqaSectionWidth}px + 10px);`}
+  class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Instantiate VQA model</p>
+    <p>
+      Instantiate {task === MultimodalImageNLPTask.CONDITIONAL_GENERATION
+        ? "VQA"
+        : "Mask Generation"} model
+    </p>
   </div>
   <div class="p-3 flex flex-col gap-2">
     <h5 class="font-medium">Provider (only use providers installed with pixano-inference)</h5>

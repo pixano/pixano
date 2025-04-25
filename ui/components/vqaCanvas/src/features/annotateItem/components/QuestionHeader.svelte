@@ -8,10 +8,10 @@ License: CECILL-C
   import { Sparkles } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
-  import { IconButton } from "@pixano/core";
+  import { IconButton, MultimodalImageNLPTask } from "@pixano/core";
+  import { pixanoInferenceModelsStore } from "@pixano/core/src/lib/types/inference/modelsStore";
 
   import { messages } from "../../../../../datasetItemWorkspace/src/lib/stores/datasetItemWorkspaceStores";
-  import { completionModelsStore } from "../../../stores/completionModels";
   import CompletedQuestion from "../assets/icons/completed-question.png";
   import PendingQuestion from "../assets/icons/pending-question.png";
 
@@ -29,7 +29,9 @@ License: CECILL-C
     }
 
     const completionModel =
-      $completionModelsStore.filter((model) => model.selected)[0]?.name ?? undefined;
+      $pixanoInferenceModelsStore.filter(
+        (model) => model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && model.selected,
+      )[0]?.name ?? undefined;
     if (completionModel === undefined) {
       console.error("ERROR: No model selected");
       return;

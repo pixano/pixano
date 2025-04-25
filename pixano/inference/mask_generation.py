@@ -28,6 +28,7 @@ async def image_mask_generation(
     source: Source,
     image_embedding: ViewEmbedding | NDArrayFloat | LanceVector | None = None,
     high_resolution_features: list[ViewEmbedding] | list[NDArrayFloat] | list[LanceVector] | None = None,
+    reset_predictor: bool = True,
     bbox: BBox | None = None,
     points: list[list[int]] | None = None,
     labels: list[int] | None = None,
@@ -43,6 +44,7 @@ async def image_mask_generation(
         source: The source refering to the model.
         image_embedding: Image embedding.
         high_resolution_features: High resolution features.
+        reset_predictor: True (default) if it's a new image.
         bbox: Bounding box of the object in the original image.
         points: Points to generate mask for.
         labels: Labels of the points. If 0, the point is background else the point is foreground.
@@ -82,12 +84,15 @@ async def image_mask_generation(
     else:
         bbox_request = None
 
-    return_image_embedding = image_embedding is None
+    # Note: As long as we don't store pixano-inference embeddings somewhere, no need to return them
+    # More, it is VERY costly (around 13 sec) as it means to shape them and transfer them via HTTP.
+    return_image_embedding = False  # reset_predictor and image_embedding is None
 
     request = ImageMaskGenerationRequest(
         image=image_request,
         image_embedding=image_embedding_request,
         high_resolution_features=high_resolution_features_request,
+        reset_predictor=reset_predictor,
         boxes=bbox_request,
         points=points_request,
         labels=labels_request,
