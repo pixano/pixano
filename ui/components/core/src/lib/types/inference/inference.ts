@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Entity, Message, QuestionTypeEnum } from "../dataset";
+import { Entity, Message, MessageTypeEnum, QuestionTypeEnum } from "../dataset";
 
 export enum MultimodalImageNLPTask {
   //Multimodal tasks
@@ -15,12 +15,32 @@ export enum MultimodalImageNLPTask {
   QUESTION_ANSWERING = "image_question_answering",
 }
 
+export enum ImageTask {
+  CLASSIFICATION = "image_classification",
+  DEPTH_ESTIMATION = "depth_estimation",
+  INSTANCE_SEGMENTATION = "instance_segmentation",
+  FEATURE_EXTRACTION = "image_feature_extraction",
+  KEYPOINT_DETECTION = "keypoint_detection",
+  MASK_GENERATION = "image_mask_generation",
+  OBJECT_DETECTION = "object_detection",
+  SEMANTIC_SEGMENTATION = "semantic_segmentation",
+  UNIVERSAL_SEGMENTATION = "universal_segmentation",
+  ZERO_SHOT_CLASSIFICATION = "image_zero_shot_classification",
+  ZERO_SHOT_DETECTION = "image_zero_shot_detection",
+}
+
+export type Task = MultimodalImageNLPTask | ImageTask;
+
 export interface SystemPrompt {
   content: string;
   question_type: QuestionTypeEnum;
   as_system: boolean;
 }
 
+export interface Model {
+  name: string;
+  task: Task;
+}
 interface ModelConfigConfig {
   name: string;
   task: string;
@@ -45,3 +65,9 @@ export interface CondititionalGenerationTextImageInput {
   role_user?: string;
   role_assistant?: string;
 }
+
+export type MessageGenerationPrompts = {
+  [key in MessageTypeEnum]: PromptByQuestionType;
+} & { as_system: boolean };
+
+export type PromptByQuestionType = Record<QuestionTypeEnum, string>;

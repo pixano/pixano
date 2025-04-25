@@ -7,11 +7,16 @@ License: CECILL-C
 <script lang="ts">
   import { Sparkles } from "lucide-svelte";
 
-  import { LoadingModal, PrimaryButton, QuestionTypeEnum } from "@pixano/core";
+  import {
+    LoadingModal,
+    MultimodalImageNLPTask,
+    PrimaryButton,
+    QuestionTypeEnum,
+  } from "@pixano/core";
+  import { pixanoInferenceModelsStore } from "@pixano/core/src/lib/types/inference/modelsStore";
 
   // To refacto : Cross module imports
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
-  import { completionModelsStore } from "../../../stores/completionModels";
   import { default as QuestionTypeSelect } from "./AddQuestionModalTypeSelect.svelte";
   import NewQuestionForm from "./NewQuestionForm.svelte";
 
@@ -22,7 +27,9 @@ License: CECILL-C
   let questionContent: string = "";
   let isGenerating: boolean = false;
 
-  $: completionModel = $completionModelsStore.find((m) => m.selected)?.name;
+  $: completionModel = $pixanoInferenceModelsStore.find(
+    (m) => m.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && m.selected,
+  )?.name;
 
   const handleGenerateQuestion = async () => {
     if (!completionModel || completionModel.length === 0) return;

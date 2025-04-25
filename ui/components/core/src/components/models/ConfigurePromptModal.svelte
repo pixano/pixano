@@ -11,13 +11,13 @@ License: CECILL-C
     AutoResizeTextarea,
     Input,
     MessageTypeEnum,
+    MultimodalImageNLPTask,
     PrimaryButton,
     QuestionTypeEnum,
-  } from "@pixano/core";
+  } from "../..";
+  import { pixanoInferenceModelsStore } from "../../lib/types/inference/modelsStore";
 
-  import { completionModelsStore } from "../../../stores/completionModels";
-
-  export let vqaSectionWidth: number;
+  export let modelName: string;
 
   let question_type = QuestionTypeEnum.OPEN;
   const list_qt = Object.values(QuestionTypeEnum).map((value) => ({
@@ -34,18 +34,22 @@ License: CECILL-C
   let completionPrompt: string = "";
   $: selectPrompt(question_type, message_type);
 
+  const completionModels = $pixanoInferenceModelsStore.filter(
+    (m) => m.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION,
+  );
+
   const selectPrompt = (qtype: QuestionTypeEnum, mtype: MessageTypeEnum) => {
-    completionPrompt = $completionModelsStore.find((m) => m.selected)?.prompts[mtype][qtype] ?? "";
+    completionPrompt = completionModels.find((m) => m.selected)?.prompts[mtype][qtype] ?? "";
   };
 
-  let temperature = $completionModelsStore.find((m) => m.selected)?.temperature ?? 1.0;
+  let temperature = completionModels.find((m) => m.selected)?.temperature ?? 1.0;
 
   const dispatch = createEventDispatcher();
 
   function handleSavePrompt() {
-    completionModelsStore.update((models) =>
+    pixanoInferenceModelsStore.update((models) =>
       models.map((model) =>
-        model.selected
+        model.name === modelName && model.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION
           ? {
               ...model,
               prompts: {
@@ -74,8 +78,7 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3 pb-3"
-  style={`left: calc(${vqaSectionWidth}px + 10px);`}
+  class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50 overflow-y-auto w-80 rounded-md bg-white text-slate-800 flex flex-col gap-3 pb-3"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Prompt settings</p>

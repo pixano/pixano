@@ -9,21 +9,28 @@ import { get } from "svelte/store";
 import {
   api,
   isQuestionData,
+  MultimodalImageNLPTask,
   QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
   type Message,
   type SaveItem,
 } from "@pixano/core";
+import {
+  pixanoInferenceModelsStore,
+  type PixanoInferenceCompletionModel,
+} from "@pixano/core/src/lib/types/inference/modelsStore";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
-import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
 import { addOrUpdateSaveItem } from "../../api/objectsApi";
 import { removeFieldFromObject } from "../../utils/removeUiFieldFromObject";
 import { annotations, conversations, saveData } from "../datasetItemWorkspaceStores";
 
 export const generateAnswer = async (completionModel: string, question: Message) => {
   const questionData = question.data;
-  const temperature = get(completionModelsStore).find((m) => m.selected)?.temperature ?? 1.0;
+  const m = get(pixanoInferenceModelsStore).find(
+    (m) => m.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION && m.selected,
+  ) as PixanoInferenceCompletionModel | undefined;
+  const temperature = m?.temperature ?? 1.0;
 
   if (!isQuestionData(questionData)) {
     console.error("ERROR: Message is not a question");
