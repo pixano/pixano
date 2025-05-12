@@ -47,7 +47,7 @@ License: CECILL-C
 <div
   on:mouseup={mouseupListener}
   on:mousedown={clickHandler}
-  class="border rounded-lg p-2"
+  class="border rounded-lg p-2 whitespace-pre-wrap"
   role="textbox"
   tabindex="0"
 >
