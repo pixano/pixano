@@ -22,6 +22,11 @@ from .annotation import Annotation
 class Answer:
     """Holds the parts of an answer for multi-choices questions.
 
+    Attributes:
+        content: full serialized content of the answer
+        _choices: parsed list of selected choices
+        _explanation: parsed explanation message for the answer
+
     Raises:
         ValueError: in case of parsing error at initialisation
     """
