@@ -20,7 +20,17 @@ License: CECILL-C
   export let textSpanAttributes: TextSpanType | null = null;
   export let textView: TextView;
 
-  $: richEditorContent = textSpansToHtml({ text: textView.data.content, textSpans, colorScale });
+  function escapeHtmlTagsOnly(text: string): string {
+    return text.replace(/<\/?[a-zA-Z][^<>]*?>/g, (match) => {
+      return match.replace("<", "-").replace(">", "-");
+    });
+  }
+
+  $: richEditorContent = textSpansToHtml({
+    text: escapeHtmlTagsOnly(textView.data.content),
+    textSpans,
+    colorScale,
+  });
 
   const mouseupListener = (
     e: MouseEvent & {
