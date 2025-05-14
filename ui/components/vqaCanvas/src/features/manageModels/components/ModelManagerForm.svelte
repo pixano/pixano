@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   import { Plus, Settings, Sparkles } from "lucide-svelte";
-  import { onMount } from "svelte";
 
   import {
     api,
@@ -59,7 +58,7 @@ License: CECILL-C
   }
 
   //Try to connect with default URL at startup
-  onMount(connectToPixanoInference);
+  //onMount(connectToPixanoInference);
 
   const listModels = async () => {
     const availableModels = await api.listModels();

@@ -12,7 +12,16 @@ License: CECILL-C
   // Import stores and API functions
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { DatasetItem, Image, isImage, type ImagesPerView } from "@pixano/core";
+  import {
+    DatasetItem,
+    Image,
+    isImage,
+    Mask,
+    type Box,
+    type ImagesPerView,
+    type LabeledClick,
+    type Reference,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -38,6 +47,11 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
+  export let pixanoInferenceSegmentation: (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+  ) => Promise<Mask | undefined>;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -153,6 +167,7 @@ License: CECILL-C
     selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
     embeddings={$embeddings}
     {filters}
+    {pixanoInferenceSegmentation}
     canvasSize={resize}
     imageSmoothing={$imageSmoothing}
     bind:selectedTool={$selectedTool}
