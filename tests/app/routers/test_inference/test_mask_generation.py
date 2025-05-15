@@ -33,7 +33,6 @@ sample_input_json = {
     },
     "model": "model",
     "mask_table_name": "mask_image",
-    "entity": None,
     "bbox": {
         "id": "",
         "created_at": "2025-05-15T13:31:08.690Z",
@@ -112,7 +111,6 @@ def test_call_image_mask_generation_error(
     # name must be an existing table name, but not the correct one
     sample_input_json["image"]["table_info"].update({"name": "mask_image"})
     json = jsonable_encoder(sample_input_json)
-
     response = client.post(url, json=json)
     assert response.status_code == 400
     assert response.json() == {"detail": "Image must be an image."}
