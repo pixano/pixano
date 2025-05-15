@@ -35,8 +35,8 @@ sample_input_json = {
     "mask_table_name": "mask_image",
     "bbox": {
         "id": "",
-        "created_at": "2025-05-15T13:31:08.690Z",
-        "updated_at": "2025-05-15T13:31:08.690Z",
+        "created_at": "2025-05-15T13:31:08.690",
+        "updated_at": "2025-05-15T13:31:08.690",
         "item_ref": {"name": "", "id": ""},
         "view_ref": {"name": "", "id": ""},
         "entity_ref": {"name": "", "id": ""},
@@ -112,5 +112,6 @@ def test_call_image_mask_generation_error(
     sample_input_json["image"]["table_info"].update({"name": "mask_image"})
     json = jsonable_encoder(sample_input_json)
     response = client.post(url, json=json)
+    print("ZZQQZQZ", response.json())
     assert response.status_code == 400
     assert response.json() == {"detail": "Image must be an image."}
