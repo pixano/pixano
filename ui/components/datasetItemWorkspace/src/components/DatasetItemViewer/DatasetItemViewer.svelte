@@ -47,6 +47,7 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
+    //TODO config URL !
     const isConnected = await api.isInferenceApiHealthy("http://localhost:9152");
     if (!isConnected) return;
     const models = await api.listModels();
