@@ -97,57 +97,6 @@ License: CECILL-C
     console.error("Can't connect to Pixano Inference API");
   });
 
-  const handleOpenConnectModal = (event: MouseEvent) => {
-    // stopPropgation is not called as event modifier
-    // because event modifiers can only be used on DOM elements
-    event.stopPropagation();
-    if (showConnectModal) {
-      handleCloseConnectModal();
-    } else {
-      showConnectModal = true;
-      document.body.addEventListener("click", handleCloseConnectModal);
-    }
-  };
-
-  const handleCloseConnectModal = () => {
-    showConnectModal = false;
-    document.body.removeEventListener("click", handleCloseConnectModal);
-  };
-
-  const handleOpenAddModelModal = (event: MouseEvent) => {
-    // stopPropgation is not called as event modifier
-    // because event modifiers can only be used on DOM elements
-    event.stopPropagation();
-    if (showAddModelModal) {
-      handleCloseAddModelModal();
-    } else {
-      showAddModelModal = true;
-      document.body.addEventListener("click", handleCloseAddModelModal);
-    }
-  };
-
-  const handleCloseAddModelModal = () => {
-    showAddModelModal = false;
-    document.body.removeEventListener("click", handleCloseAddModelModal);
-  };
-
-  const handleOpenPromptModal = (event: MouseEvent) => {
-    // stopPropgation is not called as event modifier
-    // because event modifiers can only be used on DOM elements
-    event.stopPropagation();
-    if (showPromptModal) {
-      handleClosePromptModal();
-    } else {
-      showPromptModal = true;
-      document.body.addEventListener("click", handleClosePromptModal);
-    }
-  };
-
-  const handleClosePromptModal = () => {
-    showPromptModal = false;
-    document.body.removeEventListener("click", handleClosePromptModal);
-  };
-
   const handleKeyDown = (
     event: KeyboardEvent & {
       currentTarget: EventTarget & Window;
@@ -162,7 +111,10 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-row gap-2">
-  <IconButton tooltipContent="Pixano Inference connection" on:click={handleOpenConnectModal}>
+  <IconButton
+    tooltipContent="Pixano Inference connection"
+    on:click={() => (showConnectModal = !showConnectModal)}
+  >
     <Sparkles
       size={20}
       class={isInferenceApiConnected
@@ -191,14 +143,14 @@ License: CECILL-C
       ? "Instantiate a model"
       : "Pixano Inference is not connected"}
     disabled={!isInferenceApiConnected}
-    on:click={handleOpenAddModelModal}
+    on:click={() => (showAddModelModal = !showAddModelModal)}
   >
     <Plus />
   </IconButton>
   <IconButton
     tooltipContent="Configure generation prompts and temperature"
     disabled={$completionModelsStore.length === 0}
-    on:click={handleOpenPromptModal}
+    on:click={() => (showPromptModal = !showPromptModal)}
   >
     <Settings />
   </IconButton>
@@ -210,7 +162,7 @@ License: CECILL-C
     {vqaSectionWidth}
     {url}
     bind:isConnected={isInferenceApiConnected}
-    on:cancelConnect={handleCloseConnectModal}
+    on:cancelConnect={() => (showConnectModal = false)}
     on:listModels={listModels}
   />
 {/if}
@@ -219,10 +171,10 @@ License: CECILL-C
   <AddModelModal
     {vqaSectionWidth}
     on:listModels={listModels}
-    on:cancelAddModel={handleCloseAddModelModal}
+    on:cancelAddModel={() => (showAddModelModal = false)}
   />
 {/if}
 
 {#if showPromptModal}
-  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={handleClosePromptModal} />
+  <ConfigurePromptModal {vqaSectionWidth} on:cancelPrompt={() => (showPromptModal = false)} />
 {/if}
