@@ -18,7 +18,10 @@ License: CECILL-C
     type LabeledClick,
     type Reference,
   } from "@pixano/core";
-  import { pixanoInferenceSegmentationModelsStore } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+  import {
+    pixanoInferenceSegmentationModelsStore,
+    type PixanoInferenceSegmentationOutput,
+  } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import { rleFrString } from "../../../../canvas2d/src/api/maskApi";
@@ -130,7 +133,7 @@ License: CECILL-C
       body: JSON.stringify(input),
     });
     if (response.ok) {
-      const result = await response.json(); //TODO define the output type... -_-'
+      const result = (await response.json()) as PixanoInferenceSegmentationOutput;
       result.mask.data.counts = rleFrString(result.mask.data.counts as string);
       return result.mask as Mask;
     } else {

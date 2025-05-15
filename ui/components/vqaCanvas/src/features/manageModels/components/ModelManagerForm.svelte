@@ -54,7 +54,7 @@ License: CECILL-C
     isInferenceApiConnected = await api.isInferenceApiHealthy(url);
     if (isInferenceApiConnected) {
       await listModels();
-    } else return Promise.reject();
+    } else return Promise.reject(new Error(`Unable to connect to Pixano Inference at ${url}`));
   }
 
   const listModels = async () => {
@@ -90,8 +90,8 @@ License: CECILL-C
     );
   };
 
-  connectToPixanoInference().catch(() => {
-    console.warn(`Pixano Inference API not connected on ${url}`);
+  connectToPixanoInference().catch((err) => {
+    console.warn(err);
   });
 
   const handleKeyDown = (
