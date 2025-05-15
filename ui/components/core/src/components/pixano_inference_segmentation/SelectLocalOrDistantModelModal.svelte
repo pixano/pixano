@@ -112,57 +112,62 @@ License: CECILL-C
     <p>Select a Mask Generation Model</p>
   </div>
   <div class="flex flex-col p-3 gap-5">
-    <div class="flex flex-row gap-2">
-      <label>
+    <label>
+      <div class="flex flex-row gap-2">
         <input
           type="radio"
           bind:group={localOrPixinf}
           value="local"
           on:change={handleLocalOrPixinfChange}
         />
-        <p>Local</p>
-        {#if choices}
-          <select
-            class="py-1 px-2 border rounded focus:outline-none
-  bg-slate-100 border-slate-300 focus:border-main"
-            bind:value={selected}
-          >
-            {#each choices as choice}
-              <option value={choice}>
-                {choice}
-              </option>
-            {/each}
-          </select>
-        {:else}
-          <p class="pb-1 italic">No local model found</p>
-        {/if}
-      </label>
-    </div>
-    <div class="flex flex-row gap-2">
-      <label>
+        <div class="flex flex-col gap-2">
+          <p class="self-center">Local</p>
+          {#if choices}
+            <select
+              class="py-1 px-2 border rounded focus:outline-none bg-slate-100 border-slate-300 focus:border-main"
+              bind:value={selected}
+            >
+              {#each choices as choice}
+                <option value={choice}>
+                  {choice}
+                </option>
+              {/each}
+            </select>
+          {:else}
+            <p class="pb-1 italic">No local model found</p>
+          {/if}
+        </div>
+      </div>
+    </label>
+    <div class="h-1 bg-primary-light" />
+    <label>
+      <div class="flex flex-row gap-2">
         <input
           type="radio"
           bind:group={localOrPixinf}
           value="pixinf"
           on:change={handleLocalOrPixinfChange}
         />
-        <p>Pixano Inference</p>
-        <div class="p-3 flex flex-col gap-2">
-          {#if $pixanoInferenceSegmentationModelsStore.length === 0}
-            <p class="text-gray-500">No models added yet.</p>
-          {/if}
+        <div class="flex flex-col gap-2">
+          <p class="self-center">Pixano Inference</p>
+          <div class="p-3 flex flex-col gap-2">
+            {#if $pixanoInferenceSegmentationModelsStore.length === 0}
+              <p class="text-gray-500">No models added yet.</p>
+            {/if}
 
-          <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-            {#each $pixanoInferenceSegmentationModelsStore as model}
-              <ModelItem modelName={model.name} on:select={() => handleSelect(model.name)} />
-            {/each}
+            <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+              {#each $pixanoInferenceSegmentationModelsStore as model}
+                <ModelItem modelName={model.name} on:select={() => handleSelect(model.name)} />
+              {/each}
+            </div>
+            <PrimaryButton on:click={handleOpenAddModelModal}>
+              <Plus />Add a model
+            </PrimaryButton>
           </div>
-          <PrimaryButton on:click={handleOpenAddModelModal}>
-            <Plus />Add a model
-          </PrimaryButton>
         </div>
-      </label>
-    </div>
+      </div>
+    </label>
+    <div class="h-1 bg-primary-light" />
     <div class="flex flex-row gap-2 px-3 justify-center">
       <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
       <PrimaryButton on:click={handleConfirm}>OK</PrimaryButton>

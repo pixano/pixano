@@ -10,6 +10,7 @@ License: CECILL-C
 
   import {
     api,
+    BaseSchema,
     Mask,
     WorkspaceType,
     type Box,
@@ -43,11 +44,9 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
-    console.time("timer");
     const isConnected = await api.isInferenceApiHealthy("http://localhost:9152");
     if (!isConnected) return;
     const models = await api.listModels();
-    console.log("Models:", models);
     const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
     const maskModelName = selectedMaskModel ? selectedMaskModel.name : "SAM2";
     if (!models.map((m) => m.name).includes(maskModelName)) return;
@@ -64,9 +63,9 @@ License: CECILL-C
       dataset_id: selectedItem.ui.datasetId,
       image: fixed_image,
       model: maskModelName,
-      entity: null,
+      entity: null, //unused, we don't create a mask object, we only need the mask RLE
       bbox: box,
-      mask_table_name: "masks", //TODO : get correct masks table name
+      mask_table_name: "", //unused, we don't create a mask object, we only need the mask RLE
     };
     let input;
     if (points) {
@@ -79,9 +78,49 @@ License: CECILL-C
       input = { ...base_input, points: pts, labels: labels };
     }
     if (box) {
-      //TODO -> need a BBox object !!
+      //coords must be positive
+      const positiveBBox = (bbox: Box): Box => {
+        let { x, y, width, height } = bbox;
+        if (width < 0) {
+          x += width;
+          width = -width;
+        }
+        if (height < 0) {
+          y += height;
+          height = -height;
+        }
+        if (x < 0) {
+          width += x;
+          x = 0;
+        }
+        if (y < 0) {
+          height += y;
+          y = 0;
+        }
+        width = Math.max(0, width);
+        height = Math.max(0, height);
+        return { x, y, width, height } as Box;
+      };
+      box = positiveBBox(box);
+      //need a somehow BBox object (not exactly).
+      const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
+      const input_bbox = {
+        id: "",
+        created_at: now,
+        updated_at: now,
+        table_info: { name: "", group: "annotations", base_schema: BaseSchema.BBox },
+        coords: [
+          Math.round(box.x),
+          Math.round(box.y),
+          Math.round(box.width),
+          Math.round(box.height),
+        ],
+        format: "xywh",
+        is_normalized: false,
+        confidence: 1,
+      };
+      input = { ...base_input, bbox: input_bbox };
     }
-    console.log("INPUT:", input);
     const response = await fetch("/inference/tasks/mask-generation/image", {
       headers: {
         Accept: "application/json",
@@ -92,15 +131,12 @@ License: CECILL-C
     });
     if (response.ok) {
       const result = await response.json(); //TODO define the output type... -_-'
-      console.log("rerere", result);
       result.mask.data.counts = rleFrString(result.mask.data.counts as string);
-      console.timeEnd("timer");
       return result.mask as Mask;
     } else {
-      console.log("no answer!", response);
-      console.log("...", await response.json());
+      console.error("ERROR: Unable to segment", response);
+      console.log("  error details:", await response.json());
     }
-    console.timeEnd("timer");
     return;
   };
 </script>
