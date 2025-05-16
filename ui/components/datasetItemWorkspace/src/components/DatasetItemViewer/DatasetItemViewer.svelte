@@ -68,7 +68,6 @@ License: CECILL-C
       image: fixed_image,
       model: maskModelName,
       entity: null, //unused, we don't create a mask object, we only need the mask RLE
-      bbox: box,
       mask_table_name: "", //unused, we don't create a mask object, we only need the mask RLE
     };
     let input;
