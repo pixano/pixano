@@ -112,6 +112,5 @@ def test_call_image_mask_generation_error(
     sample_input_json["image"]["table_info"].update({"name": "mask_image"})
     json = jsonable_encoder(sample_input_json)
     response = client.post(url, json=json)
-    print("ZZQQZQZ", response.json())
     assert response.status_code == 400
     assert response.json() == {"detail": "Image must be an image."}
