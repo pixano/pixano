@@ -20,6 +20,7 @@ License: CECILL-C
   } from "@pixano/core";
   import {
     pixanoInferenceSegmentationModelsStore,
+    pixanoInferenceSegmentationURL,
     type PixanoInferenceSegmentationOutput,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -47,8 +48,7 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
-    //TODO config URL !
-    const isConnected = await api.isInferenceApiHealthy("http://localhost:9152");
+    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
     if (!isConnected) return;
     const models = await api.listModels();
     const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
