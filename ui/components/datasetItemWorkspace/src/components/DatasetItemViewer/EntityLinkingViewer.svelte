@@ -14,8 +14,12 @@ License: CECILL-C
     DatasetItem,
     Image,
     isImage,
+    Mask,
     Message,
+    type Box,
     type ImagesPerView,
+    type LabeledClick,
+    type Reference,
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -48,6 +52,11 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
+  export let pixanoInferenceSegmentation: (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+  ) => Promise<Mask | undefined>;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -218,6 +227,7 @@ License: CECILL-C
         )}
         embeddings={$embeddings}
         {filters}
+        {pixanoInferenceSegmentation}
         canvasSize={entityLinkingAreaWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}

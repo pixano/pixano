@@ -25,6 +25,7 @@ export const currentDatasetStore = writable<DatasetInfo>();
 export const datasetSchema = writable<DatasetSchema>();
 export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
+export const isLocalSegmentationModel = writable<boolean>(true);
 export const sourcesStore = writable<Source[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(true);
 export const datasetTableStore = writable<DatasetTableStore>(defaultDatasetTableValues);

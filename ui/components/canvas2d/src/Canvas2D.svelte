@@ -23,6 +23,7 @@ License: CECILL-C
     type KeypointsTemplate,
     type LabeledPointTool,
     type Reference,
+    type SegmentationResult,
     type SelectionTool,
     type Shape,
     type Vertex,
@@ -30,7 +31,9 @@ License: CECILL-C
   import { cn } from "@pixano/core/src";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
+  import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
+  import { isLocalSegmentationModel } from "../../../apps/pixano/src/lib/stores/datasetStores";
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
@@ -66,6 +69,11 @@ License: CECILL-C
   export let merge: (ann: Annotation) => void = () => {
     return;
   };
+  export let pixanoInferenceSegmentation: (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+  ) => Promise<Mask | undefined>;
 
   // Image settings
   export let filters: Writable<Filters> = writable<Filters>();
@@ -447,65 +455,89 @@ License: CECILL-C
   // ********** BOUNDING BOXES AND MASKS ********** //
 
   async function updateCurrentMask(viewRef: Reference) {
+    let results: SegmentationResult = null;
+
     const points = getInputPoints(viewRef.name);
     const box = getInputRect(viewRef.name);
     const currentImage = getCurrentImage(viewRef.name);
-    const input = {
-      image: currentImage,
-      embedding: viewRef.id in embeddings ? embeddings[viewRef.id] : null,
-      points: points,
-      box: box,
-    };
 
-    if (selectedTool.postProcessor == null) {
-      clearAnnotationAndInputs();
-    } else if (embeddings[viewRef.id] == null) {
-      viewEmbeddingModal = true;
-      viewWithoutEmbeddings = viewRef.name;
-      clearAnnotationAndInputs();
-    } else {
-      const results = await selectedTool.postProcessor.segmentImage(input);
-      if (results) {
-        newShape = {
-          masksImageSVG: results.masksImageSVG,
-          rle: results.rle,
-          type: SaveShapeType.mask,
-          viewRef,
-          itemId: selectedItemId,
-          imageWidth: currentImage.width,
-          imageHeight: currentImage.height,
-          status: "saving",
+    if ($isLocalSegmentationModel) {
+      if (selectedTool.postProcessor == null) {
+        clearAnnotationAndInputs();
+      } else if (embeddings[viewRef.id] == null) {
+        viewEmbeddingModal = true;
+        viewWithoutEmbeddings = viewRef.name;
+        clearAnnotationAndInputs();
+      } else {
+        const input = {
+          image: currentImage,
+          embedding: viewRef.id in embeddings ? embeddings[viewRef.id] : null,
+          points: points,
+          box: box,
         };
-
-        const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
-        const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
-        const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
-
-        // always clean existing masks before adding a new currentAnn
-        currentMaskGroup.removeChildren();
-
-        currentAnn = {
-          id: nanoid(10),
-          viewRef,
-          label: "",
-          output: results,
-          input_points: points,
-          input_box: box,
-          validated: false,
-        };
-        addMask(
-          currentAnn.id,
-          currentAnn.output.masksImageSVG,
-          true,
-          1.0,
-          "#008000",
-          currentMaskGroup,
-          image,
-          viewRef.name,
-          stage,
-          zoomFactor,
-        );
+        results = await selectedTool.postProcessor.segmentImage(input);
       }
+    } else {
+      // infer
+      const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
+      if (pixinf_res) {
+        const maskPolygons = generatePolygonSegments(
+          pixinf_res.data.counts as number[],
+          currentImage.height,
+        );
+        const masksSVG = convertSegmentsToSVG(maskPolygons);
+
+        results = {
+          masksImageSVG: masksSVG,
+          rle: {
+            counts: pixinf_res.data.counts,
+            size: pixinf_res.data.size,
+            id: pixinf_res.id,
+            ref_name: pixinf_res.table_info.name,
+          },
+        };
+      }
+    }
+
+    if (results) {
+      newShape = {
+        masksImageSVG: results.masksImageSVG,
+        rle: results.rle,
+        type: SaveShapeType.mask,
+        viewRef,
+        itemId: selectedItemId,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
+        status: "saving",
+      };
+      const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+      const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
+
+      // always clean existing masks before adding a new currentAnn
+      currentMaskGroup.removeChildren();
+
+      currentAnn = {
+        id: nanoid(10),
+        viewRef,
+        label: "",
+        output: results,
+        input_points: points,
+        input_box: box,
+        validated: false,
+      };
+      addMask(
+        currentAnn.id,
+        currentAnn.output.masksImageSVG,
+        true,
+        1.0,
+        "#008000",
+        currentMaskGroup,
+        image,
+        viewRef.name,
+        stage,
+        zoomFactor,
+      );
     }
   }
 

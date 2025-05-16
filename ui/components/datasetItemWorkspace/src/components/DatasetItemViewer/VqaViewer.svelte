@@ -10,7 +10,17 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { BaseSchema, DatasetItem, Image, LoadingModal, type ImagesPerView } from "@pixano/core";
+  import {
+    BaseSchema,
+    DatasetItem,
+    Image,
+    LoadingModal,
+    Mask,
+    type Box,
+    type ImagesPerView,
+    type LabeledClick,
+    type Reference,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
@@ -52,6 +62,11 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
+  export let pixanoInferenceSegmentation: (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+  ) => Promise<Mask | undefined>;
 
   // utility vars for resizing with slide bar
   let vqaAreaMaxWidth = 450; //default width
@@ -240,6 +255,7 @@ License: CECILL-C
         )}
         embeddings={$embeddings}
         {filters}
+        {pixanoInferenceSegmentation}
         canvasSize={vqaAreaMaxWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}

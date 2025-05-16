@@ -8,11 +8,19 @@ License: CECILL-C
   // Imports
   import { derived } from "svelte/store";
 
-  import { LoadingModal, SelectModal, WarningModal } from "@pixano/core";
-  import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
+  import {
+    ConfirmModal,
+    LoadingModal,
+    SelectLocalOrDistantModelModal,
+    SelectModal,
+    WarningModal,
+  } from "@pixano/core";
   import { SAM } from "@pixano/models";
 
-  import { datasetSchema } from "../../../../apps/pixano/src/lib/stores/datasetStores";
+  import {
+    datasetSchema,
+    isLocalSegmentationModel,
+  } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import { panTool } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -52,14 +60,23 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    modelsUiStore.update((store) => ({
-      ...store,
-      currentModalOpen: "loading",
-      selectedModelName,
-    }));
-    await sam.init("/app_models/" + selectedModelName + ".onnx");
-    interactiveSegmenterModel.set(sam);
-    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
+    if ($isLocalSegmentationModel) {
+      modelsUiStore.update((store) => ({
+        ...store,
+        currentModalOpen: "loading",
+        selectedModelName,
+      }));
+      await sam.init("/app_models/" + selectedModelName + ".onnx");
+      interactiveSegmenterModel.set(sam);
+      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
+    } else {
+      modelsUiStore.set({
+        currentModalOpen: "none",
+        selectedModelName: "",
+        selectedTableName: "",
+        yetToLoadEmbedding: true,
+      });
+    }
   }
 
   const closeModal = () => {
@@ -83,10 +100,8 @@ License: CECILL-C
 </script>
 
 {#if currentModalOpen === "selectModel"}
-  <SelectModal
-    message="Please select your model for interactive segmentation."
+  <SelectLocalOrDistantModelModal
     choices={models}
-    ifNoChoices={""}
     bind:selected={selectedModelName}
     on:confirm={loadModel}
     on:cancel={closeModal}

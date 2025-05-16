@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 export * from "./dataset";
-export * from "./inference/inference";
+export * from "./inference";
 export * from "./modelsTypes";
 export * from "./objectTypes";
 export * from "./toolsTypes";
