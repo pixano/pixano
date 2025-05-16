@@ -179,7 +179,9 @@ class FolderBaseBuilder(DatasetBuilder):
                         continue
                     # create item with default values for custom fields
                     custom_item_metadata = self._build_default_custom_metadata_item()
-                    item = self._create_item(split.name, view_file.stem, **custom_item_metadata)
+                    custom_item_metadata["id"] = view_file.stem
+                    custom_item_metadata["split"] = split.name
+                    item = self._create_item(**custom_item_metadata)
                     # create view
                     view_name_nojsonl, view_schema_nojsonl = list(self.views_schema.items())[0]  # only one view
                     view = self._create_view(item, view_file, view_schema_nojsonl)
@@ -214,9 +216,11 @@ class FolderBaseBuilder(DatasetBuilder):
                     dataset_piece.pop(k, None)
 
                 # create item
-                item = self._create_item(
-                    split.name, id=f"item_{split.name}_{i}" if self.use_image_name_as_id else None, **item_metadata
-                )
+                if "id" not in item_metadata:
+                    item_metadata["id"] = f"item_{split.name}_{i}" if self.use_image_name_as_id else shortuuid.uuid()
+                if "split" not in item_metadata:
+                    item_metadata["split"] = split.name
+                item = self._create_item(**item_metadata)
 
                 # create view
                 views_data: list[tuple[str, View]] = []
@@ -282,13 +286,8 @@ class FolderBaseBuilder(DatasetBuilder):
                 yield all_entities_data
                 yield all_annotations_data
 
-    def _create_item(self, split: str, id: str | None = None, **item_metadata) -> BaseSchema:
-        if "id" not in item_metadata:
-            item_metadata["id"] = id if id is not None else shortuuid.uuid()
-        return self.item_schema(
-            split=split,
-            **item_metadata,
-        )
+    def _create_item(self, **item_metadata) -> BaseSchema:
+        return self.item_schema(**item_metadata)
 
     def _create_view(self, item: Item, view_file: Path, view_schema: type[View]) -> View:
         if not issubclass(view_schema, View):
