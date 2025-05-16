@@ -5,14 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Plus } from "lucide-svelte";
+  import { Plus, Sparkles } from "lucide-svelte";
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, ImageTask, PrimaryButton } from "../..";
+  import { api, IconButton, ImageTask, PrimaryButton } from "../..";
   import { isLocalSegmentationModel } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import AddModelModal from "./AddModelModal.svelte";
+  import ConnectModal from "./ConnectModal.svelte";
   import {
     pixanoInferenceSegmentationModelsStore,
+    pixanoInferenceSegmentationURL,
     type PixanoInferenceSegmentationModel,
   } from "./inference";
   import ModelItem from "./ModelItem.svelte";
@@ -25,12 +27,11 @@ License: CECILL-C
   let localOrPixinf = $isLocalSegmentationModel ? "local" : "pixinf";
 
   let showAddModelModal = false;
+  let showConnectModal = false;
 
   let isInferenceApiConnected = false;
   async function connectToPixanoInference() {
-    //TMP -- TODO: allow to choose pixano inference url
-    const url = "http://127.0.0.1:9152";
-    isInferenceApiConnected = await api.isInferenceApiHealthy(url);
+    isInferenceApiConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
     if (isInferenceApiConnected) {
       await listModels();
     }
@@ -149,7 +150,22 @@ License: CECILL-C
           on:change={handleLocalOrPixinfChange}
         />
         <div class="flex flex-col gap-2">
-          <p class="self-center">Pixano Inference</p>
+          <div class="flex flex-row">
+            <IconButton
+              tooltipContent="Pixano Inference connection"
+              on:click={() => (showConnectModal = !showConnectModal)}
+            >
+              <Sparkles
+                size={20}
+                class={isInferenceApiConnected
+                  ? $pixanoInferenceSegmentationModelsStore.length > 0
+                    ? "text-green-500"
+                    : "text-yellow-500"
+                  : "text-red-500"}
+              />
+            </IconButton>
+            <p class="self-center">Pixano Inference</p>
+          </div>
           <div class="p-3 flex flex-col gap-2">
             {#if $pixanoInferenceSegmentationModelsStore.length === 0}
               <p class="text-gray-500">No models added yet.</p>
@@ -175,79 +191,14 @@ License: CECILL-C
   </div>
 </div>
 
+{#if showConnectModal}
+  <ConnectModal
+    bind:isConnected={isInferenceApiConnected}
+    on:cancelConnect={() => (showConnectModal = false)}
+    on:listModels={listModels}
+  />
+{/if}
+
 {#if showAddModelModal}
   <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
 {/if}
-
-<!-------------------------------------
-Copyright: CEA-LIST/DIASI/SIALV/LVA
-Author : pixano@cea.fr
-License: CECILL-C
-
-<script lang="ts">
-  // Imports
-  import { createEventDispatcher } from "svelte";
-
-  // Exports
-  export let choices: Array<string>;
-  export let selected: string;
-
-  const dispatch = createEventDispatcher();
-
-  function handleConfirm() {
-    dispatch("confirm");
-  }
-
-  function handleCancel() {
-    dispatch("cancel");
-  }
-</script>
-
-<div class="fixed inset-0 z-50 overflow-y-auto">
-  <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
-  <div class="flex min-h-full justify-center text-center items-center">
-    <div
-      class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-          bg-slate-50 text-slate-800"
-    >
-    <p class="pb-1">Please select a segmentation model</p>
-    <p class="pb-2">local model</p>
-    {#if choices}
-        <select
-          class="py-1 px-2 border rounded focus:outline-none
-        bg-slate-100 border-slate-300 focus:border-main"
-          bind:value={selected}
-        >
-          {#each choices as choice}
-            <option value={choice}>
-              {choice}
-            </option>
-          {/each}
-        </select>
-      {:else}
-        <p class="pb-1 italic">WHAT?</p>
-      {/if}
-
-      <p class="pb-2">served by Pixano Inference</p>
-
-      <button
-        type="button"
-        disabled={!selected}
-        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-primary transition-colors hover:bg-primary-foreground disabled:bg-primary-light"
-        on:click={handleConfirm}
-      >
-        Ok
-      </button>
-      <button
-        type="button"
-        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-primary transition-colors hover:bg-primary-foreground"
-        on:click={handleCancel}
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-</div>
--------------------------------------->

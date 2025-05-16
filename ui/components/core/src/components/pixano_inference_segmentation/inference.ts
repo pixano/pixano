@@ -8,6 +8,8 @@ import { writable } from "svelte/store";
 
 import type { AnnotationType, MaskType } from "../../lib/types";
 
+const DEFAULT_URL = "http://localhost:9152";
+
 export type PixanoInferenceSegmentationModel = {
   selected: boolean;
   name: string;
@@ -30,3 +32,4 @@ export type PixanoInferenceSegmentationOutput = {
 export const pixanoInferenceSegmentationModelsStore = writable<PixanoInferenceSegmentationModel[]>(
   [],
 );
+export const pixanoInferenceSegmentationURL = writable<string>(DEFAULT_URL);
