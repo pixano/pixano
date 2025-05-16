@@ -201,7 +201,11 @@ License: CECILL-C
     propertyName: string,
     obj: Item | Entity | Annotation,
   ) => {
-    if ([BaseSchema.Track, BaseSchema.Entity].includes(obj.table_info.base_schema)) {
+    if (
+      [BaseSchema.Track, BaseSchema.Entity, BaseSchema.MultiModalEntity].includes(
+        obj.table_info.base_schema,
+      )
+    ) {
       entities.update((oldObjects) =>
         oldObjects.map((object) => {
           if (object === obj) {
