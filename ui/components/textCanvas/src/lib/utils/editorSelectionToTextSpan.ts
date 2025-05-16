@@ -32,7 +32,7 @@ export const editorSelectionToTextSpan = (
 
   return {
     spans_start: [span_start],
-    spans_end: [span_start + selectedText.length - 1],
+    spans_end: [span_start + selectedText.length],
     mention: selectedText,
     view_ref: viewRef,
   } as TextSpanTypeWithViewRef;
