@@ -159,6 +159,7 @@ class TestFolderBaseBuilder:
 
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
+            id="id0",
             split="train",
             metadata="metadata",
         )
@@ -168,6 +169,7 @@ class TestFolderBaseBuilder:
 
     def test_create_image_view(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
+            id="id0",
             split="train",
             metadata="metadata",
         )
@@ -184,6 +186,7 @@ class TestFolderBaseBuilder:
     @pytest.mark.skipif(not VIDEO_INSTALLED, reason="To load video files metadata, install ffmpeg")
     def test_create_video_view(self, video_folder_builder: VideoFolderBuilder):
         item = video_folder_builder._create_item(
+            id="id0",
             split="train",
             metadata="metadata",
         )
@@ -202,6 +205,7 @@ class TestFolderBaseBuilder:
 
     def test_create_entities(self, image_folder_builder: ImageFolderBuilder, entity_category):
         item = image_folder_builder._create_item(
+            id="id0",
             split="train",
             metadata="metadata",
         )
