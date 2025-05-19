@@ -17,10 +17,14 @@ License: CECILL-C
     DatasetItem,
     Entity,
     Keypoints,
+    Mask,
     SaveShapeType,
     SequenceFrame,
     Tracklet,
+    type Box,
     type EditShape,
+    type LabeledClick,
+    type Reference,
     type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -63,6 +67,11 @@ License: CECILL-C
   export let selectedItem: DatasetItem;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
+  export let pixanoInferenceSegmentation: (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+  ) => Promise<Mask | undefined>;
 
   $: {
     if (selectedItem) {
@@ -411,6 +420,7 @@ License: CECILL-C
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
+        {pixanoInferenceSegmentation}
         canvasSize={inspectorMaxHeight + resize}
         isVideo={true}
         embeddings={$embeddings}

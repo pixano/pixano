@@ -4,14 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { MultimodalImageNLPTask } from "../../lib/types";
+import { type Task } from "../../lib/types";
 
 interface Model {
   name: string;
-  task: MultimodalImageNLPTask;
+  task: Task;
 }
 
-export async function listModels(task: MultimodalImageNLPTask | null = null): Promise<Model[]> {
+export async function listModels(task: Task | null = null): Promise<Model[]> {
   const url =
     task === null
       ? "/inference/models/list"

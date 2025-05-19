@@ -10,6 +10,7 @@ License: CECILL-C
     MinusCircleIcon,
     MousePointer,
     PlusCircleIcon,
+    Settings,
     Share2,
     Square,
     Wand2Icon,
@@ -19,7 +20,9 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
+  import { pixanoInferenceSegmentationModelsStore } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
 
+  import { isLocalSegmentationModel } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import { clearHighlighting } from "../lib/api/objectsApi/clearHighlighting";
   import {
     addSmartPointTool,
@@ -59,9 +62,18 @@ License: CECILL-C
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
-      if ($modelsUiStore.selectedModelName === "" || $modelsUiStore.selectedTableName === "")
-        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
+      if (
+        ($isLocalSegmentationModel &&
+          ($modelsUiStore.selectedModelName === "" || $modelsUiStore.selectedTableName === "")) ||
+        (!$isLocalSegmentationModel &&
+          $pixanoInferenceSegmentationModelsStore.filter((m) => m.selected).length > 0)
+      )
+        configSmartToolClick();
     } else selectTool(panTool);
+  };
+
+  const configSmartToolClick = () => {
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
   };
 
   interactiveSegmenterModel.subscribe((segmenter) => {
@@ -142,6 +154,13 @@ License: CECILL-C
         selected={$selectedTool?.type === ToolType.Rectangle && $selectedTool.isSmart}
       >
         <Square />
+      </IconButton>
+      <div class="w-1 -m-3.5 h-full bg-primary-light"></div>
+      <IconButton
+        tooltipContent={"Smart segmentation model settings"}
+        on:click={() => configSmartToolClick()}
+      >
+        <Settings />
       </IconButton>
     {/if}
   </div>
