@@ -9,10 +9,11 @@ License: CECILL-C
 
   import {
     api,
-    ImageTask,
+    // ImageTask,
     Input,
     LoadingModal,
     PrimaryButton,
+    VideoTask,
     type InputEvents,
     type ModelConfig,
   } from "../..";
@@ -23,7 +24,7 @@ License: CECILL-C
       provider: "sam2",
       model_name: "SAM2",
       model_path: "facebook/sam2-hiera-tiny",
-      dtype: "bfloat16",
+      dtype: "float32",
     },
   };
   let formData = modelChoices["sam2"];
@@ -45,26 +46,47 @@ License: CECILL-C
 
   const handleAddModel = async () => {
     isAddingModelRequestPending = true;
-    const model_config: ModelConfig = {
+    // const model_config: ModelConfig = {
+    //   config: {
+    //     name: formData.model_name,
+    //     task: ImageTask.MASK_GENERATION,
+    //     path: formData.model_path,
+    //     config: { dtype: formData.dtype },
+    //     processor_config: {},
+    //   },
+    //   provider: formData.provider,
+    // };
+
+    // const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
+    // if (!success) {
+    //   console.error(`Couldn't instantiate model '${model_config.config.name}'`);
+    //   return;
+    // } else {
+    //   console.log(`Model '${model_config.config.name}' added.`);
+    // }
+
+    //Also add segmentation model for video (tracking)
+    const model_config_video: ModelConfig = {
       config: {
-        name: formData.model_name,
-        task: ImageTask.MASK_GENERATION,
+        name: formData.model_name + "-video",
+        task: VideoTask.MASK_GENERATION,
         path: formData.model_path,
-        config: { dtype: formData.dtype },
+        config: { torch_dtype: formData.dtype },
         processor_config: {},
       },
       provider: formData.provider,
     };
 
-    const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
+    const success_video = await api.instantiateModel(model_config_video);
 
-    if (!success) {
-      console.error(`Couldn't instantiate model '${model_config.config.name}'`);
+    if (!success_video) {
+      console.error(`Couldn't instantiate model '${model_config_video.config.name}' for tracking`);
       return;
+    } else {
+      console.log(`Model '${model_config_video.config.name}' added.`);
     }
 
     isAddingModelRequestPending = false;
-    console.log(`Model '${model_config.config.name}' added.`);
 
     dispatch("listModels");
     dispatch("cancelAddModel");

@@ -26,6 +26,7 @@ export * from "./defineCreatedObject";
 export * from "./defineObjectThumbnail";
 export * from "./deleteObject";
 export * from "./findOrCreateTopAndSubEntities";
+export * from "./getFrameIndexFromViewRef";
 export * from "./getPixanoSource";
 export * from "./getTable";
 export * from "./getTopEntity";

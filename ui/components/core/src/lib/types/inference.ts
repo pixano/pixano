@@ -29,7 +29,11 @@ export enum ImageTask {
   ZERO_SHOT_DETECTION = "image_zero_shot_detection",
 }
 
-export type Task = MultimodalImageNLPTask | ImageTask;
+export enum VideoTask {
+  MASK_GENERATION = "video_mask_generation",
+}
+
+export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
 
 export interface SystemPrompt {
   content: string;

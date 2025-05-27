@@ -29,6 +29,7 @@ License: CECILL-C
     type Vertex,
   } from "@pixano/core";
   import { cn } from "@pixano/core/src";
+  import { pixanoInferenceToValidateTrackingMasks } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
@@ -1009,6 +1010,7 @@ License: CECILL-C
     for (const view_name of Object.keys(imagesPerView)) {
       clearInputs(view_name);
       clearCurrentAnn(view_name, stage, selectedTool);
+      pixanoInferenceToValidateTrackingMasks.set([]);
     }
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
