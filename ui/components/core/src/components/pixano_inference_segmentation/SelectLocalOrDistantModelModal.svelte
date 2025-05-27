@@ -8,7 +8,7 @@ License: CECILL-C
   import { Plus, Sparkles } from "lucide-svelte";
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, IconButton, ImageTask, PrimaryButton } from "../..";
+  import { api, IconButton, PrimaryButton } from "../.."; //TMP: ImageTask
   import { isLocalSegmentationModel } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
@@ -41,7 +41,7 @@ License: CECILL-C
   onMount(connectToPixanoInference);
 
   const listModels = async () => {
-    const availableSegmentationModels = await api.listModels(ImageTask.MASK_GENERATION);
+    const availableSegmentationModels = await api.listModels(); //TMP: ImageTask.MASK_GENERATION);
 
     const availableSegmentationModelsNames = availableSegmentationModels.map((model) => model.name);
 

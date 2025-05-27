@@ -12,6 +12,7 @@ License: CECILL-C
     api,
     BaseSchema,
     Mask,
+    SequenceFrame,
     WorkspaceType,
     type Box,
     type DatasetItem,
@@ -21,7 +22,9 @@ License: CECILL-C
   import {
     pixanoInferenceSegmentationModelsStore,
     pixanoInferenceSegmentationURL,
+    pixanoInferenceToValidateTrackingMasks,
     type PixanoInferenceSegmentationOutput,
+    type PixanoInferenceVideoSegmentationOutput,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
@@ -142,6 +145,130 @@ License: CECILL-C
     }
     return;
   };
+
+  const pixanoInferenceSegmentationVideo = async (
+    viewRef: Reference,
+    points: LabeledClick[],
+    box: Box,
+    num_frames: number = 2,
+  ): Promise<Mask | undefined> => {
+    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
+    if (!isConnected) return;
+    const models = await api.listModels();
+    const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
+    const maskModelName = (selectedMaskModel ? selectedMaskModel.name : "SAM2") + "-video";
+    if (!models.map((m) => m.name).includes(maskModelName)) return;
+
+    //get video from viewRef (current frame) & num_frames
+    let full_video = selectedItem.views[viewRef.name];
+    if (!Array.isArray(full_video)) {
+      console.error("Tracking available only for video!");
+      return;
+    }
+    const first_frame = full_video.find((sf) => sf.id === viewRef.id) as SequenceFrame;
+    if (!first_frame) {
+      console.error("ERROR: frame unavailable");
+      return;
+    }
+    const sub_video = full_video.filter(
+      (sf) =>
+        (sf as SequenceFrame).data.frame_index >= first_frame.data.frame_index &&
+        (sf as SequenceFrame).data.frame_index <= first_frame.data.frame_index + num_frames,
+    );
+
+    //need to remove "/media" from seqframes url, and move "data" outside !
+    const video = sub_video.map((sf) => {
+      const fixed_sf = structuredClone(sf);
+      fixed_sf.data.url = (fixed_sf.data.url as string).replace("media/", "");
+      return fixed_sf;
+    });
+
+    const base_input = {
+      dataset_id: selectedItem.ui.datasetId,
+      video,
+      model: maskModelName,
+    };
+
+    let input;
+    if (points) {
+      let pts = [];
+      let labels = [];
+      for (const pt of points) {
+        pts.push([Math.round(pt.x), Math.round(pt.y)]);
+        labels.push(pt.label);
+      }
+      input = { ...base_input, points: pts, labels: labels };
+    }
+    if (box) {
+      //coords must be positive
+      const positiveBBox = (bbox: Box): Box => {
+        let { x, y, width, height } = bbox;
+        if (width < 0) {
+          x += width;
+          width = -width;
+        }
+        if (height < 0) {
+          y += height;
+          height = -height;
+        }
+        if (x < 0) {
+          width += x;
+          x = 0;
+        }
+        if (y < 0) {
+          height += y;
+          y = 0;
+        }
+        width = Math.max(0, width);
+        height = Math.max(0, height);
+        return { x, y, width, height } as Box;
+      };
+      box = positiveBBox(box);
+      //need a somehow BBox object (not exactly).
+      const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
+      const input_bbox = {
+        id: "",
+        created_at: now,
+        updated_at: now,
+        table_info: { name: "", group: "annotations", base_schema: BaseSchema.BBox },
+        coords: [
+          Math.round(box.x),
+          Math.round(box.y),
+          Math.round(box.width),
+          Math.round(box.height),
+        ],
+        format: "xywh",
+        is_normalized: false,
+        confidence: 1,
+      };
+      input = { ...base_input, bbox: input_bbox };
+    }
+    console.log("INPUT:", input);
+    const response = await fetch("/inference/tasks/mask-generation/video", {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    if (response.ok) {
+      const result = (await response.json()) as PixanoInferenceVideoSegmentationOutput;
+      console.log("RAW OUTPUT", result);
+      //TODO: rebuild
+      for (const mask of result.masks) {
+        mask.data.counts = rleFrString(mask.data.counts as string);
+        //correct viewref..etc ?
+      }
+      //We will store masks so that when validated, they are used to fill the created Track
+      pixanoInferenceToValidateTrackingMasks.set(result.masks);
+      return result.masks[0] as Mask;
+    } else {
+      console.error("ERROR: Unable to track", response);
+      console.log("  error details:", await response.json());
+    }
+    return;
+  };
 </script>
 
 <div class="max-h-[calc(100vh-80px)] w-full max-w-full bg-slate-800">
@@ -150,7 +277,12 @@ License: CECILL-C
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.ui.type === WorkspaceType.VIDEO}
-    <VideoViewer {selectedItem} {pixanoInferenceSegmentation} {resize} bind:currentAnn />
+    <VideoViewer
+      {selectedItem}
+      pixanoInferenceSegmentation={pixanoInferenceSegmentationVideo}
+      {resize}
+      bind:currentAnn
+    />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_VQA}
     <VqaViewer {selectedItem} {pixanoInferenceSegmentation} {resize} bind:currentAnn />
   {:else if selectedItem.ui.type === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING}

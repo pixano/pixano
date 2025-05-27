@@ -13,12 +13,14 @@ License: CECILL-C
     Annotation,
     BaseSchema,
     Button,
+    Mask,
     SaveShapeType,
     Tracklet,
     WorkspaceType,
     type SaveItem,
     type SaveTrackletShape,
   } from "@pixano/core";
+  import { pixanoInferenceToValidateTrackingMasks } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
@@ -26,6 +28,7 @@ License: CECILL-C
     addOrUpdateSaveItem,
     defineCreatedObject,
     findOrCreateSubAndTopEntities,
+    getFrameIndexFromViewRef,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex } from "../../lib/api/videoApi";
   import { mapShapeType2BaseSchema } from "../../lib/constants";
@@ -62,6 +65,7 @@ License: CECILL-C
     let newTracklet: Annotation | undefined = undefined;
 
     const isVideo = $itemMetas.type === WorkspaceType.VIDEO;
+    const isFromTracking = isVideo && $pixanoInferenceToValidateTrackingMasks.length > 1;
 
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
@@ -89,7 +93,26 @@ License: CECILL-C
 
     if (subEntity) subEntity.ui.childs?.push(newObject);
 
+    let tracking_masks: Mask[] = [];
     if (isVideo) {
+      let lastFrameIndex = $currentFrameIndex;
+      if (isFromTracking) {
+        for (const tr_mask of $pixanoInferenceToValidateTrackingMasks.slice(1)) {
+          // really create Mask instance (before it's just a cast)
+          tracking_masks.push(new Mask({ ...tr_mask }));
+        }
+        for (const tr_mask of tracking_masks) {
+          //fill some missing info in tracking masks
+          tr_mask.data.entity_ref = newObject.data.entity_ref;
+          tr_mask.table_info = newObject.table_info;
+          const tr_frame_idx = getFrameIndexFromViewRef(tr_mask.data.view_ref);
+          tr_mask.ui = { ...newObject.ui, frame_index: tr_frame_idx };
+          topEntity.ui.childs?.push(tr_mask);
+          if (subEntity) subEntity.ui.childs?.push(tr_mask);
+          //get lastFrameIndex from tracking masks
+          lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
+        }
+      }
       // for video, there is 1 anns, 1 track (may have 1 sub entity), 1 tracklet
       // -> add tracklet
       const candidate_tracklets = topEntity.ui.childs?.filter(
@@ -97,7 +120,7 @@ License: CECILL-C
           ann.is_type(BaseSchema.Tracklet) &&
           ann.data.view_ref.name === $newShape.viewRef.name &&
           (ann as Tracklet).data.start_timestep <= $currentFrameIndex &&
-          (ann as Tracklet).data.end_timestep >= $currentFrameIndex,
+          (ann as Tracklet).data.end_timestep >= lastFrameIndex,
       );
       if (candidate_tracklets && candidate_tracklets.length === 1) {
         const candidate_tracklet = candidate_tracklets[0] as Tracklet;
@@ -105,6 +128,9 @@ License: CECILL-C
         //it means that the tracklet may be wider than the new shape "range" (1 frame at creation)
         //-- this is potentially dangerous... but *should* be fine --
         candidate_tracklet.ui.childs.push(newObject);
+        if (isFromTracking) {
+          for (const tr_mask of tracking_masks) candidate_tracklet.ui.childs.push(tr_mask);
+        }
         candidate_tracklet.ui.childs.sort(sortByFrameIndex);
       } else {
         const trackletShape: SaveTrackletShape = {
@@ -116,10 +142,10 @@ License: CECILL-C
           viewRef: { id: "", name: $newShape.viewRef.name },
           attrs: {
             start_timestep: $currentFrameIndex,
-            end_timestep: $currentFrameIndex,
+            end_timestep: lastFrameIndex,
             //TODO timestamp management...
             start_timestamp: $currentFrameIndex,
-            end_timestamp: $currentFrameIndex,
+            end_timestamp: lastFrameIndex,
           },
         };
         newTracklet = defineCreatedObject(
@@ -134,6 +160,9 @@ License: CECILL-C
         if (!newTracklet) return;
         newTracklet.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
         (newTracklet as Tracklet).ui.childs = [newObject];
+        if (isFromTracking) {
+          for (const tr_mask of tracking_masks) (newTracklet as Tracklet).ui.childs.push(tr_mask);
+        }
 
         const save_item_tracklet: SaveItem = {
           change_type: "add",
@@ -165,8 +194,18 @@ License: CECILL-C
       change_type: "add",
       object: newObject,
     };
-
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+
+    if (isFromTracking) {
+      for (const tr_mask of tracking_masks) {
+        const save_tr_item: SaveItem = {
+          change_type: "add",
+          object: tr_mask,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_tr_item));
+      }
+    }
+
     // push new entity & sub(s)
     entities.update((ents) => {
       if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
@@ -184,6 +223,7 @@ License: CECILL-C
       return [
         ...objectsWithoutHighlighted,
         ...(newObject ? [newObject] : []),
+        ...(isFromTracking ? tracking_masks : []),
         ...(newTracklet ? [newTracklet] : []),
       ];
     });
