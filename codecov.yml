@@ -1,0 +1,2 @@
+ignore:
+  - "pixano/__version__.py"
