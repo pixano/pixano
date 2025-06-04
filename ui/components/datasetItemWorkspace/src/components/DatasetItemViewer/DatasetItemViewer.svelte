@@ -150,7 +150,7 @@ License: CECILL-C
     viewRef: Reference,
     points: LabeledClick[],
     box: Box,
-    num_frames: number = 2,
+    num_frames: number = 10,
   ): Promise<Mask | undefined> => {
     const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
     if (!isConnected) return;
