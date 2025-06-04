@@ -9,7 +9,7 @@ License: CECILL-C
 
   import {
     api,
-    // ImageTask,
+    ImageTask,
     Input,
     LoadingModal,
     PrimaryButton,
@@ -17,6 +17,8 @@ License: CECILL-C
     type InputEvents,
     type ModelConfig,
   } from "../..";
+
+  export let isVideo: boolean = false;
 
   //TMP: default values
   const modelChoices = {
@@ -46,44 +48,23 @@ License: CECILL-C
 
   const handleAddModel = async () => {
     isAddingModelRequestPending = true;
-    // const model_config: ModelConfig = {
-    //   config: {
-    //     name: formData.model_name,
-    //     task: ImageTask.MASK_GENERATION,
-    //     path: formData.model_path,
-    //     config: { dtype: formData.dtype },
-    //     processor_config: {},
-    //   },
-    //   provider: formData.provider,
-    // };
-
-    // const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
-    // if (!success) {
-    //   console.error(`Couldn't instantiate model '${model_config.config.name}'`);
-    //   return;
-    // } else {
-    //   console.log(`Model '${model_config.config.name}' added.`);
-    // }
-
-    //Also add segmentation model for video (tracking)
-    const model_config_video: ModelConfig = {
+    const model_config: ModelConfig = {
       config: {
-        name: formData.model_name + "-video",
-        task: VideoTask.MASK_GENERATION,
+        name: formData.model_name + isVideo ? "-video" : "",
+        task: isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION,
         path: formData.model_path,
-        config: { torch_dtype: formData.dtype },
+        // Note: dtype or torch_dtype ? >> some model requires dtype, others torch_dtype, so use both
+        config: { dtype: formData.dtype, torch_dtype: formData.dtype },
         processor_config: {},
       },
       provider: formData.provider,
     };
-
-    const success_video = await api.instantiateModel(model_config_video);
-
-    if (!success_video) {
-      console.error(`Couldn't instantiate model '${model_config_video.config.name}' for tracking`);
+    const success = await api.instantiateModel(model_config); //NOTE: may take some time
+    if (!success) {
+      console.error(`Couldn't instantiate model '${model_config.config.name}'`);
       return;
     } else {
-      console.log(`Model '${model_config_video.config.name}' added.`);
+      console.log(`Model '${model_config.config.name}' added.`);
     }
 
     isAddingModelRequestPending = false;

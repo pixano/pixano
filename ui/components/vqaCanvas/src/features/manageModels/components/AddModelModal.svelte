@@ -40,7 +40,7 @@ License: CECILL-C
       dtype: "float16",
     },
   };
-  let formData = modelChoices["llava-mistral"];
+  let formData = modelChoices["llava-qwen"];
 
   let isAddingModelRequestPending = false;
   const dispatch = createEventDispatcher();

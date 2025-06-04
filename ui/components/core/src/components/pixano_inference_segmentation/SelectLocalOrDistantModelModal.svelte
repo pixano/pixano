@@ -8,8 +8,11 @@ License: CECILL-C
   import { Plus, Sparkles } from "lucide-svelte";
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, IconButton, PrimaryButton } from "../.."; //TMP: ImageTask
-  import { isLocalSegmentationModel } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { api, IconButton, ImageTask, PrimaryButton, VideoTask, WorkspaceType } from "../.."; //TMP: ImageTask
+  import {
+    currentDatasetStore,
+    isLocalSegmentationModel,
+  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
   import {
@@ -41,7 +44,11 @@ License: CECILL-C
   onMount(connectToPixanoInference);
 
   const listModels = async () => {
-    const availableSegmentationModels = await api.listModels(); //TMP: ImageTask.MASK_GENERATION);
+    const task =
+      $currentDatasetStore.workspace === WorkspaceType.VIDEO
+        ? VideoTask.MASK_GENERATION
+        : ImageTask.MASK_GENERATION;
+    const availableSegmentationModels = await api.listModels(task);
 
     const availableSegmentationModelsNames = availableSegmentationModels.map((model) => model.name);
 
@@ -200,5 +207,9 @@ License: CECILL-C
 {/if}
 
 {#if showAddModelModal}
-  <AddModelModal on:listModels={listModels} on:cancelAddModel={handleCloseAddModelModal} />
+  <AddModelModal
+    isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO}
+    on:listModels={listModels}
+    on:cancelAddModel={handleCloseAddModelModal}
+  />
 {/if}

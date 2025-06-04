@@ -11,6 +11,7 @@ License: CECILL-C
   import {
     api,
     BaseSchema,
+    LoadingModal,
     Mask,
     SequenceFrame,
     WorkspaceType,
@@ -41,6 +42,8 @@ License: CECILL-C
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
   export let resize: number;
+
+  let modelWorking: boolean = false;
 
   modelsUiStore.subscribe(() => {
     if (selectedItem) loadViewEmbeddings();
@@ -244,6 +247,7 @@ License: CECILL-C
       input = { ...base_input, bbox: input_bbox };
     }
     console.log("INPUT:", input);
+    modelWorking = true;
     const response = await fetch("/inference/tasks/mask-generation/video", {
       headers: {
         Accept: "application/json",
@@ -262,11 +266,13 @@ License: CECILL-C
       }
       //We will store masks so that when validated, they are used to fill the created Track
       pixanoInferenceToValidateTrackingMasks.set(result.masks);
+      modelWorking = false;
       return result.masks[0] as Mask;
     } else {
       console.error("ERROR: Unable to track", response);
       console.log("  error details:", await response.json());
     }
+    modelWorking = false;
     return;
   };
 </script>
@@ -293,3 +299,6 @@ License: CECILL-C
     <ThreeDimensionsViewer />
   {/if}
 </div>
+{#if modelWorking}
+  <LoadingModal />
+{/if}
