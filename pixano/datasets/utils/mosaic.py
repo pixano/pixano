@@ -97,9 +97,12 @@ def create_mosaic(
         img_rgb = Image.new("RGB", img_resized.size, (0, 0, 0))
         img_rgb.paste(img_resized, mask=img_resized.split()[3])  # Apply alpha channel
         # Add label
-        label_text = f"{label_prefix} {idx + 1}"
-        img_labeled = add_label_above(img_rgb, label_text, label_height)
-        images_resized.append(img_labeled)
+        if label_prefix != "":
+            label_text = f"{label_prefix} {idx + 1}"
+            img_labeled = add_label_above(img_rgb, label_text, label_height)
+            images_resized.append(img_labeled)
+        else:
+            images_resized.append(img_rgb)
 
     mosaic_width = cols * (avg_width + padding) - padding
     mosaic_height = rows * (avg_height + label_height + padding) - padding
@@ -117,7 +120,7 @@ def create_mosaic(
 
 
 def mosaic(source_dir: Path, split: str, image_files: list[str], view_name: str, mosaic_filename: str = "") -> str:
-    """Create a mosaic from input images."""
+    """Create a mosaic from input images. Add a label if view_name is not empty string."""
     if not mosaic_filename:
         mosaic_filename = generate_mosaic_name(image_files)
     create_mosaic(source_dir, split, image_files, mosaic_filename, label_prefix=view_name, label_height=30, padding=5)

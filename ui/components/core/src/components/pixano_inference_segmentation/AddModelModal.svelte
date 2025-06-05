@@ -50,7 +50,7 @@ License: CECILL-C
     isAddingModelRequestPending = true;
     const model_config: ModelConfig = {
       config: {
-        name: formData.model_name + isVideo ? "-video" : "",
+        name: formData.model_name + (isVideo ? "-video" : ""),
         task: isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION,
         path: formData.model_path,
         // Note: dtype or torch_dtype ? >> some model requires dtype, others torch_dtype, so use both

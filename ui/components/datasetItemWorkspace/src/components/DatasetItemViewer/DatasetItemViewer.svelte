@@ -130,6 +130,7 @@ License: CECILL-C
       };
       input = { ...base_input, bbox: input_bbox };
     }
+    modelWorking = true;
     const response = await fetch("/inference/tasks/mask-generation/image", {
       headers: {
         Accept: "application/json",
@@ -141,11 +142,13 @@ License: CECILL-C
     if (response.ok) {
       const result = (await response.json()) as PixanoInferenceSegmentationOutput;
       result.mask.data.counts = rleFrString(result.mask.data.counts as string);
+      modelWorking = false;
       return result.mask as Mask;
     } else {
       console.error("ERROR: Unable to segment", response);
       console.log("  error details:", await response.json());
     }
+    modelWorking = false;
     return;
   };
 
@@ -246,7 +249,7 @@ License: CECILL-C
       };
       input = { ...base_input, bbox: input_bbox };
     }
-    console.log("INPUT:", input);
+    //console.log("INPUT:", input);
     modelWorking = true;
     const response = await fetch("/inference/tasks/mask-generation/video", {
       headers: {
@@ -258,7 +261,7 @@ License: CECILL-C
     });
     if (response.ok) {
       const result = (await response.json()) as PixanoInferenceVideoSegmentationOutput;
-      console.log("RAW OUTPUT", result);
+      //console.log("RAW OUTPUT", result);
       //TODO: rebuild
       for (const mask of result.masks) {
         mask.data.counts = rleFrString(mask.data.counts as string);
