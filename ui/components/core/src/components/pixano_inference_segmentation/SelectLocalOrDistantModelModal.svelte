@@ -84,6 +84,18 @@ License: CECILL-C
       }),
     );
   };
+
+  const handleLocalOrPixinfChange = () => {
+    isLocalSegmentationModel.set(localOrPixinf === "local");
+    if (localOrPixinf !== "local") {
+      //if no PixInf model is selected, select first (can happens with only one model or on reload)
+      const selectedModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
+      if (!selectedModel && $pixanoInferenceSegmentationModelsStore.length > 0) {
+        $pixanoInferenceSegmentationModelsStore[0].selected = true;
+      }
+    }
+  };
+
   const handleOpenAddModelModal = (event: Event) => {
     // stopPropgation is not called as event modifier
     // because event modifiers can only be used on DOM elements
@@ -96,10 +108,6 @@ License: CECILL-C
   };
   const handleCloseAddModelModal = () => {
     showAddModelModal = false;
-  };
-
-  const handleLocalOrPixinfChange = () => {
-    isLocalSegmentationModel.set(localOrPixinf === "local");
   };
 
   const handleValTrackingClick = (checked: boolean) => {

@@ -24,7 +24,7 @@ License: CECILL-C
   const modelChoices = {
     sam2: {
       provider: "sam2",
-      model_name: "SAM2",
+      model_name: "SAM2" + (isVideo ? "_video" : ""),
       model_path: "facebook/sam2-hiera-tiny",
       dtype: "float32",
     },
@@ -50,7 +50,7 @@ License: CECILL-C
     isAddingModelRequestPending = true;
     const model_config: ModelConfig = {
       config: {
-        name: formData.model_name + (isVideo ? "_video" : ""),
+        name: formData.model_name,
         task: isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION,
         path: formData.model_path,
         // Note: dtype or torch_dtype ? >> some model requires dtype, others torch_dtype, so use both
@@ -82,7 +82,7 @@ License: CECILL-C
   class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Instantiate Segmentation model</p>
+    <p>Instantiate Segmentation model {isVideo ? " for Video" : ""}</p>
   </div>
   <div class="p-3 flex flex-col gap-2">
     <h5 class="font-medium">Provider (only use providers installed with pixano-inference)</h5>
