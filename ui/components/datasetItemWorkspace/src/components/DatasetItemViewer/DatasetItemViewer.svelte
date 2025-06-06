@@ -162,7 +162,7 @@ License: CECILL-C
     if (!isConnected) return;
     const models = await api.listModels();
     const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
-    const maskModelName = (selectedMaskModel ? selectedMaskModel.name : "SAM2") + "-video";
+    const maskModelName = (selectedMaskModel ? selectedMaskModel.name : "SAM2") + "_video";
     if (!models.map((m) => m.name).includes(maskModelName)) return;
 
     //get video from viewRef (current frame) & num_frames
