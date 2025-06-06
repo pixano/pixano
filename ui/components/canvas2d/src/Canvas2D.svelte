@@ -29,6 +29,10 @@ License: CECILL-C
     type Vertex,
   } from "@pixano/core";
   import { cn } from "@pixano/core/src";
+  import {
+    pixanoInferenceToValidateTrackingMasks,
+    pixanoInferenceTracking,
+  } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
@@ -86,6 +90,8 @@ License: CECILL-C
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {view_name: zoomFactor}
+
+  let lastInputViewRef: Reference;
 
   $: {
     if (
@@ -454,6 +460,18 @@ License: CECILL-C
 
   // ********** BOUNDING BOXES AND MASKS ********** //
 
+  // launch tracking on validate
+  $: if (
+    isVideo &&
+    !$isLocalSegmentationModel &&
+    $pixanoInferenceTracking.mustValidate &&
+    $pixanoInferenceTracking.validated
+  ) {
+    if (lastInputViewRef != undefined) {
+      void updateCurrentMask(lastInputViewRef);
+    }
+  }
+
   async function updateCurrentMask(viewRef: Reference) {
     let results: SegmentationResult = null;
 
@@ -479,23 +497,31 @@ License: CECILL-C
       }
     } else {
       // infer
-      const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
-      if (pixinf_res) {
-        const maskPolygons = generatePolygonSegments(
-          pixinf_res.data.counts as number[],
-          currentImage.height,
-        );
-        const masksSVG = convertSegmentsToSVG(maskPolygons);
+      if (
+        (isVideo &&
+          (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
+            !$pixanoInferenceTracking.mustValidate)) ||
+        !isVideo
+      ) {
+        const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
+        $pixanoInferenceTracking.validated = false;
+        if (pixinf_res) {
+          const maskPolygons = generatePolygonSegments(
+            pixinf_res.data.counts as number[],
+            currentImage.height,
+          );
+          const masksSVG = convertSegmentsToSVG(maskPolygons);
 
-        results = {
-          masksImageSVG: masksSVG,
-          rle: {
-            counts: pixinf_res.data.counts,
-            size: pixinf_res.data.size,
-            id: pixinf_res.id,
-            ref_name: pixinf_res.table_info.name,
-          },
-        };
+          results = {
+            masksImageSVG: masksSVG,
+            rle: {
+              counts: pixinf_res.data.counts,
+              size: pixinf_res.data.size,
+              id: pixinf_res.id,
+              ref_name: pixinf_res.table_info.name,
+            },
+          };
+        }
       }
     }
 
@@ -811,6 +837,7 @@ License: CECILL-C
     } else if (drag_point.y() > img_size.height) {
       drag_point.y(img_size.height);
     }
+    lastInputViewRef = viewRef;
 
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
@@ -973,13 +1000,14 @@ License: CECILL-C
             };
           }
           if (selectedTool.isSmart) {
+            lastInputViewRef = viewRef;
             await updateCurrentMask(viewRef);
           }
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
       }
-      if (selectedTool.isSmart) {
+      if (selectedTool.isSmart && !$pixanoInferenceTracking.mustValidate) {
         rect.destroy();
       }
     }
@@ -1009,6 +1037,7 @@ License: CECILL-C
     for (const view_name of Object.keys(imagesPerView)) {
       clearInputs(view_name);
       clearCurrentAnn(view_name, stage, selectedTool);
+      pixanoInferenceToValidateTrackingMasks.set([]);
     }
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
@@ -1129,6 +1158,7 @@ License: CECILL-C
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewRef.name);
+      lastInputViewRef = viewRef;
       await updateCurrentMask(viewRef);
     } else if (selectedTool?.type == ToolType.Rectangle) {
       viewLayer.on("pointermove", () => dragInputRectMove(viewRef));

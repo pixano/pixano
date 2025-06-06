@@ -13,17 +13,20 @@ License: CECILL-C
     Input,
     LoadingModal,
     PrimaryButton,
+    VideoTask,
     type InputEvents,
     type ModelConfig,
   } from "../..";
+
+  export let isVideo: boolean = false;
 
   //TMP: default values
   const modelChoices = {
     sam2: {
       provider: "sam2",
-      model_name: "SAM2",
+      model_name: "SAM2" + (isVideo ? "_video" : ""),
       model_path: "facebook/sam2-hiera-tiny",
-      dtype: "bfloat16",
+      dtype: "float32",
     },
   };
   let formData = modelChoices["sam2"];
@@ -48,23 +51,23 @@ License: CECILL-C
     const model_config: ModelConfig = {
       config: {
         name: formData.model_name,
-        task: ImageTask.MASK_GENERATION,
+        task: isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION,
         path: formData.model_path,
-        config: { dtype: formData.dtype },
+        // Note: dtype or torch_dtype ? >> some model requires dtype, others torch_dtype, so use both
+        config: { dtype: formData.dtype, torch_dtype: formData.dtype },
         processor_config: {},
       },
       provider: formData.provider,
     };
-
-    const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
-
+    const success = await api.instantiateModel(model_config); //NOTE: may take some time
     if (!success) {
       console.error(`Couldn't instantiate model '${model_config.config.name}'`);
       return;
+    } else {
+      console.log(`Model '${model_config.config.name}' added.`);
     }
 
     isAddingModelRequestPending = false;
-    console.log(`Model '${model_config.config.name}' added.`);
 
     dispatch("listModels");
     dispatch("cancelAddModel");
@@ -79,7 +82,7 @@ License: CECILL-C
   class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50 overflow-y-auto w-68 rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Instantiate Segmentation model</p>
+    <p>Instantiate Segmentation model {isVideo ? " for Video" : ""}</p>
   </div>
   <div class="p-3 flex flex-col gap-2">
     <h5 class="font-medium">Provider (only use providers installed with pixano-inference)</h5>

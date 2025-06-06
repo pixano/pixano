@@ -12,10 +12,16 @@ from fastapi.encoders import jsonable_encoder
 from pixano_inference.client import PixanoInferenceClient
 from pixano_inference.pydantic import LanceVector
 from pixano_inference.pydantic.tasks import CompressedRLE as PixanoInferenceCompressedRLE
-from pixano_inference.pydantic.tasks import ImageMaskGenerationRequest, ImageMaskGenerationResponse
+from pixano_inference.pydantic.tasks import (
+    ImageMaskGenerationRequest,
+    ImageMaskGenerationResponse,
+    VideoMaskGenerationOutput,
+    VideoMaskGenerationRequest,
+    VideoMaskGenerationResponse,
+)
 from pixano_inference.utils import is_url
 
-from pixano.features import BBox, CompressedRLE, Image, NDArrayFloat, Source, ViewEmbedding
+from pixano.features import BBox, CompressedRLE, Image, NDArrayFloat, SequenceFrame, Source, ViewEmbedding
 from pixano.features.schemas.entities.entity import Entity
 from pixano.features.types.schema_reference import EntityRef, SourceRef, ViewRef
 
@@ -125,3 +131,99 @@ async def image_mask_generation(
     score = response.data.scores.values[0]
 
     return mask, score, response.data.image_embedding, response.data.high_resolution_features
+
+
+async def video_mask_generation(
+    client: PixanoInferenceClient,
+    media_dir: Path,
+    video: list[SequenceFrame],
+    source: Source,
+    entity: Entity | None = None,
+    bbox: BBox | None = None,
+    points: list[list[int]] | None = None,
+    labels: list[int] | None = None,
+    **client_kwargs: Any,
+) -> tuple[list[CompressedRLE], list[int], list[int]]:
+    """Image mask generation task.
+
+    Args:
+        client: Pixano inference client.
+        media_dir: Media directory.
+        video: Video as list of SequenceFrame.
+        source: The source refering to the model.
+        entity: Entity to put objects in, if provided.
+        bbox: Bounding box of the object in the original image.
+        points: Points to generate mask for.
+        labels: Labels of the points. If 0, the point is background else the point is foreground.
+        client_kwargs: Additional kwargs for the client to be passed.
+
+    Returns:
+        tuple of the compressed RLE mask, its score, the source of the image, the image embeddings and the high
+        resolution features The features are returned if not provided in the arguments otherwise None is returned.
+    """
+    if not isinstance(video, list):
+        raise ValueError("Video format not currently supported, please use sequence frames.")
+    video_request = [sf.url if is_url(sf.url) else sf.open(media_dir, "base64") for sf in video]
+
+    if points is not None:
+        points_request = [points]
+    else:
+        points_request = None
+    if labels is not None:
+        labels_request = [labels]
+    else:
+        labels_request = None
+    if bbox is not None:
+        if bbox.is_normalized:
+            bbox = bbox.denormalize(height=video[0].height, width=video[0].width)
+        bbox_request = [[int(c) for c in bbox.xyxy_coords]]
+    else:
+        bbox_request = None
+
+    request = VideoMaskGenerationRequest(
+        video=video_request,
+        objects_ids=range(len(video)),
+        frame_indexes=range(len(video)),
+        boxes=bbox_request,
+        points=points_request,
+        labels=labels_request,
+        model=source.name,
+    )
+
+    response: VideoMaskGenerationResponse = await client.video_mask_generation(request, **client_kwargs)
+
+    inference_metadata = jsonable_encoder(
+        {
+            "timestamp": response.timestamp,
+            "processing_time": response.processing_time,
+            **response.metadata,
+        }
+    )
+
+    masks: list[CompressedRLE] = []
+    objects_ids: list[int] = []
+    frame_indexes: list[int] = []
+
+    if response.status == "SUCCESS":
+        output: VideoMaskGenerationOutput = response.data
+        entity_ref_id = shortuuid.uuid()  # used to check masks are from same generation when no entity in input
+
+        for o_mask, obj_id, frame_idx in zip(output.masks, output.objects_ids, output.frame_indexes):
+            image = video[frame_idx]
+            mask_inference: PixanoInferenceCompressedRLE = o_mask
+            mask = CompressedRLE(
+                id=shortuuid.uuid(),
+                item_ref=image.item_ref,
+                view_ref=ViewRef(name=image.table_name, id=image.id),
+                entity_ref=EntityRef(name=entity.table_name, id=entity.id)
+                if entity
+                else EntityRef(name="", id=entity_ref_id),
+                source_ref=SourceRef(id=source.id),
+                inference_metadata=inference_metadata,
+                **mask_inference.model_dump(),
+            )
+            masks.append(mask)
+            objects_ids.append(obj_id)
+            frame_indexes.append(frame_idx)
+
+    return masks, objects_ids, frame_indexes

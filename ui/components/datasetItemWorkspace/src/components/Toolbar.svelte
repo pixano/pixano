@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import {
+    Check,
     MinusCircleIcon,
     MousePointer,
     PlusCircleIcon,
@@ -14,13 +15,17 @@ License: CECILL-C
     Share2,
     Square,
     Wand2Icon,
+    X,
   } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
-  import { pixanoInferenceSegmentationModelsStore } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+  import {
+    pixanoInferenceSegmentationModelsStore,
+    pixanoInferenceTracking,
+  } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
 
   import { isLocalSegmentationModel } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import { clearHighlighting } from "../lib/api/objectsApi/clearHighlighting";
@@ -70,6 +75,10 @@ License: CECILL-C
       )
         configSmartToolClick();
     } else selectTool(panTool);
+  };
+
+  const onAbort = () => {
+    newShape.set({ status: "none", shouldReset: true });
   };
 
   const configSmartToolClick = () => {
@@ -155,6 +164,20 @@ License: CECILL-C
       >
         <Square />
       </IconButton>
+      {#if isVideo && $pixanoInferenceTracking.mustValidate}
+        <IconButton
+          tooltipContent={"Track"}
+          on:click={() =>
+            pixanoInferenceTracking.set({ ...$pixanoInferenceTracking, validated: true })}
+          selected={false}
+        >
+          <Check />
+        </IconButton>
+        <IconButton tooltipContent={"Abort tracking (Escape)"} on:click={onAbort} selected={false}>
+          <X />
+        </IconButton>
+      {/if}
+
       <div class="w-1 -m-3.5 h-full bg-primary-light"></div>
       <IconButton
         tooltipContent={"Smart segmentation model settings"}

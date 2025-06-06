@@ -39,6 +39,7 @@ class DefaultVideoDatasetItem(DatasetItem):
     tracks: list[Track]
     tracklets: list[Tracklet]
     bboxes: list[BBox]
+    masks: list[CompressedRLE]
     keypoints: list[KeyPoints]
 
 
