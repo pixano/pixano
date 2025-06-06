@@ -8,7 +8,7 @@ License: CECILL-C
   import { Plus, Sparkles } from "lucide-svelte";
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, IconButton, ImageTask, PrimaryButton, VideoTask, WorkspaceType } from "../.."; //TMP: ImageTask
+  import { api, IconButton, ImageTask, PrimaryButton, VideoTask, WorkspaceType } from "../..";
   import {
     currentDatasetStore,
     isLocalSegmentationModel,
@@ -18,6 +18,7 @@ License: CECILL-C
   import {
     pixanoInferenceSegmentationModelsStore,
     pixanoInferenceSegmentationURL,
+    pixanoInferenceTrackingNbAdditionalFrames,
     type PixanoInferenceSegmentationModel,
   } from "./inference";
   import ModelItem from "./ModelItem.svelte";
@@ -28,6 +29,8 @@ License: CECILL-C
   export let choices: Array<string>;
   export let selected: string;
   let localOrPixinf = $isLocalSegmentationModel ? "local" : "pixinf";
+
+  let isVideo = $currentDatasetStore.workspace === WorkspaceType.VIDEO;
 
   let showAddModelModal = false;
   let showConnectModal = false;
@@ -44,10 +47,7 @@ License: CECILL-C
   onMount(connectToPixanoInference);
 
   const listModels = async () => {
-    const task =
-      $currentDatasetStore.workspace === WorkspaceType.VIDEO
-        ? VideoTask.MASK_GENERATION
-        : ImageTask.MASK_GENERATION;
+    const task = isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION;
     const availableSegmentationModels = await api.listModels(task);
 
     const availableSegmentationModelsNames = availableSegmentationModels.map((model) => model.name);
@@ -190,6 +190,31 @@ License: CECILL-C
         </div>
       </div>
     </label>
+    {#if isVideo}
+      <div class="h-1 bg-primary-light" />
+      <div class="ml-4 flex flex-row items-center">
+        <label for="positiveInteger" class="mr-2">Frames to track</label>
+        <div
+          class="flex w-20 h-10 items-center rounded-md border border-gray-300 bg-white pl-3 text-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:ring-offset-2"
+        >
+          <input
+            class="w-full focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            type="number"
+            id="positiveInteger"
+            name="positiveInteger"
+            min="0"
+            step="1"
+            value={$pixanoInferenceTrackingNbAdditionalFrames}
+            on:change={(e) => {
+              pixanoInferenceTrackingNbAdditionalFrames.set(parseInt(e.currentTarget.value));
+            }}
+          />
+        </div>
+      </div>
+      <p class="w-60 ml-2 italic text-gray-500">
+        First use of a tracking model may be long. A small value is advised first.
+      </p>
+    {/if}
     <div class="h-1 bg-primary-light" />
     <div class="flex flex-row gap-2 px-3 justify-center">
       <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
@@ -208,7 +233,7 @@ License: CECILL-C
 
 {#if showAddModelModal}
   <AddModelModal
-    isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO}
+    {isVideo}
     on:listModels={listModels}
     on:cancelAddModel={handleCloseAddModelModal}
   />

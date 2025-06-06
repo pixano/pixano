@@ -41,3 +41,5 @@ export const pixanoInferenceSegmentationModelsStore = writable<PixanoInferenceSe
 export const pixanoInferenceSegmentationURL = writable<string>(DEFAULT_URL);
 
 export const pixanoInferenceToValidateTrackingMasks = writable<MaskSegmentationOutput[]>([]);
+
+export const pixanoInferenceTrackingNbAdditionalFrames = writable<number>(5);

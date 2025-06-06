@@ -24,6 +24,7 @@ License: CECILL-C
     pixanoInferenceSegmentationModelsStore,
     pixanoInferenceSegmentationURL,
     pixanoInferenceToValidateTrackingMasks,
+    pixanoInferenceTrackingNbAdditionalFrames,
     type PixanoInferenceSegmentationOutput,
     type PixanoInferenceVideoSegmentationOutput,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
@@ -156,7 +157,6 @@ License: CECILL-C
     viewRef: Reference,
     points: LabeledClick[],
     box: Box,
-    num_frames: number = 10,
   ): Promise<Mask | undefined> => {
     const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
     if (!isConnected) return;
@@ -179,7 +179,8 @@ License: CECILL-C
     const sub_video = full_video.filter(
       (sf) =>
         (sf as SequenceFrame).data.frame_index >= first_frame.data.frame_index &&
-        (sf as SequenceFrame).data.frame_index <= first_frame.data.frame_index + num_frames,
+        (sf as SequenceFrame).data.frame_index <=
+          first_frame.data.frame_index + $pixanoInferenceTrackingNbAdditionalFrames,
     );
 
     //need to remove "/media" from seqframes url, and move "data" outside !
