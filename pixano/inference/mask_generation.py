@@ -162,7 +162,7 @@ async def video_mask_generation(
         resolution features The features are returned if not provided in the arguments otherwise None is returned.
     """
     if not isinstance(video, list):
-        raise "Video format not currently supported, please use sequence frames."
+        raise ValueError("Video format not currently supported, please use sequence frames.")
     video_request = [sf.url if is_url(sf.url) else sf.open(media_dir, "base64") for sf in video]
 
     if points is not None:

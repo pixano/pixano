@@ -265,6 +265,42 @@ async def test_image_mask_generation(
             [[1, 2]],
             [0],
         ),
+        (
+            VideoMaskGenerationResponse(
+                id="id",
+                status="SUCCESS",
+                timestamp=datetime(year=2025, month=2, day=19),
+                processing_time=1.0,
+                metadata={"metadata": "value"},
+                data=VideoMaskGenerationOutput(
+                    masks=[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))],
+                    objects_ids=[0],
+                    frame_indexes=[0],
+                ),
+            ),
+            (
+                CompressedRLE(
+                    size=[10, 2],
+                    counts=bytes([3, 4]),
+                    entity_ref=EntityRef(id="test_entity", name="entity"),
+                    view_ref=ViewRef(id="image", name="image"),
+                    item_ref=ItemRef(id="test_item"),
+                    source_ref=SourceRef(id="test_source"),
+                    inference_metadata=jsonable_encoder(
+                        {
+                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "processing_time": 1.0,
+                            "metadata": "value",
+                        }
+                    ),
+                ),
+                [0],
+                [0],
+            ),
+            BBox(coords=[0.1, 0.2, 0.3, 0.4], is_normalized=True, format="xyxy"),
+            [[1, 2]],
+            [0],
+        ),
     ],
 )
 async def test_video_mask_generation(
@@ -299,3 +335,20 @@ async def test_video_mask_generation(
     assert masks[0].model_dump(exclude=exclude_keys) == expected_mask.model_dump(exclude=exclude_keys)
     assert objects_ids == expected_objects_ids
     assert frame_indexes == expected_frame_indexes
+
+
+@pytest.mark.asyncio
+@patch("pixano_inference.client.PixanoInferenceClient.video_mask_generation")
+async def test_error_video_mask_generation(
+    simple_pixano_inference_client: PixanoInferenceClient,
+):
+    with pytest.raises(ValueError, match="Video format not currently supported, please use sequence frames."):
+        await video_mask_generation(
+            client=simple_pixano_inference_client,
+            media_dir=Path("."),
+            video="not a list",
+            source=Source(id="test_source", name="test_source", kind="model"),
+            bbox=None,
+            points=None,
+            labels=None,
+        )
