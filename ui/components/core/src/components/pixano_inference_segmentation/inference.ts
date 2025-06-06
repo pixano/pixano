@@ -35,6 +35,11 @@ export type PixanoInferenceVideoSegmentationOutput = {
   masks: MaskSegmentationOutput[];
 };
 
+export type PixanoInferenceTrackingCfg = {
+  mustValidate: boolean;
+  validated: boolean;
+};
+
 export const pixanoInferenceSegmentationModelsStore = writable<PixanoInferenceSegmentationModel[]>(
   [],
 );
@@ -43,3 +48,8 @@ export const pixanoInferenceSegmentationURL = writable<string>(DEFAULT_URL);
 export const pixanoInferenceToValidateTrackingMasks = writable<MaskSegmentationOutput[]>([]);
 
 export const pixanoInferenceTrackingNbAdditionalFrames = writable<number>(5);
+
+export const pixanoInferenceTracking = writable<PixanoInferenceTrackingCfg>({
+  mustValidate: false,
+  validated: false,
+});

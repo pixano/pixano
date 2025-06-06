@@ -13,13 +13,16 @@ License: CECILL-C
     currentDatasetStore,
     isLocalSegmentationModel,
   } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import Checkbox from "../ui/checkbox/checkbox.svelte";
   import AddModelModal from "./AddModelModal.svelte";
   import ConnectModal from "./ConnectModal.svelte";
   import {
     pixanoInferenceSegmentationModelsStore,
     pixanoInferenceSegmentationURL,
+    pixanoInferenceTracking,
     pixanoInferenceTrackingNbAdditionalFrames,
     type PixanoInferenceSegmentationModel,
+    type PixanoInferenceTrackingCfg,
   } from "./inference";
   import ModelItem from "./ModelItem.svelte";
 
@@ -97,6 +100,13 @@ License: CECILL-C
 
   const handleLocalOrPixinfChange = () => {
     isLocalSegmentationModel.set(localOrPixinf === "local");
+  };
+
+  const handleValTrackingClick = (checked: boolean) => {
+    pixanoInferenceTracking.set({
+      mustValidate: checked,
+      validated: false,
+    } as PixanoInferenceTrackingCfg);
   };
 
   function handleConfirm() {
@@ -214,6 +224,14 @@ License: CECILL-C
       <p class="w-60 ml-2 italic text-gray-500">
         First use of a tracking model may be long. A small value is advised first.
       </p>
+      <div class="h-1 bg-primary-light" />
+      <div class="ml-4 flex gap-4 items-center">
+        <Checkbox
+          handleClick={handleValTrackingClick}
+          checked={$pixanoInferenceTracking.mustValidate}
+        />
+        <span>Validate before tracking</span>
+      </div>
     {/if}
     <div class="h-1 bg-primary-light" />
     <div class="flex flex-row gap-2 px-3 justify-center">
