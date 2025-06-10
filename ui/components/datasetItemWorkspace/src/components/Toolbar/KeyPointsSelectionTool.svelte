@@ -6,10 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { TangentIcon } from "lucide-svelte";
-
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
+  import keypoints_icon from "@pixano/core/src/assets/lucide_keypoints_icon.svg";
 
   import { templates } from "../../lib/settings/keyPointsTemplates";
   import { keyPointTool } from "../../lib/settings/selectionTools";
@@ -46,7 +45,7 @@ License: CECILL-C
   })}
 >
   <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>
-    <TangentIcon />
+    <img src={keypoints_icon} alt="keypoints icon" />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Keypoint}
     {#each templates as template}

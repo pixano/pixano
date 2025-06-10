@@ -13,9 +13,7 @@ License: CECILL-C
     GitCommitHorizontal,
     Link,
     Pencil,
-    Share2,
     Square,
-    TangentIcon,
     Trash2,
     Type,
   } from "lucide-svelte";
@@ -33,6 +31,8 @@ License: CECILL-C
     type DisplayControl,
     type KeypointsTemplate,
   } from "@pixano/core";
+  import keypoints_icon from "@pixano/core/src/assets/lucide_keypoints_icon.svg";
+  import polygon_icon from "@pixano/core/src/assets/lucide_polygon_icon.svg";
 
   import { deleteObject, relink } from "../../lib/api/objectsApi";
   import {
@@ -122,10 +122,10 @@ License: CECILL-C
         <Square class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Mask)}
-        <Share2 class="h-4" />
+        <img src={polygon_icon} alt="polygon icon" class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Keypoints)}
-        <TangentIcon class="h-4" />
+        <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Tracklet)}
         <GitCommitHorizontal class="h-4" />
@@ -188,10 +188,10 @@ License: CECILL-C
           <Square class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
-          <Share2 class="h-4" />
+          <img src={polygon_icon} alt="polygon icon" class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
-          <TangentIcon class="h-4" />
+          <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.TextSpan}
           <Type class="h-4" />
