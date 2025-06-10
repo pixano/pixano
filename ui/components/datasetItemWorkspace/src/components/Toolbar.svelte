@@ -127,7 +127,7 @@ License: CECILL-C
       on:click={() => selectTool(polygonTool)}
       selected={$selectedTool?.type === ToolType.Polygon}
     >
-      <img src={polygon_icon} />
+      <img src={polygon_icon} alt="polygon icon" />
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}

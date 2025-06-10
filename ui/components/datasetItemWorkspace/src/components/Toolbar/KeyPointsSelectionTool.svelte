@@ -45,7 +45,7 @@ License: CECILL-C
   })}
 >
   <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>
-    <img src={keypoints_icon} />
+    <img src={keypoints_icon} alt="keypoints icon" />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Keypoint}
     {#each templates as template}

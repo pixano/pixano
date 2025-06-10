@@ -122,10 +122,10 @@ License: CECILL-C
         <Square class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Mask)}
-        <img src={polygon_icon} class="h-4" />
+        <img src={polygon_icon} alt="polygon icon" class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Keypoints)}
-        <img src={keypoints_icon} class="h-4" />
+        <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
       {/if}
       {#if child.is_type(BaseSchema.Tracklet)}
         <GitCommitHorizontal class="h-4" />
@@ -188,10 +188,10 @@ License: CECILL-C
           <Square class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
-          <img src={polygon_icon} class="h-4" />
+          <img src={polygon_icon} alt="polygon icon" class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
-          <img src={keypoints_icon} class="h-4" />
+          <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
         {/if}
         {#if trackletChild.table_info.base_schema === BaseSchema.TextSpan}
           <Type class="h-4" />
