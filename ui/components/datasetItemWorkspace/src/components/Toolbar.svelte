@@ -12,7 +12,6 @@ License: CECILL-C
     MousePointer,
     PlusCircleIcon,
     Settings,
-    Share2,
     Square,
     Wand2Icon,
     X,
@@ -22,6 +21,7 @@ License: CECILL-C
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
   import { cn, IconButton } from "@pixano/core/src";
+  import polygon_icon from "@pixano/core/src/assets/lucide_polygon_icon.svg";
   import {
     pixanoInferenceSegmentationModelsStore,
     pixanoInferenceTracking,
@@ -127,7 +127,7 @@ License: CECILL-C
       on:click={() => selectTool(polygonTool)}
       selected={$selectedTool?.type === ToolType.Polygon}
     >
-      <Share2 />
+      <img src={polygon_icon} />
     </IconButton>
     <KeyPointsSelection {selectTool} />
     {#if isVideo}
