@@ -8,13 +8,14 @@ License: CECILL-C
   import { createEventDispatcher } from "svelte";
 
   import { api, Input, PrimaryButton, type InputEvents } from "../..";
-  import { pixanoInferenceSegmentationURL } from "./inference";
+  import { pixanoInferenceSegmentationURL, pixanoInferenceTrackingURL } from "./inference";
 
   export let isConnected = false;
+  export let isVideo = false;
 
   // default values
   let formData = {
-    pi_url: $pixanoInferenceSegmentationURL,
+    pi_url: isVideo ? $pixanoInferenceTrackingURL : $pixanoInferenceSegmentationURL,
   };
 
   const dispatch = createEventDispatcher();
@@ -22,7 +23,11 @@ License: CECILL-C
   async function handleConnect() {
     isConnected = await api.isInferenceApiHealthy(formData.pi_url);
     if (isConnected) {
-      pixanoInferenceSegmentationURL.set(formData.pi_url);
+      if (isVideo) {
+        pixanoInferenceTrackingURL.set(formData.pi_url);
+      } else {
+        pixanoInferenceSegmentationURL.set(formData.pi_url);
+      }
       dispatch("listModels");
       dispatch("cancelConnect"); //also close modal
     }
