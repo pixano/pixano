@@ -25,6 +25,7 @@ License: CECILL-C
     pixanoInferenceSegmentationURL,
     pixanoInferenceToValidateTrackingMasks,
     pixanoInferenceTrackingNbAdditionalFrames,
+    pixanoInferenceTrackingURL,
     type PixanoInferenceSegmentationOutput,
     type PixanoInferenceVideoSegmentationOutput,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
@@ -158,7 +159,7 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
-    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
+    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceTrackingURL);
     if (!isConnected) return;
     const models = await api.listModels();
     const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);

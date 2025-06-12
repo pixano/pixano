@@ -21,6 +21,7 @@ License: CECILL-C
     pixanoInferenceSegmentationURL,
     pixanoInferenceTracking,
     pixanoInferenceTrackingNbAdditionalFrames,
+    pixanoInferenceTrackingURL,
     type PixanoInferenceSegmentationModel,
     type PixanoInferenceTrackingCfg,
   } from "./inference";
@@ -40,7 +41,9 @@ License: CECILL-C
 
   let isInferenceApiConnected = false;
   async function connectToPixanoInference() {
-    isInferenceApiConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
+    isInferenceApiConnected = await api.isInferenceApiHealthy(
+      isVideo ? $pixanoInferenceTrackingURL : $pixanoInferenceSegmentationURL,
+    );
     if (isInferenceApiConnected) {
       await listModels();
     }
@@ -251,6 +254,7 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectModal
+    {isVideo}
     bind:isConnected={isInferenceApiConnected}
     on:cancelConnect={() => (showConnectModal = false)}
     on:listModels={listModels}

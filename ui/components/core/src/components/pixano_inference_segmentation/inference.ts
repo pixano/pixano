@@ -8,7 +8,8 @@ import { writable } from "svelte/store";
 
 import type { AnnotationType, BaseSchema, MaskType } from "../../lib/types";
 
-const DEFAULT_URL = "http://localhost:9152";
+const DEFAULT_SEG_URL = "http://pixano-inference-sami:8000";
+const DEFAULT_TRACK_URL = "http://pixano-inference-samv:8000";
 
 export type PixanoInferenceSegmentationModel = {
   selected: boolean;
@@ -43,7 +44,8 @@ export type PixanoInferenceTrackingCfg = {
 export const pixanoInferenceSegmentationModelsStore = writable<PixanoInferenceSegmentationModel[]>(
   [],
 );
-export const pixanoInferenceSegmentationURL = writable<string>(DEFAULT_URL);
+export const pixanoInferenceSegmentationURL = writable<string>(DEFAULT_SEG_URL);
+export const pixanoInferenceTrackingURL = writable<string>(DEFAULT_TRACK_URL);
 
 export const pixanoInferenceToValidateTrackingMasks = writable<MaskSegmentationOutput[]>([]);
 
