@@ -29,6 +29,7 @@ export const isLocalSegmentationModel = writable<boolean>(true);
 export const sourcesStore = writable<Source[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(true);
 export const datasetTableStore = writable<DatasetTableStore>(defaultDatasetTableValues);
+export const datasetItemIds = writable<Array<string>>([]);
 export const datasetTotalItemsCount = writable<number>(0);
 export const canSaveCurrentItemStore = writable<boolean>();
 export const saveCurrentItemStore = writable<{ shouldSave: boolean; canSave: boolean }>({

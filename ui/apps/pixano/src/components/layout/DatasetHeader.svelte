@@ -16,13 +16,13 @@ License: CECILL-C
   import { navItems } from "$lib/constants/headerConstants";
   import {
     currentDatasetStore,
+    datasetItemIds,
     datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
 
   export let pageId: string | null;
-  export let datasetItemsIds: string[];
 
   let currentItemId: string;
   let isLoading: boolean;
@@ -43,14 +43,14 @@ License: CECILL-C
   });
 
   const getDatasetItemDisplayCount = () => {
-    const index = datasetItemsIds.indexOf(currentItemId);
-    return `${index + 1} of ${datasetItemsIds.length}`;
+    const index = $datasetItemIds.indexOf(currentItemId);
+    return `${index + 1} of ${$datasetItemIds.length}`;
   };
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
     // Find the neighbor item id
-    const neighborId = findNeighborItemId(datasetItemsIds, direction, currentItemId);
+    const neighborId = findNeighborItemId($datasetItemIds, direction, currentItemId);
 
     // If a neighbor item has been found
     if (neighborId) {
@@ -92,7 +92,7 @@ License: CECILL-C
     if (currentItemId) {
       // Update the current page to ensure that we follow the selected item
       datasetTableStore.update((pagination) => {
-        pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
+        pagination.currentPage = getPageFromItemId($datasetItemIds, currentItemId);
         return pagination;
       });
       await navigateTo(`/${$currentDatasetStore.id}/dataset`);

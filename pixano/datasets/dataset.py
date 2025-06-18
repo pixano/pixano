@@ -873,7 +873,7 @@ class Dataset:
 
     def semantic_search(
         self, query: str, table_name: str, limit: int, skip: int = 0
-    ) -> tuple[list[BaseSchema], list[float]]:
+    ) -> tuple[list[BaseSchema], list[float], list[str]]:
         """Perform a semantic search.
 
         It searches for the closest items to the query in the table embeddings.
@@ -885,7 +885,7 @@ class Dataset:
             skip: Skip number of items
 
         Returns:
-            Tuple of items and distances.
+            Tuple of items, distances, and full sorted list of ids.
         """
         if not isinstance(query, str):
             raise DatasetAccessError("query must be a string.")
@@ -907,7 +907,8 @@ class Dataset:
             table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
         )  # TODO: change high limit if lancedb supports it
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
-        item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
+        full_item_ids = item_results["item_ref.id"].to_list()
+        item_ids = full_item_ids[skip : skip + limit]
 
         item_rows = self.get_data("item", ids=item_ids)
         item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
@@ -915,7 +916,7 @@ class Dataset:
             item_results.row(by_predicate=(pl.col("item_ref.id") == item.id), named=True)["_distance"]
             for item in item_rows
         ]
-        return item_rows, distances
+        return item_rows, distances, full_item_ids
 
     @staticmethod
     def list(directory: Path) -> list[DatasetInfo]:

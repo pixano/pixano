@@ -17,6 +17,7 @@ class TestDatasetBrowser:
             table_data=TableData(columns=[PaginationColumn(name="col", type="col")], rows=[{"metadata": 123}]),
             pagination=PaginationInfo(current_page=1, page_size=10, total_size=20),
             semantic_search=["search1", "search2"],
+            item_ids=["id0"],
         )
 
 
