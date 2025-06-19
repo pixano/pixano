@@ -39,6 +39,11 @@ def test_get_browser(
         output.table_data.columns.sort(key=lambda x: x.name)
         assert browser.model_dump() == output.model_dump()
 
+    response = client.get(f"/browser/{info_dataset_image_bboxes_keypoint.id}?limit=50&skip=0&where=split=%27test%27")
+    assert response.status_code == 200
+    browser = DatasetBrowser.model_validate(response.json())
+    assert browser.item_ids == ["0", "2", "4"]
+
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
     assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
@@ -93,3 +98,17 @@ def test_get_browser_semantic_search(
     )
     assert response.status_code == 400
     assert response.json() == {"detail": "Table image is not a view embedding table."}
+
+
+def test_get_item_ids(
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
+    info_dataset_image_bboxes_keypoint: DatasetInfo,
+    browser_dataset_image_bboxes_keypoint: DatasetBrowser,
+):
+    app, settings, client = app_and_settings_with_client
+
+    info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
+
+    response = client.get(f"/browser/item_ids/{info_dataset_image_bboxes_keypoint.id}")
+    assert response.status_code == 200
+    assert browser_dataset_image_bboxes_keypoint.item_ids == response.json()
