@@ -111,15 +111,16 @@ License: CECILL-C
     resetTool();
   };
 
-  const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
+  const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"], viewname: string) => {
     onTimeTrackClick(frameIndex);
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
-          (!ann.is_type(BaseSchema.Tracklet) &&
+          ann.data.view_ref.name === viewname &&
+          ((!ann.is_type(BaseSchema.Tracklet) &&
             getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
-          (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id);
+            (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id));
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
           highlighted: to_highlight ? "self" : "none",
@@ -238,7 +239,7 @@ License: CECILL-C
         }),
       );
     }
-    onEditKeyItemClick($currentFrameIndex);
+    onEditKeyItemClick($currentFrameIndex, tracklet.data.view_ref.name);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
