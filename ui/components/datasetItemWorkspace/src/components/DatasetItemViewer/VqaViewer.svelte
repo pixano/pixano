@@ -69,7 +69,7 @@ License: CECILL-C
   ) => Promise<Mask | undefined>;
 
   // utility vars for resizing with slide bar
-  let vqaAreaMaxWidth = 450; //default width
+  let vqaAreaMaxWidth = 500; //default width
   const minVqaAreaWidth = 260; //minimum width for VqaArea (less may hide some elements)
   let expanding = false;
 
