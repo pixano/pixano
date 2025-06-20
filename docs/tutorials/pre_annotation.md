@@ -6,6 +6,7 @@ It is common to use a object detection model to pre-annotate a dataset.
 
 This tutorial will help you unlock this feature.
 
+
 ## Using YOLOv11 from Ultralytics
 
 In your environnement, install [ultralytics](https://www.ultralytics.com)
@@ -25,7 +26,7 @@ dataset_dirname = "pixano_dataset_directory_name"  # as in library directory
 
 Utility function to create pixano BBox and associated Entity.
 
-It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspace`.
+It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspaces`.
 
 Of course you can customize it to match your own dataset.
 
@@ -119,7 +120,7 @@ dataset_dirname = "pixano_dataset_directory_name"  # as in library directory
 
 Utility function to create pixano BBox and associated Entity.
 
-It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspace`.
+It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspaces`.
 
 Of course you can customize it to match your own dataset.
 
