@@ -6962,8 +6962,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 
             <details class="quote">
               <summary>Source code in <code>pixano/datasets/dataset.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-920">920</a></span>
-<span class="normal"><a href="#__codelineno-0-921">921</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-921">921</a></span>
 <span class="normal"><a href="#__codelineno-0-922">922</a></span>
 <span class="normal"><a href="#__codelineno-0-923">923</a></span>
 <span class="normal"><a href="#__codelineno-0-924">924</a></span>
@@ -6975,20 +6974,21 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-930">930</a></span>
 <span class="normal"><a href="#__codelineno-0-931">931</a></span>
 <span class="normal"><a href="#__codelineno-0-932">932</a></span>
-<span class="normal"><a href="#__codelineno-0-933">933</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a><span class="nd">@staticmethod</span>
-</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
-</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;List the datasets information in directory.</span>
-</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>
-</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a><span class="sd">        directory: Directory to search in.</span>
-</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>
-</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a><span class="sd">        List of dataset infos.</span>
-</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>    <span class="n">dataset_infos</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>    <span class="k">for</span> <span class="n">json_fp</span> <span class="ow">in</span> <span class="n">directory</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*/info.json&quot;</span><span class="p">):</span>
-</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>        <span class="n">dataset_infos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DatasetInfo</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">json_fp</span><span class="p">))</span>
-</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>    <span class="k">return</span> <span class="n">dataset_infos</span>
+<span class="normal"><a href="#__codelineno-0-933">933</a></span>
+<span class="normal"><a href="#__codelineno-0-934">934</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="nd">@staticmethod</span>
+</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
+</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;List the datasets information in directory.</span>
+</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>
+</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a><span class="sd">        directory: Directory to search in.</span>
+</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>
+</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a><span class="sd">        List of dataset infos.</span>
+</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>    <span class="n">dataset_infos</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>    <span class="k">for</span> <span class="n">json_fp</span> <span class="ow">in</span> <span class="n">directory</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*/info.json&quot;</span><span class="p">):</span>
+</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>        <span class="n">dataset_infos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DatasetInfo</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">json_fp</span><span class="p">))</span>
+</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>    <span class="k">return</span> <span class="n">dataset_infos</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -7479,11 +7479,15 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 
   
       staticmethod
-   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#float">float</a>]]</code>
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/functions.html#float">float</a>], <a class="autorefs autorefs-internal" title="list(directory)
+
+  
+      staticmethod
+   (pixano.datasets.dataset.Dataset.list)" href="#pixano.datasets.dataset.Dataset.list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#str">str</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tuple of items and distances.</p>
+                <p>Tuple of items, distances, and full sorted list of ids.</p>
               </div>
             </td>
           </tr>
@@ -7537,9 +7541,10 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 <span class="normal"><a href="#__codelineno-0-915">915</a></span>
 <span class="normal"><a href="#__codelineno-0-916">916</a></span>
 <span class="normal"><a href="#__codelineno-0-917">917</a></span>
-<span class="normal"><a href="#__codelineno-0-918">918</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="k">def</span><span class="w"> </span><span class="nf">semantic_search</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-918">918</a></span>
+<span class="normal"><a href="#__codelineno-0-919">919</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a><span class="k">def</span><span class="w"> </span><span class="nf">semantic_search</span><span class="p">(</span>
 </span><span id="__span-0-875"><a id="__codelineno-0-875" name="__codelineno-0-875"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">skip</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">BaseSchema</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
 </span><span id="__span-0-877"><a id="__codelineno-0-877" name="__codelineno-0-877"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform a semantic search.</span>
 </span><span id="__span-0-878"><a id="__codelineno-0-878" name="__codelineno-0-878"></a>
 </span><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a><span class="sd">    It searches for the closest items to the query in the table embeddings.</span>
@@ -7551,7 +7556,7 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 </span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a><span class="sd">        skip: Skip number of items</span>
 </span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a>
 </span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a><span class="sd">        Tuple of items and distances.</span>
+</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a><span class="sd">        Tuple of items, distances, and full sorted list of ids.</span>
 </span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>        <span class="k">raise</span> <span class="n">DatasetAccessError</span><span class="p">(</span><span class="s2">&quot;query must be a string.&quot;</span><span class="p">)</span>
@@ -7573,15 +7578,16 @@ the data in the form of <a class="autorefs autorefs-external" href="https://lanc
 </span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="n">table</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mf">1e9</span><span class="p">)</span><span class="o">.</span><span class="n">to_polars</span><span class="p">()</span>
 </span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>    <span class="p">)</span>  <span class="c1"># TODO: change high limit if lancedb supports it</span>
 </span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>    <span class="n">item_results</span> <span class="o">=</span> <span class="n">semantic_results</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="s2">&quot;_distance&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;_distance&quot;</span><span class="p">)</span>
-</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>    <span class="n">item_ids</span> <span class="o">=</span> <span class="n">item_results</span><span class="p">[</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">()[</span><span class="n">skip</span> <span class="p">:</span> <span class="n">skip</span> <span class="o">+</span> <span class="n">limit</span><span class="p">]</span>
-</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>
-</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>    <span class="n">item_rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;item&quot;</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="n">item_ids</span><span class="p">)</span>
-</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="n">item_rows</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">item_rows</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">item_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
-</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="n">distances</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>        <span class="n">item_results</span><span class="o">.</span><span class="n">row</span><span class="p">(</span><span class="n">by_predicate</span><span class="o">=</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">named</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;_distance&quot;</span><span class="p">]</span>
-</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">item_rows</span>
-</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>    <span class="p">]</span>
-</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>    <span class="k">return</span> <span class="n">item_rows</span><span class="p">,</span> <span class="n">distances</span>
+</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>    <span class="n">full_item_ids</span> <span class="o">=</span> <span class="n">item_results</span><span class="p">[</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">()</span>
+</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="n">item_ids</span> <span class="o">=</span> <span class="n">full_item_ids</span><span class="p">[</span><span class="n">skip</span> <span class="p">:</span> <span class="n">skip</span> <span class="o">+</span> <span class="n">limit</span><span class="p">]</span>
+</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>
+</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="n">item_rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="s2">&quot;item&quot;</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="n">item_ids</span><span class="p">)</span>
+</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="n">item_rows</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">item_rows</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">item_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>    <span class="n">distances</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>        <span class="n">item_results</span><span class="o">.</span><span class="n">row</span><span class="p">(</span><span class="n">by_predicate</span><span class="o">=</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;item_ref.id&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">named</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;_distance&quot;</span><span class="p">]</span>
+</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">item_rows</span>
+</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>    <span class="p">]</span>
+</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>    <span class="k">return</span> <span class="n">item_rows</span><span class="p">,</span> <span class="n">distances</span><span class="p">,</span> <span class="n">full_item_ids</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
