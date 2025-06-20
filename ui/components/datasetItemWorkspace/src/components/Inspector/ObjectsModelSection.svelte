@@ -6,11 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Eye, EyeOff } from "lucide-svelte";
+  import { Eye, EyeOff, SlidersHorizontal } from "lucide-svelte";
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
 
-  import { IconButton, Source } from "@pixano/core/src";
+  import { BaseSchema, BBox, IconButton, Source } from "@pixano/core/src";
+  import SliderWithValue from "@pixano/core/src/components/ui/slider/SliderWithValue.svelte";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, OTHER } from "../../lib/constants";
@@ -20,6 +21,8 @@ License: CECILL-C
   export let numberOfItem: number;
   let modelName: string = OTHER;
   let sectionTitle: string = OTHER + " - unknown";
+  let showFilters = false;
+  let confidenceThreshold = [0.0];
 
   let visibilityStatus = derived([annotations], ([$annotations]) =>
     //Note: as we removed grouping by model, we don't filter by source anymore
@@ -48,6 +51,22 @@ License: CECILL-C
       }),
     );
   };
+
+  const handleConfidenceThresholdChange = () => {
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        if (ann.is_type(BaseSchema.BBox)) {
+          return toggleObjectDisplayControl(
+            ann,
+            "hidden",
+            (ann as BBox).data.confidence <= confidenceThreshold[0],
+          );
+        } else {
+          return ann;
+        }
+      }),
+    );
+  };
 </script>
 
 <section class="h-full">
@@ -60,9 +79,28 @@ License: CECILL-C
       {/if}
     </IconButton>
     <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
+    <IconButton
+      tooltipContent={"Filter: confidence"}
+      selected={showFilters}
+      on:click={() => (showFilters = !showFilters)}
+    >
+      <SlidersHorizontal />
+    </IconButton>
     <slot name="modelSelection" />
     <p>{numberOfItem}</p>
   </div>
+  {#if showFilters}
+    <div>
+      <span>Confidence threshold</span>
+      <SliderWithValue
+        bind:value={confidenceThreshold}
+        onChange={handleConfidenceThresholdChange}
+        min={0}
+        max={1}
+        step={0.01}
+      />
+    </div>
+  {/if}
   <div class="p-2 pt-0 max-h-full">
     <slot />
   </div>
