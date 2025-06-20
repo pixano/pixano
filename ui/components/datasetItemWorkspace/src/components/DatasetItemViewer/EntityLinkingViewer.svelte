@@ -63,7 +63,7 @@ License: CECILL-C
   let loaded: boolean = false; // Loading status of images per view
 
   // utility vars for resizing with slide bar
-  let entityLinkingAreaWidth = 300; //default width
+  let entityLinkingAreaWidth = 700; //default width
   let expanding = false;
 
   /**
