@@ -60,6 +60,8 @@ License: CECILL-C
   let overlapTargetId: string = "";
   let currentTrackletChilds: { trackletChild: Annotation; displayName: string }[] = [];
 
+  let childEditing = false;
+  $: if ($annotations) childEditing = child.ui.displayControl.editing;
   $: if ($annotations || child) buildCurrentTrackletChildList();
 
   const buildCurrentTrackletChildList = () => {
@@ -142,7 +144,7 @@ License: CECILL-C
     {#if $selectedTool.type !== ToolType.Fusion}
       <IconButton
         tooltipContent="Edit object"
-        selected={child.ui.displayControl.editing}
+        selected={childEditing}
         on:click={() => onEditIconClick(child)}
       >
         <Pencil class="h-4" />

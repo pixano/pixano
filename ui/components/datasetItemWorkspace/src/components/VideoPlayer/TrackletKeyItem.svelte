@@ -23,7 +23,10 @@ License: CECILL-C
   export let height: number;
   export let top: number;
   export let oneFrameInPixel: number;
-  export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
+  export let onEditKeyItemClick: (
+    frameIndex: TrackletItem["frame_index"],
+    viewname: string,
+  ) => void;
   export let onClick: (button: number, clientX: number) => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
@@ -38,17 +41,21 @@ License: CECILL-C
   let isItemBeingEdited = false;
 
   $: {
-    const currentObjectBeingEdited = $annotations.find(
-      (object) => object.ui.displayControl.editing,
+    const currentObjectsBeingEdited = $annotations.filter(
+      (ann) =>
+        ann.ui.displayControl.editing &&
+        tracklet.ui.childs.includes(ann) &&
+        ann.ui.frame_index === itemFrameIndex &&
+        ann.ui.frame_index === $currentFrameIndex &&
+        ann.data.entity_ref.id === trackId,
     );
-    isItemBeingEdited =
-      itemFrameIndex === $currentFrameIndex &&
-      currentObjectBeingEdited?.data.entity_ref.id === trackId;
+    isItemBeingEdited = currentObjectsBeingEdited.length === 1;
   }
 
   const onDeleteItemClick = () => {
-    const ann_to_del = tracklet.ui.childs.find((ann) => ann.ui.frame_index === itemFrameIndex);
-    if (!ann_to_del) return;
+    const anns_to_del = tracklet.ui.childs.filter((ann) => ann.ui.frame_index === itemFrameIndex);
+    if (!anns_to_del) return;
+    const anns_to_del_ids = anns_to_del.map((ann) => ann.id);
     if (tracklet.ui.childs.length <= 2) {
       console.error("Deleting one of 2 last item of tracklet, it should not happen.");
       return;
@@ -59,7 +66,7 @@ License: CECILL-C
         .map((ann) => {
           if (ann.id === tracklet.id && ann.is_type(BaseSchema.Tracklet)) {
             (ann as Tracklet).ui.childs = (ann as Tracklet).ui.childs.filter(
-              (fann) => fann.ui.frame_index !== itemFrameIndex,
+              (fann) => !anns_to_del_ids.includes(fann.id),
             );
             //if ann_to_del first/last of tracklet, need to "resize" (childs should be sorted)
             if (itemFrameIndex === tracklet.data.start_timestep) {
@@ -77,22 +84,25 @@ License: CECILL-C
           }
           return ann;
         })
-        .filter((ann) => ann.id !== ann_to_del.id),
+        .filter((ann) => !anns_to_del_ids.includes(ann.id)),
     );
     entities.update((ents) =>
       ents.map((ent) => {
         if (ent.is_track && ent.id === tracklet.data.entity_ref.id) {
-          ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== ann_to_del.id);
+          ent.ui.childs = ent.ui.childs?.filter((ann) => !anns_to_del_ids.includes(ann.id));
         }
         return ent;
       }),
     );
 
-    const save_del_ann: SaveItem = {
-      change_type: "delete",
-      object: ann_to_del,
-    };
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
+    for (const ann_to_del of anns_to_del) {
+      const save_del_ann: SaveItem = {
+        change_type: "delete",
+        object: ann_to_del,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
+    }
+
     if (changed_tracklet) {
       const pixSource = getPixanoSource(sourcesStore);
       tracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
@@ -193,7 +203,9 @@ License: CECILL-C
       <ContextMenu.Item on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item on:click={() => onEditKeyItemClick(itemFrameIndex)}>
+      <ContextMenu.Item
+        on:click={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_ref.name)}
+      >
         Edit item
       </ContextMenu.Item>
     {/if}
