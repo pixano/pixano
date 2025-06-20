@@ -14,7 +14,7 @@ from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import SchemaGroup, is_image, is_text, is_view_embedding
 from pixano.features.utils.image import generate_text_image_base64, get_image_thumbnail, image_to_base64
 
-from .utils import get_dataset, get_rows
+from .utils import assert_table_in_group, get_dataset, get_rows
 
 
 router = APIRouter(prefix="/browser", tags=["Browser"])
@@ -67,11 +67,16 @@ async def get_browser(
     # get data (items and views)
     if semantic_search:
         try:
-            item_rows, distances = dataset.semantic_search(query, embedding_table, limit, skip)
+            item_rows, distances, list_ids = dataset.semantic_search(query, embedding_table, limit, skip)
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
         item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip, where=where)
+        if where is not None:
+            full_item_rows = get_rows(dataset=dataset, table=table_item, where=where)
+            list_ids = [item.id for item in full_item_rows]
+        else:
+            list_ids = dataset.get_all_ids()
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}
@@ -141,4 +146,24 @@ async def get_browser(
         table_data=TableData(columns=cols, rows=rows),
         pagination=PaginationInfo(current_page=skip, page_size=original_limit, total_size=total),
         semantic_search=semantic_search_list,
+        item_ids=list_ids,
     )
+
+
+@router.get("/item_ids/{id}/", response_model=list[str])
+async def get_items_ids(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[str]:
+    """Get all item ids.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        List of dataset items ids.
+    """
+    dataset = get_dataset(id, settings.library_dir, None)
+    assert_table_in_group(dataset, SchemaGroup.ITEM.value, SchemaGroup.ITEM)
+    return dataset.get_all_ids()

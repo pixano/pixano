@@ -1192,7 +1192,7 @@ class TestDataset:
             return df_semantic_search
 
         with patch("lancedb.query.LanceQueryBuilder.to_polars", _mock_to_polars):
-            items, distances = dataset_multi_view_tracking_and_image.semantic_search(
+            items, distances, list_ids = dataset_multi_view_tracking_and_image.semantic_search(
                 "some_text", "image_embedding", limit=50, skip=0
             )
 
@@ -1203,6 +1203,9 @@ class TestDataset:
             assert isinstance(distance, float)
             assert item.id == sorted_df["item_ref.id"][i]
             assert distance == sorted_df["_distance"][i]
+        assert len(items) == len(list_ids)
+        for i in range(len(items)):
+            assert items[i].id == list_ids[i]
 
         with pytest.raises(DatasetAccessError, match="query must be a string"):
             dataset_multi_view_tracking_and_image.semantic_search(0, "image_embedding", limit=50, skip=0)

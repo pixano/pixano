@@ -6,7 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
+  import type { Unsubscriber } from "svelte/motion";
 
   import type { DatasetBrowser } from "@pixano/core/src";
   import { getBrowser } from "@pixano/core/src/api";
@@ -15,7 +16,7 @@ License: CECILL-C
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { datasetTableStore, datasetTotalItemsCount } from "$lib/stores/datasetStores";
+  import { datasetItemIds, datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDatasetId: string;
   let selectedDataset: DatasetBrowser;
@@ -23,27 +24,30 @@ License: CECILL-C
 
   $: page.subscribe((value) => (selectedDatasetId = value.params.dataset));
 
-  $: unsubscribe2datasetTableStore = datasetTableStore.subscribe((pagination) => {
-    if (selectedDatasetId) {
-      getBrowser(
-        selectedDatasetId,
-        pagination.currentPage,
-        pagination.pageSize,
-        pagination.query,
-        pagination.where,
-      )
-        .then((datasetItems) => {
-          if (datasetItems.id) {
-            selectedDataset = datasetItems;
-            //$datasetTotalItemsCount is fetched before and have the real count (different if filtered)
-            selectedDataset.pagination.total_size = $datasetTotalItemsCount;
-          } else {
-            showNoRowModal = true;
-            //do not change current selectedDataset if error / no row.
-          }
-        })
-        .catch((err) => console.log("ERROR: Couldn't get dataset items", err));
-    }
+  let unsubscribe2datasetTableStore: Unsubscriber;
+  onMount(() => {
+    unsubscribe2datasetTableStore = datasetTableStore.subscribe((pagination) => {
+      if (selectedDatasetId) {
+        getBrowser(
+          selectedDatasetId,
+          pagination.currentPage,
+          pagination.pageSize,
+          pagination.query,
+          pagination.where,
+        )
+          .then((datasetItems) => {
+            if (datasetItems.id) {
+              selectedDataset = datasetItems;
+              datasetItemIds.set(selectedDataset.item_ids);
+              selectedDataset.pagination.total_size = selectedDataset.item_ids.length;
+            } else {
+              showNoRowModal = true;
+              //do not change current selectedDataset if error / no row.
+            }
+          })
+          .catch((err) => console.log("ERROR: Couldn't get dataset items", err));
+      }
+    });
   });
 
   const handleSelectItem = async (event: CustomEvent) => {

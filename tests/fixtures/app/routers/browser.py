@@ -71,6 +71,7 @@ def browser_dataset_image_bboxes_keypoint() -> DatasetBrowser:
         ),
         pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
         semantic_search=[],
+        item_ids=["0", "1", "2", "3", "4"],
     )
 
 
@@ -144,6 +145,7 @@ def browser_dataset_multi_view_tracking_and_image() -> DatasetBrowser:
         ),
         pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
         semantic_search=["image_embedding", "video_embeddings"],
+        item_ids=["0", "1", "2", "3", "4"],
     )
 
 
@@ -228,4 +230,5 @@ def browser_dataset_multi_view_tracking_and_image_semantic_search() -> DatasetBr
         ),
         pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
         semantic_search=["image_embedding", "video_embeddings"],
+        item_ids=["2", "3", "4", "1", "0"],
     )

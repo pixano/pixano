@@ -32,7 +32,7 @@ License: CECILL-C
   let datasetErrorModal = false;
 
   // Semantic search
-  let searchInput: string = "";
+  let searchInput: string = $datasetTableStore.query?.search ?? "";
   let selectedSearchModel: string | undefined;
 
   const dispatch = createEventDispatcher();

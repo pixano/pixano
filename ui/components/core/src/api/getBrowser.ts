@@ -26,7 +26,7 @@ export async function getBrowser(
   }
   try {
     const response = await fetch(
-      `/browser/${datasetId}/?skip=${(page - 1) * size}&limit=${size}${query_qparams}${where_qparams}`,
+      `/browser/${datasetId}?skip=${(page - 1) * size}&limit=${size}${query_qparams}${where_qparams}`,
     );
     if (response.ok) {
       datasetItems_raw = (await response.json()) as DatasetBrowserType;

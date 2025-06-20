@@ -15,6 +15,7 @@ License: CECILL-C
   import MainHeader from "../components/layout/MainHeader.svelte";
   import {
     currentDatasetStore,
+    datasetItemIds,
     datasetsStore,
     datasetTableStore,
     datasetTotalItemsCount,
@@ -26,7 +27,6 @@ License: CECILL-C
   import "./styles.css";
 
   let currentDatasetId: string;
-  let currentDatasetItemsIds: string[];
 
   const HOME_ROUTE_ID = "/";
 
@@ -48,17 +48,21 @@ License: CECILL-C
   // Get all the ids of the items of the selected dataset
   $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
 
-  datasetTableStore.subscribe(async (value) => {
+  datasetTableStore.subscribe((value) => {
     if (value.where != undefined) {
-      currentDatasetItemsIds = await api.getDatasetItemsIds(currentDatasetId, value.where);
-      datasetTotalItemsCount.set(currentDatasetItemsIds.length);
+      datasetTotalItemsCount.set($datasetItemIds.length);
     }
   });
 
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
     if (datasetId === undefined) return;
-    currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
-    datasetTotalItemsCount.set(currentDatasetItemsIds.length);
+    if ($datasetItemIds.length === 0) {
+      const item_ids = await api.getDatasetItemsIds(datasetId);
+      datasetItemIds.set(item_ids);
+      datasetTotalItemsCount.set($datasetItemIds.length);
+    } else {
+      datasetTotalItemsCount.set($datasetItemIds.length);
+    }
   };
 
   $: page.subscribe((value) => {
@@ -91,7 +95,7 @@ License: CECILL-C
   {#if $page.route.id === HOME_ROUTE_ID}
     <MainHeader datasets={$datasetsStore} />
   {:else}
-    <DatasetHeader pageId={$page.route.id} datasetItemsIds={currentDatasetItemsIds} />
+    <DatasetHeader pageId={$page.route.id} />
   {/if}
   <main
     class={cn("bg-slate-50 flex flex-col h-screen", $page.route.id !== HOME_ROUTE_ID && "pt-20")}
