@@ -24,6 +24,17 @@ media = Path("/path_to_pixano_media_dir")
 dataset_dirname = "pixano_dataset_directory_name"  # as in library directory
 ```
 
+Load your Pixano dataset
+
+```python
+from pixano.datasets import Dataset
+ds = Dataset(library / dataset_dirname, media_dir=media)
+
+# Add YOLO source
+if not ds.get_data("source", ids="src_yolo"):
+    ds.add_data("source", [Source(id="src_yolo", name="yolo11n", kind="model")])
+```
+
 Utility function to create pixano BBox and associated Entity.
 
 It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspaces`.
@@ -69,17 +80,6 @@ from ultralytics import YOLO
 model = YOLO("yolo11n.pt")
 ```
 
-Load your Pixano dataset
-
-```python
-from pixano.datasets import Dataset
-ds = Dataset(library / dataset_dirname, media_dir=media)
-
-# Add YOLO source
-if not ds.get_data("source", ids="src_yolo"):
-    ds.add_data("source", [Source(id="src_yolo", name="yolo11n", kind="model")])
-```
-
 Pre-annotate
 
 ```python
@@ -120,6 +120,17 @@ from pathlib import Path
 library = Path("/path_to_pixano_library_dir")
 media = Path("/path_to_pixano_media_dir")
 dataset_dirname = "pixano_dataset_directory_name"  # as in library directory
+```
+
+Load your Pixano dataset
+
+```python
+from pixano.datasets import Dataset
+ds = Dataset(library / dataset_dirname, media_dir=media)
+
+# Add GroundingDINO source
+if not ds.get_data("source", ids="src_gdino"):
+    ds.add_data("source", [Source(id="src_gdino", name="GROUNDINGDino", kind="model")])
 ```
 
 Utility function to create pixano BBox and associated Entity.
@@ -174,17 +185,6 @@ model = provider.load_model(
     torch.device("cuda") if torch.cuda.is_available() else "cpu",
     "IDEA-Research/grounding-dino-base"
 )
-```
-
-Load your Pixano dataset
-
-```python
-from pixano.datasets import Dataset
-ds = Dataset(library / dataset_dirname, media_dir=media)
-
-# Add GroundingDINO source
-if not ds.get_data("source", ids="src_gdino"):
-    ds.add_data("source", [Source(id="src_gdino", name="GROUNDINGDino", kind="model")])
 ```
 
 Pre-annotate. We ask Grounding DINO to detect objects of classes ["person", "car", "motorcycle"].
