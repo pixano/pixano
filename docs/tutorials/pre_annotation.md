@@ -6,10 +6,10 @@ It is common to use a object detection model to pre-annotate a dataset.
 
 This tutorial will help you unlock this feature.
 
-
 ## Using YOLOv11 from Ultralytics
 
 In your environnement, install [ultralytics](https://www.ultralytics.com)
+
 ```bash
 pip install ultralytics
 ```
@@ -54,7 +54,7 @@ def create_pixano_bbox_entity(pix_image, bbox_coords, score, category):
         coords=bbox_coords,
         is_normalized=True,
         format="xyxy",
-        # "source_ref": ## if you registered a model source, you can add it here, else it's a default
+        source_ref={"id":"src_yolo", "name": "source"},
     )
 
     return entity, bbox
@@ -74,6 +74,10 @@ Load your Pixano dataset
 ```python
 from pixano.datasets import Dataset
 ds = Dataset(library / dataset_dirname, media_dir=media)
+
+# Add YOLO source
+if not ds.get_data("source", ids="src_yolo"):
+    ds.add_data("source", [Source(id="src_yolo", name="yolo11n", kind="model")])
 ```
 
 Pre-annotate
@@ -150,7 +154,7 @@ def create_pixano_bbox_entity(pix_image, bbox_coords, score, category):
         coords=bbox_coords,
         is_normalized=False,
         format="xyxy",
-        # "source_ref": ## if you registered a model source, you can add it here, else it's a default
+        source_ref={"id":"src_gdino", "name": "source"},
     )
 
     return entity, bbox
@@ -177,6 +181,10 @@ Load your Pixano dataset
 ```python
 from pixano.datasets import Dataset
 ds = Dataset(library / dataset_dirname, media_dir=media)
+
+# Add GroundingDINO source
+if not ds.get_data("source", ids="src_gdino"):
+    ds.add_data("source", [Source(id="src_gdino", name="GROUNDINGDino", kind="model")])
 ```
 
 Pre-annotate. We ask Grounding DINO to detect objects of classes ["person", "car", "motorcycle"].
