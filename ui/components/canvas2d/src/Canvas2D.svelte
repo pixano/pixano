@@ -1157,7 +1157,7 @@ License: CECILL-C
       input_point.on("dragend", () => dragInputPointEnd());
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
-      inputGroup.moveToTop();  //ensure input points stay over other groups
+      inputGroup.moveToTop(); //ensure input points stay over other groups
       highlightInputPoint(input_point, viewRef.name);
       lastInputViewRef = viewRef;
       await updateCurrentMask(viewRef);
