@@ -130,7 +130,7 @@ ds = Dataset(library / dataset_dirname, media_dir=media)
 
 # Add GroundingDINO source
 if not ds.get_data("source", ids="src_gdino"):
-    ds.add_data("source", [Source(id="src_gdino", name="GROUNDINGDino", kind="model")])
+    ds.add_data("source", [Source(id="src_gdino", name="GroundingDINO", kind="model")])
 ```
 
 Utility function to create pixano BBox and associated Entity.
