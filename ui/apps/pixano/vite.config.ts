@@ -6,6 +6,7 @@ const proxies_list = [
   "browser",
   "dataset_items",
   "items",
+  "items_info",
   "views",
   "entities",
   "annotations",

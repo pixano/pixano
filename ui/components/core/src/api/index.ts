@@ -12,6 +12,7 @@ export * from "./getDataset";
 export * from "./getDatasetItem";
 export * from "./getDatasetItemsIds";
 export * from "./getDatasetsInfo";
+export * from "./getItemsInfo";
 export * from "./getModels";
 export * from "./getSources";
 export * from "./getViewEmbeddings";
