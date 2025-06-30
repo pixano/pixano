@@ -61,14 +61,24 @@ License: CECILL-C
 
   async function loadModel() {
     if ($isLocalSegmentationModel) {
-      modelsUiStore.update((store) => ({
-        ...store,
-        currentModalOpen: "loading",
-        selectedModelName,
-      }));
-      await sam.init("/app_models/" + selectedModelName + ".onnx");
-      interactiveSegmenterModel.set(sam);
-      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
+      if (selectedModelName && selectedModelName !== "") {
+        modelsUiStore.update((store) => ({
+          ...store,
+          currentModalOpen: "loading",
+          selectedModelName,
+        }));
+        await sam.init("/app_models/" + selectedModelName + ".onnx");
+        interactiveSegmenterModel.set(sam);
+        modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectEmbeddingsTable" }));
+      } else {
+        modelsUiStore.set({
+          currentModalOpen: "noModel",
+          selectedModelName: "",
+          selectedTableName: "",
+          yetToLoadEmbedding: true,
+        });
+        selectedTool.set(panTool);
+      }
     } else {
       modelsUiStore.set({
         currentModalOpen: "none",
@@ -89,13 +99,8 @@ License: CECILL-C
     selectedTool.set(panTool);
   };
 
-  $: {
-    if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
-      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
-    }
-    if ($selectedTool?.isSmart && models.length == 0) {
-      modelsUiStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
-    }
+  $: if ($selectedTool?.isSmart) {
+    modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
   }
 </script>
 
@@ -120,7 +125,7 @@ License: CECILL-C
     on:cancel={closeModal}
   />
 {/if}
-{#if currentModalOpen === "noModel"}
+{#if currentModalOpen === "noModel" && $isLocalSegmentationModel}
   <WarningModal
     message="It looks like there is no model for interactive segmentation in your dataset library."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
