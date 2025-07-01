@@ -343,12 +343,10 @@ License: CECILL-C
     <div
       class={cn(
         "flex-shrink-0 flex items-center justify-end",
-        showIcons || entity.ui.displayControl.editing
+        showIcons
           ? entity.is_track
-            ? $selectedTool.type !== ToolType.Fusion
-              ? "basis-[160px]"
-              : "basis-[120px]"
-            : "basis-[120px]"
+            ? "basis-[120px]"
+            : "basis-[80px]"
           : entity.is_track && hiddenTrack
             ? "basis-[80px]"
             : "basis-[40px]",
@@ -356,15 +354,6 @@ License: CECILL-C
       style="min-width: 40px;"
     >
       {#if showIcons || entity.ui.displayControl.editing}
-        {#if $selectedTool.type !== ToolType.Fusion}
-          <IconButton
-            tooltipContent="Edit object"
-            selected={entity.ui.displayControl.editing}
-            on:click={() => onEditIconClick()}
-          >
-            <Pencil class="h-4" />
-          </IconButton>
-        {/if}
         <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity)}>
           <Trash2 class="h-4" />
         </IconButton>
@@ -396,7 +385,19 @@ License: CECILL-C
       >
         <div class="flex flex-col gap-2">
           <div class="w-full block">
-            <p class="font-medium">Features</p>
+            <div class="flex justify-between items-center">
+              <p class="font-medium">Features</p>
+              {#if $selectedTool.type !== ToolType.Fusion}
+                <IconButton
+                  tooltipContent="Edit object"
+                  selected={entity.ui.displayControl.editing}
+                  on:click={() => onEditIconClick()}
+                >
+                  <Pencil class="h-4" />
+                </IconButton>
+              {/if}
+            </div>
+
             <UpdateFeatureInputs
               featureClass="objects"
               features={$features}

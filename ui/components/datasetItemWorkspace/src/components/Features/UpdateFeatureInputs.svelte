@@ -31,7 +31,7 @@ License: CECILL-C
         {feature.label.replace("_", " ")}
       </p>
     {/if}
-    <div class="flex items-center justify-end">
+    <div class="flex items-center justify-end overflow-hidden">
       {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
         <Checkbox
           checked={!!feature.value}
