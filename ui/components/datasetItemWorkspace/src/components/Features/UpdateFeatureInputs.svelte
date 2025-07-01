@@ -25,28 +25,30 @@ License: CECILL-C
 </script>
 
 {#each features as feature}
-  <div class="flex w-full gap-4 mt-2 px-4">
+  <div class="flex w-full gap-4 mt-2 px-4 justify-between items-center">
     {#if isEditing || feature.value !== undefined}
-      <p class="flex items-center">
+      <p class="flex items-center" title={feature.obj.id}>
         {feature.label.replace("_", " ")}
       </p>
     {/if}
-    {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
-      <Checkbox
-        checked={!!feature.value}
-        disabled={!isEditing}
-        handleClick={(checked) => saveInputChange(checked, feature.name, feature.obj)}
-      />
-    {/if}
-    {#if feature.type === "list"}
-      <ListFeature
-        {isEditing}
-        handleInputChange={(value, name) => saveInputChange(value, name, feature.obj)}
-        listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
-      />
-    {/if}
-    {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
-      <FeatureTextInput {featureClass} {feature} {saveInputChange} {isEditing} />
-    {/if}
+    <div class="flex items-center justify-end">
+      {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
+        <Checkbox
+          checked={!!feature.value}
+          disabled={!isEditing}
+          handleClick={(checked) => saveInputChange(checked, feature.name, feature.obj)}
+        />
+      {/if}
+      {#if feature.type === "list"}
+        <ListFeature
+          {isEditing}
+          handleInputChange={(value, name) => saveInputChange(value, name, feature.obj)}
+          listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
+        />
+      {/if}
+      {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
+        <FeatureTextInput {featureClass} {feature} {saveInputChange} {isEditing} />
+      {/if}
+    </div>
   </div>
 {/each}

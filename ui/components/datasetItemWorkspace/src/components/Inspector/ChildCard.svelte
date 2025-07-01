@@ -61,7 +61,9 @@ License: CECILL-C
   let currentTrackletChilds: { trackletChild: Annotation; displayName: string }[] = [];
 
   let childEditing = false;
+  let childVisible = true;
   $: if ($annotations) childEditing = child.ui.displayControl.editing;
+  $: if ($annotations) childVisible = !child.ui.displayControl.hidden;
   $: if ($annotations || child) buildCurrentTrackletChildList();
 
   const buildCurrentTrackletChildList = () => {
@@ -110,10 +112,10 @@ License: CECILL-C
 <div class="flex justify-between bg-transparent border-transparent">
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
-      on:click={() => handleSetDisplayControl("hidden", !child.ui.displayControl.hidden, child)}
-      tooltipContent={!child.ui.displayControl.hidden ? "Hide" : "Show"}
+      on:click={() => handleSetDisplayControl("hidden", childVisible, child)}
+      tooltipContent={childVisible ? "Hide" : "Show"}
     >
-      {#if !child.ui.displayControl.hidden}
+      {#if childVisible}
         <Eye class="h-4" />
       {:else}
         <EyeOff class="h-4" />
@@ -142,13 +144,15 @@ License: CECILL-C
   </div>
   <div class="flex-shrink-0 flex items-center justify-end">
     {#if $selectedTool.type !== ToolType.Fusion}
-      <IconButton
-        tooltipContent="Edit object"
-        selected={childEditing}
-        on:click={() => onEditIconClick(child)}
-      >
-        <Pencil class="h-4" />
-      </IconButton>
+      {#if !child.is_type(BaseSchema.TextSpan)}
+        <IconButton
+          tooltipContent="Edit object"
+          selected={childEditing}
+          on:click={() => onEditIconClick(child)}
+        >
+          <Pencil class="h-4" />
+        </IconButton>
+      {/if}
       <IconButton
         tooltipContent="Relink object"
         selected={showRelink}

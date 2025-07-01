@@ -56,7 +56,7 @@ License: CECILL-C
   let showIcons: boolean = false;
   let highlightState: string = "all";
   let isVisible: boolean = true;
-
+  let childsPanelOpen = true;
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
   let displayName: string;
@@ -121,12 +121,17 @@ License: CECILL-C
       //let anns_features: Record<string, Feature[]> = {};
       let feats: Record<string, Feature[]> = {};
       let child_anns: Annotation[] = [];
-      if ($currentFrameIndex !== null) {
-        child_anns = entity.ui.childs!.filter(
-          (ann) => !ann.is_type(BaseSchema.Tracklet) && ann.ui.frame_index! === $currentFrameIndex,
-        );
+      if (entity.is_track) {
+        if ($currentFrameIndex !== null) {
+          child_anns = entity.ui.childs!.filter(
+            (ann) =>
+              !ann.is_type(BaseSchema.Tracklet) && ann.ui.frame_index! === $currentFrameIndex,
+          );
+        } else {
+          child_anns = entity.ui.childs!.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+        }
       } else {
-        child_anns = entity.ui.childs!.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+        child_anns = entity.ui.childs!;
       }
       for (const ann of child_anns) {
         if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
@@ -399,33 +404,49 @@ License: CECILL-C
               {saveInputChange}
             />
           </div>
-          <p class="font-medium">Objects ({allowableChilds.length})</p>
-          <div class="flex flex-col">
-            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-              <p class="text-center italic">
-                {allowedChilds.length > 0 ? allowedChilds.length : "No"}
-                object{allowedChilds.length === 1 ? "" : "s"}
-                visible on frame {$currentFrameIndex}
-              </p>
-            {/if}
-            {#each allowedChilds as child}
-              <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-            {/each}
+          <div class="flex justify-between items-center">
+            <p class="font-medium">Objects ({allowableChilds.length})</p>
+            <IconButton
+              on:click={() => (childsPanelOpen = !childsPanelOpen)}
+              tooltipContent={childsPanelOpen ? "Hide objects" : "Show objects"}
+            >
+              <ChevronRight
+                class={cn("transition", { "rotate-90": childsPanelOpen })}
+                strokeWidth={1}
+              />
+            </IconButton>
           </div>
-          <p class="font-medium">Thumbnails</p>
-          {#each thumbnails as thumbnail}
-            <Thumbnail
-              imageDimension={thumbnail.baseImageDimensions}
-              coords={thumbnail.coords}
-              imageUrl={`/${thumbnail.uri}`}
-              minSide={150}
-              maxWidth={200}
-              maxHeight={200}
-            />
-            {#if Object.keys($mediaViews).length > 1}
-              <span class="text-center italic">{thumbnail.view}</span>
-            {/if}
-          {/each}
+
+          {#if childsPanelOpen}
+            <div class="flex flex-col">
+              {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+                <p class="text-center italic">
+                  {allowedChilds.length > 0 ? allowedChilds.length : "No"}
+                  object{allowedChilds.length === 1 ? "" : "s"}
+                  visible on frame {$currentFrameIndex}
+                </p>
+              {/if}
+              {#each allowedChilds as child}
+                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+              {/each}
+            </div>
+          {/if}
+          {#if thumbnails.length > 0}
+            <p class="font-medium">Thumbnails</p>
+            {#each thumbnails as thumbnail}
+              <Thumbnail
+                imageDimension={thumbnail.baseImageDimensions}
+                coords={thumbnail.coords}
+                imageUrl={`/${thumbnail.uri}`}
+                minSide={150}
+                maxWidth={200}
+                maxHeight={200}
+              />
+              {#if Object.keys($mediaViews).length > 1}
+                <span class="text-center italic">{thumbnail.view}</span>
+              {/if}
+            {/each}
+          {/if}
           <TextSpansContent annotations={entity.ui.childs} />
         </div>
       </div>
