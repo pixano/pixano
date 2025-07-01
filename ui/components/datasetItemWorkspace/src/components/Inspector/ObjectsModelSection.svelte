@@ -10,12 +10,12 @@ License: CECILL-C
   import { onMount } from "svelte";
   import { derived } from "svelte/store";
 
-  import { BaseSchema, BBox, IconButton, Source } from "@pixano/core/src";
+  import { BaseSchema, BBox, Checkbox, IconButton, Source } from "@pixano/core/src";
   import SliderWithValue from "@pixano/core/src/components/ui/slider/SliderWithValue.svelte";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, OTHER } from "../../lib/constants";
-  import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, interpolate } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let source: Source | undefined;
   export let numberOfItem: number;
@@ -80,7 +80,7 @@ License: CECILL-C
     </IconButton>
     <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
     <IconButton
-      tooltipContent={"Filter: confidence"}
+      tooltipContent={"Filters: confidence, interpolation"}
       selected={showFilters}
       on:click={() => (showFilters = !showFilters)}
     >
@@ -90,7 +90,7 @@ License: CECILL-C
     <p>{numberOfItem}</p>
   </div>
   {#if showFilters}
-    <div>
+    <div class="flex flex-col gap-2">
       <span>Confidence threshold</span>
       <SliderWithValue
         bind:value={confidenceThreshold}
@@ -99,6 +99,15 @@ License: CECILL-C
         max={1}
         step={0.01}
       />
+      <div class="ml-4 flex gap-4 items-center">
+        <Checkbox
+          handleClick={() => {
+            $interpolate = !$interpolate;
+          }}
+          checked={$interpolate}
+        />
+        <span>Interpolate</span>
+      </div>
     </div>
   {/if}
   <div class="p-2 pt-0 max-h-full">

@@ -54,7 +54,6 @@ License: CECILL-C
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
-  //export let onRelinkTrackletClick: () => void;
   export let findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let moveCursorToPosition: (clientX: number) => void;
   export let resetTool: () => void;

@@ -40,6 +40,7 @@ License: CECILL-C
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    interpolate,
     mediaViews,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -64,7 +65,7 @@ License: CECILL-C
   let childVisible = true;
   $: if ($annotations) childEditing = child.ui.displayControl.editing;
   $: if ($annotations) childVisible = !child.ui.displayControl.hidden;
-  $: if ($annotations || child) buildCurrentTrackletChildList();
+  $: if ($annotations || child || $interpolate) buildCurrentTrackletChildList();
 
   const buildCurrentTrackletChildList = () => {
     if (child.is_type(BaseSchema.Tracklet)) {
