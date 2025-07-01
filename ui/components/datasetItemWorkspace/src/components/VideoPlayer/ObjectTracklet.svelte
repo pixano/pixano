@@ -312,17 +312,19 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if canAddKeyFrame}
-      <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
-        Add a point at frame {$currentFrameIndex}
-      </ContextMenu.Item>
-    {/if}
-    {#if canSplit}
-      <ContextMenu.Item on:click={onSplitTrackletClick}>
-        Split tracklet after frame {$currentFrameIndex}
-      </ContextMenu.Item>
-    {/if}
-    {#if $selectedTool.type !== ToolType.Fusion}
+    {#if $selectedTool.type === ToolType.Fusion}
+      <ContextMenu.Item>Context options disabled while in association mode</ContextMenu.Item>
+    {:else}
+      {#if canAddKeyFrame}
+        <ContextMenu.Item on:click={(event) => onAddKeyItemClick(event)}>
+          Add a point at frame {$currentFrameIndex}
+        </ContextMenu.Item>
+      {/if}
+      {#if canSplit}
+        <ContextMenu.Item on:click={onSplitTrackletClick}>
+          Split tracklet after frame {$currentFrameIndex}
+        </ContextMenu.Item>
+      {/if}
       {#if leftTracklet}
         <ContextMenu.Item on:click={() => onGlueTrackletClick("left")}>
           Glue to left
@@ -334,20 +336,20 @@ License: CECILL-C
         </ContextMenu.Item>
       {/if}
       <ContextMenu.Item on:click={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
-    {/if}
-    <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
-    {#if showRelink}
-      <div class="flex flex-row gap-4 items-center mr-4">
-        <RelinkAnnotation
-          bind:selectedEntityId
-          bind:mustMerge
-          bind:overlapTargetId
-          baseSchema={tracklet.table_info.base_schema}
-          viewRef={tracklet.data.view_ref}
-          {tracklet}
-        />
-        <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
-      </div>
+      <ContextMenu.Item on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+      {#if showRelink}
+        <div class="flex flex-row gap-4 items-center mr-4">
+          <RelinkAnnotation
+            bind:selectedEntityId
+            bind:mustMerge
+            bind:overlapTargetId
+            baseSchema={tracklet.table_info.base_schema}
+            viewRef={tracklet.data.view_ref}
+            {tracklet}
+          />
+          <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
+        </div>
+      {/if}
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
