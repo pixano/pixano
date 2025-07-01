@@ -64,12 +64,13 @@ License: CECILL-C
   let mustMerge: boolean = false;
   let overlapTargetId: string = "";
 
+  const tracklet_margin = 0.3;
   const getLeft = (tracklet: Tracklet) => {
-    let start = Math.max(0, tracklet.data.start_timestep - 0.5);
+    let start = Math.max(0, tracklet.data.start_timestep - tracklet_margin);
     return (start / ($lastFrameIndex + 1)) * 100;
   };
   const getRight = (tracklet: Tracklet) => {
-    let end = Math.max(tracklet.data.start_timestep, tracklet.data.end_timestep) + 0.5;
+    let end = Math.max(tracklet.data.start_timestep, tracklet.data.end_timestep) + tracklet_margin;
     return (end / ($lastFrameIndex + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;

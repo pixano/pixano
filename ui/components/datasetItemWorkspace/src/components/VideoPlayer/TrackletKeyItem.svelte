@@ -137,7 +137,10 @@ License: CECILL-C
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.ui.childs?.length > 2}
-      <ContextMenu.Item on:click={() => onDeleteItemClick(tracklet, itemFrameIndex)}>
+      <ContextMenu.Item
+        on:click={() => onDeleteItemClick(tracklet, itemFrameIndex)}
+        title="Remove all shapes under this key. For selective delete, use Objects panel."
+      >
         Remove item
       </ContextMenu.Item>
     {/if}
