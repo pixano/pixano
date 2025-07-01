@@ -29,7 +29,11 @@ License: CECILL-C
         <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="objects" class="h-full overflow-y-auto scroll-smooth">
+      <Tabs.Content
+        value="objects"
+        class="h-full overflow-y-auto scroll-smooth"
+        id="card-object-container"
+      >
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />

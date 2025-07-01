@@ -64,8 +64,8 @@ License: CECILL-C
     const displayFeat = getDefaultDisplayFeat(entity);
     displayName = displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
   }
-
   $: color = $colorScale[1](entity.id);
+  $: entity.ui.displayControl.open = highlightState === "self";
 
   const isAllowedChild = (child: Annotation): boolean => {
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
