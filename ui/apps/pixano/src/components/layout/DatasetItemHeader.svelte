@@ -34,10 +34,17 @@ License: CECILL-C
       event.stopPropagation();
       return;
     }
-    if (event.shiftKey && event.key === "ArrowLeft") {
+    if (event.shiftKey) {
+      switch (event.code) {
+        case "ArrowRight":
+        case "KeyD":
+          await goToNeighborItem("next");
+          break;
+        case "ArrowLeft":
+        case "KeyA":
       await goToNeighborItem("previous");
-    } else if (event.shiftKey && event.key === "ArrowRight") {
-      await goToNeighborItem("next");
+          break;
+      }
     }
     return event.key;
   };
