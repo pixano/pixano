@@ -25,7 +25,7 @@ License: CECILL-C
   <p class="font-medium mt-4">Text spans</p>
   <div class="grid gap-x-4 gap-y-2 grid-cols-[150px_auto] mt-2 pr-4">
     {#each mentions as mention}
-      <p class="font-medium">mention</p>
+      <p class="font-medium ml-4">mention</p>
       <p>{mention}</p>
     {/each}
   </div>

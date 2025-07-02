@@ -77,6 +77,9 @@ export const selectedKeypointsTemplate = writable<KeypointsTemplate["template_id
 
 export const saveData = writable<SaveItem[]>([]);
 export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);
+
+export const interpolate = writable<boolean>(true);
+
 type ColorScale = [Array<string>, (id: string) => string];
 
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
@@ -168,8 +171,8 @@ export const conversations = derived(entities, ($entities) => {
 });
 
 export const current_itemBBoxes = derived(
-  [itemBboxes, currentFrameIndex, tracklets, mediaViews],
-  ([$itemBboxes, $currentFrameIndex, $tracklets, $mediaViews]) => {
+  [itemBboxes, currentFrameIndex, tracklets, mediaViews, interpolate],
+  ([$itemBboxes, $currentFrameIndex, $tracklets, $mediaViews, $interpolate]) => {
     const current_bboxes_and_interpolated: BBox[] = [];
     const current_tracklets = $tracklets.filter(
       (tracklet) =>
@@ -183,7 +186,7 @@ export const current_itemBBoxes = derived(
       const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
       const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
       if (box) current_bboxes_and_interpolated.push(box);
-      else if (bbox_childs.length > 1) {
+      else if (bbox_childs.length > 1 && $interpolate) {
         const sample_bbox = bbox_childs[0];
         const view_id = ($mediaViews[sample_bbox.data.view_ref.name] as SequenceFrame[])[
           $currentFrameIndex
@@ -197,8 +200,8 @@ export const current_itemBBoxes = derived(
 );
 
 export const current_itemKeypoints = derived(
-  [itemKeypoints, currentFrameIndex, tracklets, mediaViews],
-  ([$itemKeypoints, $currentFrameIndex, $tracklets, $mediaViews]) => {
+  [itemKeypoints, currentFrameIndex, tracklets, mediaViews, interpolate],
+  ([$itemKeypoints, $currentFrameIndex, $tracklets, $mediaViews, $interpolate]) => {
     const current_kpts_and_interpolated: KeypointsTemplate[] = [];
     const current_tracklets = $tracklets.filter(
       (tracklet) =>
@@ -212,7 +215,7 @@ export const current_itemKeypoints = derived(
       const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
       const kpt = kpt_childs.find((kpt) => kpt.ui!.frame_index === $currentFrameIndex);
       if (kpt) current_kpts_and_interpolated.push(kpt);
-      else if (kpt_childs.length > 1) {
+      else if (kpt_childs.length > 1 && $interpolate) {
         const sample_kpt = kpt_childs[0];
         const view_id = ($mediaViews[sample_kpt.viewRef!.name] as SequenceFrame[])[
           $currentFrameIndex

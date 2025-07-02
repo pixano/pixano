@@ -34,12 +34,13 @@ License: CECILL-C
   import keypoints_icon from "@pixano/core/src/assets/lucide_keypoints_icon.svg";
   import polygon_icon from "@pixano/core/src/assets/lucide_polygon_icon.svg";
 
-  import { deleteObject, relink } from "../../lib/api/objectsApi";
+  import { deleteObject, onDeleteItemClick, relink } from "../../lib/api/objectsApi";
   import {
     annotations,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    interpolate,
     mediaViews,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -58,11 +59,13 @@ License: CECILL-C
   let selectedEntityId: string = "new";
   let mustMerge: boolean = false;
   let overlapTargetId: string = "";
-  let currentTrackletChilds: { trackletChild: Annotation; displayName: string }[] = [];
+  let currentTrackletChilds: { trackletChild: Annotation; interpolated: boolean }[] = [];
 
   let childEditing = false;
+  let childVisible = true;
   $: if ($annotations) childEditing = child.ui.displayControl.editing;
-  $: if ($annotations || child) buildCurrentTrackletChildList();
+  $: if ($annotations) childVisible = !child.ui.displayControl.hidden;
+  $: if ($annotations || child || $interpolate) buildCurrentTrackletChildList();
 
   const buildCurrentTrackletChildList = () => {
     if (child.is_type(BaseSchema.Tracklet)) {
@@ -80,7 +83,7 @@ License: CECILL-C
         if (directMatch) {
           currentTrackletChilds.push({
             trackletChild: directMatch,
-            displayName: cann.id,
+            interpolated: false,
           });
         } else if (
           trackletChilds.some(
@@ -93,7 +96,7 @@ License: CECILL-C
         ) {
           currentTrackletChilds.push({
             trackletChild: cann as Annotation,
-            displayName: `<i>interpolated</i> (${cann.id})`,
+            interpolated: true,
           });
         }
       });
@@ -110,10 +113,10 @@ License: CECILL-C
 <div class="flex justify-between bg-transparent border-transparent">
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
-      on:click={() => handleSetDisplayControl("hidden", !child.ui.displayControl.hidden, child)}
-      tooltipContent={!child.ui.displayControl.hidden ? "Hide" : "Show"}
+      on:click={() => handleSetDisplayControl("hidden", childVisible, child)}
+      tooltipContent={childVisible ? "Hide" : "Show"}
     >
-      {#if !child.ui.displayControl.hidden}
+      {#if childVisible}
         <Eye class="h-4" />
       {:else}
         <EyeOff class="h-4" />
@@ -142,13 +145,15 @@ License: CECILL-C
   </div>
   <div class="flex-shrink-0 flex items-center justify-end">
     {#if $selectedTool.type !== ToolType.Fusion}
-      <IconButton
-        tooltipContent="Edit object"
-        selected={childEditing}
-        on:click={() => onEditIconClick(child)}
-      >
-        <Pencil class="h-4" />
-      </IconButton>
+      {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
+        <IconButton
+          tooltipContent="Edit object"
+          selected={childEditing}
+          on:click={() => onEditIconClick(child)}
+        >
+          <Pencil class="h-4" />
+        </IconButton>
+      {/if}
       <IconButton
         tooltipContent="Relink object"
         selected={showRelink}
@@ -158,14 +163,14 @@ License: CECILL-C
       >
         <Link class="h-4" />
       </IconButton>
+      <IconButton
+        tooltipContent="Delete object"
+        redconfirm
+        on:click={() => deleteObject(entity, child)}
+      >
+        <Trash2 class="h-4" />
+      </IconButton>
     {/if}
-    <IconButton
-      tooltipContent="Delete object"
-      redconfirm
-      on:click={() => deleteObject(entity, child)}
-    >
-      <Trash2 class="h-4" />
-    </IconButton>
   </div>
 </div>
 {#if showRelink}
@@ -182,26 +187,52 @@ License: CECILL-C
   </div>
 {/if}
 {#if child.is_type(BaseSchema.Tracklet)}
-  {#each currentTrackletChilds as { trackletChild, displayName }}
-    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 ml-4">
-      <IconButton disabled tooltipContent={trackletChild.table_info.base_schema}>
-        <!-- trackletChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
-        {#if trackletChild.table_info.base_schema === BaseSchema.BBox}
-          <Square class="h-4" />
-        {/if}
-        {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
-          <img src={polygon_icon} alt="polygon icon" class="h-4" />
-        {/if}
-        {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
-          <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
-        {/if}
-        {#if trackletChild.table_info.base_schema === BaseSchema.TextSpan}
-          <Type class="h-4" />
-        {/if}
-      </IconButton>
-      <span class="flex-auto block w-full truncate" title={trackletChild.id}>
-        {@html displayName}
-      </span>
+  <!-- NOTE: trackletChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
+  {#each currentTrackletChilds as { trackletChild, interpolated }}
+    {@const displayName = interpolated
+      ? `<i>interpolated</i> (${trackletChild.id})`
+      : trackletChild.id}
+    <div class="flex items-center justify-between w-full overflow-hidden ml-4">
+      <div class="flex items-center flex-1 min-w-0 overflow-hidden">
+        <IconButton disabled tooltipContent={trackletChild.table_info.base_schema}>
+          {#if trackletChild.table_info.base_schema === BaseSchema.BBox}
+            <Square class="h-4" />
+          {/if}
+          {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
+            <img src={polygon_icon} alt="polygon icon" class="h-4" />
+          {/if}
+          {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
+            <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
+          {/if}
+          {#if trackletChild.table_info.base_schema === BaseSchema.TextSpan}
+            <Type class="h-4" />
+          {/if}
+        </IconButton>
+
+        <span class="block w-full truncate ml-2" title={trackletChild.id}>
+          {@html displayName}
+        </span>
+      </div>
+      {#if $selectedTool.type !== ToolType.Fusion && !interpolated}
+        <div class="flex items-center mr-4">
+          {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackletChild.table_info.base_schema)}
+            <IconButton
+              tooltipContent="Edit object"
+              selected={trackletChild.ui.displayControl.editing}
+              on:click={() => onEditIconClick(trackletChild)}
+            >
+              <Pencil class="h-4" />
+            </IconButton>
+          {/if}
+          <IconButton
+            tooltipContent="Delete object"
+            redconfirm
+            on:click={() => onDeleteItemClick(child, trackletChild.ui.frame_index, trackletChild)}
+          >
+            <Trash2 class="h-4" />
+          </IconButton>
+        </div>
+      {/if}
     </div>
   {/each}
 {/if}
