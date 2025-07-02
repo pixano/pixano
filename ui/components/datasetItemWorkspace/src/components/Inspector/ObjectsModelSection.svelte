@@ -80,7 +80,7 @@ License: CECILL-C
     </IconButton>
     <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
     <IconButton
-      tooltipContent={"Filters: confidence, interpolation"}
+      tooltipContent={"Generic options"}
       selected={showFilters}
       on:click={() => (showFilters = !showFilters)}
     >
@@ -90,7 +90,7 @@ License: CECILL-C
     <p>{numberOfItem}</p>
   </div>
   {#if showFilters}
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 border-2 rounded-md border-primary p-2">
       <span>Confidence threshold</span>
       <SliderWithValue
         bind:value={confidenceThreshold}
@@ -99,7 +99,7 @@ License: CECILL-C
         max={1}
         step={0.01}
       />
-      <div class="ml-4 flex gap-4 items-center">
+      <div class="flex gap-4 items-center">
         <Checkbox
           handleClick={() => {
             $interpolate = !$interpolate;

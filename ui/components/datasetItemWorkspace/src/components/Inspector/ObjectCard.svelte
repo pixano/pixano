@@ -57,6 +57,7 @@ License: CECILL-C
   let highlightState: string = "all";
   let isVisible: boolean = true;
   let childsPanelOpen = true;
+  let thumbnailsPanelOpen = false;
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
   let displayName: string;
@@ -433,20 +434,33 @@ License: CECILL-C
             </div>
           {/if}
           {#if thumbnails.length > 0}
-            <p class="font-medium">Thumbnails</p>
-            {#each thumbnails as thumbnail}
-              <Thumbnail
-                imageDimension={thumbnail.baseImageDimensions}
-                coords={thumbnail.coords}
-                imageUrl={`/${thumbnail.uri}`}
-                minSide={150}
-                maxWidth={200}
-                maxHeight={200}
-              />
-              {#if Object.keys($mediaViews).length > 1}
-                <span class="text-center italic">{thumbnail.view}</span>
-              {/if}
-            {/each}
+            <div class="flex justify-between items-center">
+              <p class="font-medium">Thumbnails</p>
+              <IconButton
+                on:click={() => (thumbnailsPanelOpen = !thumbnailsPanelOpen)}
+                tooltipContent={thumbnailsPanelOpen ? "Hide thumbnails" : "Show thumbnails"}
+              >
+                <ChevronRight
+                  class={cn("transition", { "rotate-90": thumbnailsPanelOpen })}
+                  strokeWidth={1}
+                />
+              </IconButton>
+            </div>
+            {#if thumbnailsPanelOpen}
+              {#each thumbnails as thumbnail}
+                <Thumbnail
+                  imageDimension={thumbnail.baseImageDimensions}
+                  coords={thumbnail.coords}
+                  imageUrl={`/${thumbnail.uri}`}
+                  minSide={150}
+                  maxWidth={200}
+                  maxHeight={200}
+                />
+                {#if Object.keys($mediaViews).length > 1}
+                  <span class="text-center italic">{thumbnail.view}</span>
+                {/if}
+              {/each}
+            {/if}
           {/if}
           <TextSpansContent annotations={entity.ui.childs} />
         </div>
