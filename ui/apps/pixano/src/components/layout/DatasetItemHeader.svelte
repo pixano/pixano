@@ -34,10 +34,17 @@ License: CECILL-C
       event.stopPropagation();
       return;
     }
-    if (event.shiftKey && event.key === "ArrowLeft") {
-      await goToNeighborItem("previous");
-    } else if (event.shiftKey && event.key === "ArrowRight") {
-      await goToNeighborItem("next");
+    if (event.shiftKey) {
+      switch (event.code) {
+        case "ArrowRight":
+        case "KeyD":
+          await goToNeighborItem("next");
+          break;
+        case "ArrowLeft":
+        case "KeyA":
+          await goToNeighborItem("previous");
+          break;
+      }
     }
     return event.key;
   };
@@ -57,13 +64,13 @@ License: CECILL-C
       {currentItemId}
       <IconButton
         on:click={() => goToNeighborItem("previous")}
-        tooltipContent="Previous item (shift + left arrow)"
+        tooltipContent="Previous item (Shift + Left / Shift + A or Q)"
       >
         <ArrowLeft />
       </IconButton>
       <IconButton
         on:click={() => goToNeighborItem("next")}
-        tooltipContent="Next item (shift + right arrow)"
+        tooltipContent="Next item (Shift + Right / Shift + D)"
       >
         <ArrowRight />
       </IconButton>

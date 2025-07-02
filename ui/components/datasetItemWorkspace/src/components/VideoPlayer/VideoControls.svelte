@@ -89,17 +89,19 @@ License: CECILL-C
       return; // Ignore shortcut when typing text
     }
 
-    switch (event.key) {
-      case " ":
+    switch (event.code) {
+      case "Space":
         if (event.repeat) break;
         event.preventDefault();
         onPlayClick();
         break;
       case "ArrowRight":
+      case "KeyD":
         if (event.shiftKey) break;
         onPlayStepClick();
         break;
       case "ArrowLeft":
+      case "KeyA":
         if (event.shiftKey) break;
         onPlayStepBackClick();
         break;
@@ -120,13 +122,13 @@ License: CECILL-C
     {/if}
   </button>
   <button
-    title="One step backward (left arrow)"
+    title="Previous frame (Left / A or Q)"
     on:click={onPlayStepBackClick}
     class="text-primary"
   >
     <StepBack />
   </button>
-  <button title="One step forward (right arrow)" on:click={onPlayStepClick} class="text-primary">
+  <button title="Next frame (Right / D)" on:click={onPlayStepClick} class="text-primary">
     <StepForward />
   </button>
   <p>
