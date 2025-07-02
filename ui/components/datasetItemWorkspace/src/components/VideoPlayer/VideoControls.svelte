@@ -89,17 +89,19 @@ License: CECILL-C
       return; // Ignore shortcut when typing text
     }
 
-    switch (event.key) {
-      case " ":
+    switch (event.code) {
+      case "Space":
         if (event.repeat) break;
         event.preventDefault();
         onPlayClick();
         break;
       case "ArrowRight":
+      case "KeyD":
         if (event.shiftKey) break;
         onPlayStepClick();
         break;
       case "ArrowLeft":
+      case "KeyA":
         if (event.shiftKey) break;
         onPlayStepBackClick();
         break;
