@@ -122,13 +122,13 @@ License: CECILL-C
     {/if}
   </button>
   <button
-    title="One step backward (left arrow)"
+    title="Previous frame (Left / A or Q)"
     on:click={onPlayStepBackClick}
     class="text-primary"
   >
     <StepBack />
   </button>
-  <button title="One step forward (right arrow)" on:click={onPlayStepClick} class="text-primary">
+  <button title="Next frame (Right / D)" on:click={onPlayStepClick} class="text-primary">
     <StepForward />
   </button>
   <p>

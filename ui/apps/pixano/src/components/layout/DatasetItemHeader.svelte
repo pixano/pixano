@@ -42,7 +42,7 @@ License: CECILL-C
           break;
         case "ArrowLeft":
         case "KeyA":
-      await goToNeighborItem("previous");
+          await goToNeighborItem("previous");
           break;
       }
     }
@@ -64,13 +64,13 @@ License: CECILL-C
       {currentItemId}
       <IconButton
         on:click={() => goToNeighborItem("previous")}
-        tooltipContent="Previous item (shift + left arrow)"
+        tooltipContent="Previous item (Shift + Left / Shift + A or Q)"
       >
         <ArrowLeft />
       </IconButton>
       <IconButton
         on:click={() => goToNeighborItem("next")}
-        tooltipContent="Next item (shift + right arrow)"
+        tooltipContent="Next item (Shift + Right / Shift + D)"
       >
         <ArrowRight />
       </IconButton>
