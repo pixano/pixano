@@ -125,6 +125,7 @@ nav:
           - "Build and query a dataset": tutorials/dataset.md
           - "Semantic search": tutorials/semantic_search.md
           - "Interactive segmentation": tutorials/interactive_segmentation.md
+          - "Pre-annotation": tutorials/pre_annotation.md
       - "API reference": api_reference/
 
   - "Pixano-Inference": https://pixano.github.io/pixano-inference/latest/
