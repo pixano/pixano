@@ -110,13 +110,23 @@ export type Merges = {
 // Filters types
 export type LogicOperator = "FIRST" | "AND" | "OR";
 type StrOperator = "=" | "startsWith" | "endsWith";
+type BoolOperator = "=";
 type NumberOperator = "=" | "<" | ">" | "<=" | ">=";
-export type FieldOperator = StrOperator | NumberOperator;
+export type FieldOperator = StrOperator | BoolOperator | NumberOperator;
 const strOperators: StrOperator[] = ["=", "startsWith", "endsWith"];
+const boolOperators: BoolOperator[] = ["="];
 const numberOperators: NumberOperator[] = ["=", "<", ">", "<=", ">="];
 
 export function getOperatorsForType(typeVal: string): FieldOperator[] {
-  return ["int", "float"].includes(typeVal) ? numberOperators : strOperators;
+  switch (typeVal) {
+    case "int":
+    case "float":
+      return numberOperators;
+    case "bool":
+      return boolOperators;
+    default:
+      return strOperators;
+  }
 }
 
 export type FieldCol = { name: string; type: string };
@@ -125,5 +135,5 @@ export type ObjectsFilter = {
   table: string;
   name: string;
   fieldOperator: FieldOperator;
-  value: string;
+  value: string | boolean;
 };

@@ -10,11 +10,22 @@ License: CECILL-C
   import { CircleSlash2 } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
-  import { Annotation, BaseSchema, Entity, IconButton } from "@pixano/core";
+  import {
+    Annotation,
+    BaseSchema,
+    BBox,
+    Entity,
+    IconButton,
+    Keypoints,
+    Mask,
+    TextSpan,
+    Tracklet,
+  } from "@pixano/core";
   import { Checkbox } from "@pixano/core/src";
   import SliderWithValue from "@pixano/core/src/components/ui/slider/SliderWithValue.svelte";
 
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { getTopEntity } from "../../lib/api/objectsApi";
   import {
     annotations,
     confidenceThreshold,
@@ -37,7 +48,33 @@ License: CECILL-C
 
   let disableFilter = false; //when nothing to filter, disable it
   let defaultFilter: ObjectsFilter;
-  const allowedTypes = ["str", "int", "float"];
+  const allowedTypes = ["str", "int", "float", "bool"];
+
+  const getNonFeaturesFields = (baseSchema: BaseSchema, group: string): string[] => {
+    let nonFeatsFields: string[] = [];
+    if (group === "annotations") {
+      if (baseSchema === BaseSchema.BBox)
+        nonFeatsFields = nonFeatsFields.concat(BBox.nonFeaturesFields());
+      //keep "confidence"
+      const confidenceIndex = nonFeatsFields.indexOf("confidence");
+      if (confidenceIndex > -1) nonFeatsFields.splice(confidenceIndex, 1);
+      if (baseSchema === BaseSchema.Keypoints)
+        nonFeatsFields = nonFeatsFields.concat(Keypoints.nonFeaturesFields());
+      if (baseSchema === BaseSchema.Mask)
+        nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
+      if (baseSchema === BaseSchema.Tracklet)
+        nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
+      if (baseSchema === BaseSchema.TextSpan)
+        nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
+    } else {
+      nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
+    }
+    //keep "id"
+    const idIndex = nonFeatsFields.indexOf("id");
+    if (idIndex > -1) nonFeatsFields.splice(idIndex, 1);
+
+    return nonFeatsFields;
+  };
 
   datasetSchema.subscribe((schema) => {
     tableColumns = [];
@@ -66,11 +103,25 @@ License: CECILL-C
       disableFilter = true;
       return;
     }
+
+    const tableToGroup = Object.entries(schema.groups).reduce(
+      (acc, [group, tables]) => {
+        for (const table of tables) {
+          acc[table] = group;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
     const firstTable = tableColumns[0];
     for (const table of tableColumns) {
       fieldColumns[table] = [];
+      const nonFeatsFields = getNonFeaturesFields(
+        schema.schemas[table].base_schema,
+        tableToGroup[table],
+      );
       for (const [k, v] of Object.entries(schema.schemas[table].fields)) {
-        if (!v.collection && allowedTypes.includes(v.type))
+        if (!v.collection && allowedTypes.includes(v.type) && !nonFeatsFields.includes(k))
           fieldColumns[table].push({
             name: k,
             type: v.type,
@@ -93,8 +144,19 @@ License: CECILL-C
     //TODO test si avec store ca marche en pushant
   };
 
-  function applyOperator(a: number | string, b: string, op: FieldOperator): boolean {
-    const val = typeof a === "number" ? parseFloat(b) : b;
+  function applyOperator(
+    a: number | string | boolean,
+    b: string | boolean,
+    op: FieldOperator,
+  ): boolean {
+    const val =
+      typeof a === "number" && typeof b === "string"
+        ? parseFloat(b)
+        : typeof a === "boolean"
+          ? b
+            ? true
+            : false
+          : b;
     switch (op) {
       case "=":
         return a === val;
@@ -131,9 +193,9 @@ License: CECILL-C
   }
 
   const filterAnnOrEnt = (annOrEnt: Annotation | Entity, cond: ObjectsFilter): boolean => {
-    let value: string | number;
+    let value: string | number | boolean;
     if (cond.name === "id") value = annOrEnt.id;
-    else value = annOrEnt.data[cond.name] as string | number;
+    else value = annOrEnt.data[cond.name] as string | number | boolean;
     return (
       cond.table === annOrEnt.table_info.name &&
       applyOperator(value, cond.value, cond.fieldOperator)
@@ -153,10 +215,12 @@ License: CECILL-C
         if ($datasetSchema.groups["annotations"].includes(cond.table)) {
           condRes = $annotations
             .filter((ann) => filterAnnOrEnt(ann, cond))
-            .map((ann) => ann.ui.top_entities![0]);
+            .map((ann) => getTopEntity(ann));
         }
         if ($datasetSchema.groups["entities"].includes(cond.table)) {
           condRes = $entities.filter((ent) => filterAnnOrEnt(ent, cond));
+          //in case entities are not TopEntities, get the top
+          condRes = condRes.map((ent) => getTopEntity(ent));
         }
         andRes = andRes.filter((ent) => condRes.includes(ent)); //AND : intersection
       }

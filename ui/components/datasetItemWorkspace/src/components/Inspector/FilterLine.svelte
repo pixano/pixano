@@ -10,6 +10,7 @@ License: CECILL-C
   import { onMount } from "svelte";
 
   import { IconButton } from "@pixano/core";
+  import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
   import {
     getOperatorsForType,
@@ -22,6 +23,8 @@ License: CECILL-C
   export let tableColumns: string[];
   export let fieldColumns: Record<string, FieldCol[]>;
 
+  let ftype: string = "";
+
   onMount(() => handleTableChange());
 
   let fieldOperators: FieldOperator[] = [];
@@ -32,9 +35,13 @@ License: CECILL-C
   };
 
   const handleFieldChange = () => {
-    const ftype = fieldColumns[filter.table].find((field) => field.name === filter.name)!.type;
+    ftype = fieldColumns[filter.table].find((field) => field.name === filter.name)!.type;
     fieldOperators = getOperatorsForType(ftype);
     filter.fieldOperator = fieldOperators[0];
+  };
+
+  const handleBoolValClick = (b: boolean) => {
+    filter.value = b;
   };
 </script>
 
@@ -78,9 +85,13 @@ License: CECILL-C
     {/each}
   </select>
 </div>
-<input
-  type="text"
-  bind:value={filter.value}
-  placeholder="filter value"
-  class="h-10 pl-10 pr-4 rounded-lg border font-normal text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
-/>
+{#if ftype === "bool"}
+  <Checkbox handleClick={handleBoolValClick} checked={filter.value ? true : false} />
+{:else}
+  <input
+    type="text"
+    bind:value={filter.value}
+    placeholder="filter value"
+    class="h-10 pl-10 pr-4 rounded-lg border font-normal text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
+  />
+{/if}
