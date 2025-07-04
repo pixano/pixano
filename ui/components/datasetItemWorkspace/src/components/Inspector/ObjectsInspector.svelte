@@ -26,7 +26,7 @@ License: CECILL-C
   import { sortEntities } from "../../lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
-  import ObjectsModelSection from "./ObjectsSection.svelte";
+  import ObjectsSection from "./ObjectsSection.svelte";
 
   let selectedEntitiesId: string[];
   let allTopEntities: Entity[];
@@ -36,7 +36,7 @@ License: CECILL-C
 
   //Note: Previously Entities where grouped by source
   //Now they're all displayed regardless of source
-  //so we fake a global source for ObjectsModelSection (may be rewritten later)
+  //so we fake a global source for ObjectsSection (may be rewritten later)
   const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
   const globalSource = new Source({
     id: "pixano_source",
@@ -150,7 +150,7 @@ License: CECILL-C
         {/if}
       {/each}
     {/if}
-    <ObjectsModelSection
+    <ObjectsSection
       source={globalSource}
       {countText}
       on:filter={(event) => handleFilter(event.detail)}
@@ -161,6 +161,6 @@ License: CECILL-C
           <ObjectCard {entity} />
         {/each}
       {/key}
-    </ObjectsModelSection>
+    </ObjectsSection>
   {/if}
 </div>
