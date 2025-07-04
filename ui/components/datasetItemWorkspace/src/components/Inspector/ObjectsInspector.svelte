@@ -112,13 +112,13 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.map((ann) => {
         const topEnt = getTopEntity(ann);
+        const hide =
+          $confidenceThreshold[0] === 0.0
+            ? false
+            : (ann as BBox).data.confidence <= $confidenceThreshold[0];
         if (allTopEntities.includes(topEnt)) {
           if (ann.is_type(BaseSchema.BBox)) {
-            return toggleObjectDisplayControl(
-              ann,
-              "hidden",
-              (ann as BBox).data.confidence <= $confidenceThreshold[0],
-            );
+            return toggleObjectDisplayControl(ann, "hidden", hide);
           }
         }
         return ann;

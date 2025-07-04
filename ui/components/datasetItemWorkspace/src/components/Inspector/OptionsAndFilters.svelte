@@ -35,24 +35,31 @@ License: CECILL-C
   let tableColumns: string[] = [];
   let fieldColumns: Record<string, FieldCol[]> = {};
 
+  let disableFilter = false; //when nothing to filter, disable it
   let defaultFilter: Filter;
   const allowedTypes = ["str", "int", "float"];
 
-  datasetSchema.subscribe(($datasetSchema) => {
-    for (const table of $datasetSchema.groups["entities"]) {
+  datasetSchema.subscribe((schema) => {
+    tableColumns = [];
+    for (const table of schema.groups["entities"]) {
       if ($entities.find((ent) => ent.table_info.name === table)) {
         tableColumns.push(table);
       }
     }
-    for (const table of $datasetSchema.groups["annotations"]) {
+    for (const table of schema.groups["annotations"]) {
       if ($annotations.find((ann) => ann.table_info.name === table)) {
         tableColumns.push(table);
       }
     }
+    if (tableColumns.length === 0) {
+      //ther is no objects (entity or annotations), so deactivate filtering
+      disableFilter = true;
+      return;
+    }
     const firstTable = tableColumns[0];
     for (const table of tableColumns) {
       fieldColumns[table] = [];
-      for (const [k, v] of Object.entries($datasetSchema.schemas[table].fields)) {
+      for (const [k, v] of Object.entries(schema.schemas[table].fields)) {
         if (!v.collection && allowedTypes.includes(v.type))
           fieldColumns[table].push({
             name: k,
@@ -179,24 +186,26 @@ License: CECILL-C
     />
     <span>Interpolate</span>
   </div>
-  <div class="flex items-center justify-between w-full">
-    <span class="font-medium">Filters</span>
-    <div class="flex gap-4 items-center">
-      <IconButton on:click={() => handleAddFilter("AND")} tooltipContent={"Add a AND condition"}>
-        AND
-      </IconButton>
-      <IconButton on:click={() => handleAddFilter("OR")} tooltipContent={"Add a OR condition"}>
-        OR
-      </IconButton>
-      <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>
-        <CircleSlash2 />
-      </IconButton>
+  {#if !disableFilter}
+    <div class="flex items-center justify-between w-full">
+      <span class="font-medium">Filters</span>
+      <div class="flex gap-4 items-center">
+        <IconButton on:click={() => handleAddFilter("AND")} tooltipContent={"Add a AND condition"}>
+          AND
+        </IconButton>
+        <IconButton on:click={() => handleAddFilter("OR")} tooltipContent={"Add a OR condition"}>
+          OR
+        </IconButton>
+        <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>
+          <CircleSlash2 />
+        </IconButton>
+      </div>
     </div>
-  </div>
-  {#each $entityFilters as filter}
-    <FilterLine {filter} {tableColumns} {fieldColumns} />
-  {/each}
-  <IconButton big on:click={() => handleFilterOK()} tooltipContent="Filter with conditions.">
-    Filter
-  </IconButton>
+    {#each $entityFilters as filter}
+      <FilterLine {filter} {tableColumns} {fieldColumns} />
+    {/each}
+    <IconButton big on:click={() => handleFilterOK()} tooltipContent="Filter with conditions.">
+      Filter
+    </IconButton>
+  {/if}
 </div>
