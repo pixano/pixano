@@ -115,7 +115,7 @@ License: CECILL-C
         const hide =
           $confidenceThreshold[0] === 0.0
             ? false
-            : (ann as BBox).data.confidence <= $confidenceThreshold[0];
+            : (ann as BBox).data.confidence < $confidenceThreshold[0];
         if (allTopEntities.includes(topEnt)) {
           if (ann.is_type(BaseSchema.BBox)) {
             return toggleObjectDisplayControl(ann, "hidden", hide);

@@ -167,7 +167,9 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-2 border-2 rounded-md border-primary p-2">
-  <span>Confidence threshold</span>
+  <span title="Hide all objects with confidence < threshold. O disable threshold.">
+    Confidence threshold
+  </span>
   <SliderWithValue
     bind:value={$confidenceThreshold}
     onChange={() => {
