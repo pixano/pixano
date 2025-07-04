@@ -50,28 +50,41 @@ License: CECILL-C
   let defaultFilter: ObjectsFilter;
   const allowedTypes = ["str", "int", "float", "bool"];
 
+  const removeFields = (listFields: string[], toRemove: string[]) => {
+    for (const rf of toRemove) {
+      const index = listFields.indexOf(rf);
+      if (index > -1) listFields.splice(index, 1);
+    }
+    return listFields;
+  };
+
   const getNonFeaturesFields = (baseSchema: BaseSchema, group: string): string[] => {
     let nonFeatsFields: string[] = [];
     if (group === "annotations") {
       if (baseSchema === BaseSchema.BBox)
         nonFeatsFields = nonFeatsFields.concat(BBox.nonFeaturesFields());
       //keep "confidence"
-      const confidenceIndex = nonFeatsFields.indexOf("confidence");
-      if (confidenceIndex > -1) nonFeatsFields.splice(confidenceIndex, 1);
+      nonFeatsFields = removeFields(nonFeatsFields, ["confidence"]);
       if (baseSchema === BaseSchema.Keypoints)
         nonFeatsFields = nonFeatsFields.concat(Keypoints.nonFeaturesFields());
       if (baseSchema === BaseSchema.Mask)
         nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
       if (baseSchema === BaseSchema.Tracklet)
         nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
+      //keep (start/end_timestep/stamp)
+      nonFeatsFields = removeFields(nonFeatsFields, [
+        "start_timestep",
+        "end_timestep",
+        "start_timestamp",
+        "end_timestamp",
+      ]);
       if (baseSchema === BaseSchema.TextSpan)
         nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
     } else {
       nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
     }
     //keep "id"
-    const idIndex = nonFeatsFields.indexOf("id");
-    if (idIndex > -1) nonFeatsFields.splice(idIndex, 1);
+    nonFeatsFields = removeFields(nonFeatsFields, ["id"]);
 
     return nonFeatsFields;
   };
