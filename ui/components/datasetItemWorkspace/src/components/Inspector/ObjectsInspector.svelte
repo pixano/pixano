@@ -62,9 +62,7 @@ License: CECILL-C
     );
     //apply confidence threshold
     handleConfidenceThresholdChange();
-  };
 
-  $: {
     const unFilteredCount = $entities.filter(
       (ent) => !ent.is_conversation && ent.data.parent_ref.id === "",
     ).length;
@@ -73,7 +71,7 @@ License: CECILL-C
     } else {
       countText = `${unFilteredCount}`;
     }
-  }
+  };
 
   $: if ($annotations) handleSelectedEntitiesBBoxThumbnails();
   const handleSelectedEntitiesBBoxThumbnails = () => {
