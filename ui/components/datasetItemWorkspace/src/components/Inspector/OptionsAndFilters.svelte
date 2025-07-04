@@ -25,8 +25,8 @@ License: CECILL-C
   import type {
     FieldCol,
     FieldOperator,
-    Filter,
     LogicOperator,
+    ObjectsFilter,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import FilterLine from "./FilterLine.svelte";
 
@@ -36,7 +36,7 @@ License: CECILL-C
   let fieldColumns: Record<string, FieldCol[]> = {};
 
   let disableFilter = false; //when nothing to filter, disable it
-  let defaultFilter: Filter;
+  let defaultFilter: ObjectsFilter;
   const allowedTypes = ["str", "int", "float"];
 
   datasetSchema.subscribe((schema) => {
@@ -73,7 +73,7 @@ License: CECILL-C
       name: fieldColumns[firstTable][0].name,
       fieldOperator: "=",
       value: "",
-    } as Filter;
+    } as ObjectsFilter;
     entityFilters.set([structuredClone(defaultFilter)]);
   });
 
@@ -103,9 +103,9 @@ License: CECILL-C
     }
   }
 
-  function groupConditions(conditions: Filter[]): Filter[][] {
-    const groups: Filter[][] = [];
-    let currentGroup: Filter[] = [];
+  function groupConditions(conditions: ObjectsFilter[]): ObjectsFilter[][] {
+    const groups: ObjectsFilter[][] = [];
+    let currentGroup: ObjectsFilter[] = [];
 
     for (const cond of conditions) {
       if (cond.logicOperator === "FIRST" || cond.logicOperator === "OR") {
@@ -120,7 +120,7 @@ License: CECILL-C
     return groups;
   }
 
-  const filterAnnOrEnt = (annOrEnt: Annotation | Entity, cond: Filter): boolean => {
+  const filterAnnOrEnt = (annOrEnt: Annotation | Entity, cond: ObjectsFilter): boolean => {
     let value: string | number;
     if (cond.name === "id") value = annOrEnt.id;
     else value = annOrEnt.data[cond.name] as string | number;

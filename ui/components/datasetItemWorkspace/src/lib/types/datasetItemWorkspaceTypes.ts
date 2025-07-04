@@ -120,7 +120,7 @@ export function getOperatorsForType(typeVal: string): FieldOperator[] {
 }
 
 export type FieldCol = { name: string; type: string };
-export type Filter = {
+export type ObjectsFilter = {
   logicOperator: LogicOperator;
   table: string;
   name: string;

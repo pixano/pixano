@@ -15,10 +15,10 @@ License: CECILL-C
     getOperatorsForType,
     type FieldCol,
     type FieldOperator,
-    type Filter,
+    type ObjectsFilter,
   } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  export let filter: Filter;
+  export let filter: ObjectsFilter;
   export let tableColumns: string[];
   export let fieldColumns: Record<string, FieldCol[]>;
 

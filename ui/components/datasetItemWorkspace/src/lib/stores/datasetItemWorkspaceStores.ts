@@ -38,11 +38,11 @@ import {
 } from "../api/objectsApi";
 import { boxLinearInterpolation, keypointsLinearInterpolation } from "../api/videoApi";
 import type {
-  Filter,
   Filters,
   ItemsMeta,
   Merges,
   ModelSelection,
+  ObjectsFilter,
 } from "../types/datasetItemWorkspaceTypes";
 import { currentFrameIndex } from "./videoViewerStores";
 
@@ -81,7 +81,7 @@ export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);
 
 export const interpolate = writable<boolean>(true);
 export const confidenceThreshold = writable<number[]>([0.0]);
-export const entityFilters = writable<Filter[]>([]);
+export const entityFilters = writable<ObjectsFilter[]>([]);
 
 type ColorScale = [Array<string>, (id: string) => string];
 
