@@ -106,3 +106,24 @@ export type Merges = {
   to_fuse: Entity[];
   forbids: Entity[];
 };
+
+// Filters types
+export type LogicOperator = "FIRST" | "AND" | "OR";
+type StrOperator = "=" | "startsWith" | "endsWith";
+type NumberOperator = "=" | "<" | ">" | "<=" | ">=";
+export type FieldOperator = StrOperator | NumberOperator;
+const strOperators: StrOperator[] = ["=", "startsWith", "endsWith"];
+const numberOperators: NumberOperator[] = ["=", "<", ">", "<=", ">="];
+
+export function getOperatorsForType(typeVal: string): FieldOperator[] {
+  return ["int", "float"].includes(typeVal) ? numberOperators : strOperators;
+}
+
+export type FieldCol = { name: string; type: string };
+export type Filter = {
+  logicOperator: LogicOperator;
+  table: string;
+  name: string;
+  fieldOperator: FieldOperator;
+  value: string;
+};

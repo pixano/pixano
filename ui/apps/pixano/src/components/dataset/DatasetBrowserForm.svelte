@@ -12,7 +12,7 @@ License: CECILL-C
   import type { DatasetBrowser } from "@pixano/core/src";
   import { svg_clear, svg_search } from "@pixano/core/src/icons";
 
-  import FilterTable from "./filterTable.svelte";
+  import FilterTable from "./FilterTable.svelte";
 
   // Exports
   export let selectedDataset: DatasetBrowser;

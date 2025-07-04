@@ -6,12 +6,18 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Thumbnail } from "@pixano/canvas2d";
-  import { BaseSchema, Source, type ObjectThumbnail } from "@pixano/core";
 
-  import { defineObjectThumbnail, getTopEntity } from "../../lib/api/objectsApi";
+  import { Thumbnail } from "@pixano/canvas2d";
+  import { BaseSchema, BBox, Entity, Source, type ObjectThumbnail } from "@pixano/core";
+
+  import {
+    defineObjectThumbnail,
+    getTopEntity,
+    toggleObjectDisplayControl,
+  } from "../../lib/api/objectsApi";
   import {
     annotations,
+    confidenceThreshold,
     entities,
     itemMetas,
     mediaViews,
@@ -20,9 +26,12 @@ License: CECILL-C
   import { sortEntities } from "../../lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ObjectCard from "./ObjectCard.svelte";
-  import ObjectsModelSection from "./ObjectsModelSection.svelte";
+  import ObjectsModelSection from "./ObjectsSection.svelte";
 
   let selectedEntitiesId: string[];
+  let allTopEntities: Entity[];
+  let filteredEntities: Entity[] = $entities;
+  let countText: string;
   const thumbnails: Record<string, ObjectThumbnail | null> = {};
 
   //Note: Previously Entities where grouped by source
@@ -37,9 +46,34 @@ License: CECILL-C
     data: { name: "All", kind: "Global", metadata: {} },
   });
 
-  $: allTopEntities = $entities
-    .filter((ent) => !ent.is_conversation && ent.data.parent_ref.id === "")
-    .sort(sortEntities);
+  $: if ($entities || filteredEntities) updateObjectsEntities();
+  const updateObjectsEntities = () => {
+    allTopEntities = $entities
+      .filter(
+        (ent) =>
+          !ent.is_conversation && ent.data.parent_ref.id === "" && filteredEntities.includes(ent),
+      )
+      .sort(sortEntities);
+    //hide entities not in filter
+    annotations.update((anns) =>
+      anns.map((ann) =>
+        toggleObjectDisplayControl(ann, "hidden", !filteredEntities.includes(getTopEntity(ann))),
+      ),
+    );
+    //apply confidence threshold
+    handleConfidenceThresholdChange();
+  };
+
+  $: {
+    const unFilteredCount = $entities.filter(
+      (ent) => !ent.is_conversation && ent.data.parent_ref.id === "",
+    ).length;
+    if (unFilteredCount !== allTopEntities.length) {
+      countText = `${allTopEntities.length} / ${unFilteredCount}`;
+    } else {
+      countText = `${unFilteredCount}`;
+    }
+  }
 
   $: if ($annotations) handleSelectedEntitiesBBoxThumbnails();
   const handleSelectedEntitiesBBoxThumbnails = () => {
@@ -69,6 +103,28 @@ License: CECILL-C
       }
     }
   };
+
+  const handleFilter = (filteredEnts: Entity[]) => {
+    filteredEntities = filteredEnts;
+  };
+
+  const handleConfidenceThresholdChange = () => {
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        const topEnt = getTopEntity(ann);
+        if (allTopEntities.includes(topEnt)) {
+          if (ann.is_type(BaseSchema.BBox)) {
+            return toggleObjectDisplayControl(
+              ann,
+              "hidden",
+              (ann as BBox).data.confidence <= $confidenceThreshold[0],
+            );
+          }
+        }
+        return ann;
+      }),
+    );
+  };
 </script>
 
 <div class="p-2 w-full">
@@ -94,7 +150,12 @@ License: CECILL-C
         {/if}
       {/each}
     {/if}
-    <ObjectsModelSection source={globalSource} numberOfItem={allTopEntities.length}>
+    <ObjectsModelSection
+      source={globalSource}
+      {countText}
+      on:filter={(event) => handleFilter(event.detail)}
+      on:confidenceThresholdChange={() => handleConfidenceThresholdChange()}
+    >
       {#key allTopEntities.length}
         {#each allTopEntities as entity}
           <ObjectCard {entity} />
