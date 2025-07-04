@@ -48,29 +48,40 @@ License: CECILL-C
 
   $: if ($entities || filteredEntities) updateObjectsEntities();
   const updateObjectsEntities = () => {
+    //for video: show/hide track in Video inspector depending on filter
+    $entities.forEach((ent) => {
+      if (ent.is_track) ent.ui.displayControl.hidden = !filteredEntities.includes(ent);
+    });
+
+    //show shapes of entities in filter, hide others
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        if (!ann.is_type(BaseSchema.Tracklet))
+          toggleObjectDisplayControl(ann, "hidden", !filteredEntities.includes(getTopEntity(ann)));
+        return ann;
+      }),
+    );
+
+    //rebuild list of ObjectInspector
     allTopEntities = $entities
       .filter(
         (ent) =>
           !ent.is_conversation && ent.data.parent_ref.id === "" && filteredEntities.includes(ent),
       )
       .sort(sortEntities);
-    //hide entities not in filter
-    annotations.update((anns) =>
-      anns.map((ann) =>
-        toggleObjectDisplayControl(ann, "hidden", !filteredEntities.includes(getTopEntity(ann))),
-      ),
-    );
-    //apply confidence threshold
-    handleConfidenceThresholdChange();
 
+    //update count
     const unFilteredCount = $entities.filter(
       (ent) => !ent.is_conversation && ent.data.parent_ref.id === "",
     ).length;
     if (unFilteredCount !== allTopEntities.length) {
       countText = `${allTopEntities.length} / ${unFilteredCount}`;
     } else {
-      countText = `${unFilteredCount}`;
+      countText = `${allTopEntities.length}`;
     }
+
+    //apply current confidence threshold
+    handleConfidenceThresholdChange();
   };
 
   $: if ($annotations) handleSelectedEntitiesBBoxThumbnails();
