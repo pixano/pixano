@@ -10,7 +10,7 @@ License: CECILL-C
   import { CircleSlash2 } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
-  import { Annotation, Entity, IconButton } from "@pixano/core";
+  import { Annotation, BaseSchema, Entity, IconButton } from "@pixano/core";
   import { Checkbox } from "@pixano/core/src";
   import SliderWithValue from "@pixano/core/src/components/ui/slider/SliderWithValue.svelte";
 
@@ -42,12 +42,22 @@ License: CECILL-C
   datasetSchema.subscribe((schema) => {
     tableColumns = [];
     for (const table of schema.groups["entities"]) {
-      if ($entities.find((ent) => ent.table_info.name === table)) {
+      if (
+        $entities.find(
+          (ent) =>
+            ent.table_info.name === table && ent.table_info.base_schema !== BaseSchema.Conversation,
+        )
+      ) {
         tableColumns.push(table);
       }
     }
     for (const table of schema.groups["annotations"]) {
-      if ($annotations.find((ann) => ann.table_info.name === table)) {
+      if (
+        $annotations.find(
+          (ann) =>
+            ann.table_info.name === table && ann.table_info.base_schema !== BaseSchema.Message,
+        )
+      ) {
         tableColumns.push(table);
       }
     }
