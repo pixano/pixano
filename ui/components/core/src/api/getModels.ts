@@ -8,7 +8,7 @@ export async function getModels(): Promise<Array<string>> {
   let models: Array<string> | undefined;
 
   try {
-    const response = await fetch("/models");
+    const response = await fetch("/models/");
     if (response.ok) {
       models = (await response.json()) as Array<string>;
     } else {

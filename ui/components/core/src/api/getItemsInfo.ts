@@ -10,7 +10,7 @@ export async function getItemsInfo(datasetId: string): Promise<Array<DatasetMore
   let infos: Array<DatasetMoreInfo>;
 
   try {
-    const response = await fetch(`/items_info/${datasetId}`);
+    const response = await fetch(`/items_info/${datasetId}/`);
     if (response.ok) {
       infos = (await response.json()) as Array<DatasetMoreInfo>;
     } else {

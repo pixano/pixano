@@ -7,7 +7,7 @@ License: CECILL-C
 import type { Source } from "../lib/types";
 
 export async function getSources(datasetId: string): Promise<Source[]> {
-  const response = await fetch(`/sources/${datasetId}`);
+  const response = await fetch(`/sources/${datasetId}/`);
   if (response.ok) {
     return (await response.json()) as Source[];
   } else {
