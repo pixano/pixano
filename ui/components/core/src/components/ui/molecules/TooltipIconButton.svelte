@@ -16,6 +16,7 @@ License: CECILL-C
   export let selected: boolean = false;
   export let disabled: boolean = false;
   export let redconfirm: boolean = false;
+  export let big: boolean = false;
 
   let redConfirmState = false; // Internal state for double confirmation
   const dispatch = createEventDispatcher();
@@ -38,7 +39,7 @@ License: CECILL-C
   <Tooltip.Trigger tabindex={-1}>
     <Button
       {disabled}
-      size="icon"
+      size={big ? "lg" : "icon"}
       class={cn("bg-transparent text-slate-800 hover:bg-primary-light relative", {
         "bg-red-500 hover:bg-red-500": redConfirmState,
         "bg-primary text-white": selected,
