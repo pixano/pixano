@@ -23,6 +23,8 @@ export const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
   textSpan: BaseSchema.TextSpan,
 };
 
+export const temporayTextSpanId = "temporaryHighlightedTextSpan_x45mqsw";
+
 // PRE-ANNOTATION
 export const HIGHLIGHTED_BOX_STROKE_FACTOR = 4;
 export const HIGHLIGHTED_MASK_STROKE_FACTOR = 2;

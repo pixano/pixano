@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import {
+    BaseSchema,
     SaveShapeType,
     TextSpan,
     TextView,
@@ -13,6 +14,8 @@ License: CECILL-C
     type TextSpanAttributes,
     type TextSpanTypeWithViewRef,
   } from "@pixano/core";
+  import { temporayTextSpanId } from "@pixano/dataset-item-workspace/src/lib/constants";
+  import { annotations } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
   import { SpannableTextView } from "./components";
   import { groupTextSpansByViewId } from "./lib";
@@ -32,6 +35,30 @@ License: CECILL-C
     if (!textSpanAttributes) return;
 
     const { view_ref, ...textSpanAttrs } = textSpanAttributes;
+
+    //temporary TextSpan to keep it highlighted while filling form
+    annotations.update((anns) => {
+      const tempTextSpan = new TextSpan({
+        id: temporayTextSpanId,
+        data: {
+          spans_start: textSpanAttributes?.spans_start as number[],
+          spans_end: textSpanAttributes?.spans_end as number[],
+          mention: textSpanAttributes?.mention as string,
+          inference_metadata: {},
+          item_ref: { id: selectedItemId, name: "item" },
+          entity_ref: { id: "", name: "" },
+          view_ref: textSpanAttributes?.view_ref,
+          source_ref: { id: "", name: "" },
+        },
+        table_info: { name: "not_a_table", group: "annotations", base_schema: BaseSchema.TextSpan },
+        created_at: "",
+        updated_at: "",
+      });
+      tempTextSpan.ui.displayControl.highlighted = "self";
+      anns.push(tempTextSpan);
+      return anns;
+    });
+
     // Changing newShape opens the window for customizing and saving a new
     // anotation in the object inspector
     newShape = {

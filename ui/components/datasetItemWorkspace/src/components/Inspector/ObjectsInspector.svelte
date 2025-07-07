@@ -57,7 +57,16 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.map((ann) => {
         if (!ann.is_type(BaseSchema.Tracklet))
-          toggleObjectDisplayControl(ann, "hidden", !filteredEntities.includes(getTopEntity(ann)));
+          try {
+            toggleObjectDisplayControl(
+              ann,
+              "hidden",
+              !filteredEntities.includes(getTopEntity(ann)),
+            );
+          } catch {
+            //do nothing -- happen with temporary TextSpan which doesn't have a topEntity.
+          }
+
         return ann;
       }),
     );

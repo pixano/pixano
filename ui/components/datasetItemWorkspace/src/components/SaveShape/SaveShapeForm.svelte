@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   /* eslint-disable svelte/no-at-html-tags */
   // Imports
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   import {
     Annotation,
@@ -31,7 +31,7 @@ License: CECILL-C
     getFrameIndexFromViewRef,
   } from "../../lib/api/objectsApi";
   import { sortByFrameIndex } from "../../lib/api/videoApi";
-  import { mapShapeType2BaseSchema } from "../../lib/constants";
+  import { mapShapeType2BaseSchema, temporayTextSpanId } from "../../lib/constants";
   import {
     annotations,
     entities,
@@ -55,6 +55,7 @@ License: CECILL-C
   let selectedEntityId: string = "";
 
   const handleFormSubmit = () => {
+    removeTemporaryTextSpan();
     currentTab = "objects";
 
     if ($newShape.status !== "saving") {
@@ -240,9 +241,18 @@ License: CECILL-C
     newShape.set({ status: "none", shouldReset: true });
   };
 
+  function removeTemporaryTextSpan() {
+    if ($annotations.find((ann) => ann.id === temporayTextSpanId)) {
+      annotations.update((anns) => anns.filter((ann) => ann.id !== temporayTextSpanId));
+    }
+  }
+  function handleCancel() {
+    newShape.set({ status: "none", shouldReset: true });
+  }
+
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
-      newShape.set({ status: "none", shouldReset: true });
+      handleCancel();
     }
   }
 
@@ -256,6 +266,8 @@ License: CECILL-C
       }
     }
   });
+
+  onDestroy(removeTemporaryTextSpan);
 </script>
 
 {#if $newShape.status === "saving"}
@@ -276,12 +288,7 @@ License: CECILL-C
       />
     </div>
     <div class="flex gap-4">
-      <Button
-        class="text-white"
-        on:click={() => newShape.set({ status: "none", shouldReset: true })}
-      >
-        Cancel
-      </Button>
+      <Button class="text-white" on:click={handleCancel}>Cancel</Button>
       <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>
