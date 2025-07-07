@@ -271,6 +271,7 @@ License: CECILL-C
         bind:isFormValid
         bind:formInputs
         bind:objectProperties
+        {selectedEntityId}
         baseSchema={mapShapeType2BaseSchema[$newShape.type]}
       />
     </div>

@@ -6,17 +6,14 @@ License: CECILL-C
 
 import { get } from "svelte/store";
 
-import { Annotation, BaseSchema, Entity } from "@pixano/core";
+import { Annotation, Entity } from "@pixano/core";
 
 import { entities } from "../../stores/datasetItemWorkspaceStores";
 
 export const getTopEntity = (obj: Annotation | Entity): Entity => {
   let entity: Entity | undefined;
   // in case this is an entity (or sub entity)
-  if (
-    obj.table_info.base_schema === BaseSchema.Entity ||
-    obj.table_info.base_schema === BaseSchema.Track
-  ) {
+  if (obj.table_info.group === "entities") {
     //same logic, but do not use / store ui.top_entities (not present in Entity)
     entity = obj as Entity;
     const local_entities = get(entities);
