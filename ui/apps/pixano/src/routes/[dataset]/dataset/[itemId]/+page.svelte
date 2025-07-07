@@ -97,10 +97,25 @@ License: CECILL-C
       Object.keys(feature_values["entities"]).length > 0
     ) {
       for (const entity_group of $datasetSchema.groups.entities) {
-        frontFV.objects = {};
-        for (const feat of feature_values["entities"][entity_group]) {
-          let { name, ...fv } = feat;
-          frontFV.objects[name] = fv;
+        if (feature_values["entities"][entity_group]) {
+          for (const feat of feature_values["entities"][entity_group]) {
+            let { name, ...fv } = feat;
+            frontFV.objects[name] = fv;
+          }
+        }
+      }
+    }
+    if (
+      "annotations" in feature_values &&
+      feature_values["annotations"] &&
+      Object.keys(feature_values["annotations"]).length > 0
+    ) {
+      for (const ann_group of $datasetSchema.groups.annotations) {
+        if (feature_values["annotations"][ann_group]) {
+          for (const feat of feature_values["annotations"][ann_group]) {
+            let { name, ...fv } = feat;
+            frontFV.objects[name] = fv;
+          }
         }
       }
     }
