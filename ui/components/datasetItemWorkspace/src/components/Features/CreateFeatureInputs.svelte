@@ -29,6 +29,7 @@ License: CECILL-C
   export let objectProperties: ObjectProperties = {};
   export let initialValues: Record<string, Record<string, ItemFeature>> = {};
   export let isAutofocusEnabled: boolean = true;
+  export let selectedEntityId: string = "new";
   export let baseSchema: BaseSchema;
   let objectValidationSchema: CreateObjectSchema;
 
@@ -68,58 +69,60 @@ License: CECILL-C
 </script>
 
 {#each formInputs as feature, i}
-  {#if feature.type === "bool"}
-    <div class="flex gap-4 items-center">
-      <Checkbox
-        handleClick={(checked) => handleInputChange(checked, feature.name, feature.sch.name)}
-        checked={feature.sch.name in initialValues
-          ? initialValues[feature.sch.name][feature.name]?.value === 1
-          : false}
+  {#if selectedEntityId === "new" || (selectedEntityId !== "new" && feature.sch.group !== "entities")}
+    {#if feature.type === "bool"}
+      <div class="flex gap-4 items-center">
+        <Checkbox
+          handleClick={(checked) => handleInputChange(checked, feature.name, feature.sch.name)}
+          checked={feature.sch.name in initialValues
+            ? initialValues[feature.sch.name][feature.name]?.value === 1
+            : false}
+        />
+        <span class="capitalize">
+          {feature.label}
+          {#if feature.required}
+            <span>*</span>
+          {/if}
+        </span>
+      </div>
+    {/if}
+    {#if feature.type === "list"}
+      <Combobox
+        placeholder={`Select a ${feature.label}`}
+        listItems={feature.options}
+        saveValue={(value) => handleInputChange(value, feature.name, feature.sch.name)}
       />
-      <span class="capitalize">
-        {feature.label}
-        {#if feature.required}
-          <span>*</span>
+    {/if}
+    {#if ["int", "float", "str"].includes(feature.type)}
+      <div>
+        <span class="capitalize">
+          {feature.label}
+          {#if feature.required}
+            <span>*</span>
+          {/if}
+        </span>
+        {#if feature.type === "str"}
+          <AutocompleteTextFeature
+            value={findStringValue(feature.name)}
+            onTextInputChange={(value) => handleInputChange(value, feature.name, feature.sch.name)}
+            featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
+            autofocus={i === 0 && isAutofocusEnabled}
+            isInputEnabled={!$itemMetas.featuresList?.objects[feature.name]?.restricted}
+          />
+        {:else}
+          <Input
+            type="number"
+            step={feature.type === "int" ? "1" : "any"}
+            value={feature.sch.name in initialValues
+              ? initialValues[feature.sch.name][feature.name]?.value || ""
+              : ""}
+            autofocus={i === 0}
+            on:keyup={(e) => e.stopPropagation()}
+            on:input={(e) =>
+              handleInputChange(Number(e.currentTarget.value), feature.name, feature.sch.name)}
+          />
         {/if}
-      </span>
-    </div>
-  {/if}
-  {#if feature.type === "list"}
-    <Combobox
-      placeholder={`Select a ${feature.label}`}
-      listItems={feature.options}
-      saveValue={(value) => handleInputChange(value, feature.name, feature.sch.name)}
-    />
-  {/if}
-  {#if ["int", "float", "str"].includes(feature.type)}
-    <div>
-      <span class="capitalize">
-        {feature.label}
-        {#if feature.required}
-          <span>*</span>
-        {/if}
-      </span>
-      {#if feature.type === "str"}
-        <AutocompleteTextFeature
-          value={findStringValue(feature.name)}
-          onTextInputChange={(value) => handleInputChange(value, feature.name, feature.sch.name)}
-          featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
-          autofocus={i === 0 && isAutofocusEnabled}
-          isInputEnabled={!$itemMetas.featuresList?.objects[feature.name]?.restricted}
-        />
-      {:else}
-        <Input
-          type="number"
-          step={feature.type === "int" ? "1" : "any"}
-          value={feature.sch.name in initialValues
-            ? initialValues[feature.sch.name][feature.name]?.value || ""
-            : ""}
-          autofocus={i === 0}
-          on:keyup={(e) => e.stopPropagation()}
-          on:input={(e) =>
-            handleInputChange(Number(e.currentTarget.value), feature.name, feature.sch.name)}
-        />
-      {/if}
-    </div>
+      </div>
+    {/if}
   {/if}
 {/each}
