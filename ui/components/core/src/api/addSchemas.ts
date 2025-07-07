@@ -13,7 +13,7 @@ export async function addSchemas(
   table: string,
   no_table: boolean,
 ) {
-  const url = no_table ? `/${route}/${ds_id}` : `/${route}/${ds_id}/${table}`;
+  const url = no_table ? `/${route}/${ds_id}/` : `/${route}/${ds_id}/${table}/`;
   try {
     const response = await fetch(url, {
       headers: {
