@@ -57,6 +57,9 @@ License: CECILL-C
   let highlightState: string = "all";
   let isVisible: boolean = true;
   let childsPanelOpen = true;
+  let featuresPanelOpen = !entity.ui.childs?.some(
+    (ann) => ann.ui.datasetItemType === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+  );
   let thumbnailsPanelOpen = false;
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
@@ -275,6 +278,7 @@ License: CECILL-C
     if (child) {
       handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
     } else {
+      featuresPanelOpen = true;
       if (!entity.ui.displayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entity.ui.displayControl.editing);
     }
@@ -388,23 +392,38 @@ License: CECILL-C
           <div class="w-full block">
             <div class="flex justify-between items-center">
               <p class="font-medium">Features</p>
-              {#if $selectedTool.type !== ToolType.Fusion}
+              <div class="flex-shrink-0 flex items-center justify-end">
+                {#if $selectedTool.type !== ToolType.Fusion}
+                  <IconButton
+                    tooltipContent="Edit object"
+                    selected={entity.ui.displayControl.editing}
+                    on:click={() => onEditIconClick()}
+                  >
+                    <Pencil class="h-4" />
+                  </IconButton>
+                {/if}
                 <IconButton
-                  tooltipContent="Edit object"
-                  selected={entity.ui.displayControl.editing}
-                  on:click={() => onEditIconClick()}
+                  on:click={() => {
+                    featuresPanelOpen = !featuresPanelOpen;
+                    entity.ui.displayControl.editing = false;
+                  }}
+                  tooltipContent={featuresPanelOpen ? "Hide features" : "Show features"}
                 >
-                  <Pencil class="h-4" />
+                  <ChevronRight
+                    class={cn("transition", { "rotate-90": featuresPanelOpen })}
+                    strokeWidth={1}
+                  />
                 </IconButton>
-              {/if}
+              </div>
             </div>
-
-            <UpdateFeatureInputs
-              featureClass="objects"
-              features={$features}
-              isEditing={entity.ui.displayControl.editing ?? false}
-              {saveInputChange}
-            />
+            {#if featuresPanelOpen}
+              <UpdateFeatureInputs
+                featureClass="objects"
+                features={$features}
+                isEditing={entity.ui.displayControl.editing ?? false}
+                {saveInputChange}
+              />
+            {/if}
           </div>
           <div class="flex justify-between items-center">
             <p class="font-medium">Objects ({allowableChilds.length})</p>
