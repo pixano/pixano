@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { BBox, Entity, SliderRoot, type KeypointsTemplate } from "@pixano/core";
@@ -30,9 +30,11 @@ License: CECILL-C
   export let keypoints: KeypointsTemplate[];
 
   let tracks: Entity[] = [];
-  entities.subscribe((entities) => {
+  const unsubscribeEntities = entities.subscribe((entities) => {
     tracks = entities.filter((entity) => entity.is_track).sort(sortEntities);
   });
+
+  onDestroy(unsubscribeEntities);
 
   onMount(() => {
     videoControls.update((old) => ({ ...old, isLoaded: true }));

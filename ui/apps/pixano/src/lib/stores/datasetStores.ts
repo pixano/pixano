@@ -23,7 +23,7 @@ export const defaultDatasetTableValues: DatasetTableStore = {
 // Exports
 export const currentDatasetStore = writable<DatasetInfo>();
 export const datasetSchema = writable<DatasetSchema>();
-export const datasetsStore = writable<DatasetInfo[]>();
+export const datasetsStore = writable<DatasetInfo[]>([]);
 export const modelsStore = writable<string[]>([]);
 export const isLocalSegmentationModel = writable<boolean>(false);
 export const sourcesStore = writable<Source[]>([]);

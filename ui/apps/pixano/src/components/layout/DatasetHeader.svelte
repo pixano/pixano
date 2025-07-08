@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
@@ -32,14 +34,22 @@ License: CECILL-C
 
   const DATASET_ITEM_ROUTE = `/[dataset]/dataset/[itemId]`;
 
-  saveCurrentItemStore.subscribe((value) => (canSaveCurrentItem = value.canSave));
+  const unsubscribeSaveCurrentItemStore = saveCurrentItemStore.subscribe(
+    (value) => (canSaveCurrentItem = value.canSave),
+  );
 
-  isLoadingNewItemStore.subscribe((value) => {
+  const unsubscribeisLoadingNewItemStore = isLoadingNewItemStore.subscribe((value) => {
     isLoading = value;
   });
 
-  $: page.subscribe((value) => {
+  $: unsubscribePage = page.subscribe((value) => {
     currentItemId = value.params.itemId;
+  });
+
+  onDestroy(() => {
+    unsubscribeSaveCurrentItemStore();
+    unsubscribeisLoadingNewItemStore();
+    unsubscribePage();
   });
 
   const getDatasetItemDisplayCount = () => {

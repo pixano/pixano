@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { BoxSelectIcon, Check, Filter } from "lucide-svelte";
+  import { onDestroy } from "svelte";
 
   import { Annotation, cn, IconButton, PrimaryButton, SliderWithValue, Switch } from "@pixano/core";
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
@@ -35,7 +36,7 @@ License: CECILL-C
   $: objectToAnnotate = filteredObjectsToAnnotate[0];
   $: color = $colorScale[1](objectToAnnotate?.id || "");
 
-  annotations.subscribe((objects) => {
+  const unsubscribeAnnotations = annotations.subscribe((objects) => {
     objectsToAnnotate = getObjectsToPreAnnotate(objects);
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
@@ -43,6 +44,8 @@ License: CECILL-C
       $currentFrameIndex,
     );
   });
+
+  onDestroy(unsubscribeAnnotations);
 
   $: {
     if ($preAnnotationIsActive && objectsToAnnotate.length === 0) {
@@ -57,7 +60,7 @@ License: CECILL-C
   }
 
   const onAcceptItem = () => {
-    objectToAnnotate.review_state = "accepted";
+    objectToAnnotate.ui.review_state = "accepted";
     objectToAnnotate.ui.displayControl.highlighted = "none";
 
     annotations.update((objects) => [
@@ -145,10 +148,11 @@ License: CECILL-C
           {#key objectToAnnotate.id}
             <CreateFeatureInputs
               bind:isFormValid
-              initialValues={objectToAnnotate.features}
               bind:objectProperties
               isAutofocusEnabled={false}
+              baseSchema={objectToAnnotate.table_info.base_schema}
             />
+            <!-- initialValues={objectToAnnotate.features}  // need rework/rethink -->
           {/key}
         </div>
         <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
