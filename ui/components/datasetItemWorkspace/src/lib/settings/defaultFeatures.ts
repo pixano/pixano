@@ -6,7 +6,7 @@ License: CECILL-C
 
 import type { Entity, ItemFeature } from "@pixano/core";
 
-// TextSpan features to use (value) instead of "mention"
+// TextSpan features to use (value) instead of "mention", in this order
 export const DISPLAY_MENTION_FEATURES = ["role"];
 
 // default entity features used to display tooltip, in this order
