@@ -21,6 +21,7 @@ License: CECILL-C
   export let selectedDataset: DatasetBrowser;
   let isLoadingTableItems = false;
 
+  // Reactive statement to set isLoadingTableItems to false when table data is available
   $: {
     if (selectedDataset.table_data) {
       isLoadingTableItems = false;
@@ -37,15 +38,18 @@ License: CECILL-C
 
   const dispatch = createEventDispatcher();
 
+  // Function to handle item selection
   function handleSelectItem(itemId: string) {
     dispatch("selectItem", itemId);
   }
 
+  // Function to clear the search input and trigger a new empty search
   function handleClearSearch() {
     searchInput = "";
     handleSearch();
   }
 
+  // Function to handle search input changes
   function handleSearch() {
     let query = { model: selectedSearchModel as string, search: searchInput };
     isLoadingTableItems = true;
@@ -56,6 +60,7 @@ License: CECILL-C
     }));
   }
 
+  // Function to handle filter changes
   function handleFilter(where: string) {
     datasetTableStore.update((value) => ({
       ...value,
@@ -77,15 +82,18 @@ License: CECILL-C
       on:filter={(event) => handleFilter(event.detail)}
     />
 
+    <!-- Loading spinner while table items are being loaded -->
     {#if isLoadingTableItems}
       <div class="flex-grow flex justify-center items-center">
         <Loader2Icon class="animate-spin" />
       </div>
+    <!-- Display table -->
     {:else if !selectedDataset.isErrored}
       <Table
         items={selectedDataset.table_data}
         on:selectItem={(event) => handleSelectItem(event.detail)}
       />
+    <!-- Display error message if items could not be loaded -->
     {:else}
       <div
         class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
@@ -95,8 +103,11 @@ License: CECILL-C
       </div>
     {/if}
 
+    <!-- DatasetPagination component for page navigation -->
     <DatasetPagination {selectedDataset} bind:isLoadingTableItems />
   {/if}
+
+  <!-- Warning modal for dataset errors -->
   {#if datasetErrorModal}
     <WarningModal
       message="Error while retrieving dataset items."
@@ -104,6 +115,8 @@ License: CECILL-C
       on:confirm={() => (datasetErrorModal = false)}
     />
   {/if}
+
+  <!-- Loading modal while results are being loaded -->
   {#if loadingResultsModal}
     <LoadingModal />
   {/if}
