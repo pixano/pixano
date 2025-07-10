@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import { BaseSchema, type ItemFeature } from "@pixano/core";
   import { Checkbox, Combobox, Input } from "@pixano/core/src";
 
@@ -33,12 +35,14 @@ License: CECILL-C
   export let baseSchema: BaseSchema;
   let objectValidationSchema: CreateObjectSchema;
 
-  datasetSchema.subscribe((schema) => {
+  const unsubscribeDatasetSchema = datasetSchema.subscribe((schema) => {
     ({ schema: objectValidationSchema, inputs: formInputs } = getValidationSchemaAndFormInputs(
       schema,
       baseSchema,
     ));
   });
+
+  onDestroy(unsubscribeDatasetSchema);
 
   const handleInputChange = (
     value: string | number | boolean,

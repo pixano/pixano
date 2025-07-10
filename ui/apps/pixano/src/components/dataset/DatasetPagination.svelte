@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import type { DatasetBrowser } from "@pixano/core/src";
   import {
     svg_first_page,
@@ -28,10 +30,12 @@ License: CECILL-C
   let currentPage: number;
   let pageSize: number;
 
-  datasetTableStore.subscribe((value) => {
+  const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
     currentPage = value?.currentPage || DEFAULT_DATASET_TABLE_PAGE;
     pageSize = value?.pageSize || DEFAULT_DATASET_TABLE_SIZE;
   });
+
+  onDestroy(unsubscribeDatasetTableStore);
 
   function handleGoToFirstPage() {
     if (currentPage > 1) {

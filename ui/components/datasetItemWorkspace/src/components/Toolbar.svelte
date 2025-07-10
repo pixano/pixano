@@ -16,7 +16,7 @@ License: CECILL-C
     Wand2Icon,
     X,
   } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
@@ -85,13 +85,15 @@ License: CECILL-C
     modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
   };
 
-  interactiveSegmenterModel.subscribe((segmenter) => {
+  const unsubscribeInteractiveSegmenterModel = interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
       addSmartPointTool.postProcessor = segmenter;
       removeSmartPointTool.postProcessor = segmenter;
       smartRectangleTool.postProcessor = segmenter;
     }
   });
+
+  onDestroy(unsubscribeInteractiveSegmenterModel);
 
   onMount(() => {
     if ($selectedTool === undefined) selectedTool.set(panTool);

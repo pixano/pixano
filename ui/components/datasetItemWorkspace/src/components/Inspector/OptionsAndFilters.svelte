@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
 
   import { CircleSlash2 } from "lucide-svelte";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
 
   import {
     Annotation,
@@ -89,7 +89,7 @@ License: CECILL-C
     return nonFeatsFields;
   };
 
-  datasetSchema.subscribe((schema) => {
+  const unsubscribeDatasetSchema = datasetSchema.subscribe((schema) => {
     tableColumns = [];
     for (const table of schema.groups["entities"]) {
       if (
@@ -149,6 +149,10 @@ License: CECILL-C
       value: "",
     } as ObjectsFilter;
     entityFilters.set([structuredClone(defaultFilter)]);
+  });
+
+  onDestroy(() => {
+    unsubscribeDatasetSchema();
   });
 
   const handleAddFilter = (logicOperator: LogicOperator) => {

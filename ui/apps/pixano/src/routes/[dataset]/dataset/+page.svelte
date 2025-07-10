@@ -18,18 +18,15 @@ License: CECILL-C
   import { page } from "$app/stores";
   import { datasetItemIds, datasetTableStore } from "$lib/stores/datasetStores";
 
-  let selectedDatasetId: string;
   let selectedDataset: DatasetBrowser;
   let showNoRowModal = false;
-
-  $: page.subscribe((value) => (selectedDatasetId = value.params.dataset));
 
   let unsubscribe2datasetTableStore: Unsubscriber;
   onMount(() => {
     unsubscribe2datasetTableStore = datasetTableStore.subscribe((pagination) => {
-      if (selectedDatasetId) {
+      if ($page.params.dataset) {
         getBrowser(
-          selectedDatasetId,
+          $page.params.dataset,
           pagination.currentPage,
           pagination.pageSize,
           pagination.query,

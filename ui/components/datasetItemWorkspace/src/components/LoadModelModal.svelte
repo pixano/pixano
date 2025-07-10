@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
   import { derived } from "svelte/store";
 
   import {
@@ -40,13 +41,15 @@ License: CECILL-C
     return [...withSam, ...withoutSam];
   });
 
-  modelsUiStore.subscribe((store) => {
+  const unsubscribeModelsUiStore = modelsUiStore.subscribe((store) => {
     currentModalOpen = store.currentModalOpen;
     selectedModelName =
       store.selectedModelName !== "" ? store.selectedModelName : selectedModelName;
     selectedTableName =
       store.selectedTableName !== "" ? store.selectedTableName : selectedTableName;
   });
+
+  onDestroy(unsubscribeModelsUiStore);
 
   const getViewEmbeddings = () => {
     modelsUiStore.update((store) => ({

@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
   import keypoints_icon from "@pixano/core/src/assets/lucide_keypoints_icon.svg";
@@ -30,13 +32,15 @@ License: CECILL-C
     newShape.set({ status: "none" });
   };
 
-  selectedTool.subscribe((tool) => {
+  const unsubscribeSelectedTool = selectedTool.subscribe((tool) => {
     if (tool?.type !== ToolType.Keypoint) {
       selectedKeypointsTemplate.set(null);
     } else {
       selectedKeypointsTemplate.set(templates[0].template_id);
     }
   });
+
+  onDestroy(unsubscribeSelectedTool);
 </script>
 
 <div

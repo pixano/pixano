@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type {
     KeypointsTemplate,
@@ -77,7 +79,7 @@ License: CECILL-C
     ) as Tracklet[];
   }
 
-  annotations.subscribe(() => {
+  const unsubscribeAnnotations = annotations.subscribe(() => {
     highlightState = "all";
     for (const ann of track.ui.childs ?? []) {
       if (ann.ui.displayControl.highlighted === "self") {
@@ -89,6 +91,8 @@ License: CECILL-C
       }
     }
   });
+
+  onDestroy(unsubscribeAnnotations);
 
   const moveCursorToPosition = (clientX: number) => {
     const newPosition = objectTimeTrack.getBoundingClientRect();

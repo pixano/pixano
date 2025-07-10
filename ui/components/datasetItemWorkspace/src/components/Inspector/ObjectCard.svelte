@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ChevronRight, Eye, EyeOff, ListPlus, ListX, Pencil, Trash2 } from "lucide-svelte";
+  import { onDestroy } from "svelte";
   import { derived } from "svelte/store";
 
   import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
@@ -161,7 +162,7 @@ License: CECILL-C
     },
   );
 
-  annotations.subscribe(() => {
+  const unsubscribeAnnotations = annotations.subscribe(() => {
     highlightState = "all";
     for (const ann of entity.ui.childs ?? []) {
       if (ann.ui.displayControl.highlighted === "self") {
@@ -303,7 +304,12 @@ License: CECILL-C
       }
     }
   };
-  entities.subscribe(() => setThumbnails());
+  const unsubscribeEntities = entities.subscribe(() => setThumbnails());
+
+  onDestroy(() => {
+    unsubscribeAnnotations();
+    unsubscribeEntities();
+  });
 </script>
 
 <article
