@@ -6,11 +6,17 @@ License: CECILL-C
 
 import type { DatasetMoreInfo } from "../lib/types/dataset/DatasetMoreInfo";
 
-export async function getItemsInfo(datasetId: string): Promise<Array<DatasetMoreInfo>> {
+export async function getItemsInfo(
+  datasetId: string,
+  options?: { signal?: AbortSignal },
+): Promise<Array<DatasetMoreInfo>> {
   let infos: Array<DatasetMoreInfo>;
 
   try {
-    const response = await fetch(`/items_info/${datasetId}/`);
+    const response = await fetch(`/items_info/${datasetId}/`, {
+      method: "GET",
+      signal: options?.signal,
+    });
     if (response.ok) {
       infos = (await response.json()) as Array<DatasetMoreInfo>;
     } else {
@@ -24,7 +30,7 @@ export async function getItemsInfo(datasetId: string): Promise<Array<DatasetMore
     }
   } catch (e) {
     infos = [];
-    console.log("api.getItemsInfo -", e);
+    if (!(typeof e === "string" && e === "aborted")) console.log("api.getItemsInfo -", e);
   }
 
   return infos;

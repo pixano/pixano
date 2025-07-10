@@ -10,12 +10,13 @@ License: CECILL-C
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
   import { svg_search } from "@pixano/core/src/icons";
 
-  import { datasetsStore } from "$lib/stores/datasetStores";
+  import { datasetFilter, datasetsStore } from "$lib/stores/datasetStores";
 
   export let datasets: Array<DatasetInfo>;
 
   const handleSearch = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
+    datasetFilter.set(target.value);
     datasetsStore.update((value = []) =>
       value.map((dataset) => ({
         ...dataset,
@@ -58,6 +59,7 @@ License: CECILL-C
               class="h-10 pl-10 pr-4 rounded border border-primary-foreground bg-primary-foreground
               text-white placeholder-white font-medium focus:outline-none"
               on:input={handleSearch}
+              value={$datasetFilter}
             />
             <svg
               xmlns="http://www.w3.org/2000/svg"
