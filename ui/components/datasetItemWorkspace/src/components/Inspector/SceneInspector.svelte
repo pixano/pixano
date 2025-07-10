@@ -9,6 +9,7 @@ License: CECILL-C
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
+  import { onDestroy } from "svelte";
   import RangeSlider from "svelte-range-slider-pips";
 
   import { Image, SequenceFrame, View, type SaveItem } from "@pixano/core";
@@ -45,7 +46,7 @@ License: CECILL-C
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
-  $: mediaViews.subscribe((views) => {
+  $: unsubscriberMediaViews = mediaViews.subscribe((views) => {
     viewMeta = Object.values(views || {}).map((view: View | View[]) => {
       let image: Image | SequenceFrame;
       if (Array.isArray(view)) {
@@ -73,6 +74,10 @@ License: CECILL-C
           };
     });
     features = createFeature($itemMetas.item, $datasetSchema);
+  });
+
+  onDestroy(() => {
+    unsubscriberMediaViews();
   });
 
   /**
