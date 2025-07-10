@@ -5,8 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { onMount } from "svelte";
-
   import { BaseSchema, TextSpan, type Annotation } from "@pixano/core";
   import { DISPLAY_MENTION_FEATURES } from "@pixano/dataset-item-workspace/src/lib/settings/defaultFeatures";
 
@@ -15,7 +13,9 @@ License: CECILL-C
   let col_names: string[] = [];
   let mentionRows: { [key: string]: string | undefined }[] = [];
 
-  onMount(() => {
+  $: if (annotations) buildTextSpanTable();
+
+  const buildTextSpanTable = () => {
     const textSpans =
       (annotations?.filter((ann) => ann.is_type(BaseSchema.TextSpan)) as TextSpan[]) ?? [];
     // get used fields
@@ -49,7 +49,7 @@ License: CECILL-C
       seen.add(key);
       return true;
     });
-  });
+  };
 </script>
 
 {#if mentionRows.length > 0}
