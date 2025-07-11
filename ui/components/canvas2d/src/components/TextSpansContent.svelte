@@ -10,32 +10,69 @@ License: CECILL-C
 
   export let annotations: Annotation[] | undefined;
 
-  const uniqueMentions = (): [string, string][] => {
-    const mentions: [string, string][] = [];
-    const textSpans = annotations?.filter((ann) => ann.is_type(BaseSchema.TextSpan)) ?? [];
-    (textSpans as TextSpan[]).forEach((tspan) => {
-      let mention_label: string = "mention";
-      for (const feat of DISPLAY_MENTION_FEATURES) {
-        if (feat in tspan.data && typeof tspan.data[feat] === "string") {
-          mention_label = tspan.data[feat];
-          break;
+  let col_names: string[] = [];
+  let mentionRows: { [key: string]: string | undefined }[] = [];
+
+  $: if (annotations) buildTextSpanTable();
+
+  const buildTextSpanTable = () => {
+    const textSpans =
+      (annotations?.filter((ann) => ann.is_type(BaseSchema.TextSpan)) as TextSpan[]) ?? [];
+    // get used fields
+    const foundFields = new Set<string>();
+    for (const tspan of textSpans) {
+      for (const field of DISPLAY_MENTION_FEATURES) {
+        const val = tspan.data[field];
+        if (typeof val === "string") {
+          foundFields.add(field);
         }
       }
-      if (!mentions.find(([ml, m]) => ml === mention_label && m === tspan.data.mention))
-        mentions.push([mention_label, tspan.data.mention]);
+    }
+    // force "mention"
+    foundFields.add("mention");
+    // filter col_names
+    col_names = DISPLAY_MENTION_FEATURES.filter((f) => foundFields.has(f));
+    // build rows
+    const rawRows = textSpans.map((tspan) => {
+      const row: { [key: string]: string | undefined } = {};
+      for (const field of col_names) {
+        const val = tspan.data[field];
+        row[field] = typeof val === "string" ? val : undefined;
+      }
+      return row;
     });
-    return Array.from(mentions.values());
+    // deduplicate
+    const seen = new Set<string>();
+    mentionRows = rawRows.filter((row) => {
+      const key = JSON.stringify(row);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   };
-
-  const mentions = uniqueMentions();
 </script>
 
-{#if annotations?.some((ann) => ann.is_type(BaseSchema.TextSpan))}
-  <p class="font-medium mt-4">Text spans</p>
-  <div class="grid gap-x-4 gap-y-2 grid-cols-[150px_auto] mt-2 pr-4 justify-between">
-    {#each mentions as [mention_label, mention]}
-      <p class="font-medium ml-4">{mention_label}</p>
-      <p>{mention}</p>
-    {/each}
+{#if mentionRows.length > 0}
+  <div class="mt-4 mr-4">
+    <p class="font-medium mb-2">Text spans</p>
+
+    <table class="table-auto border-collapse w-full text-sm">
+      <thead class="bg-gray-100">
+        <tr>
+          {#each col_names as col}
+            <th class="border px-2 py-1 text-left">{col}</th>
+          {/each}
+        </tr>
+      </thead>
+      <tbody>
+        {#each mentionRows as row}
+          <tr>
+            {#each col_names as col}
+              <td class="border px-2 py-1">{row[col] ?? ""}</td>
+            {/each}
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   </div>
 {/if}

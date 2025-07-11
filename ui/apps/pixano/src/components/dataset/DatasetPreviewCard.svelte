@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
   import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
@@ -16,6 +16,7 @@ License: CECILL-C
   export let dataset: DatasetInfo;
 
   let additionalInfo: string | undefined = undefined;
+  const controller = new AbortController();
 
   const dispatch = createEventDispatcher();
 
@@ -39,11 +40,13 @@ License: CECILL-C
         return "Undefined";
     }
   }
+
   onMount(() => {
     //get dataset infos to put in tooltip
     api
-      .getItemsInfo(dataset.id)
+      .getItemsInfo(dataset.id, { signal: controller.signal })
       .then((infos) => {
+        if (controller.signal.aborted) return;
         let maxNumViews = 0;
         let entitiesCounts = 0;
         let annCounts: Record<string, number> = {};
@@ -71,6 +74,10 @@ License: CECILL-C
       .catch((err) => {
         console.log("Error collecting additionnal dataset infos", err);
       });
+  });
+
+  onDestroy(() => {
+    controller.abort("aborted");
   });
 </script>
 
