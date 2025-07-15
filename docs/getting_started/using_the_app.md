@@ -14,7 +14,7 @@ On the dataset page, you will see a list of all the items it contains, organized
 
 ![Pixano dataset page - bottom](../assets/user/app_dataset_2.png)
 
-When scrolling to the bottom of the page, you will see navigation buttons to move through the pages of your dataset.
+Navigation buttons at the page bottom allows to move through the pages of your dataset.
 
 ## Dashboard page
 
@@ -26,7 +26,11 @@ From the dataset page, you can go to the dashboard page, which contains more inf
 
 When opening an item, the item media will be displayed in the center on the screen (in case of multi-view datasets, the images will be tiled).
 
-On the left, a toolbar is available. On the right, two panels will display information on the item objects and scene.
+On the top, a toolbar is available. On the right, two panels will display information on the item objects and scene.
+
+For video datasets, there will be a timeline display of tracks.
+
+For VQA and EntityLinking datasets, ther will be a text panel on the left.
 
 ### Scene panel
 
@@ -42,17 +46,16 @@ You can edit the scene features and then click the save changes button to write 
 
 The objects panel will display all the item objects.
 
-On the top, you will see the ground truth objects, which are the objects you imported with your dataset, and objects you create within the app. On the bottom, a dropdown menu will let you go through all the objects created by models like the ones available in Pixano Inference.
-
 You have visibility toggles for objects and object group, and when hovering on an object, you will have access to an edit tool and a delete tool.
 
-If you have used an inference model for pre-annotating the dataset, a "Pre-annotation" toggle will also appear above the ground truth section. Activating this toggle will let you go through each object and accept or reject them individually. You will also be able to edit the object features before accepting it.
+<!--If you have used an inference model for pre-annotating the dataset, a "Pre-annotation" toggle will also appear above the ground truth section. Activating this toggle will let you go through each object and accept or reject them individually. You will also be able to edit the object features before accepting it.-->
 
 ![Pixano item view - object edition](../assets/user/exploration_object_edition.png)
 
-The edit tool will allow you to edit the object features, for example its category and category ID, and also allow you to edit the object bounding box and mask on the image. For text features, auto-completion based on existing feature values in the dataset is available.
+The edit tool will allow you to edit the object features, for example its category and category ID.
+and also allow you to edit the object bounding box and mask on the image. For text features, auto-completion based on existing feature values in the dataset is available.
 
-To create new objects, you have multiple tools at your disposal on the left toolbar.
+To create new objects, you have multiple tools at your disposal on the top toolbar.
 
 ### Toolbar
 
