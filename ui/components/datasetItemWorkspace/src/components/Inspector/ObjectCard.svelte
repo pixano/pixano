@@ -155,7 +155,7 @@ License: CECILL-C
           ann.table_info.name + "." + ann.data.view_ref.name,
         );
       }
-      feats[entity.id] = createFeature(entity, $datasetSchema);
+      feats[entity.id] = createFeature(entity, $datasetSchema, entity.table_info.name);
 
       return Object.values(feats).flat();
     },
@@ -395,7 +395,7 @@ License: CECILL-C
               <div class="flex-shrink-0 flex items-center justify-end">
                 {#if $selectedTool.type !== ToolType.Fusion}
                   <IconButton
-                    tooltipContent="Edit object"
+                    tooltipContent="Edit object features"
                     selected={entity.ui.displayControl.editing}
                     on:click={() => onEditIconClick()}
                   >

@@ -162,7 +162,7 @@ export const getValidationSchemaAndFormInputs = (schema: DatasetSchema, baseSche
             featuresArray.push({
               name: feat,
               required: false, //TODO (info not in datasetSchema (nowhere yet))
-              label: feat,
+              label: `[${tname}] ${feat}`,
               type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
               sch: { name: tname, group, base_schema: sch.base_schema },
             });
