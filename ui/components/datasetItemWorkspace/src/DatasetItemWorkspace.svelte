@@ -29,6 +29,8 @@ License: CECILL-C
 
   import "./index.css";
 
+  import { onDestroy } from "svelte";
+
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
@@ -169,7 +171,11 @@ License: CECILL-C
     saveData.set([]);
   };
 
-  canSave.subscribe((value) => (canSaveCurrentItem = value));
+  const unsubscribeCanSave = canSave.subscribe((value) => (canSaveCurrentItem = value));
+
+  onDestroy(() => {
+    unsubscribeCanSave();
+  });
 
   $: if (selectedItem) {
     newShape.update((old) => ({ ...old, status: "none" }));

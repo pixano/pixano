@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   import { api, cn } from "@pixano/core/src";
 
@@ -48,7 +48,7 @@ License: CECILL-C
   // Get all the ids of the items of the selected dataset
   $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
 
-  datasetTableStore.subscribe((value) => {
+  const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
     if (value.where != undefined) {
       datasetTotalItemsCount.set($datasetItemIds.length);
     }
@@ -65,7 +65,7 @@ License: CECILL-C
     }
   };
 
-  $: page.subscribe((value) => {
+  $: unsubscribePage = page.subscribe((value) => {
     currentDatasetId = value.params.dataset;
     // if currentDatasetStore is not set yet (happens from a refresh on a datasetItem page), set it now
     if (currentDatasetId && $currentDatasetStore == null) {
@@ -76,13 +76,17 @@ License: CECILL-C
     }
   });
 
-  $: {
-    currentDatasetStore.subscribe((currentDataset) => {
-      if (currentDataset) {
-        datasetTableStore.set(defaultDatasetTableValues);
-      }
-    });
-  }
+  $: unsubscribeCurrentDatasetStore = currentDatasetStore.subscribe((currentDataset) => {
+    if (currentDataset) {
+      datasetTableStore.set(defaultDatasetTableValues);
+    }
+  });
+
+  onDestroy(() => {
+    unsubscribeDatasetTableStore();
+    unsubscribePage();
+    unsubscribeCurrentDatasetStore();
+  });
 </script>
 
 <svelte:head>

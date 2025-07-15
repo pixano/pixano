@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
+  import { onDestroy } from "svelte";
 
   import {
     api,
@@ -47,9 +48,11 @@ License: CECILL-C
 
   let modelWorking: boolean = false;
 
-  modelsUiStore.subscribe(() => {
+  const unsubscribeModelsUiStore = modelsUiStore.subscribe(() => {
     if (selectedItem) loadViewEmbeddings();
   });
+
+  onDestroy(unsubscribeModelsUiStore);
 
   const pixanoInferenceSegmentation = async (
     viewRef: Reference,
