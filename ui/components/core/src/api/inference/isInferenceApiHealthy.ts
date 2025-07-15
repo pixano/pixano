@@ -12,13 +12,13 @@ export async function isInferenceApiHealthy(url: string): Promise<boolean> {
         "Content-Type": "application/json",
       },
       method: "POST",
+      signal: AbortSignal.timeout(4000),
     });
 
     if (!response.ok) {
+      // console.log("api.inferenceConnect -", response.status, response.statusText);
       return false;
     }
-
-    // console.log("api.inferenceConnect -", response.status, response.statusText);
     return true;
   } catch {
     return false;
