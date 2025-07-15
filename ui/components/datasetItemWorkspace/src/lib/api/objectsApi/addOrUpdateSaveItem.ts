@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { SaveItem } from "@pixano/core";
+import { BaseSchema, type SaveItem } from "@pixano/core";
 
 export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
   const existing_sames = objects.filter(
@@ -24,6 +24,15 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
     existing_sames.some((item) => item.change_type === "add")
   ) {
     //deleting an object created in this "session" (after last save): no need to keep delete
+    //if Source - pixano_source is the only object in objects, discard it too (it will be put back if needed)
+    if (
+      objects.length === 1 &&
+      objects[0].change_type === "add" &&
+      objects[0].object.table_info.base_schema === BaseSchema.Source &&
+      objects[0].object.id === "pixano_source"
+    ) {
+      return [];
+    }
     return objects;
   }
   if (

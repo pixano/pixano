@@ -36,7 +36,14 @@ License: CECILL-C
 </script>
 
 <Tooltip.Root>
-  <Tooltip.Trigger tabindex={-1}>
+  <Tooltip.Trigger tabindex={-1} class="relative">
+    {#if redConfirmState}
+      <div
+        class="absolute right-full top-1/2 -translate-y-1/2 mr-2 bg-slate-800 text-white text-sm px-3 py-1 rounded shadow-lg whitespace-nowrap z-10"
+      >
+        Click again to confirm suppression
+      </div>
+    {/if}
     <Button
       {disabled}
       size={big ? "lg" : "icon"}
