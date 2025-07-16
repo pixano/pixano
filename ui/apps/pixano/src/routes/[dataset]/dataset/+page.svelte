@@ -16,8 +16,8 @@ License: CECILL-C
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
+  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
   import { datasetItemIds, datasetTableStore } from "$lib/stores/datasetStores";
-    import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
 
   let selectedDataset: DatasetBrowser;
   let showNoRowModal = false;
