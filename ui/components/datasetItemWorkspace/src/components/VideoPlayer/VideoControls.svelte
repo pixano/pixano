@@ -62,7 +62,7 @@ License: CECILL-C
       if (!$videoControls.isLoaded) return;
       clearInterval($videoControls.intervalId);
       currentFrameIndex.update((index) => {
-        if (index == 0) return $lastFrameIndex;
+        if (index === 0) return $lastFrameIndex;
         else return (index - 1) % ($lastFrameIndex + 1);
       });
       updateView($currentFrameIndex);

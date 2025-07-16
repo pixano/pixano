@@ -291,7 +291,7 @@ License: CECILL-C
     thumbnails = [];
     for (const view of Object.keys($mediaViews)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
-        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
+        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name === view,
       );
       if (highlightedBoxesByView) {
         const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];

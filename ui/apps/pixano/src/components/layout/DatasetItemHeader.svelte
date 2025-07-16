@@ -77,8 +77,14 @@ License: CECILL-C
       </IconButton>
       <span>{getDatasetItemDisplayCount()}</span>
     </div>
-    <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
+    <Toolbar isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO} />
   {/if}
 {/if}
-<PrimaryButton disabled={$saveData.length === 0} on:click={handleSave}>Save</PrimaryButton>
+<PrimaryButton
+  disabled={$saveData.length === 0}
+  brighter={$saveData.length > 0}
+  on:click={handleSave}
+>
+  Save
+</PrimaryButton>
 <svelte:window on:keyup={onKeyUp} />
