@@ -19,7 +19,6 @@ License: CECILL-C
     datasetsStore,
     datasetTableStore,
     datasetTotalItemsCount,
-    defaultDatasetTableValues,
     modelsStore,
   } from "../lib/stores/datasetStores";
   import { page } from "$app/stores";
@@ -76,16 +75,9 @@ License: CECILL-C
     }
   });
 
-  $: unsubscribeCurrentDatasetStore = currentDatasetStore.subscribe((currentDataset) => {
-    if (currentDataset) {
-      datasetTableStore.set(defaultDatasetTableValues);
-    }
-  });
-
   onDestroy(() => {
     unsubscribeDatasetTableStore();
     unsubscribePage();
-    unsubscribeCurrentDatasetStore();
   });
 </script>
 

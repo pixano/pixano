@@ -60,7 +60,7 @@ License: CECILL-C
   };
 
   let unsubscribe2datasetTableStore: Unsubscriber;
-  onMount(async () => {
+  onMount(() => {
     unsubscribe2datasetTableStore = datasetTableStore.subscribe((pagination) => {
       if ($page.params.dataset) {
         getBrowser(
@@ -72,12 +72,18 @@ License: CECILL-C
         )
           .then((datasetItems) => {
             if (datasetItems.id) {
-              getCounts(datasetItems.id, datasetItems.table_data).then((table_counts) => {
-                selectedDataset = datasetItems;
-                selectedDataset.table_data = table_counts;
-                datasetItemIds.set(selectedDataset.item_ids);
-                selectedDataset.pagination.total_size = selectedDataset.item_ids.length;
-              });
+              getCounts(datasetItems.id, datasetItems.table_data)
+                .then((table_counts) => {
+                  datasetItems.table_data = table_counts;
+                })
+                .catch((err) => {
+                  console.warn("Could not get computed items infos", err);
+                })
+                .finally(() => {
+                  datasetItems.pagination.total_size = datasetItems.item_ids.length;
+                  selectedDataset = datasetItems;
+                  datasetItemIds.set(selectedDataset.item_ids);
+                });
             } else {
               showNoRowModal = true;
               //do not change current selectedDataset if error / no row.
