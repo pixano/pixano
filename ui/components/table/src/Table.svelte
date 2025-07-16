@@ -195,7 +195,7 @@ License: CECILL-C
           >
             {#each row.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs>
-                <td {...attrs} class="border-b border-slate-300">
+                <td {...attrs} class="px-2 border-b border-slate-300">
                   <Render of={cell.render()} />
                 </td>
               </Subscribe>
