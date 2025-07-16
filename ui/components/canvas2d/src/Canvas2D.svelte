@@ -674,7 +674,7 @@ License: CECILL-C
   }
 
   function dragKeyPointInputRectEnd(viewRef: Reference) {
-    if (selectedTool?.type == ToolType.Keypoint) {
+    if (selectedTool?.type === ToolType.Keypoint) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
       if (rect && newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) {
@@ -973,7 +973,7 @@ License: CECILL-C
       const rect: Konva.Rect = stage.findOne("#drag-rect");
       if (rect) {
         const { width, height } = rect.size();
-        if (width == 0 || height == 0) {
+        if (width === 0 || height === 0) {
           //rect with area = 0 -> delete it
           newShape = { status: "none" };
         } else {
@@ -1161,7 +1161,7 @@ License: CECILL-C
       highlightInputPoint(input_point, viewRef.name);
       lastInputViewRef = viewRef;
       await updateCurrentMask(viewRef);
-    } else if (selectedTool?.type == ToolType.Rectangle) {
+    } else if (selectedTool?.type === ToolType.Rectangle) {
       viewLayer.on("pointermove", () => dragInputRectMove(viewRef));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewRef));
     } else if (selectedTool?.type === ToolType.Keypoint) {
@@ -1232,7 +1232,7 @@ License: CECILL-C
       return; // Ignore shortcut when typing text
     }
 
-    if (event.key == "Delete" && highlighted_point != null) {
+    if (event.key === "Delete" && highlighted_point != null) {
       //get view_name of highlighted_point
       const view_name = findViewName(highlighted_point);
       const to_destroy_hl_point = highlighted_point;
@@ -1252,7 +1252,7 @@ License: CECILL-C
         clearCurrentAnn(view_name, stage, selectedTool);
       }
     }
-    if (event.key == "i") {
+    if (event.key === "i") {
       console.log("Canvas2D - Infos");
       console.log("masks", masks);
       console.log("bboxes", bboxes);

@@ -11,6 +11,7 @@ License: CECILL-C
 
   export let isSelected: boolean = false;
   export let disabled: boolean = false;
+  export let brighter: boolean = false;
 </script>
 
 <Button
@@ -23,4 +24,12 @@ License: CECILL-C
   on:click
 >
   <slot />
+  {#if brighter}
+    <span class="relative flex size-3">
+      <span
+        class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"
+      ></span>
+      <span class="relative inline-flex size-3 rounded-full bg-primary"></span>
+    </span>
+  {/if}
 </Button>
