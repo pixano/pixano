@@ -82,8 +82,8 @@ License: CECILL-C
     }
     */
     const frontFV: FeaturesValues = { main: {}, objects: {} };
-    if ("items" in feature_values && feature_values["items"] && feature_values["items"]["items"]) {
-      for (const feat of feature_values["items"]["items"]) {
+    if ("item" in feature_values && feature_values["item"] && feature_values["item"]["item"]) {
+      for (const feat of feature_values["item"]["item"]) {
         let { name, ...fv } = feat;
         frontFV.main[name] = fv;
       }

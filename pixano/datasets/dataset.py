@@ -10,7 +10,7 @@ import shutil
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, List, Literal, Union, cast, overload
 
 import lancedb
 import polars as pl
@@ -26,7 +26,7 @@ from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embeddin
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.utils.python import to_sql_list
 
-from .dataset_features_values import DatasetFeaturesValues
+from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from .dataset_stat import DatasetStatistic
@@ -932,3 +932,42 @@ class Dataset:
         for json_fp in directory.glob("*/info.json"):
             dataset_infos.append(DatasetInfo.from_json(json_fp))
         return dataset_infos
+
+    def add_constraint(
+        self,
+        table: TableName,
+        field_name: str,
+        values: List[Union[int, float, str, bool]],
+        restricted: bool = True,
+    ):
+        """Add or replace a constraint.
+
+        Args:
+            table: Table name (as in DatasetItem schema)
+            field_name: Name of the field to constrain.
+            values: List of allowed values.
+            restricted: True if no other values are allowed.
+        """
+        # get kind ("item", "views", "entities", "annotations") from schema (table name are unique)
+        kinds = [group.value for group, tables in self.schema.groups.items() if table in tables]
+        if len(kinds) != 1:
+            raise ValueError(f"Table {table} do not exist in schema")
+
+        constraint_dict: ConstraintDict = getattr(self.features_values, kinds[0])
+
+        # Ensure the list exists for the given table
+        if table not in constraint_dict:
+            constraint_dict[table] = []
+
+        # Check if the field already has a constraint → update it if so
+        for constraint in constraint_dict[table]:
+            if constraint.name == field_name:
+                constraint.restricted = restricted
+                constraint.values = values
+                return
+
+        # Otherwise, add a new constraint
+        constraint_dict[table].append(Constraint(name=field_name, restricted=restricted, values=values))
+
+        # Save json
+        self.features_values.to_json(self._features_values_file)
