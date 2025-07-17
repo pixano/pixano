@@ -15,7 +15,7 @@ import shortuuid
 import tqdm
 from lancedb.table import Table
 
-from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
+from pixano.datasets import Dataset, DatasetInfo, DatasetItem, DatasetSchema
 from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source, SourceKind
@@ -57,6 +57,7 @@ class DatasetBuilder(ABC):
         self.info: DatasetInfo = info
         self.dataset_schema: DatasetSchema = dataset_item.to_dataset_schema()
         self.schemas: dict[str, type[BaseSchema]] = self.dataset_schema.schemas
+        self.dataset_features_values = dataset_item.to_features_values()
 
         self.db: lancedb.DBConnection = lancedb.connect(self.target_dir / Dataset._DB_PATH)
 
@@ -155,7 +156,9 @@ class DatasetBuilder(ABC):
 
         # save features_values.json
         # TMP: empty now
-        DatasetFeaturesValues().to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
+        # TODO WIP: fill DatasetFeaturesValues from Literal if any
+        # + give method(s) to easily fill constraints
+        self.dataset_features_values.to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
 
         # remove previous schema.json if any
         if (self.target_dir / Dataset._SCHEMA_FILE).exists():

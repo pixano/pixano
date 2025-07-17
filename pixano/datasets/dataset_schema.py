@@ -9,11 +9,12 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from types import GenericAlias
-from typing import Any
+from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, create_model, model_serializer, model_validator
 from typing_extensions import TYPE_CHECKING, Self
 
+from pixano.datasets.dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from pixano.features import BaseSchema, Item
 from pixano.features.schemas.registry import _SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
@@ -308,7 +309,7 @@ class DatasetSchema(BaseModel):
         Returns:
             The dataset schema.
         """
-        item_fields = {}
+        item_fields: dict[str, Any] = {}
 
         # table schemas
         dataset_schema_dict: dict[str, Any] = {}
@@ -337,6 +338,11 @@ class DatasetSchema(BaseModel):
                 else:
                     # Default case: categorize as item attribute
                     item_fields[field_name] = (args[0], ...)  # type: ignore[valid-type]
+            # Literal: item attribute
+            # - must be tested before issubclass to avoid error
+            elif get_origin(field.annotation) is Literal:
+                literal_values = get_args(field.annotation)
+                item_fields[field_name] = (type(literal_values[0]), ...)
             # Check if field is a schema
             elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
                 schemas[field_name] = field.annotation
@@ -556,3 +562,21 @@ class DatasetItem(BaseModel):
         )
 
         return SubDatasetItem
+
+    @classmethod
+    def to_features_values(cls) -> "DatasetFeaturesValues":
+        """Create DatasetFeaturesValues from DatasetItem.
+        Seek Literal items to create Constraints on them.
+
+        Args:
+            dataset_item: DatasetItem class
+        """
+        table_name = TableName("items")
+        items_constraints: ConstraintDict = {table_name: []}
+        for field_name, field in cls.model_fields.items():
+            if get_origin(field.annotation) is Literal:
+                literal_values = get_args(field.annotation)
+                items_constraints[table_name].append(Constraint(TableName(field_name), True, list(literal_values)))
+        if len(items_constraints[table_name]) > 0:
+            return DatasetFeaturesValues(items=items_constraints)
+        return DatasetFeaturesValues()
