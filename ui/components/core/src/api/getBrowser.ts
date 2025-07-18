@@ -18,11 +18,11 @@ export async function getBrowser(
 
   let query_qparams = "";
   if (query && query.model !== "" && query.search !== "") {
-    query_qparams = `&query=${query.search}&embedding_table=${query.model}`;
+    query_qparams = `&query=${encodeURIComponent(query.search)}&embedding_table=${query.model}`;
   }
   let where_qparams = "";
   if (where && where !== "") {
-    where_qparams = `&where=${where}`;
+    where_qparams = `&where=${encodeURIComponent(where)}`;
   }
   try {
     const response = await fetch(
