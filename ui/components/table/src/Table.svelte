@@ -23,6 +23,7 @@ License: CECILL-C
 
   // Exports
   export let items: TableData;
+  export let disableSort = false;
 
   // Add data into a writable store, reactive to items
   const data = writable(items.rows);
@@ -58,7 +59,7 @@ License: CECILL-C
           sort:
             col.type === "image" || col.name.startsWith(COUNTS_COLUMNS_PREFIX)
               ? { disable: true }
-              : {},
+              : { disable: false },
         },
       }),
     );
@@ -78,8 +79,9 @@ License: CECILL-C
     table.createViewModel(columns);
 
   const { sortKeys } = pluginStates.sort;
-  const handleSort = (props) => {
-    if (!props.sort.disable) {
+  const handleSort = (props, cell) => {
+    const isColDisabled = cell?.state?.columns[cell?.colstart].plugins?.sort?.disable === true;
+    if (!isColDisabled && !disableSort) {
       // note1: we use this function instead of subscribing to sortKeys
       // to avoid dispatching on page mount
       // note2: disabling no-unsafe-call because props is a svelte-headless-table
@@ -181,15 +183,19 @@ License: CECILL-C
               <Subscribe props={cell.props()} let:props attrs={cell.attrs()} let:attrs>
                 <th
                   {...attrs}
-                  on:click={() => handleSort(props)}
+                  on:click={() => handleSort(props, cell)}
                   class="relative py-4 px-2 font-semibold"
                 >
-                  <Render of={cell.render()} />
-                  {#if props.sort.order === "asc"}
-                    ⬇️
-                  {:else if props.sort.order === "desc"}
-                    ⬆️
-                  {/if}
+                  <span class="whitespace-nowrap flex items-center gap-1 justify-center">
+                    <Render of={cell.render()} />
+                    {#if !disableSort}
+                      {#if props.sort.order === "asc"}
+                        ⬇️
+                      {:else if props.sort.order === "desc"}
+                        ⬆️
+                      {/if}
+                    {/if}
+                  </span>
                 </th>
               </Subscribe>
             {/each}

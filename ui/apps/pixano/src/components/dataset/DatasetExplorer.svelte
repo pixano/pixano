@@ -107,6 +107,7 @@ License: CECILL-C
     {:else if !selectedDataset.isErrored}
       <Table
         items={selectedDataset.table_data}
+        disableSort={searchInput !== ""}
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:colsort={(event) => handleColSort(event.detail)}
       />
