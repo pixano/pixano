@@ -6,15 +6,22 @@
 
 From the app home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
+On this page header is displayed number of datasets and total number of items in datasets. A field allow to filter datasets by contained text.
+
+Each dataset card display dataset name, number of items, an image (currently user-defined), and the dataset kind (Image, Video, VQA or EntityLinking), if defined.
+
+When hovering over a dataset card, a tooltip will display this dataset specific information: name, description, maximum number of views, total number of entities, as well as a count of each different annotations.
+
+Clicking on a dataset card will lead to this dataset page.
+
+
 ## Dataset page
 
-![Pixano dataset page - top](../assets/user/app_dataset_1.png)
+![Pixano dataset page](../assets/user/app_dataset.png)
 
 On the dataset page, you will see a list of all the items it contains, organized in pages.
 
-![Pixano dataset page - bottom](../assets/user/app_dataset_2.png)
-
-Navigation buttons at the page bottom allows to move through the pages of your dataset.
+Navigation buttons at bottom allows to move through the pages of your dataset.
 
 ## Dashboard page
 
