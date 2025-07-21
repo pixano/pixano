@@ -519,16 +519,26 @@ class Dataset:
         ids_found = list(TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
         return {id: id in ids_found for id in ids}
 
-    def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
+    def get_all_ids(
+        self,
+        table_name: str = SchemaGroup.ITEM.value,
+        sortcol: str | None = None,
+        order: str | None = None,
+    ) -> list[str]:
         """Get all the ids from a table.
 
         Args:
             table_name: table to look for ids.
+            sortcol: column to order by
+            order: sort order (asc or desc)
 
         Returns:
             list of the ids.
         """
-        return [row["id"] for row in TableQueryBuilder(self.open_table(table_name)).select(["id"]).to_list()]
+        query = TableQueryBuilder(self.open_table(table_name)).select(["id"])
+        if sortcol is not None and order is not None:
+            query = query.order_by(order_by=sortcol, descending=order == "desc")
+        return [row["id"] for row in query.to_list()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the [view embeddings][pixano.features.ViewEmbedding] via the

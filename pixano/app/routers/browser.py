@@ -82,7 +82,7 @@ async def get_browser(
             full_item_rows = get_rows(dataset=dataset, table=table_item, where=where)
             list_ids = [item.id for item in full_item_rows]
         else:
-            list_ids = dataset.get_all_ids()
+            list_ids = dataset.get_all_ids(sortcol=sortcol, order=order)
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}
