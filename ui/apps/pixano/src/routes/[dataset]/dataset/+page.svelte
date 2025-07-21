@@ -69,6 +69,7 @@ License: CECILL-C
           pagination.pageSize,
           pagination.query,
           pagination.where,
+          pagination.sort,
         )
           .then((datasetItems) => {
             if (datasetItems.id) {

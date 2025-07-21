@@ -29,6 +29,8 @@ async def get_browser(
     query: str = "",
     embedding_table: str = "",
     where: str | None = None,
+    sortcol: str | None = None,
+    order: str | None = None,
 ) -> DatasetBrowser:  # type: ignore
     """Load dataset items for the explorer page.
 
@@ -40,6 +42,8 @@ async def get_browser(
         query: Text query for semantic search.
         embedding_table: Table name for embeddings.
         where: Where clause.
+        sortcol: column to order by
+        order: sort order (asc or desc)
 
     Returns:
         Dataset explorer page.
@@ -71,7 +75,9 @@ async def get_browser(
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
-        item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip, where=where)
+        item_rows = get_rows(
+            dataset=dataset, table=table_item, limit=limit, skip=skip, where=where, sortcol=sortcol, order=order
+        )
         if where is not None:
             full_item_rows = get_rows(dataset=dataset, table=table_item, where=where)
             list_ids = [item.id for item in full_item_rows]

@@ -344,6 +344,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: list[str] | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
@@ -354,6 +356,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> BaseSchema | None: ...
 
     def get_data(
@@ -364,6 +368,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: list[str] | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
 
@@ -376,6 +382,8 @@ class Dataset:
             limit: Amount of items to read. If not set, will default to table size.
             skip: The number of data to skip.
             item_ids: Item ids to read.
+            sortcol: column to order by
+            order: sort order (asc or desc)
 
         Returns:
             List of values.
@@ -413,6 +421,8 @@ class Dataset:
                 else:
                     where = f"item_ref.id IN {sql_item_ids}"
                 query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+            if sortcol is not None and order is not None:
+                query = query.order_by(sortcol, order == "desc")
         else:
             sql_ids = to_sql_list(ids)
             if where is not None:

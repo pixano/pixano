@@ -10,7 +10,7 @@ License: CECILL-C
   // Svelte Imports
   import { createEventDispatcher } from "svelte";
   import { createTable, Render, Subscribe } from "svelte-headless-table";
-  import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
+  import { addColumnOrder, addHiddenColumns, addSortBy } from "svelte-headless-table/plugins";
   import SortableList from "svelte-sortable-list";
   import { writable } from "svelte/store";
 
@@ -18,6 +18,7 @@ License: CECILL-C
   import type { TableData } from "@pixano/core";
   import { Button, Checkbox, icons } from "@pixano/core";
 
+  import { COUNTS_COLUMNS_PREFIX } from "../../../apps/pixano/src/lib/constants/pixanoConstants";
   import { TableCell } from "./TableCell";
 
   // Exports
@@ -31,6 +32,11 @@ License: CECILL-C
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
+    sort: addSortBy({
+      initialSortKeys: [{ id: "created_at", order: "asc" }],
+      disableMultiSort: true,
+      serverSide: true,
+    }),
   });
 
   // Initialise columns by parsing the first row and order them based on their type
@@ -39,7 +45,6 @@ License: CECILL-C
   let lowPriorityColumns: string[] = [];
 
   // Parse a feature into a table cell
-
   Object.values(items.columns).forEach((col) => {
     // Add field to column list
     itemColumns.push(
@@ -49,6 +54,12 @@ License: CECILL-C
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         cell: TableCell[col.type],
         accessor: col.name,
+        plugins: {
+          sort:
+            col.type === "image" || col.name.startsWith(COUNTS_COLUMNS_PREFIX)
+              ? { disable: true }
+              : {},
+        },
       }),
     );
 
@@ -65,6 +76,22 @@ License: CECILL-C
   const columns = table.createColumns(itemColumns);
   const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
     table.createViewModel(columns);
+
+  const { sortKeys } = pluginStates.sort;
+  const handleSort = (props) => {
+    if (!props.sort.disable) {
+      // note1: we use this function instead of subscribing to sortKeys
+      // to avoid dispatching on page mount
+      // note2: disabling no-unsafe-call because props is a svelte-headless-table
+      // with some complex type we don't bother to import, we know it's OK.
+      props.sort.toggle(); // eslint-disable-line @typescript-eslint/no-unsafe-call
+      if ($sortKeys.length === 0) {
+        //default sort when no sort.
+        sortKeys.set([{ id: "created_at", order: "asc" }]);
+      }
+      dispatch("colsort", $sortKeys);
+    }
+  };
 
   // Initialise plugin to order and re-order columns
   const { columnIdOrder } = pluginStates.colOrder;
@@ -151,9 +178,18 @@ License: CECILL-C
             class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
           >
             {#each headerRow.cells as cell (cell.id)}
-              <Subscribe attrs={cell.attrs()} let:attrs>
-                <th {...attrs} class="relative py-4 px-2 font-semibold">
+              <Subscribe props={cell.props()} let:props attrs={cell.attrs()} let:attrs>
+                <th
+                  {...attrs}
+                  on:click={() => handleSort(props)}
+                  class="relative py-4 px-2 font-semibold"
+                >
                   <Render of={cell.render()} />
+                  {#if props.sort.order === "asc"}
+                    ⬇️
+                  {:else if props.sort.order === "desc"}
+                    ⬆️
+                  {/if}
                 </th>
               </Subscribe>
             {/each}
