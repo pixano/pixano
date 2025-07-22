@@ -344,6 +344,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: list[str] | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
@@ -354,6 +356,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> BaseSchema | None: ...
 
     def get_data(
@@ -364,6 +368,8 @@ class Dataset:
         skip: int = 0,
         where: str | None = None,
         item_ids: list[str] | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
 
@@ -376,6 +382,8 @@ class Dataset:
             limit: Amount of items to read. If not set, will default to table size.
             skip: The number of data to skip.
             item_ids: Item ids to read.
+            sortcol: column to order by
+            order: sort order (asc or desc)
 
         Returns:
             List of values.
@@ -413,6 +421,8 @@ class Dataset:
                 else:
                     where = f"item_ref.id IN {sql_item_ids}"
                 query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+            if sortcol is not None and order is not None:
+                query = query.order_by(sortcol, order == "desc")
         else:
             sql_ids = to_sql_list(ids)
             if where is not None:
@@ -509,16 +519,26 @@ class Dataset:
         ids_found = list(TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
         return {id: id in ids_found for id in ids}
 
-    def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
+    def get_all_ids(
+        self,
+        table_name: str = SchemaGroup.ITEM.value,
+        sortcol: str | None = None,
+        order: str | None = None,
+    ) -> list[str]:
         """Get all the ids from a table.
 
         Args:
             table_name: table to look for ids.
+            sortcol: column to order by
+            order: sort order (asc or desc)
 
         Returns:
             list of the ids.
         """
-        return [row["id"] for row in TableQueryBuilder(self.open_table(table_name)).select(["id"]).to_list()]
+        query = TableQueryBuilder(self.open_table(table_name)).select(["id"])
+        if sortcol is not None and order is not None:
+            query = query.order_by(order_by=sortcol, descending=order == "desc")
+        return [row["id"] for row in query.to_list()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the [view embeddings][pixano.features.ViewEmbedding] via the

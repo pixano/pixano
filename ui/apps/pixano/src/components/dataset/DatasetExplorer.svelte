@@ -63,6 +63,29 @@ License: CECILL-C
       where,
     }));
   }
+
+  function handleColSort(colsorts: { id: string; order: string }[]) {
+    if (colsorts.length === 0) {
+      //reset sort
+      datasetTableStore.update((value) => {
+        value = {
+          ...value,
+          currentPage: 1, //reset page (?)
+        };
+        delete value.sort;
+        return value;
+      });
+    } else if (colsorts.length === 1) {
+      const { id, order } = colsorts[0];
+      datasetTableStore.update((value) => ({
+        ...value,
+        currentPage: 1, //reset page (?)
+        sort: { col: id, order },
+      }));
+    } else {
+      console.error("ERROR: MultiSort on columns is not managed nor allowed");
+    }
+  }
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
@@ -84,7 +107,9 @@ License: CECILL-C
     {:else if !selectedDataset.isErrored}
       <Table
         items={selectedDataset.table_data}
+        disableSort={searchInput !== ""}
         on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:colsort={(event) => handleColSort(event.detail)}
       />
     {:else}
       <div

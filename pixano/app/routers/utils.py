@@ -100,6 +100,8 @@ def get_rows(
     item_ids: list[str] | None = None,
     limit: int | None = None,
     skip: int = 0,
+    sortcol: str | None = None,
+    order: str | None = None,
 ) -> list[BaseSchema]:
     """Get rows from a table.
 
@@ -113,12 +115,23 @@ def get_rows(
         item_ids: Item IDs of the rows.
         limit: Limit number of rows.
         skip: Skip number of rows.
+        sortcol: column to order by
+        order: sort order (asc or desc)
 
     Returns:
         List of rows.
     """
     try:
-        rows = dataset.get_data(table_name=table, where=where, ids=ids, limit=limit, skip=skip, item_ids=item_ids)
+        rows = dataset.get_data(
+            table_name=table,
+            where=where,
+            ids=ids,
+            limit=limit,
+            skip=skip,
+            item_ids=item_ids,
+            sortcol=sortcol,
+            order=order,
+        )
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:

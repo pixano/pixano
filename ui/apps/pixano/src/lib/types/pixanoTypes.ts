@@ -12,4 +12,8 @@ export type DatasetTableStore = {
     search: string;
   };
   where?: string;
+  sort?: {
+    col: string;
+    order: string;
+  };
 };
