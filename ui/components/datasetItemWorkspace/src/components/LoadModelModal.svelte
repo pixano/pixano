@@ -16,6 +16,7 @@ License: CECILL-C
     SelectModal,
     WarningModal,
   } from "@pixano/core";
+  import { pixanoInferenceSegmentationModelsStore } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import { SAM } from "@pixano/models";
 
   import {
@@ -102,7 +103,11 @@ License: CECILL-C
     selectedTool.set(panTool);
   };
 
-  $: if ($selectedTool?.isSmart) {
+  $: if (
+    $selectedTool?.isSmart &&
+    (($isLocalSegmentationModel && models.length > 0 && !selectedModelName) ||
+      (!$isLocalSegmentationModel && $pixanoInferenceSegmentationModelsStore.length === 0))
+  ) {
     modelsUiStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
   }
 </script>
