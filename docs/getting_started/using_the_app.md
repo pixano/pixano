@@ -2,26 +2,70 @@
 
 ## Home page
 
-![Pixano home page](../assets/user/app_home.png)
-
 From the app home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
-On this page header is displayed number of datasets and total number of items in datasets. A field allow to filter datasets by contained text.
+![Pixano home page](../assets/user/app_home.png)
+
+### Header
+
+On the header is displayed the number of datasets and total number of items in datasets. A field allows to filter datasets by contained text.
+
+### Dataset Card
+
+![Dataset Card](../assets/user/dataset_card.png)
 
 Each dataset card display dataset name, number of items, an image (currently user-defined), and the dataset kind (Image, Video, VQA or EntityLinking), if defined.
 
 When hovering over a dataset card, a tooltip will display this dataset specific information: name, description, maximum number of views, total number of entities, as well as a count of each different annotations.
 
-Clicking on a dataset card will lead to this dataset page.
-
+Clicking on a dataset card will lead to the selected dataset page.
 
 ## Dataset page
 
+On the dataset page, you will see a list of all the items it contains, by pages of 20 items.
+
 ![Pixano dataset page](../assets/user/app_dataset.png)
 
-On the dataset page, you will see a list of all the items it contains, organized in pages.
+### Header
+
+On the header is displayed the dataset name. Pixano logo allows to go back to Pixano home page. "Dashboard" and "Dataset" buttons allows to switch between Dashboard and Dataset view. Datasets are always open in "Dataset" mode first.
+
+### Column filter
+
+![Dataset filter](../assets/user/dataset_filter.png)
+
+You can filter table by choosing a column and a value. the right button clear the filter.
+
+Note: "Free mode" allows to type your filter, as a basic SQL WHERE clause. Only listed columns are availables. Strings must be enclosed in single quotes in free mode.
+
+Free mode example: `id LIKE '%009' AND split = 'train2017'` will filter rows where id ends with 009 and split equals 'train2017'.
+
+<!-- devnote: the filter is not persistent -- this must be fixed! -->
+
+### Semantic search
+
+![Dataset semantic search](../assets/user/dataset_semsearch.png)
+
+If you have [computed semantic embeddings](../tutorials/semantic_search.md), semantic search will be displayed.
+You can select semantic data (stored in a table) and type some text to get your dataset items sorted by semantic distance to this text (closer first).
+
+### Item table
+
+Table header display columns name. By default, the "images" columns are first, then dataset items metadatas, then computed counts columns (with a leading '#'). Except images columns, you can order items of any column, ascending or descending, by clicking on it.
+
+This ordering is disabled after a semantic search.
+
+The "gear" icon open a panel to select which columns to display, and reorder them. By default all available columns are displayed.
+
+<!-- devnote: "gear" settings are not persistent -- should be corrected? -->
+
+### Navigation
 
 Navigation buttons at bottom allows to move through the pages of your dataset.
+
+Clicking on any item lead to Item page.
+
+<!-- devnote: for big datasets, the ability to enter a page number may be usefull -->
 
 ## Dashboard page
 
@@ -29,9 +73,11 @@ Navigation buttons at bottom allows to move through the pages of your dataset.
 
 From the dataset page, you can go to the dashboard page, which contains more information about your datasets and also displays all the computed statistics available.
 
+<!-- devnote: need rework or more dev... -->
+
 ## Item page
 
-When opening an item, the item media will be displayed in the center on the screen (in case of multi-view datasets, the images will be tiled).
+When opening an item, the item media will be displayed in the center on the screen. For multi-view datasets, the images will be tiled.
 
 On the top, a toolbar is available. On the right, two panels will display information on the item objects and scene.
 
