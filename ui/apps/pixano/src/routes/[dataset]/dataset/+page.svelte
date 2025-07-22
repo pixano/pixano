@@ -33,7 +33,6 @@ License: CECILL-C
     ];
 
     extendedTableData.rows = tableData.rows.map((row) => {
-      //tableData.rows = tableData.rows.map((row) => {
       let count = counts.find((count) => row.id === count.id);
       if (count) {
         const count_ent_cells = Object.fromEntries(
