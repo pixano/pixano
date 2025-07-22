@@ -8,6 +8,7 @@ License: CECILL-C
   // Local Imports
 
   // Svelte Imports
+  import { ChevronsDown, ChevronsUp, ChevronsUpDown } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
   import { createTable, Render, Subscribe } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns, addSortBy } from "svelte-headless-table/plugins";
@@ -18,7 +19,6 @@ License: CECILL-C
   import type { TableData } from "@pixano/core";
   import { Button, Checkbox, icons } from "@pixano/core";
 
-  import { COUNTS_COLUMNS_PREFIX } from "../../../apps/pixano/src/lib/constants/pixanoConstants";
   import { TableCell } from "./TableCell";
 
   // Exports
@@ -56,10 +56,7 @@ License: CECILL-C
         cell: TableCell[col.type],
         accessor: col.name,
         plugins: {
-          sort:
-            col.type === "image" || col.name.startsWith(COUNTS_COLUMNS_PREFIX)
-              ? { disable: true }
-              : { disable: false },
+          sort: col.type === "image" ? { disable: true } : { disable: false },
         },
       }),
     );
@@ -188,11 +185,13 @@ License: CECILL-C
                 >
                   <span class="whitespace-nowrap flex items-center gap-1 justify-center">
                     <Render of={cell.render()} />
-                    {#if !disableSort}
+                    {#if !disableSort && !props.sort.disabled}
                       {#if props.sort.order === "asc"}
-                        ⬇️
+                        <ChevronsDown />
                       {:else if props.sort.order === "desc"}
-                        ⬆️
+                        <ChevronsUp />
+                      {:else}
+                        <ChevronsUpDown class="opacity-20" />
                       {/if}
                     {/if}
                   </span>

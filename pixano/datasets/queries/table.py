@@ -7,6 +7,7 @@
 from typing import Any, TypeVar
 
 import duckdb
+import lancedb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
@@ -216,6 +217,19 @@ class TableQueryBuilder:
         if self._order_by == [] and "created_at" in columns:
             self._order_by = ["created_at"]
             self._descending = [False]
+        # if order_by is a count computed column, we need a join on local count table
+        count_table = None
+        if len(self._order_by) == 1 and self._order_by not in columns and self._order_by[0].startswith("#"):
+            # get lancedb connection, to check if #column is an existing table
+            db = lancedb.connect(self.table._conn.uri)
+            count_name = self._order_by[0][1:]
+            if count_name in db.table_names():
+                count_table = db.open_table(count_name).to_arrow()
+                SQL_WITH = """WITH counts AS(
+                SELECT item_ref.id as id, COUNT(*) as tbl_count FROM count_table GROUP BY item_ref.id)"""
+                self._order_by = ["IFNULL(c.tbl_count, 0)"]
+            else:
+                self._order_by = []
 
         arrow_table = self.table.to_arrow()  # noqa: F841
 
@@ -225,8 +239,12 @@ class TableQueryBuilder:
                 return f"{struct}['{property}']"
             return column
 
-        formatted_columns = [duckdb_format_column(col) for col in columns]  # format columns to handle struct columns
+        formatted_columns = [
+            "arrow_table." + duckdb_format_column(col) for col in columns
+        ]  # format columns to handle struct columns + add "arrow_table."" in case of join
         SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
+        if count_table is not None:
+            SQL_QUERY = SQL_WITH + " " + SQL_QUERY + " LEFT JOIN counts c ON arrow_table.id = c.id"
         if self._where is not None:
             SQL_QUERY += f" WHERE {self._where}"
         if self._order_by != []:
