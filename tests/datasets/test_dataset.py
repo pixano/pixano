@@ -16,7 +16,7 @@ from lancedb.embeddings import get_registry
 from lancedb.table import LanceTable
 
 from pixano.datasets import Dataset
-from pixano.datasets.dataset_features_values import DatasetFeaturesValues
+from pixano.datasets.dataset_features_values import Constraint, DatasetFeaturesValues, TableName
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetIntegrityError
@@ -1215,3 +1215,27 @@ class TestDataset:
             dataset_multi_view_tracking_and_image.semantic_search("some_text", "image_embedding", limit=0, skip=0)
         with pytest.raises(DatasetAccessError, match="skip must be a positive integer"):
             dataset_multi_view_tracking_and_image.semantic_search("some_text", "image_embedding", limit=50, skip=-1)
+
+    def test_add_constraint(self, dataset_multi_view_tracking_and_image: Dataset):
+        dataset_multi_view_tracking_and_image.add_constraint("item", "category", ["A", "B"], True)
+        constraints = dataset_multi_view_tracking_and_image.features_values.item["item"]
+        assert len(constraints) == 1
+        assert constraints[0].name == "category"
+        assert constraints[0].values == ["A", "B"]
+        assert constraints[0].restricted is True
+
+    def test_update_existing_constraint(self, dataset_multi_view_tracking_and_image: Dataset):
+        dataset_multi_view_tracking_and_image.features_values.item["item"] = [
+            Constraint(name="category", restricted=True, values=["OK"])
+        ]
+        dataset_multi_view_tracking_and_image.add_constraint("item", "category", ["KO"], restricted=False)
+
+        constraints = dataset_multi_view_tracking_and_image.features_values.item["item"]
+        assert len(constraints) == 1
+        assert constraints[0].name == "category"
+        assert constraints[0].values == ["KO"]
+        assert constraints[0].restricted is False
+
+    def test_invalid_table_raises_error(self, dataset_multi_view_tracking_and_image: Dataset):
+        with pytest.raises(ValueError, match="Table bad_table do not exist in schema"):
+            dataset_multi_view_tracking_and_image.add_constraint("bad_table", "foo", ["bar"])

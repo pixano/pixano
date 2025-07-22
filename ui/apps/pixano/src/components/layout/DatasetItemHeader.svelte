@@ -10,6 +10,7 @@ License: CECILL-C
 
   import { IconButton, PrimaryButton, WorkspaceType } from "@pixano/core/src";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
+  import { saveData } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
   import { currentDatasetStore } from "$lib/stores/datasetStores";
 
@@ -76,8 +77,14 @@ License: CECILL-C
       </IconButton>
       <span>{getDatasetItemDisplayCount()}</span>
     </div>
-    <Toolbar isVideo={$currentDatasetStore.workspace == WorkspaceType.VIDEO} />
+    <Toolbar isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO} />
   {/if}
 {/if}
-<PrimaryButton on:click={handleSave}>Save</PrimaryButton>
+<PrimaryButton
+  disabled={$saveData.length === 0}
+  brighter={$saveData.length > 0}
+  on:click={handleSave}
+>
+  Save
+</PrimaryButton>
 <svelte:window on:keyup={onKeyUp} />

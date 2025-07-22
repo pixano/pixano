@@ -38,9 +38,9 @@ License: CECILL-C
 
   // Define label names
   let labels;
-  if (hist.type == "numerical")
+  if (hist.type === "numerical")
     labels = [...new Set(hist.histogram.map((item) => item.bin_start + "-" + item.bin_end))];
-  else if (hist.type == "categorical")
+  else if (hist.type === "categorical")
     labels = [...new Set(hist.histogram.map((item) => item[hist.name]))];
 
   // Prepare chart data and options

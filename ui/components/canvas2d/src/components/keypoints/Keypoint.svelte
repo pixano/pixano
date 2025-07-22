@@ -70,7 +70,7 @@ License: CECILL-C
     }}
   />
 {/each}
-{#if $videoControls.intervalId == 0}
+{#if $videoControls.intervalId === 0}
   {#each vertices as vertex, i}
     <KeyPointCircle
       vertexIndex={i}

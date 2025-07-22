@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onDestroy } from "svelte";
+
   import {
     api,
     BaseSchema,
@@ -35,7 +37,6 @@ License: CECILL-C
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
-  let models: Array<string>;
   let currentDatasetId: string;
   let currentItemId: string;
   let isLoadingNewItem: boolean = false;
@@ -44,11 +45,7 @@ License: CECILL-C
   let noItemFound: boolean = false;
   let featureValues: FeaturesValues = { main: {}, objects: {} };
 
-  modelsStore.subscribe((value) => {
-    models = value;
-  });
-
-  saveCurrentItemStore.subscribe((value) => {
+  const unsubscribeSaveCurrentItemStore = saveCurrentItemStore.subscribe((value) => {
     canSaveCurrentItem = value.canSave;
     shouldSaveCurrentItem = value.shouldSave;
   });
@@ -85,8 +82,8 @@ License: CECILL-C
     }
     */
     const frontFV: FeaturesValues = { main: {}, objects: {} };
-    if ("items" in feature_values && feature_values["items"] && feature_values["items"]["items"]) {
-      for (const feat of feature_values["items"]["items"]) {
+    if ("item" in feature_values && feature_values["item"] && feature_values["item"]["item"]) {
+      for (const feat of feature_values["item"]["item"]) {
         let { name, ...fv } = feat;
         frontFV.main[name] = fv;
       }
@@ -195,12 +192,12 @@ License: CECILL-C
       .catch((err) => console.error(err));
   };
 
-  page.subscribe((value) => {
+  const unsubscribePage = page.subscribe((value) => {
     currentDatasetId = value.params.dataset;
     currentItemId = value.params.itemId;
   });
 
-  datasetsStore.subscribe((value) => {
+  const unsubscribeDatasetsStore = datasetsStore.subscribe((value) => {
     const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     if (foundDataset) {
       selectedDataset = foundDataset;
@@ -218,8 +215,15 @@ License: CECILL-C
     }
   }
 
-  $: isLoadingNewItemStore.subscribe((value) => {
+  $: unsubscibeIsLoadingNewItemStore = isLoadingNewItemStore.subscribe((value) => {
     isLoadingNewItem = value;
+  });
+
+  onDestroy(() => {
+    unsubscribeDatasetsStore();
+    unsubscribePage();
+    unsubscribeSaveCurrentItemStore();
+    unsubscibeIsLoadingNewItemStore();
   });
 
   function reduceByTypeAndGroupAndTable(
@@ -324,7 +328,7 @@ License: CECILL-C
 {#if selectedItem && selectedDataset}
   <DatasetItemWorkspace
     {selectedItem}
-    {models}
+    models={$modelsStore}
     {featureValues}
     {handleSaveItem}
     isLoading={isLoadingNewItem}

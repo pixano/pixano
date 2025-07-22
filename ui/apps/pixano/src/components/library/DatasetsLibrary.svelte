@@ -19,7 +19,11 @@ License: CECILL-C
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { goto } from "$app/navigation";
-  import { currentDatasetStore } from "$lib/stores/datasetStores";
+  import {
+    currentDatasetStore,
+    datasetTableStore,
+    defaultDatasetTableValues,
+  } from "$lib/stores/datasetStores";
 
   /**
    * DatasetsLibrary Component
@@ -39,6 +43,7 @@ License: CECILL-C
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     currentDatasetStore.set(dataset);
+    datasetTableStore.set(defaultDatasetTableValues);
     await goto(`${dataset.id}/dataset`);
   };
 

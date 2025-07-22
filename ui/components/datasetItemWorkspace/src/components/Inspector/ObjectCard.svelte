@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ChevronRight, Eye, EyeOff, ListPlus, ListX, Pencil, Trash2 } from "lucide-svelte";
+  import { onDestroy } from "svelte";
   import { derived } from "svelte/store";
 
   import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
@@ -155,13 +156,13 @@ License: CECILL-C
           ann.table_info.name + "." + ann.data.view_ref.name,
         );
       }
-      feats[entity.id] = createFeature(entity, $datasetSchema);
+      feats[entity.id] = createFeature(entity, $datasetSchema, entity.table_info.name);
 
       return Object.values(feats).flat();
     },
   );
 
-  annotations.subscribe(() => {
+  const unsubscribeAnnotations = annotations.subscribe(() => {
     highlightState = "all";
     for (const ann of entity.ui.childs ?? []) {
       if (ann.ui.displayControl.highlighted === "self") {
@@ -290,7 +291,7 @@ License: CECILL-C
     thumbnails = [];
     for (const view of Object.keys($mediaViews)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
-        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name == view,
+        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name === view,
       );
       if (highlightedBoxesByView) {
         const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
@@ -303,7 +304,12 @@ License: CECILL-C
       }
     }
   };
-  entities.subscribe(() => setThumbnails());
+  const unsubscribeEntities = entities.subscribe(() => setThumbnails());
+
+  onDestroy(() => {
+    unsubscribeAnnotations();
+    unsubscribeEntities();
+  });
 </script>
 
 <article
@@ -395,7 +401,7 @@ License: CECILL-C
               <div class="flex-shrink-0 flex items-center justify-end">
                 {#if $selectedTool.type !== ToolType.Fusion}
                   <IconButton
-                    tooltipContent="Edit object"
+                    tooltipContent="Edit object features"
                     selected={entity.ui.displayControl.editing}
                     on:click={() => onEditIconClick()}
                   >

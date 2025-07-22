@@ -10,6 +10,8 @@ License: CECILL-C
 
   import { IconButton } from "@pixano/core";
 
+  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
+
   export let columns: { type: string; name: string }[] = [];
   export let handleFilter: (where: string) => void;
 
@@ -69,7 +71,7 @@ License: CECILL-C
     bind:value={selectedCol}
   >
     {#each columns as { type, name }}
-      {#if allowedTypes.includes(type) && name}
+      {#if allowedTypes.includes(type) && name && !name.startsWith(COUNTS_COLUMNS_PREFIX)}
         <option value={name}>
           {name}
         </option>

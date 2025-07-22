@@ -5,25 +5,52 @@
 # =====================================
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict, List, NewType, Union
 
 from pydantic import BaseModel
+
+
+TableName = NewType("TableName", str)
+
+
+@dataclass
+class Constraint:
+    """Constraint values.
+
+    Attributes:
+        name: name of the field.
+        restricted: whether allowed values are restricted to given values, or user may enter new values.
+        values: list of allowed values.
+    """
+
+    name: str
+    restricted: bool
+    values: List[Union[int, float, str, bool]]
+
+
+ConstraintDict = Dict[TableName, List[Constraint]]
+"""Dict of Constraint, by table.
+
+Keys are table names (`TableName`), and values are list of constraints (`Constraint`).
+"""
 
 
 class DatasetFeaturesValues(BaseModel):
     """Constraints for the dataset features values.
 
     Attributes:
-        items: Constraints for the dataset item table.
+        item: Constraints for the dataset item table.
         views: Constraints for the dataset view tables.
         entities: Constraints for the dataset entity tables.
         annotations: Constraints for the dataset annotation tables.
     """
 
-    items: dict[str, list] = {}
-    views: dict[str, list] = {}
-    entities: dict[str, list] = {}
-    annotations: dict[str, list] = {}
+    item: ConstraintDict = {}
+    views: ConstraintDict = {}
+    entities: ConstraintDict = {}
+    annotations: ConstraintDict = {}
 
     def to_json(self, json_fp: Path) -> None:
         """Save DatasetFeaturesValues to json file."""
