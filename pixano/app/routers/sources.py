@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/sources", tags=["Sources"])
 
 
-@router.get("/{dataset_id}/", response_model=list[SourceModel])
+@router.get("/{dataset_id}", response_model=list[SourceModel])
 async def get_sources(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -79,7 +79,7 @@ async def get_source(dataset_id: str, id: str, settings: Annotated[Settings, Dep
     return await get_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
 
 
-@router.post("/{dataset_id}/", response_model=list[SourceModel])
+@router.post("/{dataset_id}", response_model=list[SourceModel])
 async def create_sources(
     dataset_id: str,
     sources: list[SourceModel],
@@ -140,7 +140,7 @@ async def update_source(
     return await update_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, source, settings)
 
 
-@router.put("/{dataset_id}/", response_model=list[SourceModel])
+@router.put("/{dataset_id}", response_model=list[SourceModel])
 async def update_sources(
     dataset_id: str,
     sources: list[SourceModel],
@@ -171,7 +171,7 @@ async def delete_source(dataset_id: str, id: str, settings: Annotated[Settings, 
     return await delete_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
 
 
-@router.delete("/{dataset_id}/")
+@router.delete("/{dataset_id}")
 async def delete_sources(
     dataset_id: str,
     ids: Annotated[list[str], Query()],

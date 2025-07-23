@@ -156,7 +156,7 @@ async def get_browser(
     )
 
 
-@router.get("/item_ids/{id}/", response_model=list[str])
+@router.get("/item_ids/{id}", response_model=list[str])
 async def get_items_ids(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],

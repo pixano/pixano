@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/embeddings", tags=["Embeddings"])
 
 
-@router.get("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
+@router.get("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
 async def get_embeddings(
     dataset_id: str,
     table: str,
@@ -86,7 +86,7 @@ async def get_embedding(
     return await get_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
+@router.post("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
 async def create_embeddings(
     dataset_id: str,
     table: str,
@@ -153,7 +153,7 @@ async def update_embedding(
     return await update_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
 
-@router.put("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
+@router.put("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
 async def update_embeddings(
     dataset_id: str,
     table: str,
@@ -189,7 +189,7 @@ async def delete_embedding(
     return await delete_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}/")
+@router.delete("/{dataset_id}/{table}")
 async def delete_embeddings(
     dataset_id: str,
     table: str,

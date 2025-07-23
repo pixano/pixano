@@ -17,7 +17,7 @@ export async function getViewEmbeddings(
     let ifWhere = "";
     if (where !== "") ifWhere = `&where=${where}`;
     const response = await fetch(
-      `/embeddings/${datasetId}/${tableName}/?item_ids=${itemId}${ifWhere}`,
+      `/embeddings/${datasetId}/${tableName}?item_ids=${itemId}${ifWhere}`,
     );
     if (response.ok) {
       viewEmbeddings = (await response.json()) as Array<ViewEmbedding>;

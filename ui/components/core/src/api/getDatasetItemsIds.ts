@@ -9,7 +9,7 @@ export async function getDatasetItemsIds(datasetId: string): Promise<Array<strin
   let datasetItemsIds: string[] = [];
 
   try {
-    const response = await fetch(`/browser/item_ids/${datasetId}/`);
+    const response = await fetch(`/browser/item_ids/${datasetId}`);
     if (response.ok) {
       datasetItemsIds = (await response.json()) as string[];
     } else {

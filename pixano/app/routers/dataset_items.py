@@ -18,7 +18,7 @@ from .utils import get_dataset
 router = APIRouter(prefix="/dataset_items", tags=["Dataset Items"])
 
 
-@router.get("/{dataset_id}/", response_model=list[DatasetItemModel])
+@router.get("/{dataset_id}", response_model=list[DatasetItemModel])
 async def get_dataset_items(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -69,7 +69,7 @@ async def get_dataset_item(
     return (await get_dataset_items(dataset_id, settings, ids=[id]))[0]
 
 
-@router.post("/{dataset_id}/", response_model=list[DatasetItemModel])
+@router.post("/{dataset_id}", response_model=list[DatasetItemModel])
 async def create_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
@@ -118,7 +118,7 @@ async def create_dataset_item(
     return (await create_dataset_items(dataset_id, [dataset_item], settings))[0]
 
 
-@router.put("/{dataset_id}/", response_model=list[DatasetItemModel])
+@router.put("/{dataset_id}", response_model=list[DatasetItemModel])
 async def update_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
@@ -167,7 +167,7 @@ async def update_dataset_item(
     return (await update_dataset_items(dataset_id, [dataset_item], settings))[0]
 
 
-@router.delete("/{dataset_id}/")
+@router.delete("/{dataset_id}")
 async def delete_dataset_items(
     dataset_id: str,
     ids: Annotated[list[str], Query()],
