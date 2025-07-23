@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/views", tags=["Views"])
 
 
-@router.get("/{dataset_id}/{table}/", response_model=list[ViewModel])
+@router.get("/{dataset_id}/{table}", response_model=list[ViewModel])
 async def get_views(
     dataset_id: str,
     table: str,
@@ -86,7 +86,7 @@ async def get_view(
     return await get_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}/", response_model=list[ViewModel])
+@router.post("/{dataset_id}/{table}", response_model=list[ViewModel])
 async def create_views(
     dataset_id: str,
     table: str,
@@ -153,7 +153,7 @@ async def update_view(
     return await update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
-@router.put("/{dataset_id}/{table}/", response_model=list[ViewModel])
+@router.put("/{dataset_id}/{table}", response_model=list[ViewModel])
 async def update_views(
     dataset_id: str,
     table: str,
@@ -189,7 +189,7 @@ async def delete_view(
     return await delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}/")
+@router.delete("/{dataset_id}/{table}")
 async def delete_views(
     dataset_id: str,
     table: str,

@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/entities", tags=["Entitys"])
 
 
-@router.get("/{dataset_id}/{table}/", response_model=list[EntityModel])
+@router.get("/{dataset_id}/{table}", response_model=list[EntityModel])
 async def get_entities(
     dataset_id: str,
     table: str,
@@ -86,7 +86,7 @@ async def get_entity(
     return await get_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}/", response_model=list[EntityModel])
+@router.post("/{dataset_id}/{table}", response_model=list[EntityModel])
 async def create_entities(
     dataset_id: str,
     table: str,
@@ -153,7 +153,7 @@ async def update_entity(
     return await update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
-@router.put("/{dataset_id}/{table}/", response_model=list[EntityModel])
+@router.put("/{dataset_id}/{table}", response_model=list[EntityModel])
 async def update_entities(
     dataset_id: str,
     table: str,
@@ -189,7 +189,7 @@ async def delete_entity(
     return await delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}/")
+@router.delete("/{dataset_id}/{table}")
 async def delete_entities(
     dataset_id: str,
     table: str,

@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/annotations", tags=["Annotations"])
 
 
-@router.get("/{dataset_id}/{table}/", response_model=list[AnnotationModel])
+@router.get("/{dataset_id}/{table}", response_model=list[AnnotationModel])
 async def get_annotations(
     dataset_id: str,
     table: str,
@@ -86,7 +86,7 @@ async def get_annotation(
     return await get_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}/", response_model=list[AnnotationModel])
+@router.post("/{dataset_id}/{table}", response_model=list[AnnotationModel])
 async def create_annotations(
     dataset_id: str,
     table: str,
@@ -153,7 +153,7 @@ async def update_annotation(
     return await update_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
 
-@router.put("/{dataset_id}/{table}/", response_model=list[AnnotationModel])
+@router.put("/{dataset_id}/{table}", response_model=list[AnnotationModel])
 async def update_annotations(
     dataset_id: str,
     table: str,
@@ -189,7 +189,7 @@ async def delete_annotation(
     return await delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}/")
+@router.delete("/{dataset_id}/{table}")
 async def delete_annotations(
     dataset_id: str,
     table: str,

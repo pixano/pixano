@@ -15,7 +15,7 @@ from pixano.app.settings import Settings, get_settings
 router = APIRouter(prefix="/models", tags=["Models"])
 
 
-@router.get("/", response_model=list[str])
+@router.get("", response_model=list[str])
 async def get_models(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[str]:
