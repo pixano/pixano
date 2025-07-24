@@ -47,7 +47,7 @@ Free mode example: `id LIKE '%009' AND split = 'train2017'` will filter rows whe
 ![Dataset semantic search](../assets/user/dataset_semsearch.png)
 
 If you have [computed semantic embeddings](../tutorials/semantic_search.md), semantic search will be displayed.
-You can select semantic data (stored in a table) and type some text to get your dataset items sorted by semantic distance to this text (closer first).
+You can select semantic embeddings (stored in a table) and type some text to get your dataset items sorted by semantic distance to this text (closer first).
 
 ### Item table
 
@@ -87,38 +87,21 @@ For VQA and EntityLinking datasets, ther will be a text panel on the left.
 
 You can resize panels by dragging the thin border pink line between them.
 
-
 ### Header
 
-The "Home" icon retunr to home page.
+The "Home" icon return to home page.
 
 The circled left arrow go back to dataset explorer page, at the current item's page.
 
-Dataset item ID is displayed next.
+Dataset item id is displayed next.
 
-Left and right arrows allows to go to previous/next item, in the current selection and order.
+Left and right arrows allows to go to previous/next item, in the current selection and order. Shortcuts, detailed in tooltip, are available too.
 
 Next, is displayed the index of current item in the full selection, ordered.
 
-The toolbar is at the center.
+The [toolbar](#toolbar) is at the center.
 
 "Save" button on the right. It has a pulsing dot when there is changes to save.
-
-#### Toolbar
-
-The "mouse" icon is the Pan/Select tool. In this mode you can select any object in the view.
-By dragging image, outside of an object area, you can move the image (may be usefull in multiview or if zoomed)
-
-You can always zoom in or out with the mouse wheel, as well as move image with wheel button, even outside of Pan tool.
-
-Also, is you want to select image or an object under another object, you can select the front one and hide it with visibility icon on right panel. Then you can go through the hidden one.
-
-Next are tools to draw bounding box, polygon, and keypoints.
-
-In video mode, a "associate" icon allows to merge tracks.
-
-The "magic wand" icon give access to interactive segmentation.
-
 
 ### Scene panel
 
@@ -128,8 +111,7 @@ The scene panel will display all the scene features, like the item split, or any
 
 You can edit the scene features and then click the save changes button to write them to the dataset.
 
-There is also a selection of image filters and settings. They allows to disable / enable image smoothing, equalize the image histogram, tune brightness / contrast, or RGB channels.
-
+There is also a set of image filters and settings. They allow to disable / enable image smoothing, equalize the image histogram, and tune brightness, contrast, or RGB channels.
 
 ### Object panel
 
@@ -137,19 +119,52 @@ There is also a selection of image filters and settings. They allows to disable 
 
 The objects panel will display all the item objects.
 
+On the header line just under tabs, a global visibility icon can hide/show all objects. On the right, an "options" icon, and the number of objects is displayed. If some filter apply, this the number of filtered object / total number of objects.
 
-You have visibility toggles for objects and object group, and when hovering on an object, you will have access to an edit tool and a delete tool.
+#### Options
 
-<!--If you have used an inference model for pre-annotating the dataset, a "Pre-annotation" toggle will also appear above the ground truth section. Activating this toggle will let you go through each object and accept or reject them individually. You will also be able to edit the object features before accepting it.-->
+By clicking on "Options" icon, the option panel opens.
 
-![Pixano item view - object edition](../assets/user/exploration_object_edition.png)
+![Pixano item view - objects options](../assets/user/objects_options.png)
 
-The edit tool will allow you to edit the object features, for example its category and category ID.
-and also allow you to edit the object bounding box and mask on the image. For text features, auto-completion based on existing feature values in the dataset is available.
+Here you can set a threshold for bounding boxes confidence.
 
-To create new objects, you have multiple tools at your disposal on the top toolbar.
+In video mode, disable / enable interpolation of bounding boxes and keypoints.
+
+Filters are available. You can add new filter wit 'AND" or "OR" buttons, and clear the filters with the "clear" icon.
+For each filter, you have to select a table, a field, an operator, and a value.
+Note that "AND" has precedence over "OR".
+Click on "Filter" button to apply.
+
+#### Object item
+
+For each object in the dataset item, an object card is displayed.
+
+An "Eye" icon allows to toggle visibility.
+
+A "Trash" icon, when opened or on hover, allows to delete the object. It requires another click within 3 seconds to confirm.
+
+The right most "chevron" icon open the details.
+
+When opened, there is at most 4 sub-sections: Features, Objects, Thumbnails and Text spans. Some are displayed only if relevant.
+
+- "Features" display the object features. Clicking on the "Edit" icon allows to edit them.
+  Each features is displayed with it's table name in brackets (in some cases features are from different sub-objects).
+
+- "Object" display the sub-objects, somehow the shapes belonging to that object, or entity.
+  For video, there can be another layer as shapes are under tracklets.
+
+For each sub object, here also an "Eye" icon to toggle visibility, then an icon that represent the kind of sub-object (bounding box, mask, keypoints, text, or tracklet). Hovering on it show the actual class. Next is it's id.
+On the right, an "Edit" icon, if relevant, allows to modify the shape. A "Link" icon allows to relink this shape in another object (entity). And finally a "Trash" icon to delete it.
+
+- "Thumbnails" shows a crop of the object, if relevant. Note: It is not meant to be the exact bounding box, if any, but as a quick look on the object.
+
+- "Text spans" is only for EntityLinking datasets, and show a table associating text span features to the actual text span (the highlighted text).
 
 ### Toolbar
+
+<!-- TMP Where?-- Also, is you want to select image or an object under another object, you can select the front one and hide it with visibility icon on right panel. Then you can go through the hidden one.
+-->
 
 #### Pan tool
 
@@ -172,6 +187,17 @@ Then, click save changes in the object panels to save the created object to your
 With the polygon tool, you can create a segmentation mask manually by adding points with the granularity of your choice.
 
 Once you save this mask, a matching bounding box will automatically be created.
+
+#### Associate tool
+
+In video mode only, a "associate" icon allows to merge tracks.
+
+![Pixano tools - associate](../assets/user/annotation_associate.png)
+
+In this mode, select a first object in any view, then other objects to associate. Clicking again on a object deselect it.
+Object that cannot be selected, because of current selection, are greyed out.
+You can move in the timeline, select in other view or other kind of shapes.
+Validate when done. All selected objects are merged in the first one of the selected list.
 
 #### Smart segmentation tool
 
