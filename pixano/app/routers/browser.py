@@ -123,9 +123,12 @@ async def get_browser(
             if curr_view is not None:
                 if is_image(type(curr_view)):
                     try:
+                        # Try to open image. If image is found, give an url to access via the get_thumbnail endpoint.
+                        curr_view.open(settings.media_dir, output_type="image")
                         encoded_url = base64.b64encode(curr_view.url.encode("utf-8")).decode("utf-8")
                         row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
                     except ValueError:
+                        # If image not accesible, set view_url to empty string.
                         row_view_url = ""
                 elif is_text(type(curr_view)):
                     row_view_url = generate_text_image_base64(curr_view.content[:80])
