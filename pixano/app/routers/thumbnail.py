@@ -44,7 +44,7 @@ async def get_thumbnail(
     try:
         image = Image.open(settings.media_dir / Path(image_path))  # ou depuis la DB, autre source…
     except Exception:
-        raise HTTPException(status_code=404, detail="Requested image not found.")
+        raise HTTPException(status_code=404, detail="Requested image cannot be found.")
 
     media_type = image.get_format_mimetype()
     image_format = image.format

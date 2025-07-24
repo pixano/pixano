@@ -27,3 +27,15 @@ def test_get_thumbnail(app_and_settings_with_client: tuple[FastAPI, Settings, Te
     assert response.status_code == 200
     assert response.headers["content-Type"] == "image/jpeg"
     # assert response.content == ??
+
+    response = client.get(f"/thumbnail/{encoded_basename}?max_size={2000}")
+    assert response.status_code == 200
+
+    response = client.get(f"/thumbnail/abcd123456?max_size={max_size}")
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unable to decode the image path."}
+
+    encoded_basename = base64.b64encode("missing_image.jpg".encode("utf-8")).decode("utf-8")
+    response = client.get(f"/thumbnail/{encoded_basename}?max_size={max_size}")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Requested image cannot be found."}
