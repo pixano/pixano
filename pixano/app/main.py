@@ -20,6 +20,7 @@ from pixano.app.routers.items import router as items_router
 from pixano.app.routers.items_info import router as items_info_router
 from pixano.app.routers.models import router as models_router
 from pixano.app.routers.sources import router as sources_router
+from pixano.app.routers.thumbnail import router as thumbnail_router
 from pixano.app.routers.views import router as views_router
 from pixano.app.settings import Settings
 
@@ -83,6 +84,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(annotations_router)
     app.include_router(dataset_items_router)
     app.include_router(datasets_router)
+    app.include_router(thumbnail_router)
     app.include_router(browser_router)
     app.include_router(embeddings_router)
     app.include_router(entities_router)
