@@ -44,7 +44,7 @@ License: CECILL-C
   onMount(() => {
     //get dataset infos to put in tooltip
     api
-      .getItemsInfo(dataset.id, { signal: controller.signal })
+      .getItemsInfo(dataset.id, null, { signal: controller.signal })
       .then((infos) => {
         if (controller.signal.aborted) return;
         let maxNumViews = 0;
