@@ -14,6 +14,7 @@ from pydantic import BaseModel, field_serializer, field_validator
 
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import Image
+from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 
 
 class DatasetInfo(BaseModel):
@@ -110,10 +111,11 @@ class DatasetInfo(BaseModel):
         for json_fp in sorted(directory.glob("*/info.json")):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
             try:
-                info.preview = Image.open_url(
-                    str(json_fp.parent.resolve() / "previews/dataset_preview.jpg"),
-                    Path("/"),
+                image = Image.open_url(
+                    str(json_fp.parent.resolve() / "previews/dataset_preview.jpg"), Path("/"), "image"
                 )  # TODO choose correct preview name / path / extension
+                thumb = get_image_thumbnail(image, (350, 150))
+                info.preview = image_to_base64(thumb, "JPEG")
             except Exception:  # TODO: specify exception URL and Value
                 info.preview = ""
             if return_path:
