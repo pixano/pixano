@@ -22,8 +22,8 @@ export async function getItemsInfo(
       //we assume every ids goes in first chunk as a page has 20 items (could be increased but should be OK)
       //if one day the page size is really increased,
       //then we should map through chunks like in "deleteSchemaByIds.ts"
-      url = `/items_info/${datasetId}/?ids=${ids_chunks[0]}`;
-    } else url = `/items_info/${datasetId}/`;
+      url = `/items_info/${datasetId}?ids=${ids_chunks[0]}`;
+    } else url = `/items_info/${datasetId}`;
     const response = await fetch(url, {
       method: "GET",
       signal: options?.signal,

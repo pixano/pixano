@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/items_info", tags=["Items"])
 
 
-@router.get("/{dataset_id}/", response_model=list[ItemInfoModel])
+@router.get("/{dataset_id}", response_model=list[ItemInfoModel])
 async def get_items_info(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],

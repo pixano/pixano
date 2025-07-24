@@ -13,7 +13,7 @@ export async function deleteSchemasByIds(
   table_name: string,
   no_table: boolean,
 ) {
-  const base_url = no_table ? `/${route}/${ds_id}/?ids=` : `/${route}/${ds_id}/${table_name}/?ids=`;
+  const base_url = no_table ? `/${route}/${ds_id}?ids=` : `/${route}/${ds_id}/${table_name}?ids=`;
   //split sch_ids to avoid "431 Request Header Fields Too Large" if too long
   const url_chunks = splitWithLimit(sch_ids, "&ids=", 8000);
   //const results =
