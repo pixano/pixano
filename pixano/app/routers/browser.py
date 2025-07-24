@@ -75,14 +75,13 @@ async def get_browser(
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
-        item_rows = get_rows(
-            dataset=dataset, table=table_item, limit=limit, skip=skip, where=where, sortcol=sortcol, order=order
-        )
-        if where is not None:
-            full_item_rows = get_rows(dataset=dataset, table=table_item, where=where)
+        if where is not None or sortcol is not None:
+            full_item_rows = get_rows(dataset=dataset, table=table_item, where=where, sortcol=sortcol, order=order)
+            item_rows = full_item_rows[skip : skip + limit]
             list_ids = [item.id for item in full_item_rows]
         else:
-            list_ids = dataset.get_all_ids(sortcol=sortcol, order=order)
+            item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip)
+            list_ids = dataset.get_all_ids()
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}

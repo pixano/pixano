@@ -213,10 +213,6 @@ class TableQueryBuilder:
         # This is because Lance does not support order_by
         # Also DuckDB is less memory efficient than Lance
         # ###################
-        # Now we always use use duckdb because we always order by "created_at" when there is no specified order
-        if self._order_by == [] and "created_at" in columns:
-            self._order_by = ["created_at"]
-            self._descending = [False]
         # if order_by is a count computed column, we need a join on local count table
         count_table = None
         if len(self._order_by) == 1 and self._order_by not in columns and self._order_by[0].startswith("#"):
