@@ -79,11 +79,14 @@ From the dataset page, you can go to the dashboard page, which contains more inf
 
 When opening an item, the item media will be displayed in the center on the screen. For multi-view datasets, the images will be tiled.
 
-On the top, a toolbar is available. On the right, two panels will display information on the item objects and scene.
+On the right, a two-tab panel, Object or Scene, is displayed.
 
 For video datasets, there will be a timeline display of tracks.
 
 For VQA and EntityLinking datasets, ther will be a text panel on the left.
+
+You can resize panels by dragging the thin border pink line between them.
+
 
 ### Header
 
@@ -95,20 +98,45 @@ Dataset item ID is displayed next.
 
 Left and right arrows allows to go to previous/next item, in the current selection and order.
 
+Next, is displayed the index of current item in the full selection, ordered.
+
+The toolbar is at the center.
+
+"Save" button on the right. It has a pulsing dot when there is changes to save.
+
+#### Toolbar
+
+The "mouse" icon is the Pan/Select tool. In this mode you can select any object in the view.
+By dragging image, outside of an object area, you can move the image (may be usefull in multiview or if zoomed)
+
+You can always zoom in or out with the mouse wheel, as well as move image with wheel button, even outside of Pan tool.
+
+Also, is you want to select image or an object under another object, you can select the front one and hide it with visibility icon on right panel. Then you can go through the hidden one.
+
+Next are tools to draw bounding box, polygon, and keypoints.
+
+In video mode, a "associate" icon allows to merge tracks.
+
+The "magic wand" icon give access to interactive segmentation.
+
 
 ### Scene panel
 
 ![Pixano item view - scene](../assets/user/item_scene.png)
 
-The scene panel will display all the scene features, like the item label, or any other feature created when importing your dataset, as well as metadata information on all the images in the item.
+The scene panel will display all the scene features, like the item split, or any other feature created when importing your dataset, as well as metadata information on all the images in the item.
 
 You can edit the scene features and then click the save changes button to write them to the dataset.
 
+There is also a selection of image filters and settings. They allows to disable / enable image smoothing, equalize the image histogram, tune brightness / contrast, or RGB channels.
+
+
 ### Object panel
 
-![Pixano item view - objects](../assets/user/exploration_objects.png)
+![Pixano item view - objects](../assets/user/item_objects.png)
 
 The objects panel will display all the item objects.
+
 
 You have visibility toggles for objects and object group, and when hovering on an object, you will have access to an edit tool and a delete tool.
 
