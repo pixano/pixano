@@ -215,7 +215,7 @@ class TableQueryBuilder:
         # ###################
 
         # protection against not allowed columns
-        self._order_by = [order for order in self._order_by if order in columns or order.startswith("#")]
+        self._order_by = [order for order in self._order_by if order.split(".")[0] in columns or order.startswith("#")]
 
         # if order_by is a count computed column, we need a join on local count table
         count_table = None
