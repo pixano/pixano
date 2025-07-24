@@ -213,9 +213,13 @@ class TableQueryBuilder:
         # This is because Lance does not support order_by
         # Also DuckDB is less memory efficient than Lance
         # ###################
+
+        # protection against not allowed columns
+        self._order_by = [order for order in self._order_by if order in columns or order.startswith("#")]
+
         # if order_by is a count computed column, we need a join on local count table
         count_table = None
-        if len(self._order_by) == 1 and self._order_by not in columns and self._order_by[0].startswith("#"):
+        if len(self._order_by) == 1 and self._order_by[0] not in columns and self._order_by[0].startswith("#"):
             # get lancedb connection, to check if #column is an existing table
             db = lancedb.connect(self.table._conn.uri)
             count_name = self._order_by[0][1:]
