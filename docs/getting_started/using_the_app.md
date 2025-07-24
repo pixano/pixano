@@ -85,9 +85,20 @@ For video datasets, there will be a timeline display of tracks.
 
 For VQA and EntityLinking datasets, ther will be a text panel on the left.
 
+### Header
+
+The "Home" icon retunr to home page.
+
+The circled left arrow go back to dataset explorer page, at the current item's page.
+
+Dataset item ID is displayed next.
+
+Left and right arrows allows to go to previous/next item, in the current selection and order.
+
+
 ### Scene panel
 
-![Pixano item view - scene](../assets/user/exploration_scene.png)
+![Pixano item view - scene](../assets/user/item_scene.png)
 
 The scene panel will display all the scene features, like the item label, or any other feature created when importing your dataset, as well as metadata information on all the images in the item.
 
