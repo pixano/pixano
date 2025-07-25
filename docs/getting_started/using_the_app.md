@@ -40,7 +40,7 @@ Note: "Free mode" allows to type your filter, as a basic SQL WHERE clause. Only 
 
 Free mode example: `id LIKE '%009' AND split = 'train2017'` will filter rows where id ends with 009 and split equals 'train2017'.
 
-<!-- devnote: the filter is not persistent -- this must be fixed! -->
+<!-- devnote: the filter is not persistent -- this must be fixed! (use a store) -->
 
 ### Semantic search
 
@@ -57,7 +57,7 @@ This ordering is disabled after a semantic search.
 
 The "gear" icon open a panel to select which columns to display, and reorder them. By default all available columns are displayed.
 
-<!-- devnote: "gear" settings are not persistent -- should be corrected? -->
+<!-- devnote: "gear" settings are not persistent -- should be corrected? (store?) -->
 
 ### Navigation
 
@@ -193,6 +193,8 @@ The dropbox "Select parent Entity" let choose if the object is a new object, or 
 
 Below, each relevant feature for this shape is listed, with an input to enter value. If Features Values <!--TODO link to FeaturesValues (future) doc--> are defined, choices may be proposed.
 
+<!-- devnote: FeaturesValues should be completely reworked, at least front side - cf https://github.com/pixano/pixano/issues/491 & https://github.com/pixano/pixano/issues/408 -->
+
 ##### Bounding box tool
 
 With the bounding box tool, you can create a bounding box object by click and dragging a rectangle over the image.
@@ -274,7 +276,7 @@ Depending on context, different options are available:
 - Remove item: Remove the item.
 - Edit item: Edit the item.
 
-Note: Ther may be different shape under the same keyframe (ex: a bounding box and a keypoints). Use [Object Card](#object-card) for more precise control.
+Note: There may be different shapes under the same keyframe (ex: a bounding box and a keypoints). Use [Object Card](#object-card) for more precise control.
 
 #### Control panel
 
@@ -287,6 +289,25 @@ On the right, a slider allows to zoom the timeline.
 ## Item page - VQA Dataset
 
 ![Pixano item view - VQA](../assets/user/item_vqa.png)
+
+On the left is the VQA panel list.
+
+On the top, the VQA model settings.
+
+![VQA Model Settings](../assets//user/vqa_model_settings.png)
+
+The "sparkling star" icon, allows to connect a Pixano Inference model provider.
+It is red if Pixano Inference is not connected, orange if connected but no suitable model found, and green if a suitable model is ready.
+The dropdown list let choose the model, the "+" icon allows to instantiate a new model in Pixano Inference provider. See [Select Smart Model](#select-smart-model).
+The "gear" icon allows to set some model prompt settings and model temperature.
+
+The "Add question" button open the QA Editor, where you can choose a question type and type the question, or generate it if a model is up and ready.
+
+For each question, there is a "check" icon, red if no answer, green if an answer is present. Then quesstion number, and on the right another "sparling star" icon to generate the answer. You also can manually enter an answer, and correct it.
+Multiple answers are allowed.
+
+<!-- devnote: TODO: add "Trash" icon (+fonctionality) to delete Message (Question/Answer) -->
+<!-- devnote: TODO: manage other types than "Open" questions... -->
 
 ## Item page - EntityLinking Dataset
 
