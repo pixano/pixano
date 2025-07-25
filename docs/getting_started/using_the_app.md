@@ -144,7 +144,13 @@ For each object in the dataset item, an object card is displayed.
 
 An "Eye" icon allows to toggle visibility.
 
+A colored dot show the color used to display this object. Clicking on it select it. In [Video](#item-page---video-dataset) mode, it will change current frame to the first visible instance.
+
+Next is the 'name' (in fact the first available feature amongst "name", "category", "category_name"), as well as the object id (parenthized if there is a 'name').
+
 A "Trash" icon, when opened or on hover, allows to delete the object. It requires another click within 3 seconds to confirm.
+
+In [Video](#item-page---video-dataset) mode, ther is a "Hide track"/"Show track" icon. It toggle the track display in [Video Inspector](#video-inspector)
 
 The right most "chevron" icon open the details.
 
@@ -154,7 +160,7 @@ When opened, there is at most 4 sub-sections: Features, Objects, Thumbnails and 
   Each features is displayed with it's table name in brackets (in some cases features are from different sub-objects).
 
 - "Object" display the sub-objects, somehow the shapes belonging to that object, or entity.
-  For video, there can be another layer as shapes are under tracklets.
+  For video, there can be another layer as shapes are under tracklets. Under tracklet, interpolated shapes do not offer interaction here as this is not real objects of your dataset. See [Track Item](#track-item) for other interactions on tracks and tracklets.
 
 For each sub object, here also an "Eye" icon to toggle visibility, then an icon that represent the kind of sub-object (bounding box, mask, keypoints, text, or tracklet). Hovering on it show the actual class. Next is it's id.
 On the right, an "Edit" icon, if relevant, allows to modify the shape. A "Link" icon allows to relink this shape in another object (entity). And finally a "Trash" icon to delete it.
@@ -165,14 +171,13 @@ On the right, an "Edit" icon, if relevant, allows to modify the shape. A "Link" 
 
 ### Toolbar
 
-<!-- TMP Where?-- Also, is you want to select image or an object under another object, you can select the front one and hide it with visibility icon on right panel. Then you can go through the hidden one.
--->
-
 #### Pan tool
 
 With the pan tool selected, you can move the image around. This is especially useful for multi-view datasets for organizing multiple images.
 
 Moving the images is still possible while any other tools is selected by using your mouse middle click. You can also zoom in and out of an image with the mouse wheel, and double click an image to bring it in front of the others.
+
+Note: if you want to select image or an object under another object, you can select the front one and hide it with visibility icon on right panel. Then you can go through the hidden one.
 
 #### Creation tools
 
@@ -207,7 +212,7 @@ Once created, by editing keypoints shape, you can change a keypoint status (visi
 
 With Pixano, you can segment with smart segmentation tool like SAM (Segment Anything Model).
 
-The first time you click on the "magicwand" icon, the Smart Model Selection modal will open, to configure the segmentation model to use. See more information on [Smart Model Selection](#TODO).
+The first time you click on the "magicwand" icon, the Smart Model Selection modal will open, to configure the segmentation model to use. See more information on [Smart Model Selection](#select-smart-model) for configuration.
 
 With the positive and negative points, you can inform the interactive segmentation tool on which part of the image you are trying to segment, and it will generate the mask.
 
@@ -215,7 +220,7 @@ When relevant, you can also use the rectangle tool to select the thing you want 
 
 #### Associate tool
 
-In video mode only, a "associate" icon allows to merge tracks.
+In [Video](#item-page---video-dataset) mode only, a "associate" icon allows to merge tracks.
 
 ![Pixano tools - associate](../assets/user/annotation_associate.png)
 
@@ -226,6 +231,63 @@ Validate when done. All selected objects are merged in the first one of the sele
 
 ## Item page - Video Dataset
 
+![Pixano item view - Video](../assets/user/item_video.png)
+
+In this mode, a specific ["associate"](#associate-tool) tool is available in the toolbar.
+
+### Video Inspector
+
+Video Inspector panel is displayed in the bottom.
+
+![Pixano item view - Video Inspector](../assets/user/video_inspector.png)
+
+Here you have the [timeline](#timeline), with each [track](#track-item), and a [control panel](#control-panel) at the bottom.
+
+#### Timeline
+
+The time axis, in seconds. You can change (click or drag) the current time of the video.
+
+#### Track item
+
+![Pixano item view - Track Item](../assets/user/track_item.png)
+
+Upon each track is displayed a colored dot and 'name' (id) (same as in [Object Card](#object-card))
+
+Then, all tracklets are shown as lines. Horizontal level correspond to each view, for multiview dataset.
+If the track, or tracklet, is selected, and the timeline zoom is enough (depends on frame density), keyframes are shown too.
+Keyframes are "real" shapes. On frames between keyframes, inside a traclet, the shape is interpolated (bounding boxes and keypoints).
+
+A left-click on a tracklet change the current time.
+
+A right click on a tracklet select it and open the tracklet popup menu.
+Depending on context, different options are available:
+
+- Add point: Replace interpolated shape by a "real" shape.
+- Split: Cut the tracklet in two tracklets, between previous and next keypoints.
+- Glue left/right: Glue tracklet to the left or right tracklet.
+- Relink: change tracklet owner (move or merge it in another track)
+- Delete: Delete tracklet, and all that it contains.
+
+A right click on a keyframe open the keyframe popup menu.
+Depending on context, different options are available:
+
+- Remove item: Remove the item.
+- Edit item: Edit the item.
+
+Note: Ther may be different shape under the same keyframe (ex: a bounding box and a keypoints). Use [Object Card](#object-card) for more precise control.
+
+#### Control panel
+
+"Play", "Step backward" and "Step forward" icons allows the corresponding actions. There are keyboard shortcuts described in tooltip for theses.
+"Play" will read the video to the end once.
+
+The time (format: minutes:second.millisecond) is diplayed next, then the current frame index in parenthesis.
+On the right, a slider allows to zoom the timeline.
+
 ## Item page - VQA Dataset
 
+![Pixano item view - VQA](../assets/user/item_vqa.png)
+
 ## Item page - EntityLinking Dataset
+
+## Select Smart Model

@@ -75,7 +75,7 @@ License: CECILL-C
       datasetTableStore.update((value) => {
         value = {
           ...value,
-          currentPage: 1, //reset page (?)
+          currentPage: 1, //reset page
         };
         delete value.sort;
         return value;
@@ -84,7 +84,7 @@ License: CECILL-C
       const { id, order } = colsorts[0];
       datasetTableStore.update((value) => ({
         ...value,
-        currentPage: 1, //reset page (?)
+        currentPage: 1, //reset page
         sort: { col: id, order },
       }));
     } else {
