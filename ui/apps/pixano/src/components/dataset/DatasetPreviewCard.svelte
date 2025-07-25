@@ -12,6 +12,14 @@ License: CECILL-C
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
   import { svg_right_arrow } from "@pixano/core/src/icons";
 
+  /**
+   * DatasetPreviewCard Component
+   *
+   *   This component displays a preview card for a dataset.
+   *   It includes the dataset name, number of items, preview image, and workspace type.
+   *   The component also provides a tooltip with additional information about the dataset.
+   */
+
   // Exports
   export let dataset: DatasetInfo;
 
@@ -20,10 +28,19 @@ License: CECILL-C
 
   const dispatch = createEventDispatcher();
 
+  /**
+   * Handles the selection of the dataset.
+   * Dispatches a "selectDataset" event.
+   */
   function handleSelectDataset() {
     dispatch("selectDataset");
   }
 
+  /**
+   * Displays the workspace type in a human-readable format.
+   * @param {WorkspaceType} workspace - The workspace type to display.
+   * @returns {string} - The human-readable workspace type.
+   */
   function displayWorkspaceType(workspace: WorkspaceType) {
     switch (workspace) {
       case WorkspaceType.IMAGE:
@@ -42,7 +59,7 @@ License: CECILL-C
   }
 
   onMount(() => {
-    //get dataset infos to put in tooltip
+    // Get dataset infos to put in tooltip
     api
       .getItemsInfo(dataset.id, null, { signal: controller.signal })
       .then((infos) => {
@@ -51,9 +68,9 @@ License: CECILL-C
         let entitiesCounts = 0;
         let annCounts: Record<string, number> = {};
         for (const info of infos) {
-          //get max number of views
+          // Get max number of views
           maxNumViews = Math.max(maxNumViews, Object.keys(info.info.views).length);
-          //sum objs counts
+          // Sum objs counts
           if ("info" in info && "entities" in info.info) {
             for (const ent of Object.values(info.info.entities)) {
               entitiesCounts += ent.count;
@@ -68,11 +85,11 @@ License: CECILL-C
         Total number of entities: ${entitiesCounts}
         Total annotation counts:`;
         for (const [k, v] of Object.entries(annCounts)) {
-          additionalInfo += `\n${"\xa0".repeat(6)}${k}: ${v}`; //&nbsp; *6 to force some indent space
+          additionalInfo += `\n${"\xa0".repeat(6)}${k}: ${v}`; // &nbsp; *6 to force some indent space
         }
       })
       .catch((err) => {
-        console.log("Error collecting additionnal dataset infos", err);
+        console.log("Error collecting additional dataset infos", err);
       });
   });
 

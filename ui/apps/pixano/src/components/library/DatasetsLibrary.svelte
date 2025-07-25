@@ -25,6 +25,20 @@ License: CECILL-C
     defaultDatasetTableValues,
   } from "$lib/stores/datasetStores";
 
+  /**
+   * DatasetsLibrary Component
+   *
+   * This component displays a list of datasets. Each dataset is represented by a
+   * DatasetPreviewCard component. When a dataset is selected, the user is navigated
+   * to the dataset's detail page.
+   *
+   * Props:
+   *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
+   *
+   * Events:
+   *   - selectDataset: Triggered when a dataset is selected.
+   */
+
   export let datasets: Array<DatasetInfo>;
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
