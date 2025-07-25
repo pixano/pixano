@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 const proxies_list = [
   "datasets",
   "browser",
+  "thumbnail",
   "dataset_items",
   "items",
   "items_info",
