@@ -317,4 +317,6 @@ Multiple answers are allowed.
 
 ## Item page - EntityLinking Dataset
 
+![Pixano item view - EntityLinking](../assets/user/item_entity_linking.png)
+
 ## Select Smart Model
