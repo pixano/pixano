@@ -288,11 +288,15 @@ On the right, a slider allows to zoom the timeline.
 
 ## Item page - VQA Dataset
 
-![Pixano item view - VQA](../assets/user/item_vqa.png)
-
 On the left is the VQA panel list.
 
+![Pixano item view - VQA](../assets/user/item_vqa.png)
+
 On the top, the VQA model settings.
+
+Under, a list of question and answers.
+
+### VQA model settings
 
 ![VQA Model Settings](../assets//user/vqa_model_settings.png)
 
@@ -300,6 +304,8 @@ The "sparkling star" icon, allows to connect a Pixano Inference model provider.
 It is red if Pixano Inference is not connected, orange if connected but no suitable model found, and green if a suitable model is ready.
 The dropdown list let choose the model, the "+" icon allows to instantiate a new model in Pixano Inference provider. See [Select Smart Model](#select-smart-model).
 The "gear" icon allows to set some model prompt settings and model temperature.
+
+### Questions and answers
 
 The "Add question" button open the QA Editor, where you can choose a question type and type the question, or generate it if a model is up and ready.
 
