@@ -110,7 +110,7 @@ License: CECILL-C
       <div class="flex-grow flex justify-center items-center">
         <Loader2Icon class="animate-spin" />
       </div>
-    <!-- Display table -->
+      <!-- Display table -->
     {:else if !selectedDataset.isErrored}
       <Table
         items={selectedDataset.table_data}
@@ -118,7 +118,7 @@ License: CECILL-C
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:colsort={(event) => handleColSort(event.detail)}
       />
-    <!-- Display error message if items could not be loaded -->
+      <!-- Display error message if items could not be loaded -->
     {:else}
       <div
         class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"

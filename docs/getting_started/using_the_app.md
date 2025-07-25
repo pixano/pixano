@@ -75,15 +75,17 @@ From the dataset page, you can go to the dashboard page, which contains more inf
 
 <!-- devnote: need rework or more dev... -->
 
-## Item page
+## Item page - Common
 
 When opening an item, the item media will be displayed in the center on the screen. For multi-view datasets, the images will be tiled.
 
-On the right, a two-tab panel, Object or Scene, is displayed.
+On the right, a two-tab panel, [Object](#object-panel) or [Scene](#scene-panel), is displayed.
 
-For video datasets, there will be a timeline display of tracks.
+For [Video](#item-page---video-dataset) datasets, there will be a timeline display of tracks.
 
-For VQA and EntityLinking datasets, ther will be a text panel on the left.
+For [VQA](#item-page---vqa-dataset) and [EntityLinking](#item-page---entitylinking-dataset) datasets, ther will be a text panel on the left.
+
+In the following sub-sections we will cover only common subjects for all kind of dataset. Specifics are in their respectives sections.
 
 You can resize panels by dragging the thin border pink line between them.
 
@@ -136,7 +138,7 @@ For each filter, you have to select a table, a field, an operator, and a value.
 Note that "AND" has precedence over "OR".
 Click on "Filter" button to apply.
 
-#### Object item
+#### Object card
 
 For each object in the dataset item, an object card is displayed.
 
@@ -221,3 +223,9 @@ In this mode, select a first object in any view, then other objects to associate
 Object that cannot be selected, because of current selection, are greyed out.
 You can move in the timeline, select in other view or other kind of shapes.
 Validate when done. All selected objects are merged in the first one of the selected list.
+
+## Item page - Video Dataset
+
+## Item page - VQA Dataset
+
+## Item page - EntityLinking Dataset
