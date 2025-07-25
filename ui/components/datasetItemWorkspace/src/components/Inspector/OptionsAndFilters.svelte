@@ -50,6 +50,8 @@ License: CECILL-C
   let defaultFilter: ObjectsFilter;
   const allowedTypes = ["str", "int", "float", "bool"];
 
+  let isVideo = false;
+
   const removeFields = (listFields: string[], toRemove: string[]) => {
     for (const rf of toRemove) {
       const index = listFields.indexOf(rf);
@@ -92,6 +94,9 @@ License: CECILL-C
   const unsubscribeDatasetSchema = datasetSchema.subscribe((schema) => {
     tableColumns = [];
     for (const table of schema.groups["entities"]) {
+      //isVideo if schema contains a Track base_schema
+      if (schema.schemas[table].base_schema === BaseSchema.Track) isVideo = true;
+
       if (
         $entities.find(
           (ent) =>
@@ -158,7 +163,6 @@ License: CECILL-C
   const handleAddFilter = (logicOperator: LogicOperator) => {
     const newFilter = { ...defaultFilter, logicOperator };
     entityFilters.set([...$entityFilters, newFilter]); //note: a push will not trigger reactive
-    //TODO test si avec store ca marche en pushant
   };
 
   function applyOperator(
@@ -222,7 +226,7 @@ License: CECILL-C
   function evaluateGroups(): Entity[] {
     const groups = groupConditions($entityFilters);
 
-    // Union des objets correspondant à chaque groupe (OR)
+    // Union of "OR" objets groups
     const matching = new Set<Entity>();
 
     for (const groupOR of groups) {
@@ -270,15 +274,17 @@ License: CECILL-C
     max={1}
     step={0.01}
   />
-  <div class="flex gap-4 items-center">
-    <Checkbox
-      handleClick={() => {
-        $interpolate = !$interpolate;
-      }}
-      checked={$interpolate}
-    />
-    <span>Interpolate</span>
-  </div>
+  {#if isVideo}
+    <div class="flex gap-4 items-center">
+      <Checkbox
+        handleClick={() => {
+          $interpolate = !$interpolate;
+        }}
+        checked={$interpolate}
+      />
+      <span>Interpolate</span>
+    </div>
+  {/if}
   {#if !disableFilter}
     <div class="flex items-center justify-between w-full">
       <span class="font-medium">Filters</span>

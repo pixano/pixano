@@ -4,15 +4,17 @@
 # License: CECILL-C
 # =====================================
 
+import base64
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import NonNegativeInt, PositiveInt
 
 from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import SchemaGroup, is_image, is_text, is_view_embedding
-from pixano.features.utils.image import generate_text_image_base64, get_image_thumbnail, image_to_base64
+from pixano.features.utils.image import generate_text_image_base64
 
 from .utils import assert_table_in_group, get_dataset, get_rows
 
@@ -22,10 +24,11 @@ router = APIRouter(prefix="/browser", tags=["Browser"])
 
 @router.get("/{id}", response_model=DatasetBrowser)
 async def get_browser(
+    request: Request,
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-    limit: int = 50,
-    skip: int = 0,
+    limit: PositiveInt = 50,
+    skip: NonNegativeInt = 0,
     query: str = "",
     embedding_table: str = "",
     where: str | None = None,
@@ -35,6 +38,7 @@ async def get_browser(
     """Load dataset items for the explorer page.
 
     Args:
+        request: the request object, used to retrieve the current app instance
         id: Dataset ID containing the items.
         settings: App settings.
         limit: Limit number of items.
@@ -62,7 +66,7 @@ async def get_browser(
     # Get page parameters
     total = dataset.num_rows
     original_limit = limit
-    limit = min(limit, total)
+    limit = min(limit, total - skip)
 
     # Get tables
     table_item = SchemaGroup.ITEM.value
@@ -75,14 +79,13 @@ async def get_browser(
         except DatasetAccessError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
-        item_rows = get_rows(
-            dataset=dataset, table=table_item, limit=limit, skip=skip, where=where, sortcol=sortcol, order=order
-        )
-        if where is not None:
-            full_item_rows = get_rows(dataset=dataset, table=table_item, where=where)
+        if where is not None or sortcol is not None:
+            full_item_rows = get_rows(dataset=dataset, table=table_item, where=where, sortcol=sortcol, order=order)
+            item_rows = full_item_rows[skip : skip + limit]
             list_ids = [item.id for item in full_item_rows]
         else:
-            list_ids = dataset.get_all_ids(sortcol=sortcol, order=order)
+            item_rows = get_rows(dataset=dataset, table=table_item, limit=limit, skip=skip)
+            list_ids = dataset.get_all_ids()
 
     item_ids = [item.id for item in item_rows]
     item_first_media: dict[str, dict] = {}
@@ -120,14 +123,16 @@ async def get_browser(
             if curr_view is not None:
                 if is_image(type(curr_view)):
                     try:
-                        row_view = curr_view.open(settings.media_dir, output_type="image")
-                        row_view = get_image_thumbnail(row_view, (128, 128))
-                        row_view_base64 = image_to_base64(row_view, curr_view.format)
+                        # Try to open image. If image is found, give an url to access via the get_thumbnail endpoint.
+                        curr_view.open(settings.media_dir, output_type="image")
+                        encoded_url = base64.b64encode(curr_view.url.encode("utf-8")).decode("utf-8")
+                        row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
                     except ValueError:
-                        row_view_base64 = ""
+                        # If image not accesible, set view_url to empty string.
+                        row_view_url = ""
                 elif is_text(type(curr_view)):
-                    row_view_base64 = generate_text_image_base64(curr_view.content[:80])
-                row[view] = row_view_base64
+                    row_view_url = generate_text_image_base64(curr_view.content[:80])
+                row[view] = row_view_url
 
         # ITEM features
         for feat in vars(item).keys():
