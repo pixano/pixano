@@ -172,21 +172,45 @@ With the pan tool selected, you can move the image around. This is especially us
 
 Moving the images is still possible while any other tools is selected by using your mouse middle click. You can also zoom in and out of an image with the mouse wheel, and double click an image to bring it in front of the others.
 
-#### Bounding box tool
+#### Creation tools
 
-![Pixano tools - bounding box](../assets/user/annotation_bounding_box.png)
+Each of theses tools allows creation of a new shape.
 
-With the bounding box tool, you can create a bounding box object by click and dragging a rectangle over the image. Once you are done with your selection, you will be prompted to enter values for your object features depending on your dataset (in this case category_id and category), and to confirm the object.
+There is 3 manual creation tools, and the interactive segmentation tool.
 
-Then, click save changes in the object panels to save the created object to your dataset.
+For each tool, when the shape is drawn, you will be prompted to enter values for your object features depending on your dataset, and to confirm the object.
 
-#### Polygon tool
+![Pixano Toolbar - Creation prompt](../assets//user/creation_prompt.png)
 
-![Pixano tools - polygon](../assets/user/annotation_polygon.png)
+The dropbox "Select parent Entity" let choose if the object is a new object, or if it belongs to an existing one.
+
+Below, each relevant feature for this shape is listed, with an input to enter value. If Features Values <!--TODO link to FeaturesValues (future) doc--> are defined, choices may be proposed.
+
+##### Bounding box tool
+
+With the bounding box tool, you can create a bounding box object by click and dragging a rectangle over the image.
+
+##### Polygon tool
 
 With the polygon tool, you can create a segmentation mask manually by adding points with the granularity of your choice.
 
-Once you save this mask, a matching bounding box will automatically be created.
+##### Keypoints tool
+
+With the keypoints tool, you can create a keypoints.
+First select one of the keypoints templates, then drag a box to roughly place the template. Now you can place each keypoint by dragging them.
+
+Once created, by editing keypoints shape, you can change a keypoint status (visible, hidden, invisible) by clicking on it.
+
+##### Smart segmentation tool
+
+With Pixano, you can segment with smart segmentation tool like SAM (Segment Anything Model).
+
+The first time you click on the "magicwand" icon, the Smart Model Selection modal will open, to configure the segmentation model to use. See more information on [Smart Model Selection](#TODO).
+
+With the positive and negative points, you can inform the interactive segmentation tool on which part of the image you are trying to segment, and it will generate the mask.
+
+When relevant, you can also use the rectangle tool to select the thing you want to segment.
+
 
 #### Associate tool
 
@@ -198,17 +222,3 @@ In this mode, select a first object in any view, then other objects to associate
 Object that cannot be selected, because of current selection, are greyed out.
 You can move in the timeline, select in other view or other kind of shapes.
 Validate when done. All selected objects are merged in the first one of the selected list.
-
-#### Smart segmentation tool
-
-With Pixano, you can segment with smart segmentation tool like SAM (Segment Anything Model). Please follow our documentation on how to precompute the embeddings required by SAM and export its ONNX model to be able to use it.
-
-![Pixano tools - SAM points](../assets/user/annotation_sam_points.png)
-
-With the positive and negative points, you can inform SAM on which part of the image you are trying to segment, and SAM will generate the mask for you.
-
-![Pixano tools - SAM rectangle](../assets/user/annotation_sam_rectangle.png)
-
-When relevant, you can also use the rectangle tool to select the thing you want SAM to segment.
-
-When saving the mask created by SAM, like with the polygon tool, a matching bounding box will automatically be created.
