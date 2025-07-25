@@ -211,7 +211,6 @@ With the positive and negative points, you can inform the interactive segmentati
 
 When relevant, you can also use the rectangle tool to select the thing you want to segment.
 
-
 #### Associate tool
 
 In video mode only, a "associate" icon allows to merge tracks.
