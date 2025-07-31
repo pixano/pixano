@@ -167,7 +167,7 @@ On the right, an "Edit" icon, if relevant, allows to modify the shape. A "Link" 
 
 - "Thumbnails" shows a crop of the object, if relevant. Note: It is not meant to be the exact bounding box, if any, but as a quick look on the object.
 
-- "Text spans" is only for EntityLinking datasets, and show a table associating text span features to the actual text span (the highlighted text).
+- "Text spans" is only for [EntityLinking](#item-page---entitylinking-dataset) datasets, and show a table associating text span features to the actual text span (the highlighted text).
 
 ### Toolbar
 
@@ -319,4 +319,21 @@ Multiple answers are allowed.
 
 ![Pixano item view - EntityLinking](../assets/user/item_entity_linking.png)
 
+An the left is the entity linking text panel.
+
+Text spans are background colored, using the object color. Text span can be clicked to select the object.
+
+In the text area, if you select some text and click "Tag Selected Text" button, the [creation panel](#creation-tools) will open to validate this new text span.
+
 ## Select Smart Model
+
+![Smart Model panel](../assets/user/smart_model.png)
+
+Here you can choose a model for segmentation. You can choose either a local model (which requires precomputed embeddings and a local model, see [Interactive segmentation](../tutorials/interactive_segmentation.md)), or a segmentation model provided by Pixano Inference.
+
+The "sparkling star" icon, allows to connect a Pixano Inference model provider.
+It is red if Pixano Inference is not connected, orange if connected but no suitable model found, and green if a suitable model is ready.
+
+"Add a model" button open the Instantiate model page (for either segmentation or VQA, depending on context)
+
+For more information on the settings to provide, please refer to [Pixano Inference](https://pixano.github.io/pixano-inference/latest).
