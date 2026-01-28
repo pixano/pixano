@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+
 from pixano.features import (
     BBox,
     CompressedRLE,

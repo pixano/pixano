@@ -364,12 +364,18 @@ class DatasetItem(BaseModel):
         split: The split of the item.
         created_at: The creation date of the item.
         updated_at: The last modification date of the item.
+        status: Status information about the item, eg restricted values within a list,
+                eg 'new', 'inProgress', 'inReview', 'validated'.
+        comment: Information added by the annotator, eg if a specific sample is
+                difficult to annotate.
     """
 
     id: str
     split: str = "default"
     created_at: datetime
     updated_at: datetime
+    status: str = "new"
+    comment: str = ""
 
     def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any) -> None:
         """Create a new model by parsing and validating input data from keyword arguments.
