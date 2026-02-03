@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 import os
 import subprocess
 
@@ -5,7 +11,10 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 
 class CustomBuildHook(BuildHookInterface):
+    """Custom build hook to build the frontend during package build."""
+
     def initialize(self, version, build_data):
+        """Build frontend assets using pnpm, skipped for editable installs."""
         if version == "editable":
             return
 

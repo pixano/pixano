@@ -59,7 +59,7 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY pixano/ ./pixano
-COPY ["pyproject.toml", "uv.lock", "README.md", "./"]
+COPY ["pyproject.toml", "uv.lock", "hatch_build.py", "README.md", "./"]
 
 # Install dependencies
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
