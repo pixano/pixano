@@ -53,6 +53,7 @@ ENV USE_AWS=${USE_AWS}
 # PYTHONUNBUFFERED: turns off buffering for easier container logging
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
