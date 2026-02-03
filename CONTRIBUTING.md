@@ -22,13 +22,19 @@ If you are looking to contribute to Pixano and develop new features, you will ne
 
 #### Backend
 
-You need a python environment with a supported version. Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
+You need [uv](https://docs.astral.sh/uv/) and a supported Python version. Install uv if you haven't already:
 
 ```bash
-pip install . -e
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-The `-e` argument install the repository in dev mode so that your local changes are taken into account each time you run your environment.
+Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
+
+```bash
+uv sync
+```
+
+This installs the project in editable mode so that your local changes are taken into account each time you run your environment.
 
 #### Frontend
 
@@ -106,13 +112,13 @@ You can install the [Visual Studio Extension](https://marketplace.visualstudio.c
 You can also use our **pre-commit** configuration to format and lint all backend files before commiting your changes:
 
 ```bash
-pip install pre-commit
-pre-commit run --all-files
+uv tool run pre-commit run --all-files
 ```
 
 You can also install the pre-commit hook if you want it to run automatically on `git commit`:
 
 ```bash
+uv tool install pre-commit
 pre-commit install
 ```
 

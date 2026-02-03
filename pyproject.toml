@@ -37,7 +37,7 @@ dependencies = [
   "opencv-python >= 4.7.0, < 5.0.0",
   "pandas >= 1.5.0, < 3.0.0",
   "Pillow >= 9.4.0, < 11.0.0",
-  "pixano-inference ~= 0.5.6",
+  #"pixano-inference ~= 0.5.6",
   "polars > 1.7.0, < 2.0.0",
   "pycocotools >= 2.0.0, < 3.0.0",
   "pydantic >= 2.9.0, < 3.0.0",
@@ -49,7 +49,7 @@ dependencies = [
   "uvicorn >= 0.20.0, < 1.0.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
   "mike >= 2.1.0, < 3.0.0",
   "mkdocs >= 1.6.0, < 2.0.0",
@@ -80,6 +80,8 @@ pixano = "pixano.app.serve:main"
 include = ["/pixano"]
 exclude = ["__pycache__"]
 artifacts = ["/pixano/app/dist"]
+
+[tool.hatch.build.hooks.custom]
 
 [tool.hatch.version]
 path = "pixano/__version__.py"

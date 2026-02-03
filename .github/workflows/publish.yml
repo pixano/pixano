@@ -24,11 +24,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Setup Node.js 23
         uses: actions/setup-node@v4
@@ -40,21 +42,8 @@ jobs:
         with:
           version: 10.4.1
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install hatch
-
-      - name: Build app
-        run: |
-          cd ui
-          pnpm i --frozen-lockfile
-          cd apps/pixano
-          pnpm build
-          cd ../../..
-
       - name: Build package
-        run: hatch build
+        run: uv build
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -77,11 +66,13 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Create cache_id for key creation
         run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
@@ -95,10 +86,10 @@ jobs:
             mkdocs-material-
 
       - name: Install dependencies
-        run: pip install .[docs]
+        run: uv sync --group docs
 
       - name: Publish documentation website
-        run: mike deploy --push --update-aliases ${{ env.VERSION }} stable
+        run: uv run mike deploy --push --update-aliases ${{ env.VERSION }} stable
 
   publish_docker:
     name: Docker
