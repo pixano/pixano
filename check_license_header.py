@@ -47,6 +47,7 @@ EXCLUDE_FILES = {
 EXCLUDE_PATHS = {
     "node_modules",
     ".svelte-kit",
+    ".venv",
 }
 
 

@@ -53,23 +53,25 @@ ENV USE_AWS=${USE_AWS}
 # PYTHONUNBUFFERED: turns off buffering for easier container logging
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 COPY pixano/ ./pixano
-COPY ["pyproject.toml", "README.md", "./"]
+COPY ["pyproject.toml", "uv.lock", "hatch_build.py", "README.md", "./"]
 
 # Install dependencies
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
-RUN pip install --upgrade pip
 RUN if [ "$USE_AWS" = "true" ]; then \
-    pip install awscli && \
+    uv pip install --system awscli && \
     mkdir -p /root/.aws && \
     --mount=type=secret,id=aws,target=/root/.aws/credentials; \
     fi
 
 # Install the package
-RUN pip install -e .
+RUN uv sync
 
 # Expose ports
 # 8000: FastAPI server
@@ -80,7 +82,6 @@ WORKDIR /app/pixano/app
 COPY --from=build /app/pixano/app/dist ./dist/
 
 # Clean up the build environment
-RUN rm -Rf /root/.cache/pip
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Run the server

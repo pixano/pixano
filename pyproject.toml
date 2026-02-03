@@ -49,7 +49,7 @@ dependencies = [
   "uvicorn >= 0.20.0, < 1.0.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
   "mike >= 2.1.0, < 3.0.0",
   "mkdocs >= 1.6.0, < 2.0.0",
@@ -76,10 +76,15 @@ Source = "https://github.com/pixano/pixano"
 [project.scripts]
 pixano = "pixano.app.serve:main"
 
+[tool.uv]
+prerelease = "allow"
+
 [tool.hatch.build]
 include = ["/pixano"]
 exclude = ["__pycache__"]
 artifacts = ["/pixano/app/dist"]
+
+[tool.hatch.build.hooks.custom]
 
 [tool.hatch.version]
 path = "pixano/__version__.py"

@@ -32,11 +32,13 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Create cache_id for key creation
         run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
@@ -50,7 +52,7 @@ jobs:
             mkdocs-material-
 
       - name: Install dependencies
-        run: pip install .[docs]
+        run: uv sync --group docs
 
       - name: Publish documentation website
-        run: mike deploy --push --update-aliases latest
+        run: uv run mike deploy --push --update-aliases latest
