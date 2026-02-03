@@ -32,7 +32,9 @@ Pixano is an open-source tool by CEA List for exploring and annotating your data
 
 # Installing Pixano
 
-As Pixano requires specific versions for its dependencies, we recommend creating a new Python virtual environment to install it.
+## Production
+
+We recommend installing the published Pixano package in a dedicated Python virtual environment (Python >= 3.10, < 3.14).
 
 For example, with <a href="https://conda.io/projects/conda/en/latest/user-guide/install/index.html" target="_blank">conda</a>:
 
@@ -41,17 +43,49 @@ conda create -n pixano_env python=3.10
 conda activate pixano_env
 ```
 
-Then, you can install the Pixano package inside that environment with pip:
+Then, install Pixano with pip:
 
 ```shell
 pip install pixano
 ```
 
-Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano), you can also install it as follows:
+Start the Pixano server:
+
+```shell
+pixano /path/to/library /path/to/media
+```
+
+Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano):
 
 ```shell
 docker pull pixano/pixano:stable
 ```
+
+## Development (from source)
+
+To run the latest version of Pixano from source, you need [uv](https://docs.astral.sh/uv/). Install it if you haven't already:
+
+```shell
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then, clone the repository and install all dependencies:
+
+```shell
+git clone https://github.com/pixano/pixano.git
+cd pixano
+uv sync
+```
+
+This installs the project in editable mode with all dependencies pinned via `uv.lock`. Your local changes are taken into account each time you run your environment.
+
+Start the Pixano server:
+
+```shell
+uv run pixano /path/to/library /path/to/media
+```
+
+For more details on running Pixano locally (frontend setup, testing, formatting), see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 # Using Pixano
 
