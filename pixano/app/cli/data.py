@@ -79,7 +79,9 @@ def import_data(
     ),
     name: Optional[str] = typer.Option(None, help="Dataset name. Defaults to source directory name."),
     description: str = typer.Option("", help="Dataset description."),
-    dataset_type: Optional[DatasetType] = typer.Option(None, "--type", help="Dataset type: image, video, or vqa. Prompted if omitted."),
+    dataset_type: Optional[DatasetType] = typer.Option(
+        None, "--type", help="Dataset type: image, video, or vqa. Prompted if omitted."
+    ),
     schema: Optional[str] = typer.Option(
         None,
         help="Custom schema in 'path/to/file.py:ClassName' format. Uses the default schema for the type if omitted.",
