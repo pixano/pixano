@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 import shutil
 from enum import Enum
 from pathlib import Path
@@ -20,6 +21,39 @@ class DatasetType(str, Enum):
     image = "image"
     video = "video"
     vqa = "vqa"
+
+
+def _detect_dataset_type(source_dir: Path) -> DatasetType:
+    """Auto-detect dataset type from the source directory contents.
+
+    Checks split subdirectories for metadata.jsonl (VQA) or video files.
+    Falls back to image.
+    """
+    video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".vob"}
+
+    for split_dir in source_dir.iterdir():
+        if not split_dir.is_dir():
+            continue
+
+        # Check for VQA by looking at metadata.jsonl
+        metadata_file = split_dir / "metadata.jsonl"
+        if metadata_file.exists():
+            try:
+                with metadata_file.open("r", encoding="utf-8") as f:
+                    first_line = f.readline().strip()
+                if first_line:
+                    record = json.loads(first_line)
+                    if "conversations" in record:
+                        return DatasetType.vqa
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        # Check for video files
+        for file in split_dir.iterdir():
+            if file.is_file() and file.suffix.lower() in video_extensions:
+                return DatasetType.video
+
+    return DatasetType.image
 
 
 class ImportMode(str, Enum):
@@ -45,7 +79,7 @@ def import_data(
     ),
     name: Optional[str] = typer.Option(None, help="Dataset name. Defaults to source directory name."),
     description: str = typer.Option("", help="Dataset description."),
-    type: DatasetType = typer.Option(DatasetType.image, help="Dataset type: image, video, or vqa."),
+    dataset_type: Optional[DatasetType] = typer.Option(None, "--type", help="Dataset type: image, video, or vqa. Prompted if omitted."),
     schema: Optional[str] = typer.Option(
         None,
         help="Custom schema in 'path/to/file.py:ClassName' format. Uses the default schema for the type if omitted.",
@@ -67,6 +101,21 @@ def import_data(
 
     # Resolve dataset name
     dataset_name = name if name is not None else source_dir.name
+
+    # Interactive type detection when --type is not provided
+    if dataset_type is None:
+        detected = _detect_dataset_type(source_dir)
+        typer.echo("\nDataset type determines how your data is displayed in Pixano.")
+        typer.echo("  image - Image dataset with optional object annotations")
+        typer.echo("  video - Video dataset")
+        typer.echo("  vqa   - Visual Question Answering (image + conversations)")
+        type_str = typer.prompt("Select dataset type", default=detected.value)
+        try:
+            dataset_type = DatasetType(type_str)
+        except ValueError:
+            typer.echo(f"Error: Invalid type '{type_str}'. Must be one of: image, video, vqa.", err=True)
+            raise typer.Exit(code=1)
+        typer.echo("")
 
     # Derive library_dir and media_dir from data_dir
     resolved_library_dir = data_dir / "library"
@@ -95,7 +144,7 @@ def import_data(
     # Resolve builder class
     import importlib
 
-    module_path, class_name = builder_map[type].rsplit(".", 1)
+    module_path, class_name = builder_map[dataset_type].rsplit(".", 1)
     module = importlib.import_module(module_path)
     builder_cls = getattr(module, class_name)
 
