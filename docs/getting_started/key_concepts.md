@@ -19,14 +19,14 @@ Pixano has **three** layers:
 
 Every dataset is composed of tables grouped by purpose. Pixano defines six **schema groups**:
 
-| Group         | Description                                      | Example             |
-|---------------|--------------------------------------------------|----------------------|
-| **Item**      | One row per dataset entry (metadata, split, ...) | `Item`               |
-| **View**      | Media attached to an item                        | `Image`, `Video`     |
-| **Entity**    | Objects or tracks within an item                 | `Entity`             |
-| **Annotation**| Labels attached to entities                      | `BBox`, `KeyPoints`, `CompressedRLE` |
-| **Embedding** | Vectors for semantic search                      | `Embedding`          |
-| **Source**    | Provenance of annotations/predictions            | `Source`             |
+| Group          | Description                                      | Example                              |
+| -------------- | ------------------------------------------------ | ------------------------------------ |
+| **Item**       | One row per dataset entry (metadata, split, ...) | `Item`                               |
+| **View**       | Media attached to an item                        | `Image`, `Video`                     |
+| **Entity**     | Objects or tracks within an item                 | `Entity`                             |
+| **Annotation** | Labels attached to entities                      | `BBox`, `KeyPoints`, `CompressedRLE` |
+| **Embedding**  | Vectors for semantic search                      | `Embedding`                          |
+| **Source**     | Provenance of annotations/predictions            | `Source`                             |
 
 Each group has a base class (e.g. `Item`, `View`, `Entity`, `Annotation`) that you can subclass to add domain-specific fields:
 

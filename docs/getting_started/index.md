@@ -4,45 +4,45 @@ Pixano is an open-source data-centric AI tool for exploring and annotating compu
 
 <div class="grid cards" markdown>
 
--   :material-rocket-launch: **Quickstart**
+- :material-rocket-launch: **Quickstart**
 
-    ---
+  ***
 
-    Import a dataset with pre-annotations and launch the app in minutes.
+  Import a dataset with pre-annotations and launch the app in minutes.
 
-    [:octicons-arrow-right-24: Get started](quickstart.md)
+  [:octicons-arrow-right-24: Get started](quickstart.md)
 
--   :material-download-circle: **Installation**
+- :material-download-circle: **Installation**
 
-    ---
+  ***
 
-    All the ways to install Pixano: pip, Docker, or from source.
+  All the ways to install Pixano: pip, Docker, or from source.
 
-    [:octicons-arrow-right-24: Install Pixano](installing_pixano.md)
+  [:octicons-arrow-right-24: Install Pixano](installing_pixano.md)
 
--   :material-lightbulb-on: **Key concepts**
+- :material-lightbulb-on: **Key concepts**
 
-    ---
+  ***
 
-    Understand the data model: items, views, entities, annotations, and more.
+  Understand the data model: items, views, entities, annotations, and more.
 
-    [:octicons-arrow-right-24: Learn concepts](key_concepts.md)
+  [:octicons-arrow-right-24: Learn concepts](key_concepts.md)
 
--   :material-play-circle: **Launching the app**
+- :material-play-circle: **Launching the app**
 
-    ---
+  ***
 
-    Start Pixano locally, from a notebook, with Docker, or connected to S3.
+  Start Pixano locally, from a notebook, with Docker, or connected to S3.
 
-    [:octicons-arrow-right-24: Launch Pixano](launching_the_app.md)
+  [:octicons-arrow-right-24: Launch Pixano](launching_the_app.md)
 
--   :material-monitor-dashboard: **Using the app**
+- :material-monitor-dashboard: **Using the app**
 
-    ---
+  ***
 
-    Navigate the web UI: browse datasets, annotate, and use AI-assisted tools.
+  Navigate the web UI: browse datasets, annotate, and use AI-assisted tools.
 
-    [:octicons-arrow-right-24: Explore the UI](using_the_app.md)
+  [:octicons-arrow-right-24: Explore the UI](using_the_app.md)
 
 </div>
 

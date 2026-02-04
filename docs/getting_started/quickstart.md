@@ -7,9 +7,9 @@ This guide walks you through importing an annotated dataset into Pixano in three
 - Python 3.10+ installed
 - Pixano installed:
 
-    ```bash
-    pip install pixano
-    ```
+  ```bash
+  pip install pixano
+  ```
 
 ??? note "Running from source with uv"
 
@@ -143,11 +143,11 @@ pixano data import ./my_data ./street_objects \
 
 Common options:
 
-| Option     | Description                                                                 |
-|------------|-----------------------------------------------------------------------------|
-| `--name`   | Dataset name. Defaults to the source directory name.                        |
-| `--type`   | Dataset type: `image` (default), `video`, or `vqa`.                         |
-| `--mode`   | `create` (default, fails if exists), `overwrite`, or `add` (append).        |
+| Option     | Description                                                                       |
+| ---------- | --------------------------------------------------------------------------------- |
+| `--name`   | Dataset name. Defaults to the source directory name.                              |
+| `--type`   | Dataset type: `image` (default), `video`, or `vqa`.                               |
+| `--mode`   | `create` (default, fails if exists), `overwrite`, or `add` (append).              |
 | `--schema` | Custom schema as `path/to/file.py:ClassName`. Uses the default schema if omitted. |
 
 ??? note "Alternative: build the dataset with Python"
