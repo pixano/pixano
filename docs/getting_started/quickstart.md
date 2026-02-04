@@ -174,6 +174,73 @@ Common options:
     print(f"Dataset built: {dataset.num_rows} items")
     ```
 
+#### Try it: Pascal VOC 2007
+
+The repository includes a ready-to-run example that downloads a sample of the [Pascal VOC 2007](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/) dataset and produces a Pixano-compatible folder. Use it to test the full import workflow with real data.
+
+**1. Generate the sample folder**
+
+```bash
+pip install pillow                        # required by the script
+python examples/voc/generate_sample.py ./voc_sample --num-samples 50
+```
+
+This downloads VOC 2007, samples 50 images per split, converts the XML annotations to `metadata.jsonl` files with normalized bounding boxes, and writes everything to `./voc_sample/`.
+
+The resulting folder looks like:
+
+```
+voc_sample/
+  train/
+    000032.jpg
+    000045.jpg
+    ...
+    metadata.jsonl
+  validation/
+    000007.jpg
+    000019.jpg
+    ...
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` follows the format described above:
+
+```json
+{"image": "000032.jpg", "objects": {"bboxes": [[0.078, 0.090, 0.756, 0.792], ...], "category": ["aeroplane", ...], "is_difficult": [false, ...]}}
+```
+
+**2. Review the schema**
+
+The example schema is at `examples/voc/schema.py`:
+
+```python
+from pixano.datasets.workspaces import DefaultImageDatasetItem
+from pixano.features import Entity
+
+
+class VOCObject(Entity):
+    category: str = ""
+    is_difficult: bool = False
+
+
+class VOCDatasetItem(DefaultImageDatasetItem):
+    objects: list[VOCObject]
+```
+
+Same pattern as the street-objects example — a custom `Entity` subclass with domain-specific attributes, plugged into `DefaultImageDatasetItem`.
+
+**3. Import and serve**
+
+```bash
+pixano init ./my_data
+pixano data import ./my_data ./voc_sample \
+    --name "VOC 2007 Sample" \
+    --schema examples/voc/schema.py:VOCDatasetItem
+pixano server run ./my_data
+```
+
+Open `http://127.0.0.1:7492` to browse the imported VOC images and bounding boxes.
+
 ## Step 3 — Launch the Server
 
 ```bash

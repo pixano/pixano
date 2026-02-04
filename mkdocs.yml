@@ -2,10 +2,12 @@ site_name: Pixano Documentation
 site_url: https://pixano.github.io/pixano/
 theme:
   name: material
+  custom_dir: docs/overrides
   logo: assets/pixano_white.png
   favicon: assets/pixano.png
   icon:
     repo: fontawesome/brands/github
+    annotation: material/plus-circle
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
@@ -25,12 +27,21 @@ theme:
   font:
     text: Poppins
   features:
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
     - navigation.instant
+    - navigation.path
+    - navigation.sections
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.tracking
     - navigation.top
     - navigation.indexes
+    - search.highlight
+    - search.share
+    - search.suggest
     - toc.integrate
 repo_url: https://github.com/pixano/pixano
 repo_name: pixano/pixano
@@ -101,13 +112,31 @@ plugins:
               - pydantic
 
 markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 nav:
   - "Home": https://pixano.github.io/
@@ -115,12 +144,11 @@ nav:
   - "Pixano":
       - "Getting started":
           - getting_started/index.md
+          - "Quickstart": getting_started/quickstart.md
+          - "Installation": getting_started/installing_pixano.md
           - "Key concepts": getting_started/key_concepts.md
-          - "Installing Pixano": getting_started/installing_pixano.md
-          - "Creating a dataset": getting_started/creating_a_dataset.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
-          - "Quickstart: Import with pre-annotations": getting_started/quickstart_image_preannotation.md
       - "Tutorials":
           - tutorials/index.md
           - "Build and query a dataset": tutorials/dataset.md

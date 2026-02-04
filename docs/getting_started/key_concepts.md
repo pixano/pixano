@@ -1,121 +1,86 @@
 # Key concepts
 
-## Context
+## What Pixano does
 
-Pixano is a data-centric tool that provides multiple functionalities:
+Pixano provides two main capabilities:
 
-1. **Dataset management** in a fast, columnar data format based on the [Lance](https://lancedb.github.io/lance/) format and the [LanceDB](https://lancedb.github.io/lancedb/) vector database. The dataset is split into various Lance tables to separate features of each dataset item (metadata, views, entities, annotations, embeddings, sources).
+1. **Dataset management** in a fast, columnar data format based on the [Lance](https://lancedb.github.io/lance/) format and the [LanceDB](https://lancedb.github.io/lancedb/) vector database.
 2. **An annotation web platform** powered by AI.
 
-## Pixano Layers
+## Architecture
 
 Pixano has **three** layers:
 
-- The **backend** manages datasets from creation to operations like insertions, deletions, updates, and statistical computations.
-- The **REST API**, which requires an **app** to be started, handles REST requests (as its name suggests). These requests are translated for the backend to perform one or multiple operations based on the request, and it returns the results.
-- The **UI**, which also requires an **app** to be started, allows users to visualize data and interact with it to add, update, or delete annotations and entities.
+- The **backend** manages datasets: creation, insertions, deletions, updates, and statistical computations.
+- The **REST API** handles HTTP requests and translates them into backend operations.
+- The **UI** allows users to visualize data and interact with it to add, update, or delete annotations and entities.
 
-## Datasets
+## Schema groups
 
-Datasets are specific [LanceDB](https://lancedb.github.io/lancedb/) databases. They are split into tables storing different types of information. Each dataset contains **features** that have two levels of description:
+Every dataset is composed of tables grouped by purpose. Pixano defines six **schema groups**:
 
-- **Top-level features**, or **schemas**, which are tables containing comprehensive information on a part of a dataset item, such as a view, an annotation, or an entity.
-- **Bottom-level features**, or **types**, which contain atomic information. They can be standard Python types or complex types allowed by LanceDB, which are BaseModels with constraints.
+| Group         | Description                                      | Example             |
+|---------------|--------------------------------------------------|----------------------|
+| **Item**      | One row per dataset entry (metadata, split, ...) | `Item`               |
+| **View**      | Media attached to an item                        | `Image`, `Video`     |
+| **Entity**    | Objects or tracks within an item                 | `Entity`             |
+| **Annotation**| Labels attached to entities                      | `BBox`, `KeyPoints`, `CompressedRLE` |
+| **Embedding** | Vectors for semantic search                      | `Embedding`          |
+| **Source**    | Provenance of annotations/predictions            | `Source`             |
 
-### Schemas
-
-Schemas contain information related to a specific part of an item in dedicated tables. They are defined using the Python API from a `BaseSchema`, which inherits from [LanceModel](https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel).
-
-We strongly suggest reviewing [LanceModel](https://lancedb.github.io/lancedb/python/python/#lancedb.pydantic.LanceModel) before proceeding further.
-
-Since Lance stores data in a columnar format, the `BaseSchema` is structured as follows:
-
-```python
-from lancedb.pydantic import LanceModel
-
-
-class BaseSchema(LanceModel):
-    id: str
-    created_at: datetime
-    updated_at: datetime
-```
-
-The **id** must be a unique identifier to retrieve the correct data.
-
-Pixano supports various schema groups (`SchemaGroup`), including:
-
-- `SchemaGroup.ITEM`: the unique schema named `'item'` containing metadata related to each dataset **item**.
-- `SchemaGroup.VIEW`: schemas related to the **views** of each dataset item, such as images, videos, or text.
-- `SchemaGroup.EMBEDDING`: schemas related to the **embeddings** of one or multiple views of a dataset item or its entities.
-- `SchemaGroup.ENTITY`: schemas related to **entities** (or objects) within a dataset item.
-- `SchemaGroup.ANNOTATION`: schemas related to **annotations** of the entities in a dataset item.
-- `SchemaGroup.SOURCE`: the unique schema named `'source'`, containing **sources** for the dataset.
-
-Each group has a base class that organizes all subclasses, defined by Pixano or users, into their respective groups. These are:
-
-- `Item`
-- `View`
-- `Embedding`
-- `Entity`
-- `Annotation`
-- `Source`
-
-For example, the `Image` view derives from `View` and stores image-specific information:
-
-```python
-from datetime import datetime
-from pixano.features import View, ItemRef, ViewRef
-
-
-class Image(View):
-    id: str
-    created_at: datetime
-    updated_at: datetime
-    item_ref: ItemRef
-    parent_ref: ViewRef
-    url: str
-    width: int
-    height: int
-    format: str
-```
-
-To define a new schema, Pixano requires two things:
-
-1. Deriving from `BaseSchema`, preferably from a group base class.
-2. Registering the custom schema using the `register_schema` function.
+Each group has a base class (e.g. `Item`, `View`, `Entity`, `Annotation`) that you can subclass to add domain-specific fields:
 
 ```python
 from pixano.features import Entity
 
-
-class MyEntity(Entity):
-    category: str
-    metadata_int: int
+class DetectedObject(Entity):
+    category: str = ""
 ```
 
-### Types
+## Library, media, and models
 
-Types hold atomic information within a schema, forming the **columns** of the table that implements the schema.
+Pixano organizes data around three directories:
 
-Pixano supports native Python types with some extensions, such as datetime. It also supports custom types using [BaseModel](https://docs.pydantic.dev/latest/api/base_model/), but it shares the same limitations as Lance.
+- **Library** -- contains all datasets (each dataset is a LanceDB database). The path is provided at launch time.
+- **Media** -- holds images, videos, and other files referenced by views. Also provided at launch time.
+- **Models** -- optional directory for model files used by AI-assisted features (e.g. SAM for interactive segmentation).
 
-For example, `ViewRef` is a custom type that defines a reference to a specific ID in a view table with a specific name, as shown below:
+## On-disk layout
+
+Each dataset is a directory inside the library with this structure:
+
+```text
+<dataset>/
+  info.json               # name, description, workspace type
+  schema.json             # tables, fields, relations, groups
+  features_values.json    # value constraints for fields (optional)
+  stats.json              # dataset statistics (optional)
+  preview.png             # preview image (optional)
+  db/                     # LanceDB tables (one per schema)
+```
+
+Media files live in the separate media directory, and views reference them by relative URL.
+
+## Common Python operations
 
 ```python
-from pydantic import BaseModel
+from pathlib import Path
+from pixano.datasets import Dataset
 
+# Open a dataset
+ds = Dataset(Path("./library/my_dataset"), media_dir=Path("./media"))
 
-class ViewRef(BaseModel):
-    name: str
-    id: str
+# Read items
+items = ds.get_dataset_items(limit=20, skip=0)
+
+# Read a specific table
+images = ds.get_data("image", limit=5)
+
+# Add annotations
+ds.add_data("bboxes", [bbox1, bbox2])
+
+# Semantic search (requires precomputed embeddings)
+top_items, distances, ids = ds.semantic_search("car on road", "image_embedding", limit=50)
 ```
 
-Currently, it is not possible to register new types for the app. If you need a new type, please open an [issue](https://github.com/pixano/pixano/issues).
-
-## Library, media and models
-
-Pixano presumes that datasets are all stored in a **library**. The path to this library is passed to the app at launch time to allow it to load this datasets.
-
-It also expects all **media** (images, videos, texts, ...) to be available at a location provided at launch time. This media directory should be used as the parent folder to construct url paths for the views (`Image`, `Video`, ...).
-
-Finally, some functionalities available on the UI such as assisted semantic segmentation by AI might require the use of **models** available in a directory whose location should be provided at launch time.
+For a full walkthrough, see the [Build and query a dataset](../tutorials/dataset.md) tutorial.

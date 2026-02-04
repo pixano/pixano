@@ -1,5 +1,9 @@
 # Build and query a dataset
 
+!!! tip "New to Pixano?"
+
+    If you just want to get a dataset running quickly, start with the [Quickstart](../getting_started/quickstart.md) guide.
+
 ## Context
 
 In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the `./assets/health_images/` folder with a unique subfolder `all/` which will later be considered as a split.
@@ -87,8 +91,6 @@ root_folder/
         ...
 ```
 
-<!--TODO explain metadata.jsonl, better describe FolderBuilder usage/possibility ?-->
-
 Therefore the `pixano.datasets.builders.ImageFolderBuilder` can be used to construct the Pixano dataset as follows:
 
 ```python
@@ -122,7 +124,7 @@ dataset = builder.build(mode="create")
         --name "Health Images" --schema ./schema.py:HealthDatasetItem
     ```
 
-    See the [quickstart guide](../getting_started/quickstart_image_preannotation.md) for more details.
+    See the [quickstart guide](../getting_started/quickstart.md) for more details.
 
 ### Write your own DatasetBuilder
 

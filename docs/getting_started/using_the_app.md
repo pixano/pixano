@@ -40,8 +40,6 @@ Note: "Free mode" allows to type your filter, as a basic SQL WHERE clause. Only 
 
 Free mode example: `id LIKE '%009' AND split = 'train2017'` will filter rows where id ends with 009 and split equals 'train2017'.
 
-<!-- devnote: the filter is not persistent -- this must be fixed! (use a store) -->
-
 ### Semantic search
 
 ![Dataset semantic search](../assets/user/dataset_semsearch.png)
@@ -57,23 +55,17 @@ This ordering is disabled after a semantic search.
 
 The "gear" icon open a panel to select which columns to display, and reorder them. By default all available columns are displayed.
 
-<!-- devnote: "gear" settings are not persistent -- should be corrected? (store?) -->
-
 ### Navigation
 
 Navigation buttons at bottom allows to move through the pages of your dataset.
 
 Clicking on any item lead to Item page.
 
-<!-- devnote: for big datasets, the ability to enter a page number may be usefull -->
-
 ## Dashboard page
 
 ![Pixano dataset dashboard](../assets/user/app_dashboard.png)
 
 From the dataset page, you can go to the dashboard page, which contains more information about your datasets and also displays all the computed statistics available.
-
-<!-- devnote: need rework or more dev... -->
 
 ## Item page - Common
 
@@ -83,7 +75,7 @@ On the right, a two-tab panel, [Object](#object-panel) or [Scene](#scene-panel),
 
 For [Video](#item-page---video-dataset) datasets, there will be a timeline display of tracks.
 
-For [VQA](#item-page---vqa-dataset) and [EntityLinking](#item-page---entitylinking-dataset) datasets, ther will be a text panel on the left.
+For [VQA](#item-page---vqa-dataset) and [EntityLinking](#item-page---entitylinking-dataset) datasets, there will be a text panel on the left.
 
 In the following sub-sections we will cover only common subjects for all kind of dataset. Specifics are in their respectives sections.
 
@@ -150,7 +142,7 @@ Next is the 'name' (in fact the first available feature amongst "name", "categor
 
 A "Trash" icon, when opened or on hover, allows to delete the object. It requires another click within 3 seconds to confirm.
 
-In [Video](#item-page---video-dataset) mode, ther is a "Hide track"/"Show track" icon. It toggle the track display in [Video Inspector](#video-inspector)
+In [Video](#item-page---video-dataset) mode, there is a "Hide track"/"Show track" icon. It toggle the track display in [Video Inspector](#video-inspector)
 
 The right most "chevron" icon open the details.
 
@@ -187,13 +179,11 @@ There is 3 manual creation tools, and the interactive segmentation tool.
 
 For each tool, when the shape is drawn, you will be prompted to enter values for your object features depending on your dataset, and to confirm the object.
 
-![Pixano Toolbar - Creation prompt](../assets//user/creation_prompt.png)
+![Pixano Toolbar - Creation prompt](../assets/user/creation_prompt.png)
 
 The dropbox "Select parent Entity" let choose if the object is a new object, or if it belongs to an existing one.
 
-Below, each relevant feature for this shape is listed, with an input to enter value. If Features Values <!--TODO link to FeaturesValues (future) doc--> are defined, choices may be proposed.
-
-<!-- devnote: FeaturesValues should be completely reworked, at least front side - cf https://github.com/pixano/pixano/issues/491 & https://github.com/pixano/pixano/issues/408 -->
+Below, each relevant feature for this shape is listed, with an input to enter value. If Features Values are defined, choices may be proposed.
 
 ##### Bounding box tool
 
@@ -298,7 +288,7 @@ Under, a list of question and answers.
 
 ### VQA model settings
 
-![VQA Model Settings](../assets//user/vqa_model_settings.png)
+![VQA Model Settings](../assets/user/vqa_model_settings.png)
 
 The "sparkling star" icon, allows to connect a Pixano Inference model provider.
 It is red if Pixano Inference is not connected, orange if connected but no suitable model found, and green if a suitable model is ready.
@@ -309,11 +299,8 @@ The "gear" icon allows to set some model prompt settings and model temperature.
 
 The "Add question" button open the QA Editor, where you can choose a question type and type the question, or generate it if a model is up and ready.
 
-For each question, there is a "check" icon, red if no answer, green if an answer is present. Then quesstion number, and on the right another "sparling star" icon to generate the answer. You also can manually enter an answer, and correct it.
+For each question, there is a "check" icon, red if no answer, green if an answer is present. Then question number, and on the right another "sparling star" icon to generate the answer. You also can manually enter an answer, and correct it.
 Multiple answers are allowed.
-
-<!-- devnote: TODO: add "Trash" icon (+fonctionality) to delete Message (Question/Answer) -->
-<!-- devnote: TODO: manage other types than "Open" questions... -->
 
 ## Item page - EntityLinking Dataset
 

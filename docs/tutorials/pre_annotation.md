@@ -6,6 +6,45 @@ It is common to use a object detection model to pre-annotate a dataset.
 
 This tutorial will help you unlock this feature.
 
+## Shared utility
+
+Both examples below use the same helper function to create a Pixano `BBox` and its associated `Entity`. It assumes your dataset has been created with the `EntityWithCategory` custom Entity and one of the defaults provided in `pixano.datasets.workspaces`.
+
+You can customize it to match your own dataset.
+
+```python
+from pixano.features import BBox, Entity
+import shortuuid
+
+class EntityWithCategory(Entity):
+    category: str
+
+def create_pixano_bbox_entity(
+    pix_image, bbox_coords, score, category, *,
+    is_normalized=True, source_id="source",
+):
+    view_ref = {"id": pix_image.id, "name": "image"}
+    entity = EntityWithCategory(
+        id=shortuuid.uuid(),
+        item_ref=pix_image.item_ref,
+        view_ref=view_ref,
+        category=category,
+    )
+    bbox = BBox(
+        id=shortuuid.uuid(),
+        item_ref=pix_image.item_ref,
+        view_ref=view_ref,
+        entity_ref={"id": entity.id, "name": "objects"},
+        confidence=score,
+        coords=bbox_coords,
+        is_normalized=is_normalized,
+        format="xyxy",
+        source_ref={"id": source_id, "name": "source"},
+    )
+
+    return entity, bbox
+```
+
 ## Using YOLOv11 from Ultralytics
 
 In your environnement, install [ultralytics](https://www.ultralytics.com)
@@ -35,42 +74,6 @@ if not ds.get_data("source", ids="src_yolo"):
     ds.add_data("source", [Source(id="src_yolo", name="yolo11n", kind="model")])
 ```
 
-Utility function to create pixano BBox and associated Entity.
-
-It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspaces`.
-
-Of course you can customize it to match your own dataset.
-
-```python
-from pixano.features import BBox, Entity
-import shortuuid
-
-class EntityWithCategory(Entity):
-    category: str
-
-def create_pixano_bbox_entity(pix_image, bbox_coords, score, category):
-    view_ref = {"id": pix_image.id, "name": "image"}
-    entity = EntityWithCategory(
-        id=shortuuid.uuid(),
-        item_ref=pix_image.item_ref,
-        view_ref=view_ref,
-        category=category,
-    )
-    bbox = BBox(
-        id=shortuuid.uuid(),
-        item_ref=pix_image.item_ref,
-        view_ref=view_ref,
-        entity_ref={"id": entity.id, "name": "objects"},
-        confidence=score,
-        coords=bbox_coords,
-        is_normalized=True,
-        format="xyxy",
-        source_ref={"id":"src_yolo", "name": "source"},
-    )
-
-    return entity, bbox
-```
-
 Load YOLOv11 model.
 
 ```python
@@ -98,7 +101,10 @@ for image in tqdm(images):
             res.boxes.conf.tolist(),
             res.boxes.cls.tolist(),
         ):
-            entity, pix_bbox = create_pixano_bbox_entity(image, bbox, score, res.names[category])
+            entity, pix_bbox = create_pixano_bbox_entity(
+                image, bbox, score, res.names[category],
+                is_normalized=True, source_id="src_yolo",
+            )
             new_entities.append(entity)
             new_bboxes.append(pix_bbox)
 
@@ -131,44 +137,6 @@ ds = Dataset(library / dataset_dirname, media_dir=media)
 # Add GroundingDINO source
 if not ds.get_data("source", ids="src_gdino"):
     ds.add_data("source", [Source(id="src_gdino", name="GroundingDINO", kind="model")])
-```
-
-Utility function to create pixano BBox and associated Entity.
-
-It assume your dataset has been created with the EntityWithCategory custom Entity, and one of the Default provided in `pixano.datasets.workspaces`.
-
-Of course you can customize it to match your own dataset.
-
-This is exactly the same function as in the previous sample, except for BBox `is_normalized` field, to match Grounding DINO output.
-
-```python
-from pixano.features import BBox, Entity
-import shortuuid
-
-class EntityWithCategory(Entity):
-    category: str
-
-def create_pixano_bbox_entity(pix_image, bbox_coords, score, category):
-    view_ref = {"id": pix_image.id, "name": "image"}
-    entity = EntityWithCategory(
-        id=shortuuid.uuid(),
-        item_ref=pix_image.item_ref,
-        view_ref=view_ref,
-        category=category,
-    )
-    bbox = BBox(
-        id=shortuuid.uuid(),
-        item_ref=pix_image.item_ref,
-        view_ref=view_ref,
-        entity_ref={"id": entity.id, "name": "objects"},
-        confidence=score,
-        coords=bbox_coords,
-        is_normalized=False,
-        format="xyxy",
-        source_ref={"id":"src_gdino", "name": "source"},
-    )
-
-    return entity, bbox
 ```
 
 Load Grounding DINO model with Pixano Inference from transformers provider ([HuggingFace](https://huggingface.co))
@@ -213,7 +181,10 @@ for image in tqdm(images):
         image_zero_shot_detection_out.scores,
         image_zero_shot_detection_out.classes,
     ):
-        entity, pix_bbox = create_pixano_bbox_entity(image, bbox, score, category)
+        entity, pix_bbox = create_pixano_bbox_entity(
+            image, bbox, score, category,
+            is_normalized=False, source_id="src_gdino",
+        )
         new_entities.append(entity)
         new_bboxes.append(pix_bbox)
 
