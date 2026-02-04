@@ -1,3 +1,260 @@
+/* ==========================================================================
+   Pixano – Custom Material for MkDocs Theme
+   ========================================================================== */
+
+/* ---------- Color palette (light) ---------- */
 :root {
   --md-primary-fg-color: #771e5f;
+  --md-primary-fg-color--light: #9b3a7f;
+  --md-primary-fg-color--dark: #5a1648;
+  --md-accent-fg-color: #e91e8c;
+  --px-surface: #ffffff;
+  --px-surface-alt: #f8f5f7;
+  --px-border: #e8e0e5;
+  --px-text: #2d2d2d;
+  --px-text-muted: #6b6b6b;
+  --px-shadow: rgba(119, 30, 95, 0.08);
+  --px-shadow-hover: rgba(119, 30, 95, 0.16);
+  --px-radius: 12px;
+  --px-transition: 0.2s ease;
+}
+
+/* ---------- Color palette (dark) ---------- */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #9b3a7f;
+  --md-primary-fg-color--light: #b85a9c;
+  --md-primary-fg-color--dark: #771e5f;
+  --md-accent-fg-color: #f06cba;
+  --px-surface: #1e1e2e;
+  --px-surface-alt: #262637;
+  --px-border: #3a3a4e;
+  --px-text: #e0e0e0;
+  --px-text-muted: #a0a0a0;
+  --px-shadow: rgba(0, 0, 0, 0.25);
+  --px-shadow-hover: rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Gradient header ---------- */
+.md-header {
+  background: linear-gradient(135deg, #5a1648 0%, #771e5f 40%, #9b3a7f 100%);
+  box-shadow: 0 2px 8px var(--px-shadow);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: linear-gradient(135deg, #2a0e20 0%, #4a1a3a 40%, #6b2858 100%);
+}
+
+/* ---------- Search bar ---------- */
+.md-search__form {
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: background-color var(--px-transition);
+}
+
+.md-search__form:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Typography ---------- */
+.md-typeset h1 {
+  font-weight: 700;
+  color: var(--md-primary-fg-color);
+  margin-bottom: 0.6em;
+}
+
+.md-typeset h2 {
+  font-weight: 600;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--px-border);
+  margin-top: 1.8em;
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+  margin-top: 1.4em;
+}
+
+/* ---------- Card grid ---------- */
+.md-typeset .grid.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 0;
+}
+
+.md-typeset .grid.cards > ul {
+  display: contents;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.md-typeset .grid.cards > ul > li {
+  background: var(--px-surface);
+  border: 1px solid var(--px-border);
+  border-radius: var(--px-radius);
+  padding: 1.2rem 1.4rem;
+  box-shadow: 0 2px 6px var(--px-shadow);
+  transition: transform var(--px-transition), box-shadow var(--px-transition);
+  list-style: none;
+  margin: 0;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px var(--px-shadow-hover);
+}
+
+.md-typeset .grid.cards > ul > li hr {
+  margin: 0.6rem 0;
+  border-color: var(--px-border);
+}
+
+/* Responsive: 2 cols on medium screens */
+@media screen and (max-width: 960px) {
+  .md-typeset .grid.cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsive: 1 col on small screens */
+@media screen and (max-width: 600px) {
+  .md-typeset .grid.cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Admonitions ---------- */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--px-radius);
+  box-shadow: 0 2px 6px var(--px-shadow);
+  border-left-width: 4px;
+  overflow: hidden;
+}
+
+/* ---------- Code blocks ---------- */
+.md-typeset pre > code {
+  border-radius: 8px;
+}
+
+.md-typeset .highlight {
+  border-radius: 8px;
+  border: 1px solid var(--px-border);
+  box-shadow: 0 1px 4px var(--px-shadow);
+  overflow: hidden;
+}
+
+.md-typeset .highlight .copy {
+  border-radius: 0 8px 0 8px;
+}
+
+/* ---------- Tables ---------- */
+.md-typeset table:not([class]) {
+  border-radius: var(--px-radius);
+  overflow: hidden;
+  border: 1px solid var(--px-border);
+  box-shadow: 0 1px 4px var(--px-shadow);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-primary-fg-color);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) tr:hover td {
+  background-color: var(--px-surface-alt);
+  transition: background-color var(--px-transition);
+}
+
+/* ---------- Navigation ---------- */
+.md-nav__link {
+  transition: color var(--px-transition);
+}
+
+.md-tabs__link {
+  transition: opacity var(--px-transition);
+}
+
+/* ---------- Footer ---------- */
+.md-footer {
+  border-top: 1px solid var(--px-border);
+}
+
+.md-footer-meta {
+  background: var(--px-surface-alt);
+}
+
+/* ---------- Buttons (markdown links styled as buttons) ---------- */
+.md-typeset .md-button {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: transform var(--px-transition), box-shadow var(--px-transition);
+}
+
+.md-typeset .md-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--px-shadow-hover);
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+}
+
+/* ---------- Content area fade-in ---------- */
+.md-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Custom scrollbar (webkit) ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--px-surface-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--px-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--md-primary-fg-color--light);
+}
+
+/* ---------- Announcement bar ---------- */
+.md-banner {
+  background: linear-gradient(90deg, #5a1648, #9b3a7f);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.md-banner a {
+  color: #f0c8e4;
+}
+
+.md-banner a:hover {
+  color: #ffffff;
+}
+
+/* ---------- Breadcrumbs (navigation.path) ---------- */
+.md-path {
+  margin-bottom: 0.4rem;
+}
+
+/* ---------- TOC permalink ---------- */
+.md-typeset .headerlink {
+  transition: opacity var(--px-transition);
 }
