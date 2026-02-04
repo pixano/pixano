@@ -113,6 +113,17 @@ dataset = builder.build(mode="create")
 
 `media_dir` and `library_dir` should be the same you provide to [launch Pixano](https://pixano.github.io/pixano/latest/getting_started/launching_the_app).
 
+!!! tip "CLI alternative"
+
+    You can also import a dataset from the command line. The CLI copies your source directory into the data directory automatically:
+
+    ```bash
+    pixano data import ./my_data ./health_images \
+        --name "Health Images" --schema ./schema.py:HealthDatasetItem
+    ```
+
+    See the [quickstart guide](../getting_started/quickstart_image_preannotation.md) for more details.
+
 ### Write your own DatasetBuilder
 
 While it is convenient to use built-in dataset builders, Pixano do not cover all your use-cases. Fortunatly it is possible to design your own builder by subclassing the `pixano.datasets.builders.DatasetBuilder` class and implementing the `generate_data` method.
@@ -261,16 +272,16 @@ dataset.get_dataset_items("iyA4tHmGeHPP4N6diSuUXi")
 To use the REST API, we first need to launch the Pixano's app.
 
 ```bash
-pixano ./pixano_library ./assets --host localhost --port 8000
+pixano server run ./my_data --host localhost --port 7492
 ```
 
-Then we can call the endpoints of the REST API. To have the complete list of endpoints, we can have take a look at the Swagger docs [http://localhost:8000/docs](http://localhost:8000/docs) or look at the relevant [documentation](../api_reference/index.md).
+Then we can call the endpoints of the REST API. To have the complete list of endpoints, we can have take a look at the Swagger docs [http://localhost:7492/docs](http://localhost:7492/docs) or look at the relevant [documentation](../api_reference/index.md).
 
 To fetch the first two image views here is the call:
 
 ```bash
 curl -X 'GET' \
-  'http://localhost:8000/views/health_images/image/?limit=2&skip=0' \
+  'http://localhost:7492/views/health_images/image/?limit=2&skip=0' \
   -H 'accept: application/json'
 
 >>> [

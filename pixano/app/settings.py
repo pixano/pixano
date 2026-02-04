@@ -21,10 +21,12 @@ class Settings(BaseSettings):
     """Pixano app settings.
 
     Attributes:
-        library_dir: Local or S3 path to dataset library. If not provided, it is set to `'./library/'`.
-        media_dir: Local or S3 path to media library. If not provided, it is set to `'./media/'`.
-        models_dir: Models directory as Path. Must be provided if library_dir is an S3 path else it is set to
-            `'library_dir/models'`
+        data_dir: Root data directory. If library_dir, media_dir, or models_dir are not provided,
+            they are derived as data_dir/library, data_dir/media, and data_dir/models respectively.
+        library_dir: Local or S3 path to dataset library. Overrides data_dir/library if provided.
+        media_dir: Local or S3 path to media library. Overrides data_dir/media if provided.
+        models_dir: Models directory as Path. Overrides data_dir/models if provided. Must be provided
+            if library_dir is an S3 path.
         aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
             Used if library_dir is an S3 path.
         aws_region: S3 region name, not always required for private storages.
@@ -33,8 +35,9 @@ class Settings(BaseSettings):
         aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path.
     """
 
-    library_dir: Path | S3Path = Path.cwd() / "library"
-    media_dir: Path | S3Path = Path.cwd() / "media"
+    data_dir: Path | S3Path = Path.cwd()
+    library_dir: Path | S3Path | None = None
+    media_dir: Path | S3Path | None = None
     models_dir: Path | None = None
     aws_endpoint: str | None = None
     aws_region: str | None = None
@@ -42,9 +45,20 @@ class Settings(BaseSettings):
     aws_secret_key: str | None = None
     pixano_inference_client: PixanoInferenceClient | None = None
 
+    @field_validator("data_dir", mode="before")
+    @classmethod
+    def _validate_before_data_dir(cls, data_dir: Any):
+        if isinstance(data_dir, str):
+            if urlparse(data_dir).scheme == "s3":
+                return S3Path.from_uri(data_dir)
+            return Path(data_dir)
+        return data_dir
+
     @field_validator("library_dir", mode="before")
     @classmethod
     def _validate_before_library_dir(cls, library_dir: Any):
+        if library_dir is None:
+            return None
         if isinstance(library_dir, str):
             if urlparse(library_dir).scheme == "s3":
                 library_dir = S3Path.from_uri(library_dir)
@@ -55,6 +69,8 @@ class Settings(BaseSettings):
     @field_validator("media_dir", mode="before")
     @classmethod
     def _validate_before_media_dir(cls, media_dir: Any):
+        if media_dir is None:
+            return None
         if isinstance(media_dir, str):
             if urlparse(media_dir).scheme == "s3":
                 media_dir = S3Path.from_uri(media_dir)
@@ -71,6 +87,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_after_model(self) -> Self:
+        # Derive library_dir, media_dir from data_dir if not provided
+        if self.library_dir is None:
+            self.library_dir = self.data_dir / "library"
+        if self.media_dir is None:
+            self.media_dir = self.data_dir / "media"
+
         # Setup library and media directories
         for attr in ["library_dir", "media_dir"]:
             if isinstance(getattr(self, attr), S3Path):
@@ -103,7 +125,7 @@ class Settings(BaseSettings):
                 "stored locally and their directory must be provided with 'model_dir'."
             )
         elif self.models_dir is None:
-            self.models_dir = self.library_dir / "models"
+            self.models_dir = self.data_dir / "models"
         return self
 
 

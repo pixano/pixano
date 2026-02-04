@@ -5,3 +5,4 @@
 - [Creating a dataset](creating_a_dataset.md)
 - [Launching the app](launching_the_app.md)
 - [Using the app](using_the_app.md)
+- [Quickstart: Image dataset with pre-annotations](quickstart_image_preannotation.md)

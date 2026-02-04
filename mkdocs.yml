@@ -120,6 +120,7 @@ nav:
           - "Creating a dataset": getting_started/creating_a_dataset.md
           - "Launching the app": getting_started/launching_the_app.md
           - "Using the app": getting_started/using_the_app.md
+          - "Quickstart: Import with pre-annotations": getting_started/quickstart_image_preannotation.md
       - "Tutorials":
           - tutorials/index.md
           - "Build and query a dataset": tutorials/dataset.md

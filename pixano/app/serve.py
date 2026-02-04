@@ -8,7 +8,6 @@ import asyncio
 import warnings
 from functools import lru_cache
 
-import click
 import fastapi
 import pkg_resources  # type: ignore[import-untyped]
 import uvicorn
@@ -65,25 +64,30 @@ class App:
 
     def __init__(
         self,
-        library_dir: str,
-        media_dir: str,
+        data_dir: str = ".",
+        *,
+        library_dir: str | None = None,
+        media_dir: str | None = None,
         models_dir: str | None = None,
         aws_endpoint: str | None = None,
         aws_region: str | None = None,
         aws_access_key: str | None = None,
         aws_secret_key: str | None = None,
         host: str = "127.0.0.1",
-        port: int = 8000,
+        port: int = 7492,
         pixano_inference_url: str | None = None,
     ):
         """Initialize and serve the Pixano app.
 
         Args:
-            library_dir: Local or S3 path to dataset library
-            media_dir: Local or S3 path to media library
-            models_dir: Path to your models. If not provided, and
-                library_dir is not a S3 path, it is set to
-                library_dir/models.
+            data_dir: Root data directory containing library/, media/,
+                and models/ subdirectories.
+            library_dir: Override for the library directory. If not
+                provided, defaults to data_dir/library.
+            media_dir: Override for the media directory. If not
+                provided, defaults to data_dir/media.
+            models_dir: Override for the models directory. If not
+                provided, defaults to data_dir/models.
             aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
                 Used if library_dir is an S3 path.
             aws_region: S3 region name, not always required for
@@ -101,6 +105,7 @@ class App:
         @lru_cache
         def get_settings_override():
             return Settings(
+                data_dir=data_dir,
                 library_dir=library_dir,
                 media_dir=media_dir,
                 models_dir=models_dir,
@@ -195,90 +200,7 @@ class App:
         return "none"
 
 
-@click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
-@click.argument("library_dir", type=str)
-@click.argument("media_dir", type=str)
-@click.option(
-    "--models_dir",
-    type=str,
-    help="Path to your models. If not provided, and library_dir is not a S3 path, it is set to library_dir/models",
-)
-@click.option(
-    "--aws_endpoint",
-    type=str,
-    help=("S3 endpoint URL, use 'AWS' if not provided. Used if library_dir or media_dir is an S3 path"),
-)
-@click.option(
-    "--aws_region",
-    type=str,
-    help=("S3 region name, not always required for private storages. Used if library_dir or media_dir is an S3 path"),
-)
-@click.option(
-    "--aws_access_key",
-    type=str,
-    help="S3 AWS access key. Used if library_dir or media_dir is an S3 path",
-)
-@click.option(
-    "--aws_secret_key",
-    type=str,
-    help="S3 AWS secret key. Used if library_dir or media_dir is an S3 path",
-)
-@click.option(
-    "--host",
-    type=str,
-    default="127.0.0.1",
-    help="Pixano app URL host",
-    show_default=True,
-)
-@click.option(
-    "--port",
-    type=int,
-    default=0,
-    help="Pixano app URL port",
-    show_default=True,
-)
-@click.option("--pixano_inference_url", type=str, help="Pixano inference API url.", default="")
-def main(
-    library_dir: str,
-    media_dir: str,
-    models_dir: str,
-    aws_endpoint: str,
-    aws_region: str,
-    aws_access_key: str,
-    aws_secret_key: str,
-    host: str,
-    port: int,
-    pixano_inference_url: str,
-) -> None:
-    """Launch Pixano App in LIBRARY_DIR.
-
-    Args:
-        library_dir: Local or S3 path to dataset library.
-        media_dir: Local or S3 path to media library.
-        models_dir: Path to your models. If not provided, and
-            library_dir is not a S3 path, it is set to
-            library_dir/models.
-        aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
-        aws_region: S3 region name, not always required for private storages.
-        aws_access_key: S3 AWS access key.
-        aws_secret_key: S3 AWS secret key.
-        host: App host.
-        port: App port.
-        pixano_inference_url: Pixano inference URL.
-    """
-    App(
-        library_dir,
-        media_dir,
-        models_dir,
-        aws_endpoint,
-        aws_region,
-        aws_access_key,
-        aws_secret_key,
-        host,
-        port,
-        pixano_inference_url if pixano_inference_url != "" else None,
-    )
-
-
 if __name__ == "__main__":
+    from pixano.app.cli import main
+
     main()
