@@ -35,7 +35,7 @@ FROM python:3.12-slim
 # Arguments
 # DATA_DIR: path to the root data directory (contains library/, media/, models/). It should be mounted.
 # USE_AWS: whether to use AWS S3. If true, the AWS credentials should be mounted.
-ARG DATA_DIR=/app/data
+ARG DATA_DIR=/app
 ARG USE_AWS=false
 
 # Environment variables from the arguments to be used in the container
@@ -68,8 +68,8 @@ RUN if [ "$USE_AWS" = "true" ]; then \
 RUN uv sync
 
 # Expose ports
-# 7492: Pixano server (PIXA on phone keypad)
-EXPOSE 7492
+# 8000: FastAPI server
+EXPOSE 8000
 
 # Copy the build files to FastAPI static files
 WORKDIR /app/pixano/app
@@ -81,11 +81,11 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 # Run the server
 # TODO: Improve the conditional statement to avoid the use of the shell if possible
 CMD ["sh", "-c", "if [ \"$USE_AWS\" = \"true\" ]; then \
-    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"7492\" \
+    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\" \
     \"--aws-endpoint\" \"$(aws configure get aws_endpoint)\" \
     \"--aws-region\" \"$(aws configure get region)\" \
     \"--aws-access-key\" \"$(aws configure get aws_access_key_id)\" \
     \"--aws-secret-key\" \"$(aws configure get aws_secret_access_key)\";\
     else \
-    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"7492\"; \
+    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\"; \
     fi"]
