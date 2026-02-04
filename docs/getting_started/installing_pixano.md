@@ -1,26 +1,33 @@
-# Install
+# Installation
 
-## Python Environment
+## pip (recommended)
 
-As Pixano requires specific versions for its dependencies, we recommend creating a new Python virtual environment to install it.
-
-For example, with <a href="https://github.com/conda-forge/miniforge" target="_blank">miniforge</a>:
+We recommend installing Pixano in a virtual environment:
 
 ```bash
-conda create -n pixano_env -y python~=3.12
-conda activate pixano_env
-```
-
-Then, you can install the Pixano package inside that environment with pip:
-
-```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install pixano
 ```
 
 ## Docker
 
-Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano). We suggest you to pull the stable version which is the last release:
+Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano). Pull the stable version (latest release):
 
 ```bash
 docker pull pixano/pixano:stable
 ```
+
+See [Launching the app](launching_the_app.md#from-docker) for how to run the container.
+
+## From source
+
+Clone the repository and install with [uv](https://docs.astral.sh/uv/):
+
+```bash
+git clone https://github.com/pixano/pixano.git
+cd pixano
+uv sync
+```
+
+When running from source, prefix every command with `uv run` (e.g. `uv run pixano server run ./my_data`).

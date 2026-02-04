@@ -121,7 +121,7 @@ Then you can curl the REST API to navigate through your items:
 
 ```bash
 curl -X 'GET' \
-  'http://localhost:8000/browser/health_images?limit=5&skip=0&query=microscope&embedding_table=emb_open-clip' \
+  'http://localhost:7492/browser/health_images?limit=5&skip=0&query=microscope&embedding_table=emb_open-clip' \
   -H 'accept: application/json'
 
 >>> {

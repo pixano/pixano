@@ -247,7 +247,7 @@ class FolderBaseBuilder(DatasetBuilder):
                                     views_data.append((view_name, view))
                             else:
                                 view_file = self.source_dir / (
-                                    Path(v) if split.name == Path(v).parts[0] else split / Path(v)
+                                    Path(v) if split.name == Path(v).parts[0] else Path(split.name) / Path(v)
                                 )
                                 if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                                     view = self._create_view(item, view_file, view_schema)

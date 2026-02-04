@@ -33,19 +33,13 @@ RUN pnpm build
 FROM python:3.12-slim
 
 # Arguments
-# LIBRARY_DIR: path to the directory containing the Pixano datasets. It should be mounted.
-# MEDIA_DIR: path to the directory containing the Pixano media files. It should be mounted.
-# MODELS_DIR: path to the directory containing the models. It should be mounted.
-# USE_AWS: whether to use AWS S3. If true, the AWS credentials should be mounted and at least one of LIBRARY_DIR, MEDIA_DIR should be S3 paths.
-ARG LIBRARY_DIR=/app/library
-ARG MEDIA_DIR=/app/media
-ARG MODELS_DIR=/app/models
+# DATA_DIR: path to the root data directory (contains library/, media/, models/). It should be mounted.
+# USE_AWS: whether to use AWS S3. If true, the AWS credentials should be mounted.
+ARG DATA_DIR=/app/data
 ARG USE_AWS=false
 
 # Environment variables from the arguments to be used in the container
-ENV LIBRARY_DIR=${LIBRARY_DIR}
-ENV MEDIA_DIR=${MEDIA_DIR}
-ENV MODELS_DIR=${MODELS_DIR}
+ENV DATA_DIR=${DATA_DIR}
 ENV USE_AWS=${USE_AWS}
 
 # Environment variables
@@ -87,11 +81,11 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 # Run the server
 # TODO: Improve the conditional statement to avoid the use of the shell if possible
 CMD ["sh", "-c", "if [ \"$USE_AWS\" = \"true\" ]; then \
-    pixano \"${LIBRARY_DIR}\" \"${MEDIA_DIR}\" \"--models_dir\" \"${MODELS_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\" \
+    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\" \
     \"--aws-endpoint\" \"$(aws configure get aws_endpoint)\" \
     \"--aws-region\" \"$(aws configure get region)\" \
     \"--aws-access-key\" \"$(aws configure get aws_access_key_id)\" \
     \"--aws-secret-key\" \"$(aws configure get aws_secret_access_key)\";\
     else \
-    pixano \"${LIBRARY_DIR}\" \"${MEDIA_DIR}\" \"--models_dir\" \"${MODELS_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\"; \
+    pixano server run \"${DATA_DIR}\" \"--host\" \"0.0.0.0\" \"--port\" \"8000\"; \
     fi"]
