@@ -104,19 +104,23 @@ class App:
         # Override app settings
         @lru_cache
         def get_settings_override():
-            return Settings(
-                data_dir=data_dir,
-                library_dir=library_dir,
-                media_dir=media_dir,
-                models_dir=models_dir,
-                aws_endpoint=aws_endpoint,
-                aws_region=aws_region,
-                aws_access_key=aws_access_key,
-                aws_secret_key=aws_secret_key,
-                pixano_inference_client=PixanoInferenceClient.connect(pixano_inference_url)
+            kwargs: dict = {
+                "data_dir": data_dir,
+                "aws_endpoint": aws_endpoint,
+                "aws_region": aws_region,
+                "aws_access_key": aws_access_key,
+                "aws_secret_key": aws_secret_key,
+                "pixano_inference_client": PixanoInferenceClient.connect(pixano_inference_url)
                 if pixano_inference_url is not None
                 else None,
-            )
+            }
+            if library_dir is not None:
+                kwargs["library_dir"] = library_dir
+            if media_dir is not None:
+                kwargs["media_dir"] = media_dir
+            if models_dir is not None:
+                kwargs["models_dir"] = models_dir
+            return Settings(**kwargs)
 
         # Create app
         settings = get_settings_override()

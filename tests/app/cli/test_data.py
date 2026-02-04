@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 
 from pixano.app.cli import app
 
+
 runner = CliRunner()
 
 
@@ -53,9 +54,15 @@ class TestImportCopiesMedia:
             data_dir = base / "data"
             data_dir.mkdir()
 
-            result = runner.invoke(app, [
-                "data", "import", str(data_dir), str(source),
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                ],
+            )
 
             assert result.exit_code == 0, result.stdout
             dest = data_dir / "media" / "my_dataset"
@@ -75,9 +82,15 @@ class TestImportCopiesMedia:
             dest = data_dir / "media" / "my_dataset"
             dest.mkdir(parents=True)
 
-            result = runner.invoke(app, [
-                "data", "import", str(data_dir), str(source),
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                ],
+            )
 
             assert result.exit_code != 0
             assert "already exists" in result.stdout or "already exists" in (result.stderr or "")
@@ -101,10 +114,17 @@ class TestImportCopiesMedia:
             dest.mkdir(parents=True)
             (dest / "old_file.txt").write_text("old content")
 
-            result = runner.invoke(app, [
-                "data", "import", str(data_dir), str(source),
-                "--mode", "overwrite",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--mode",
+                    "overwrite",
+                ],
+            )
 
             assert result.exit_code == 0, result.stdout
             assert not (dest / "old_file.txt").exists()
@@ -129,10 +149,17 @@ class TestImportCopiesMedia:
             dest.mkdir(parents=True)
             (dest / "existing.jpg").write_text("existing content")
 
-            result = runner.invoke(app, [
-                "data", "import", str(data_dir), str(source),
-                "--mode", "add",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--mode",
+                    "add",
+                ],
+            )
 
             assert result.exit_code == 0, result.stdout
             # Existing file preserved
@@ -154,10 +181,17 @@ class TestImportCopiesMedia:
             data_dir = base / "data"
             data_dir.mkdir()
 
-            result = runner.invoke(app, [
-                "data", "import", str(data_dir), str(source),
-                "--name", "custom",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--name",
+                    "custom",
+                ],
+            )
 
             assert result.exit_code == 0, result.stdout
             dest = data_dir / "media" / "custom"

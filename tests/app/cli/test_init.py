@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from pixano.app.cli import app
 
+
 runner = CliRunner()
 
 

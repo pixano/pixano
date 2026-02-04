@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     """
 
     data_dir: Path | S3Path = Path.cwd()
-    library_dir: Path | S3Path | None = None
-    media_dir: Path | S3Path | None = None
+    library_dir: Path | S3Path = Path.cwd() / "library"
+    media_dir: Path | S3Path = Path.cwd() / "media"
     models_dir: Path | None = None
     aws_endpoint: str | None = None
     aws_region: str | None = None
@@ -57,8 +57,6 @@ class Settings(BaseSettings):
     @field_validator("library_dir", mode="before")
     @classmethod
     def _validate_before_library_dir(cls, library_dir: Any):
-        if library_dir is None:
-            return None
         if isinstance(library_dir, str):
             if urlparse(library_dir).scheme == "s3":
                 library_dir = S3Path.from_uri(library_dir)
@@ -69,8 +67,6 @@ class Settings(BaseSettings):
     @field_validator("media_dir", mode="before")
     @classmethod
     def _validate_before_media_dir(cls, media_dir: Any):
-        if media_dir is None:
-            return None
         if isinstance(media_dir, str):
             if urlparse(media_dir).scheme == "s3":
                 media_dir = S3Path.from_uri(media_dir)
@@ -87,10 +83,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_after_model(self) -> Self:
-        # Derive library_dir, media_dir from data_dir if not provided
-        if self.library_dir is None:
+        # Derive library_dir, media_dir from data_dir if not explicitly provided
+        if "library_dir" not in self.model_fields_set:
             self.library_dir = self.data_dir / "library"
-        if self.media_dir is None:
+        if "media_dir" not in self.model_fields_set:
             self.media_dir = self.data_dir / "media"
 
         # Setup library and media directories

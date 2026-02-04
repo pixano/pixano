@@ -21,7 +21,8 @@ def run(
     ),
     aws_region: Optional[str] = typer.Option(
         None,
-        help="S3 region name, not always required for private storages. Used if library_dir or media_dir is an S3 path.",
+        help="S3 region name, not always required for private storages."
+        " Used if library_dir or media_dir is an S3 path.",
     ),
     aws_access_key: Optional[str] = typer.Option(
         None,

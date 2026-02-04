@@ -134,19 +134,21 @@ def _parse_annotation(xml_path: Path) -> tuple[int, int, list[dict]]:
     root = tree.getroot()
 
     size = root.find("size")
-    width = int(size.findtext("width"))
-    height = int(size.findtext("height"))
+    assert size is not None, "Missing <size> element in annotation XML"
+    width = int(size.findtext("width", "0"))
+    height = int(size.findtext("height", "0"))
 
     objects = []
     for obj in root.iter("object"):
         category = obj.findtext("name")
         is_difficult = obj.findtext("difficult") == "1"
         bndbox = obj.find("bndbox")
+        assert bndbox is not None, "Missing <bndbox> element in annotation XML"
         bbox = (
-            int(bndbox.findtext("xmin")),
-            int(bndbox.findtext("ymin")),
-            int(bndbox.findtext("xmax")),
-            int(bndbox.findtext("ymax")),
+            int(bndbox.findtext("xmin", "0")),
+            int(bndbox.findtext("ymin", "0")),
+            int(bndbox.findtext("xmax", "0")),
+            int(bndbox.findtext("ymax", "0")),
         )
         objects.append({"category": category, "is_difficult": is_difficult, "bbox": bbox})
 
@@ -231,6 +233,7 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, voc_
 
 
 def main():
+    """Generate a Pixano-compatible sample folder from Pascal VOC 2007."""
     parser = argparse.ArgumentParser(
         description="Generate a Pixano-compatible sample folder from Pascal VOC 2007.",
     )
@@ -275,8 +278,8 @@ def main():
         total += export_split(output_dir, split, args.num_samples, args.seed, voc_root)
 
     print(f"\nDone. {total} images exported.")
-    print(f"\nTo import into Pixano:")
-    print(f"  pixano data import ./my_data {output_dir} --name \"VOC 2007 Sample\"")
+    print("\nTo import into Pixano:")
+    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample"')
 
 
 if __name__ == "__main__":
