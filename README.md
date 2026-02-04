@@ -80,6 +80,14 @@ uv sync
 
 This installs the project in editable mode with all dependencies pinned via `uv.lock`. Your local changes are taken into account each time you run your environment.
 
+Build the frontend UI assets:
+
+```shell
+cd ui/apps/pixano
+pnpm i
+pnpm run build
+```
+
 Init the data base and start the Pixano server:
 
 ```shell
