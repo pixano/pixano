@@ -35,7 +35,7 @@ FROM python:3.12-slim
 # Arguments
 # DATA_DIR: path to the root data directory (contains library/, media/, models/). It should be mounted.
 # USE_AWS: whether to use AWS S3. If true, the AWS credentials should be mounted.
-ARG DATA_DIR=/app
+ARG DATA_DIR=/app/data
 ARG USE_AWS=false
 
 # Environment variables from the arguments to be used in the container
