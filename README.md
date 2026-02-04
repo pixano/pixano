@@ -49,10 +49,11 @@ Then, install Pixano with pip:
 pip install pixano
 ```
 
-Start the Pixano server:
+Init the database and start the Pixano server:
 
 ```shell
-pixano /path/to/library /path/to/media
+pixano init path/to/database
+pixano server run path/to/database
 ```
 
 Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano):
@@ -79,10 +80,11 @@ uv sync
 
 This installs the project in editable mode with all dependencies pinned via `uv.lock`. Your local changes are taken into account each time you run your environment.
 
-Start the Pixano server:
+Init the data base and start the Pixano server:
 
 ```shell
-uv run pixano /path/to/library /path/to/media
+uv run pixano init path/to/database
+uv run pixano server run path/to/database
 ```
 
 For more details on running Pixano locally (frontend setup, testing, formatting), see [CONTRIBUTING.md](CONTRIBUTING.md).
