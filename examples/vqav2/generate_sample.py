@@ -46,7 +46,7 @@ def export_split(output_dir: Path, num_samples: int, seed: int) -> int:
     split_dir = output_dir / split
     split_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"  Loading VQAv2 (merve/vqav2-small) from HuggingFace...")
+    print("  Loading VQAv2 (merve/vqav2-small) from HuggingFace...")
     ds = load_dataset("merve/vqav2-small", split="validation")
 
     rng = random.Random(seed)
