@@ -349,7 +349,18 @@ vqav2_sample/
 Each line in `metadata.jsonl` describes one image with its question and answer:
 
 ```json
-{"image": "000000.jpg", "conversations": [{"question": {"content": "Where are the kids riding?", "question_type": "OPEN"}, "responses": [{"content": "carnival ride"}]}]}
+{
+  "image": "000000.jpg",
+  "conversations": [
+    {
+      "question": {
+        "content": "Where are the kids riding?",
+        "question_type": "OPEN"
+      },
+      "responses": [{ "content": "carnival ride" }]
+    }
+  ]
+}
 ```
 
 **2. Review the schema**
