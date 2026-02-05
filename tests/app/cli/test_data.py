@@ -61,6 +61,8 @@ class TestImportCopiesMedia:
                     "import",
                     str(data_dir),
                     str(source),
+                    "--type",
+                    "image",
                 ],
             )
 
@@ -89,6 +91,8 @@ class TestImportCopiesMedia:
                     "import",
                     str(data_dir),
                     str(source),
+                    "--type",
+                    "image",
                 ],
             )
 
@@ -121,6 +125,8 @@ class TestImportCopiesMedia:
                     "import",
                     str(data_dir),
                     str(source),
+                    "--type",
+                    "image",
                     "--mode",
                     "overwrite",
                 ],
@@ -156,6 +162,8 @@ class TestImportCopiesMedia:
                     "import",
                     str(data_dir),
                     str(source),
+                    "--type",
+                    "image",
                     "--mode",
                     "add",
                 ],
@@ -188,6 +196,8 @@ class TestImportCopiesMedia:
                     "import",
                     str(data_dir),
                     str(source),
+                    "--type",
+                    "image",
                     "--name",
                     "custom",
                 ],
