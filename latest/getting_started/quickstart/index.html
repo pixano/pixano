@@ -633,6 +633,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#visual-question-answering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visual Question Answering
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visual Question Answering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#try-it-vqav2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Try it: VQAv2
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5032,8 +5056,128 @@
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>pixano<span class="w"> </span>server<span class="w"> </span>run<span class="w"> </span>./my_data
 </span></code></pre></div>
 <p>Open <code>http://127.0.0.1:7492</code> to browse the imported VOC images and bounding boxes.</p>
+<h3 id="visual-question-answering">Visual Question Answering<a class="headerlink" href="#visual-question-answering" title="Permanent link">&para;</a></h3>
+<p>You have images with question-answer pairs and want to import them into Pixano.</p>
+<p><strong>Organize your source folder</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>vqa_data/
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>  train/
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    image_001.jpg
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    image_002.jpg
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    metadata.jsonl
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>  val/
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    image_003.jpg
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    metadata.jsonl
+</span></code></pre></div>
+<p>Same rules as object detection: each subfolder is a split, and a <code>metadata.jsonl</code> provides the annotations.</p>
+<p><strong>Write the metadata.jsonl</strong></p>
+<p>For VQA datasets, each line in <code>metadata.jsonl</code> describes one image and its associated question-answer conversations:</p>
+<p><strong><code>vqa_data/train/metadata.jsonl</code></strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p">{</span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;image_001.jpg&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;conversations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What color is the car?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;question_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OPEN&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;responses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;red&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;annotator_0&quot;</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dark red&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;annotator_1&quot;</span><span class="p">}]},</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;How many people are visible?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;question_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OPEN&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;responses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;annotator_0&quot;</span><span class="p">}]}]}</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="p">{</span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;image_002.jpg&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;conversations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Is it raining?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;question_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OPEN&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;responses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;no&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;annotator_0&quot;</span><span class="p">}]}]}</span>
+</span></code></pre></div>
+<p>Format rules:</p>
+<ul>
+<li><strong><code>image</code></strong> points to the image file in the same folder.</li>
+<li><strong><code>conversations</code></strong> is a list of question-answer exchanges for the image.</li>
+<li>Each conversation has a <strong><code>question</code></strong> with <code>content</code> (the question text) and <code>question_type</code> (<code>"OPEN"</code> for free-form answers).</li>
+<li><strong><code>responses</code></strong> is a list of answers. Each response has <code>content</code> (the answer text) and an optional <code>user</code> field to distinguish annotators.</li>
+<li>An image can have <strong>multiple conversations</strong> (multiple questions about the same image).</li>
+</ul>
+<details class="note">
+<summary>Multiple-choice questions</summary>
+<p>For multiple-choice questions, set <code>question_type</code> to <code>"multi_choice"</code> and add a <code>choices</code> list:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is in the image?&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;question_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;multi_choice&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;choices&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;a cat&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;a dog&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;a bird&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;a fish&quot;</span><span class="p">]},</span><span class="w"> </span><span class="nt">&quot;responses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a cat&quot;</span><span class="p">}]}</span>
+</span></code></pre></div>
+</details>
+<p><strong>Run the import</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>pixano<span class="w"> </span>data<span class="w"> </span>import<span class="w"> </span>./my_data<span class="w"> </span>./vqa_data<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;VQA Data&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span>--type<span class="w"> </span>vqa
+</span></code></pre></div>
+<p>The <code>--type vqa</code> flag tells Pixano to use the VQA folder builder, which parses the <code>conversations</code> format. No custom schema is required — the default <code>DefaultVQADatasetItem</code> schema handles images, conversations, messages, objects, bounding boxes, masks, and keypoints.</p>
+<details class="note">
+<summary>Alternative: build the dataset with Python</summary>
+<p>You can also build the dataset programmatically:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatasetInfo</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets.builders</span><span class="w"> </span><span class="kn">import</span> <span class="n">VQAFolderBuilder</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets.workspaces</span><span class="w"> </span><span class="kn">import</span> <span class="n">DefaultVQADatasetItem</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="n">builder</span> <span class="o">=</span> <span class="n">VQAFolderBuilder</span><span class="p">(</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    <span class="n">media_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/media&quot;</span><span class="p">),</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    <span class="n">library_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/library&quot;</span><span class="p">),</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    <span class="n">dataset_item</span><span class="o">=</span><span class="n">DefaultVQADatasetItem</span><span class="p">,</span>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>    <span class="n">info</span><span class="o">=</span><span class="n">DatasetInfo</span><span class="p">(</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;VQA Data&quot;</span><span class="p">,</span>
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;VQA dataset with question-answer pairs&quot;</span><span class="p">,</span>
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>    <span class="p">),</span>
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    <span class="n">dataset_path</span><span class="o">=</span><span class="s2">&quot;vqa_data&quot;</span><span class="p">,</span>
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="p">)</span>
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;create&quot;</span><span class="p">)</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset built: </span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">num_rows</span><span class="si">}</span><span class="s2"> items&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+</details>
+<h4 id="try-it-vqav2">Try it: VQAv2<a class="headerlink" href="#try-it-vqav2" title="Permanent link">&para;</a></h4>
+<p>The repository includes a ready-to-run example that downloads a sample of a small <a href="https://visualqa.org/">VQAv2</a> subset from HuggingFace and produces a Pixano-compatible folder. It also demonstrates how to combine VQA with object annotation using a custom schema. Use it to test the full VQA import workflow with real data.</p>
+<p><strong>1. Generate the sample folder</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>pip<span class="w"> </span>install<span class="w"> </span>datasets<span class="w"> </span>pillow<span class="w">              </span><span class="c1"># required by the script</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>python<span class="w"> </span>examples/vqav2/generate_sample.py<span class="w"> </span>./vqav2_sample<span class="w"> </span>--num-samples<span class="w"> </span><span class="m">50</span>
+</span></code></pre></div>
+<p>This downloads a small VQAv2 subset, samples 50 images with their questions, and writes everything to <code>./vqav2_sample/</code>.</p>
+<p>The resulting folder looks like:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>vqav2_sample/
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  validation/
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    000000.jpg
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    000001.jpg
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    ...
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    metadata.jsonl
+</span></code></pre></div>
+<p>Each line in <code>metadata.jsonl</code> describes one image with its question and answer:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="p">{</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">&quot;image&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;000000.jpg&quot;</span><span class="p">,</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">&quot;conversations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">      </span><span class="nt">&quot;question&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">        </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Where are the kids riding?&quot;</span><span class="p">,</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">        </span><span class="nt">&quot;question_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OPEN&quot;</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="p">},</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">      </span><span class="nt">&quot;responses&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;carnival ride&quot;</span><span class="w"> </span><span class="p">}]</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>2. Review the schema</strong></p>
+<p>The example uses a custom schema at <code>examples/vqav2/schema.py</code> to add object annotation support alongside the VQA task:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets.workspaces</span><span class="w"> </span><span class="kn">import</span> <span class="n">DefaultVQADatasetItem</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">ObjectEntity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom entity for object annotation with category and occlusion info.&quot;&quot;&quot;</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="n">subcategory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="n">is_occluded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>
+</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">VQAv2DatasetItem</span><span class="p">(</span><span class="n">DefaultVQADatasetItem</span><span class="p">):</span>
+</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Dataset item for VQAv2 with object annotation support.&quot;&quot;&quot;</span>
+</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>
+</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="n">objects</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ObjectEntity</span><span class="p">]</span>
+</span></code></pre></div>
+<p>Same pattern as the VOC example — a custom <code>Entity</code> subclass with domain-specific attributes, plugged into <code>DefaultVQADatasetItem</code>.</p>
+<p><strong>3. Import and serve</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>pixano<span class="w"> </span>init<span class="w"> </span>./my_data
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>pixano<span class="w"> </span>data<span class="w"> </span>import<span class="w"> </span>./my_data<span class="w"> </span>./vqav2_sample<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;VQAv2 Sample&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span>--type<span class="w"> </span>vqa<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">    </span>--schema<span class="w"> </span>examples/vqav2/schema.py:VQAv2DatasetItem
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>pixano<span class="w"> </span>server<span class="w"> </span>run<span class="w"> </span>./my_data
+</span></code></pre></div>
+<p>Open <code>http://127.0.0.1:7492</code> to browse the imported VQA images, questions, and answers.</p>
 <h2 id="step-3-launch-the-server">Step 3 — Launch the Server<a class="headerlink" href="#step-3-launch-the-server" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>pixano<span class="w"> </span>server<span class="w"> </span>run<span class="w"> </span>./my_data
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>pixano<span class="w"> </span>server<span class="w"> </span>run<span class="w"> </span>./my_data
 </span></code></pre></div>
 <p>Open <code>http://127.0.0.1:7492</code> in your browser to explore and annotate your dataset.</p>
 <ul>
@@ -5050,35 +5194,35 @@
 <li><strong>ReDoc</strong>: <code>http://127.0.0.1:7492/redoc</code></li>
 </ul>
 <p><strong>List all datasets</strong> and find the dataset ID:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:7492/datasets/info<span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:7492/datasets/info<span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 <p>The response includes an <code>id</code> field for each dataset. Use this ID in subsequent requests (referred to as <code>&lt;DATASET_ID&gt;</code> below).</p>
 <p><strong>Get items</strong> (first 3):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/items/&lt;DATASET_ID&gt;?limit=3&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/items/&lt;DATASET_ID&gt;?limit=3&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 <p><strong>Get image views</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/views/&lt;DATASET_ID&gt;/image?limit=2&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/views/&lt;DATASET_ID&gt;/image?limit=2&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 <p><strong>Get entities</strong> (objects with category):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/entities/&lt;DATASET_ID&gt;/objects?limit=5&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/entities/&lt;DATASET_ID&gt;/objects?limit=5&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 <p><strong>Get bounding boxes for a specific item</strong>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/annotations/&lt;DATASET_ID&gt;/bboxes?item_ids=&lt;ITEM_ID&gt;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/annotations/&lt;DATASET_ID&gt;/bboxes?item_ids=&lt;ITEM_ID&gt;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 <p><strong>Browse dataset</strong> (same endpoint the UI uses):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/browser/&lt;DATASET_ID&gt;?limit=10&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s1">&#39;http://localhost:7492/browser/&lt;DATASET_ID&gt;?limit=10&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>json.tool
 </span></code></pre></div>
 </details>
 <details class="note">
 <summary>Verify with the Python API</summary>
 <p>Load the dataset and inspect items to confirm the import worked:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/library/street_objects&quot;</span><span class="p">),</span> <span class="n">media_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/media&quot;</span><span class="p">))</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="n">items</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_dataset_items</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item </span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> | split=</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/library/street_objects&quot;</span><span class="p">),</span> <span class="n">media_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./my_data/media&quot;</span><span class="p">))</span>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="n">items</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_dataset_items</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item </span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> | split=</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 </details>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
