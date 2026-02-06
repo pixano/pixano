@@ -145,7 +145,7 @@ License: CECILL-C
     <span>Select parent entity</span>
     <select
       class="w-full py-1 px-2 border rounded focus:outline-none
-bg-slate-100 border-slate-300 focus:border-main"
+bg-muted border-border focus:border-main"
       on:change={handleChange}
     >
       {#each $entitiesCombo as { id, name, color, targets }}

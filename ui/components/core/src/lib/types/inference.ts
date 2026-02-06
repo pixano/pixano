@@ -35,6 +35,11 @@ export enum VideoTask {
 
 export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
 
+export interface InferenceModel {
+  name: string;
+  task: Task;
+}
+
 export interface SystemPrompt {
   content: string;
   question_type: QuestionTypeEnum;

@@ -47,7 +47,6 @@ License: CECILL-C
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
-  export let models: string[] = [];
   export let handleSaveItem: (data: SaveItem[]) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
@@ -247,7 +246,7 @@ License: CECILL-C
 <div class="w-full h-full flex" role="tab" tabindex="0">
   {#if isSaving}
     <div
-      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
+      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-foreground/10 z-50"
     >
       <Loader2Icon class="animate-spin" />
     </div>
@@ -261,12 +260,12 @@ License: CECILL-C
     <DatasetItemViewer {selectedItem} {isLoading} resize={objectInspectorAreaMaxWidth + 1} />
   </div>
   <button
-    class="w-1 bg-primary-light cursor-col-resize h-full"
+    class="w-1.5 bg-border hover:bg-muted-foreground/30 cursor-col-resize h-full transition-colors"
     on:mousedown={startExpand}
     on:click={shrink}
   />
   <div class="grow overflow-hidden" style={`width: ${objectInspectorAreaMaxWidth}px`}>
     <Inspector on:click={onSave} {isLoading} />
   </div>
-  <LoadModelModal {models} />
+  <LoadModelModal />
 </div>

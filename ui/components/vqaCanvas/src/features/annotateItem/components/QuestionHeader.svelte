@@ -53,6 +53,6 @@ License: CECILL-C
   </div>
 
   <IconButton tooltipContent="Generate answer" on:click={handleGenerateAnswer}>
-    <Sparkles size={20} class="text-slate-700" />
+    <Sparkles size={20} class="text-foreground" />
   </IconButton>
 </div>

@@ -139,7 +139,7 @@ License: CECILL-C
       </div>
     </div>
     {#if objectToAnnotate}
-      <div class="bg-white rounded-sm p-4 pb-0 mt-4 relative max-h-[60vh] overflow-y-auto">
+      <div class="bg-card rounded-sm p-4 pb-0 mt-4 relative max-h-[60vh] overflow-y-auto">
         <p class="flex gap-2">
           <BoxSelectIcon {color} />
           <span>{objectToAnnotate.id}</span>
@@ -155,7 +155,7 @@ License: CECILL-C
             <!-- initialValues={objectToAnnotate.features}  // need rework/rethink -->
           {/key}
         </div>
-        <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
+        <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-card">
           <PrimaryButton on:click={onAcceptItem} isSelected disabled={!isFormValid}>
             <Check />Accept
           </PrimaryButton>

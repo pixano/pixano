@@ -119,20 +119,20 @@ License: CECILL-C
 <!-- Settings popup -->
 {#if popupOpened}
   <div
-    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
-    flex items-center justify-center font-Montserrat"
+    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm
+    flex items-center justify-center font-DM Sans"
   >
     <div
-      class="px-12 pt-10 flex flex-col
-    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+      class="px-8 pt-8 flex flex-col
+    bg-card border border-border shadow-xl rounded-xl"
     >
-      <span class="text-3xl font-bold mb-4">Column settings</span>
-      <span class="text-sm italic text-gray-500 font-medium mb-3">
+      <span class="text-lg font-medium mb-3">Column settings</span>
+      <span class="text-sm text-muted-foreground mb-3">
         Drag and drop to re-order, toggle box for visibility.
       </span>
       <div class="flex flex-col space-y-2">
         <SortableList list={$columnIdOrder} on:sort={sortList} let:item>
-          <div class="py-1 px-2 flex items-center space-x-2 border rounded-sm">
+          <div class="py-1 px-2 flex items-center space-x-2 border border-border rounded-md">
             <Checkbox id={item} bind:checked={shownColumnsById[item]}></Checkbox>
             <label for={item} class="text-sm select-none grow cursor-pointer">
               {item}
@@ -152,7 +152,6 @@ License: CECILL-C
 
       <div class="my-6 flex justify-end items-end">
         <Button
-          class="text-white"
           on:click={() => {
             popupOpened = false;
           }}
@@ -164,24 +163,19 @@ License: CECILL-C
   </div>
 {/if}
 
-<div
-  class="w-full overflow-y-auto rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
->
-  <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
+<div class="w-full overflow-y-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans">
+  <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-sm text-foreground">
     <!-- Header -->
     <thead>
       {#each $headerRows as headerRow (headerRow.id)}
         <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-          <tr
-            {...rowAttrs}
-            class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
-          >
+          <tr {...rowAttrs} class="sticky top-0 bg-muted/50 border-b border-border">
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe props={cell.props()} let:props attrs={cell.attrs()} let:attrs>
                 <th
                   {...attrs}
                   on:click={() => handleSort(props, cell)}
-                  class="relative py-4 px-2 font-semibold"
+                  class="relative py-3 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider"
                 >
                   <span class="whitespace-nowrap flex items-center gap-1 justify-center">
                     <Render of={cell.render()} />
@@ -215,7 +209,7 @@ License: CECILL-C
                   class="h-6 w-6"
                 >
                   <title></title>
-                  <path d={icons.svg_settings} fill="#111" />
+                  <path d={icons.svg_settings} fill="currentcolor" />
                 </svg>
               </Button>
             </th>
@@ -229,27 +223,27 @@ License: CECILL-C
         <Subscribe rowAttrs={row.attrs()} let:rowAttrs>
           <tr
             {...rowAttrs}
-            class="h-24 cursor-pointer hover:bg-slate-100"
+            class="h-20 cursor-pointer hover:bg-muted/50 transition-colors"
             on:click={() => {
               handleSelectItem(items.rows[row.id].id);
             }}
           >
             {#each row.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs>
-                <td {...attrs} class="px-2 border-b border-slate-300">
+                <td {...attrs} class="px-3 py-1 border-b border-border">
                   <Render of={cell.render()} />
                 </td>
               </Subscribe>
             {/each}
-            <td class="w-full border-b border-slate-300"></td>
+            <td class="w-full border-b border-border"></td>
             <!-- Go Button -->
-            <td class="border-b border-slate-300">
+            <td class="border-b border-border">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 height="48"
                 viewBox="0 -960 960 960"
                 width="48"
-                class="h-8 w-8 mx-auto p-1 ml-3 border rounded-full border-slate-300 transition-colors hover:bg-slate-200"
+                class="h-8 w-8 mx-auto p-1 ml-3 border rounded-full border-border text-foreground transition-colors hover:bg-accent"
               >
                 <title>Open</title>
                 <path d={icons.svg_right_arrow} fill="currentcolor" />

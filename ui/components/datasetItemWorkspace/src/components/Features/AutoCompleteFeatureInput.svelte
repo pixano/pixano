@@ -65,7 +65,7 @@ License: CECILL-C
       use:builder.action
       {...builder}
       class={cn(
-        "py-0 rounded-md bg-transparent flex h-10 items-center border border-input bg-white px-3 text-sm ring-offset-background w-full",
+        "py-0 rounded-md bg-transparent flex h-10 items-center border border-input bg-card px-3 text-sm ring-offset-background w-full",
         className,
       )}
     >

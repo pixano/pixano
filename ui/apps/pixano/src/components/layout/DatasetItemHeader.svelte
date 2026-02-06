@@ -55,27 +55,29 @@ License: CECILL-C
   {#if isLoading}
     <Loader2Icon class="animate-spin" />
   {:else}
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
         <Home />
       </IconButton>
       <IconButton on:click={handleReturnToPreviousPage} tooltipContent={"Back to dataset"}>
         <ArrowLeftCircleIcon />
       </IconButton>
-      {currentItemId}
-      <IconButton
-        on:click={() => goToNeighborItem("previous")}
-        tooltipContent="Previous item (Shift + Left / Shift + A or Q)"
-      >
-        <ArrowLeft />
-      </IconButton>
-      <IconButton
-        on:click={() => goToNeighborItem("next")}
-        tooltipContent="Next item (Shift + Right / Shift + D)"
-      >
-        <ArrowRight />
-      </IconButton>
-      <span>{getDatasetItemDisplayCount()}</span>
+      <span class="text-sm font-medium text-foreground">{currentItemId}</span>
+      <div class="flex items-center border border-border rounded-lg overflow-hidden">
+        <IconButton
+          on:click={() => goToNeighborItem("previous")}
+          tooltipContent="Previous item (Shift + Left / Shift + A or Q)"
+        >
+          <ArrowLeft />
+        </IconButton>
+        <IconButton
+          on:click={() => goToNeighborItem("next")}
+          tooltipContent="Next item (Shift + Right / Shift + D)"
+        >
+          <ArrowRight />
+        </IconButton>
+      </div>
+      <span class="text-sm text-muted-foreground">{getDatasetItemDisplayCount()}</span>
     </div>
     <Toolbar isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO} />
   {/if}

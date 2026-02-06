@@ -26,17 +26,17 @@ License: CECILL-C
 </script>
 
 <div class="fixed inset-0 z-50 overflow-y-auto">
-  <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
   <div class="flex min-h-full justify-center text-center items-center">
     <div
-      class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-          bg-slate-50 text-slate-800"
+      class="relative transform overflow-hidden rounded-xl p-6 max-w-2xl shadow-xl
+          bg-card text-foreground"
     >
       <p class="pb-1">{message}</p>
       {#if choices}
         <select
-          class="py-1 px-2 border rounded focus:outline-none
-        bg-slate-100 border-slate-300 focus:border-main"
+          class="py-1.5 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring
+        bg-background border-border"
           bind:value={selected}
         >
           {#each choices as choice}
@@ -46,22 +46,22 @@ License: CECILL-C
           {/each}
         </select>
       {:else}
-        <p class="pb-1 italic">{ifNoChoices}</p>
+        <p class="pb-1 italic text-muted-foreground">{ifNoChoices}</p>
       {/if}
 
       <button
         type="button"
         disabled={!selected}
-        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-primary transition-colors hover:bg-primary-foreground disabled:bg-primary-light"
+        class="rounded-lg border border-transparent text-primary-foreground mt-3 mx-1 py-1.5 px-4
+        bg-primary transition-colors hover:bg-primary/80 disabled:opacity-50"
         on:click={handleConfirm}
       >
         Ok
       </button>
       <button
         type="button"
-        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-primary transition-colors hover:bg-primary-foreground"
+        class="rounded-lg border border-transparent text-primary-foreground mt-3 mx-1 py-1.5 px-4
+        bg-primary transition-colors hover:bg-primary/80"
         on:click={handleCancel}
       >
         Cancel

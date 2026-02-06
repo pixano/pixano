@@ -49,7 +49,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="p-2 border border-slate-100 rounded-lg flex flex-col gap-3">
+<div class="p-2 border border-border rounded-lg flex flex-col gap-3">
   {#each choices as choice, index}
     <div class="flex flex-row gap-2 items-center">
       <!-- Do not bind with checked variable because handleClick is triggered before the change applies to binded value -->
@@ -66,7 +66,7 @@ License: CECILL-C
     <input
       type="text"
       placeholder="Explanations"
-      class="p-2 text-slate-800 placeholder-slate-500 outline-none border border-slate-100 rounded-lg"
+      class="p-2 text-foreground placeholder-muted-foreground outline-none border border-border rounded-lg"
       bind:value={explanations}
       on:blur={handleContentChange}
     />

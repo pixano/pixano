@@ -23,13 +23,13 @@ License: CECILL-C
   }
 </script>
 
-<div class="mx-8 h-20 aspect-square">
+<div class="mx-4 h-16 aspect-square">
   <video
     bind:this={video}
     src={value}
     loop
     muted
-    class="h-full w-full object-cover rounded"
+    class="h-full w-full object-cover rounded-lg"
     on:mouseenter={toggleHover}
     on:mouseleave={toggleHover}
   />

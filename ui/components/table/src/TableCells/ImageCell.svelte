@@ -9,6 +9,6 @@ License: CECILL-C
   export let value: string;
 </script>
 
-<div class="mx-8 h-20 aspect-square">
-  <img class="h-full w-full object-cover rounded" src={value} alt={value} />
+<div class="mx-4 h-16 aspect-square">
+  <img class="h-full w-full object-cover rounded-lg" src={value} alt={value} />
 </div>

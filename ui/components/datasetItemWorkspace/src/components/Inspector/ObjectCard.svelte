@@ -10,11 +10,12 @@ License: CECILL-C
   import { onDestroy } from "svelte";
   import { derived } from "svelte/store";
 
-  import { TextSpansContent, Thumbnail } from "@pixano/canvas2d";
+  import { TextSpansContent } from "@pixano/canvas2d";
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import {
     Annotation,
     BaseSchema,
+    Card,
     cn,
     Entity,
     IconButton,
@@ -61,7 +62,6 @@ License: CECILL-C
   let featuresPanelOpen = !entity.ui.childs?.some(
     (ann) => ann.ui.datasetItemType === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
   );
-  let thumbnailsPanelOpen = false;
   let hiddenTrack = entity.is_track ? entity.ui.displayControl.hidden : false;
 
   let displayName: string;
@@ -312,18 +312,19 @@ License: CECILL-C
   });
 </script>
 
-<article
+<Card.Root
+  class={cn(
+    "shadow-none rounded-lg border-border/50 overflow-hidden transition-all duration-150 hover:bg-accent/50",
+  )}
+  style={`
+    border-left: ${highlightState === "self" ? `3px solid ${color}` : "3px solid transparent"};
+    background: ${highlightState === "self" ? `${color}0d` : "hsl(var(--card))"}
+  `}
   on:mouseenter={() => (showIcons = true)}
   on:mouseleave={() => (showIcons = entity.ui.displayControl.open ?? false)}
   id={`card-object-${entity.id}`}
 >
-  <div
-    class={cn("flex items-center mt-1 rounded justify-between bg-white border-2 overflow-hidden")}
-    style={`
-      background: ${highlightState === "self" ? `${color}8a` : "white"};
-      border-color: ${highlightState === "self" ? color : "transparent"}
-    `}
-  >
+  <Card.Header class="p-1 py-0.5 flex-row space-y-0 items-center justify-between">
     <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
       <IconButton
         on:click={() => handleSetDisplayControl("hidden", isVisible)}
@@ -335,48 +336,82 @@ License: CECILL-C
           <EyeOff class="h-4" />
         {/if}
       </IconButton>
-      <button
-        class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
-        style="background:{color}"
-        title="Highlight object"
-        on:click={onColoredDotClick}
-      />
+      {#if thumbnails.length > 0}
+        {@const thumb = thumbnails[0]}
+        {@const innerSize = 44}
+        {@const cropW = thumb.coords[2] * thumb.baseImageDimensions.width}
+        {@const cropH = thumb.coords[3] * thumb.baseImageDimensions.height}
+        {@const cropAspect = cropW / cropH}
+        {@const fitW = cropAspect >= 1 ? innerSize : innerSize * cropAspect}
+        {@const fitH = cropAspect >= 1 ? innerSize / cropAspect : innerSize}
+        {@const imgScale = fitW / cropW}
+        {@const imgW = thumb.baseImageDimensions.width * imgScale}
+        {@const imgH = thumb.baseImageDimensions.height * imgScale}
+        {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
+        {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
+        <button
+          class="flex-shrink-0 mr-2 flex items-center justify-center rounded overflow-hidden
+                 transition-transform hover:scale-110"
+          style="width: 48px; height: 48px; border: 2px solid {color};
+                 background: hsl(var(--muted) / 0.5);"
+          title="Highlight object"
+          on:click={onColoredDotClick}
+        >
+          <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
+            <img
+              src="/{thumb.uri}"
+              alt=""
+              class="absolute max-w-none"
+              style="width: {imgW}px; height: {imgH}px;
+                     left: {offX}px; top: {offY}px;"
+            />
+          </div>
+        </button>
+      {:else}
+        <button
+          class="rounded-full w-2.5 h-2.5 mr-2.5 flex-shrink-0 ring-1 ring-black/10
+                 transition-transform hover:scale-125"
+          style="background:{color}"
+          title="Highlight object"
+          on:click={onColoredDotClick}
+        />
+      {/if}
       <span
-        class={cn("truncate flex-auto overflow-hidden overflow-ellipsis whitespace-nowrap", {
-          "text-slate-800": highlightState !== "none",
-          "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+        class={cn("truncate flex-auto text-[13px] leading-tight", {
+          "text-foreground": highlightState !== "none",
+          "text-muted-foreground":
+            highlightState === "none" && $selectedTool.type === ToolType.Fusion,
         })}
         title="{entity.table_info.base_schema} ({entity.id})"
       >
         {displayName}
       </span>
     </div>
-    <div
-      class={cn(
-        "flex-shrink-0 flex items-center justify-end",
-        showIcons
-          ? entity.is_track
-            ? "basis-[120px]"
-            : "basis-[80px]"
-          : entity.is_track && hiddenTrack
-            ? "basis-[80px]"
-            : "basis-[40px]",
-      )}
-      style="min-width: 40px;"
-    >
-      {#if showIcons || entity.ui.displayControl.editing}
-        <IconButton tooltipContent="Delete object" redconfirm on:click={() => deleteObject(entity)}>
-          <Trash2 class="h-4" />
-        </IconButton>
-      {/if}
-      {#if entity.is_track && (showIcons || entity.ui.displayControl.editing || hiddenTrack)}
-        <IconButton
-          tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
-          on:click={onTrackVisClick}
-        >
-          {#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}
-        </IconButton>
-      {/if}
+    <div class="flex-shrink-0 flex items-center justify-end">
+      <div
+        class={cn(
+          "flex items-center gap-0.5 transition-opacity duration-150",
+          showIcons || entity.ui.displayControl.editing ? "opacity-100" : "opacity-0",
+        )}
+      >
+        {#if showIcons || entity.ui.displayControl.editing}
+          <IconButton
+            tooltipContent="Delete object"
+            redconfirm
+            on:click={() => deleteObject(entity)}
+          >
+            <Trash2 class="h-4" />
+          </IconButton>
+        {/if}
+        {#if entity.is_track && (showIcons || entity.ui.displayControl.editing || hiddenTrack)}
+          <IconButton
+            tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
+            on:click={onTrackVisClick}
+          >
+            {#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}
+          </IconButton>
+        {/if}
+      </div>
       <IconButton
         on:click={() => (entity.ui.displayControl.open = !entity.ui.displayControl.open)}
         tooltipContent={entity.ui.displayControl.open ? "Hide features" : "Show features"}
@@ -387,109 +422,84 @@ License: CECILL-C
         />
       </IconButton>
     </div>
-  </div>
+  </Card.Header>
   {#if entity.ui.displayControl.open}
-    <div class="pl-5 text-slate-800 bg-white">
-      <div
-        class="border-l-4 border-dashed border-red-400 pl-4 flex flex-col gap-4 pb-2"
-        style="border-color:{color}"
-      >
-        <div class="flex flex-col gap-2">
-          <div class="w-full block">
-            <div class="flex justify-between items-center">
-              <p class="font-medium">Features</p>
-              <div class="flex-shrink-0 flex items-center justify-end">
-                {#if $selectedTool.type !== ToolType.Fusion}
-                  <IconButton
-                    tooltipContent="Edit object features"
-                    selected={entity.ui.displayControl.editing}
-                    on:click={() => onEditIconClick()}
-                  >
-                    <Pencil class="h-4" />
-                  </IconButton>
-                {/if}
+    <Card.Content class="p-3 bg-muted/30 border-t border-border/50">
+      <div class="flex flex-col gap-2">
+        <div class="w-full block">
+          <div class="flex items-center justify-between py-1.5 border-b border-border/40">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Features
+            </span>
+            <div class="flex-shrink-0 flex items-center justify-end">
+              {#if $selectedTool.type !== ToolType.Fusion}
                 <IconButton
-                  on:click={() => {
-                    featuresPanelOpen = !featuresPanelOpen;
-                    entity.ui.displayControl.editing = false;
-                  }}
-                  tooltipContent={featuresPanelOpen ? "Hide features" : "Show features"}
+                  tooltipContent="Edit object features"
+                  selected={entity.ui.displayControl.editing}
+                  on:click={() => onEditIconClick()}
                 >
-                  <ChevronRight
-                    class={cn("transition", { "rotate-90": featuresPanelOpen })}
-                    strokeWidth={1}
-                  />
+                  <Pencil class="h-4" />
                 </IconButton>
-              </div>
-            </div>
-            {#if featuresPanelOpen}
-              <UpdateFeatureInputs
-                featureClass="objects"
-                features={$features}
-                isEditing={entity.ui.displayControl.editing ?? false}
-                {saveInputChange}
-              />
-            {/if}
-          </div>
-          <div class="flex justify-between items-center">
-            <p class="font-medium">Objects ({allowableChilds.length})</p>
-            <IconButton
-              on:click={() => (childsPanelOpen = !childsPanelOpen)}
-              tooltipContent={childsPanelOpen ? "Hide objects" : "Show objects"}
-            >
-              <ChevronRight
-                class={cn("transition", { "rotate-90": childsPanelOpen })}
-                strokeWidth={1}
-              />
-            </IconButton>
-          </div>
-
-          {#if childsPanelOpen}
-            <div class="flex flex-col">
-              {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-                <p class="text-center italic">
-                  {allowedChilds.length > 0 ? allowedChilds.length : "No"}
-                  object{allowedChilds.length === 1 ? "" : "s"}
-                  visible on frame {$currentFrameIndex}
-                </p>
               {/if}
-              {#each allowedChilds as child}
-                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-              {/each}
-            </div>
-          {/if}
-          {#if thumbnails.length > 0}
-            <div class="flex justify-between items-center">
-              <p class="font-medium">Thumbnails</p>
               <IconButton
-                on:click={() => (thumbnailsPanelOpen = !thumbnailsPanelOpen)}
-                tooltipContent={thumbnailsPanelOpen ? "Hide thumbnails" : "Show thumbnails"}
+                on:click={() => {
+                  featuresPanelOpen = !featuresPanelOpen;
+                  entity.ui.displayControl.editing = false;
+                }}
+                tooltipContent={featuresPanelOpen ? "Hide features" : "Show features"}
               >
                 <ChevronRight
-                  class={cn("transition", { "rotate-90": thumbnailsPanelOpen })}
+                  class={cn("transition", { "rotate-90": featuresPanelOpen })}
                   strokeWidth={1}
                 />
               </IconButton>
             </div>
-            {#if thumbnailsPanelOpen}
-              {#each thumbnails as thumbnail}
-                <Thumbnail
-                  imageDimension={thumbnail.baseImageDimensions}
-                  coords={thumbnail.coords}
-                  imageUrl={`/${thumbnail.uri}`}
-                  minSide={150}
-                  maxWidth={200}
-                  maxHeight={200}
-                />
-                {#if Object.keys($mediaViews).length > 1}
-                  <span class="text-center italic">{thumbnail.view}</span>
-                {/if}
-              {/each}
-            {/if}
+          </div>
+          {#if featuresPanelOpen}
+            <UpdateFeatureInputs
+              featureClass="objects"
+              features={$features}
+              isEditing={entity.ui.displayControl.editing ?? false}
+              {saveInputChange}
+            />
           {/if}
-          <TextSpansContent annotations={entity.ui.childs} />
         </div>
+        <div class="flex items-center justify-between py-1.5 border-b border-border/40">
+          <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Objects
+            <span
+              class="ml-1.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 leading-none"
+            >
+              {allowableChilds.length}
+            </span>
+          </span>
+          <IconButton
+            on:click={() => (childsPanelOpen = !childsPanelOpen)}
+            tooltipContent={childsPanelOpen ? "Hide objects" : "Show objects"}
+          >
+            <ChevronRight
+              class={cn("transition", { "rotate-90": childsPanelOpen })}
+              strokeWidth={1}
+            />
+          </IconButton>
+        </div>
+
+        {#if childsPanelOpen}
+          <div class="flex flex-col">
+            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+              <p class="text-center italic">
+                {allowedChilds.length > 0 ? allowedChilds.length : "No"}
+                object{allowedChilds.length === 1 ? "" : "s"}
+                visible on frame {$currentFrameIndex}
+              </p>
+            {/if}
+            {#each allowedChilds as child}
+              <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+            {/each}
+          </div>
+        {/if}
+        <TextSpansContent annotations={entity.ui.childs} />
       </div>
-    </div>
+    </Card.Content>
   {/if}
-</article>
+</Card.Root>

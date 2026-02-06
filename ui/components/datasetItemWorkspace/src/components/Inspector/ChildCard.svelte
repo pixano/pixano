@@ -110,7 +110,9 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex justify-between bg-transparent border-transparent">
+<div
+  class="flex justify-between items-center py-1 px-1 rounded-md hover:bg-accent/50 transition-colors duration-100 group/child"
+>
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
       on:click={() => handleSetDisplayControl("hidden", childVisible, child)}
@@ -139,11 +141,13 @@ License: CECILL-C
         <Type class="h-4" />
       {/if}
     </IconButton>
-    <span class="flex-auto block w-full truncate" title={child.id}>
+    <span class="flex-auto block truncate text-[13px]" title={child.id}>
       {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>
-  <div class="flex-shrink-0 flex items-center justify-end">
+  <div
+    class="flex-shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-150"
+  >
     {#if $selectedTool.type !== ToolType.Fusion}
       {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
         <IconButton
@@ -183,7 +187,7 @@ License: CECILL-C
       viewRef={child.data.view_ref}
       tracklet={child}
     />
-    <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
+    <Button class="text-primary-foreground mt-4" on:click={handleRelink}>OK</Button>
   </div>
 {/if}
 {#if child.is_type(BaseSchema.Tracklet)}
@@ -192,7 +196,7 @@ License: CECILL-C
     {@const displayName = interpolated
       ? `<i>interpolated</i> (${trackletChild.id})`
       : trackletChild.id}
-    <div class="flex items-center justify-between w-full overflow-hidden ml-4">
+    <div class="flex items-center justify-between w-full overflow-hidden pl-6 py-0.5">
       <div class="flex items-center flex-1 min-w-0 overflow-hidden">
         <IconButton disabled tooltipContent={trackletChild.table_info.base_schema}>
           {#if trackletChild.table_info.base_schema === BaseSchema.BBox}

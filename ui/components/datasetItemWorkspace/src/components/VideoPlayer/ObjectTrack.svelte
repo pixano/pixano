@@ -316,8 +316,9 @@ License: CECILL-C
   <div style={`width: ${$videoControls.zoomLevel[0]}%;`}>
     <div
       class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
-        "text-slate-800": highlightState !== "none",
-        "text-slate-300": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+        "text-foreground": highlightState !== "none",
+        "text-muted-foreground":
+          highlightState === "none" && $selectedTool.type === ToolType.Fusion,
       })}
       style={`
         background: ${

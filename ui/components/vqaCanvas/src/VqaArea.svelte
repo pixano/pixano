@@ -18,7 +18,7 @@ License: CECILL-C
   $: messagesByNumber = groupMessagesByNumber(messages);
 </script>
 
-<div class="bg-white p-4 flex flex-col gap-4 h-full overflow-y-auto">
+<div class="bg-card p-4 flex flex-col gap-4 h-full overflow-y-auto">
   <ModelSelectAdd {vqaSectionWidth} />
   <AddQuestionButton {vqaSectionWidth} on:storeQuestion />
   {#each messagesByNumber as messages}

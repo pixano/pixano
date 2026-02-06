@@ -9,6 +9,7 @@ License: CECILL-C
   import { onDestroy, onMount } from "svelte";
 
   import { api, cn } from "@pixano/core/src";
+  import { checkInferenceStatus } from "@pixano/core/src/lib/services/inferenceService";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
@@ -19,7 +20,6 @@ License: CECILL-C
     datasetsStore,
     datasetTableStore,
     datasetTotalItemsCount,
-    modelsStore,
   } from "../lib/stores/datasetStores";
   import { page } from "$app/stores";
 
@@ -31,10 +31,6 @@ License: CECILL-C
 
   onMount(() => {
     api
-      .getModels()
-      .then((models) => modelsStore.set(models))
-      .catch(() => modelsStore.set([]));
-    api
       .getDatasetsInfo()
       .then((loadedDatasetInfos) => {
         datasetsStore.set(loadedDatasetInfos);
@@ -42,6 +38,7 @@ License: CECILL-C
       .catch((err) => {
         console.error(err);
       });
+    checkInferenceStatus();
   });
 
   // Get all the ids of the items of the selected dataset
@@ -87,14 +84,17 @@ License: CECILL-C
   <meta name="description" content="Pixano app" />
 </svelte:head>
 
-<div class="app">
+<div class="app h-screen flex flex-col overflow-hidden">
   {#if $page.route.id === HOME_ROUTE_ID}
-    <MainHeader datasets={$datasetsStore} />
+    <MainHeader />
   {:else}
     <DatasetHeader pageId={$page.route.id} />
   {/if}
   <main
-    class={cn("bg-slate-50 flex flex-col h-screen", $page.route.id !== HOME_ROUTE_ID && "pt-20")}
+    class={cn(
+      "bg-background flex flex-col flex-1 min-h-0",
+      $page.route.id !== HOME_ROUTE_ID && "pt-20",
+    )}
   >
     <slot />
   </main>

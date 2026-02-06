@@ -83,7 +83,7 @@ License: CECILL-C
 </script>
 
 {#if !selectedDataset.isErrored}
-  <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
+  <div class="w-full py-5 h-20 flex justify-center items-center text-foreground">
     {#if selectedDataset.pagination.total_size > pageSize}
       <button on:click={handleGoToFirstPage}>
         <svg
@@ -91,7 +91,7 @@ License: CECILL-C
           height="48"
           viewBox="0 -960 960 960"
           width="48"
-          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
           <path d={svg_first_page} fill="currentcolor" />
         </svg>
@@ -103,7 +103,7 @@ License: CECILL-C
           height="48"
           viewBox="0 -960 960 960"
           width="48"
-          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
           <path d={svg_prev_page} fill="currentcolor" />
         </svg>
@@ -125,7 +125,7 @@ License: CECILL-C
           height="48"
           viewBox="0 -960 960 960"
           width="48"
-          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
           <path d={svg_next_page} fill="currentcolor" />
         </svg>
@@ -137,7 +137,7 @@ License: CECILL-C
           height="48"
           viewBox="0 -960 960 960"
           width="48"
-          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+          class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
           <path d={svg_last_page} fill="currentcolor" />
         </svg>

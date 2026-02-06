@@ -54,8 +54,10 @@ License: CECILL-C
   };
 </script>
 
-<section class="h-full">
-  <div class="flex items-center justify-between text-slate-800 gap-3 w-full">
+<section class="flex flex-col">
+  <div
+    class="flex items-center justify-between text-foreground gap-2 w-full px-1 py-2 sticky top-0 bg-card z-10 border-b border-border/30"
+  >
     <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
       {#if $visibilityStatus === "hidden"}
         <EyeOff class="h-4" />
@@ -63,7 +65,9 @@ License: CECILL-C
         <Eye class="h-4" />
       {/if}
     </IconButton>
-    <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground grow">
+      {sectionTitle}
+    </h3>
     <IconButton
       tooltipContent={"Generic options"}
       selected={showFilters}
@@ -72,7 +76,10 @@ License: CECILL-C
       <SlidersHorizontal />
     </IconButton>
     <slot name="modelSelection" />
-    <span title="object count - (filtered / total) if some objects are filtered out)">
+    <span
+      class="text-xs text-muted-foreground tabular-nums bg-muted rounded-full px-2 py-0.5"
+      title="object count - (filtered / total) if some objects are filtered out)"
+    >
       {countText}
     </span>
   </div>
@@ -82,7 +89,7 @@ License: CECILL-C
       on:confidenceThresholdChange={() => dispatch("confidenceThresholdChange")}
     />
   </div>
-  <div class="p-2 pt-0 max-h-full">
+  <div class="flex flex-col gap-1.5 px-1 pt-1 pb-2">
     <slot />
   </div>
 </section>

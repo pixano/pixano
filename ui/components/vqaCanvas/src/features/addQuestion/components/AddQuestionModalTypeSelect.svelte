@@ -23,6 +23,6 @@ License: CECILL-C
   <RadioGroup
     bind:selectedValue={questionType}
     values={availableQuestionTypes}
-    itemClass="text-slate-800 text-base font-normal"
+    itemClass="text-foreground text-base font-normal"
   />
 </div>

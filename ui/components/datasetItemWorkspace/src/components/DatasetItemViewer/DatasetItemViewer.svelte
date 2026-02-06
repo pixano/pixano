@@ -22,14 +22,15 @@ License: CECILL-C
     type Reference,
   } from "@pixano/core";
   import {
-    pixanoInferenceSegmentationModelsStore,
-    pixanoInferenceSegmentationURL,
     pixanoInferenceToValidateTrackingMasks,
     pixanoInferenceTrackingNbAdditionalFrames,
-    pixanoInferenceTrackingURL,
     type PixanoInferenceSegmentationOutput,
     type PixanoInferenceVideoSegmentationOutput,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+  import {
+    inferenceServerStore,
+    selectedSegmentationModelName,
+  } from "@pixano/core/src/lib/stores/inferenceStore";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import { rleFrString } from "../../../../canvas2d/src/api/maskApi";
@@ -59,12 +60,8 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
-    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceSegmentationURL);
-    if (!isConnected) return;
-    const models = await api.listModels();
-    const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
-    const maskModelName = selectedMaskModel ? selectedMaskModel.name : "SAM2";
-    if (!models.map((m) => m.name).includes(maskModelName)) return;
+    if (!$inferenceServerStore.connected) return;
+    const maskModelName = $selectedSegmentationModelName ?? "SAM2";
     let image = selectedItem.views[viewRef.name];
     if (Array.isArray(image)) {
       const candidate_image = image.find((v) => v.id === viewRef.id);
@@ -162,12 +159,8 @@ License: CECILL-C
     points: LabeledClick[],
     box: Box,
   ): Promise<Mask | undefined> => {
-    const isConnected = await api.isInferenceApiHealthy($pixanoInferenceTrackingURL);
-    if (!isConnected) return;
-    const models = await api.listModels();
-    const selectedMaskModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
-    const maskModelName = selectedMaskModel ? selectedMaskModel.name : "SAM2_video";
-    if (!models.map((m) => m.name).includes(maskModelName)) return;
+    if (!$inferenceServerStore.connected) return;
+    const maskModelName = $selectedSegmentationModelName ?? "SAM2_video";
 
     //get video from viewRef (current frame) & num_frames
     let full_video = selectedItem.views[viewRef.name];
@@ -285,7 +278,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="max-h-[calc(100vh-80px)] w-full max-w-full bg-slate-800">
+<div class="max-h-[calc(100vh-80px)] w-full max-w-full bg-foreground">
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
