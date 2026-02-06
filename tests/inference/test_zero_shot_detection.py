@@ -7,14 +7,8 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
-from pixano_inference.client import PixanoInferenceClient
-from pixano_inference.pydantic import (
-    ImageZeroShotDetectionOutput,
-    ImageZeroShotDetectionResponse,
-)
 
 from pixano.features import (
     BBox,
@@ -26,6 +20,11 @@ from pixano.features import (
     Source,
     SourceRef,
     ViewRef,
+)
+from pixano.inference.provider import InferenceProvider
+from pixano.inference.types import (
+    ImageZeroShotDetectionOutput,
+    ImageZeroShotDetectionResult,
 )
 from pixano.inference.zero_shot_detection import image_zero_shot_detection
 
@@ -49,15 +48,11 @@ def image_url() -> Image:
 
 
 @pytest.mark.asyncio
-@patch("pixano_inference.client.PixanoInferenceClient.image_zero_shot_detection")
 async def test_image_zero_shot_detection(
-    mock_image_zero_shot_detection,
-    simple_pixano_inference_client: PixanoInferenceClient,
+    simple_inference_provider: InferenceProvider,
     image_url: Image,
 ):
-    response = ImageZeroShotDetectionResponse(
-        id="id",
-        status="SUCCESS",
+    response = ImageZeroShotDetectionResult(
         timestamp=datetime(year=2025, month=2, day=19),
         processing_time=1.0,
         metadata={"metadata": "value"},
@@ -85,13 +80,13 @@ async def test_image_zero_shot_detection(
         inference_metadata={"timestamp": "2025-02-19T00:00:00", "processing_time": 1.0, "metadata": "value"},
     )
 
-    mock_image_zero_shot_detection.return_value = response
+    simple_inference_provider.image_zero_shot_detection.return_value = response
 
     entity = Entity(id="test_entity")
     entity.table_name = "entity"
 
     output = await image_zero_shot_detection(
-        client=simple_pixano_inference_client,
+        provider=simple_inference_provider,
         media_dir=Path("."),
         image=image_url,
         entity=entity,

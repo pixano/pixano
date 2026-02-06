@@ -14,7 +14,6 @@ import uvicorn
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pixano_inference.client import PixanoInferenceClient
 
 from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
@@ -104,16 +103,22 @@ class App:
         # Override app settings
         @lru_cache
         def get_settings_override():
+            inference_providers: dict = {}
+            if pixano_inference_url is not None:
+                from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
+
+                provider = PixanoInferenceProvider(url=pixano_inference_url)
+                inference_providers[provider.name] = provider
             kwargs: dict = {
                 "data_dir": data_dir,
                 "aws_endpoint": aws_endpoint,
                 "aws_region": aws_region,
                 "aws_access_key": aws_access_key,
                 "aws_secret_key": aws_secret_key,
-                "pixano_inference_client": PixanoInferenceClient.connect(pixano_inference_url)
-                if pixano_inference_url is not None
-                else None,
+                "inference_providers": inference_providers,
             }
+            if inference_providers:
+                kwargs["default_inference_provider"] = next(iter(inference_providers))
             if library_dir is not None:
                 kwargs["library_dir"] = library_dir
             if media_dir is not None:

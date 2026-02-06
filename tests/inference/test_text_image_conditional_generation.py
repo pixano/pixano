@@ -8,16 +8,10 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.encoders import jsonable_encoder
-from pixano_inference.client import PixanoInferenceClient
-from pixano_inference.pydantic import (
-    TextImageConditionalGenerationOutput,
-    TextImageConditionalGenerationResponse,
-    UsageConditionalGeneration,
-)
 
 from pixano.features import (
     BBox,
@@ -31,7 +25,13 @@ from pixano.features import (
     SourceRef,
     ViewRef,
 )
+from pixano.inference.provider import InferenceProvider
 from pixano.inference.text_image_conditional_generation import messages_to_prompt, text_image_conditional_generation
+from pixano.inference.types import (
+    TextImageConditionalGenerationOutput,
+    TextImageConditionalGenerationResult,
+    UsageInfo,
+)
 
 
 FILE_PATH = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -353,15 +353,12 @@ def test_messages_to_prompt(
 
 
 @pytest.mark.asyncio
-@patch("pixano_inference.client.PixanoInferenceClient.text_image_conditional_generation")
 @pytest.mark.parametrize(
     "num_messages,response,expected_output",
     [
         (
             1,
-            TextImageConditionalGenerationResponse(
-                id="id",
-                status="SUCCESS",
+            TextImageConditionalGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -370,7 +367,7 @@ def test_messages_to_prompt(
                 data=TextImageConditionalGenerationOutput(
                     generated_text="test",
                     generation_config={"generate": "yes"},
-                    usage=UsageConditionalGeneration(prompt_tokens=10, completion_tokens=10, total_tokens=20),
+                    usage=UsageInfo(prompt_tokens=10, completion_tokens=10, total_tokens=20),
                 ),
             ),
             Message(
@@ -384,7 +381,7 @@ def test_messages_to_prompt(
                     {
                         "generation_config": {"generate": "yes"},
                         "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
-                        "timestamp": datetime(year=2025, month=2, day=19),
+                        "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                         "processing_time": 1.0,
                     }
                 ),
@@ -393,9 +390,7 @@ def test_messages_to_prompt(
         ),
         (
             2,
-            TextImageConditionalGenerationResponse(
-                id="id",
-                status="SUCCESS",
+            TextImageConditionalGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -404,7 +399,7 @@ def test_messages_to_prompt(
                 data=TextImageConditionalGenerationOutput(
                     generated_text="test",
                     generation_config={"generate": "yes"},
-                    usage=UsageConditionalGeneration(prompt_tokens=10, completion_tokens=10, total_tokens=20),
+                    usage=UsageInfo(prompt_tokens=10, completion_tokens=10, total_tokens=20),
                 ),
             ),
             Message(
@@ -418,7 +413,7 @@ def test_messages_to_prompt(
                     {
                         "generation_config": {"generate": "yes"},
                         "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
-                        "timestamp": datetime(year=2025, month=2, day=19),
+                        "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                         "processing_time": 1.0,
                     }
                 ),
@@ -427,9 +422,7 @@ def test_messages_to_prompt(
         ),
         (
             3,
-            TextImageConditionalGenerationResponse(
-                id="id",
-                status="SUCCESS",
+            TextImageConditionalGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={
@@ -438,7 +431,7 @@ def test_messages_to_prompt(
                 data=TextImageConditionalGenerationOutput(
                     generated_text="test",
                     generation_config={"generate": "yes"},
-                    usage=UsageConditionalGeneration(prompt_tokens=10, completion_tokens=10, total_tokens=20),
+                    usage=UsageInfo(prompt_tokens=10, completion_tokens=10, total_tokens=20),
                 ),
             ),
             Message(
@@ -452,7 +445,7 @@ def test_messages_to_prompt(
                     {
                         "generation_config": {"generate": "yes"},
                         "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
-                        "timestamp": datetime(year=2025, month=2, day=19),
+                        "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                         "processing_time": 1.0,
                     }
                 ),
@@ -462,20 +455,19 @@ def test_messages_to_prompt(
     ],
 )
 async def test_text_image_conditional_generation(
-    mock_text_image_conditional_generation,
     mock_dataset: MagicMock,
     num_messages: int,
-    response: TextImageConditionalGenerationResponse,
+    response: TextImageConditionalGenerationResult,
     expected_output: Message,
     vqa_conversation: Conversation,
     vqa_messages: list[Message],
-    simple_pixano_inference_client: PixanoInferenceClient,
+    simple_inference_provider: InferenceProvider,
     vqa_sources: tuple[Source, Source, Source],
 ):
-    mock_text_image_conditional_generation.return_value = response
+    simple_inference_provider.text_image_conditional_generation.return_value = response
 
     message = await text_image_conditional_generation(
-        client=simple_pixano_inference_client,
+        provider=simple_inference_provider,
         source=vqa_sources[1],
         dataset=mock_dataset,
         media_dir=ASSETS_PATH,

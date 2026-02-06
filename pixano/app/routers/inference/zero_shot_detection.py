@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from pixano.app.models import AnnotationModel, EntityModel, TableInfo, ViewModel
-from pixano.app.routers.inference.utils import get_client_from_settings
+from pixano.app.routers.inference.utils import get_provider_from_settings
 from pixano.app.routers.utils import get_dataset
 from pixano.app.settings import Settings, get_settings
 from pixano.features import BBox, Classification, Entity, Image, is_image
@@ -63,7 +63,7 @@ async def call_image_zero_shot_detection(
         The predicted bboxes and classifications.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    client = get_client_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings)
 
     if not is_image(dataset.schema.schemas[image.table_info.name]):
         raise HTTPException(status_code=400, detail="Image must be an image.")
@@ -74,7 +74,7 @@ async def call_image_zero_shot_detection(
 
     try:
         bboxes_and_classifications: list[tuple[BBox, Classification]] = await image_zero_shot_detection(
-            client=client,
+            provider=provider,
             source=source,
             media_dir=settings.media_dir,
             image=image_row,

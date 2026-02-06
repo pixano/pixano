@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from pixano.app.models import AnnotationModel, EntityModel, TableInfo, ViewModel
-from pixano.app.routers.inference.utils import get_client_from_settings
+from pixano.app.routers.inference.utils import get_provider_from_settings
 from pixano.app.routers.utils import get_dataset
 from pixano.app.settings import Settings, get_settings
 from pixano.features import (
@@ -74,7 +74,7 @@ async def call_image_mask_generation(
     global store_last_image_id
 
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    client = get_client_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings)
 
     if not is_image(dataset.schema.schemas[image.table_info.name]):
         raise HTTPException(status_code=400, detail="Image must be an image.")
@@ -87,7 +87,7 @@ async def call_image_mask_generation(
         mask_output: tuple[
             CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None
         ] = await image_mask_generation(
-            client=client,
+            provider=provider,
             source=source,
             media_dir=settings.media_dir,
             image=image_row,
@@ -148,7 +148,7 @@ async def call_video_mask_generation(
         The generated masks.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    client = get_client_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings)
 
     if not is_sequence_frame(dataset.schema.schemas[video[0].table_info.name]):
         raise HTTPException(status_code=400, detail="Video must be a list of SequenceFrame.")
@@ -158,7 +158,7 @@ async def call_video_mask_generation(
 
     try:
         mask_output: tuple[list[CompressedRLE], list[int], list[int]] = await video_mask_generation(
-            client=client,
+            provider=provider,
             source=source,
             media_dir=settings.media_dir,
             video=video_row,

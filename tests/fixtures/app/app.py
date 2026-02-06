@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
-from pixano_inference.client import PixanoInferenceClient
 
 from pixano.app.main import create_app
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset
+from pixano.inference.provider import InferenceProvider
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 
 
@@ -27,10 +27,13 @@ MEDIA_DIR = ASSETS_DIRECTORY / "sample_data"
 def app_and_settings(
     dataset_image_bboxes_keypoint: Dataset,
     dataset_multi_view_tracking_and_image: Dataset,
-    simple_pixano_inference_client,
+    simple_inference_provider: InferenceProvider,
 ) -> tuple[FastAPI, Settings]:  # args to ensure the fixture is called before the app fixture
     settings = Settings(
-        library_dir=str(LIBRARY_DIR), media_dir=str(MEDIA_DIR), pixano_inference_client=simple_pixano_inference_client
+        library_dir=str(LIBRARY_DIR),
+        media_dir=str(MEDIA_DIR),
+        inference_providers={"mock-provider": simple_inference_provider},
+        default_inference_provider="mock-provider",
     )
 
     @lru_cache
@@ -53,14 +56,15 @@ def app_and_settings_copy(
     dataset_image_bboxes_keypoint_copy: Dataset,
     dataset_multi_view_tracking_and_image_copy: Dataset,
     dataset_vqa_copy: Dataset,
-    simple_pixano_inference_client_fn_scope: PixanoInferenceClient,
+    simple_inference_provider_fn_scope: InferenceProvider,
 ) -> tuple[FastAPI, Settings]:
     library_dir = Path(tempfile.mkdtemp())
     settings = Settings(
         library_dir=str(library_dir),
         media_dir=str(MEDIA_DIR),
         models_dir=str(library_dir),
-        pixano_inference_client=simple_pixano_inference_client_fn_scope,
+        inference_providers={"mock-provider": simple_inference_provider_fn_scope},
+        default_inference_provider="mock-provider",
     )
 
     for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy, dataset_vqa_copy]:

@@ -4,31 +4,33 @@
 # License: CECILL-C
 # =====================================
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pixano_inference.client import PixanoInferenceClient
 
 from pixano.app.settings import Settings
+from pixano.inference.provider import InferenceProvider
 
 
-@patch("pixano.app.routers.inference.PixanoInferenceClient.connect")
+@patch("pixano.app.routers.inference.PixanoInferenceProvider.connect")
 def test_connect_inference(
     mock_connect,
     empty_app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
     empty_app, empty_settings, empty_client = empty_app_and_settings_with_client
 
-    expected_client = PixanoInferenceClient(url="http://valid_url.com", app_name="test")
-    mock_connect.return_value = expected_client
+    # Create a mock provider
+    mock_provider = MagicMock(spec=InferenceProvider)
+    mock_provider.name = "test-provider"
+    mock_connect.return_value = mock_provider
 
-    url = "/inference/connect/?url=valid_url.com"
+    url = "/inference/connect?url=http://valid_url.com"
 
     response = empty_client.post(url)
     assert response.status_code == 200
-    assert response.json() is None
-    assert empty_settings.pixano_inference_client == expected_client
+    assert response.json() == {"status": "connected", "provider": "test-provider"}
+    assert "test-provider" in empty_settings.inference_providers
 
 
 def test_connect_inference_error(
@@ -36,8 +38,8 @@ def test_connect_inference_error(
 ):
     empty_app, empty_settings, empty_client = empty_app_and_settings_with_client
 
-    url = "/inference/connect/?url=wrongurl.wrongurl"
+    url = "/inference/connect?url=wrongurl.wrongurl"
 
     response = empty_client.post(url)
     assert response.status_code == 404
-    assert response.json() == {"detail": "Impossible to connect to Pixano Inference from url: wrongurl.wrongurl"}
+    assert "wrongurl.wrongurl" in response.json()["detail"]

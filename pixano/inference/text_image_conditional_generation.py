@@ -9,15 +9,17 @@ from typing import Any
 
 import shortuuid
 from fastapi.encoders import jsonable_encoder
-from pixano_inference.client import PixanoInferenceClient
-from pixano_inference.pydantic.tasks import (
-    TextImageConditionalGenerationRequest,
-    TextImageConditionalGenerationResponse,
-)
-from pixano_inference.utils import is_url
 
 from pixano.datasets import Dataset
 from pixano.features import Conversation, EntityRef, Message, SchemaGroup, Source, SourceRef, is_bbox
+
+from .provider import InferenceProvider
+from .types import TextImageConditionalGenerationInput
+
+
+def _is_url(value: str) -> bool:
+    """Check if a string is a URL."""
+    return value.startswith(("http://", "https://", "s3://"))
 
 
 DEFAULT_ROLE_SYSTEM = "system"
@@ -39,7 +41,7 @@ def messages_to_prompt(
     """Convert a list of messages to a prompt.
 
     Args:
-        dataset: The Pixano dtaset.
+        dataset: The Pixano dataset.
         conversation: The conversation entity of the messages.
         messages: List of messages.
         media_dir: The directory containing the images.
@@ -63,7 +65,7 @@ def messages_to_prompt(
             case _:
                 raise ValueError(f"Unknown message type {message.type}")
 
-        ## add images to prompt
+        # add images to prompt
         tables_view = sorted(dataset.schema.groups[SchemaGroup.VIEW])
         for table_view in tables_view:
             images = dataset.get_data(table_view, item_ids=[conversation.item_ref.id])
@@ -72,11 +74,11 @@ def messages_to_prompt(
                 message_prompt["content"].append(
                     {
                         "type": "image_url",
-                        "image_url": {"url": image.url if is_url(image.url) else image.open(media_dir, "base64")},
+                        "image_url": {"url": image.url if _is_url(image.url) else image.open(media_dir, "base64")},
                     }
                 )
 
-        ## add objects (bbox) to prompt
+        # add objects (bbox) to prompt
         tables_entities = sorted(dataset.schema.groups[SchemaGroup.ENTITY])
         tables_bbox = [k for k, v in dataset.schema.schemas.items() if is_bbox(v)]
         if len(tables_bbox) > 0:
@@ -107,7 +109,7 @@ def messages_to_prompt(
 
 
 async def text_image_conditional_generation(
-    client: PixanoInferenceClient,
+    provider: InferenceProvider,
     source: Source,
     dataset: Dataset,
     media_dir: Path,
@@ -118,12 +120,12 @@ async def text_image_conditional_generation(
     role_system: str = DEFAULT_ROLE_SYSTEM,
     role_user: str = DEFAULT_ROLE_USER,
     role_assistant: str = DEFAULT_ROLE_ASSISTANT,
-    **client_kwargs: Any,
+    **provider_kwargs: Any,
 ) -> Message:
-    """Generate text from an image using the Pixano Inference API.
+    """Generate text from an image using the inference provider.
 
     Args:
-        client: The Pixano-Inference client to use.
+        provider: The inference provider to use.
         source: The source refering to the model.
         dataset: The Pixano dataset.
         media_dir: The directory containing the input media files.
@@ -134,10 +136,10 @@ async def text_image_conditional_generation(
         role_system: The role of the system in the prompt.
         role_user: The role of the user in the prompt.
         role_assistant: The role of the assistant in the prompt.
-        client_kwargs: Additional kwargs for the client to be passed.
+        provider_kwargs: Additional kwargs for the provider.
 
     Returns:
-        The response message and its source.
+        The response message.
     """
     prompt = messages_to_prompt(
         dataset=dataset,
@@ -148,6 +150,7 @@ async def text_image_conditional_generation(
         role_user=role_user,
         role_assistant=role_assistant,
     )
+
     last_message = messages[-1]
     match last_message.type:
         case "SYSTEM":
@@ -161,23 +164,27 @@ async def text_image_conditional_generation(
             number = last_message.number
         case _:
             raise ValueError(f"Invalid last message type {last_message.type}")
-    request = TextImageConditionalGenerationRequest(
+
+    input_data = TextImageConditionalGenerationInput(
         model=source.name,
         prompt=prompt,
         images=None,
         max_new_tokens=max_new_tokens,
         temperature=temperature,
     )
-    response: TextImageConditionalGenerationResponse = await client.text_image_conditional_generation(
-        request, **client_kwargs
-    )
+
+    result = await provider.text_image_conditional_generation(input_data, **provider_kwargs)
 
     inference_metadata = jsonable_encoder(
         {
-            "generation_config": response.data.generation_config,
-            "usage": response.data.usage,
-            "timestamp": response.timestamp,
-            "processing_time": response.processing_time,
+            "generation_config": result.data.generation_config,
+            "usage": {
+                "prompt_tokens": result.data.usage.prompt_tokens,
+                "completion_tokens": result.data.usage.completion_tokens,
+                "total_tokens": result.data.usage.total_tokens,
+            },
+            "timestamp": result.timestamp.isoformat(),
+            "processing_time": result.processing_time,
         }
     )
 
@@ -188,10 +195,10 @@ async def text_image_conditional_generation(
         entity_ref=EntityRef(id=conversation.id, name=conversation.table_name),
         source_ref=SourceRef(id=source.id),
         type=response_type,
-        content=response.data.generated_text,
+        content=result.data.generated_text,
         number=number,
         user=source.name,
-        timestamp=response.timestamp,
+        timestamp=result.timestamp,
         inference_metadata=inference_metadata,
     )
 

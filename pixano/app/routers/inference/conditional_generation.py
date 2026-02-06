@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 
 from pixano.app.models import AnnotationModel
 from pixano.app.models.entities import EntityModel
-from pixano.app.routers.inference.utils import get_client_from_settings
+from pixano.app.routers.inference.utils import get_provider_from_settings
 from pixano.app.routers.utils import get_dataset
 from pixano.app.settings import Settings, get_settings
 from pixano.features import Conversation, Message
@@ -64,7 +64,7 @@ async def call_text_image_conditional_generation(
     Returns: The generated message model.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    client = get_client_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings)
 
     if not is_conversation(dataset.schema.schemas[conversation.table_info.name]):
         raise HTTPException(status_code=400, detail="Conversation must be a conversation.")
@@ -86,7 +86,7 @@ async def call_text_image_conditional_generation(
 
     try:
         infered_message = await text_image_conditional_generation(
-            client=client,
+            provider=provider,
             source=source,
             dataset=dataset,
             media_dir=settings.media_dir,
