@@ -12,6 +12,7 @@ License: CECILL-C
     MousePointer,
     PlusCircleIcon,
     Settings,
+    Sparkles,
     Square,
     Wand2Icon,
     X,
@@ -20,14 +21,15 @@ License: CECILL-C
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
   import type { SelectionTool } from "@pixano/core";
-  import { cn, IconButton } from "@pixano/core/src";
+  import { cn, ConnectToServerModal, IconButton } from "@pixano/core/src";
   import polygon_icon from "@pixano/core/src/assets/lucide_polygon_icon.svg";
+  import { pixanoInferenceTracking } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import {
-    pixanoInferenceSegmentationModelsStore,
-    pixanoInferenceTracking,
-  } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+    inferenceServerStore,
+    segmentationModels,
+    selectedSegmentationModelName,
+  } from "@pixano/core/src/lib/stores/inferenceStore";
 
-  import { isLocalSegmentationModel } from "../../../../apps/pixano/src/lib/stores/datasetStores";
   import { clearHighlighting } from "../lib/api/objectsApi/clearHighlighting";
   import {
     addSmartPointTool,
@@ -49,6 +51,7 @@ License: CECILL-C
 
   export let isVideo: boolean = false;
 
+  let showConnectModal = false;
   let previousSelectedTool: SelectionTool | null = null;
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
 
@@ -67,13 +70,10 @@ License: CECILL-C
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
-      if (
-        ($isLocalSegmentationModel &&
-          ($modelsUiStore.selectedModelName === "" || $modelsUiStore.selectedTableName === "")) ||
-        (!$isLocalSegmentationModel &&
-          $pixanoInferenceSegmentationModelsStore.filter((m) => m.selected).length > 0)
-      )
+      // Open model selection if no model is selected from centralized store
+      if ($segmentationModels.length > 0 && !$selectedSegmentationModelName) {
         configSmartToolClick();
+      }
     } else selectTool(panTool);
   };
 
@@ -189,4 +189,26 @@ License: CECILL-C
       </IconButton>
     {/if}
   </div>
+  <div class="w-px h-8 bg-border self-center"></div>
+  <IconButton
+    tooltipContent="Inference server connection"
+    on:click={() => (showConnectModal = true)}
+  >
+    <Sparkles
+      size={20}
+      class={$inferenceServerStore.connected
+        ? $inferenceServerStore.models.length > 0
+          ? "text-green-500"
+          : "text-yellow-500"
+        : "text-red-500"}
+    />
+  </IconButton>
 </div>
+
+{#if showConnectModal}
+  <ConnectToServerModal
+    defaultUrl={$inferenceServerStore.url ?? ""}
+    on:close={() => (showConnectModal = false)}
+    on:connected={() => (showConnectModal = false)}
+  />
+{/if}

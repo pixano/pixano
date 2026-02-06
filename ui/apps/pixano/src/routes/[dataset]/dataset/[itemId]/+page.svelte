@@ -28,7 +28,6 @@ License: CECILL-C
     datasetSchema,
     datasetsStore,
     isLoadingNewItemStore,
-    modelsStore,
     saveCurrentItemStore,
     sourcesStore,
   } from "../../../../lib/stores/datasetStores";
@@ -328,7 +327,6 @@ License: CECILL-C
 {#if selectedItem && selectedDataset}
   <DatasetItemWorkspace
     {selectedItem}
-    models={$modelsStore}
     {featureValues}
     {handleSaveItem}
     isLoading={isLoadingNewItem}

@@ -163,18 +163,13 @@ License: CECILL-C
   </div>
 {/if}
 
-<div
-  class="w-full overflow-y-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans"
->
+<div class="w-full overflow-y-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans">
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-sm text-foreground">
     <!-- Header -->
     <thead>
       {#each $headerRows as headerRow (headerRow.id)}
         <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-          <tr
-            {...rowAttrs}
-            class="sticky top-0 bg-muted/50 border-b border-border"
-          >
+          <tr {...rowAttrs} class="sticky top-0 bg-muted/50 border-b border-border">
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe props={cell.props()} let:props attrs={cell.attrs()} let:attrs>
                 <th

@@ -22,6 +22,15 @@ router.include_router(zero_shot_detection.router)
 router.include_router(mask_generation.router)
 
 
+@router.get("/status")
+async def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]):
+    """Get current inference connection status."""
+    client = settings.pixano_inference_client
+    if client is None:
+        return {"connected": False, "url": None}
+    return {"connected": True, "url": client.url}
+
+
 @router.post("/connect")
 async def connect_inference(url: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Connect to Pixano Inference."""

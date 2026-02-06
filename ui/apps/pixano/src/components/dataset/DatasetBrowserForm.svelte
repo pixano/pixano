@@ -48,7 +48,9 @@ License: CECILL-C
 <div class="ml-auto relative flex items-center py-5 h-20">
   <FilterTable columns={selectedDataset.table_data.columns} {handleFilter} />
   {#if searchModels.length > 0}
-    <select class="h-10 px-4 mx-4 border rounded-lg bg-background border-border text-foreground text-sm">
+    <select
+      class="h-10 px-4 mx-4 border rounded-lg bg-background border-border text-foreground text-sm"
+    >
       {#each searchModels as model}
         <option value={selectedSearchModel}>
           {model}

@@ -37,7 +37,6 @@ License: CECILL-C
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
-  import { isLocalSegmentationModel } from "../../../apps/pixano/src/lib/stores/datasetStores";
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
@@ -461,12 +460,7 @@ License: CECILL-C
   // ********** BOUNDING BOXES AND MASKS ********** //
 
   // launch tracking on validate
-  $: if (
-    isVideo &&
-    !$isLocalSegmentationModel &&
-    $pixanoInferenceTracking.mustValidate &&
-    $pixanoInferenceTracking.validated
-  ) {
+  $: if (isVideo && $pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) {
     if (lastInputViewRef != undefined) {
       void updateCurrentMask(lastInputViewRef);
     }
@@ -479,49 +473,31 @@ License: CECILL-C
     const box = getInputRect(viewRef.name);
     const currentImage = getCurrentImage(viewRef.name);
 
-    if ($isLocalSegmentationModel) {
-      if (selectedTool.postProcessor == null) {
-        clearAnnotationAndInputs();
-      } else if (embeddings[viewRef.id] == null) {
-        viewEmbeddingModal = true;
-        viewWithoutEmbeddings = viewRef.name;
-        clearAnnotationAndInputs();
-      } else {
-        const input = {
-          image: currentImage,
-          embedding: viewRef.id in embeddings ? embeddings[viewRef.id] : null,
-          points: points,
-          box: box,
-        };
-        results = await selectedTool.postProcessor.segmentImage(input);
-      }
-    } else {
-      // infer
-      if (
-        (isVideo &&
-          (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
-            !$pixanoInferenceTracking.mustValidate)) ||
-        !isVideo
-      ) {
-        const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
-        $pixanoInferenceTracking.validated = false;
-        if (pixinf_res) {
-          const maskPolygons = generatePolygonSegments(
-            pixinf_res.data.counts as number[],
-            currentImage.height,
-          );
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
+    // Remote inference via pixano-inference server
+    if (
+      (isVideo &&
+        (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
+          !$pixanoInferenceTracking.mustValidate)) ||
+      !isVideo
+    ) {
+      const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
+      $pixanoInferenceTracking.validated = false;
+      if (pixinf_res) {
+        const maskPolygons = generatePolygonSegments(
+          pixinf_res.data.counts as number[],
+          currentImage.height,
+        );
+        const masksSVG = convertSegmentsToSVG(maskPolygons);
 
-          results = {
-            masksImageSVG: masksSVG,
-            rle: {
-              counts: pixinf_res.data.counts,
-              size: pixinf_res.data.size,
-              id: pixinf_res.id,
-              ref_name: pixinf_res.table_info.name,
-            },
-          };
-        }
+        results = {
+          masksImageSVG: masksSVG,
+          rle: {
+            counts: pixinf_res.data.counts,
+            size: pixinf_res.data.size,
+            id: pixinf_res.id,
+            ref_name: pixinf_res.table_info.name,
+          },
+        };
       }
     }
 

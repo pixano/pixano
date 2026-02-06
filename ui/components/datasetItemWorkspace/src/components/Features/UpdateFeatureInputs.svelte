@@ -25,7 +25,9 @@ License: CECILL-C
 </script>
 
 {#each features as feature}
-  <div class="flex w-full items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/50 transition-colors duration-100 min-h-[32px]">
+  <div
+    class="flex w-full items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/50 transition-colors duration-100 min-h-[32px]"
+  >
     {#if isEditing || feature.value !== undefined}
       <span class="text-[13px] text-muted-foreground truncate max-w-[45%]" title={feature.obj.id}>
         {feature.label.replace("_", " ")}

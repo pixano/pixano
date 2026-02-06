@@ -110,7 +110,9 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex justify-between items-center py-1 px-1 rounded-md hover:bg-accent/50 transition-colors duration-100 group/child">
+<div
+  class="flex justify-between items-center py-1 px-1 rounded-md hover:bg-accent/50 transition-colors duration-100 group/child"
+>
   <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
     <IconButton
       on:click={() => handleSetDisplayControl("hidden", childVisible, child)}
@@ -143,7 +145,9 @@ License: CECILL-C
       {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>
-  <div class="flex-shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-150">
+  <div
+    class="flex-shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-150"
+  >
     {#if $selectedTool.type !== ToolType.Fusion}
       {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
         <IconButton

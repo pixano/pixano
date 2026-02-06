@@ -17,8 +17,7 @@ License: CECILL-C
 <Button
   {disabled}
   class={cn("font-medium h-10 px-6 border rounded-full transition-colors flex gap-2 ", {
-    "bg-primary hover:bg-primary/80 border-primary text-primary-foreground":
-      isSelected,
+    "bg-primary hover:bg-primary/80 border-primary text-primary-foreground": isSelected,
     "bg-card border-border text-foreground hover:bg-accent": !isSelected,
   })}
   on:click

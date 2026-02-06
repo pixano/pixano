@@ -317,7 +317,8 @@ License: CECILL-C
     <div
       class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
         "text-foreground": highlightState !== "none",
-        "text-muted-foreground": highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+        "text-muted-foreground":
+          highlightState === "none" && $selectedTool.type === ToolType.Fusion,
       })}
       style={`
         background: ${

@@ -18,7 +18,9 @@ License: CECILL-C
 </script>
 
 <div class="h-full flex flex-row bg-background p-20 gap-6 text-foreground font-DM Sans">
-  <div class="bg-card min-h-[70%] rounded-xl border border-border flex flex-col w-1/6 min-w-32 overflow-hidden">
+  <div
+    class="bg-card min-h-[70%] rounded-xl border border-border flex flex-col w-1/6 min-w-32 overflow-hidden"
+  >
     {#each dashboardTabs as tab}
       <button
         on:click={() => (selectedTab = tab)}

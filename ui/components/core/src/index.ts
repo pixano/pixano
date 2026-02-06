@@ -19,6 +19,8 @@ export { default as PromptModal } from "./components/modals/PromptModal.svelte";
 export { default as SelectModal } from "./components/modals/SelectModal.svelte";
 export { default as WarningModal } from "./components/modals/WarningModal.svelte";
 export { default as SelectLocalOrDistantModelModal } from "./components/pixano_inference_segmentation/SelectLocalOrDistantModelModal.svelte";
+// Inference
+export { default as ConnectToServerModal } from "./components/inference/ConnectToServerModal.svelte";
 // ui
 export { AutoResizeTextarea } from "./components/ui/autoresize-textarea";
 export { Button } from "./components/ui/button";

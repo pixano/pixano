@@ -47,7 +47,6 @@ License: CECILL-C
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
-  export let models: string[] = [];
   export let handleSaveItem: (data: SaveItem[]) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
@@ -268,5 +267,5 @@ License: CECILL-C
   <div class="grow overflow-hidden" style={`width: ${objectInspectorAreaMaxWidth}px`}>
     <Inspector on:click={onSave} {isLoading} />
   </div>
-  <LoadModelModal {models} />
+  <LoadModelModal />
 </div>

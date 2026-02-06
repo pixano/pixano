@@ -55,7 +55,9 @@ License: CECILL-C
 </script>
 
 <section class="flex flex-col">
-  <div class="flex items-center justify-between text-foreground gap-2 w-full px-1 py-2 sticky top-0 bg-card z-10 border-b border-border/30">
+  <div
+    class="flex items-center justify-between text-foreground gap-2 w-full px-1 py-2 sticky top-0 bg-card z-10 border-b border-border/30"
+  >
     <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
       {#if $visibilityStatus === "hidden"}
         <EyeOff class="h-4" />
@@ -63,7 +65,9 @@ License: CECILL-C
         <Eye class="h-4" />
       {/if}
     </IconButton>
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground grow">{sectionTitle}</h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground grow">
+      {sectionTitle}
+    </h3>
     <IconButton
       tooltipContent={"Generic options"}
       selected={showFilters}
