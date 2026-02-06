@@ -57,7 +57,7 @@ License: CECILL-C
     <p class="font-medium mb-2">Text spans</p>
 
     <table class="table-auto border-collapse w-full text-sm">
-      <thead class="bg-gray-100">
+      <thead class="bg-muted">
         <tr>
           {#each col_names as col}
             <th class="border px-2 py-1 text-left">{col}</th>

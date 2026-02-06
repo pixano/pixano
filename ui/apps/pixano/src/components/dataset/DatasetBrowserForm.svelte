@@ -48,7 +48,7 @@ License: CECILL-C
 <div class="ml-auto relative flex items-center py-5 h-20">
   <FilterTable columns={selectedDataset.table_data.columns} {handleFilter} />
   {#if searchModels.length > 0}
-    <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
+    <select class="h-10 px-4 mx-4 border rounded-lg bg-background border-border text-foreground text-sm">
       {#each searchModels as model}
         <option value={selectedSearchModel}>
           {model}
@@ -60,7 +60,7 @@ License: CECILL-C
         type="text"
         bind:value={searchInput}
         placeholder="Semantic search using {selectedSearchModel}"
-        class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
+        class="h-10 pl-10 pr-4 rounded-lg border text-sm text-foreground placeholder-muted-foreground bg-background border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
         on:change={handleSearch}
       />
       <svg
@@ -68,13 +68,13 @@ License: CECILL-C
         height="48"
         viewBox="0 -960 960 960"
         width="48"
-        class="absolute left-2 h-5 w-5 text-slate-800 pointer-events-none"
+        class="absolute left-2 h-5 w-5 text-muted-foreground pointer-events-none"
       >
         <path d={svg_search} fill="currentcolor" />
       </svg>
       {#if searchInput !== ""}
         <button
-          class="absolute right-2 p-1 rounded-full transition-colors hover:bg-slate-300"
+          class="absolute right-2 p-1 rounded-full transition-colors hover:bg-accent"
           on:click={handleClearSearch}
         >
           <svg
@@ -82,7 +82,7 @@ License: CECILL-C
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-5 w-5 text-slate-800"
+            class="h-5 w-5 text-foreground"
           >
             <path d={svg_clear} fill="currentcolor" />
           </svg>

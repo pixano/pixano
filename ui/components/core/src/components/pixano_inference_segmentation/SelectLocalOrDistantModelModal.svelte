@@ -135,7 +135,7 @@ License: CECILL-C
 <div
   on:click|stopPropagation={() => {}}
   class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50
-  rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  rounded-md bg-card text-foreground flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
     <p>Select a Mask Generation Model</p>
@@ -153,7 +153,7 @@ License: CECILL-C
           <p class="self-center">Local</p>
           {#if choices}
             <select
-              class="py-1 px-2 border rounded focus:outline-none bg-slate-100 border-slate-300 focus:border-main"
+              class="py-1 px-2 border rounded focus:outline-none bg-muted border-border focus:border-main"
               bind:value={selected}
             >
               {#each choices as choice}
@@ -196,7 +196,7 @@ License: CECILL-C
           </div>
           <div class="p-3 flex flex-col gap-2">
             {#if $pixanoInferenceSegmentationModelsStore.length === 0}
-              <p class="text-gray-500">No models added yet.</p>
+              <p class="text-muted-foreground">No models added yet.</p>
             {/if}
 
             <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
@@ -216,7 +216,7 @@ License: CECILL-C
       <div class="ml-4 flex flex-row items-center">
         <label for="positiveInteger" class="mr-2">Frames to track</label>
         <div
-          class="flex w-20 h-10 items-center rounded-md border border-gray-300 bg-white pl-3 text-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:ring-offset-2"
+          class="flex w-20 h-10 items-center rounded-md border border-border bg-card pl-3 text-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:ring-offset-2"
         >
           <input
             class="w-full focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -232,7 +232,7 @@ License: CECILL-C
           />
         </div>
       </div>
-      <p class="w-60 ml-2 italic text-gray-500">
+      <p class="w-60 ml-2 italic text-muted-foreground">
         First use of a tracking model may be long. A small value is advised first.
       </p>
       <div class="h-1 bg-primary-light" />

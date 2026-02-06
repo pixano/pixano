@@ -1277,7 +1277,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100 relative", {
+  class={cn("h-full bg-foreground transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}

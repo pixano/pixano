@@ -139,7 +139,7 @@ License: CECILL-C
 
 <header
   class="w-full fixed z-40 font-Montserrat h-20 p-5 flex justify-between items-center shrink-0
-      bg-white border-b border-slate-200 shadow-sm text-slate-800"
+      bg-background border-b border-border shadow-sm text-foreground"
   use:preventUnsavedUnload
 >
   {#if $page.route.id === DATASET_ITEM_ROUTE}
@@ -154,8 +154,8 @@ License: CECILL-C
     />
   {:else}
     {#if $currentDatasetStore}
-      <div class="h-10 flex items-center font-semibold text-2xl">
-        <div class="flex gap-4 items-center font-light">
+      <div class="h-10 flex items-center font-medium text-xl">
+        <div class="flex gap-4 items-center font-normal">
           <div class="h-10 w-10">
             <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
               <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />

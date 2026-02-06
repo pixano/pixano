@@ -18,5 +18,5 @@ License: CECILL-C
 
 <PrimaryButton on:click={handleAddChoice}>
   <Plus />
-  <p class="text-slate-800">Add an answer</p>
+  <p class="text-foreground">Add an answer</p>
 </PrimaryButton>

@@ -83,26 +83,26 @@ License: CECILL-C
 <div
   id="circle-menu"
   style="display: none;"
-  class="absolute bg-white shadow-sm"
+  class="absolute bg-card shadow-sm"
   bind:this={menuNode}
   on:pointerleave={hideMenu}
 >
   <button
-    class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
+    class="block disabled:bg-muted hover:bg-accent p-2 w-full"
     on:click={() => onMenuClick("visible")}
     disabled={vertex.features.state === "visible"}
   >
     Visible
   </button>
   <button
-    class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
+    class="block disabled:bg-muted hover:bg-accent p-2 w-full"
     on:click={() => onMenuClick("hidden")}
     disabled={vertex.features.state === "hidden"}
   >
     Hidden
   </button>
   <button
-    class="block disabled:bg-slate-400 hover:bg-slate-200 p-2 w-full"
+    class="block disabled:bg-muted hover:bg-accent p-2 w-full"
     on:click={() => onMenuClick("invisible")}
     disabled={vertex.features.state === "invisible"}
   >

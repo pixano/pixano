@@ -10,7 +10,6 @@ License: CECILL-C
 
   import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import { svg_right_arrow } from "@pixano/core/src/icons";
 
   /**
    * DatasetPreviewCard Component
@@ -98,10 +97,10 @@ License: CECILL-C
   });
 </script>
 
-<div class="relative group w-96">
+<div class="relative group">
   <!-- Tooltip -->
   <div
-    class="absolute bottom-full mb-2 w-96 bg-gray-800 text-white text-sm rounded-md px-4 py-2 shadow-lg whitespace-pre-line hidden group-hover:block z-10"
+    class="absolute bottom-full mb-2 w-full bg-foreground text-background text-sm rounded-lg px-4 py-2 shadow-lg whitespace-pre-line hidden group-hover:block z-10"
   >
     Name: {dataset.name}
     Description: {dataset.description}
@@ -109,47 +108,37 @@ License: CECILL-C
   </div>
 
   <button
-    class="w-96 h-72 flex flex-col text-left font-Montserrat
-    bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
+    class="w-full h-72 flex flex-col text-left font-DM Sans
+    bg-card rounded-xl border border-border shadow-sm transition-all duration-200 hover:shadow-lg hover:border-foreground/10"
     on:click={handleSelectDataset}
   >
     <!-- Infos -->
-    <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
-      <h3 class="text-lg w-5/6 font-semibold truncate text-primary">
+    <div class="w-full pt-4 px-4 flex flex-col justify-center">
+      <h3 class="text-base font-medium truncate text-foreground">
         {dataset.name}
       </h3>
 
-      <p class="text-sm text-slate-500 font-medium">
+      <p class="text-sm text-muted-foreground">
         {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
         {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
           ? " - " + dataset.size
           : ""}
       </p>
-
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        height="48"
-        viewBox="0 -960 960 960"
-        width="48"
-        class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
-      >
-        <path d={svg_right_arrow} fill="currentcolor" />
-      </svg>
     </div>
 
     <!-- Thumbnail -->
-    <div class="m-4 bg-slate-50 flex items-center justify-center">
+    <div class="m-4 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
       <img
         src={dataset.preview ? dataset.preview : pixanoLogo}
         alt="{dataset.name} thumbnail"
-        class="w-[350px] h-[150px] rounded-sm object-contain object-center"
+        class="w-[350px] h-[150px] rounded-lg object-contain object-center"
       />
     </div>
 
     <!-- Workspace -->
     {#if dataset.workspace != WorkspaceType.UNDEFINED}
       <div
-        class="mt-auto mb-2 mx-auto flex items-center justify-center h-10 px-6 border rounded-full"
+        class="mt-auto mb-3 mx-auto flex items-center justify-center h-7 px-3 rounded-full bg-muted text-muted-foreground text-xs"
       >
         {displayWorkspaceType(dataset.workspace)}
       </div>

@@ -288,8 +288,8 @@ License: CECILL-C
       />
     </div>
     <div class="flex gap-4">
-      <Button class="text-white" on:click={handleCancel}>Cancel</Button>
-      <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
+      <Button class="text-primary-foreground" on:click={handleCancel}>Cancel</Button>
+      <Button class="text-primary-foreground" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>
 {/if}

@@ -125,7 +125,7 @@ License: CECILL-C
   <!-- For some reason, some tailwind classes don't work on select -->
   <!-- Use style instead -->
   <select
-    class="py-3 px-2 border rounded-lg border-gray-200 outline-none text-slate-800 grow"
+    class="py-3 px-2 border rounded-lg border-border outline-none text-foreground grow"
     style="color: #1e293b; border-color: #e5e7eb;"
     bind:value={selectedModel}
   >

@@ -28,7 +28,7 @@ License: CECILL-C
 
 <textarea
   {placeholder}
-  class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary resize-none overflow-hidden"
+  class="p-2 border rounded-lg border-border outline-none text-foreground focus:border-primary resize-none overflow-hidden"
   bind:this={textarea}
   bind:value
   on:blur

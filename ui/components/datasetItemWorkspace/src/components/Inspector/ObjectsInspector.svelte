@@ -148,26 +148,33 @@ License: CECILL-C
 <div class="p-2 w-full">
   <PreAnnotation />
   {#if !$preAnnotationIsActive}
-    {#if selectedEntitiesId.length > 0}
-      <span class="flex justify-center font-medium text-slate-800">
-        Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
+    <div class="mb-2">
+      <span class="mb-1 flex justify-center text-xs font-medium text-muted-foreground">
+        Preview
       </span>
-      {#each selectedEntitiesId as selectedEntity}
-        <span class="flex justify-center text-slate-800">{selectedEntity}</span>
-        {#if thumbnails[selectedEntity]}
-          {#key thumbnails[selectedEntity].coords[0]}
-            <Thumbnail
-              imageDimension={thumbnails[selectedEntity].baseImageDimensions}
-              coords={thumbnails[selectedEntity].coords}
-              imageUrl={`/${thumbnails[selectedEntity].uri}`}
-              minSide={150}
-              maxHeight={200}
-              maxWidth={200}
-            />
-          {/key}
+      <div
+        class="flex h-[220px] items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-muted/30"
+      >
+        {#if selectedEntitiesId.length > 0}
+          {#each selectedEntitiesId as selectedEntity}
+            {#if thumbnails[selectedEntity]}
+              {#key thumbnails[selectedEntity].coords[0]}
+                <Thumbnail
+                  imageDimension={thumbnails[selectedEntity].baseImageDimensions}
+                  coords={thumbnails[selectedEntity].coords}
+                  imageUrl={`/${thumbnails[selectedEntity].uri}`}
+                  minSide={150}
+                  maxHeight={200}
+                  maxWidth={200}
+                />
+              {/key}
+            {/if}
+          {/each}
+        {:else}
+          <p class="text-center text-sm text-muted-foreground">Click an object to preview</p>
         {/if}
-      {/each}
-    {/if}
+      </div>
+    </div>
     <ObjectsSection
       source={globalSource}
       {countText}

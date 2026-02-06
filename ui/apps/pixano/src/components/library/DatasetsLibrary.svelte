@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Loader2Icon } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import type { DatasetInfo } from "@pixano/core/src";
@@ -61,14 +60,26 @@ License: CECILL-C
   });
 </script>
 
-<div class="flex flex-wrap justify-center gap-6 py-12">
+<div class="max-w-7xl mx-auto py-10 px-6">
   {#if datasets}
-    {#each datasets as dataset}
-      {#if !dataset.isFiltered}
-        <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
-      {/if}
-    {/each}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {#each datasets as dataset}
+        {#if !dataset.isFiltered}
+          <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+        {/if}
+      {/each}
+    </div>
   {:else}
-    <Loader2Icon class="animate-spin" />
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {#each Array(4) as _}
+        <div class="h-72 rounded-xl border border-border bg-card animate-pulse">
+          <div class="pt-4 px-4 space-y-2">
+            <div class="h-5 w-2/3 bg-muted rounded"></div>
+            <div class="h-4 w-1/3 bg-muted rounded"></div>
+          </div>
+          <div class="m-4 h-[150px] bg-muted rounded-lg"></div>
+        </div>
+      {/each}
+    </div>
   {/if}
 </div>

@@ -94,7 +94,7 @@ License: CECILL-C
     <DatasetHeader pageId={$page.route.id} />
   {/if}
   <main
-    class={cn("bg-slate-50 flex flex-col h-screen", $page.route.id !== HOME_ROUTE_ID && "pt-20")}
+    class={cn("bg-background flex flex-col h-screen", $page.route.id !== HOME_ROUTE_ID && "pt-20")}
   >
     <slot />
   </main>

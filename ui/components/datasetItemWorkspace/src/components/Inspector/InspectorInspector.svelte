@@ -19,19 +19,19 @@ License: CECILL-C
 </script>
 
 <div
-  class="h-[calc(100vh-80px)] flex flex-col overflow-y-auto shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat"
+  class="h-[calc(100vh-80px)] flex flex-col overflow-y-auto border-l border-border bg-card font-DM Sans"
 >
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
-      <Tabs.List class="flex h-12">
+      <Tabs.List class="flex h-11 border-b border-border/50 px-1">
         <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content
         value="objects"
-        class="h-full overflow-y-auto scroll-smooth"
+        class="flex-1 overflow-y-auto scroll-smooth"
         id="card-object-container"
       >
         {#if isLoading}
@@ -44,7 +44,7 @@ License: CECILL-C
           <ObjectsInspector />
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="scene" class="h-full overflow-y-auto scroll-smooth">
+      <Tabs.Content value="scene" class="flex-1 overflow-y-auto scroll-smooth">
         {#if isLoading}
           <div class="p-4 flex flex-col gap-4">
             <Skeleton class="h-8 w-full" />

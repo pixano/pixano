@@ -22,6 +22,7 @@ export { default as SelectLocalOrDistantModelModal } from "./components/pixano_i
 // ui
 export { AutoResizeTextarea } from "./components/ui/autoresize-textarea";
 export { Button } from "./components/ui/button";
+export * as Card from "./components/ui/card";
 export { Checkbox } from "./components/ui/checkbox";
 export { default as Combobox } from "./components/ui/combobox/combobox.svelte";
 export * as Command from "./components/ui/command";

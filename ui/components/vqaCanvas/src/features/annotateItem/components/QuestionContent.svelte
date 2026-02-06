@@ -10,4 +10,4 @@ License: CECILL-C
   export let content: string;
 </script>
 
-<p class={cn("text-gray-500")}>{content}</p>
+<p class={cn("text-muted-foreground")}>{content}</p>

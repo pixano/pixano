@@ -138,7 +138,7 @@ License: CECILL-C
   </div>
   <div
     class={cn("flex items-center gap-4", {
-      "bg-slate-200 rounded-sm": showSmartTools,
+      "bg-muted rounded-lg": showSmartTools,
     })}
   >
     <IconButton tooltipContent="Use a smart segmentation model" on:click={handleSmartToolClick}>
@@ -180,7 +180,7 @@ License: CECILL-C
         </IconButton>
       {/if}
 
-      <div class="w-1 -m-3.5 h-full bg-primary-light"></div>
+      <div class="w-px -m-3.5 h-full bg-border"></div>
       <IconButton
         tooltipContent={"Smart segmentation model settings"}
         on:click={() => configSmartToolClick()}

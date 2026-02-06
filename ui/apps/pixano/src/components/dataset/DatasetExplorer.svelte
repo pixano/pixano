@@ -93,7 +93,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
+<div class="w-full px-20 bg-background flex flex-col text-foreground min-h-[calc(100vh-80px)]">
   {#if selectedDataset.pagination}
     <!-- Items list -->
     <DatasetBrowserForm
