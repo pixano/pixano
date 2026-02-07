@@ -35,6 +35,17 @@ export enum VideoTask {
 
 export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
 
+export interface ConnectedProvider {
+  name: string;
+  url: string | null;
+}
+
+export interface InferenceModel {
+  name: string;
+  task: Task;
+  provider_name?: string;
+}
+
 export interface SystemPrompt {
   content: string;
   question_type: QuestionTypeEnum;
@@ -64,4 +75,5 @@ export interface CondititionalGenerationTextImageInput {
   role_system?: string;
   role_user?: string;
   role_assistant?: string;
+  provider_name?: string;
 }

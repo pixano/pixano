@@ -8,9 +8,8 @@ License: CECILL-C
   // Imports
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
-  import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
+  import { api, WorkspaceType, type DatasetInfo } from "@pixano/core";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import { svg_right_arrow } from "@pixano/core/src/icons";
 
   /**
    * DatasetPreviewCard Component
@@ -98,61 +97,76 @@ License: CECILL-C
   });
 </script>
 
-<div class="relative group w-96">
+<div class="relative group h-full">
   <!-- Tooltip -->
   <div
-    class="absolute bottom-full mb-2 w-96 bg-gray-800 text-white text-sm rounded-md px-4 py-2 shadow-lg whitespace-pre-line hidden group-hover:block z-10"
+    class="absolute bottom-full mb-3 w-full bg-foreground text-background text-[11px] leading-relaxed rounded-xl px-4 py-3 shadow-2xl whitespace-pre-line hidden group-hover:block z-20 border border-border/10 animate-in fade-in zoom-in-95 duration-200"
   >
-    Name: {dataset.name}
-    Description: {dataset.description}
-    {additionalInfo ? `\n\n${additionalInfo}` : ""}
+    <div class="font-bold text-xs mb-1 border-b border-background/10 pb-1">{dataset.name}</div>
+    {dataset.description}
+    {#if additionalInfo}
+      <div class="mt-2 pt-2 border-t border-background/10 text-background/70 font-medium">
+        {additionalInfo}
+      </div>
+    {/if}
   </div>
 
   <button
-    class="w-96 h-72 flex flex-col text-left font-Montserrat
-    bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
+    class="w-full h-full min-h-[320px] flex flex-col text-left font-DM Sans
+    bg-card rounded-2xl border border-border shadow-sm transition-all duration-300 hover:shadow-xl hover:border-primary/20 hover:-translate-y-1 group/btn overflow-hidden"
     on:click={handleSelectDataset}
   >
-    <!-- Infos -->
-    <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
-      <h3 class="text-lg w-5/6 font-semibold truncate text-primary">
-        {dataset.name}
-      </h3>
-
-      <p class="text-sm text-slate-500 font-medium">
-        {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
-        {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
-          ? " - " + dataset.size
-          : ""}
-      </p>
-
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        height="48"
-        viewBox="0 -960 960 960"
-        width="48"
-        class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
-      >
-        <path d={svg_right_arrow} fill="currentcolor" />
-      </svg>
-    </div>
-
     <!-- Thumbnail -->
-    <div class="m-4 bg-slate-50 flex items-center justify-center">
+    <div class="relative w-full h-44 bg-muted overflow-hidden">
       <img
         src={dataset.preview ? dataset.preview : pixanoLogo}
         alt="{dataset.name} thumbnail"
-        class="w-[350px] h-[150px] rounded-sm object-contain object-center"
+        class="w-full h-full object-cover transition-transform duration-500 group-hover/btn:scale-105"
       />
+      <div
+        class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
+      ></div>
+
+      <!-- Workspace Badge (Overlay) -->
+      {#if dataset.workspace != WorkspaceType.UNDEFINED}
+        <div
+          class="absolute top-3 right-3 flex items-center justify-center h-6 px-2.5 rounded-full bg-background/90 backdrop-blur-md text-foreground shadow-sm text-[10px] font-bold uppercase tracking-wider"
+        >
+          {displayWorkspaceType(dataset.workspace)}
+        </div>
+      {/if}
     </div>
 
-    <!-- Workspace -->
-    {#if dataset.workspace != WorkspaceType.UNDEFINED}
-      <div
-        class="mt-auto mb-2 mx-auto flex items-center justify-center h-10 px-6 border rounded-full"
+    <!-- Content -->
+    <div class="flex-1 p-5 flex flex-col gap-1">
+      <h3
+        class="text-base font-bold text-foreground line-clamp-1 group-hover/btn:text-primary transition-colors"
       >
-        {displayWorkspaceType(dataset.workspace)}
+        {dataset.name}
+      </h3>
+
+      <div class="flex items-center gap-2 mt-auto">
+        <div
+          class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50"
+        >
+          <span class="text-[11px] font-bold text-foreground/80 tabular-nums">
+            {dataset.num_items}
+          </span>
+          <span class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
+            Items
+          </span>
+        </div>
+
+        {#if dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"}
+          <span class="text-[11px] text-muted-foreground/60 font-medium">
+            • {dataset.size}
+          </span>
+        {/if}
       </div>
-    {/if}
+
+      <p class="text-[12px] text-muted-foreground line-clamp-2 mt-2 leading-relaxed opacity-80">
+        {dataset.description}
+      </p>
+    </div>
   </button>
 </div>

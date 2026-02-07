@@ -83,7 +83,7 @@ License: CECILL-C
     type="text"
     bind:value={filterText}
     placeholder="filter value"
-    class="h-10 pl-10 pr-4 rounded-lg border font-normal text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300"
+    class="h-10 pl-10 pr-4 rounded-lg border font-normal text-foreground placeholder-muted-foreground bg-background border-border shadow-sm"
     on:change={handleFilterText}
   />
   <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>

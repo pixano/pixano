@@ -91,4 +91,9 @@ from tests.fixtures.features.entity import (
 )
 from tests.fixtures.features.item import item_categories, item_categories_name_index, item_metadata
 from tests.fixtures.features.sequence_frame import sequence_frame_category
-from tests.fixtures.inference.client import simple_pixano_inference_client, simple_pixano_inference_client_fn_scope
+from tests.fixtures.inference.client import (
+    simple_inference_provider,
+    simple_inference_provider_fn_scope,
+    simple_pixano_inference_client,
+    simple_pixano_inference_client_fn_scope,
+)

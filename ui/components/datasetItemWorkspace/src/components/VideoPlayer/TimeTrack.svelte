@@ -108,7 +108,7 @@ License: CECILL-C
 </script>
 
 <div
-  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200 focus:outline-none"
+  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-card border-b border-border focus:outline-none"
   style={`width: ${$videoControls.zoomLevel[0]}%`}
   role="slider"
   tabindex="0"
@@ -117,7 +117,7 @@ License: CECILL-C
   aria-valuenow={$currentFrameIndex}
   bind:this={timeTrackElement}
 >
-  <span class="bg-slate-200 w-full h-[1px] absolute top-2/3" />
+  <span class="bg-accent w-full h-[1px] absolute top-2/3" />
   <button
     use:dragMe
     class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
@@ -134,12 +134,12 @@ License: CECILL-C
   {#each timeScaleInMs as ms}
     {#if shouldDisplayTime(ms, timeTrackDensity)}
       <span
-        class="absolute text-slate-300 w-[1px] h-1 bg-slate-500 bottom-1/3 pointer-events-none"
+        class="absolute text-muted-foreground w-[1px] h-1 bg-muted-foreground bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
       />
       {#if ms > 0}
         <span
-          class="absolute -translate-x-1/2 text-slate-500 bottom-1/3 pointer-events-none font-light text-xs pb-1"
+          class="absolute -translate-x-1/2 text-muted-foreground bottom-1/3 pointer-events-none font-light text-xs pb-1"
           style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
         >
           {#if videoTotalLengthInMs > 60000}
@@ -151,7 +151,7 @@ License: CECILL-C
       {/if}
     {:else if shouldDisplayMarker(ms, timeTrackDensity)}
       <span
-        class="absolute text-slate-300 w-[1px] h-1 bg-slate-300 bottom-1/3 pointer-events-none"
+        class="absolute text-muted-foreground w-[1px] h-1 bg-border bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
       />
     {/if}

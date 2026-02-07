@@ -9,8 +9,8 @@ module.exports = {
         Montserrat: ["Montserrat", "sans-serif"],
       },
       colors: {
-        main: "#771E5F",
-        secondary: "#872f6e",
+        main: "#18181b",
+        secondary: "#27272a",
       },
     },
   },

@@ -25,13 +25,15 @@ License: CECILL-C
 </script>
 
 {#each features as feature}
-  <div class="flex w-full gap-4 mt-2 px-4 justify-between items-center">
+  <div
+    class="flex w-full items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/50 transition-colors duration-100 min-h-[32px]"
+  >
     {#if isEditing || feature.value !== undefined}
-      <p class="flex items-center" title={feature.obj.id}>
+      <span class="text-[13px] text-muted-foreground truncate max-w-[45%]" title={feature.obj.id}>
         {feature.label.replace("_", " ")}
-      </p>
+      </span>
     {/if}
-    <div class="flex items-center justify-end overflow-hidden">
+    <div class="flex items-center justify-end overflow-hidden max-w-[50%] text-[13px]">
       {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
         <Checkbox
           checked={!!feature.value}

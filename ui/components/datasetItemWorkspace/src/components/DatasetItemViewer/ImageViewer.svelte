@@ -165,7 +165,6 @@ License: CECILL-C
     masks={$itemMasks}
     keypoints={$itemKeypoints}
     selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
-    embeddings={$embeddings}
     {filters}
     {pixanoInferenceSegmentation}
     canvasSize={resize}

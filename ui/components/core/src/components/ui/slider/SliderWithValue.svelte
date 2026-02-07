@@ -37,7 +37,7 @@ License: CECILL-C
     class={cn(" relative flex w-full touch-none select-none items-center", className)}
     {...$$restProps}
   >
-    <span class="relative h-2 w-full grow overflow-hidden rounded-full bg-white">
+    <span class="relative h-2 w-full grow overflow-hidden rounded-full bg-card">
       <SliderPrimitive.Range class="absolute h-full bg-primary" />
     </span>
     <button

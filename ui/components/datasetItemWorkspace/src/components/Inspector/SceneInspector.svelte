@@ -109,7 +109,7 @@ License: CECILL-C
 </script>
 
 <!-- Features Section -->
-<div class="p-4 pb-8 text-slate-800">
+<div class="p-4 pb-8 text-foreground">
   <h3 class="uppercase font-medium h-10">
     <span>Features</span>
     <IconButton
@@ -131,7 +131,7 @@ License: CECILL-C
 </div>
 
 <!-- Item Meta Information Section -->
-<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
+<div class="p-4 pb-8 border-b-2 border-b-border text-foreground">
   <h3 class="uppercase font-medium h-10 flex items-center">Views</h3>
   {#each viewMeta as meta}
     <h2 class="font-medium h-10 flex items-center truncate" title="{meta.id} ({meta.view})">
@@ -159,12 +159,12 @@ License: CECILL-C
 </div>
 
 <!-- Filters Section -->
-<div class="p-4 pb-8 text-slate-800 font-medium">
+<div class="p-4 pb-8 text-foreground font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
 
   <!-- General Filters -->
-  <div class="border border-gray-300 rounded py-2 px-4 text-sm">
-    <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
+  <div class="border border-border rounded py-2 px-4 text-sm">
+    <h4 class="uppercase font-medium h-6 text-muted-foreground">GENERAL</h4>
     <!-- Image Smoothing -->
     <div class="w-full my-1 flex items-center justify-between">
       <label for="smoothing" class="select-none cursor-pointer">Image smoothing</label>
@@ -219,8 +219,8 @@ License: CECILL-C
 
   {#if !isVideo}
     <!-- Color Channels Filters -->
-    <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
-      <h4 class="uppercase font-medium h-6 text-gray-500">CHANNELS</h4>
+    <div class="mt-4 border border-border rounded py-2 px-4 text-sm">
+      <h4 class="uppercase font-medium h-6 text-muted-foreground">CHANNELS</h4>
 
       {#if $itemMetas.color === "rgba"}
         <div class="w-full my-1 flex items-center justify-between">
@@ -321,8 +321,8 @@ License: CECILL-C
 
     <!-- 16-BIT SETTINGS -->
     {#if $itemMetas.format === "16bit"}
-      <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
-        <h4 class="uppercase font-medium h-6 text-gray-500">16-BIT SETTINGS</h4>
+      <div class="mt-4 border border-border rounded py-2 px-4 text-sm">
+        <h4 class="uppercase font-medium h-6 text-muted-foreground">16-BIT SETTINGS</h4>
         <div class="my-1">Select range :</div>
         <div class="flex items-center text-sm text-center">
           <input

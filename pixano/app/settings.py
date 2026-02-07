@@ -10,8 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import boto3
-from pixano_inference.client import PixanoInferenceClient
-from pydantic import field_validator, model_validator
+from pydantic import ConfigDict, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from s3path import S3Path, register_configuration_parameter
 from typing_extensions import Self
@@ -33,7 +32,12 @@ class Settings(BaseSettings):
             Used if library_dir is an S3 path.
         aws_access_key: S3 AWS access key. Used if library_dir is an S3 path.
         aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path.
+        inference_providers: Dictionary of connected inference providers (InferenceProvider instances),
+            keyed by name.
+        default_inference_provider: Name of the default inference provider to use.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     data_dir: Path | S3Path = Path.cwd()
     library_dir: Path | S3Path = Path.cwd() / "library"
@@ -43,7 +47,8 @@ class Settings(BaseSettings):
     aws_region: str | None = None
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
-    pixano_inference_client: PixanoInferenceClient | None = None
+    inference_providers: dict[str, Any] = {}
+    default_inference_provider: str | None = None
 
     @field_validator("data_dir", mode="before")
     @classmethod

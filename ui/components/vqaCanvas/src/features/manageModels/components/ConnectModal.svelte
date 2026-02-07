@@ -46,7 +46,7 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-96 rounded-md bg-white text-slate-800 flex flex-col gap-3"
+  class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-96 rounded-md bg-card text-foreground flex flex-col gap-3"
   style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
   <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">

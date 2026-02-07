@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import * as ort from "onnxruntime-web";
   import { afterUpdate, onDestroy, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
@@ -18,7 +17,6 @@ License: CECILL-C
     BBox,
     Mask,
     SaveShapeType,
-    WarningModal,
     type ImagesPerView,
     type KeypointsTemplate,
     type LabeledPointTool,
@@ -37,7 +35,6 @@ License: CECILL-C
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
-  import { isLocalSegmentationModel } from "../../../apps/pixano/src/lib/stores/datasetStores";
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
@@ -62,7 +59,6 @@ License: CECILL-C
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[] = [];
   export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
-  export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
@@ -85,8 +81,6 @@ License: CECILL-C
 
   let isReady = false;
 
-  let viewEmbeddingModal = false;
-  let viewWithoutEmbeddings = "";
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {view_name: zoomFactor}
@@ -461,12 +455,7 @@ License: CECILL-C
   // ********** BOUNDING BOXES AND MASKS ********** //
 
   // launch tracking on validate
-  $: if (
-    isVideo &&
-    !$isLocalSegmentationModel &&
-    $pixanoInferenceTracking.mustValidate &&
-    $pixanoInferenceTracking.validated
-  ) {
+  $: if (isVideo && $pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) {
     if (lastInputViewRef != undefined) {
       void updateCurrentMask(lastInputViewRef);
     }
@@ -479,49 +468,31 @@ License: CECILL-C
     const box = getInputRect(viewRef.name);
     const currentImage = getCurrentImage(viewRef.name);
 
-    if ($isLocalSegmentationModel) {
-      if (selectedTool.postProcessor == null) {
-        clearAnnotationAndInputs();
-      } else if (embeddings[viewRef.id] == null) {
-        viewEmbeddingModal = true;
-        viewWithoutEmbeddings = viewRef.name;
-        clearAnnotationAndInputs();
-      } else {
-        const input = {
-          image: currentImage,
-          embedding: viewRef.id in embeddings ? embeddings[viewRef.id] : null,
-          points: points,
-          box: box,
-        };
-        results = await selectedTool.postProcessor.segmentImage(input);
-      }
-    } else {
-      // infer
-      if (
-        (isVideo &&
-          (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
-            !$pixanoInferenceTracking.mustValidate)) ||
-        !isVideo
-      ) {
-        const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
-        $pixanoInferenceTracking.validated = false;
-        if (pixinf_res) {
-          const maskPolygons = generatePolygonSegments(
-            pixinf_res.data.counts as number[],
-            currentImage.height,
-          );
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
+    // Remote inference via pixano-inference server
+    if (
+      (isVideo &&
+        (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
+          !$pixanoInferenceTracking.mustValidate)) ||
+      !isVideo
+    ) {
+      const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
+      $pixanoInferenceTracking.validated = false;
+      if (pixinf_res) {
+        const maskPolygons = generatePolygonSegments(
+          pixinf_res.data.counts as number[],
+          currentImage.height,
+        );
+        const masksSVG = convertSegmentsToSVG(maskPolygons);
 
-          results = {
-            masksImageSVG: masksSVG,
-            rle: {
-              counts: pixinf_res.data.counts,
-              size: pixinf_res.data.size,
-              id: pixinf_res.id,
-              ref_name: pixinf_res.table_info.name,
-            },
-          };
-        }
+        results = {
+          masksImageSVG: masksSVG,
+          rle: {
+            counts: pixinf_res.data.counts,
+            size: pixinf_res.data.size,
+            id: pixinf_res.id,
+            ref_name: pixinf_res.table_info.name,
+          },
+        };
       }
     }
 
@@ -1277,7 +1248,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100 relative", {
+  class={cn("h-full bg-foreground transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
@@ -1383,11 +1354,4 @@ License: CECILL-C
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
-{#if viewEmbeddingModal}
-  <WarningModal
-    message="No embeddings found for view '{viewWithoutEmbeddings}'."
-    details="The embeddings may not have finished loading yet. Please try again."
-    on:confirm={() => (viewEmbeddingModal = false)}
-  />
-{/if}
 <svelte:window on:keydown={handleKeyDown} />

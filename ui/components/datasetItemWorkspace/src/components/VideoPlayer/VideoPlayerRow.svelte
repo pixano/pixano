@@ -14,7 +14,7 @@ License: CECILL-C
 </script>
 
 <div class={cn("flex px-4", className)}>
-  <div class={cn("w-full sticky top-0 bg-white z-20")}>
+  <div class={cn("w-full sticky top-0 bg-card z-20")}>
     <slot name="timeTrack" />
   </div>
 </div>

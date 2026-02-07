@@ -5,112 +5,33 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Plus, Sparkles } from "lucide-svelte";
-  import { createEventDispatcher, onMount } from "svelte";
+  import { Server, Wand2Icon } from "lucide-svelte";
+  import { createEventDispatcher } from "svelte";
 
-  import { api, IconButton, ImageTask, PrimaryButton, VideoTask, WorkspaceType } from "../..";
+  import { currentDatasetStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
-    currentDatasetStore,
-    isLocalSegmentationModel,
-  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+    inferenceServerStore,
+    segmentationModels,
+    selectedSegmentationModelName,
+  } from "../../lib/stores/inferenceStore";
+  import { WorkspaceType } from "../../lib/types";
   import Checkbox from "../ui/checkbox/checkbox.svelte";
-  import AddModelModal from "./AddModelModal.svelte";
-  import ConnectModal from "./ConnectModal.svelte";
+  import PrimaryButton from "../ui/molecules/PrimaryButton.svelte";
   import {
-    pixanoInferenceSegmentationModelsStore,
-    pixanoInferenceSegmentationURL,
     pixanoInferenceTracking,
     pixanoInferenceTrackingNbAdditionalFrames,
-    pixanoInferenceTrackingURL,
-    type PixanoInferenceSegmentationModel,
     type PixanoInferenceTrackingCfg,
   } from "./inference";
-  import ModelItem from "./ModelItem.svelte";
 
   const dispatch = createEventDispatcher();
 
-  // Exports
-  export let choices: Array<string>;
-  export let selected: string;
-  let localOrPixinf = $isLocalSegmentationModel ? "local" : "pixinf";
+  let isVideo = $currentDatasetStore?.workspace === WorkspaceType.VIDEO;
 
-  let isVideo = $currentDatasetStore.workspace === WorkspaceType.VIDEO;
+  // Initialize selected model from store if available
+  let selectedModel = $selectedSegmentationModelName ?? ($segmentationModels[0]?.name || "");
 
-  let showAddModelModal = false;
-  let showConnectModal = false;
-
-  let isInferenceApiConnected = false;
-  async function connectToPixanoInference() {
-    isInferenceApiConnected = await api.isInferenceApiHealthy(
-      isVideo ? $pixanoInferenceTrackingURL : $pixanoInferenceSegmentationURL,
-    );
-    if (isInferenceApiConnected) {
-      await listModels();
-    }
-  }
-
-  //Try to connect with default URL at startup
-  onMount(connectToPixanoInference);
-
-  const listModels = async () => {
-    const task = isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION;
-    const availableSegmentationModels = await api.listModels(task);
-
-    const availableSegmentationModelsNames = availableSegmentationModels.map((model) => model.name);
-
-    //inferenceModels = availableSegmentationModels.map((name) => ({ id: name, value: name }));
-    pixanoInferenceSegmentationModelsStore.update((currentList) =>
-      mergeModelLists(availableSegmentationModelsNames, currentList),
-    );
-  };
-
-  export function mergeModelLists(
-    newModelsName: string[],
-    existingModels: PixanoInferenceSegmentationModel[],
-  ): PixanoInferenceSegmentationModel[] {
-    const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
-
-    return newModelsName.map(
-      (model) =>
-        existingModelsMap.get(model) ?? {
-          name: model,
-          selected: false,
-        },
-    );
-  }
-
-  const handleSelect = (selectedModelName: string) => {
-    pixanoInferenceSegmentationModelsStore.update((models) =>
-      models.map((m) => {
-        m.selected = m.name === selectedModelName;
-        return m;
-      }),
-    );
-  };
-
-  const handleLocalOrPixinfChange = () => {
-    isLocalSegmentationModel.set(localOrPixinf === "local");
-    if (localOrPixinf !== "local") {
-      //if no PixInf model is selected, select first (can happens with only one model or on reload)
-      const selectedModel = $pixanoInferenceSegmentationModelsStore.find((m) => m.selected);
-      if (!selectedModel && $pixanoInferenceSegmentationModelsStore.length > 0) {
-        $pixanoInferenceSegmentationModelsStore[0].selected = true;
-      }
-    }
-  };
-
-  const handleOpenAddModelModal = (event: Event) => {
-    // stopPropgation is not called as event modifier
-    // because event modifiers can only be used on DOM elements
-    event.stopPropagation();
-    if (showAddModelModal) {
-      handleCloseAddModelModal();
-    } else {
-      showAddModelModal = true;
-    }
-  };
-  const handleCloseAddModelModal = () => {
-    showAddModelModal = false;
+  const handleSelect = (modelName: string) => {
+    selectedModel = modelName;
   };
 
   const handleValTrackingClick = (checked: boolean) => {
@@ -121,6 +42,7 @@ License: CECILL-C
   };
 
   function handleConfirm() {
+    selectedSegmentationModelName.set(selectedModel || null);
     dispatch("confirm");
   }
 
@@ -129,142 +51,115 @@ License: CECILL-C
   }
 </script>
 
-<!-- stop propagation to prevent from closing the modal when clicking on the background -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50
-  rounded-md bg-white text-slate-800 flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  class="fixed top-[calc(64px+16px)] left-1/2 transform -translate-x-1/2 z-50
+  rounded-2xl bg-card text-foreground flex flex-col gap-0 border border-border shadow-2xl w-[400px] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
 >
-  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Select a Mask Generation Model</p>
+  <div class="bg-primary/5 p-5 border-b border-border flex items-center gap-3">
+    <div class="p-2 rounded-lg bg-primary/10">
+      <Wand2Icon size={18} class="text-primary" />
+    </div>
+    <p class="font-bold text-sm tracking-tight">Smart Segmentation Model</p>
   </div>
-  <div class="flex flex-col p-3 gap-5">
-    <label>
-      <div class="flex flex-row gap-2">
-        <input
-          type="radio"
-          bind:group={localOrPixinf}
-          value="local"
-          on:change={handleLocalOrPixinfChange}
-        />
-        <div class="flex flex-col gap-2">
-          <p class="self-center">Local</p>
-          {#if choices}
-            <select
-              class="py-1 px-2 border rounded focus:outline-none bg-slate-100 border-slate-300 focus:border-main"
-              bind:value={selected}
-            >
-              {#each choices as choice}
-                <option value={choice}>
-                  {choice}
-                </option>
-              {/each}
-            </select>
-          {:else}
-            <p class="pb-1 italic">No local model found</p>
-          {/if}
-        </div>
-      </div>
-    </label>
-    <div class="h-1 bg-primary-light" />
-    <label>
-      <div class="flex flex-row gap-2">
-        <input
-          type="radio"
-          bind:group={localOrPixinf}
-          value="pixinf"
-          on:change={handleLocalOrPixinfChange}
-        />
-        <div class="flex flex-col gap-2">
-          <div class="flex flex-row">
-            <IconButton
-              tooltipContent="Pixano Inference connection"
-              on:click={() => (showConnectModal = !showConnectModal)}
-            >
-              <Sparkles
-                size={20}
-                class={isInferenceApiConnected
-                  ? $pixanoInferenceSegmentationModelsStore.length > 0
-                    ? "text-green-500"
-                    : "text-yellow-500"
-                  : "text-red-500"}
-              />
-            </IconButton>
-            <p class="self-center">Pixano Inference</p>
-          </div>
-          <div class="p-3 flex flex-col gap-2">
-            {#if $pixanoInferenceSegmentationModelsStore.length === 0}
-              <p class="text-gray-500">No models added yet.</p>
-            {/if}
 
-            <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-              {#each $pixanoInferenceSegmentationModelsStore as model}
-                <ModelItem modelName={model.name} on:select={() => handleSelect(model.name)} />
-              {/each}
-            </div>
-            <PrimaryButton on:click={handleOpenAddModelModal}>
-              <Plus />Add a model
-            </PrimaryButton>
-          </div>
+  <div class="flex flex-col p-6 gap-6">
+    {#if !$inferenceServerStore.connected}
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <div class="p-3 rounded-full bg-muted/50">
+          <Server size={24} class="text-muted-foreground/50" />
         </div>
+        <p class="text-xs text-muted-foreground leading-relaxed px-4">
+          Connect to an inference server from the toolbar to use AI models.
+        </p>
       </div>
-    </label>
-    {#if isVideo}
-      <div class="h-1 bg-primary-light" />
-      <div class="ml-4 flex flex-row items-center">
-        <label for="positiveInteger" class="mr-2">Frames to track</label>
-        <div
-          class="flex w-20 h-10 items-center rounded-md border border-gray-300 bg-white pl-3 text-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:ring-offset-2"
-        >
-          <input
-            class="w-full focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            type="number"
-            id="positiveInteger"
-            name="positiveInteger"
-            min="0"
-            step="1"
-            value={$pixanoInferenceTrackingNbAdditionalFrames}
-            on:change={(e) => {
-              pixanoInferenceTrackingNbAdditionalFrames.set(parseInt(e.currentTarget.value));
-            }}
-          />
+    {:else if $segmentationModels.length === 0}
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <p class="text-xs text-muted-foreground font-medium">
+          No segmentation models found on server.
+        </p>
+      </div>
+    {:else}
+      <div class="space-y-2">
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">
+          Available Models
+        </h4>
+        <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1">
+          {#each $segmentationModels as model}
+            <button
+              class="flex flex-col gap-1 px-4 py-3 rounded-xl border text-left transition-all duration-200
+              {selectedModel === model.name
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'}"
+              on:click={() => handleSelect(model.name)}
+            >
+              <span
+                class="text-xs font-bold {selectedModel === model.name
+                  ? 'text-primary'
+                  : 'text-foreground'}"
+              >
+                {model.name}
+              </span>
+              {#if model.provider_name}
+                <span class="text-[10px] text-muted-foreground font-medium italic opacity-70">
+                  via {model.provider_name.includes("@")
+                    ? model.provider_name.substring(model.provider_name.indexOf("@") + 1)
+                    : model.provider_name}
+                </span>
+              {/if}
+            </button>
+          {/each}
         </div>
-      </div>
-      <p class="w-60 ml-2 italic text-gray-500">
-        First use of a tracking model may be long. A small value is advised first.
-      </p>
-      <div class="h-1 bg-primary-light" />
-      <div class="ml-4 flex gap-4 items-center">
-        <Checkbox
-          handleClick={handleValTrackingClick}
-          checked={$pixanoInferenceTracking.mustValidate}
-        />
-        <span>Validate before tracking</span>
       </div>
     {/if}
-    <div class="h-1 bg-primary-light" />
-    <div class="flex flex-row gap-2 px-3 justify-center">
-      <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
-      <PrimaryButton on:click={handleConfirm}>OK</PrimaryButton>
+
+    {#if isVideo}
+      <div class="h-px bg-border/40" />
+      <div class="space-y-4">
+        <div class="flex items-center justify-between px-1">
+          <label for="positiveInteger" class="text-xs font-bold text-foreground/80">
+            Tracking Window
+          </label>
+          <div
+            class="flex items-center rounded-lg border border-border bg-muted/30 px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all"
+          >
+            <input
+              class="w-12 bg-transparent text-xs font-bold focus:outline-none text-center"
+              type="number"
+              id="positiveInteger"
+              min="0"
+              step="1"
+              value={$pixanoInferenceTrackingNbAdditionalFrames}
+              on:change={(e) => {
+                pixanoInferenceTrackingNbAdditionalFrames.set(parseInt(e.currentTarget.value));
+              }}
+            />
+            <span class="text-[10px] font-bold text-muted-foreground ml-1">frames</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+          <Checkbox
+            handleClick={handleValTrackingClick}
+            checked={$pixanoInferenceTracking.mustValidate}
+          />
+          <span class="text-xs font-medium text-foreground/80">Validate before tracking</span>
+        </div>
+      </div>
+    {/if}
+
+    <div class="flex flex-row gap-3 pt-2">
+      <PrimaryButton on:click={handleCancel} class="flex-1 h-10">Cancel</PrimaryButton>
+      <PrimaryButton
+        on:click={handleConfirm}
+        isSelected
+        disabled={!selectedModel && $segmentationModels.length > 0}
+        class="flex-1 h-10"
+      >
+        Confirm
+      </PrimaryButton>
     </div>
   </div>
 </div>
-
-{#if showConnectModal}
-  <ConnectModal
-    {isVideo}
-    bind:isConnected={isInferenceApiConnected}
-    on:cancelConnect={() => (showConnectModal = false)}
-    on:listModels={listModels}
-  />
-{/if}
-
-{#if showAddModelModal}
-  <AddModelModal
-    {isVideo}
-    on:listModels={listModels}
-    on:cancelAddModel={handleCloseAddModelModal}
-  />
-{/if}

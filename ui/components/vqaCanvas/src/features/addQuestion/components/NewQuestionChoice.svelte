@@ -31,6 +31,6 @@ License: CECILL-C
   placeholder="Type here..."
   autofocus
   type="text"
-  class="p-2 border rounded-lg border-gray-200 outline-none text-slate-800 focus:border-primary"
+  class="p-2 border rounded-lg border-border outline-none text-foreground focus:border-primary"
   bind:value={questionChoices[index]}
 />

@@ -45,7 +45,7 @@ License: CECILL-C
 
 <div
   class={cn("flex items-center gap-4", {
-    "bg-slate-200 rounded-sm": $selectedTool?.type === ToolType.Keypoint,
+    "bg-accent rounded-sm": $selectedTool?.type === ToolType.Keypoint,
   })}
 >
   <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>

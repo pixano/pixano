@@ -27,7 +27,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="border rounded p-3 flex items-center justify-between gap-2 hover:bg-gray-50">
+<div class="border rounded p-3 flex items-center justify-between gap-2 hover:bg-accent">
   <label class="flex items-center gap-2 cursor-pointer flex-grow">
     <input
       type="radio"

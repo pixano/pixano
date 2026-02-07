@@ -6,10 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onDestroy } from "svelte";
+  import { fade } from "svelte/transition";
 
-  import { ConfirmModal, IconButton, PrimaryButton } from "@pixano/core/src";
-  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import { ConfirmModal, PrimaryButton } from "@pixano/core";
 
   import DatasetItemHeader from "./DatasetItemHeader.svelte";
   import { goto } from "$app/navigation";
@@ -20,45 +19,28 @@ License: CECILL-C
     currentDatasetStore,
     datasetItemIds,
     datasetTableStore,
-    isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
 
   export let pageId: string | null;
 
-  let currentItemId: string;
-  let isLoading: boolean;
-  let canSaveCurrentItem: boolean;
   let showConfirmModal: string = "none";
   let newItemId: string = "none";
 
   const DATASET_ITEM_ROUTE = `/[dataset]/dataset/[itemId]`;
 
-  const unsubscribeSaveCurrentItemStore = saveCurrentItemStore.subscribe(
-    (value) => (canSaveCurrentItem = value.canSave),
-  );
-
-  const unsubscribeisLoadingNewItemStore = isLoadingNewItemStore.subscribe((value) => {
-    isLoading = value;
-  });
-
-  $: unsubscribePage = page.subscribe((value) => {
-    currentItemId = value.params.itemId;
-  });
-
-  onDestroy(() => {
-    unsubscribeSaveCurrentItemStore();
-    unsubscribeisLoadingNewItemStore();
-    unsubscribePage();
-  });
+  $: currentItemId = $page.params.itemId;
 
   const getDatasetItemDisplayCount = () => {
     const index = $datasetItemIds.indexOf(currentItemId);
+    if (index === -1) return "0 of 0";
     return `${index + 1} of ${$datasetItemIds.length}`;
   };
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
+    if (!$currentDatasetStore) return;
+
     // Find the neighbor item id
     const neighborId = findNeighborItemId($datasetItemIds, direction, currentItemId);
 
@@ -67,13 +49,12 @@ License: CECILL-C
       const route = `/${$currentDatasetStore.id}/dataset/${neighborId}`;
 
       // Ask for confirmation if modifications have been made to the item
-      if (canSaveCurrentItem) {
+      if ($saveCurrentItemStore.canSave) {
         newItemId = neighborId;
         return (showConfirmModal = route);
       }
 
       // Go to next/previous item
-      currentItemId = neighborId;
       await goto(route);
     }
   };
@@ -89,7 +70,6 @@ License: CECILL-C
 
   const handleContinue = async () => {
     if (newItemId !== "none") {
-      currentItemId = newItemId;
       newItemId = "none";
     }
     await goto(showConfirmModal);
@@ -99,6 +79,7 @@ License: CECILL-C
 
   // Return to the previous page
   const handleReturnToPreviousPage = async () => {
+    if (!$currentDatasetStore) return;
     if (currentItemId) {
       // Update the current page to ensure that we follow the selected item
       datasetTableStore.update((pagination) => {
@@ -110,7 +91,7 @@ License: CECILL-C
   };
 
   const navigateTo = async (route: string) => {
-    if (canSaveCurrentItem) {
+    if ($saveCurrentItemStore.canSave) {
       return (showConfirmModal = route);
     }
     await goto(route);
@@ -124,7 +105,7 @@ License: CECILL-C
   // eslint-disable-next-line
   function preventUnsavedUnload(_: HTMLElement) {
     function checkNavigation(e: BeforeUnloadEvent) {
-      if (canSaveCurrentItem) {
+      if ($saveCurrentItemStore.canSave) {
         e.preventDefault();
       }
     }
@@ -137,47 +118,47 @@ License: CECILL-C
   }
 </script>
 
-<header
-  class="w-full fixed z-40 font-Montserrat h-20 p-5 flex justify-between items-center shrink-0
-      bg-white border-b border-slate-200 shadow-sm text-slate-800"
-  use:preventUnsavedUnload
->
+<div class="h-full w-full flex items-center" use:preventUnsavedUnload>
   {#if $page.route.id === DATASET_ITEM_ROUTE}
     <DatasetItemHeader
       {currentItemId}
-      {isLoading}
       {handleSave}
       {goToNeighborItem}
       {handleReturnToPreviousPage}
-      {navigateTo}
       {getDatasetItemDisplayCount}
     />
   {:else}
-    {#if $currentDatasetStore}
-      <div class="h-10 flex items-center font-semibold text-2xl">
-        <div class="flex gap-4 items-center font-light">
-          <div class="h-10 w-10">
-            <IconButton on:click={() => navigateTo("/")} tooltipContent={"Back to Home"}>
-              <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-            </IconButton>
+    <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">
+      <div class="flex items-center gap-6">
+        {#if $currentDatasetStore}
+          <div
+            class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]"
+          >
+            <span class="text-sm font-bold text-foreground truncate">
+              {$currentDatasetStore.name}
+            </span>
           </div>
-          {$currentDatasetStore.name}
+        {/if}
+
+        <div class="flex items-center gap-2">
+          {#each navItems as { name, Icon }}
+            <PrimaryButton
+              isSelected={pageId?.includes(`/${name}`.toLowerCase())}
+              on:click={() => navigateTo(`/${$currentDatasetStore.id}/${name.toLocaleLowerCase()}`)}
+              class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
+            >
+              <Icon class="h-3.5 w-3.5" />
+              {name}
+            </PrimaryButton>
+          {/each}
         </div>
       </div>
-    {/if}
-    <div class="flex gap-4">
-      {#each navItems as { name, Icon }}
-        <PrimaryButton
-          isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-          on:click={() => navigateTo(`/${$currentDatasetStore.id}/${name.toLocaleLowerCase()}`)}
-        >
-          <Icon strokeWidth={1} />
-          {name}
-        </PrimaryButton>
-      {/each}
+
+      <!-- Placeholder for Right zone in browser view to maintain symmetry -->
+      <div class="w-10"></div>
     </div>
   {/if}
-</header>
+</div>
 {#if showConfirmModal !== "none"}
   <ConfirmModal
     message="You have unsaved changes"

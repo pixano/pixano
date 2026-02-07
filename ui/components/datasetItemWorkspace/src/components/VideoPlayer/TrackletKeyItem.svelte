@@ -115,7 +115,7 @@ License: CECILL-C
   };
 
   function getDotColor(): string {
-    return isLuminanceHigh(color) ? "border-slate-500" : "border-slate-300";
+    return isLuminanceHigh(color) ? "border-border" : "border-border";
   }
 </script>
 

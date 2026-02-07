@@ -45,7 +45,6 @@ License: CECILL-C
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
-    embeddings,
     entities,
     imageSmoothing,
     itemMasks,
@@ -423,7 +422,6 @@ License: CECILL-C
         {pixanoInferenceSegmentation}
         canvasSize={inspectorMaxHeight + resize}
         isVideo={true}
-        embeddings={$embeddings}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn

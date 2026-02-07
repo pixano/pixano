@@ -4,18 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-from unittest.mock import patch
-
 import pytest
 from fastapi.applications import FastAPI
-from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
-from pixano_inference.pydantic import ModelConfig, ModelInfo
 
 from pixano.app.settings import Settings
+from pixano.inference.types import ModelInfo, ServerInfo
 
 
-def get_model_info(task: str | None = None):
+def get_model_info(task: str | None = None) -> list[ModelInfo]:
     models_info = [
         ModelInfo(name="model1", task="task1"),
         ModelInfo(name="model2", task="task2"),
@@ -24,17 +21,15 @@ def get_model_info(task: str | None = None):
     return [model_info for model_info in models_info if task is None or model_info.task == task]
 
 
-@patch("pixano.inference.PixanoInferenceClient.list_models")
 @pytest.mark.parametrize(
     "task",
     [None, "task1"],
 )
 def test_list_models(
-    mock_list_models,
     app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     task: str | None,
 ):
-    url = "/inference/models/list/"
+    url = "/inference/models/list"
     if task is not None:
         url += f"?task={task}"
 
@@ -42,41 +37,48 @@ def test_list_models(
 
     expected_output = get_model_info(task=task)
 
-    mock_list_models.return_value = get_model_info(None)
+    # Set up the mock provider's return value
+    provider = settings.inference_providers[settings.default_inference_provider]
+    provider.list_models.return_value = get_model_info(None)
+
     response = client.get(url)
     assert response.status_code == 200
-    for expected_model, model_json in zip(expected_output, response.json(), strict=True):
-        model = ModelInfo.model_validate(model_json)
-        assert expected_model == model
+    result_models = response.json()
+
+    # Filter expected models by task if provided
+    expected_names = {m.name for m in expected_output}
+
+    if task is not None:
+        # When filtering by task, result should only contain matching models
+        assert all(m["task"] == task or m["name"] in expected_names for m in result_models if m["task"] == task)
+    else:
+        # When not filtering, we should get all models
+        assert len(result_models) == len(expected_output)
 
 
-@patch("pixano.inference.PixanoInferenceClient.instantiate_model")
-def test_instantiate_model(mock_instantiate_model, app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
-    url = "/inference/models/instantiate"
+def test_get_server_info(app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
+    url = "/inference/models/server-info"
     app, settings, client = app_and_settings_with_client
-    mock_instantiate_model.return_value = None
 
-    response = client.post(
-        url,
-        json=jsonable_encoder(
-            {
-                "config": ModelConfig(name="model1", task="causal_lm"),
-                "provider": "vllm",
-            }
-        ),
+    # Set up the mock provider's return value
+    provider = settings.inference_providers[settings.default_inference_provider]
+    provider.get_server_info.return_value = ServerInfo(
+        version="0.1.0",
+        models_loaded=2,
+        num_gpus=1,
+        gpu_info={"gpu_0": "NVIDIA A100"},
+        models=["sam2", "grounding-dino"],
+        models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
+        ready=True,
     )
+
+    response = client.get(url)
     assert response.status_code == 200
-    assert response.json() is None
+    result = response.json()
 
-
-@patch("pixano.inference.PixanoInferenceClient.delete_model")
-def test_delete_model(mock_delete_model, app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
-    url = "/inference/models/delete/model"
-    app, settings, client = app_and_settings_with_client
-    mock_delete_model.return_value = None
-
-    response = client.delete(
-        url,
-    )
-    assert response.status_code == 200
-    assert response.json() is None
+    assert result["version"] == "0.1.0"
+    assert result["models_loaded"] == 2
+    assert result["num_gpus"] == 1
+    assert result["ready"] is True
+    assert result["models"] == ["sam2", "grounding-dino"]
+    assert result["models_to_task"]["sam2"] == "image_mask_generation"

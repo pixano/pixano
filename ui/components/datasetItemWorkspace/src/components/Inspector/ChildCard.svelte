@@ -110,48 +110,53 @@ License: CECILL-C
   };
 </script>
 
-<div class="flex justify-between bg-transparent border-transparent">
-  <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
+<div
+  class="flex justify-between items-center py-1 px-1 rounded-lg hover:bg-background hover:shadow-sm border border-transparent hover:border-border/50 transition-all duration-200 group/child"
+>
+  <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 gap-0.5">
     <IconButton
       on:click={() => handleSetDisplayControl("hidden", childVisible, child)}
       tooltipContent={childVisible ? "Hide" : "Show"}
+      class="opacity-60 hover:opacity-100"
     >
       {#if childVisible}
-        <Eye class="h-4" />
+        <Eye class="h-3.5 w-3.5" />
       {:else}
-        <EyeOff class="h-4" />
+        <EyeOff class="h-3.5 w-3.5" />
       {/if}
     </IconButton>
-    <IconButton disabled tooltipContent={child.table_info.base_schema}>
+    <div class="flex items-center text-muted-foreground/60">
       {#if child.is_type(BaseSchema.BBox)}
-        <Square class="h-4" />
+        <Square class="h-3.5 w-3.5 mx-1" />
+      {:else if child.is_type(BaseSchema.Mask)}
+        <img src={polygon_icon} alt="polygon icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
+      {:else if child.is_type(BaseSchema.Keypoints)}
+        <img src={keypoints_icon} alt="keypoints icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
+      {:else if child.is_type(BaseSchema.Tracklet)}
+        <GitCommitHorizontal class="h-3.5 w-3.5 mx-1" />
+      {:else if child.is_type(BaseSchema.TextSpan)}
+        <Type class="h-3.5 w-3.5 mx-1" />
       {/if}
-      {#if child.is_type(BaseSchema.Mask)}
-        <img src={polygon_icon} alt="polygon icon" class="h-4" />
-      {/if}
-      {#if child.is_type(BaseSchema.Keypoints)}
-        <img src={keypoints_icon} alt="keypoints icon" class="h-4" />
-      {/if}
-      {#if child.is_type(BaseSchema.Tracklet)}
-        <GitCommitHorizontal class="h-4" />
-      {/if}
-      {#if child.is_type(BaseSchema.TextSpan)}
-        <Type class="h-4" />
-      {/if}
-    </IconButton>
-    <span class="flex-auto block w-full truncate" title={child.id}>
+    </div>
+    <span
+      class="flex-auto block truncate text-[12px] font-medium text-foreground/80"
+      title={child.id}
+    >
       {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>
-  <div class="flex-shrink-0 flex items-center justify-end">
+  <div
+    class="flex-shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200"
+  >
     {#if $selectedTool.type !== ToolType.Fusion}
       {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
         <IconButton
           tooltipContent="Edit object"
           selected={childEditing}
           on:click={() => onEditIconClick(child)}
+          class="h-7 w-7"
         >
-          <Pencil class="h-4" />
+          <Pencil class="h-3.5 w-3.5" />
         </IconButton>
       {/if}
       <IconButton
@@ -160,15 +165,17 @@ License: CECILL-C
         on:click={() => {
           showRelink = !showRelink;
         }}
+        class="h-7 w-7"
       >
-        <Link class="h-4" />
+        <Link class="h-3.5 w-3.5" />
       </IconButton>
       <IconButton
         tooltipContent="Delete object"
         redconfirm
         on:click={() => deleteObject(entity, child)}
+        class="h-7 w-7 text-muted-foreground hover:text-destructive"
       >
-        <Trash2 class="h-4" />
+        <Trash2 class="h-3.5 w-3.5" />
       </IconButton>
     {/if}
   </div>
@@ -183,7 +190,7 @@ License: CECILL-C
       viewRef={child.data.view_ref}
       tracklet={child}
     />
-    <Button class="text-white mt-4" on:click={handleRelink}>OK</Button>
+    <Button class="text-primary-foreground mt-4" on:click={handleRelink}>OK</Button>
   </div>
 {/if}
 {#if child.is_type(BaseSchema.Tracklet)}
@@ -192,7 +199,7 @@ License: CECILL-C
     {@const displayName = interpolated
       ? `<i>interpolated</i> (${trackletChild.id})`
       : trackletChild.id}
-    <div class="flex items-center justify-between w-full overflow-hidden ml-4">
+    <div class="flex items-center justify-between w-full overflow-hidden pl-6 py-0.5">
       <div class="flex items-center flex-1 min-w-0 overflow-hidden">
         <IconButton disabled tooltipContent={trackletChild.table_info.base_schema}>
           {#if trackletChild.table_info.base_schema === BaseSchema.BBox}

@@ -72,7 +72,7 @@ License: CECILL-C
       </span>
     {/if}
   {:else if feature.value || feature.value === 0}
-    <span class="block w-full truncate" title={`${feature.value}`}>
+    <span class="block truncate text-foreground font-medium" title={`${feature.value}`}>
       {feature.value}
     </span>
   {/if}

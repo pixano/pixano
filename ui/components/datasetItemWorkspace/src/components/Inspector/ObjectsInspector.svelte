@@ -145,40 +145,106 @@ License: CECILL-C
   };
 </script>
 
-<div class="p-2 w-full">
-  <PreAnnotation />
-  {#if !$preAnnotationIsActive}
-    {#if selectedEntitiesId.length > 0}
-      <span class="flex justify-center font-medium text-slate-800">
-        Selected object{selectedEntitiesId.length > 1 ? "s" : ""}
-      </span>
-      {#each selectedEntitiesId as selectedEntity}
-        <span class="flex justify-center text-slate-800">{selectedEntity}</span>
-        {#if thumbnails[selectedEntity]}
-          {#key thumbnails[selectedEntity].coords[0]}
-            <Thumbnail
-              imageDimension={thumbnails[selectedEntity].baseImageDimensions}
-              coords={thumbnails[selectedEntity].coords}
-              imageUrl={`/${thumbnails[selectedEntity].uri}`}
-              minSide={150}
-              maxHeight={200}
-              maxWidth={200}
-            />
-          {/key}
-        {/if}
-      {/each}
+<div class="flex flex-col h-full bg-card overflow-hidden">
+  <div class="shrink-0 p-3 pb-0 space-y-4">
+    <PreAnnotation />
+
+    {#if !$preAnnotationIsActive}
+      <!-- Preview Area -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
+            Object Preview
+          </h3>
+        </div>
+        <div
+          class="group relative flex h-[180px] items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/20 shadow-inner transition-all duration-300 hover:border-primary/20"
+        >
+          {#if selectedEntitiesId.length > 0}
+            {#each selectedEntitiesId as selectedEntity}
+              {#if thumbnails[selectedEntity]}
+                {#key thumbnails[selectedEntity].coords[0]}
+                  <div class="animate-in fade-in zoom-in-95 duration-300">
+                    <Thumbnail
+                      imageDimension={thumbnails[selectedEntity].baseImageDimensions}
+                      coords={thumbnails[selectedEntity].coords}
+                      imageUrl={`/${thumbnails[selectedEntity].uri}`}
+                      minSide={150}
+                      maxHeight={160}
+                      maxWidth={240}
+                    />
+                  </div>
+                {/key}
+              {/if}
+            {/each}
+          {:else}
+            <div class="flex flex-col items-center gap-2 text-center px-6">
+              <div class="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="text-muted-foreground/40"
+                >
+                  <path
+                    d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                  ></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <circle cx="10" cy="13" r="2"></circle>
+                  <path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"></path>
+                </svg>
+              </div>
+              <p class="text-xs font-medium text-muted-foreground/60">
+                Select an object to see its preview
+              </p>
+            </div>
+          {/if}
+        </div>
+      </div>
     {/if}
-    <ObjectsSection
-      source={globalSource}
-      {countText}
-      on:filter={(event) => handleFilter(event.detail)}
-      on:confidenceThresholdChange={() => handleConfidenceThresholdChange()}
-    >
-      {#key allTopEntities.length}
-        {#each allTopEntities as entity}
-          <ObjectCard {entity} />
-        {/each}
-      {/key}
-    </ObjectsSection>
-  {/if}
+  </div>
+
+  <!-- Scrollable List Area -->
+  <div class="flex-1 overflow-y-auto custom-scrollbar">
+    <div class="p-3 pt-2">
+      {#if !$preAnnotationIsActive}
+        <ObjectsSection
+          source={globalSource}
+          {countText}
+          on:filter={(event) => handleFilter(event.detail)}
+          on:confidenceThresholdChange={() => handleConfidenceThresholdChange()}
+        >
+          <div class="space-y-2 mt-2">
+            {#key allTopEntities.length}
+              {#each allTopEntities as entity}
+                <ObjectCard {entity} />
+              {/each}
+            {/key}
+          </div>
+        </ObjectsSection>
+      {/if}
+    </div>
+  </div>
 </div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+</style>

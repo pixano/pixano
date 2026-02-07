@@ -7,21 +7,10 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi.encoders import jsonable_encoder
 from lancedb.pydantic import Vector
-from pixano_inference.client import PixanoInferenceClient
-from pixano_inference.pydantic import (
-    CompressedRLE as PixanoInferenceCompressedRLE,
-)
-from pixano_inference.pydantic import (
-    ImageMaskGenerationOutput,
-    ImageMaskGenerationResponse,
-    VideoMaskGenerationOutput,
-    VideoMaskGenerationResponse,
-)
 
 from pixano.features import (
     BBox,
@@ -37,6 +26,15 @@ from pixano.features import (
     ViewRef,
 )
 from pixano.inference.mask_generation import image_mask_generation, video_mask_generation
+from pixano.inference.provider import InferenceProvider
+from pixano.inference.types import (
+    CompressedRLEData,
+    ImageMaskGenerationOutput,
+    ImageMaskGenerationResult,
+    NDArrayData,
+    VideoMaskGenerationOutput,
+    VideoMaskGenerationResult,
+)
 
 
 FILE_PATH = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -63,22 +61,19 @@ class ViewEmbedding8(ViewEmbedding):
 
 
 @pytest.mark.asyncio
-@patch("pixano_inference.client.PixanoInferenceClient.image_mask_generation")
 @pytest.mark.parametrize(
     "response, expected_output, image_embedding, high_resolution_features, bbox, points, labels",
     [
         (
-            ImageMaskGenerationResponse(
-                id="id",
-                status="SUCCESS",
+            ImageMaskGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=ImageMaskGenerationOutput(
-                    masks=[[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))]],
-                    scores=NDArrayFloat(values=[0.9], shape=[1]),
-                    image_embedding=NDArrayFloat(values=[1], shape=[1]),
-                    high_resolution_features=[NDArrayFloat(values=[1], shape=[1])],
+                    masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
+                    scores=NDArrayData(values=[0.9], shape=[1]),
+                    image_embedding=NDArrayData(values=[1], shape=[1]),
+                    high_resolution_features=[NDArrayData(values=[1], shape=[1])],
                 ),
             ),
             (
@@ -91,7 +86,7 @@ class ViewEmbedding8(ViewEmbedding):
                     source_ref=SourceRef(id="test_source"),
                     inference_metadata=jsonable_encoder(
                         {
-                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                             "processing_time": 1.0,
                             "metadata": "value",
                         }
@@ -108,15 +103,13 @@ class ViewEmbedding8(ViewEmbedding):
             None,
         ),
         (
-            ImageMaskGenerationResponse(
-                id="id",
-                status="SUCCESS",
+            ImageMaskGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=ImageMaskGenerationOutput(
-                    masks=[[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))]],
-                    scores=NDArrayFloat(values=[0.9], shape=[1]),
+                    masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
+                    scores=NDArrayData(values=[0.9], shape=[1]),
                     image_embedding=None,
                     high_resolution_features=None,
                 ),
@@ -131,7 +124,7 @@ class ViewEmbedding8(ViewEmbedding):
                     source_ref=SourceRef(id="test_source"),
                     inference_metadata=jsonable_encoder(
                         {
-                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                             "processing_time": 1.0,
                             "metadata": "value",
                         }
@@ -150,9 +143,8 @@ class ViewEmbedding8(ViewEmbedding):
     ],
 )
 async def test_image_mask_generation(
-    mock_image_mask_generation,
-    simple_pixano_inference_client: PixanoInferenceClient,
-    response: ImageMaskGenerationResponse,
+    simple_inference_provider: InferenceProvider,
+    response: ImageMaskGenerationResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     image_embedding: ViewEmbedding | None,
     high_resolution_features: list[ViewEmbedding] | None,
@@ -161,13 +153,13 @@ async def test_image_mask_generation(
     labels: list[int],
     image_url: Image,
 ):
-    mock_image_mask_generation.return_value = response
+    simple_inference_provider.image_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
     entity.table_name = "entity"
 
     mask, score, out_image_embedding, out_high_resolution_features = await image_mask_generation(
-        client=simple_pixano_inference_client,
+        provider=simple_inference_provider,
         media_dir=Path("."),
         image=image_url,
         entity=entity,
@@ -189,19 +181,17 @@ async def test_image_mask_generation(
 
 
 @pytest.mark.asyncio
-@patch("pixano_inference.client.PixanoInferenceClient.video_mask_generation")
 @pytest.mark.parametrize(
     "response, expected_output, bbox, points, labels",
     [
         (
-            VideoMaskGenerationResponse(
-                id="id",
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))],
+                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
                 ),
@@ -216,7 +206,7 @@ async def test_image_mask_generation(
                     source_ref=SourceRef(id="test_source"),
                     inference_metadata=jsonable_encoder(
                         {
-                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                             "processing_time": 1.0,
                             "metadata": "value",
                         }
@@ -230,14 +220,13 @@ async def test_image_mask_generation(
             None,
         ),
         (
-            VideoMaskGenerationResponse(
-                id="id",
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))],
+                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
                 ),
@@ -252,7 +241,7 @@ async def test_image_mask_generation(
                     source_ref=SourceRef(id="test_source"),
                     inference_metadata=jsonable_encoder(
                         {
-                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                             "processing_time": 1.0,
                             "metadata": "value",
                         }
@@ -266,14 +255,13 @@ async def test_image_mask_generation(
             [0],
         ),
         (
-            VideoMaskGenerationResponse(
-                id="id",
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[PixanoInferenceCompressedRLE(size=[10, 2], counts=bytes([3, 4]))],
+                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
                 ),
@@ -288,7 +276,7 @@ async def test_image_mask_generation(
                     source_ref=SourceRef(id="test_source"),
                     inference_metadata=jsonable_encoder(
                         {
-                            "timestamp": datetime(year=2025, month=2, day=19),
+                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
                             "processing_time": 1.0,
                             "metadata": "value",
                         }
@@ -304,22 +292,21 @@ async def test_image_mask_generation(
     ],
 )
 async def test_video_mask_generation(
-    mock_video_mask_generation,
-    simple_pixano_inference_client: PixanoInferenceClient,
-    response: ImageMaskGenerationResponse,
+    simple_inference_provider: InferenceProvider,
+    response: VideoMaskGenerationResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     bbox: BBox | None,
     points: list[list[int]] | None,
     labels: list[int],
     image_url: Image,
 ):
-    mock_video_mask_generation.return_value = response
+    simple_inference_provider.video_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
     entity.table_name = "entity"
 
     masks, objects_ids, frame_indexes = await video_mask_generation(
-        client=simple_pixano_inference_client,
+        provider=simple_inference_provider,
         media_dir=Path("."),
         video=[image_url],
         entity=entity,
@@ -338,13 +325,12 @@ async def test_video_mask_generation(
 
 
 @pytest.mark.asyncio
-@patch("pixano_inference.client.PixanoInferenceClient.video_mask_generation")
 async def test_error_video_mask_generation(
-    simple_pixano_inference_client: PixanoInferenceClient,
+    simple_inference_provider: InferenceProvider,
 ):
     with pytest.raises(ValueError, match="Video format not currently supported, please use sequence frames."):
         await video_mask_generation(
-            client=simple_pixano_inference_client,
+            provider=simple_inference_provider,
             media_dir=Path("."),
             video="not a list",
             source=Source(id="test_source", name="test_source", kind="model"),

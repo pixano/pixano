@@ -13,6 +13,7 @@ import {
   QuestionTypeEnum,
   type CondititionalGenerationTextImageInput,
 } from "@pixano/core";
+import { vqaModels } from "@pixano/core/src/lib/stores/inferenceStore";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
@@ -50,12 +51,14 @@ export const generateQuestion = async (
     content: prompt,
   });
 
+  const selectedVqa = get(vqaModels).find((m) => m.name === completionModel);
   const input: CondititionalGenerationTextImageInput = {
     dataset_id: get(currentDatasetStore).id,
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(systemMessage, "ui")],
     model: completionModel,
     temperature,
+    provider_name: selectedVqa?.provider_name,
   };
 
   try {

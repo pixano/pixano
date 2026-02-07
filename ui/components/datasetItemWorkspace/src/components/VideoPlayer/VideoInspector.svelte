@@ -61,9 +61,9 @@ License: CECILL-C
 </script>
 
 {#if $videoControls.isLoaded}
-  <div class="h-full bg-white overflow-x-auto relative flex flex-col scroll-smooth">
-    <div class="sticky top-0 bg-white z-20">
-      <VideoPlayerRow class="bg-white ">
+  <div class="h-full bg-card overflow-x-auto relative flex flex-col scroll-smooth">
+    <div class="sticky top-0 bg-card z-20">
+      <VideoPlayerRow class="bg-card ">
         <TimeTrack slot="timeTrack" {resetTool} {resetHighlight} />
       </VideoPlayerRow>
     </div>
@@ -84,7 +84,7 @@ License: CECILL-C
         {/if}
       {/each}
     </div>
-    <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
+    <div class="px-2 sticky bottom-0 left-0 z-20 bg-card shadow flex justify-between">
       <VideoControls {resetHighlight} />
       <SliderRoot
         class="max-w-[250px]"

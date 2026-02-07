@@ -9,17 +9,22 @@ from typing import Any
 
 import shortuuid
 from fastapi.encoders import jsonable_encoder
-from pixano_inference.client import PixanoInferenceClient
-from pixano_inference.pydantic import ImageZeroShotDetectionRequest, ImageZeroShotDetectionResponse
-from pixano_inference.utils import is_url
 
 from pixano.features import BBox, Classification, Image, Source
 from pixano.features.schemas.entities.entity import Entity
 from pixano.features.types.schema_reference import EntityRef, SourceRef, ViewRef
 
+from .provider import InferenceProvider
+from .types import ImageZeroShotDetectionInput
+
+
+def _is_url(value: str) -> bool:
+    """Check if a string is a URL."""
+    return value.startswith(("http://", "https://", "s3://"))
+
 
 async def image_zero_shot_detection(
-    client: PixanoInferenceClient,
+    provider: InferenceProvider,
     media_dir: Path,
     image: Image,
     entity: Entity,
@@ -27,12 +32,12 @@ async def image_zero_shot_detection(
     classes: list[str] | str,
     box_threshold: float = 0.5,
     text_threshold: float = 0.5,
-    **client_kwargs: Any,
+    **provider_kwargs: Any,
 ) -> list[tuple[BBox, Classification]]:
-    """Image zero shot task.
+    """Image zero shot detection task.
 
     Args:
-        client: Pixano inference client.
+        provider: Inference provider.
         media_dir: Media directory.
         image: Image to generate mask for.
         entity: Entity associated with the image.
@@ -40,34 +45,34 @@ async def image_zero_shot_detection(
         classes: List of classes to detect in the image.
         box_threshold: Box threshold for detection in the image.
         text_threshold: Text threshold for detection in the image.
-        client_kwargs: Additional kwargs for the client to be passed.
+        provider_kwargs: Additional kwargs for the provider.
 
     Returns:
         List of BBoxes and Classifications detected in the image with respect to classes and threshold values.
     """
-    image_request = image.url if is_url(image.url) else image.open(media_dir, "base64")
+    image_request = image.url if _is_url(image.url) else image.open(media_dir, "base64")
 
-    request = ImageZeroShotDetectionRequest(
+    input_data = ImageZeroShotDetectionInput(
         image=image_request,
+        model=source.name,
         classes=classes,
         box_threshold=box_threshold,
         text_threshold=text_threshold,
-        model=source.name,
     )
 
-    response: ImageZeroShotDetectionResponse = await client.image_zero_shot_detection(request, **client_kwargs)
+    result = await provider.image_zero_shot_detection(input_data, **provider_kwargs)
 
     inference_metadata = jsonable_encoder(
         {
-            "timestamp": response.timestamp,
-            "processing_time": response.processing_time,
-            **response.metadata,
+            "timestamp": result.timestamp.isoformat(),
+            "processing_time": result.processing_time,
+            **result.metadata,
         }
     )
 
-    boxes = response.data.boxes
-    scores = response.data.scores
-    detected_classes = response.data.classes
+    boxes = result.data.boxes
+    scores = result.data.scores
+    detected_classes = result.data.classes
 
     output: list[tuple[BBox, Classification]] = []
 

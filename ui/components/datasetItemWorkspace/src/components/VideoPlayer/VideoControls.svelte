@@ -109,7 +109,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200 w-fit">
+<div class="bg-card flex justify-between items-center gap-4 p-4 border-b border-border w-fit">
   <button
     title={$videoControls.intervalId ? "Pause (space)" : "Play (space)"}
     on:click={onPlayClick}
@@ -133,7 +133,7 @@ License: CECILL-C
   </button>
   <p>
     <span>{currentTime}</span>
-    <span class="text-gray-400">({$currentFrameIndex})</span>
+    <span class="text-muted-foreground">({$currentFrameIndex})</span>
   </p>
 </div>
 <svelte:window on:keydown={shortcutHandler} />

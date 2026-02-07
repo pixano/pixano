@@ -21,14 +21,13 @@ License: CECILL-C
     type FeaturesValues,
     type SaveItem,
     type Schema,
-  } from "@pixano/core/src";
+  } from "@pixano/core";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 
   import {
     datasetSchema,
     datasetsStore,
     isLoadingNewItemStore,
-    modelsStore,
     saveCurrentItemStore,
     sourcesStore,
   } from "../../../../lib/stores/datasetStores";
@@ -328,7 +327,6 @@ License: CECILL-C
 {#if selectedItem && selectedDataset}
   <DatasetItemWorkspace
     {selectedItem}
-    models={$modelsStore}
     {featureValues}
     {handleSaveItem}
     isLoading={isLoadingNewItem}
