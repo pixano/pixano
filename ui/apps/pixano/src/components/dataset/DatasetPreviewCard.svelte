@@ -123,8 +123,10 @@ License: CECILL-C
         alt="{dataset.name} thumbnail"
         class="w-full h-full object-cover transition-transform duration-500 group-hover/btn:scale-105"
       />
-      <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-      
+      <div
+        class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
+      ></div>
+
       <!-- Workspace Badge (Overlay) -->
       {#if dataset.workspace != WorkspaceType.UNDEFINED}
         <div
@@ -137,12 +139,16 @@ License: CECILL-C
 
     <!-- Content -->
     <div class="flex-1 p-5 flex flex-col gap-1">
-      <h3 class="text-base font-bold text-foreground line-clamp-1 group-hover/btn:text-primary transition-colors">
+      <h3
+        class="text-base font-bold text-foreground line-clamp-1 group-hover/btn:text-primary transition-colors"
+      >
         {dataset.name}
       </h3>
 
       <div class="flex items-center gap-2 mt-auto">
-        <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50">
+        <div
+          class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50"
+        >
           <span class="text-[11px] font-bold text-foreground/80 tabular-nums">
             {dataset.num_items}
           </span>
@@ -150,14 +156,14 @@ License: CECILL-C
             Items
           </span>
         </div>
-        
+
         {#if dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"}
           <span class="text-[11px] text-muted-foreground/60 font-medium">
             • {dataset.size}
           </span>
         {/if}
       </div>
-      
+
       <p class="text-[12px] text-muted-foreground line-clamp-2 mt-2 leading-relaxed opacity-80">
         {dataset.description}
       </p>

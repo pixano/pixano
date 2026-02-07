@@ -109,7 +109,9 @@ License: CECILL-C
       </div>
 
       <!-- Main Table Area - This should scroll -->
-      <div class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-sm">
+      <div
+        class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-sm"
+      >
         {#if isLoadingTableItems}
           <div class="flex-grow flex justify-center items-center">
             <Loader2Icon class="animate-spin text-primary opacity-50" />

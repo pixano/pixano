@@ -5,8 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { Server, Wand2Icon } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
-  import { Wand2Icon, Server } from "lucide-svelte";
 
   import { currentDatasetStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
@@ -64,7 +64,7 @@ License: CECILL-C
     </div>
     <p class="font-bold text-sm tracking-tight">Smart Segmentation Model</p>
   </div>
-  
+
   <div class="flex flex-col p-6 gap-6">
     {#if !$inferenceServerStore.connected}
       <div class="flex flex-col items-center gap-4 py-4 text-center">
@@ -77,11 +77,15 @@ License: CECILL-C
       </div>
     {:else if $segmentationModels.length === 0}
       <div class="flex flex-col items-center gap-4 py-4 text-center">
-        <p class="text-xs text-muted-foreground font-medium">No segmentation models found on server.</p>
+        <p class="text-xs text-muted-foreground font-medium">
+          No segmentation models found on server.
+        </p>
       </div>
     {:else}
       <div class="space-y-2">
-        <h4 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Available Models</h4>
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">
+          Available Models
+        </h4>
         <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1">
           {#each $segmentationModels as model}
             <button
@@ -91,7 +95,13 @@ License: CECILL-C
                 : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'}"
               on:click={() => handleSelect(model.name)}
             >
-              <span class="text-xs font-bold {selectedModel === model.name ? 'text-primary' : 'text-foreground'}">{model.name}</span>
+              <span
+                class="text-xs font-bold {selectedModel === model.name
+                  ? 'text-primary'
+                  : 'text-foreground'}"
+              >
+                {model.name}
+              </span>
               {#if model.provider_name}
                 <span class="text-[10px] text-muted-foreground font-medium italic opacity-70">
                   via {model.provider_name.includes("@")
@@ -109,8 +119,12 @@ License: CECILL-C
       <div class="h-px bg-border/40" />
       <div class="space-y-4">
         <div class="flex items-center justify-between px-1">
-          <label for="positiveInteger" class="text-xs font-bold text-foreground/80">Tracking Window</label>
-          <div class="flex items-center rounded-lg border border-border bg-muted/30 px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+          <label for="positiveInteger" class="text-xs font-bold text-foreground/80">
+            Tracking Window
+          </label>
+          <div
+            class="flex items-center rounded-lg border border-border bg-muted/30 px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all"
+          >
             <input
               class="w-12 bg-transparent text-xs font-bold focus:outline-none text-center"
               type="number"
@@ -125,7 +139,7 @@ License: CECILL-C
             <span class="text-[10px] font-bold text-muted-foreground ml-1">frames</span>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
           <Checkbox
             handleClick={handleValTrackingClick}

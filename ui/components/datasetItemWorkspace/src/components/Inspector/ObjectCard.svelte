@@ -315,7 +315,9 @@ License: CECILL-C
 <Card.Root
   class={cn(
     "shadow-none rounded-xl border-border/50 overflow-hidden transition-all duration-200",
-    highlightState === "self" ? "ring-1 ring-primary/20 bg-primary/[0.03]" : "hover:bg-accent/40 hover:border-border",
+    highlightState === "self"
+      ? "ring-1 ring-primary/20 bg-primary/[0.03]"
+      : "hover:bg-accent/40 hover:border-border",
   )}
   style={`
     border-left: ${highlightState === "self" ? `4px solid ${color}` : "4px solid transparent"};
@@ -388,7 +390,9 @@ License: CECILL-C
         >
           {displayName}
         </span>
-        <span class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium opacity-70">
+        <span
+          class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium opacity-70"
+        >
           {entity.table_info.base_schema}
         </span>
       </div>
@@ -426,7 +430,9 @@ License: CECILL-C
         class="text-muted-foreground"
       >
         <ChevronRight
-          class={cn("transition-transform duration-200", { "rotate-90": entity.ui.displayControl.open })}
+          class={cn("transition-transform duration-200", {
+            "rotate-90": entity.ui.displayControl.open,
+          })}
           strokeWidth={2}
         />
       </IconButton>
@@ -460,7 +466,9 @@ License: CECILL-C
               class="h-6 w-6"
             >
               <ChevronRight
-                class={cn("h-4 w-4 transition-transform duration-200", { "rotate-90": featuresPanelOpen })}
+                class={cn("h-4 w-4 transition-transform duration-200", {
+                  "rotate-90": featuresPanelOpen,
+                })}
               />
             </IconButton>
           </div>
@@ -492,7 +500,9 @@ License: CECILL-C
             class="h-6 w-6"
           >
             <ChevronRight
-              class={cn("h-4 w-4 transition-transform duration-200", { "rotate-90": childsPanelOpen })}
+              class={cn("h-4 w-4 transition-transform duration-200", {
+                "rotate-90": childsPanelOpen,
+              })}
             />
           </IconButton>
         </div>
@@ -500,7 +510,9 @@ License: CECILL-C
         {#if childsPanelOpen}
           <div class="space-y-1 pl-1">
             {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-              <p class="text-[11px] text-center text-muted-foreground/70 italic py-1 bg-muted/20 rounded">
+              <p
+                class="text-[11px] text-center text-muted-foreground/70 italic py-1 bg-muted/20 rounded"
+              >
                 {allowedChilds.length > 0 ? allowedChilds.length : "No"}
                 object{allowedChilds.length === 1 ? "" : "s"}
                 on frame {$currentFrameIndex}

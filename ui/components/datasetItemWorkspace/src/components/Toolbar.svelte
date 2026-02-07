@@ -108,7 +108,9 @@ License: CECILL-C
   }
 </script>
 
-<div class="flex items-center gap-1.5 z-10 bg-background/50 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-background/80 hover:border-border/60 group/toolbar">
+<div
+  class="flex items-center gap-1.5 z-10 bg-background/50 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-background/80 hover:border-border/60 group/toolbar"
+>
   <!-- Manual Tools Group -->
   <div class="flex items-center gap-0.5">
     <IconButton
@@ -149,10 +151,13 @@ License: CECILL-C
       "bg-primary/[0.02] ring-1 ring-primary/5": showSmartTools,
     })}
   >
-    <IconButton 
-      tooltipContent="Smart Segmentation" 
+    <IconButton
+      tooltipContent="Smart Segmentation"
       on:click={handleSmartToolClick}
-      class={cn("h-8 w-8 transition-all duration-300", showSmartTools ? "text-primary" : "text-muted-foreground opacity-50 hover:opacity-100")}
+      class={cn(
+        "h-8 w-8 transition-all duration-300",
+        showSmartTools ? "text-primary" : "text-muted-foreground opacity-50 hover:opacity-100",
+      )}
     >
       <Wand2Icon class="h-4.5 w-4.5" />
     </IconButton>
@@ -192,8 +197,8 @@ License: CECILL-C
           >
             <Check class="h-4.5 w-4.5" />
           </IconButton>
-          <IconButton 
-            tooltipContent={"Abort tracking (Escape)"} 
+          <IconButton
+            tooltipContent={"Abort tracking (Escape)"}
             on:click={onAbort}
             class="h-8 w-8 text-destructive/80 hover:bg-destructive/5"
           >

@@ -138,7 +138,10 @@ License: CECILL-C
         <Type class="h-3.5 w-3.5 mx-1" />
       {/if}
     </div>
-    <span class="flex-auto block truncate text-[12px] font-medium text-foreground/80" title={child.id}>
+    <span
+      class="flex-auto block truncate text-[12px] font-medium text-foreground/80"
+      title={child.id}
+    >
       {isMultiView ? child.data.view_ref.name : child.id}
     </span>
   </div>

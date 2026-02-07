@@ -6,7 +6,13 @@ License: CECILL-C
 
 import { derived, writable } from "svelte/store";
 
-import { ImageTask, MultimodalImageNLPTask, VideoTask, type ConnectedProvider, type InferenceModel } from "../types";
+import {
+  ImageTask,
+  MultimodalImageNLPTask,
+  VideoTask,
+  type ConnectedProvider,
+  type InferenceModel,
+} from "../types";
 
 export interface InferenceServerState {
   connected: boolean;

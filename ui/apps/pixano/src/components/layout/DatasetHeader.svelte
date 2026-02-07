@@ -9,6 +9,7 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import { ConfirmModal, PrimaryButton } from "@pixano/core";
+
   import DatasetItemHeader from "./DatasetItemHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -39,7 +40,7 @@ License: CECILL-C
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
     if (!$currentDatasetStore) return;
-    
+
     // Find the neighbor item id
     const neighborId = findNeighborItemId($datasetItemIds, direction, currentItemId);
 
@@ -117,10 +118,7 @@ License: CECILL-C
   }
 </script>
 
-<div
-  class="h-full w-full flex items-center"
-  use:preventUnsavedUnload
->
+<div class="h-full w-full flex items-center" use:preventUnsavedUnload>
   {#if $page.route.id === DATASET_ITEM_ROUTE}
     <DatasetItemHeader
       {currentItemId}
@@ -133,13 +131,15 @@ License: CECILL-C
     <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">
       <div class="flex items-center gap-6">
         {#if $currentDatasetStore}
-          <div class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]">
+          <div
+            class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]"
+          >
             <span class="text-sm font-bold text-foreground truncate">
               {$currentDatasetStore.name}
             </span>
           </div>
         {/if}
-        
+
         <div class="flex items-center gap-2">
           {#each navItems as { name, Icon }}
             <PrimaryButton
@@ -153,7 +153,7 @@ License: CECILL-C
           {/each}
         </div>
       </div>
-      
+
       <!-- Placeholder for Right zone in browser view to maintain symmetry -->
       <div class="w-10"></div>
     </div>

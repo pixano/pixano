@@ -148,7 +148,7 @@ License: CECILL-C
 <div class="flex flex-col h-full bg-card overflow-hidden">
   <div class="shrink-0 p-3 pb-0 space-y-4">
     <PreAnnotation />
-    
+
     {#if !$preAnnotationIsActive}
       <!-- Preview Area -->
       <div class="space-y-2">
@@ -180,7 +180,25 @@ License: CECILL-C
           {:else}
             <div class="flex flex-col items-center gap-2 text-center px-6">
               <div class="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground/40"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><circle cx="10" cy="13" r="2"></circle><path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"></path></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="text-muted-foreground/40"
+                >
+                  <path
+                    d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                  ></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <circle cx="10" cy="13" r="2"></circle>
+                  <path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"></path>
+                </svg>
               </div>
               <p class="text-xs font-medium text-muted-foreground/60">
                 Select an object to see its preview

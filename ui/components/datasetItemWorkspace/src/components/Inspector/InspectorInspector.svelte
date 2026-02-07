@@ -18,9 +18,7 @@ License: CECILL-C
   let currentTab: "scene" | "objects" = "objects";
 </script>
 
-<div
-  class="h-full flex flex-col border-l border-border bg-card font-DM Sans overflow-hidden"
->
+<div class="h-full flex flex-col border-l border-border bg-card font-DM Sans overflow-hidden">
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}

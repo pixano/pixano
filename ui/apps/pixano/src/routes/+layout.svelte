@@ -9,7 +9,7 @@ License: CECILL-C
   import { onDestroy, onMount } from "svelte";
   import { fade } from "svelte/transition";
 
-  import { api, IconButton, checkInferenceStatus } from "@pixano/core";
+  import { api, checkInferenceStatus, IconButton } from "@pixano/core";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
   import pixanoFavicon from "../assets/favicon.ico";
@@ -21,8 +21,8 @@ License: CECILL-C
     datasetTableStore,
     datasetTotalItemsCount,
   } from "../lib/stores/datasetStores";
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
 
   import "./styles.css";
 
@@ -44,7 +44,7 @@ License: CECILL-C
   });
 
   // Get all the ids of the items of the selected dataset
-  $: void getCurrentDatasetItemsIds(currentDatasetId); 
+  $: void getCurrentDatasetItemsIds(currentDatasetId);
 
   const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
     if (value.where != undefined) {
@@ -89,10 +89,16 @@ License: CECILL-C
 
 <div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-DM Sans">
   <!-- Persistent Unified Header -->
-  <header class="w-full h-16 px-6 flex items-center gap-6 bg-background border-b border-border z-50 shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+  <header
+    class="w-full h-16 px-6 flex items-center gap-6 bg-background border-b border-border z-50 shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+  >
     <!-- Branding (Always present) -->
     <div class="flex items-center shrink-0">
-      <IconButton on:click={navigateToHome} tooltipContent="Go to library" class="p-1.5 hover:bg-primary/5 rounded-xl transition-all duration-200">
+      <IconButton
+        on:click={navigateToHome}
+        tooltipContent="Go to library"
+        class="p-1.5 hover:bg-primary/5 rounded-xl transition-all duration-200"
+      >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8" />
       </IconButton>
     </div>

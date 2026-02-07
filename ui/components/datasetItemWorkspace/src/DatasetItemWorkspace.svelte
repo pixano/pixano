@@ -7,8 +7,8 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
-  import { fade, fly } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
+  import { fade, fly } from "svelte/transition";
 
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import {
@@ -261,8 +261,8 @@ License: CECILL-C
       class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors"
     ></div>
   </button>
-  <div 
-    class="grow overflow-hidden bg-card" 
+  <div
+    class="grow overflow-hidden bg-card"
     style={`width: ${objectInspectorAreaMaxWidth}px`}
     in:fly={{ x: 20, duration: 400, delay: 200, easing: cubicOut }}
   >

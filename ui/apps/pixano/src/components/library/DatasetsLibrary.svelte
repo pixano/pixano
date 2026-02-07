@@ -99,14 +99,22 @@ License: CECILL-C
     </div>
     {#if datasets}
       <div class="flex items-center gap-4">
-        <div class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm">
-          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Datasets</span>
+        <div
+          class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
+        >
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Datasets
+          </span>
           <span class="text-sm font-black text-primary tabular-nums">
             {datasets.length}
           </span>
         </div>
-        <div class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm">
-          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Items</span>
+        <div
+          class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
+        >
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Total Items
+          </span>
           <span class="text-sm font-black text-primary tabular-nums">
             {datasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
           </span>
@@ -129,7 +137,9 @@ License: CECILL-C
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {#each [0, 1, 2, 3, 4, 5] as i (i)}
-        <div class="h-[320px] rounded-2xl border border-border bg-card animate-pulse overflow-hidden">
+        <div
+          class="h-[320px] rounded-2xl border border-border bg-card animate-pulse overflow-hidden"
+        >
           <div class="h-44 bg-muted/50 w-full"></div>
           <div class="p-5 space-y-4">
             <div class="space-y-2">
