@@ -47,9 +47,9 @@ License: CECILL-C
     <Button
       {disabled}
       size={big ? "lg" : "icon"}
-      class={cn("bg-transparent text-foreground hover:bg-accent relative", {
-        "bg-red-500 hover:bg-red-500": redConfirmState,
-        "bg-primary text-white": selected,
+      class={cn("bg-transparent text-foreground hover:bg-accent transition-all duration-200 relative active:scale-95 rounded-xl", {
+        "bg-red-500 text-white hover:bg-red-600": redConfirmState,
+        "bg-primary text-primary-foreground shadow-sm": selected,
       })}
       on:click={handleClick}
       on:mouseover

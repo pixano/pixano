@@ -225,7 +225,6 @@ License: CECILL-C
         selectedKeypointTemplate={templates.find(
           (t) => t.template_id === $selectedKeypointsTemplate,
         )}
-        embeddings={$embeddings}
         {filters}
         {pixanoInferenceSegmentation}
         canvasSize={entityLinkingAreaWidth + resize}

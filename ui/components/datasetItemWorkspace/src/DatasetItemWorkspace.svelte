@@ -7,6 +7,8 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
+  import { fade, fly } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
 
   import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import {
@@ -56,7 +58,6 @@ License: CECILL-C
   const defaultOIWidth = 450;
   let objectInspectorAreaMaxWidth = defaultOIWidth; //default width
   const minOIAreaWidth = 0; //minimum width for ObjectInspector area
-  let isDragging = false;
   let initialOIAreaX = 0;
   let initialOIAreaWidth = 0;
 
@@ -217,7 +218,6 @@ License: CECILL-C
     }
   }
   const startExpand = (e: MouseEvent) => {
-    isDragging = false;
     initialOIAreaX = e.clientX;
     initialOIAreaWidth = objectInspectorAreaMaxWidth;
     window.addEventListener("mousemove", expand, true);
@@ -230,16 +230,8 @@ License: CECILL-C
   };
 
   const expand = (e: MouseEvent) => {
-    isDragging = true;
     const delta = e.clientX - initialOIAreaX;
     objectInspectorAreaMaxWidth = Math.max(minOIAreaWidth, initialOIAreaWidth - delta);
-  };
-
-  const shrink = () => {
-    if (!isDragging) {
-      objectInspectorAreaMaxWidth =
-        objectInspectorAreaMaxWidth < defaultOIWidth ? defaultOIWidth : 0;
-    }
   };
 </script>
 
@@ -255,16 +247,25 @@ License: CECILL-C
     id="datasetItemViewerDiv"
     class="flex w-full overflow-hidden"
     style={`max-width: calc(100%  - ${objectInspectorAreaMaxWidth}px);`}
+    in:fade={{ duration: 300, delay: 100 }}
   >
     <!-- 'resize' prop is used to trigger redraw on value change, value itself is not used, but shouldn't be 0, so we add '+1' -->
     <DatasetItemViewer {selectedItem} {isLoading} resize={objectInspectorAreaMaxWidth + 1} />
   </div>
   <button
-    class="w-1.5 bg-border hover:bg-muted-foreground/30 cursor-col-resize h-full transition-colors"
+    class="w-1.5 group relative bg-border hover:bg-primary/30 cursor-col-resize h-full transition-colors"
     on:mousedown={startExpand}
-    on:click={shrink}
-  />
-  <div class="grow overflow-hidden" style={`width: ${objectInspectorAreaMaxWidth}px`}>
+    aria-label="Resize object inspector"
+  >
+    <div
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-border group-hover:bg-primary/50 transition-colors"
+    ></div>
+  </button>
+  <div 
+    class="grow overflow-hidden bg-card" 
+    style={`width: ${objectInspectorAreaMaxWidth}px`}
+    in:fly={{ x: 20, duration: 400, delay: 200, easing: cubicOut }}
+  >
     <Inspector on:click={onSave} {isLoading} />
   </div>
   <LoadModelModal />

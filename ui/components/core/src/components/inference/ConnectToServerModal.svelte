@@ -62,7 +62,7 @@ License: CECILL-C
           }}
           on:keyup={(e) => {
             e.stopPropagation();
-            if (e.key === "Enter") handleConnect();
+            if (e.key === "Enter") void handleConnect();
           }}
         />
       </div>

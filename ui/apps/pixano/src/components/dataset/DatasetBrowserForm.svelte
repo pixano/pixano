@@ -9,8 +9,8 @@ License: CECILL-C
 
   import { createEventDispatcher } from "svelte";
 
-  import type { DatasetBrowser } from "@pixano/core/src";
-  import { svg_clear, svg_search } from "@pixano/core/src/icons";
+  import type { DatasetBrowser } from "@pixano/core";
+  import { icons } from "@pixano/core";
 
   import FilterTable from "./FilterTable.svelte";
 
@@ -72,7 +72,7 @@ License: CECILL-C
         width="48"
         class="absolute left-2 h-5 w-5 text-muted-foreground pointer-events-none"
       >
-        <path d={svg_search} fill="currentcolor" />
+        <path d={icons.svg_search} fill="currentcolor" />
       </svg>
       {#if searchInput !== ""}
         <button
@@ -86,7 +86,7 @@ License: CECILL-C
             width="48"
             class="h-5 w-5 text-foreground"
           >
-            <path d={svg_clear} fill="currentcolor" />
+            <path d={icons.svg_clear} fill="currentcolor" />
           </svg>
         </button>
       {/if}

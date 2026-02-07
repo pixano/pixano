@@ -4,10 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export interface ConnectedProvider {
-  name: string;
-  url: string | null;
-}
+import type { ConnectedProvider } from "../../lib/types";
 
 export interface InferenceStatusResponse {
   connected: boolean;

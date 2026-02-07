@@ -314,26 +314,27 @@ License: CECILL-C
 
 <Card.Root
   class={cn(
-    "shadow-none rounded-lg border-border/50 overflow-hidden transition-all duration-150 hover:bg-accent/50",
+    "shadow-none rounded-xl border-border/50 overflow-hidden transition-all duration-200",
+    highlightState === "self" ? "ring-1 ring-primary/20 bg-primary/[0.03]" : "hover:bg-accent/40 hover:border-border",
   )}
   style={`
-    border-left: ${highlightState === "self" ? `3px solid ${color}` : "3px solid transparent"};
-    background: ${highlightState === "self" ? `${color}0d` : "hsl(var(--card))"}
+    border-left: ${highlightState === "self" ? `4px solid ${color}` : "4px solid transparent"};
   `}
   on:mouseenter={() => (showIcons = true)}
   on:mouseleave={() => (showIcons = entity.ui.displayControl.open ?? false)}
   id={`card-object-${entity.id}`}
 >
-  <Card.Header class="p-1 py-0.5 flex-row space-y-0 items-center justify-between">
-    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0">
+  <Card.Header class="p-2 py-1.5 flex-row space-y-0 items-center justify-between gap-2">
+    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 gap-1.5">
       <IconButton
         on:click={() => handleSetDisplayControl("hidden", isVisible)}
         tooltipContent={isVisible ? "Hide object" : "Show object"}
+        class="opacity-70 hover:opacity-100"
       >
         {#if isVisible}
-          <Eye class="h-4" />
+          <Eye class="h-4 w-4" />
         {:else}
-          <EyeOff class="h-4" />
+          <EyeOff class="h-4 w-4" />
         {/if}
       </IconButton>
       {#if thumbnails.length > 0}
@@ -350,10 +351,10 @@ License: CECILL-C
         {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
         {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
         <button
-          class="flex-shrink-0 mr-2 flex items-center justify-center rounded overflow-hidden
-                 transition-transform hover:scale-110"
-          style="width: 48px; height: 48px; border: 2px solid {color};
-                 background: hsl(var(--muted) / 0.5);"
+          class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden
+                 transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+          style="width: 48px; height: 48px; border: 2.5px solid {color};
+                 background: hsl(var(--muted) / 0.8);"
           title="Highlight object"
           on:click={onColoredDotClick}
         >
@@ -369,28 +370,33 @@ License: CECILL-C
         </button>
       {:else}
         <button
-          class="rounded-full w-2.5 h-2.5 mr-2.5 flex-shrink-0 ring-1 ring-black/10
+          class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-white shadow-sm
                  transition-transform hover:scale-125"
           style="background:{color}"
           title="Highlight object"
           on:click={onColoredDotClick}
         />
       {/if}
-      <span
-        class={cn("truncate flex-auto text-[13px] leading-tight", {
-          "text-foreground": highlightState !== "none",
-          "text-muted-foreground":
-            highlightState === "none" && $selectedTool.type === ToolType.Fusion,
-        })}
-        title="{entity.table_info.base_schema} ({entity.id})"
-      >
-        {displayName}
-      </span>
+      <div class="flex flex-col min-w-0 overflow-hidden">
+        <span
+          class={cn("truncate text-[13px] font-semibold leading-tight transition-colors", {
+            "text-foreground": highlightState !== "none",
+            "text-muted-foreground":
+              highlightState === "none" && $selectedTool.type === ToolType.Fusion,
+          })}
+          title="{entity.table_info.base_schema} ({entity.id})"
+        >
+          {displayName}
+        </span>
+        <span class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium opacity-70">
+          {entity.table_info.base_schema}
+        </span>
+      </div>
     </div>
-    <div class="flex-shrink-0 flex items-center justify-end">
+    <div class="flex-shrink-0 flex items-center justify-end gap-0.5">
       <div
         class={cn(
-          "flex items-center gap-0.5 transition-opacity duration-150",
+          "flex items-center gap-0.5 transition-opacity duration-200",
           showIcons || entity.ui.displayControl.editing ? "opacity-100" : "opacity-0",
         )}
       >
@@ -399,98 +405,105 @@ License: CECILL-C
             tooltipContent="Delete object"
             redconfirm
             on:click={() => deleteObject(entity)}
+            class="text-muted-foreground hover:text-destructive"
           >
-            <Trash2 class="h-4" />
+            <Trash2 class="h-4 w-4" />
           </IconButton>
         {/if}
         {#if entity.is_track && (showIcons || entity.ui.displayControl.editing || hiddenTrack)}
           <IconButton
             tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
             on:click={onTrackVisClick}
+            class="text-muted-foreground"
           >
-            {#if hiddenTrack}<ListPlus class="h-4" />{:else}<ListX class="h-4" />{/if}
+            {#if hiddenTrack}<ListPlus class="h-4 w-4" />{:else}<ListX class="h-4 w-4" />{/if}
           </IconButton>
         {/if}
       </div>
       <IconButton
         on:click={() => (entity.ui.displayControl.open = !entity.ui.displayControl.open)}
         tooltipContent={entity.ui.displayControl.open ? "Hide features" : "Show features"}
+        class="text-muted-foreground"
       >
         <ChevronRight
-          class={cn("transition", { "rotate-90": entity.ui.displayControl.open })}
-          strokeWidth={1}
+          class={cn("transition-transform duration-200", { "rotate-90": entity.ui.displayControl.open })}
+          strokeWidth={2}
         />
       </IconButton>
     </div>
   </Card.Header>
   {#if entity.ui.displayControl.open}
-    <Card.Content class="p-3 bg-muted/30 border-t border-border/50">
-      <div class="flex flex-col gap-2">
-        <div class="w-full block">
-          <div class="flex items-center justify-between py-1.5 border-b border-border/40">
-            <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Features
-            </span>
-            <div class="flex-shrink-0 flex items-center justify-end">
-              {#if $selectedTool.type !== ToolType.Fusion}
-                <IconButton
-                  tooltipContent="Edit object features"
-                  selected={entity.ui.displayControl.editing}
-                  on:click={() => onEditIconClick()}
-                >
-                  <Pencil class="h-4" />
-                </IconButton>
-              {/if}
+    <Card.Content class="p-3 bg-muted/40 border-t border-border/40 space-y-4">
+      <!-- Features Section -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between py-1 border-b border-border/30">
+          <h4 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
+            Properties
+          </h4>
+          <div class="flex items-center gap-1">
+            {#if $selectedTool.type !== ToolType.Fusion}
               <IconButton
-                on:click={() => {
-                  featuresPanelOpen = !featuresPanelOpen;
-                  entity.ui.displayControl.editing = false;
-                }}
-                tooltipContent={featuresPanelOpen ? "Hide features" : "Show features"}
+                tooltipContent="Edit properties"
+                selected={entity.ui.displayControl.editing}
+                on:click={() => onEditIconClick()}
+                class="h-6 w-6"
               >
-                <ChevronRight
-                  class={cn("transition", { "rotate-90": featuresPanelOpen })}
-                  strokeWidth={1}
-                />
+                <Pencil class="h-3.5 w-3.5" />
               </IconButton>
-            </div>
+            {/if}
+            <IconButton
+              on:click={() => {
+                featuresPanelOpen = !featuresPanelOpen;
+                entity.ui.displayControl.editing = false;
+              }}
+              tooltipContent={featuresPanelOpen ? "Collapse" : "Expand"}
+              class="h-6 w-6"
+            >
+              <ChevronRight
+                class={cn("h-4 w-4 transition-transform duration-200", { "rotate-90": featuresPanelOpen })}
+              />
+            </IconButton>
           </div>
-          {#if featuresPanelOpen}
+        </div>
+        {#if featuresPanelOpen}
+          <div class="pl-1 pt-1">
             <UpdateFeatureInputs
               featureClass="objects"
               features={$features}
               isEditing={entity.ui.displayControl.editing ?? false}
               {saveInputChange}
             />
-          {/if}
-        </div>
-        <div class="flex items-center justify-between py-1.5 border-b border-border/40">
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Objects
-            <span
-              class="ml-1.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 leading-none"
-            >
-              {allowableChilds.length}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Objects Section -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between py-1 border-b border-border/30">
+          <h4 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
+            Annotations
+            <span class="ml-1.5 tabular-nums opacity-60">
+              ({allowableChilds.length})
             </span>
-          </span>
+          </h4>
           <IconButton
             on:click={() => (childsPanelOpen = !childsPanelOpen)}
-            tooltipContent={childsPanelOpen ? "Hide objects" : "Show objects"}
+            tooltipContent={childsPanelOpen ? "Collapse" : "Expand"}
+            class="h-6 w-6"
           >
             <ChevronRight
-              class={cn("transition", { "rotate-90": childsPanelOpen })}
-              strokeWidth={1}
+              class={cn("h-4 w-4 transition-transform duration-200", { "rotate-90": childsPanelOpen })}
             />
           </IconButton>
         </div>
 
         {#if childsPanelOpen}
-          <div class="flex flex-col">
+          <div class="space-y-1 pl-1">
             {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-              <p class="text-center italic">
+              <p class="text-[11px] text-center text-muted-foreground/70 italic py-1 bg-muted/20 rounded">
                 {allowedChilds.length > 0 ? allowedChilds.length : "No"}
                 object{allowedChilds.length === 1 ? "" : "s"}
-                visible on frame {$currentFrameIndex}
+                on frame {$currentFrameIndex}
               </p>
             {/if}
             {#each allowedChilds as child}

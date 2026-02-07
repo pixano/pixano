@@ -7,13 +7,13 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { onDestroy, onMount } from "svelte";
+  import { fade } from "svelte/transition";
 
-  import { api, cn } from "@pixano/core/src";
-  import { checkInferenceStatus } from "@pixano/core/src/lib/services/inferenceService";
+  import { api, IconButton, checkInferenceStatus } from "@pixano/core";
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import MainHeader from "../components/layout/MainHeader.svelte";
   import {
     currentDatasetStore,
     datasetItemIds,
@@ -22,10 +22,12 @@ License: CECILL-C
     datasetTotalItemsCount,
   } from "../lib/stores/datasetStores";
   import { page } from "$app/stores";
+  import { goto } from "$app/navigation";
 
   import "./styles.css";
 
   let currentDatasetId: string;
+  let lastFetchedDatasetId: string;
 
   const HOME_ROUTE_ID = "/";
 
@@ -38,11 +40,11 @@ License: CECILL-C
       .catch((err) => {
         console.error(err);
       });
-    checkInferenceStatus();
+    void checkInferenceStatus();
   });
 
   // Get all the ids of the items of the selected dataset
-  $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
+  $: void getCurrentDatasetItemsIds(currentDatasetId); 
 
   const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
     if (value.where != undefined) {
@@ -51,14 +53,11 @@ License: CECILL-C
   });
 
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
-    if (datasetId === undefined) return;
-    if ($datasetItemIds.length === 0) {
-      const item_ids = await api.getDatasetItemsIds(datasetId);
-      datasetItemIds.set(item_ids);
-      datasetTotalItemsCount.set($datasetItemIds.length);
-    } else {
-      datasetTotalItemsCount.set($datasetItemIds.length);
-    }
+    if (datasetId === undefined || datasetId === lastFetchedDatasetId) return;
+    const item_ids = await api.getDatasetItemsIds(datasetId);
+    datasetItemIds.set(item_ids);
+    datasetTotalItemsCount.set(item_ids.length);
+    lastFetchedDatasetId = datasetId;
   };
 
   $: unsubscribePage = page.subscribe((value) => {
@@ -76,6 +75,10 @@ License: CECILL-C
     unsubscribeDatasetTableStore();
     unsubscribePage();
   });
+
+  async function navigateToHome() {
+    await goto("/");
+  }
 </script>
 
 <svelte:head>
@@ -84,18 +87,30 @@ License: CECILL-C
   <meta name="description" content="Pixano app" />
 </svelte:head>
 
-<div class="app h-screen flex flex-col overflow-hidden">
-  {#if $page.route.id === HOME_ROUTE_ID}
-    <MainHeader />
-  {:else}
-    <DatasetHeader pageId={$page.route.id} />
-  {/if}
-  <main
-    class={cn(
-      "bg-background flex flex-col flex-1 min-h-0",
-      $page.route.id !== HOME_ROUTE_ID && "pt-20",
-    )}
-  >
-    <slot />
+<div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-DM Sans">
+  <!-- Persistent Unified Header -->
+  <header class="w-full h-16 px-6 flex items-center gap-6 bg-background border-b border-border z-50 shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+    <!-- Branding (Always present) -->
+    <div class="flex items-center shrink-0">
+      <IconButton on:click={navigateToHome} tooltipContent="Go to library" class="p-1.5 hover:bg-primary/5 rounded-xl transition-all duration-200">
+        <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8" />
+      </IconButton>
+    </div>
+
+    <!-- Contextual Header Content (Fills remaining space) -->
+    <div class="flex-1 h-full">
+      {#if $page.route.id !== HOME_ROUTE_ID}
+        <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
+          <DatasetHeader pageId={$page.route.id} />
+        </div>
+      {/if}
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 flex flex-col min-h-0 relative bg-muted/5">
+    <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <slot />
+    </div>
   </main>
 </div>

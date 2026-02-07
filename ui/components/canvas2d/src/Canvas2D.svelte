@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import * as ort from "onnxruntime-web";
   import { afterUpdate, onDestroy, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
@@ -18,7 +17,6 @@ License: CECILL-C
     BBox,
     Mask,
     SaveShapeType,
-    WarningModal,
     type ImagesPerView,
     type KeypointsTemplate,
     type LabeledPointTool,
@@ -61,7 +59,6 @@ License: CECILL-C
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[] = [];
   export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
-  export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
@@ -84,8 +81,6 @@ License: CECILL-C
 
   let isReady = false;
 
-  let viewEmbeddingModal = false;
-  let viewWithoutEmbeddings = "";
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {view_name: zoomFactor}
@@ -1359,11 +1354,4 @@ License: CECILL-C
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
-{#if viewEmbeddingModal}
-  <WarningModal
-    message="No embeddings found for view '{viewWithoutEmbeddings}'."
-    details="The embeddings may not have finished loading yet. Please try again."
-    on:confirm={() => (viewEmbeddingModal = false)}
-  />
-{/if}
 <svelte:window on:keydown={handleKeyDown} />

@@ -6,8 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { DatasetInfo } from "@pixano/core/src";
-  import { cn, Histogram } from "@pixano/core/src";
+  import type { DatasetInfo } from "@pixano/core";
+  import { cn, Histogram } from "@pixano/core";
 
   import { dashboardTabs } from "../../lib/constants/dashboardsConstants";
 

@@ -10,7 +10,6 @@ License: CECILL-C
   import { onDestroy } from "svelte";
 
   import {
-    api,
     BaseSchema,
     LoadingModal,
     Mask,

@@ -8,8 +8,8 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
 
-  import type { DatasetInfo } from "@pixano/core/src";
-  import { svg_search } from "@pixano/core/src/icons";
+  import type { DatasetInfo } from "@pixano/core";
+  import { icons } from "@pixano/core";
   import { panTool } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
   import {
     modelsUiStore,
@@ -74,16 +74,16 @@ License: CECILL-C
   });
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-8">
   <!-- Toolbar: search + stats -->
-  <div class="flex items-center justify-between gap-4 flex-wrap">
-    <div class="relative flex items-center">
+  <div class="flex items-center justify-between gap-6 flex-wrap pb-2 border-b border-border/50">
+    <div class="relative flex items-center group">
       <input
         id="search-input"
         type="text"
         placeholder="Search datasets..."
-        class="h-9 w-64 pl-9 pr-4 rounded-lg bg-muted border border-border
-        text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+        class="h-10 w-72 pl-10 pr-4 rounded-xl bg-muted/50 border border-border
+        text-foreground placeholder-muted-foreground/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all duration-200 shadow-sm"
         on:input={handleSearch}
         value={$datasetFilter}
       />
@@ -92,25 +92,23 @@ License: CECILL-C
         height="48"
         viewBox="0 -960 960 960"
         width="48"
-        class="absolute left-2.5 h-4 w-4 pointer-events-none"
+        class="absolute left-3.5 h-4 w-4 pointer-events-none text-muted-foreground/60 group-focus-within:text-primary transition-colors"
       >
-        <path d={svg_search} fill="hsl(var(--muted-foreground))" />
+        <path d={icons.svg_search} fill="currentColor" />
       </svg>
     </div>
     {#if datasets}
-      <div class="flex items-center gap-3">
-        <div class="px-3 py-1 rounded-full bg-muted border border-border flex items-center gap-2">
-          <span class="text-sm font-medium">{datasets.length}</span>
-          <span class="text-xs text-muted-foreground">
-            dataset{datasets.length > 1 ? "s" : ""}
+      <div class="flex items-center gap-4">
+        <div class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Datasets</span>
+          <span class="text-sm font-black text-primary tabular-nums">
+            {datasets.length}
           </span>
         </div>
-        <div class="px-3 py-1 rounded-full bg-muted border border-border flex items-center gap-2">
-          <span class="text-sm font-medium">
+        <div class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Items</span>
+          <span class="text-sm font-black text-primary tabular-nums">
             {datasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
-          </span>
-          <span class="text-xs text-muted-foreground">
-            item{datasets.reduce((sum, dataset) => sum + dataset.num_items, 0) > 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -119,22 +117,30 @@ License: CECILL-C
 
   <!-- Dataset grid -->
   {#if datasets}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {#each datasets as dataset}
         {#if !dataset.isFiltered}
-          <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+          <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+          </div>
         {/if}
       {/each}
     </div>
   {:else}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      {#each Array(4) as _}
-        <div class="h-72 rounded-xl border border-border bg-card animate-pulse">
-          <div class="pt-4 px-4 space-y-2">
-            <div class="h-5 w-2/3 bg-muted rounded"></div>
-            <div class="h-4 w-1/3 bg-muted rounded"></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {#each [0, 1, 2, 3, 4, 5] as i (i)}
+        <div class="h-[320px] rounded-2xl border border-border bg-card animate-pulse overflow-hidden">
+          <div class="h-44 bg-muted/50 w-full"></div>
+          <div class="p-5 space-y-4">
+            <div class="space-y-2">
+              <div class="h-5 w-2/3 bg-muted rounded-lg"></div>
+              <div class="h-4 w-1/3 bg-muted rounded-lg"></div>
+            </div>
+            <div class="space-y-2">
+              <div class="h-3 w-full bg-muted/50 rounded-lg"></div>
+              <div class="h-3 w-4/5 bg-muted/50 rounded-lg"></div>
+            </div>
           </div>
-          <div class="m-4 h-[150px] bg-muted rounded-lg"></div>
         </div>
       {/each}
     </div>

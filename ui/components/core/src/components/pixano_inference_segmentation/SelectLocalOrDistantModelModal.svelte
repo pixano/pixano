@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import { Wand2Icon, Server } from "lucide-svelte";
 
   import { currentDatasetStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
@@ -54,84 +55,96 @@ License: CECILL-C
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   on:click|stopPropagation={() => {}}
-  class="fixed top-[calc(80px+5px)] left-1/2 transform -translate-x-1/2 z-50
-  rounded-md bg-card text-foreground flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
+  class="fixed top-[calc(64px+16px)] left-1/2 transform -translate-x-1/2 z-50
+  rounded-2xl bg-card text-foreground flex flex-col gap-0 border border-border shadow-2xl w-[400px] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
 >
-  <div class="bg-primary p-3 rounded-b-none rounded-t-md text-white">
-    <p>Select a Mask Generation Model</p>
+  <div class="bg-primary/5 p-5 border-b border-border flex items-center gap-3">
+    <div class="p-2 rounded-lg bg-primary/10">
+      <Wand2Icon size={18} class="text-primary" />
+    </div>
+    <p class="font-bold text-sm tracking-tight">Smart Segmentation Model</p>
   </div>
-  <div class="flex flex-col p-3 gap-5">
+  
+  <div class="flex flex-col p-6 gap-6">
     {#if !$inferenceServerStore.connected}
-      <p class="text-sm text-muted-foreground py-2">
-        Connect to an inference server from the toolbar to use models.
-      </p>
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <div class="p-3 rounded-full bg-muted/50">
+          <Server size={24} class="text-muted-foreground/50" />
+        </div>
+        <p class="text-xs text-muted-foreground leading-relaxed px-4">
+          Connect to an inference server from the toolbar to use AI models.
+        </p>
+      </div>
     {:else if $segmentationModels.length === 0}
-      <p class="text-muted-foreground text-sm">No segmentation models available on the server.</p>
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <p class="text-xs text-muted-foreground font-medium">No segmentation models found on server.</p>
+      </div>
     {:else}
-      <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
-        {#each $segmentationModels as model}
-          <button
-            class="flex items-center gap-2 px-3 py-2 rounded-md border text-left transition-colors
-            {selectedModel === model.name
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted'}"
-            on:click={() => handleSelect(model.name)}
-          >
-            <span class="text-sm flex-1">{model.name}</span>
-            {#if model.provider_name}
-              <span class="text-xs text-muted-foreground shrink-0">
-                {model.provider_name.includes("@")
-                  ? model.provider_name.substring(model.provider_name.indexOf("@") + 1)
-                  : model.provider_name}
-              </span>
-            {/if}
-          </button>
-        {/each}
+      <div class="space-y-2">
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Available Models</h4>
+        <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1">
+          {#each $segmentationModels as model}
+            <button
+              class="flex flex-col gap-1 px-4 py-3 rounded-xl border text-left transition-all duration-200
+              {selectedModel === model.name
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'}"
+              on:click={() => handleSelect(model.name)}
+            >
+              <span class="text-xs font-bold {selectedModel === model.name ? 'text-primary' : 'text-foreground'}">{model.name}</span>
+              {#if model.provider_name}
+                <span class="text-[10px] text-muted-foreground font-medium italic opacity-70">
+                  via {model.provider_name.includes("@")
+                    ? model.provider_name.substring(model.provider_name.indexOf("@") + 1)
+                    : model.provider_name}
+                </span>
+              {/if}
+            </button>
+          {/each}
+        </div>
       </div>
     {/if}
 
     {#if isVideo}
-      <div class="h-px bg-border" />
-      <div class="ml-4 flex flex-row items-center">
-        <label for="positiveInteger" class="mr-2">Frames to track</label>
-        <div
-          class="flex w-20 h-10 items-center rounded-md border border-border bg-card pl-3 text-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:ring-offset-2"
-        >
-          <input
-            class="w-full focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            type="number"
-            id="positiveInteger"
-            name="positiveInteger"
-            min="0"
-            step="1"
-            value={$pixanoInferenceTrackingNbAdditionalFrames}
-            on:change={(e) => {
-              pixanoInferenceTrackingNbAdditionalFrames.set(parseInt(e.currentTarget.value));
-            }}
-          />
+      <div class="h-px bg-border/40" />
+      <div class="space-y-4">
+        <div class="flex items-center justify-between px-1">
+          <label for="positiveInteger" class="text-xs font-bold text-foreground/80">Tracking Window</label>
+          <div class="flex items-center rounded-lg border border-border bg-muted/30 px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            <input
+              class="w-12 bg-transparent text-xs font-bold focus:outline-none text-center"
+              type="number"
+              id="positiveInteger"
+              min="0"
+              step="1"
+              value={$pixanoInferenceTrackingNbAdditionalFrames}
+              on:change={(e) => {
+                pixanoInferenceTrackingNbAdditionalFrames.set(parseInt(e.currentTarget.value));
+              }}
+            />
+            <span class="text-[10px] font-bold text-muted-foreground ml-1">frames</span>
+          </div>
         </div>
-      </div>
-      <p class="w-60 ml-2 italic text-muted-foreground text-sm">
-        First use of a tracking model may be long. A small value is advised first.
-      </p>
-      <div class="h-px bg-border" />
-      <div class="ml-4 flex gap-4 items-center">
-        <Checkbox
-          handleClick={handleValTrackingClick}
-          checked={$pixanoInferenceTracking.mustValidate}
-        />
-        <span>Validate before tracking</span>
+        
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+          <Checkbox
+            handleClick={handleValTrackingClick}
+            checked={$pixanoInferenceTracking.mustValidate}
+          />
+          <span class="text-xs font-medium text-foreground/80">Validate before tracking</span>
+        </div>
       </div>
     {/if}
 
-    <div class="h-px bg-border" />
-    <div class="flex flex-row gap-2 px-3 justify-center">
-      <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
+    <div class="flex flex-row gap-3 pt-2">
+      <PrimaryButton on:click={handleCancel} class="flex-1 h-10">Cancel</PrimaryButton>
       <PrimaryButton
         on:click={handleConfirm}
+        isSelected
         disabled={!selectedModel && $segmentationModels.length > 0}
+        class="flex-1 h-10"
       >
-        OK
+        Confirm
       </PrimaryButton>
     </div>
   </div>

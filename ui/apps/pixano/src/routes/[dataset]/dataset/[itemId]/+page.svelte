@@ -21,7 +21,7 @@ License: CECILL-C
     type FeaturesValues,
     type SaveItem,
     type Schema,
-  } from "@pixano/core/src";
+  } from "@pixano/core";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 
   import {

@@ -8,7 +8,8 @@ import { disconnectProvider } from "../../api/inference/disconnectProvider";
 import { getInferenceStatus } from "../../api/inference/getInferenceStatus";
 import { isInferenceApiHealthy } from "../../api/inference/isInferenceApiHealthy";
 import { listAllModels, type ModelWithProvider } from "../../api/inference/listAllModels";
-import { inferenceServerStore, type InferenceModel } from "../stores/inferenceStore";
+import type { InferenceModel } from "../types";
+import { inferenceServerStore } from "../stores/inferenceStore";
 
 async function refreshModels(): Promise<InferenceModel[]> {
   const models: ModelWithProvider[] = await listAllModels();

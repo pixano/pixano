@@ -35,6 +35,11 @@ export enum VideoTask {
 
 export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
 
+export interface ConnectedProvider {
+  name: string;
+  url: string | null;
+}
+
 export interface InferenceModel {
   name: string;
   task: Task;

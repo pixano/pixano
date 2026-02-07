@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Skeleton, Tabs } from "@pixano/core/src";
+  import { Skeleton, Tabs } from "@pixano/core";
 
   import { newShape } from "../../lib/stores/datasetItemWorkspaceStores";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
@@ -19,15 +19,25 @@ License: CECILL-C
 </script>
 
 <div
-  class="h-[calc(100vh-80px)] flex flex-col overflow-y-auto border-l border-border bg-card font-DM Sans"
+  class="h-full flex flex-col border-l border-border bg-card font-DM Sans overflow-hidden"
 >
   {#if $newShape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
-      <Tabs.List class="flex h-11 border-b border-border/50 px-1">
-        <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
-        <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
+      <Tabs.List class="flex h-12 bg-muted/20 border-b border-border/50 px-1.5 gap-1">
+        <Tabs.Trigger
+          value="objects"
+          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+        >
+          Objects
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          value="scene"
+          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+        >
+          Scene
+        </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content
         value="objects"

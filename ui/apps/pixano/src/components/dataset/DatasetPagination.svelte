@@ -8,13 +8,8 @@ License: CECILL-C
   // Imports
   import { onDestroy } from "svelte";
 
-  import type { DatasetBrowser } from "@pixano/core/src";
-  import {
-    svg_first_page,
-    svg_last_page,
-    svg_next_page,
-    svg_prev_page,
-  } from "@pixano/core/src/icons";
+  import type { DatasetBrowser } from "@pixano/core";
+  import { icons } from "@pixano/core";
 
   import { datasetTableStore } from "../../lib/stores/datasetStores";
   import {
@@ -93,7 +88,7 @@ License: CECILL-C
           width="48"
           class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
-          <path d={svg_first_page} fill="currentcolor" />
+          <path d={icons.svg_first_page} fill="currentcolor" />
         </svg>
       </button>
 
@@ -105,12 +100,12 @@ License: CECILL-C
           width="48"
           class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
-          <path d={svg_prev_page} fill="currentcolor" />
+          <path d={icons.svg_prev_page} fill="currentcolor" />
         </svg>
       </button>
     {/if}
 
-    <span class="mx-4">
+    <span class="mx-4 text-sm font-medium opacity-70">
       {1 + pageSize * (currentPage - 1)} - {Math.min(
         pageSize * currentPage,
         selectedDataset.pagination.total_size,
@@ -127,7 +122,7 @@ License: CECILL-C
           width="48"
           class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
-          <path d={svg_next_page} fill="currentcolor" />
+          <path d={icons.svg_next_page} fill="currentcolor" />
         </svg>
       </button>
 
@@ -139,7 +134,7 @@ License: CECILL-C
           width="48"
           class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-accent"
         >
-          <path d={svg_last_page} fill="currentcolor" />
+          <path d={icons.svg_last_page} fill="currentcolor" />
         </svg>
       </button>
     {/if}

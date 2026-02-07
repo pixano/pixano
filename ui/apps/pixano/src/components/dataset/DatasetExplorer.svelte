@@ -9,8 +9,8 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
 
-  import type { DatasetBrowser } from "@pixano/core/src";
-  import { LoadingModal, PrimaryButton, WarningModal } from "@pixano/core/src";
+  import type { DatasetBrowser } from "@pixano/core";
+  import { LoadingModal, PrimaryButton, WarningModal } from "@pixano/core";
   import { Table } from "@pixano/table";
 
   import { datasetTableStore } from "../../lib/stores/datasetStores";
@@ -93,44 +93,54 @@ License: CECILL-C
   }
 </script>
 
-<div class="w-full px-20 bg-background flex flex-col text-foreground min-h-[calc(100vh-80px)]">
-  {#if selectedDataset.pagination}
-    <!-- Items list -->
-    <DatasetBrowserForm
-      {selectedDataset}
-      bind:selectedSearchModel
-      bind:searchInput
-      on:search={handleSearch}
-      on:clearSearch={handleClearSearch}
-      on:filter={(event) => handleFilter(event.detail)}
-    />
-
-    <!-- Loading spinner while table items are being loaded -->
-    {#if isLoadingTableItems}
-      <div class="flex-grow flex justify-center items-center">
-        <Loader2Icon class="animate-spin" />
+<div class="flex-1 min-w-0 px-6 py-4 bg-background flex flex-col text-foreground overflow-hidden">
+  <div class="max-w-[1400px] w-full mx-auto flex flex-col h-full">
+    {#if selectedDataset.pagination}
+      <!-- Header Area (Search/Filter) -->
+      <div class="shrink-0 mb-2">
+        <DatasetBrowserForm
+          {selectedDataset}
+          bind:selectedSearchModel
+          bind:searchInput
+          on:search={handleSearch}
+          on:clearSearch={handleClearSearch}
+          on:filter={(event) => handleFilter(event.detail)}
+        />
       </div>
-      <!-- Display table -->
-    {:else if !selectedDataset.isErrored}
-      <Table
-        items={selectedDataset.table_data}
-        disableSort={searchInput !== ""}
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-        on:colsort={(event) => handleColSort(event.detail)}
-      />
-      <!-- Display error message if items could not be loaded -->
-    {:else}
-      <div
-        class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
-      >
-        <p>Error: dataset items could not be loaded</p>
-        <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
+
+      <!-- Main Table Area - This should scroll -->
+      <div class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-sm">
+        {#if isLoadingTableItems}
+          <div class="flex-grow flex justify-center items-center">
+            <Loader2Icon class="animate-spin text-primary opacity-50" />
+          </div>
+          <!-- Display table -->
+        {:else if !selectedDataset.isErrored}
+          <div class="flex-1 overflow-y-auto">
+            <Table
+              items={selectedDataset.table_data}
+              disableSort={searchInput !== ""}
+              on:selectItem={(event) => handleSelectItem(event.detail)}
+              on:colsort={(event) => handleColSort(event.detail)}
+            />
+          </div>
+          <!-- Display error message if items could not be loaded -->
+        {:else}
+          <div
+            class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
+          >
+            <p class="text-muted-foreground italic">Error: dataset items could not be loaded</p>
+            <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
+          </div>
+        {/if}
+      </div>
+
+      <!-- DatasetPagination component for page navigation - Always visible at bottom -->
+      <div class="shrink-0 pt-2">
+        <DatasetPagination {selectedDataset} bind:isLoadingTableItems />
       </div>
     {/if}
-
-    <!-- DatasetPagination component for page navigation -->
-    <DatasetPagination {selectedDataset} bind:isLoadingTableItems />
-  {/if}
+  </div>
 
   <!-- Warning modal for dataset errors -->
   {#if datasetErrorModal}
