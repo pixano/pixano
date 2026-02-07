@@ -29,8 +29,8 @@ def test_connect_inference(
 
     response = empty_client.post(url)
     assert response.status_code == 200
-    assert response.json() == {"status": "connected", "provider": "test-provider"}
-    assert "test-provider" in empty_settings.inference_providers
+    assert response.json() == {"status": "connected", "provider": "test-provider@valid_url.com:80"}
+    assert "test-provider@valid_url.com:80" in empty_settings.inference_providers
 
 
 def test_connect_inference_error(
