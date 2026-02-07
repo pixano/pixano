@@ -207,7 +207,7 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectToServerModal
-    defaultUrl={$inferenceServerStore.url ?? ""}
+    defaultUrl=""
     on:close={() => (showConnectModal = false)}
     on:connected={() => (showConnectModal = false)}
   />

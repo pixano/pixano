@@ -44,6 +44,7 @@ async def call_image_zero_shot_detection(
     settings: Annotated[Settings, Depends(get_settings)],
     box_threshold: Annotated[float, Body(embed=True)] = 0.3,
     text_threshold: Annotated[float, Body(embed=True)] = 0.2,
+    provider_name: Annotated[str | None, Body(embed=True)] = None,
 ) -> list[ZeroShotOutput]:
     """Perform zero shot detection on an image.
 
@@ -58,12 +59,13 @@ async def call_image_zero_shot_detection(
         settings: App settings.
         box_threshold: Box threshold for detection in the image.
         text_threshold: Text threshold for detection in the image.
+        provider_name: Optional provider name to route the request to.
 
     Returns:
         The predicted bboxes and classifications.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    provider = get_provider_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
     if not is_image(dataset.schema.schemas[image.table_info.name]):
         raise HTTPException(status_code=400, detail="Image must be an image.")

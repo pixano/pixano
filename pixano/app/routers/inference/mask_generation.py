@@ -54,6 +54,7 @@ async def call_image_mask_generation(
     bbox: Annotated[BBox | None, Body(embed=True)] = None,
     points: Annotated[list[list[int]] | None, Body(embed=True)] = None,
     labels: Annotated[list[int] | None, Body(embed=True)] = None,
+    provider_name: Annotated[str | None, Body(embed=True)] = None,
 ) -> ImageMaskGenerationOutput:
     """Perform image mask generation on an image.
 
@@ -67,6 +68,7 @@ async def call_image_mask_generation(
         bbox: Input bounding box or None.
         points: Input points or None.
         labels: Labels for input points, or None.
+        provider_name: Optional provider name to route the request to.
 
     Returns:
         The generated mask.
@@ -74,7 +76,7 @@ async def call_image_mask_generation(
     global store_last_image_id
 
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    provider = get_provider_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
     if not is_image(dataset.schema.schemas[image.table_info.name]):
         raise HTTPException(status_code=400, detail="Image must be an image.")
@@ -132,6 +134,7 @@ async def call_video_mask_generation(
     bbox: Annotated[BBox | None, Body(embed=True)] = None,
     points: Annotated[list[list[int]] | None, Body(embed=True)] = None,
     labels: Annotated[list[int] | None, Body(embed=True)] = None,
+    provider_name: Annotated[str | None, Body(embed=True)] = None,
 ) -> VideoMaskGenerationOutput:
     """Perform video mask generation on a video.
 
@@ -143,12 +146,13 @@ async def call_video_mask_generation(
         bbox: Input bounding box or None.
         points: Input points or None.
         labels: Labels for input points, or None.
+        provider_name: Optional provider name to route the request to.
 
     Returns:
         The generated masks.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    provider = get_provider_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
     if not is_sequence_frame(dataset.schema.schemas[video[0].table_info.name]):
         raise HTTPException(status_code=400, detail="Video must be a list of SequenceFrame.")

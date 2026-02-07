@@ -14,6 +14,7 @@ import {
   type Message,
   type SaveItem,
 } from "@pixano/core";
+import { vqaModels } from "@pixano/core/src/lib/stores/inferenceStore";
 
 import { currentDatasetStore } from "../../../../../../apps/pixano/src/lib/stores/datasetStores";
 import { completionModelsStore } from "../../../../../vqaCanvas/src/stores/completionModels";
@@ -42,12 +43,14 @@ export const generateAnswer = async (completionModel: string, question: Message)
     return null;
   }
 
+  const selectedVqa = get(vqaModels).find((m) => m.name === completionModel);
   const input: CondititionalGenerationTextImageInput = {
     dataset_id: get(currentDatasetStore).id,
     conversation: removeFieldFromObject(conversation, "ui"),
     messages: [removeFieldFromObject(question, "ui")],
     model: completionModel,
     temperature,
+    provider_name: selectedVqa?.provider_name,
   };
 
   try {

@@ -29,6 +29,7 @@ License: CECILL-C
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import {
     inferenceServerStore,
+    segmentationModels,
     selectedSegmentationModelName,
   } from "@pixano/core/src/lib/stores/inferenceStore";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -62,6 +63,7 @@ License: CECILL-C
   ): Promise<Mask | undefined> => {
     if (!$inferenceServerStore.connected) return;
     const maskModelName = $selectedSegmentationModelName ?? "SAM2";
+    const selectedModel = $segmentationModels.find((m) => m.name === maskModelName);
     let image = selectedItem.views[viewRef.name];
     if (Array.isArray(image)) {
       const candidate_image = image.find((v) => v.id === viewRef.id);
@@ -77,6 +79,7 @@ License: CECILL-C
       model: maskModelName,
       entity: null, //unused, we don't create a mask object, we only need the mask RLE
       mask_table_name: "", //unused, we don't create a mask object, we only need the mask RLE
+      provider_name: selectedModel?.provider_name ?? undefined,
     };
     let input;
     if (points) {
@@ -161,6 +164,7 @@ License: CECILL-C
   ): Promise<Mask | undefined> => {
     if (!$inferenceServerStore.connected) return;
     const maskModelName = $selectedSegmentationModelName ?? "SAM2_video";
+    const selectedVideoModel = $segmentationModels.find((m) => m.name === maskModelName);
 
     //get video from viewRef (current frame) & num_frames
     let full_video = selectedItem.views[viewRef.name];
@@ -191,6 +195,7 @@ License: CECILL-C
       dataset_id: selectedItem.ui.datasetId,
       video,
       model: maskModelName,
+      provider_name: selectedVideoModel?.provider_name ?? undefined,
     };
 
     let input;

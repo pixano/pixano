@@ -5,10 +5,13 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { RefreshCw, Server, Sparkles } from "lucide-svelte";
+  import { RefreshCw, Server, Sparkles, X } from "lucide-svelte";
 
   import { ConnectToServerModal, IconButton, PrimaryButton } from "@pixano/core";
-  import { refreshInferenceModels } from "@pixano/core/src/lib/services/inferenceService";
+  import {
+    disconnectFromProvider,
+    refreshInferenceModels,
+  } from "@pixano/core/src/lib/services/inferenceService";
   import {
     inferenceServerStore,
     type InferenceModel,
@@ -32,6 +35,12 @@ License: CECILL-C
     return task.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
+  function formatProviderName(name: string): string {
+    // Extract the host:port portion from "pixano-inference@host:port"
+    const atIndex = name.indexOf("@");
+    return atIndex >= 0 ? name.substring(atIndex + 1) : name;
+  }
+
   $: modelGroups = groupModelsByTask($inferenceServerStore.models);
 </script>
 
@@ -50,18 +59,30 @@ License: CECILL-C
     </div>
   </div>
 
-  <div class="flex items-center gap-2">
-    <div
-      class="h-2 w-2 rounded-full {$inferenceServerStore.connected ? 'bg-green-500' : 'bg-red-400'}"
-    ></div>
-    <span class="text-sm text-muted-foreground">
-      {#if $inferenceServerStore.connected}
-        Connected to <span class="text-foreground font-medium">{$inferenceServerStore.url}</span>
-      {:else}
-        Not connected
-      {/if}
-    </span>
-  </div>
+  {#if $inferenceServerStore.providers.length > 0}
+    <div class="flex flex-col gap-1.5">
+      {#each $inferenceServerStore.providers as provider}
+        <div class="flex items-center gap-2">
+          <div class="h-2 w-2 rounded-full bg-green-500 shrink-0"></div>
+          <span class="text-sm text-foreground font-medium truncate flex-1">
+            {provider.url ?? provider.name}
+          </span>
+          <button
+            class="text-muted-foreground hover:text-red-500 transition-colors shrink-0"
+            on:click={() => disconnectFromProvider(provider.name)}
+            title="Disconnect"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <div class="flex items-center gap-2">
+      <div class="h-2 w-2 rounded-full bg-red-400"></div>
+      <span class="text-sm text-muted-foreground">Not connected</span>
+    </div>
+  {/if}
 
   {#if !$inferenceServerStore.connected}
     <div class="flex flex-col items-center gap-3 py-4 text-center">
@@ -74,7 +95,7 @@ License: CECILL-C
   {:else if $inferenceServerStore.models.length === 0}
     <div class="flex flex-col items-center gap-2 py-4 text-center">
       <p class="text-sm text-muted-foreground">
-        Connected, but no models are deployed on this server.
+        Connected, but no models are deployed on the server(s).
       </p>
     </div>
   {:else}
@@ -88,7 +109,10 @@ License: CECILL-C
             <div
               class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background border border-border/50"
             >
-              <span class="text-sm text-foreground truncate">{model.name}</span>
+              <span class="text-sm text-foreground truncate flex-1">{model.name}</span>
+              <span class="text-xs text-muted-foreground shrink-0">
+                {formatProviderName(model.provider_name)}
+              </span>
             </div>
           {/each}
         </div>
@@ -101,14 +125,14 @@ License: CECILL-C
       class="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
       on:click={() => (showConnectModal = true)}
     >
-      Change server...
+      Add server...
     </button>
   {/if}
 </div>
 
 {#if showConnectModal}
   <ConnectToServerModal
-    defaultUrl={$inferenceServerStore.url ?? ""}
+    defaultUrl=""
     on:close={() => (showConnectModal = false)}
     on:connected={() => (showConnectModal = false)}
   />

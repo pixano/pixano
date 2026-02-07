@@ -46,6 +46,7 @@ async def call_text_image_conditional_generation(
     role_system: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_SYSTEM,
     role_user: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_USER,
     role_assistant: Annotated[str, Body(embed=True)] = DEFAULT_ROLE_ASSISTANT,
+    provider_name: Annotated[str | None, Body(embed=True)] = None,
 ) -> AnnotationModel:
     """Call a text image conditional generation model for a conversation.
 
@@ -60,11 +61,12 @@ async def call_text_image_conditional_generation(
         role_system: The role of the system.
         role_user: The role of the user.
         role_assistant: The role of the assistant.
+        provider_name: Optional provider name to route the request to.
 
     Returns: The generated message model.
     """
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
-    provider = get_provider_from_settings(settings=settings)
+    provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
     if not is_conversation(dataset.schema.schemas[conversation.table_info.name]):
         raise HTTPException(status_code=400, detail="Conversation must be a conversation.")

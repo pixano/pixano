@@ -6,6 +6,7 @@
 
 
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 
@@ -31,10 +32,21 @@ router.include_router(mask_generation.router)
 @router.get("/status")
 async def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]):
     """Get current inference connection status."""
-    client = settings.pixano_inference_client
-    if client is None:
-        return {"connected": False, "url": None}
-    return {"connected": True, "url": client.url}
+    providers = [
+        {"name": name, "url": provider.url if hasattr(provider, "url") else None}
+        for name, provider in settings.inference_providers.items()
+    ]
+    return {
+        "connected": len(providers) > 0,
+        "providers": providers,
+        "default": settings.default_inference_provider,
+    }
+
+
+def _provider_key(provider: InferenceProvider, url: str) -> str:
+    """Derive a unique key for a provider from its name and URL."""
+    parsed = urlparse(url)
+    return f"{provider.name}@{parsed.hostname}:{parsed.port or 80}"
 
 
 @router.post("/connect")
@@ -56,6 +68,11 @@ async def connect_inference(
     Raises:
         HTTPException: If connection fails.
     """
+    # Check if a provider with this URL is already connected
+    for key, existing in settings.inference_providers.items():
+        if hasattr(existing, "url") and existing.url.rstrip("/") == url.rstrip("/"):
+            return {"status": "already_connected", "provider": key}
+
     provider: InferenceProvider
     try:
         if provider_type == "pixano-inference":
@@ -69,14 +86,15 @@ async def connect_inference(
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to connect to {provider_type} at {url}: {e}")
 
-    # Store the provider
-    settings.inference_providers[provider.name] = provider
+    # Derive unique key from provider name + URL to avoid collisions
+    provider_key = _provider_key(provider, url)
+    settings.inference_providers[provider_key] = provider
 
     # Set as default if no default is set
     if settings.default_inference_provider is None:
-        settings.default_inference_provider = provider.name
+        settings.default_inference_provider = provider_key
 
-    return {"status": "connected", "provider": provider.name}
+    return {"status": "connected", "provider": provider_key}
 
 
 @router.get("/providers")

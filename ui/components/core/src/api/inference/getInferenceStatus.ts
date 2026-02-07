@@ -4,9 +4,15 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+export interface ConnectedProvider {
+  name: string;
+  url: string | null;
+}
+
 export interface InferenceStatusResponse {
   connected: boolean;
-  url: string | null;
+  providers: ConnectedProvider[];
+  default: string | null;
 }
 
 export async function getInferenceStatus(): Promise<InferenceStatusResponse> {
@@ -19,11 +25,11 @@ export async function getInferenceStatus(): Promise<InferenceStatusResponse> {
     });
 
     if (!response.ok) {
-      return { connected: false, url: null };
+      return { connected: false, providers: [], default: null };
     }
 
     return (await response.json()) as InferenceStatusResponse;
   } catch {
-    return { connected: false, url: null };
+    return { connected: false, providers: [], default: null };
   }
 }

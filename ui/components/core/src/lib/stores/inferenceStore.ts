@@ -11,18 +11,26 @@ import { ImageTask, MultimodalImageNLPTask, VideoTask, type Task } from "../type
 export interface InferenceModel {
   name: string;
   task: Task;
+  provider_name: string;
+}
+
+export interface ConnectedProvider {
+  name: string;
+  url: string | null;
 }
 
 export interface InferenceServerState {
   connected: boolean;
-  url: string | null;
+  providers: ConnectedProvider[];
+  defaultProvider: string | null;
   models: InferenceModel[];
   isLoading: boolean;
 }
 
 export const inferenceServerStore = writable<InferenceServerState>({
   connected: false,
-  url: null,
+  providers: [],
+  defaultProvider: null,
   models: [],
   isLoading: false,
 });

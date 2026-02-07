@@ -38,6 +38,7 @@ export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
 export interface InferenceModel {
   name: string;
   task: Task;
+  provider_name?: string;
 }
 
 export interface SystemPrompt {
@@ -69,4 +70,5 @@ export interface CondititionalGenerationTextImageInput {
   role_system?: string;
   role_user?: string;
   role_assistant?: string;
+  provider_name?: string;
 }

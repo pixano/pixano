@@ -77,7 +77,14 @@ License: CECILL-C
               : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted'}"
             on:click={() => handleSelect(model.name)}
           >
-            <span class="text-sm">{model.name}</span>
+            <span class="text-sm flex-1">{model.name}</span>
+            {#if model.provider_name}
+              <span class="text-xs text-muted-foreground shrink-0">
+                {model.provider_name.includes("@")
+                  ? model.provider_name.substring(model.provider_name.indexOf("@") + 1)
+                  : model.provider_name}
+              </span>
+            {/if}
           </button>
         {/each}
       </div>
