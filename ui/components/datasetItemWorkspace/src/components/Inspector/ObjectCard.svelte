@@ -291,12 +291,17 @@ License: CECILL-C
     thumbnails = [];
     for (const view of Object.keys($mediaViews)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
-        (ann) => ann.is_type(BaseSchema.BBox) && ann.data.view_ref.name === view,
+        (ann) =>
+          (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)) &&
+          ann.data.view_ref.name === view,
       );
       if (highlightedBoxesByView) {
-        const selectedBox = highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
-        if (selectedBox) {
-          const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, selectedBox);
+        // Prefer BBox if available for this view
+        const preferredBox =
+          highlightedBoxesByView.find((ann) => ann.is_type(BaseSchema.BBox)) ||
+          highlightedBoxesByView[Math.floor(highlightedBoxesByView.length / 2)];
+        if (preferredBox) {
+          const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, preferredBox);
           if (selectedThumbnail) {
             thumbnails.push(selectedThumbnail);
           }

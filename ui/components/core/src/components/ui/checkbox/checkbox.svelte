@@ -35,7 +35,7 @@ License: CECILL-C
 
 <CheckboxPrimitive.Root
   class={cn(
-    "box-content peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary-light data-[state=checked]:text-primary-foreground data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50",
+    "peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50 data-[state=unchecked]:hover:bg-primary/5",
     className,
   )}
   bind:checked
@@ -45,14 +45,14 @@ License: CECILL-C
   on:keydown={handleKeyDown}
 >
   <CheckboxPrimitive.Indicator
-    class={cn("flex items-center justify-center text-current h-4 w-4")}
+    class={cn("flex items-center justify-center text-current h-full w-full")}
     let:isChecked
     let:isIndeterminate
   >
     {#if isChecked}
-      <Check class="h-3.5 w-3.5" />
+      <Check class="h-3.5 w-3.5" strokeWidth={3} />
     {:else if isIndeterminate}
-      <Minus class="h-3.5 w-3.5" />
+      <Minus class="h-3.5 w-3.5" strokeWidth={3} />
     {/if}
   </CheckboxPrimitive.Indicator>
 </CheckboxPrimitive.Root>

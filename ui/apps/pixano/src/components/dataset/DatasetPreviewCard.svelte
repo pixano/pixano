@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ArrowRight, Database, Eye, Layers, Shapes } from "lucide-svelte";
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
   import { api, WorkspaceType, type DatasetInfo } from "@pixano/core";
@@ -13,33 +14,25 @@ License: CECILL-C
 
   /**
    * DatasetPreviewCard Component
-   *
-   *   This component displays a preview card for a dataset.
-   *   It includes the dataset name, number of items, preview image, and workspace type.
-   *   The component also provides a tooltip with additional information about the dataset.
+   * Improved, professional grade dataset preview with disruptive hover stats.
    */
 
   // Exports
   export let dataset: DatasetInfo;
 
-  let additionalInfo: string | undefined = undefined;
-  const controller = new AbortController();
+  let stats: {
+    maxViews: number;
+    entities: number;
+    annotations: Record<string, number>;
+  } | null = null;
 
+  const controller = new AbortController();
   const dispatch = createEventDispatcher();
 
-  /**
-   * Handles the selection of the dataset.
-   * Dispatches a "selectDataset" event.
-   */
   function handleSelectDataset() {
     dispatch("selectDataset");
   }
 
-  /**
-   * Displays the workspace type in a human-readable format.
-   * @param {WorkspaceType} workspace - The workspace type to display.
-   * @returns {string} - The human-readable workspace type.
-   */
   function displayWorkspaceType(workspace: WorkspaceType) {
     switch (workspace) {
       case WorkspaceType.IMAGE:
@@ -52,13 +45,12 @@ License: CECILL-C
         return "Entity Linking";
       case WorkspaceType.PCL_3D:
         return "3D";
-      case WorkspaceType.UNDEFINED:
-        return "Undefined";
+      default:
+        return "General";
     }
   }
 
   onMount(() => {
-    // Get dataset infos to put in tooltip
     api
       .getItemsInfo(dataset.id, null, { signal: controller.signal })
       .then((infos) => {
@@ -67,9 +59,7 @@ License: CECILL-C
         let entitiesCounts = 0;
         let annCounts: Record<string, number> = {};
         for (const info of infos) {
-          // Get max number of views
           maxNumViews = Math.max(maxNumViews, Object.keys(info.info.views).length);
-          // Sum objs counts
           if ("info" in info && "entities" in info.info) {
             for (const ent of Object.values(info.info.entities)) {
               entitiesCounts += ent.count;
@@ -80,15 +70,16 @@ License: CECILL-C
             annCounts[annType] += c.count;
           }
         }
-        additionalInfo = `Maximum number of views: ${maxNumViews}
-        Total number of entities: ${entitiesCounts}
-        Total annotation counts:`;
-        for (const [k, v] of Object.entries(annCounts)) {
-          additionalInfo += `\n${"\xa0".repeat(6)}${k}: ${v}`; // &nbsp; *6 to force some indent space
-        }
+        stats = {
+          maxViews: maxNumViews,
+          entities: entitiesCounts,
+          annotations: annCounts,
+        };
       })
       .catch((err) => {
-        console.log("Error collecting additional dataset infos", err);
+        if (err.name !== "AbortError") {
+          console.log("Error collecting additional dataset infos", err);
+        }
       });
   });
 
@@ -97,76 +88,119 @@ License: CECILL-C
   });
 </script>
 
-<div class="relative group h-full">
-  <!-- Tooltip -->
-  <div
-    class="absolute bottom-full mb-3 w-full bg-foreground text-background text-[11px] leading-relaxed rounded-xl px-4 py-3 shadow-2xl whitespace-pre-line hidden group-hover:block z-20 border border-border/10 animate-in fade-in zoom-in-95 duration-200"
-  >
-    <div class="font-bold text-xs mb-1 border-b border-background/10 pb-1">{dataset.name}</div>
-    {dataset.description}
-    {#if additionalInfo}
-      <div class="mt-2 pt-2 border-t border-background/10 text-background/70 font-medium">
-        {additionalInfo}
-      </div>
-    {/if}
-  </div>
-
+<div class="relative group h-full font-DM Sans">
   <button
-    class="w-full h-full min-h-[320px] flex flex-col text-left font-DM Sans
-    bg-card rounded-2xl border border-border shadow-sm transition-all duration-300 hover:shadow-xl hover:border-primary/20 hover:-translate-y-1 group/btn overflow-hidden"
+    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border/60 shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card"
     on:click={handleSelectDataset}
   >
-    <!-- Thumbnail -->
-    <div class="relative w-full h-44 bg-muted overflow-hidden">
+    <!-- Thumbnail Section -->
+    <div class="relative aspect-video w-full overflow-hidden bg-muted">
       <img
-        src={dataset.preview ? dataset.preview : pixanoLogo}
+        src={dataset.preview || pixanoLogo}
         alt="{dataset.name} thumbnail"
-        class="w-full h-full object-cover transition-transform duration-500 group-hover/btn:scale-105"
+        class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-110"
       />
+
+      <!-- Glassmorphism Stats Overlay (Disruptive Hover) -->
       <div
-        class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"
-      ></div>
-
-      <!-- Workspace Badge (Overlay) -->
-      {#if dataset.workspace != WorkspaceType.UNDEFINED}
-        <div
-          class="absolute top-3 right-3 flex items-center justify-center h-6 px-2.5 rounded-full bg-background/90 backdrop-blur-md text-foreground shadow-sm text-[10px] font-bold uppercase tracking-wider"
-        >
-          {displayWorkspaceType(dataset.workspace)}
-        </div>
-      {/if}
-    </div>
-
-    <!-- Content -->
-    <div class="flex-1 p-5 flex flex-col gap-1">
-      <h3
-        class="text-base font-bold text-foreground line-clamp-1 group-hover/btn:text-primary transition-colors"
+        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex flex-col justify-end p-4"
       >
-        {dataset.name}
-      </h3>
-
-      <div class="flex items-center gap-2 mt-auto">
-        <div
-          class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 border border-border/50"
-        >
-          <span class="text-[11px] font-bold text-foreground/80 tabular-nums">
-            {dataset.num_items}
-          </span>
-          <span class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
-            Items
-          </span>
-        </div>
-
-        {#if dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"}
-          <span class="text-[11px] text-muted-foreground/60 font-medium">
-            • {dataset.size}
-          </span>
+        {#if stats}
+          <div
+            class="grid grid-cols-2 gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500 delay-75"
+          >
+            <div class="flex items-center gap-2 text-white/90">
+              <Eye size={14} class="text-primary-light" />
+              <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
+                  Views
+                </span>
+                <span class="text-xs font-black leading-none">{stats.maxViews}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-white/90">
+              <Shapes size={14} class="text-primary-light" />
+              <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
+                  Entities
+                </span>
+                <span class="text-xs font-black leading-none">{stats.entities}</span>
+              </div>
+            </div>
+            {#each Object.entries(stats.annotations).slice(0, 2) as [key, val]}
+              <div class="flex items-center gap-2 text-white/90">
+                <Layers size={14} class="text-primary-light" />
+                <div class="flex flex-col">
+                  <span
+                    class="text-[10px] uppercase tracking-tighter opacity-70 font-bold line-clamp-1"
+                  >
+                    {key}
+                  </span>
+                  <span class="text-xs font-black leading-none">{val}</span>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="flex items-center justify-center h-full">
+            <div
+              class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"
+            ></div>
+          </div>
         {/if}
       </div>
 
-      <p class="text-[12px] text-muted-foreground line-clamp-2 mt-2 leading-relaxed opacity-80">
-        {dataset.description}
+      <!-- Category Badge -->
+      {#if dataset.workspace !== WorkspaceType.UNDEFINED}
+        <div
+          class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-md border border-white/10 shadow-lg"
+        >
+          <span class="text-[10px] font-black uppercase tracking-widest text-foreground/90">
+            {displayWorkspaceType(dataset.workspace)}
+          </span>
+        </div>
+      {/if}
+
+      <!-- Open Indicator -->
+      <div
+        class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover/card:opacity-100 transform translate-x-4 group-hover/card:translate-x-0 transition-all duration-300 shadow-xl"
+      >
+        <ArrowRight size={16} />
+      </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="flex-1 p-5 flex flex-col min-h-0">
+      <div class="flex items-start justify-between gap-2 mb-1.5">
+        <h3
+          class="text-base font-black text-foreground tracking-tight line-clamp-1 group-hover/card:text-primary transition-colors"
+        >
+          {dataset.name}
+        </h3>
+      </div>
+
+      <p
+        class="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed opacity-80 mb-4 flex-1"
+      >
+        {dataset.description || "No description provided for this dataset."}
       </p>
+
+      <!-- Footer Meta -->
+      <div class="flex items-center gap-4 pt-4 border-t border-border/40">
+        <div class="flex items-center gap-1.5">
+          <Database size={13} class="text-primary" />
+          <span class="text-xs font-bold text-foreground tabular-nums">{dataset.num_items}</span>
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+            Items
+          </span>
+        </div>
+        {#if dataset.size && dataset.size !== "Unknown" && dataset.size !== "N/A"}
+          <div class="h-1 w-1 rounded-full bg-border"></div>
+          <div class="flex items-center gap-1.5 text-muted-foreground">
+            <span class="text-xs font-medium uppercase tracking-tighter">{dataset.size}</span>
+          </div>
+        {/if}
+      </div>
     </div>
   </button>
 </div>

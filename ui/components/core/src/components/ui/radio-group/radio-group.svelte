@@ -23,10 +23,10 @@ License: CECILL-C
       <RadioGroup.Item
         id={value}
         {value}
-        class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary-light data-[state=checked]:text-primary-foreground flex items-center justify-center"
+        class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground flex items-center justify-center"
       >
         {#if selectedValue === value}
-          <Check class="h-3.5 w-3.5" />
+          <Check class="h-3.5 w-3.5" strokeWidth={3} />
         {/if}
       </RadioGroup.Item>
 

@@ -6,7 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Loader2Icon } from "lucide-svelte";
+  import { Loader2Icon, SaveIcon, ShieldAlertIcon, XIcon } from "lucide-svelte";
+  import { nanoid } from "nanoid";
   import { cubicOut } from "svelte/easing";
   import { fade, fly } from "svelte/transition";
 
@@ -14,6 +15,8 @@ License: CECILL-C
   import {
     Annotation,
     BaseSchema,
+    BBox,
+    Button,
     DatasetItem,
     Entity,
     initDisplayControl,
@@ -21,10 +24,16 @@ License: CECILL-C
     Mask,
     Tracklet,
     WorkspaceType,
+    type BBoxType,
     type SaveItem,
   } from "@pixano/core";
+  import { mask_utils } from "@pixano/models";
 
-  import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
+  import {
+    getBoundingBoxFromMaskSVG,
+    rleFrString,
+    rleToString,
+  } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
@@ -33,7 +42,7 @@ License: CECILL-C
 
   import { onDestroy } from "svelte";
 
-  import { getTopEntity } from "./lib/api/objectsApi";
+  import { addOrUpdateSaveItem, getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
     annotations,
@@ -62,6 +71,7 @@ License: CECILL-C
   let initialOIAreaWidth = 0;
 
   let isSaving: boolean = false;
+  let showAutogenBBoxAlert = false;
 
   const back2front = (ann: Annotation): Annotation => {
     ann.ui = { datasetItemType: selectedItem.ui.type, displayControl: initDisplayControl };
@@ -69,6 +79,12 @@ License: CECILL-C
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;
       if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+      if (!mask.ui.svg) {
+        const rle = mask.data.counts;
+        const size = mask.data.size;
+        const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+        mask.ui.svg = mask_utils.convertSegmentsToSVG(maskPoly);
+      }
     }
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
       //add frame_index to annotation
@@ -84,6 +100,8 @@ License: CECILL-C
   };
 
   const loadData = () => {
+    saveData.set([]);
+    showAutogenBBoxAlert = false;
     views.set(selectedItem.views);
 
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {
@@ -102,6 +120,75 @@ License: CECILL-C
     Object.values(selectedItem.annotations).forEach((anns) => {
       anns.forEach((ann) => newAnns.push(back2front(ann)));
     });
+
+    // Automatically generate missing bounding boxes for masks
+    const generatedBBoxes: BBox[] = [];
+    const bboxTableNames = Object.keys(selectedItem.annotations).filter((name) =>
+      name.toLowerCase().includes("bbox"),
+    );
+    const defaultBBoxTable = bboxTableNames.length > 0 ? bboxTableNames[0] : null;
+
+    newAnns.forEach((ann) => {
+      if (ann.is_type(BaseSchema.Mask)) {
+        const mask = ann as Mask;
+        const hasBBox = newAnns.some(
+          (other) =>
+            other.is_type(BaseSchema.BBox) &&
+            other.data.entity_ref.id === mask.data.entity_ref.id &&
+            other.data.view_ref.id === mask.data.view_ref.id &&
+            other.data.view_ref.name === mask.data.view_ref.name,
+        );
+
+        if (!hasBBox) {
+          const bboxCoords = getBoundingBoxFromMaskSVG(mask.ui.svg);
+          if (bboxCoords) {
+            const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
+            const bboxData: BBoxType = {
+              item_ref: mask.data.item_ref,
+              view_ref: mask.data.view_ref,
+              entity_ref: mask.data.entity_ref,
+              source_ref: mask.data.source_ref,
+              inference_metadata: {},
+              coords: [bboxCoords.x, bboxCoords.y, bboxCoords.width, bboxCoords.height],
+              format: "xywh",
+              is_normalized: false,
+              confidence: 1,
+            };
+
+            const newBBox = new BBox({
+              id: nanoid(10),
+              created_at: now,
+              updated_at: now,
+              table_info: {
+                name: defaultBBoxTable || mask.table_info.name.replace("mask", "bbox"),
+                group: "annotations",
+                base_schema: BaseSchema.BBox,
+              },
+              data: bboxData,
+            });
+            newBBox.ui = {
+              datasetItemType: mask.ui.datasetItemType,
+              displayControl: { ...initDisplayControl, highlighted: "none" },
+              frame_index: mask.ui.frame_index,
+            };
+            generatedBBoxes.push(newBBox);
+          }
+        }
+      }
+    });
+
+    if (generatedBBoxes.length > 0) {
+      newAnns.push(...generatedBBoxes);
+      showAutogenBBoxAlert = true;
+      saveData.update((current_sd) => {
+        let updated = current_sd;
+        generatedBBoxes.forEach((bbox) => {
+          updated = addOrUpdateSaveItem(updated, { change_type: "add", object: bbox });
+        });
+        return updated;
+      });
+    }
+
     //sort by frame_index (if present) -- some function (interpolation mostly) requires sorted annotations
     newAnns.sort((a, b) => sortByFrameIndex(a, b));
     annotations.set(newAnns);
@@ -113,7 +200,7 @@ License: CECILL-C
         //build childs list
         entity.ui = {
           ...entity.ui,
-          childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id),
+          childs: newAnns.filter((ann) => ann.data.entity_ref.id === entity.id),
         };
         newEntities.push(entity);
         if (entity.data.parent_ref.id !== "" && entity.ui.childs) {
@@ -159,16 +246,11 @@ License: CECILL-C
       }),
     );
 
-    console.log("XXX entities", $entities);
-    console.log("XXX annotations", $annotations);
-
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },
       item: selectedItem.item,
       type: selectedItem.ui.type,
     });
-
-    saveData.set([]);
   };
 
   const unsubscribeCanSave = canSave.subscribe((value) => (canSaveCurrentItem = value));
@@ -244,13 +326,58 @@ License: CECILL-C
     </div>
   {/if}
   <div
-    id="datasetItemViewerDiv"
-    class="flex w-full overflow-hidden"
+    class="flex flex-col w-full overflow-hidden"
     style={`max-width: calc(100%  - ${objectInspectorAreaMaxWidth}px);`}
-    in:fade={{ duration: 300, delay: 100 }}
   >
-    <!-- 'resize' prop is used to trigger redraw on value change, value itself is not used, but shouldn't be 0, so we add '+1' -->
-    <DatasetItemViewer {selectedItem} {isLoading} resize={objectInspectorAreaMaxWidth + 1} />
+    {#if showAutogenBBoxAlert}
+      <div
+        class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-300"
+        transition:fade
+      >
+        <div class="flex items-center gap-3">
+          <div class="p-1.5 rounded-full bg-amber-500/20 text-amber-500">
+            <ShieldAlertIcon size={18} />
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-bold text-amber-200">
+              Bounding boxes automatically generated
+            </span>
+            <span class="text-[11px] text-amber-200/60 leading-tight">
+              Some masks were missing bounding boxes. They have been added for optimal visualization
+              and thumbnails.
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <Button
+            variant="outline"
+            class="h-8 px-3 border-amber-500/30 hover:bg-amber-500/20 text-amber-200 gap-2 text-xs"
+            on:click={() => {
+              void onSave();
+              showAutogenBBoxAlert = false;
+            }}
+          >
+            <SaveIcon size={14} />
+            Save All
+          </Button>
+          <button
+            class="p-1.5 rounded-md hover:bg-white/10 text-amber-200/40 hover:text-amber-200 transition-colors"
+            on:click={() => (showAutogenBBoxAlert = false)}
+            aria-label="Dismiss"
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+      </div>
+    {/if}
+    <div
+      id="datasetItemViewerDiv"
+      class="flex-1 w-full overflow-hidden"
+      in:fade={{ duration: 300, delay: 100 }}
+    >
+      <!-- 'resize' prop is used to trigger redraw on value change, value itself is not used, but shouldn't be 0, so we add '+1' -->
+      <DatasetItemViewer {selectedItem} {isLoading} resize={objectInspectorAreaMaxWidth + 1} />
+    </div>
   </div>
   <button
     class="w-1.5 group relative bg-border hover:bg-primary/30 cursor-col-resize h-full transition-colors"

@@ -52,7 +52,7 @@ License: CECILL-C
       const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
       newShape = {
         status: "saving",
-        masksImageSVG: [],
+        masksImageSVG: svg,
         rle: {
           counts,
           size: [currentImage.height, currentImage.width],

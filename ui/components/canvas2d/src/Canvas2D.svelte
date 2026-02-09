@@ -31,6 +31,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     pixanoInferenceTracking,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+  import { selectedTool as selectedToolStore } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
@@ -51,7 +52,7 @@ License: CECILL-C
     POINT_SELECTION,
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
-  import { ToolType } from "./tools";
+  import { createPanTool, ToolType } from "./tools";
 
   // Exports
   export let selectedItemId: string;
@@ -561,12 +562,17 @@ License: CECILL-C
     switch (selectedTool.type) {
       case ToolType.PointSelection:
         displayInputPointTool(selectedTool);
+        displayCrosshair(selectedTool);
         break;
       case ToolType.Rectangle:
-        displayInputRectTool(selectedTool);
+        displayCrosshair(selectedTool);
         // Enable box creation or change cursor style
         break;
+      case ToolType.Polygon:
+        displayCrosshair(selectedTool);
+        break;
       case ToolType.Keypoint:
+        displayCrosshair(selectedTool);
         // Enable keypoint creation or change cursor style
         break;
       case ToolType.Delete:
@@ -835,14 +841,13 @@ License: CECILL-C
     stage.batchDraw();
   }
 
-  // ********** INPUT RECTANGLE TOOL ********** //
+  // ********** CROSSHAIR TOOL ********** //
 
-  function displayInputRectTool(tool: SelectionTool) {
+  function displayCrosshair(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
-      // TODO: être générique sur l'ensemble des outils != Rectangle
       const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer) pointer.destroy();
+      if (pointer && tool.type !== ToolType.PointSelection) pointer.destroy();
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
@@ -851,11 +856,11 @@ License: CECILL-C
     }
   }
 
-  function updateInputRectState(mousePos: Konva.Vector2d) {
+  function updateCrosshairState(mousePos: Konva.Vector2d) {
     const scale = stage.scaleX();
     const lineScale = Math.max(1, 1 / scale);
 
-    const [xLimit, yLimit] = findOrCreateInputRectPointer();
+    const [xLimit, yLimit] = findOrCreateCrosshair();
     const stageHeight = stage.height();
     xLimit.scaleY(lineScale);
     xLimit.points([mousePos.x, 0, mousePos.x, stageHeight]);
@@ -864,7 +869,7 @@ License: CECILL-C
     yLimit.points([0, mousePos.y, stageWidth, mousePos.y]);
   }
 
-  function findOrCreateInputRectPointer(): Konva.Line[] {
+  function findOrCreateCrosshair(): Konva.Line[] {
     const stageHeight = stage.height();
     const stageWidth = stage.width();
     let crossLineGroup: Konva.Group = toolsLayer.findOne("#crossline");
@@ -1030,8 +1035,12 @@ License: CECILL-C
       updateInputPointStage(position);
     }
 
-    if (selectedTool?.type === ToolType.Rectangle) {
-      updateInputRectState(position);
+    if (
+      [ToolType.Rectangle, ToolType.Polygon, ToolType.Keypoint, ToolType.PointSelection].includes(
+        selectedTool?.type,
+      )
+    ) {
+      updateCrosshairState(position);
     }
   }
 
@@ -1201,6 +1210,10 @@ License: CECILL-C
       activeElement?.getAttribute("contenteditable") === "true"
     ) {
       return; // Ignore shortcut when typing text
+    }
+
+    if (event.key === "Escape") {
+      selectedToolStore.set(createPanTool());
     }
 
     if (event.key === "Delete" && highlighted_point != null) {

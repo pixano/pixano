@@ -22,8 +22,9 @@ from pydantic import ConfigDict
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_integrity_errors
-from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
+from pixano.features import Image, SchemaGroup, Source, ViewEmbedding, is_view_embedding
 from pixano.features.schemas.base_schema import BaseSchema
+from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
@@ -210,6 +211,53 @@ class Dataset:
         self.dataset_item_model: type[DatasetItem] = DatasetItem.from_dataset_schema(
             self.schema, exclude_embeddings=True
         )
+
+    def generate_preview(self) -> str:
+        """Generate a preview for the dataset.
+
+        It samples images from the dataset, creates a mosaic and saves it to the previews directory.
+
+        Returns:
+            The preview base64 string.
+        """
+        # 1. Find an image table
+        image_table_name = None
+        for table_name in self.schema.groups[SchemaGroup.VIEW]:
+            schema = self.schema.schemas[table_name]
+            if issubclass(schema, Image):
+                image_table_name = table_name
+                break
+
+        if image_table_name is None:
+            return ""
+
+        # 2. Sample images (up to 4 for a 2x2 grid)
+        images_data = self.get_data(image_table_name, limit=4)
+        if not images_data:
+            return ""
+
+        pil_images = []
+        for image_view in cast(list[Image], images_data):
+            try:
+                pil_img = image_view.open(self.media_dir, output_type="image")
+                pil_images.append(pil_img)
+            except Exception:
+                continue
+
+        if not pil_images:
+            return ""
+
+        try:
+            mosaic = create_mosaic(pil_images, (350, 150))
+
+            # Save to disk
+            self.previews_path.mkdir(parents=True, exist_ok=True)
+            preview_file = self.previews_path / "dataset_preview.jpg"
+            mosaic.convert("RGB").save(preview_file, "JPEG")
+
+            return image_to_base64(mosaic, "JPEG")
+        except Exception:
+            return ""
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.

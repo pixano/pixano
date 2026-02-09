@@ -163,19 +163,24 @@ License: CECILL-C
   </div>
 {/if}
 
-<div class="w-full overflow-y-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans">
-  <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-sm text-foreground">
+<div
+  class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans"
+>
+  <table
+    {...$tableAttrs}
+    class="table-auto z-0 w-full text-center text-sm text-foreground border-separate border-spacing-0"
+  >
     <!-- Header -->
-    <thead>
+    <thead class="sticky top-0 z-10">
       {#each $headerRows as headerRow (headerRow.id)}
         <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-          <tr {...rowAttrs} class="sticky top-0 bg-muted/50 border-b border-border">
+          <tr {...rowAttrs}>
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe props={cell.props()} let:props attrs={cell.attrs()} let:attrs>
                 <th
                   {...attrs}
                   on:click={() => handleSort(props, cell)}
-                  class="relative py-3 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider"
+                  class="relative py-3 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider bg-muted border-b border-border"
                 >
                   <span class="whitespace-nowrap flex items-center gap-1 justify-center">
                     <Render of={cell.render()} />
@@ -192,8 +197,8 @@ License: CECILL-C
                 </th>
               </Subscribe>
             {/each}
-            <th class="w-full"></th>
-            <th class="pr-4">
+            <th class="w-full bg-muted border-b border-border"></th>
+            <th class="pr-4 bg-muted border-b border-border">
               <!-- Settings button -->
               <Button
                 variant="ghost"

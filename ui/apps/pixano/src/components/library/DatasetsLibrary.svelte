@@ -125,7 +125,7 @@ License: CECILL-C
 
   <!-- Dataset grid -->
   {#if datasets}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {#each datasets as dataset}
         {#if !dataset.isFiltered}
           <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -135,20 +135,23 @@ License: CECILL-C
       {/each}
     </div>
   {:else}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {#each [0, 1, 2, 3, 4, 5] as i (i)}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
         <div
-          class="h-[320px] rounded-2xl border border-border bg-card animate-pulse overflow-hidden"
+          class="flex flex-col rounded-2xl border border-border/60 bg-card animate-pulse overflow-hidden"
         >
-          <div class="h-44 bg-muted/50 w-full"></div>
+          <div class="aspect-video bg-muted/50 w-full"></div>
           <div class="p-5 space-y-4">
             <div class="space-y-2">
-              <div class="h-5 w-2/3 bg-muted rounded-lg"></div>
-              <div class="h-4 w-1/3 bg-muted rounded-lg"></div>
+              <div class="h-4 w-2/3 bg-muted rounded-full"></div>
             </div>
             <div class="space-y-2">
-              <div class="h-3 w-full bg-muted/50 rounded-lg"></div>
-              <div class="h-3 w-4/5 bg-muted/50 rounded-lg"></div>
+              <div class="h-2 w-full bg-muted/40 rounded-full"></div>
+              <div class="h-2 w-4/5 bg-muted/40 rounded-full"></div>
+            </div>
+            <div class="pt-4 border-t border-border/40 flex gap-4">
+              <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
+              <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
             </div>
           </div>
         </div>

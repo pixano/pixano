@@ -79,6 +79,7 @@ License: CECILL-C
 
   const onAbort = () => {
     newShape.set({ status: "none", shouldReset: true });
+    selectTool(panTool);
   };
 
   const configSmartToolClick = () => {

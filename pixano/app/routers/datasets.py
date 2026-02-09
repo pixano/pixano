@@ -35,7 +35,7 @@ async def get_datasets_info(
     """
     try:
         infos_and_paths: list[tuple[DatasetInfo, Path]] = DatasetInfo.load_directory(
-            directory=settings.library_dir, return_path=True
+            directory=settings.library_dir, return_path=True, media_dir=settings.media_dir
         )
     except FileNotFoundError:
         raise HTTPException(
@@ -66,7 +66,7 @@ async def get_dataset_info(
         The dataset info.
     """
     try:
-        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True, media_dir=settings.media_dir)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,

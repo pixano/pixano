@@ -99,7 +99,9 @@ License: CECILL-C
     selectedEntitiesId = [];
 
     const highlightedBoxes = $annotations.filter(
-      (ann) => ann.ui.displayControl.highlighted === "self" && ann.is_type(BaseSchema.BBox),
+      (ann) =>
+        ann.ui.displayControl.highlighted === "self" &&
+        (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)),
     );
 
     if (highlightedBoxes.length > 0) {
@@ -110,9 +112,12 @@ License: CECILL-C
       selectedEntitiesId = Object.keys(highlightedBoxesByEntityId);
       for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
         if (entityBoxes) {
-          const selectedBox = entityBoxes[Math.floor(entityBoxes.length / 2)];
-          if (selectedBox) {
-            const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, selectedBox);
+          // Prefer BBox if available among highlighted objects for this entity
+          const preferredBox =
+            entityBoxes.find((ann) => ann.is_type(BaseSchema.BBox)) ||
+            entityBoxes[Math.floor(entityBoxes.length / 2)];
+          if (preferredBox) {
+            const selectedThumbnail = defineObjectThumbnail($itemMetas, $mediaViews, preferredBox);
             if (selectedThumbnail) {
               thumbnails[entityId] = selectedThumbnail;
             }
