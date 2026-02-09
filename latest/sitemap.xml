@@ -2,474 +2,474 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/SUMMARY/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/display/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/main/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/serve/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/settings/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/cli/_schema_loader/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/cli/data/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/cli/init/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/cli/server/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/annotations/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/base_schema/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/dataset_info/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/dataset_items/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/datasets/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/embeddings/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/entities/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/item_info/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/items/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/sources/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/table_info/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/utils/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/models/views/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/annotations/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/browser/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/dataset_items/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/datasets/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/embeddings/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/entities/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/items/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/items_info/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/models/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/sources/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/thumbnail/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/utils/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/views/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/inference/conditional_generation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/inference/mask_generation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/inference/models/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/inference/utils/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/app/routers/inference/zero_shot_detection/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/dataset/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/dataset_features_values/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/dataset_info/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/dataset_schema/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/dataset_stat/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/builders/dataset_builder/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/builders/folders/base/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/builders/folders/image/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/builders/folders/video/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/builders/folders/vqa/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/coco_dataset_exporter/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/dataset_exporter/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/default_json_dataset_exporter/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/exporters/default_jsonl_dataset_exporter/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/queries/table/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/utils/errors/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/utils/integrity/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/utils/labels/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/utils/mosaic/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/utils/video/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/datasets/workspaces/dataset_items/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/pyarrow_utils/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/base_schema/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/registry/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/schema_group/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/source/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/annotation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/bbox/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/camcalibration/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/classification/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/compressed_rle/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/info_extraction/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/keypoints/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/text_generation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/annotations/tracklet/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/embeddings/embedding/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/entities/conversation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/entities/entity/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/entities/multi_modal_entity/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/entities/named_entity/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/entities/track/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/items/item/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/image/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/point_cloud/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/sequence_frame/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/text/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/video/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/schemas/views/view/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/types/base_type/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/types/nd_array_float/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/types/registry/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/types/schema_reference/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/utils/boxes/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/utils/creators/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/features/utils/image/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/exceptions/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/mask_generation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/provider/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/registry/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/text_image_conditional_generation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/types/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/zero_shot_detection/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/providers/base/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/inference/providers/pixano_inference/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/utils/python/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/api_reference/utils/validation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/installing_pixano/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/key_concepts/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/launching_the_app/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/quickstart/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/getting_started/using_the_app/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/tutorials/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/tutorials/dataset/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/tutorials/interactive_segmentation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/tutorials/pre_annotation/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
     <url>
          <loc>https://pixano.github.io/pixano/latest/tutorials/semantic_search/</loc>
-         <lastmod>2026-02-07</lastmod>
+         <lastmod>2026-02-09</lastmod>
     </url>
 </urlset>
