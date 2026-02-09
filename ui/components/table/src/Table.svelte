@@ -163,8 +163,13 @@ License: CECILL-C
   </div>
 {/if}
 
-<div class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans">
-  <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-sm text-foreground border-separate border-spacing-0">
+<div
+  class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans"
+>
+  <table
+    {...$tableAttrs}
+    class="table-auto z-0 w-full text-center text-sm text-foreground border-separate border-spacing-0"
+  >
     <!-- Header -->
     <thead class="sticky top-0 z-10">
       {#each $headerRows as headerRow (headerRow.id)}

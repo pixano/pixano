@@ -31,6 +31,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     pixanoInferenceTracking,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
+  import { selectedTool as selectedToolStore } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
@@ -51,7 +52,6 @@ License: CECILL-C
     POINT_SELECTION,
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
-  import { selectedTool as selectedToolStore } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
   import { createPanTool, ToolType } from "./tools";
 
   // Exports

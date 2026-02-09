@@ -150,8 +150,8 @@ License: CECILL-C
               <div class="h-2 w-4/5 bg-muted/40 rounded-full"></div>
             </div>
             <div class="pt-4 border-t border-border/40 flex gap-4">
-               <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
-               <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
+              <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
+              <div class="h-3 w-12 bg-muted/50 rounded-full"></div>
             </div>
           </div>
         </div>

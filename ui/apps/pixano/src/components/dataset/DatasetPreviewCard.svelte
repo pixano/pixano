@@ -6,14 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { ArrowRight, Database, Eye, Layers, Shapes } from "lucide-svelte";
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
-  import { 
-    Database, 
-    Layers, 
-    Shapes, 
-    Eye, 
-    ArrowRight
-  } from "lucide-svelte";
 
   import { api, WorkspaceType, type DatasetInfo } from "@pixano/core";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
@@ -31,7 +25,7 @@ License: CECILL-C
     entities: number;
     annotations: Record<string, number>;
   } | null = null;
-  
+
   const controller = new AbortController();
   const dispatch = createEventDispatcher();
 
@@ -41,12 +35,18 @@ License: CECILL-C
 
   function displayWorkspaceType(workspace: WorkspaceType) {
     switch (workspace) {
-      case WorkspaceType.IMAGE: return "Image";
-      case WorkspaceType.VIDEO: return "Video";
-      case WorkspaceType.IMAGE_VQA: return "VQA";
-      case WorkspaceType.IMAGE_TEXT_ENTITY_LINKING: return "Entity Linking";
-      case WorkspaceType.PCL_3D: return "3D";
-      default: return "General";
+      case WorkspaceType.IMAGE:
+        return "Image";
+      case WorkspaceType.VIDEO:
+        return "Video";
+      case WorkspaceType.IMAGE_VQA:
+        return "VQA";
+      case WorkspaceType.IMAGE_TEXT_ENTITY_LINKING:
+        return "Entity Linking";
+      case WorkspaceType.PCL_3D:
+        return "3D";
+      default:
+        return "General";
     }
   }
 
@@ -73,7 +73,7 @@ License: CECILL-C
         stats = {
           maxViews: maxNumViews,
           entities: entitiesCounts,
-          annotations: annCounts
+          annotations: annCounts,
         };
       })
       .catch((err) => {
@@ -100,22 +100,30 @@ License: CECILL-C
         alt="{dataset.name} thumbnail"
         class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-110"
       />
-      
+
       <!-- Glassmorphism Stats Overlay (Disruptive Hover) -->
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+      <div
+        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex flex-col justify-end p-4"
+      >
         {#if stats}
-          <div class="grid grid-cols-2 gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500 delay-75">
+          <div
+            class="grid grid-cols-2 gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500 delay-75"
+          >
             <div class="flex items-center gap-2 text-white/90">
               <Eye size={14} class="text-primary-light" />
               <div class="flex flex-col">
-                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">Views</span>
+                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
+                  Views
+                </span>
                 <span class="text-xs font-black leading-none">{stats.maxViews}</span>
               </div>
             </div>
             <div class="flex items-center gap-2 text-white/90">
               <Shapes size={14} class="text-primary-light" />
               <div class="flex flex-col">
-                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">Entities</span>
+                <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
+                  Entities
+                </span>
                 <span class="text-xs font-black leading-none">{stats.entities}</span>
               </div>
             </div>
@@ -123,22 +131,30 @@ License: CECILL-C
               <div class="flex items-center gap-2 text-white/90">
                 <Layers size={14} class="text-primary-light" />
                 <div class="flex flex-col">
-                  <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold line-clamp-1">{key}</span>
+                  <span
+                    class="text-[10px] uppercase tracking-tighter opacity-70 font-bold line-clamp-1"
+                  >
+                    {key}
+                  </span>
                   <span class="text-xs font-black leading-none">{val}</span>
                 </div>
               </div>
             {/each}
           </div>
         {:else}
-           <div class="flex items-center justify-center h-full">
-             <div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-           </div>
+          <div class="flex items-center justify-center h-full">
+            <div
+              class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"
+            ></div>
+          </div>
         {/if}
       </div>
 
       <!-- Category Badge -->
       {#if dataset.workspace !== WorkspaceType.UNDEFINED}
-        <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-md border border-white/10 shadow-lg">
+        <div
+          class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-md border border-white/10 shadow-lg"
+        >
           <span class="text-[10px] font-black uppercase tracking-widest text-foreground/90">
             {displayWorkspaceType(dataset.workspace)}
           </span>
@@ -146,7 +162,9 @@ License: CECILL-C
       {/if}
 
       <!-- Open Indicator -->
-      <div class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover/card:opacity-100 transform translate-x-4 group-hover/card:translate-x-0 transition-all duration-300 shadow-xl">
+      <div
+        class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover/card:opacity-100 transform translate-x-4 group-hover/card:translate-x-0 transition-all duration-300 shadow-xl"
+      >
         <ArrowRight size={16} />
       </div>
     </div>
@@ -154,12 +172,16 @@ License: CECILL-C
     <!-- Info Section -->
     <div class="flex-1 p-5 flex flex-col min-h-0">
       <div class="flex items-start justify-between gap-2 mb-1.5">
-        <h3 class="text-base font-black text-foreground tracking-tight line-clamp-1 group-hover/card:text-primary transition-colors">
+        <h3
+          class="text-base font-black text-foreground tracking-tight line-clamp-1 group-hover/card:text-primary transition-colors"
+        >
           {dataset.name}
         </h3>
       </div>
 
-      <p class="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed opacity-80 mb-4 flex-1">
+      <p
+        class="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed opacity-80 mb-4 flex-1"
+      >
         {dataset.description || "No description provided for this dataset."}
       </p>
 
@@ -168,7 +190,9 @@ License: CECILL-C
         <div class="flex items-center gap-1.5">
           <Database size={13} class="text-primary" />
           <span class="text-xs font-bold text-foreground tabular-nums">{dataset.num_items}</span>
-          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Items</span>
+          <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+            Items
+          </span>
         </div>
         {#if dataset.size && dataset.size !== "Unknown" && dataset.size !== "N/A"}
           <div class="h-1 w-1 rounded-full bg-border"></div>

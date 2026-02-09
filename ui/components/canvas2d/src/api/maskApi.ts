@@ -153,7 +153,9 @@ function svgPathToBitmap(svgPath: string | string[], width: number, height: numb
   }
 
   // Get the image data from the canvas
-  const imageData = context ? context.getImageData(0, 0, width, height).data : new Uint8ClampedArray(width * height * 4);
+  const imageData = context
+    ? context.getImageData(0, 0, width, height).data
+    : new Uint8ClampedArray(width * height * 4);
   // Convert the image data to a binary bitmap
   const bitmap: number[] = [];
   for (let i = 0; i < imageData.length; i += 4) {

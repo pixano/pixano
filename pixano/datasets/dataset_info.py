@@ -139,12 +139,18 @@ class DatasetInfo(BaseModel):
 
     @overload
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: Literal[False] = False, media_dir: Path | None = None) -> "DatasetInfo": ...
+    def load_id(
+        id: str, directory: Path, return_path: Literal[False] = False, media_dir: Path | None = None
+    ) -> "DatasetInfo": ...
     @overload
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: Literal[True] = True, media_dir: Path | None = None) -> tuple["DatasetInfo", Path]: ...
+    def load_id(
+        id: str, directory: Path, return_path: Literal[True] = True, media_dir: Path | None = None
+    ) -> tuple["DatasetInfo", Path]: ...
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: bool = False, media_dir: Path | None = None) -> tuple["DatasetInfo", Path] | "DatasetInfo":
+    def load_id(
+        id: str, directory: Path, return_path: bool = False, media_dir: Path | None = None
+    ) -> tuple["DatasetInfo", Path] | "DatasetInfo":
         """Load a specific DatasetInfo from directory.
 
         Args:

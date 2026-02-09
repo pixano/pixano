@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { getBoundingBoxFromMaskSVG } from "@pixano/canvas2d/src/api/maskApi";
 import {
   BaseSchema,
   WorkspaceType,
@@ -16,7 +17,6 @@ import {
 } from "@pixano/core";
 
 import type { MView } from ".";
-import { getBoundingBoxFromMaskSVG } from "@pixano/canvas2d/src/api/maskApi";
 import type { ItemsMeta } from "../../types/datasetItemWorkspaceTypes";
 
 export const defineObjectThumbnail = (

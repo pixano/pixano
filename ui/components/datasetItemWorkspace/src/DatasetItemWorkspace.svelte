@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon, SaveIcon, ShieldAlertIcon, XIcon } from "lucide-svelte";
+  import { nanoid } from "nanoid";
   import { cubicOut } from "svelte/easing";
   import { fade, fly } from "svelte/transition";
 
@@ -27,9 +28,12 @@ License: CECILL-C
     type SaveItem,
   } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
-  import { nanoid } from "nanoid";
 
-  import { getBoundingBoxFromMaskSVG, rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
+  import {
+    getBoundingBoxFromMaskSVG,
+    rleFrString,
+    rleToString,
+  } from "../../canvas2d/src/api/maskApi";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
@@ -335,9 +339,12 @@ License: CECILL-C
             <ShieldAlertIcon size={18} />
           </div>
           <div class="flex flex-col">
-            <span class="text-sm font-bold text-amber-200">Bounding boxes automatically generated</span>
+            <span class="text-sm font-bold text-amber-200">
+              Bounding boxes automatically generated
+            </span>
             <span class="text-[11px] text-amber-200/60 leading-tight">
-              Some masks were missing bounding boxes. They have been added for optimal visualization and thumbnails.
+              Some masks were missing bounding boxes. They have been added for optimal visualization
+              and thumbnails.
             </span>
           </div>
         </div>

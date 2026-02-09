@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Checkbox } from "@pixano/core";
+
   // Exports
   export let value: boolean;
 </script>

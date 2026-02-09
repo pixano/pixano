@@ -23,8 +23,8 @@ License: CECILL-C
   } from "@pixano/core";
   import { pixanoInferenceToValidateTrackingMasks } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
 
-  import { getBoundingBoxFromMaskSVG } from "../../../../canvas2d/src/api/maskApi";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { getBoundingBoxFromMaskSVG } from "../../../../canvas2d/src/api/maskApi";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
     addOrUpdateSaveItem,
