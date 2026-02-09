@@ -320,7 +320,7 @@ License: CECILL-C
     if ((event.ctrlKey || event.metaKey) && event.key === "s") {
       event.preventDefault();
       if ($canSave && !isSaving) {
-        onSave();
+        void onSave();
       }
     }
   };

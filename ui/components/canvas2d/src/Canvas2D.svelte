@@ -33,10 +33,6 @@ License: CECILL-C
     pixanoInferenceTracking,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
   import {
-    brushSettings as brushSettingsStore,
-    selectedTool as selectedToolStore,
-  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
-  import {
     addSmartPointTool,
     brushDrawTool,
     brushEraseTool,
@@ -44,6 +40,10 @@ License: CECILL-C
     removeSmartPointTool,
     smartRectangleTool,
   } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
+  import {
+    brushSettings as brushSettingsStore,
+    selectedTool as selectedToolStore,
+  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
@@ -58,7 +58,6 @@ License: CECILL-C
   import ShowKeypoints from "./components/ShowKeypoint.svelte";
   import {
     INPUTPOINT_RADIUS,
-    INPUTPOINT_STROKEWIDTH,
     // INPUTRECT_STROKEWIDTH,
     // BBOX_STROKEWIDTH,
     // MASK_STROKEWIDTH,
@@ -66,6 +65,15 @@ License: CECILL-C
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
   import { createPanTool, ToolType } from "./tools";
+
+  interface BrushCanvasRef {
+    beginStroke(x: number, y: number): void;
+    updateStroke(x: number, y: number): void;
+    endStroke(): void;
+    getMaskData(): Shape | null;
+    clearCanvas(): void;
+    destroy(): void;
+  }
 
   // Exports
   export let selectedItemId: string;
@@ -102,7 +110,7 @@ License: CECILL-C
   let lastInputViewRef: Reference;
 
   // Brush tool state
-  let brushCanvasRefs: Record<string, BrushCanvas> = {};
+  let brushCanvasRefs: Record<string, BrushCanvasRef> = {};
   let brushCursor: Konva.Circle | null = null;
   let brushLazyLine: Konva.Line | null = null;
   let bboxEditable = false;
@@ -113,8 +121,7 @@ License: CECILL-C
   } | null = null;
 
   // True for Brush tool AND all smart/AI segmentation tools
-  $: isActivePaintingTool =
-    selectedTool?.type === ToolType.Brush || selectedTool?.isSmart === true;
+  $: isActivePaintingTool = selectedTool?.type === ToolType.Brush || selectedTool?.isSmart === true;
 
   $: {
     if (
@@ -129,7 +136,7 @@ License: CECILL-C
         currentAnn?.output?.rle
       ) {
         const rle = currentAnn.output.rle;
-        const counts = Array.isArray(rle.counts) ? (rle.counts as number[]) : [];
+        const counts = Array.isArray(rle.counts) ? rle.counts : [];
         pendingBrushMask = {
           rle: { counts, size: rle.size as [number, number] },
           maskId: currentAnn.id,
@@ -1265,9 +1272,13 @@ License: CECILL-C
     }
 
     if (
-      [ToolType.Rectangle, ToolType.Polygon, ToolType.Keypoint, ToolType.PointSelection, ToolType.Brush].includes(
-        selectedTool?.type,
-      )
+      [
+        ToolType.Rectangle,
+        ToolType.Polygon,
+        ToolType.Keypoint,
+        ToolType.PointSelection,
+        ToolType.Brush,
+      ].includes(selectedTool?.type)
     ) {
       updateCrosshairState(position);
     }
@@ -1490,8 +1501,7 @@ License: CECILL-C
     }
     if (event.key === "x" || event.key === "X") {
       if (selectedTool?.type === ToolType.Brush) {
-        const brushTool = selectedTool as BrushSelectionTool;
-        selectedToolStore.set(brushTool.mode === "draw" ? brushEraseTool : brushDrawTool);
+        selectedToolStore.set(selectedTool.mode === "draw" ? brushEraseTool : brushDrawTool);
       }
     }
     if (event.key === "[" || event.key === "q" || event.key === "Q") {
@@ -1510,7 +1520,10 @@ License: CECILL-C
         }));
       }
     }
-    if ((event.key === "Enter" || event.key === "s" || event.key === "S") && selectedTool?.type === ToolType.Brush) {
+    if (
+      (event.key === "Enter" || event.key === "s" || event.key === "S") &&
+      selectedTool?.type === ToolType.Brush
+    ) {
       // Save brush mask for all active views
       for (const view_name of Object.keys(imagesPerView)) {
         saveBrushMask(view_name);
@@ -1539,8 +1552,7 @@ License: CECILL-C
     }
     if (event.key === "x" || event.key === "X") {
       if (selectedTool?.type === ToolType.PointSelection) {
-        const current = selectedTool as LabeledPointTool;
-        selectedToolStore.set(current.label === 1 ? removeSmartPointTool : addSmartPointTool);
+        selectedToolStore.set(selectedTool.label === 1 ? removeSmartPointTool : addSmartPointTool);
       }
     }
     if (event.key === "r" || event.key === "R") {
@@ -1630,7 +1642,13 @@ License: CECILL-C
           {#if i === images.length - 1}
             <Group config={{ id: `bboxes-${view_name}` }}>
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
-                <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} editable={bboxEditable} />
+                <CreateRectangle
+                  zoomFactor={zoomFactor[view_name]}
+                  {newShape}
+                  {stage}
+                  {viewRef}
+                  editable={bboxEditable}
+                />
               {/if}
               {#each bboxes as bbox}
                 {#if bbox.data.view_ref.name === view_name && !isActivePaintingTool}
@@ -1655,9 +1673,11 @@ License: CECILL-C
                   currentImage={getCurrentImage(view_name)}
                   {zoomFactor}
                   {selectedItemId}
-                  selectedTool={selectedTool}
+                  {selectedTool}
                   brushSettings={$brushSettingsStore}
-                  existingMaskRle={pendingBrushMask?.viewName === view_name ? pendingBrushMask.rle : null}
+                  existingMaskRle={pendingBrushMask?.viewName === view_name
+                    ? pendingBrushMask.rle
+                    : null}
                 />
               {/if}
               <CreatePolygon

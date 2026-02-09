@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Popover } from "@pixano/core/src";
   import { Settings } from "lucide-svelte";
+
+  import { Popover } from "@pixano/core/src";
 
   import { brushSettings } from "../../lib/stores/datasetItemWorkspaceStores";
 

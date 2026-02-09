@@ -13,7 +13,13 @@ License: CECILL-C
   import { SaveShapeType, type BrushSelectionTool, type Reference, type Shape } from "@pixano/core";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
-  import { bitmapToRle, drawBrushCircle, interpolatePoints, isMaskEmpty, rleToBitmap } from "../api/brushApi";
+  import {
+    bitmapToRle,
+    drawBrushCircle,
+    interpolatePoints,
+    isMaskEmpty,
+    rleToBitmap,
+  } from "../api/brushApi";
 
   // Exports
   export let viewRef: Reference;
@@ -112,7 +118,8 @@ License: CECILL-C
     const displayCanvas = document.createElement("canvas");
     displayCanvas.width = offscreenCanvas.width;
     displayCanvas.height = offscreenCanvas.height;
-    const displayCtx = displayCanvas.getContext("2d")!;
+    const displayCtx = displayCanvas.getContext("2d");
+    if (!displayCtx) return;
 
     // Draw the mask in green with transparency
     displayCtx.drawImage(offscreenCanvas, 0, 0);
