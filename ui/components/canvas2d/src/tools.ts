@@ -18,6 +18,7 @@ export enum ToolType {
   Pan = "PAN",
   Fusion = "FUSION",
   Classification = "CLASSIFICATION",
+  Brush = "BRUSH",
 }
 
 interface Tool {
@@ -55,6 +56,11 @@ interface PanTool extends Tool {
 
 interface ClassificationTool extends Tool {
   type: ToolType.Classification;
+}
+
+interface BrushTool extends Tool {
+  type: ToolType.Brush;
+  mode: "draw" | "erase";
 }
 
 export function createPointSelectionTool(): PointSelectionTool {
@@ -123,7 +129,28 @@ export function createClassifTool(): ClassificationTool {
   } as ClassificationTool;
 }
 
+export function createBrushDrawTool(): BrushTool {
+  return {
+    name: "Brush (Draw)",
+    type: ToolType.Brush,
+    mode: "draw",
+    icon: icons.svg_pan,
+    cursor: "none",
+  } as BrushTool;
+}
+
+export function createBrushEraseTool(): BrushTool {
+  return {
+    name: "Brush (Erase)",
+    type: ToolType.Brush,
+    mode: "erase",
+    icon: icons.svg_pan,
+    cursor: "none",
+  } as BrushTool;
+}
+
 export type {
+  BrushTool,
   ClassificationTool,
   DeleteTool,
   PanTool,

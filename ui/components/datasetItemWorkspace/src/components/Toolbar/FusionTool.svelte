@@ -103,6 +103,8 @@ License: CECILL-C
         onAbort();
         break;
       case "Enter":
+      case "s":
+      case "S":
         onValidate();
         break;
     }
@@ -123,7 +125,7 @@ License: CECILL-C
   </IconButton>
   {#if $selectedTool?.type === ToolType.Fusion}
     <IconButton
-      tooltipContent={"Validate association (Enter)"}
+      tooltipContent={"Validate association (S / Enter)"}
       on:click={onValidate}
       selected={false}
     >
