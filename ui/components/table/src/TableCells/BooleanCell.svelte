@@ -5,8 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { Checkbox } from "@pixano/core";
   // Exports
   export let value: boolean;
 </script>
 
-<input type="checkbox" disabled={true} class="px-4 pointer-events: none;" bind:checked={value} />
+<div class="flex items-center justify-center px-4">
+  <Checkbox disabled={true} checked={value} />
+</div>

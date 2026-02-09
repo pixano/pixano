@@ -84,23 +84,27 @@ class DatasetInfo(BaseModel):
     def load_directory(
         directory: Path,
         return_path: Literal[False] = False,
+        media_dir: Path | None = None,
     ) -> list["DatasetInfo"]: ...
     @overload
     @staticmethod
     def load_directory(
         directory: Path,
         return_path: Literal[True],
+        media_dir: Path | None = None,
     ) -> list[tuple["DatasetInfo", Path]]: ...
     @staticmethod
     def load_directory(
         directory: Path,
         return_path: bool = False,
+        media_dir: Path | None = None,
     ) -> list[tuple["DatasetInfo", Path]] | list["DatasetInfo"]:
         """Load list of DatasetInfo from directory.
 
         Args:
             directory: Directory to load.
             return_path: Return the paths of the datasets.
+            media_dir: Path to the media directory.
 
         Returns:
             The list of DatasetInfo and the paths of the datasets.
@@ -111,11 +115,16 @@ class DatasetInfo(BaseModel):
         for json_fp in sorted(directory.glob("*/info.json")):
             info: DatasetInfo = DatasetInfo.from_json(json_fp)
             try:
-                image = Image.open_url(
-                    str(json_fp.parent.resolve() / "previews/dataset_preview.jpg"), Path("/"), "image"
-                )  # TODO choose correct preview name / path / extension
-                thumb = get_image_thumbnail(image, (350, 150))
-                info.preview = image_to_base64(thumb, "JPEG")
+                preview_path = json_fp.parent.resolve() / "previews/dataset_preview.jpg"
+                if not preview_path.exists():
+                    from pixano.datasets.dataset import Dataset
+
+                    dataset = Dataset(json_fp.parent, media_dir=media_dir)
+                    info.preview = dataset.generate_preview()
+                else:
+                    image = Image.open_url(str(preview_path), Path("/"), "image")
+                    thumb = get_image_thumbnail(image, (350, 150))
+                    info.preview = image_to_base64(thumb, "JPEG")
             except Exception:  # TODO: specify exception URL and Value
                 info.preview = ""
             if return_path:
@@ -130,18 +139,19 @@ class DatasetInfo(BaseModel):
 
     @overload
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: Literal[False] = False) -> "DatasetInfo": ...
+    def load_id(id: str, directory: Path, return_path: Literal[False] = False, media_dir: Path | None = None) -> "DatasetInfo": ...
     @overload
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: Literal[True] = True) -> tuple["DatasetInfo", Path]: ...
+    def load_id(id: str, directory: Path, return_path: Literal[True] = True, media_dir: Path | None = None) -> tuple["DatasetInfo", Path]: ...
     @staticmethod
-    def load_id(id: str, directory: Path, return_path: bool = False) -> tuple["DatasetInfo", Path] | "DatasetInfo":
+    def load_id(id: str, directory: Path, return_path: bool = False, media_dir: Path | None = None) -> tuple["DatasetInfo", Path] | "DatasetInfo":
         """Load a specific DatasetInfo from directory.
 
         Args:
             id: The ID of the dataset to load.
             directory: Directory to load.
             return_path: Return the path of the dataset.
+            media_dir: Path to the media directory.
 
         Returns:
             The DatasetInfo.
@@ -150,11 +160,17 @@ class DatasetInfo(BaseModel):
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 try:
-                    info.preview = Image.open_url(
-                        str(json_fp.parent / "previews/dataset_preview.jpg"),
-                        json_fp.parent / "media",
-                    )  # TODO choose correct preview name / path / extension
-                except ValueError:
+                    preview_path = json_fp.parent / "previews/dataset_preview.jpg"
+                    if not preview_path.exists():
+                        from pixano.datasets.dataset import Dataset
+
+                        dataset = Dataset(json_fp.parent, media_dir=media_dir)
+                        info.preview = dataset.generate_preview()
+                    else:
+                        image = Image.open_url(str(preview_path), Path("/"), "image")
+                        thumb = get_image_thumbnail(image, (350, 150))
+                        info.preview = image_to_base64(thumb, "JPEG")
+                except Exception:
                     info.preview = ""
                 return (info, json_fp.parent) if return_path else info
         raise FileNotFoundError(f"No dataset found with ID {id}")

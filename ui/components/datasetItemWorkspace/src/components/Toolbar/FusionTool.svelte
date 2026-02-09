@@ -12,7 +12,7 @@ License: CECILL-C
   import { Annotation, cn, IconButton, type SaveItem, type SelectionTool } from "@pixano/core/src";
 
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-  import { fusionTool } from "../../lib/settings/selectionTools";
+  import { fusionTool, panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     entities,
@@ -83,6 +83,7 @@ License: CECILL-C
 
   const onAbort = () => {
     clearFusionHighlighting();
+    selectTool(panTool);
   };
 
   function shortcutHandler(event: KeyboardEvent) {

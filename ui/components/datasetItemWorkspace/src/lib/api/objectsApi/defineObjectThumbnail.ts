@@ -10,11 +10,13 @@ import {
   type Annotation,
   type BBox,
   type Image,
+  type Mask,
   type ObjectThumbnail,
   type SequenceFrame,
 } from "@pixano/core";
 
 import type { MView } from ".";
+import { getBoundingBoxFromMaskSVG } from "@pixano/canvas2d/src/api/maskApi";
 import type { ItemsMeta } from "../../types/datasetItemWorkspaceTypes";
 
 export const defineObjectThumbnail = (
@@ -22,21 +24,35 @@ export const defineObjectThumbnail = (
   views: MView,
   object: Annotation,
 ): ObjectThumbnail | null => {
-  let box: BBox | undefined = undefined;
+  let coords: number[] | undefined = undefined;
+  let frame_index: number | undefined = undefined;
+
   if (object.is_type(BaseSchema.BBox)) {
-    box = object as BBox;
+    const box = object as BBox;
+    coords = box.data.coords;
+    frame_index = box.ui.frame_index;
+  } else if (object.is_type(BaseSchema.Mask)) {
+    const mask = object as Mask;
+    if (mask.ui.svg) {
+      const bbox = getBoundingBoxFromMaskSVG(mask.ui.svg);
+      if (bbox) {
+        coords = [bbox.x, bbox.y, bbox.width, bbox.height];
+      }
+    }
+    frame_index = mask.ui.frame_index;
   }
+
   const view_name = object.data.view_ref.name;
-  if (!box || !box.is_type(BaseSchema.BBox) || !view_name) return null;
+  if (!coords || !view_name) return null;
   //prevent bug: if thumbnail is asked before data are fully loaded, we can have a error on a bad key
   if (!(view_name in views)) return null;
 
   const view =
     metas.type === WorkspaceType.VIDEO
-      ? (views[view_name] as SequenceFrame[])[box.ui.frame_index!]
+      ? (views[view_name] as SequenceFrame[])[frame_index!]
       : (views[view_name] as Image);
-  let coords = box.data.coords;
-  if (view && !box.data.is_normalized) {
+
+  if (view && (object.is_type(BaseSchema.Mask) || !(object as BBox).data.is_normalized)) {
     coords = [
       coords[0] / view.data.width,
       coords[1] / view.data.height,

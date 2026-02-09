@@ -330,6 +330,50 @@ def get_image_thumbnail(image: Image.Image, size: tuple[int, int]) -> Image.Imag
     return thumbnail
 
 
+def create_mosaic(images: list[Image.Image], size: tuple[int, int] = (350, 150)) -> Image.Image:
+    """Create a mosaic of images.
+
+    Args:
+        images: List of Pillow images.
+        size: Target mosaic size.
+
+    Returns:
+        Mosaic image as Pillow.
+    """
+    mosaic = Image.new("RGB", size, (255, 255, 255))
+    if not images:
+        return mosaic
+
+    n = len(images)
+    cols = 2 if n > 1 else 1
+    rows = 2 if n > 2 else 1
+
+    w, h = size[0] // cols, size[1] // rows
+
+    for i, img in enumerate(images[: cols * rows]):
+        # Cover resize
+        img_w, img_h = img.size
+        aspect = img_w / img_h
+        target_aspect = w / h
+
+        if aspect > target_aspect:
+            new_w = int(img_h * target_aspect)
+            left = (img_w - new_w) // 2
+            thumb = img.crop((left, 0, left + new_w, img_h))
+        else:
+            new_h = int(img_w / target_aspect)
+            top = (img_h - new_h) // 2
+            thumb = img.crop((0, top, img_w, top + new_h))
+
+        thumb = thumb.resize((w, h), Image.Resampling.LANCZOS)
+
+        x = (i % cols) * w
+        y = (i // cols) * h
+        mosaic.paste(thumb, (x, y))
+
+    return mosaic
+
+
 def generate_text_image_base64(text: str, width: int = 128, height: int = 128, font_size: int = 16) -> str:
     """Generate a thumbnail displaying given text.
 

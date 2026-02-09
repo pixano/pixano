@@ -133,19 +133,27 @@ export function rleFrString(s: string): number[] {
 }
 
 // Function to parse SVG path (as provided in the previous response)
-function svgPathToBitmap(svgPath, width: number, height: number): number[] {
+function svgPathToBitmap(svgPath: string | string[], width: number, height: number): number[] {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
 
   // Draw the SVG path on the canvas
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = "black";
-  context.fill(new Path2D(svgPath));
+  if (context) {
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = "black";
+    if (Array.isArray(svgPath)) {
+      for (const path of svgPath) {
+        context.fill(new Path2D(path));
+      }
+    } else {
+      context.fill(new Path2D(svgPath));
+    }
+  }
 
   // Get the image data from the canvas
-  const imageData = context.getImageData(0, 0, width, height).data;
+  const imageData = context ? context.getImageData(0, 0, width, height).data : new Uint8ClampedArray(width * height * 4);
   // Convert the image data to a binary bitmap
   const bitmap: number[] = [];
   for (let i = 0; i < imageData.length; i += 4) {
@@ -155,7 +163,7 @@ function svgPathToBitmap(svgPath, width: number, height: number): number[] {
   return bitmap;
 }
 
-function rleEncode(bitmap): number[] {
+function rleEncode(bitmap: number[]): number[] {
   const counts: number[] = [];
   let count = 1;
   for (let i = 1; i < bitmap.length; i++) {
@@ -188,4 +196,41 @@ export function runLengthEncode(svg: MaskSVG, imageWidth: number, imageHeight: n
   let bitmap = svgPathToBitmap(svg, imageWidth, imageHeight);
   bitmap = reshapeArray(bitmap, imageHeight, imageWidth);
   return rleEncode(bitmap);
+}
+
+export function getBoundingBoxFromMaskSVG(svg: MaskSVG): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const path of svg) {
+    const start = m_part(path);
+    minX = Math.min(minX, start.x);
+    minY = Math.min(minY, start.y);
+    maxX = Math.max(maxX, start.x);
+    maxY = Math.max(maxY, start.y);
+
+    const l_pts = l_part(path);
+    for (const pt of l_pts) {
+      minX = Math.min(minX, pt.x);
+      minY = Math.min(minY, pt.y);
+      maxX = Math.max(maxX, pt.x);
+      maxY = Math.max(maxY, pt.y);
+    }
+  }
+
+  if (minX === Infinity) return null;
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
 }

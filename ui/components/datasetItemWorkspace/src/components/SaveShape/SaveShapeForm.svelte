@@ -18,10 +18,12 @@ License: CECILL-C
     Tracklet,
     WorkspaceType,
     type SaveItem,
+    type SaveRectangleShape,
     type SaveTrackletShape,
   } from "@pixano/core";
   import { pixanoInferenceToValidateTrackingMasks } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
 
+  import { getBoundingBoxFromMaskSVG } from "../../../../canvas2d/src/api/maskApi";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput, mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import {
@@ -95,6 +97,40 @@ License: CECILL-C
     if (subEntity) subEntity.ui.childs?.push(newObject);
 
     let tracking_masks: Mask[] = [];
+    const addedAnnotations: Annotation[] = [newObject];
+
+    if ($newShape.type === SaveShapeType.mask) {
+      const bboxCoords = getBoundingBoxFromMaskSVG($newShape.masksImageSVG);
+      if (bboxCoords) {
+        const bboxShape: SaveRectangleShape = {
+          ...($newShape as SaveRectangleShape),
+          type: SaveShapeType.bbox,
+          attrs: bboxCoords,
+        };
+        const newBBox = defineCreatedObject(
+          subEntity ?? topEntity,
+          features,
+          bboxShape,
+          $newShape.viewRef,
+          $datasetSchema,
+          isVideo,
+          $currentFrameIndex,
+        );
+        if (newBBox) {
+          newBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
+          newBBox.ui.top_entities = subEntity ? [topEntity, subEntity] : [topEntity];
+          topEntity.ui.childs?.push(newBBox);
+          if (subEntity) subEntity.ui.childs?.push(newBBox);
+          const save_item_bbox: SaveItem = {
+            change_type: "add",
+            object: newBBox,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_bbox));
+          addedAnnotations.push(newBBox);
+        }
+      }
+    }
+
     if (isVideo) {
       let lastFrameIndex = $currentFrameIndex;
       if (isFromTracking) {
@@ -223,7 +259,7 @@ License: CECILL-C
       });
       return [
         ...objectsWithoutHighlighted,
-        ...(newObject ? [newObject] : []),
+        ...addedAnnotations,
         ...(isFromTracking ? tracking_masks : []),
         ...(newTracklet ? [newTracklet] : []),
       ];
