@@ -49,6 +49,7 @@ License: CECILL-C
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import { convertPointToSvg, runLengthEncode } from "./api/maskApi";
   import { resizeStroke } from "./api/rectangleApi";
   import BrushCanvas from "./components/BrushCanvas.svelte";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
@@ -668,12 +669,32 @@ License: CECILL-C
     const x = Math.round(cursorPositionOnImage.x);
     const y = Math.round(cursorPositionOnImage.y);
 
+    // If in editing phase, start a new polygon
+    if (
+      newShape.status === "creating" &&
+      newShape.type === SaveShapeType.mask &&
+      newShape.phase === "editing"
+    ) {
+      newShape = {
+        ...newShape,
+        phase: "drawing",
+        points: [{ x, y, id: 0 }],
+      };
+      return;
+    }
+
     const oldPoints =
       newShape.status === "creating" && newShape.type === SaveShapeType.mask ? newShape.points : [];
+    const closedPolygons =
+      newShape.status === "creating" && newShape.type === SaveShapeType.mask
+        ? newShape.closedPolygons
+        : [];
     newShape = {
       status: "creating",
       type: SaveShapeType.mask,
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+      closedPolygons,
+      phase: "drawing",
       viewRef,
     };
   }
@@ -1231,6 +1252,28 @@ License: CECILL-C
     };
   }
 
+  function validatePolygon(viewRef: Reference) {
+    if (
+      newShape.status !== "creating" ||
+      newShape.type !== SaveShapeType.mask ||
+      newShape.phase !== "editing"
+    )
+      return;
+    const currentImage = getCurrentImage(viewRef.name);
+    const svg = newShape.closedPolygons.map((polygon) => convertPointToSvg(polygon));
+    const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
+    newShape = {
+      status: "saving",
+      masksImageSVG: svg,
+      rle: { counts, size: [currentImage.height, currentImage.width] },
+      type: SaveShapeType.mask,
+      viewRef,
+      itemId: selectedItemId,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
+    };
+  }
+
   // ********** INPUT DELETE TOOL ********** //
 
   function displayInputDeleteTool(tool: SelectionTool) {
@@ -1502,6 +1545,18 @@ License: CECILL-C
     }
 
     if (event.key === "Escape") {
+      // Polygon: if drawing a 2nd+ polygon, discard only in-progress and return to editing
+      if (
+        selectedTool?.type === ToolType.Polygon &&
+        newShape.status === "creating" &&
+        newShape.type === SaveShapeType.mask &&
+        newShape.phase === "drawing" &&
+        newShape.closedPolygons?.length > 0
+      ) {
+        newShape = { ...newShape, points: [], phase: "editing" };
+        return;
+      }
+
       // If brush tool is active, clean up before switching to pan
       if (selectedTool?.type === ToolType.Brush) {
         cleanupAllBrushCanvases();
@@ -1569,6 +1624,18 @@ License: CECILL-C
       newShape.type === SaveShapeType.bbox
     ) {
       validateBBox(newShape.viewRef);
+    }
+
+    // Polygon: Enter to validate and open form
+    if (
+      event.key === "Enter" &&
+      selectedTool?.type === ToolType.Polygon &&
+      newShape.status === "creating" &&
+      newShape.type === SaveShapeType.mask &&
+      newShape.phase === "editing" &&
+      newShape.closedPolygons.length > 0
+    ) {
+      validatePolygon(newShape.viewRef);
     }
 
     // Smart segmentation shortcuts
@@ -1705,14 +1772,7 @@ License: CECILL-C
                     : null}
                 />
               {/if}
-              <CreatePolygon
-                {viewRef}
-                {stage}
-                currentImage={getCurrentImage(view_name)}
-                {zoomFactor}
-                {selectedItemId}
-                bind:newShape
-              />
+              <CreatePolygon {viewRef} {stage} {zoomFactor} bind:newShape />
               {#each masks as mask (mask.id)}
                 {#if mask.data.view_ref.name === view_name}
                   <PolygonGroup

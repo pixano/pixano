@@ -71,8 +71,14 @@ export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[])
     for (const pt of l_pts) {
       ctx.lineTo(pt.x, pt.y);
     }
+    ctx.closePath();
   }
-  ctx.fillStrokeShape(shape);
+  // Use even-odd fill to support holes (inner polygons)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+  rawCtx.fillStyle = shape.fill() as string;
+  rawCtx.fill("evenodd");
+  ctx.strokeShape(shape);
 };
 
 // --- Smooth contour rendering ---
@@ -244,7 +250,12 @@ export const smoothSceneFunc = (
       ctx.closePath();
     }
   }
-  ctx.fillStrokeShape(shape);
+  // Use even-odd fill to support holes (inner polygons)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCtx2 = (ctx as any)._context as CanvasRenderingContext2D;
+  rawCtx2.fillStyle = shape.fill() as string;
+  rawCtx2.fill("evenodd");
+  ctx.strokeShape(shape);
 };
 
 // Fonction de conversion RLE vers chaîne de caractères
@@ -316,11 +327,13 @@ function svgPathToBitmap(svgPath: string | string[], width: number, height: numb
     context.clearRect(0, 0, width, height);
     context.fillStyle = "black";
     if (Array.isArray(svgPath)) {
+      const combined = new Path2D();
       for (const path of svgPath) {
-        context.fill(new Path2D(path));
+        combined.addPath(new Path2D(path));
       }
+      context.fill(combined, "evenodd");
     } else {
-      context.fill(new Path2D(svgPath));
+      context.fill(new Path2D(svgPath), "evenodd");
     }
   }
 
