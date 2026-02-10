@@ -23,7 +23,7 @@ License: CECILL-C
   import { onDestroy, onMount } from "svelte";
 
   import { ToolType } from "@pixano/canvas2d/src/tools";
-  import type { SelectionTool } from "@pixano/core";
+  import { SaveShapeType, type SelectionTool } from "@pixano/core";
   import { cn, ConnectToServerModal, IconButton } from "@pixano/core/src";
   import polygon_icon from "@pixano/core/src/assets/lucide_polygon_icon.svg";
   import { pixanoInferenceTracking } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
@@ -127,6 +127,17 @@ License: CECILL-C
     }
     previousSelectedTool = $selectedTool;
   }
+
+  $: polygonHint = (() => {
+    if ($selectedTool?.type !== ToolType.Polygon) return "";
+    if ($newShape?.status === "creating" && $newShape?.type === SaveShapeType.mask) {
+      if ($newShape.phase === "editing")
+        return "Enter: save | Click edge: add point | Click: new polygon/hole | Esc: cancel";
+      if ($newShape.phase === "drawing")
+        return "Click to add points | Click first point to close | Esc: cancel";
+    }
+    return "";
+  })();
 </script>
 
 <div
@@ -167,6 +178,12 @@ License: CECILL-C
   </div>
 
   <KeyPointsSelection {selectTool} />
+
+  {#if polygonHint}
+    <div class="text-xs text-muted-foreground px-2 py-0.5 whitespace-nowrap">
+      {polygonHint}
+    </div>
+  {/if}
 
   {#if isVideo}
     <FusionTool {selectTool} {clearFusionHighlighting} />
