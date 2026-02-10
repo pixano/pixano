@@ -282,7 +282,7 @@ License: CECILL-C
   };
 </script>
 
-<div class="max-h-[calc(100vh-80px)] w-full max-w-full bg-foreground">
+<div class="h-full w-full max-w-full bg-foreground overflow-hidden">
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />

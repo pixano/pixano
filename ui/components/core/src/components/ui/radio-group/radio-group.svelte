@@ -13,9 +13,10 @@ License: CECILL-C
   export let selectedValue: string;
   export let values: { value: string; label: string }[];
   export let itemClass: string | undefined = undefined;
+  export let disabled = false;
 </script>
 
-<RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium" bind:value={selectedValue}>
+<RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium {disabled ? 'pointer-events-none opacity-70' : ''}" bind:value={selectedValue} {disabled}>
   {#each values as { label, value }}
     <div
       class={cn("group flex select-none items-center text-foreground transition-all", itemClass)}
@@ -23,6 +24,7 @@ License: CECILL-C
       <RadioGroup.Item
         id={value}
         {value}
+        {disabled}
         class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground flex items-center justify-center"
       >
         {#if selectedValue === value}

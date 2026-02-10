@@ -20,7 +20,8 @@ export const deserializeMessageContent = (content: string | null) => {
 
     const explanations = match[2].trim();
     return { checked, explanations };
-  } else {
-    throw new Error("Input string does not match the expected format");
   }
+
+  // Content is plain text (e.g. typed via the text input) — treat as no selection
+  return { checked: [], explanations: content };
 };

@@ -4,6 +4,4 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export * from "./ContentChangeEvent";
-export * from "./DeleteQuestionEvent";
-export * from "./GenerateAnswerEvent";
+export type DeleteQuestionEvent = { questionId: string };

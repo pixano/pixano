@@ -17,15 +17,17 @@ License: CECILL-C
   export let questionType: QuestionTypeEnum;
   export let answer: Message | null;
   export let choices: string[];
+  export let disabled = false;
 </script>
 
 {#if questionType === QuestionTypeEnum.OPEN}
-  <OpenAnswer {questionId} {answer} on:answerContentChange />
+  <OpenAnswer {questionId} {answer} {disabled} on:answerContentChange />
 {:else if questionType === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION}
   <MultipleChoiceAnswer
     {questionId}
     {answer}
     {choices}
+    {disabled}
     withExplanation={true}
     on:answerContentChange
   />
@@ -34,6 +36,7 @@ License: CECILL-C
     {questionId}
     {answer}
     {choices}
+    {disabled}
     withExplanation={false}
     on:answerContentChange
   />
@@ -42,6 +45,7 @@ License: CECILL-C
     {questionId}
     {answer}
     {choices}
+    {disabled}
     withExplanation={true}
     on:answerContentChange
   />
@@ -50,6 +54,7 @@ License: CECILL-C
     {questionId}
     {answer}
     {choices}
+    {disabled}
     withExplanation={false}
     on:answerContentChange
   />

@@ -6,10 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
-
   import { ContentChangeEventType, type ContentChangeEvent } from "../types";
   import { deserializeMessageContent, serializeMessageContent } from "../utils";
 
@@ -17,6 +15,7 @@ License: CECILL-C
   export let answer: Message | null;
   export let withExplanation: boolean;
   export let questionId: string;
+  export let disabled = false;
 
   const radioGroupValues = choices.map((c) => ({ value: c, label: c }));
 
@@ -31,7 +30,11 @@ License: CECILL-C
   const dispatch = createEventDispatcher();
 
   const handleContentChange = () => {
-    const content = serializeMessageContent({ choices: [selectedValue], explanations });
+    if (disabled) return;
+    const index = choices.indexOf(selectedValue);
+    if (index === -1) return;
+    const label = String.fromCharCode(index + 65);
+    const content = serializeMessageContent({ choices: [label], explanations });
 
     const eventDetail: ContentChangeEvent = answerId
       ? {
@@ -49,17 +52,20 @@ License: CECILL-C
   };
 </script>
 
-<div class="p-2 border border-border rounded-lg flex flex-col gap-3">
-  <div class="flex flex-row gap-2 items-center">
-    <RadioGroup bind:selectedValue values={radioGroupValues} />
+<div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-1">
+    <RadioGroup bind:selectedValue values={radioGroupValues} class="flex flex-col gap-2" {disabled} />
   </div>
   {#if withExplanation}
-    <input
-      type="text"
-      placeholder="Explanations"
-      class="p-2 text-foreground placeholder-muted-foreground outline-none border border-border rounded-lg"
-      bind:value={explanations}
-      on:blur={handleContentChange}
-    />
+    <div class="mt-2 pt-2 border-t border-primary/10">
+      <input
+        type="text"
+        placeholder="Provide an explanation..."
+        class="w-full bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-300 italic {disabled ? 'cursor-default' : ''}"
+        bind:value={explanations}
+        on:blur={handleContentChange}
+        {disabled}
+      />
+    </div>
   {/if}
 </div>

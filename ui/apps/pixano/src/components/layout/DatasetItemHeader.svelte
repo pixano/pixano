@@ -22,6 +22,18 @@ License: CECILL-C
   export let getDatasetItemDisplayCount: () => string;
 
   const onKeyUp = async (event: KeyboardEvent) => {
+    // Item navigation shortcuts should work globally, even when typing in a textarea
+    if (event.shiftKey) {
+      switch (event.code) {
+        case "ArrowRight":
+          await goToNeighborItem("next");
+          return;
+        case "ArrowLeft":
+          await goToNeighborItem("previous");
+          return;
+      }
+    }
+
     const activeElement = document.activeElement;
     if (
       activeElement instanceof HTMLInputElement ||
@@ -34,18 +46,7 @@ License: CECILL-C
       event.stopPropagation();
       return;
     }
-    if (event.shiftKey) {
-      switch (event.code) {
-        case "ArrowRight":
-        case "KeyD":
-          await goToNeighborItem("next");
-          break;
-        case "ArrowLeft":
-        case "KeyA":
-          await goToNeighborItem("previous");
-          break;
-      }
-    }
+
     return event.key;
   };
 </script>
@@ -89,7 +90,7 @@ License: CECILL-C
         >
           <IconButton
             on:click={() => goToNeighborItem("previous")}
-            tooltipContent="Previous (Shift + A)"
+            tooltipContent="Previous (Shift + ←)"
             class="h-7 w-7 hover:bg-background/80"
           >
             <ArrowLeft class="h-3.5 w-3.5" />
@@ -108,7 +109,7 @@ License: CECILL-C
 
           <IconButton
             on:click={() => goToNeighborItem("next")}
-            tooltipContent="Next (Shift + D)"
+            tooltipContent="Next (Shift + →)"
             class="h-7 w-7 hover:bg-background/80"
           >
             <ArrowRight class="h-3.5 w-3.5" />
