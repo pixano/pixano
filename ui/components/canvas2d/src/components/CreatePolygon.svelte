@@ -258,7 +258,11 @@ License: CECILL-C
   function drawPolygonHit(ctx: Konva.Context, shape: Konva.Shape) {
     // Only capture clicks during editing phase (edge insertion, start new polygon).
     // During drawing, let clicks pass through to the Image node for point addition.
-    if (newShape.status !== "creating" || newShape.type !== SaveShapeType.mask || newShape.phase !== "editing") {
+    if (
+      newShape.status !== "creating" ||
+      newShape.type !== SaveShapeType.mask ||
+      newShape.phase !== "editing"
+    ) {
       return;
     }
     ctx.beginPath();
