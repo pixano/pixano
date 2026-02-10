@@ -16,7 +16,11 @@ License: CECILL-C
   export let disabled = false;
 </script>
 
-<RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium {disabled ? 'pointer-events-none opacity-70' : ''}" bind:value={selectedValue} {disabled}>
+<RadioGroup.Root
+  class="flex flex-col gap-4 text-sm font-medium {disabled ? 'pointer-events-none opacity-70' : ''}"
+  bind:value={selectedValue}
+  {disabled}
+>
   {#each values as { label, value }}
     <div
       class={cn("group flex select-none items-center text-foreground transition-all", itemClass)}

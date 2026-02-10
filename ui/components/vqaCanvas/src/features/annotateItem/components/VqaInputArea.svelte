@@ -5,20 +5,28 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import { 
-    Send, 
-    Sparkles, 
-    HelpCircle, 
-    MessageSquare, 
-    Reply, 
-    CheckCircle2, 
-    ListOrdered 
+  import {
+    CheckCircle2,
+    HelpCircle,
+    ListOrdered,
+    MessageSquare,
+    Reply,
+    Send,
+    Sparkles,
   } from "lucide-svelte";
-  import { QuestionTypeEnum, AutoResizeTextarea, LoadingModal, type Message, IconButton } from "@pixano/core";
-  import type { LabelFormat } from "../../addQuestion/types/StoreQuestionEvent";
-  import { completionModelsStore } from "../../../stores/completionModels";
+  import { createEventDispatcher } from "svelte";
+
+  import {
+    AutoResizeTextarea,
+    IconButton,
+    LoadingModal,
+    QuestionTypeEnum,
+    type Message,
+  } from "@pixano/core";
+
   import { generateQuestion } from "../../../../../datasetItemWorkspace/src/lib/stores/mutations/generateQuestion";
+  import { completionModelsStore } from "../../../stores/completionModels";
+  import type { LabelFormat } from "../../addQuestion/types/StoreQuestionEvent";
   import { ContentChangeEventType } from "../types";
   import { serializeMessageContent } from "../utils/serializeMessageContent";
 
@@ -33,13 +41,18 @@ License: CECILL-C
   $: isAnswering = !!pendingQuestion;
 
   const allowedTypes = [
-    { type: QuestionTypeEnum.OPEN, label: 'Open Question', icon: MessageSquare },
-    { type: QuestionTypeEnum.SINGLE_CHOICE, label: 'Single Choice', icon: CheckCircle2 },
-    { type: QuestionTypeEnum.MULTI_CHOICE, label: 'Multiple Choice', icon: ListOrdered }
+    { type: QuestionTypeEnum.OPEN, label: "Open Question", icon: MessageSquare },
+    { type: QuestionTypeEnum.SINGLE_CHOICE, label: "Single Choice", icon: CheckCircle2 },
+    { type: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple Choice", icon: ListOrdered },
   ];
 
-  const parseQuestionInput = (text: string): { content: string; choices: string[]; labelFormat: LabelFormat } => {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
+  const parseQuestionInput = (
+    text: string,
+  ): { content: string; choices: string[]; labelFormat: LabelFormat } => {
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l !== "");
     if (lines.length <= 1) return { content: text, choices: [], labelFormat: "none" };
 
     const questionContent = lines[0];
@@ -60,7 +73,7 @@ License: CECILL-C
 
     // Strip labels from all choice lines
     const choiceRegex = /^([0-9]+[.)]|[a-zA-Z][.)]|[-*])\s*(.*)/;
-    const extractedChoices = potentialChoices.map(line => {
+    const extractedChoices = potentialChoices.map((line) => {
       const match = line.match(choiceRegex);
       return match ? match[2].trim() : line;
     });
@@ -68,7 +81,7 @@ License: CECILL-C
     return {
       content: questionContent,
       choices: extractedChoices,
-      labelFormat
+      labelFormat,
     };
   };
 
@@ -80,11 +93,16 @@ License: CECILL-C
 
     if (isAnswering && pendingQuestion) {
       const pqType = pendingQuestion.data.question_type;
-      const isSingleChoice = pqType === QuestionTypeEnum.SINGLE_CHOICE || pqType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
-      const isMultiChoice = pqType === QuestionTypeEnum.MULTI_CHOICE || pqType === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION;
+      const isSingleChoice =
+        pqType === QuestionTypeEnum.SINGLE_CHOICE ||
+        pqType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
+      const isMultiChoice =
+        pqType === QuestionTypeEnum.MULTI_CHOICE ||
+        pqType === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION;
       const choices = (pendingQuestion.data.choices as string[]) || [];
-      const labelFormat = ((pendingQuestion.ui as Record<string, unknown>)?.labelFormat as LabelFormat | undefined) ?? 
-                          (isSingleChoice ? "none" : "alpha_upper");
+      const labelFormat =
+        ((pendingQuestion.ui as Record<string, unknown>)?.labelFormat as LabelFormat | undefined) ??
+        (isSingleChoice ? "none" : "alpha_upper");
 
       if (isSingleChoice || isMultiChoice) {
         const lowerContent = content.toLowerCase();
@@ -92,18 +110,31 @@ License: CECILL-C
 
         // 1. Check for Yes/No shortcuts if applicable
         if (isSingleChoice) {
-          if (lowerContent === 'y' || lowerContent === 'yes' || lowerContent.startsWith('y ') || lowerContent.startsWith('yes ')) {
+          if (
+            lowerContent === "y" ||
+            lowerContent === "yes" ||
+            lowerContent.startsWith("y ") ||
+            lowerContent.startsWith("yes ")
+          ) {
             selectedIndices = [0]; // Yes
-          } else if (lowerContent === 'n' || lowerContent === 'no' || lowerContent.startsWith('n ') || lowerContent.startsWith('no ')) {
+          } else if (
+            lowerContent === "n" ||
+            lowerContent === "no" ||
+            lowerContent.startsWith("n ") ||
+            lowerContent.startsWith("no ")
+          ) {
             selectedIndices = [1]; // No
           }
         }
 
         // 2. Check for label shortcuts (1, 2, a, b, etc.) if no Yes/No match
         if (selectedIndices.length === 0) {
-          const parts = content.split(/[,\s]+/).map(p => p.trim()).filter(p => p !== "");
+          const parts = content
+            .split(/[,\s]+/)
+            .map((p) => p.trim())
+            .filter((p) => p !== "");
           const candidateIndices: number[] = [];
-          
+
           for (const part of parts) {
             let foundIndex = -1;
             if (labelFormat === "numeric") {
@@ -138,7 +169,7 @@ License: CECILL-C
 
         // 3. Serialize if matches were found
         if (selectedIndices.length > 0) {
-          const labels = selectedIndices.map(i => String.fromCharCode(i + 65));
+          const labels = selectedIndices.map((i) => String.fromCharCode(i + 65));
           const explanation = content.replace(/^(yes|no|y|n|[a-z0-9])\s*/i, "").trim();
           finalContent = serializeMessageContent({ choices: labels, explanations: explanation });
         }
@@ -147,10 +178,12 @@ License: CECILL-C
       dispatch("answerContentChange", {
         type: ContentChangeEventType.NEW_ANSWER,
         questionId: pendingQuestion.id,
-        content: finalContent
+        content: finalContent,
       });
     } else {
-      const isSingleChoice = questionType === QuestionTypeEnum.SINGLE_CHOICE || questionType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
+      const isSingleChoice =
+        questionType === QuestionTypeEnum.SINGLE_CHOICE ||
+        questionType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
 
       if (isSingleChoice) {
         // Yes/No is implicit for single choice — no parsing needed
@@ -158,7 +191,7 @@ License: CECILL-C
           content: finalContent,
           question_type: questionType,
           choices: ["Yes", "No"],
-          labelFormat: "none"
+          labelFormat: "none",
         });
       } else {
         const parsed = parseQuestionInput(finalContent);
@@ -176,11 +209,11 @@ License: CECILL-C
 
   const handleVlmAction = async () => {
     if (!completionModel) return;
-    
+
     if (isAnswering && pendingQuestion) {
       dispatch("generateAnswer", {
         questionId: pendingQuestion.id,
-        completionModel
+        completionModel,
       });
     } else {
       isGenerating = true;
@@ -191,8 +224,8 @@ License: CECILL-C
       if (generated) {
         dispatch("storeQuestion", {
           content: generated.content,
-          question_type: generated.type || QuestionTypeEnum.OPEN,
-          choices: generated.choices || []
+          question_type: QuestionTypeEnum.OPEN,
+          choices: generated.choices || [],
         });
       }
     }
@@ -201,13 +234,15 @@ License: CECILL-C
   const handleKeyDown = (e: KeyboardEvent) => {
     if (isAnswering && pendingQuestion && questionContent.trim() === "") {
       const pqType = pendingQuestion.data.question_type;
-      const isSingleChoice = pqType === QuestionTypeEnum.SINGLE_CHOICE || pqType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
-      
+      const isSingleChoice =
+        pqType === QuestionTypeEnum.SINGLE_CHOICE ||
+        pqType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
+
       if (isSingleChoice) {
         const key = e.key.toLowerCase();
-        if (key === 'y' || key === 'n') {
+        if (key === "y" || key === "n") {
           e.preventDefault();
-          questionContent = key === 'y' ? "Yes" : "No";
+          questionContent = key === "y" ? "Yes" : "No";
           handleSend();
           return;
         }
@@ -221,11 +256,19 @@ License: CECILL-C
   };
 </script>
 
-<div class="p-4 bg-white border-t border-border space-y-3 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0">
+<div
+  class="p-4 bg-white border-t border-border space-y-3 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0"
+>
   <!-- Dynamic Status Label -->
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
-      <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-md {isAnswering ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'} text-[10px] font-bold uppercase tracking-widest border {isAnswering ? 'border-amber-100' : 'border-primary/10'}">
+      <div
+        class="flex items-center gap-1.5 px-2 py-0.5 rounded-md {isAnswering
+          ? 'bg-amber-50 text-amber-600'
+          : 'bg-primary/5 text-primary'} text-[10px] font-bold uppercase tracking-widest border {isAnswering
+          ? 'border-amber-100'
+          : 'border-primary/10'}"
+      >
         {#if isAnswering}
           <Reply size={10} /> Answering Question #{pendingQuestion?.data.number + 1}
         {:else}
@@ -235,7 +278,13 @@ License: CECILL-C
     </div>
   </div>
 
-  <div class="w-full relative {isAnswering ? 'bg-amber-50/30' : 'bg-slate-50'} rounded-xl border {isAnswering ? 'border-amber-200 focus-within:border-amber-400 focus-within:ring-amber-400/5' : 'border-slate-200 focus-within:border-primary/50 focus-within:ring-primary/5'} focus-within:bg-white focus-within:ring-4 transition-all overflow-hidden">
+  <div
+    class="w-full relative {isAnswering
+      ? 'bg-amber-50/30'
+      : 'bg-slate-50'} rounded-xl border {isAnswering
+      ? 'border-amber-200 focus-within:border-amber-400 focus-within:ring-amber-400/5'
+      : 'border-slate-200 focus-within:border-primary/50 focus-within:ring-primary/5'} focus-within:bg-white focus-within:ring-4 transition-all overflow-hidden"
+  >
     <AutoResizeTextarea
       placeholder={isAnswering ? "Provide the answer..." : "Ask a question..."}
       bind:value={questionContent}
@@ -248,9 +297,9 @@ License: CECILL-C
     <div class="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
       {#if !isAnswering}
         {#each allowedTypes as item}
-          <IconButton 
+          <IconButton
             selected={questionType === item.type}
-            on:click={() => questionType = item.type}
+            on:click={() => (questionType = item.type)}
             tooltipContent={item.label}
             class="h-8 w-8"
           >
@@ -261,7 +310,7 @@ License: CECILL-C
     </div>
 
     <div class="flex items-center gap-2">
-       <IconButton
+      <IconButton
         on:click={handleVlmAction}
         disabled={!completionModel || isGenerating}
         tooltipContent={isAnswering ? "Generate answer with VLM" : "Generate question from VLM"}
@@ -273,20 +322,26 @@ License: CECILL-C
       <IconButton
         on:click={handleSend}
         disabled={questionContent.trim() === ""}
-        tooltipContent={isAnswering ? 'Reply' : 'Post'}
-        class="h-10 w-10 {isAnswering ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary hover:bg-primary/90'} text-white shadow-md"
+        tooltipContent={isAnswering ? "Reply" : "Post"}
+        class="h-10 w-10 {isAnswering
+          ? 'bg-amber-500 hover:bg-amber-600'
+          : 'bg-primary hover:bg-primary/90'} text-white shadow-md"
       >
         <Send size={18} />
       </IconButton>
     </div>
   </div>
-  
+
   <p class="text-[10px] text-slate-400 flex items-center gap-1 px-1">
     <HelpCircle size={10} />
     {#if isAnswering}
-      Complete this question by providing an answer manually or using <strong>VLM</strong>.
+      Complete this question by providing an answer manually or using <strong>VLM</strong>
+      .
     {:else}
-      Type a question and press <strong>Post</strong>, or use <strong>VLM</strong> to suggest one.
+      Type a question and press <strong>Post</strong>
+      , or use
+      <strong>VLM</strong>
+       to suggest one.
     {/if}
   </p>
 </div>

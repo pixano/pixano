@@ -6,8 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+
   import type { Message } from "@pixano/core";
   import { RadioGroup } from "@pixano/core";
+
   import { ContentChangeEventType, type ContentChangeEvent } from "../types";
   import { deserializeMessageContent, serializeMessageContent } from "../utils";
 
@@ -54,14 +56,21 @@ License: CECILL-C
 
 <div class="flex flex-col gap-3">
   <div class="flex flex-col gap-1">
-    <RadioGroup bind:selectedValue values={radioGroupValues} class="flex flex-col gap-2" {disabled} />
+    <RadioGroup
+      bind:selectedValue
+      values={radioGroupValues}
+      class="flex flex-col gap-2"
+      {disabled}
+    />
   </div>
   {#if withExplanation}
     <div class="mt-2 pt-2 border-t border-primary/10">
       <input
         type="text"
         placeholder="Provide an explanation..."
-        class="w-full bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-300 italic {disabled ? 'cursor-default' : ''}"
+        class="w-full bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-300 italic {disabled
+          ? 'cursor-default'
+          : ''}"
         bind:value={explanations}
         on:blur={handleContentChange}
         {disabled}

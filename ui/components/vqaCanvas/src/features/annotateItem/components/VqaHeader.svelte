@@ -5,9 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Settings, Cpu } from "lucide-svelte";
+  import { Cpu, Settings } from "lucide-svelte";
+
   import { IconButton } from "@pixano/core";
   import { inferenceServerStore, vqaModels } from "@pixano/core/src/lib/stores/inferenceStore";
+
   import { completionModelsStore } from "../../../stores/completionModels";
   import ConfigurePromptModal from "../../manageModels/components/ConfigurePromptModal.svelte";
 
@@ -36,7 +38,7 @@ License: CECILL-C
     <div class="p-2 bg-primary/10 rounded-lg text-primary shrink-0">
       <Cpu size={20} />
     </div>
-    
+
     {#if !$inferenceServerStore.connected}
       <span class="text-sm font-medium text-muted-foreground truncate">Server disconnected</span>
     {:else if inferenceModels.length === 0}

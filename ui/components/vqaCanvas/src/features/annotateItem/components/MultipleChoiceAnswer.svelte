@@ -71,7 +71,9 @@ License: CECILL-C
       <input
         type="text"
         placeholder="Provide an explanation..."
-        class="w-full bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-300 italic {disabled ? 'cursor-default' : ''}"
+        class="w-full bg-transparent p-0 text-sm text-slate-700 outline-none placeholder:text-slate-300 italic {disabled
+          ? 'cursor-default'
+          : ''}"
         bind:value={explanations}
         on:blur={handleContentChange}
         {disabled}
