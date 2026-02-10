@@ -112,28 +112,42 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center gap-4", {
-    "bg-accent rounded-sm": $selectedTool?.type === ToolType.Fusion,
-  })}
+  class={cn(
+    "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+    {
+      "bg-muted/40 border-border/20 shadow-inner": $selectedTool?.type === ToolType.Fusion,
+    },
+  )}
 >
   <IconButton
     tooltipContent={fusionTool.name}
     on:click={() => selectTool(fusionTool)}
-    selected={$selectedTool?.type === ToolType.Fusion}
+    class={cn(
+      "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+      $selectedTool?.type === ToolType.Fusion ? "text-primary" : "text-foreground",
+    )}
   >
-    <ReplaceAll />
+    <ReplaceAll class="h-4.5 w-4.5" />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Fusion}
-    <IconButton
-      tooltipContent={"Validate association (S / Enter)"}
-      on:click={onValidate}
-      selected={false}
+    <div
+      class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
     >
-      <Check />
-    </IconButton>
-    <IconButton tooltipContent={"Abort association (Escape)"} on:click={onAbort} selected={false}>
-      <X />
-    </IconButton>
+      <IconButton
+        tooltipContent={"Validate association (S / Enter)"}
+        on:click={onValidate}
+        class="h-8 w-8 text-green-600/80 hover:bg-green-50/40"
+      >
+        <Check class="h-4.5 w-4.5" />
+      </IconButton>
+      <IconButton
+        tooltipContent={"Abort association (Escape)"}
+        on:click={onAbort}
+        class="h-8 w-8 text-destructive/80 hover:bg-destructive/5"
+      >
+        <X class="h-4.5 w-4.5" />
+      </IconButton>
+    </div>
   {/if}
 </div>
 <svelte:window on:keydown={shortcutHandler} />

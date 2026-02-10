@@ -10,7 +10,7 @@ License: CECILL-C
     Check,
     Eraser,
     MinusCircleIcon,
-    MousePointer,
+    MousePointer2,
     Paintbrush,
     PencilLine,
     PlusCircleIcon,
@@ -132,7 +132,7 @@ License: CECILL-C
 <div
   class="flex items-center gap-1.5 z-10 bg-background/50 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-background/80 hover:border-border/60 group/toolbar"
 >
-  <!-- Manual Tools Group -->
+  <!-- Selection & Move Tool Group -->
   <div class="flex items-center gap-0.5">
     <IconButton
       tooltipContent={panTool.name}
@@ -140,8 +140,14 @@ License: CECILL-C
       selected={$selectedTool?.type === ToolType.Pan}
       class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
     >
-      <MousePointer class="h-4.5 w-4.5" />
+      <MousePointer2 class="h-4.5 w-4.5" />
     </IconButton>
+  </div>
+
+  <div class="w-px h-4 bg-border/30 mx-0.5"></div>
+
+  <!-- Drawing Tools Group -->
+  <div class="flex items-center gap-0.5">
     <IconButton
       tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
@@ -156,34 +162,41 @@ License: CECILL-C
       selected={$selectedTool?.type === ToolType.Polygon}
       class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
     >
-      <img src={polygon_icon} alt="polygon icon" class="h-4.5 w-4.5 opacity-70" />
+      <img src={polygon_icon} alt="polygon icon" class="h-4.5 w-4.5" />
     </IconButton>
-    <KeyPointsSelection {selectTool} />
-    {#if isVideo}
-      <FusionTool {selectTool} {clearFusionHighlighting} />
-    {/if}
   </div>
+
+  <KeyPointsSelection {selectTool} />
+
+  {#if isVideo}
+    <FusionTool {selectTool} {clearFusionHighlighting} />
+  {/if}
 
   <div class="w-px h-4 bg-border/30 mx-0.5"></div>
 
   <!-- Brush Tool Group -->
   <div
-    class={cn("flex items-center gap-0.5 transition-all duration-500 px-0.5 py-0.5 rounded-lg", {
-      "bg-primary/[0.02] ring-1 ring-primary/5": showBrushTools,
-    })}
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showBrushTools,
+      },
+    )}
   >
     <IconButton
       tooltipContent="Brush Tool (B)"
       on:click={handleBrushToolClick}
       class={cn(
-        "h-8 w-8 transition-all duration-300",
-        showBrushTools ? "text-primary" : "text-muted-foreground opacity-50 hover:opacity-100",
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        showBrushTools ? "text-primary" : "text-foreground",
       )}
     >
       <Paintbrush class="h-4.5 w-4.5" />
     </IconButton>
     {#if showBrushTools}
-      <div class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500">
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
+      >
         <IconButton
           tooltipContent="Draw mode (X to toggle)"
           on:click={() => selectTool(brushDrawTool)}
@@ -211,9 +224,12 @@ License: CECILL-C
 
   <!-- Smart Tools Group -->
   <div
-    class={cn("flex items-center gap-0.5 transition-all duration-500 px-0.5 py-0.5 rounded-lg", {
-      "bg-primary/[0.02] ring-1 ring-primary/5": showSmartTools,
-    })}
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showSmartTools,
+      },
+    )}
   >
     <IconButton
       tooltipContent={noModelSelected
@@ -221,8 +237,8 @@ License: CECILL-C
         : "Smart Segmentation"}
       on:click={handleSmartToolClick}
       class={cn(
-        "h-8 w-8 transition-all duration-300",
-        showSmartTools ? "text-primary" : "text-muted-foreground opacity-50 hover:opacity-100",
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        showSmartTools ? "text-primary" : "text-foreground",
       )}
     >
       <Wand2Icon class="h-4.5 w-4.5" />
@@ -233,7 +249,9 @@ License: CECILL-C
       {/if}
     </IconButton>
     {#if showSmartTools}
-      <div class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500">
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
+      >
         <IconButton
           tooltipContent={addSmartPointTool.name}
           on:click={() => selectTool(addSmartPointTool)}
@@ -290,9 +308,9 @@ License: CECILL-C
         <IconButton
           tooltipContent={"Settings"}
           on:click={() => configSmartToolClick()}
-          class="h-7 w-7 text-muted-foreground opacity-40 hover:opacity-100"
+          class="h-7 w-7 text-foreground hover:bg-accent/40 transition-all duration-200"
         >
-          <Settings class="h-4 w-4" />
+          <Settings class="h-4.5 w-4.5" />
         </IconButton>
       </div>
     {/if}

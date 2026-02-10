@@ -92,10 +92,10 @@ License: CECILL-C
     <button
       use:builder.action
       {...builder}
-      class="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground opacity-40 hover:opacity-100 transition-opacity"
+      class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/40 transition-all duration-200"
       title="Keyboard Shortcuts"
     >
-      <Keyboard class="h-4 w-4" />
+      <Keyboard class="h-4.5 w-4.5" />
     </button>
   </Popover.Trigger>
   <Popover.Content class="w-72 p-4 space-y-3" side="top">
