@@ -49,6 +49,7 @@ License: CECILL-C
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import { resizeStroke } from "./api/rectangleApi";
   import BrushCanvas from "./components/BrushCanvas.svelte";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
@@ -1163,6 +1164,21 @@ License: CECILL-C
               tr.nodes([rect]);
               tr.getLayer()?.batchDraw();
             }
+            // Sync Transformer changes back to newShape so Svelte doesn't revert them
+            rect.on("transform.creation", () => {
+              resizeStroke(rect);
+            });
+            rect.on("transformend.creation dragend.creation", () => {
+              newShape = {
+                status: "creating",
+                type: SaveShapeType.bbox,
+                x: rect.x(),
+                y: rect.y(),
+                width: rect.width(),
+                height: rect.height(),
+                viewRef,
+              };
+            });
           }
           if (selectedTool.isSmart) {
             lastInputViewRef = viewRef;
@@ -1191,7 +1207,10 @@ License: CECILL-C
       relativeTo: viewLayer,
     });
 
-    // Detach Transformer
+    // Clean up creation listeners and detach Transformer
+    rect.off("transform.creation");
+    rect.off("transformend.creation");
+    rect.off("dragend.creation");
     bboxEditable = false;
     const tr: Konva.Transformer = stage.findOne("#transformer");
     if (tr) tr.nodes([]);
@@ -1487,7 +1506,13 @@ License: CECILL-C
       if (selectedTool?.type === ToolType.Brush) {
         cleanupAllBrushCanvases();
       }
-      // Detach transformer (for bbox editing)
+      // Clean up creation listeners and detach transformer (for bbox editing)
+      const dragRect: Konva.Rect = stage?.findOne("#drag-rect");
+      if (dragRect) {
+        dragRect.off("transform.creation");
+        dragRect.off("transformend.creation");
+        dragRect.off("dragend.creation");
+      }
       bboxEditable = false;
       const tr: Konva.Transformer = stage?.findOne("#transformer");
       if (tr) tr.nodes([]);
