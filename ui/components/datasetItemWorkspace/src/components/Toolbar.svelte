@@ -8,8 +8,11 @@ License: CECILL-C
   // Imports
   import {
     Check,
+    Eraser,
     MinusCircleIcon,
-    MousePointer,
+    MousePointer2,
+    Paintbrush,
+    PencilLine,
     PlusCircleIcon,
     Settings,
     Sparkles,
@@ -33,6 +36,8 @@ License: CECILL-C
   import { clearHighlighting } from "../lib/api/objectsApi/clearHighlighting";
   import {
     addSmartPointTool,
+    brushDrawTool,
+    brushEraseTool,
     panTool,
     polygonTool,
     rectangleTool,
@@ -46,7 +51,9 @@ License: CECILL-C
     newShape,
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
+  import BrushSettings from "./Toolbar/BrushSettings.svelte";
   import FusionTool from "./Toolbar/FusionTool.svelte";
+  import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
   import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
 
   export let isVideo: boolean = false;
@@ -54,6 +61,11 @@ License: CECILL-C
   let showConnectModal = false;
   let previousSelectedTool: SelectionTool | null = null;
   $: showSmartTools = $selectedTool && $selectedTool.isSmart;
+  $: showBrushTools = $selectedTool?.type === ToolType.Brush;
+  $: noModelSelected =
+    $inferenceServerStore.connected &&
+    $segmentationModels.length > 0 &&
+    !$selectedSegmentationModelName;
 
   const clearFusionHighlighting = () => {
     clearHighlighting();
@@ -64,6 +76,14 @@ License: CECILL-C
     if (tool !== $selectedTool) {
       clearFusionHighlighting();
       selectedTool.set(tool);
+    }
+  };
+
+  const handleBrushToolClick = () => {
+    if (!showBrushTools) {
+      selectTool(brushDrawTool);
+    } else {
+      selectTool(panTool);
     }
   };
 
@@ -112,7 +132,7 @@ License: CECILL-C
 <div
   class="flex items-center gap-1.5 z-10 bg-background/50 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-background/80 hover:border-border/60 group/toolbar"
 >
-  <!-- Manual Tools Group -->
+  <!-- Selection & Move Tool Group -->
   <div class="flex items-center gap-0.5">
     <IconButton
       tooltipContent={panTool.name}
@@ -120,8 +140,14 @@ License: CECILL-C
       selected={$selectedTool?.type === ToolType.Pan}
       class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
     >
-      <MousePointer class="h-4.5 w-4.5" />
+      <MousePointer2 class="h-4.5 w-4.5" />
     </IconButton>
+  </div>
+
+  <div class="w-px h-4 bg-border/30 mx-0.5"></div>
+
+  <!-- Drawing Tools Group -->
+  <div class="flex items-center gap-0.5">
     <IconButton
       tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
@@ -136,11 +162,61 @@ License: CECILL-C
       selected={$selectedTool?.type === ToolType.Polygon}
       class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
     >
-      <img src={polygon_icon} alt="polygon icon" class="h-4.5 w-4.5 opacity-70" />
+      <img src={polygon_icon} alt="polygon icon" class="h-4.5 w-4.5" />
     </IconButton>
-    <KeyPointsSelection {selectTool} />
-    {#if isVideo}
-      <FusionTool {selectTool} {clearFusionHighlighting} />
+  </div>
+
+  <KeyPointsSelection {selectTool} />
+
+  {#if isVideo}
+    <FusionTool {selectTool} {clearFusionHighlighting} />
+  {/if}
+
+  <div class="w-px h-4 bg-border/30 mx-0.5"></div>
+
+  <!-- Brush Tool Group -->
+  <div
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showBrushTools,
+      },
+    )}
+  >
+    <IconButton
+      tooltipContent="Brush Tool (B)"
+      on:click={handleBrushToolClick}
+      class={cn(
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        showBrushTools ? "text-primary" : "text-foreground",
+      )}
+    >
+      <Paintbrush class="h-4.5 w-4.5" />
+    </IconButton>
+    {#if showBrushTools}
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
+      >
+        <IconButton
+          tooltipContent="Draw mode (X to toggle)"
+          on:click={() => selectTool(brushDrawTool)}
+          selected={$selectedTool?.type === ToolType.Brush && $selectedTool.mode === "draw"}
+          class="h-8 w-8"
+        >
+          <PencilLine class="h-4.5 w-4.5" />
+        </IconButton>
+        <IconButton
+          tooltipContent="Erase mode (X to toggle)"
+          on:click={() => selectTool(brushEraseTool)}
+          selected={$selectedTool?.type === ToolType.Brush && $selectedTool.mode === "erase"}
+          class="h-8 w-8"
+        >
+          <Eraser class="h-4.5 w-4.5" />
+        </IconButton>
+
+        <div class="w-px h-3 bg-border/20 mx-0.5"></div>
+        <BrushSettings />
+      </div>
     {/if}
   </div>
 
@@ -148,22 +224,34 @@ License: CECILL-C
 
   <!-- Smart Tools Group -->
   <div
-    class={cn("flex items-center gap-0.5 transition-all duration-500 px-0.5 py-0.5 rounded-lg", {
-      "bg-primary/[0.02] ring-1 ring-primary/5": showSmartTools,
-    })}
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showSmartTools,
+      },
+    )}
   >
     <IconButton
-      tooltipContent="Smart Segmentation"
+      tooltipContent={noModelSelected
+        ? "Smart Segmentation — No model selected"
+        : "Smart Segmentation"}
       on:click={handleSmartToolClick}
       class={cn(
-        "h-8 w-8 transition-all duration-300",
-        showSmartTools ? "text-primary" : "text-muted-foreground opacity-50 hover:opacity-100",
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        showSmartTools ? "text-primary" : "text-foreground",
       )}
     >
       <Wand2Icon class="h-4.5 w-4.5" />
+      {#if noModelSelected && !showSmartTools}
+        <span
+          class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 animate-pulse"
+        />
+      {/if}
     </IconButton>
     {#if showSmartTools}
-      <div class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500">
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
+      >
         <IconButton
           tooltipContent={addSmartPointTool.name}
           on:click={() => selectTool(addSmartPointTool)}
@@ -207,13 +295,22 @@ License: CECILL-C
           </IconButton>
         {/if}
 
+        {#if noModelSelected}
+          <button
+            on:click={configSmartToolClick}
+            class="text-xs text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 transition-colors whitespace-nowrap"
+          >
+            Select model
+          </button>
+        {/if}
+
         <div class="w-px h-3 bg-border/20 mx-0.5"></div>
         <IconButton
           tooltipContent={"Settings"}
           on:click={() => configSmartToolClick()}
-          class="h-7 w-7 text-muted-foreground opacity-40 hover:opacity-100"
+          class="h-7 w-7 text-foreground hover:bg-accent/40 transition-all duration-200"
         >
-          <Settings class="h-4 w-4" />
+          <Settings class="h-4.5 w-4.5" />
         </IconButton>
       </div>
     {/if}
@@ -224,19 +321,31 @@ License: CECILL-C
   <!-- Status Group -->
   <div class="flex items-center">
     <IconButton
-      tooltipContent="Inference status"
+      tooltipContent={$inferenceServerStore.connected
+        ? $selectedSegmentationModelName
+          ? `Model: ${$selectedSegmentationModelName}`
+          : "Connected — No model selected"
+        : "Not connected"}
       on:click={() => (showConnectModal = true)}
       class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
     >
       <Sparkles
         size={18}
         class={$inferenceServerStore.connected
-          ? $inferenceServerStore.models.length > 0
-            ? "text-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.2)]"
+          ? $segmentationModels.length > 0
+            ? $selectedSegmentationModelName
+              ? "text-green-500/80"
+              : "text-amber-500/70 animate-pulse"
             : "text-yellow-500/60"
           : "text-red-400/40"}
       />
     </IconButton>
+  </div>
+
+  <div class="w-px h-4 bg-border/30 mx-0.5"></div>
+
+  <div class="flex items-center">
+    <KeyboardShortcuts {isVideo} />
   </div>
 </div>
 

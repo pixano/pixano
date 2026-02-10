@@ -17,6 +17,7 @@ License: CECILL-C
     BBox,
     Mask,
     SaveShapeType,
+    type BrushSelectionTool,
     type ImagesPerView,
     type KeypointsTemplate,
     type LabeledPointTool,
@@ -31,12 +32,25 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     pixanoInferenceTracking,
   } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
-  import { selectedTool as selectedToolStore } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+  import {
+    addSmartPointTool,
+    brushDrawTool,
+    brushEraseTool,
+    rectangleTool,
+    removeSmartPointTool,
+    smartRectangleTool,
+  } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
+  import {
+    brushSettings as brushSettingsStore,
+    selectedTool as selectedToolStore,
+  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
   import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import { resizeStroke } from "./api/rectangleApi";
+  import BrushCanvas from "./components/BrushCanvas.svelte";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
@@ -45,7 +59,6 @@ License: CECILL-C
   import ShowKeypoints from "./components/ShowKeypoint.svelte";
   import {
     INPUTPOINT_RADIUS,
-    INPUTPOINT_STROKEWIDTH,
     // INPUTRECT_STROKEWIDTH,
     // BBOX_STROKEWIDTH,
     // MASK_STROKEWIDTH,
@@ -53,6 +66,15 @@ License: CECILL-C
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
   import { createPanTool, ToolType } from "./tools";
+
+  interface BrushCanvasRef {
+    beginStroke(x: number, y: number): void;
+    updateStroke(x: number, y: number): void;
+    endStroke(): void;
+    getMaskData(): Shape | null;
+    clearCanvas(): void;
+    destroy(): void;
+  }
 
   // Exports
   export let selectedItemId: string;
@@ -88,12 +110,40 @@ License: CECILL-C
 
   let lastInputViewRef: Reference;
 
+  // Brush tool state
+  let brushCanvasRefs: Record<string, BrushCanvasRef> = {};
+  let brushCursor: Konva.Circle | null = null;
+  let brushLazyLine: Konva.Line | null = null;
+  let bboxEditable = false;
+  let pendingBrushMask: {
+    rle: { counts: number[]; size: [number, number] };
+    maskId: string;
+    viewName: string;
+  } | null = null;
+
+  // True for Brush tool AND all smart/AI segmentation tools
+  $: isActivePaintingTool = selectedTool?.type === ToolType.Brush || selectedTool?.isSmart === true;
+
   $: {
     if (
       !prevSelectedTool?.isSmart ||
       !selectedTool?.isSmart ||
       (newShape.status === "none" && newShape.shouldReset)
     ) {
+      // Capture AI mask before clearing if switching to brush tool
+      if (
+        prevSelectedTool?.isSmart &&
+        selectedTool?.type === ToolType.Brush &&
+        currentAnn?.output?.rle
+      ) {
+        const rle = currentAnn.output.rle;
+        const counts = Array.isArray(rle.counts) ? rle.counts : [];
+        pendingBrushMask = {
+          rle: { counts, size: rle.size as [number, number] },
+          maskId: currentAnn.id,
+          viewName: currentAnn.viewRef.name,
+        };
+      }
       clearAnnotationAndInputs();
     }
     prevSelectedTool = selectedTool;
@@ -132,7 +182,7 @@ License: CECILL-C
   // References to Konva Elements
   let stage: Konva.Stage;
   let toolsLayer: Konva.Layer;
-  let highlighted_point: Konva.Circle = null;
+  let highlighted_point: Konva.Text = null;
   let transformer = new Konva.Transformer({
     id: "transformer",
     rotateEnabled: false,
@@ -498,16 +548,6 @@ License: CECILL-C
     }
 
     if (results) {
-      newShape = {
-        masksImageSVG: results.masksImageSVG,
-        rle: results.rle,
-        type: SaveShapeType.mask,
-        viewRef,
-        itemId: selectedItemId,
-        imageWidth: currentImage.width,
-        imageHeight: currentImage.height,
-        status: "saving",
-      };
       const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
       const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
@@ -529,7 +569,7 @@ License: CECILL-C
         currentAnn.output.masksImageSVG,
         true,
         1.0,
-        "#008000",
+        "#FF0050",
         currentMaskGroup,
         image,
         viewRef.name,
@@ -537,6 +577,21 @@ License: CECILL-C
         zoomFactor,
       );
     }
+  }
+
+  function validateSmartMask() {
+    if (!currentAnn?.output) return;
+    const currentImage = getCurrentImage(currentAnn.viewRef.name);
+    newShape = {
+      masksImageSVG: currentAnn.output.masksImageSVG,
+      rle: currentAnn.output.rle,
+      type: SaveShapeType.mask,
+      viewRef: currentAnn.viewRef,
+      itemId: selectedItemId,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
+      status: "saving",
+    };
   }
 
   // ********** CURRENT ANNOTATION ********** //
@@ -585,6 +640,9 @@ License: CECILL-C
         break;
       case ToolType.Classification:
         displayClassificationTool(selectedTool);
+        break;
+      case ToolType.Brush:
+        displayBrushTool(selectedTool);
         break;
 
       default:
@@ -714,6 +772,126 @@ License: CECILL-C
     }
   }
 
+  // ********** BRUSH TOOL ********** //
+
+  function displayBrushTool(tool: SelectionTool) {
+    if (toolsLayer) {
+      // Clean other tools
+      const pointer = stage.findOne(`#${POINT_SELECTION}`);
+      if (pointer) pointer.destroy();
+
+      // Show crosshair like other drawing tools
+      displayCrosshair(tool);
+
+      // Hide native cursor, we'll show a custom brush cursor
+      stage.container().style.cursor = "none";
+
+      // Deactivate drag on input points
+      toggleInputPointDrag(false);
+    }
+  }
+
+  function updateBrushCursor(mousePos: Konva.Vector2d) {
+    if (!toolsLayer) return;
+
+    const mode = (selectedTool as BrushSelectionTool).mode;
+    const cursorColor = mode === "draw" ? "rgba(0, 200, 0, 0.7)" : "rgba(200, 0, 0, 0.7)";
+
+    if (!brushCursor) {
+      brushCursor = new Konva.Circle({
+        id: "brush-cursor",
+        x: 0,
+        y: 0,
+        radius: $brushSettingsStore.brushRadius,
+        stroke: cursorColor,
+        strokeWidth: 2,
+        fill: mode === "draw" ? "rgba(0, 200, 0, 0.1)" : "rgba(200, 0, 0, 0.1)",
+        listening: false,
+      });
+      toolsLayer.add(brushCursor);
+    }
+
+    brushCursor.radius($brushSettingsStore.brushRadius);
+    brushCursor.stroke(cursorColor);
+    brushCursor.fill(mode === "draw" ? "rgba(0, 200, 0, 0.1)" : "rgba(200, 0, 0, 0.1)");
+    brushCursor.x(mousePos.x);
+    brushCursor.y(mousePos.y);
+    brushCursor.show();
+  }
+
+  $: if (brushCursor && selectedTool?.type === ToolType.Brush) {
+    brushCursor.radius($brushSettingsStore.brushRadius);
+    brushCursor.getLayer()?.batchDraw();
+  }
+
+  function cleanupBrushCursor() {
+    if (brushCursor) {
+      brushCursor.destroy();
+      brushCursor = null;
+    }
+    if (brushLazyLine) {
+      brushLazyLine.destroy();
+      brushLazyLine = null;
+    }
+  }
+
+  function handleBrushPointerDown(viewRef: Reference) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const pos = viewLayer.getRelativePointerPosition();
+    if (!pos) return;
+
+    const brushCanvas = brushCanvasRefs[viewRef.name];
+    if (brushCanvas) {
+      brushCanvas.beginStroke(pos.x, pos.y);
+    }
+  }
+
+  function handleBrushPointerMove(view_name: string) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const pos = viewLayer.getRelativePointerPosition();
+    if (!pos) return;
+
+    const brushCanvas = brushCanvasRefs[view_name];
+    if (brushCanvas) {
+      brushCanvas.updateStroke(pos.x, pos.y);
+    }
+  }
+
+  function handleBrushPointerUp(view_name: string) {
+    const brushCanvas = brushCanvasRefs[view_name];
+    if (brushCanvas) {
+      brushCanvas.endStroke();
+    }
+    // Clean up layer-level drag listeners (same pattern as Rectangle/Keypoint)
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    if (viewLayer) {
+      viewLayer.off("pointermove.brush");
+      viewLayer.off("pointerup.brush");
+    }
+  }
+
+  function saveBrushMask(view_name: string) {
+    const brushCanvas = brushCanvasRefs[view_name];
+    if (brushCanvas) {
+      const maskData = brushCanvas.getMaskData();
+      if (maskData) {
+        newShape = maskData;
+      }
+    }
+  }
+
+  function cleanupAllBrushCanvases() {
+    for (const key of Object.keys(brushCanvasRefs)) {
+      const brushCanvas = brushCanvasRefs[key];
+      if (brushCanvas) {
+        brushCanvas.destroy();
+      }
+    }
+    brushCanvasRefs = {};
+    cleanupBrushCursor();
+    pendingBrushMask = null;
+  }
+
   // ********** INPUT POINTS TOOL ********** //
 
   function displayInputPointTool(tool: LabeledPointTool) {
@@ -724,8 +902,7 @@ License: CECILL-C
       if (crossline) crossline.destroy();
 
       const pointer = findOrCreateInputPointPointer(tool.type);
-      const pointerColor = tool.label === 1 ? "green" : "red";
-      pointer.stroke(pointerColor);
+      pointer.text(tool.label === 1 ? "+" : "\u2212");
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
@@ -740,25 +917,31 @@ License: CECILL-C
     const pointerScale = Math.max(1, 1 / scale);
     pointer.scaleX(pointerScale);
     pointer.scaleY(pointerScale);
-    pointer.x(mousePos.x + 1);
-    pointer.y(mousePos.y + 1);
+    const indicatorOffset = 16 * pointerScale;
+    pointer.x(mousePos.x - indicatorOffset);
+    pointer.y(mousePos.y - indicatorOffset);
   }
 
-  function findOrCreateInputPointPointer(id: string, view_name: string = null): Konva.Circle {
-    let pointer: Konva.Circle = stage.findOne(`#${id}`);
+  function findOrCreateInputPointPointer(id: string, view_name: string = null): Konva.Text {
+    let pointer: Konva.Text = stage.findOne(`#${id}`);
     if (!pointer) {
       let zoomF = 1.0; // in some cases we aren't in a view, so we use default scaling
       if (view_name) zoomF = zoomFactor[view_name];
-      pointer = new Konva.Circle({
+      pointer = new Konva.Text({
         id,
         x: 0,
         y: 0,
-        radius: INPUTPOINT_RADIUS / zoomF,
+        text: "+",
+        fontSize: (INPUTPOINT_RADIUS * 4) / zoomF,
+        fontStyle: "bold",
         fill: "white",
-        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomF,
+        stroke: "black",
+        strokeWidth: 1 / zoomF,
+        offsetX: (INPUTPOINT_RADIUS * 2) / zoomF,
+        offsetY: (INPUTPOINT_RADIUS * 2) / zoomF,
         visible: false,
         listening: false,
-        opacity: 0.5,
+        opacity: 0.9,
       });
       toolsLayer.add(pointer);
     }
@@ -771,7 +954,7 @@ License: CECILL-C
     const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
     for (const pt of inputGroup.children) {
-      if (pt instanceof Konva.Circle) {
+      if (pt instanceof Konva.Text) {
         const lblclick: LabeledClick = {
           x: pt.x(),
           y: pt.y(),
@@ -787,7 +970,7 @@ License: CECILL-C
     const input_groups = stage.find("#input");
     for (const input_group of input_groups) {
       for (const node of (input_group as Konva.Group).children) {
-        if (node instanceof Konva.Circle) {
+        if (node instanceof Konva.Text) {
           node.listening(toggle);
         }
       }
@@ -798,7 +981,7 @@ License: CECILL-C
     stage.container().style.cursor = "grab";
   }
 
-  function dragInputPointMove(drag_point: Konva.Circle, viewRef: Reference) {
+  function dragInputPointMove(drag_point: Konva.Text, viewRef: Reference) {
     stage.container().style.cursor = "grabbing";
 
     const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
@@ -821,21 +1004,25 @@ License: CECILL-C
     timerId = setTimeout(() => updateCurrentMask(viewRef), 50); // delay before predict to spare CPU
   }
 
-  function highlightInputPoint(hl_point: Konva.Circle, view_name: string) {
+  function highlightInputPoint(hl_point: Konva.Text, view_name: string) {
     const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
     pointer.hide();
-    hl_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[view_name]);
+    hl_point.fontSize((1.5 * INPUTPOINT_RADIUS * 4) / zoomFactor[view_name]);
+    hl_point.offsetX((1.5 * INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
+    hl_point.offsetY((1.5 * INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
     highlighted_point = hl_point;
     stage.container().style.cursor = "grab";
   }
 
-  function unhighlightInputPoint(hl_point: Konva.Circle, view_name: string = null) {
+  function unhighlightInputPoint(hl_point: Konva.Text, view_name: string = null) {
     const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
     pointer.show();
     if (!view_name) {
       view_name = findViewName(hl_point);
     }
-    hl_point.radius(INPUTPOINT_RADIUS / zoomFactor[view_name]);
+    hl_point.fontSize((INPUTPOINT_RADIUS * 4) / zoomFactor[view_name]);
+    hl_point.offsetX((INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
+    hl_point.offsetY((INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
     highlighted_point = null;
     stage.container().style.cursor = selectedTool.cursor;
     stage.batchDraw();
@@ -960,20 +1147,38 @@ License: CECILL-C
               skipStroke: true,
               relativeTo: viewLayer,
             });
+            // Keep in "creating" state so user can adjust before pressing Enter
             newShape = {
-              status: "saving",
-              attrs: {
-                x: correctedRect.x,
-                y: correctedRect.y,
-                width: correctedRect.width,
-                height: correctedRect.height,
-              },
+              status: "creating",
               type: SaveShapeType.bbox,
+              x: correctedRect.x,
+              y: correctedRect.y,
+              width: correctedRect.width,
+              height: correctedRect.height,
               viewRef,
-              itemId: selectedItemId,
-              imageWidth: getCurrentImage(viewRef.name).width,
-              imageHeight: getCurrentImage(viewRef.name).height,
             };
+            // Attach Transformer for resize/move
+            bboxEditable = true;
+            const tr: Konva.Transformer = stage.findOne("#transformer");
+            if (tr) {
+              tr.nodes([rect]);
+              tr.getLayer()?.batchDraw();
+            }
+            // Sync Transformer changes back to newShape so Svelte doesn't revert them
+            rect.on("transform.creation", () => {
+              resizeStroke(rect);
+            });
+            rect.on("transformend.creation dragend.creation", () => {
+              newShape = {
+                status: "creating",
+                type: SaveShapeType.bbox,
+                x: rect.x(),
+                y: rect.y(),
+                width: rect.width(),
+                height: rect.height(),
+                viewRef,
+              };
+            });
           }
           if (selectedTool.isSmart) {
             lastInputViewRef = viewRef;
@@ -987,6 +1192,43 @@ License: CECILL-C
         rect.destroy();
       }
     }
+  }
+
+  function validateBBox(viewRef: Reference) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const rect: Konva.Rect = stage.findOne("#drag-rect");
+    if (!rect) return;
+
+    // Read final position after any Transformer edits
+    const correctedRect = rect.getClientRect({
+      skipTransform: false,
+      skipShadow: true,
+      skipStroke: true,
+      relativeTo: viewLayer,
+    });
+
+    // Clean up creation listeners and detach Transformer
+    rect.off("transform.creation");
+    rect.off("transformend.creation");
+    rect.off("dragend.creation");
+    bboxEditable = false;
+    const tr: Konva.Transformer = stage.findOne("#transformer");
+    if (tr) tr.nodes([]);
+
+    newShape = {
+      status: "saving",
+      attrs: {
+        x: correctedRect.x,
+        y: correctedRect.y,
+        width: correctedRect.width,
+        height: correctedRect.height,
+      },
+      type: SaveShapeType.bbox,
+      viewRef,
+      itemId: selectedItemId,
+      imageWidth: getCurrentImage(viewRef.name).width,
+      imageHeight: getCurrentImage(viewRef.name).height,
+    };
   }
 
   // ********** INPUT DELETE TOOL ********** //
@@ -1018,10 +1260,23 @@ License: CECILL-C
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
     }
-    const pointer: Konva.Circle = stage.findOne(`#${POINT_SELECTION}`);
+    const pointer: Konva.Text = stage.findOne(`#${POINT_SELECTION}`);
     if (pointer) pointer.destroy();
     const crossline = toolsLayer?.findOne("#crossline");
     if (crossline) crossline.destroy();
+    cleanupBrushCursor();
+    // Only clear brush canvases after the user confirms (shouldReset) or
+    // when leaving the brush tool — NOT while the save form is open.
+    if (newShape.status !== "saving") {
+      if (selectedTool?.type !== ToolType.Brush || newShape.shouldReset) {
+        for (const key of Object.keys(brushCanvasRefs)) {
+          brushCanvasRefs[key]?.clearCanvas();
+        }
+      }
+      if (selectedTool?.type !== ToolType.Brush) {
+        pendingBrushMask = null;
+      }
+    }
     currentAnn = null;
   }
 
@@ -1036,11 +1291,24 @@ License: CECILL-C
     }
 
     if (
-      [ToolType.Rectangle, ToolType.Polygon, ToolType.Keypoint, ToolType.PointSelection].includes(
-        selectedTool?.type,
-      )
+      [
+        ToolType.Rectangle,
+        ToolType.Polygon,
+        ToolType.Keypoint,
+        ToolType.PointSelection,
+        ToolType.Brush,
+      ].includes(selectedTool?.type)
     ) {
       updateCrosshairState(position);
+    }
+
+    // Update brush cursor and brush stroke
+    if (selectedTool?.type === ToolType.Brush) {
+      updateBrushCursor(position);
+      // Update brush stroke for all views (the active one will handle it)
+      for (const view_name of Object.keys(imagesPerView)) {
+        handleBrushPointerMove(view_name);
+      }
     }
   }
 
@@ -1053,6 +1321,12 @@ License: CECILL-C
   function handleMouseLeaveStage() {
     for (const tool of toolsLayer.children) {
       tool.hide();
+    }
+    // End any ongoing brush stroke when mouse leaves
+    if (selectedTool?.type === ToolType.Brush) {
+      for (const view_name of Object.keys(imagesPerView)) {
+        handleBrushPointerUp(view_name);
+      }
     }
   }
 
@@ -1068,6 +1342,10 @@ License: CECILL-C
     viewLayer.off("dragend dragmove");
     if (selectedTool?.type === ToolType.Polygon) {
       drawPolygonPoints(viewRef);
+    }
+
+    if (selectedTool?.type === ToolType.Brush) {
+      handleBrushPointerUp(viewRef.name);
     }
 
     if (highlighted_point) {
@@ -1092,7 +1370,10 @@ License: CECILL-C
   async function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
-    if (newShape.status === "none" || newShape.status === "editing") {
+    if (
+      (newShape.status === "none" || newShape.status === "editing") &&
+      selectedTool?.type !== ToolType.Brush
+    ) {
       newShape = {
         status: "editing",
         viewRef,
@@ -1111,28 +1392,32 @@ License: CECILL-C
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
-      const input_point = new Konva.Circle({
+      const input_point = new Konva.Text({
         name: `${selectedTool.label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
-        radius: INPUTPOINT_RADIUS / zoomFactor[viewRef.name],
-        stroke: "white",
-        fill: selectedTool.label === 1 ? "green" : "red",
-        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewRef.name],
+        text: selectedTool.label === 1 ? "+" : "\u2212",
+        fontSize: (INPUTPOINT_RADIUS * 4) / zoomFactor[viewRef.name],
+        fontStyle: "bold",
+        fill: "white",
+        stroke: "black",
+        strokeWidth: 1 / zoomFactor[viewRef.name],
+        offsetX: (INPUTPOINT_RADIUS * 2) / zoomFactor[viewRef.name],
+        offsetY: (INPUTPOINT_RADIUS * 2) / zoomFactor[viewRef.name],
         visible: true,
         listening: true,
-        opacity: 0.75,
+        opacity: 0.9,
         draggable: true,
       });
       input_point.on("pointerenter", (event) =>
-        highlightInputPoint(event.target as Konva.Circle, viewRef.name),
+        highlightInputPoint(event.target as Konva.Text, viewRef.name),
       );
       input_point.on("pointerout", (event) =>
-        unhighlightInputPoint(event.target as Konva.Circle, viewRef.name),
+        unhighlightInputPoint(event.target as Konva.Text, viewRef.name),
       );
       input_point.on(
         "dragmove",
-        (event) => void dragInputPointMove(event.target as Konva.Circle, viewRef),
+        (event) => void dragInputPointMove(event.target as Konva.Text, viewRef),
       );
       input_point.on("dragend", () => dragInputPointEnd());
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
@@ -1141,7 +1426,11 @@ License: CECILL-C
       highlightInputPoint(input_point, viewRef.name);
       lastInputViewRef = viewRef;
       await updateCurrentMask(viewRef);
-    } else if (selectedTool?.type === ToolType.Rectangle) {
+    } else if (selectedTool?.type === ToolType.Brush) {
+      handleBrushPointerDown(viewRef);
+      viewLayer.on("pointermove.brush", () => handleBrushPointerMove(viewRef.name));
+      viewLayer.on("pointerup.brush", () => handleBrushPointerUp(viewRef.name));
+    } else if (selectedTool?.type === ToolType.Rectangle && !bboxEditable) {
       viewLayer.on("pointermove", () => dragInputRectMove(viewRef));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewRef));
     } else if (selectedTool?.type === ToolType.Keypoint) {
@@ -1213,10 +1502,93 @@ License: CECILL-C
     }
 
     if (event.key === "Escape") {
+      // If brush tool is active, clean up before switching to pan
+      if (selectedTool?.type === ToolType.Brush) {
+        cleanupAllBrushCanvases();
+      }
+      // Clean up creation listeners and detach transformer (for bbox editing)
+      const dragRect: Konva.Rect = stage?.findOne("#drag-rect");
+      if (dragRect) {
+        dragRect.off("transform.creation");
+        dragRect.off("transformend.creation");
+        dragRect.off("dragend.creation");
+      }
+      bboxEditable = false;
+      const tr: Konva.Transformer = stage?.findOne("#transformer");
+      if (tr) tr.nodes([]);
+      newShape = { status: "none", shouldReset: true };
       selectedToolStore.set(createPanTool());
     }
 
-    if (event.key === "Delete" && highlighted_point != null) {
+    // Brush tool shortcuts
+    if (event.key === "b" || event.key === "B") {
+      selectedToolStore.set(brushDrawTool);
+    }
+    if (event.key === "x" || event.key === "X") {
+      if (selectedTool?.type === ToolType.Brush) {
+        selectedToolStore.set(selectedTool.mode === "draw" ? brushEraseTool : brushDrawTool);
+      }
+    }
+    if (event.key === "[" || event.key === "q" || event.key === "Q") {
+      if (selectedTool?.type === ToolType.Brush) {
+        brushSettingsStore.update((s) => ({
+          ...s,
+          brushRadius: Math.max(1, s.brushRadius - 5),
+        }));
+      }
+    }
+    if (event.key === "]" || event.key === "e" || event.key === "E") {
+      if (selectedTool?.type === ToolType.Brush) {
+        brushSettingsStore.update((s) => ({
+          ...s,
+          brushRadius: Math.min(100, s.brushRadius + 5),
+        }));
+      }
+    }
+    if (
+      (event.key === "Enter" || event.key === "s" || event.key === "S") &&
+      selectedTool?.type === ToolType.Brush
+    ) {
+      // Save brush mask for all active views
+      for (const view_name of Object.keys(imagesPerView)) {
+        saveBrushMask(view_name);
+      }
+    }
+
+    // Smart segmentation: Enter to validate mask and open form
+    if (event.key === "Enter" && selectedTool?.isSmart && currentAnn?.output) {
+      validateSmartMask();
+    }
+
+    // Manual bounding box: Enter to validate and open form
+    if (
+      event.key === "Enter" &&
+      selectedTool?.type === ToolType.Rectangle &&
+      !selectedTool.isSmart &&
+      newShape.status === "creating" &&
+      newShape.type === SaveShapeType.bbox
+    ) {
+      validateBBox(newShape.viewRef);
+    }
+
+    // Smart segmentation shortcuts
+    if (event.key === "w" || event.key === "W") {
+      selectedToolStore.set(addSmartPointTool);
+    }
+    if (event.key === "x" || event.key === "X") {
+      if (selectedTool?.type === ToolType.PointSelection) {
+        selectedToolStore.set(selectedTool.label === 1 ? removeSmartPointTool : addSmartPointTool);
+      }
+    }
+    if (event.key === "r" || event.key === "R") {
+      if (selectedTool?.isSmart) {
+        selectedToolStore.set(smartRectangleTool);
+      } else {
+        selectedToolStore.set(rectangleTool);
+      }
+    }
+
+    if ((event.key === "Delete" || event.key === "Backspace") && highlighted_point != null) {
       //get view_name of highlighted_point
       const view_name = findViewName(highlighted_point);
       const to_destroy_hl_point = highlighted_point;
@@ -1295,10 +1667,16 @@ License: CECILL-C
           {#if i === images.length - 1}
             <Group config={{ id: `bboxes-${view_name}` }}>
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
-                <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} />
+                <CreateRectangle
+                  zoomFactor={zoomFactor[view_name]}
+                  {newShape}
+                  {stage}
+                  {viewRef}
+                  editable={bboxEditable}
+                />
               {/if}
               {#each bboxes as bbox}
-                {#if bbox.data.view_ref.name === view_name}
+                {#if bbox.data.view_ref.name === view_name && !isActivePaintingTool}
                   <Rectangle
                     {bbox}
                     {colorScale}
@@ -1312,6 +1690,21 @@ License: CECILL-C
               {/each}
             </Group>
             <Group config={{ id: `masks-${view_name}` }}>
+              {#if selectedTool?.type === ToolType.Brush}
+                <BrushCanvas
+                  bind:this={brushCanvasRefs[view_name]}
+                  {viewRef}
+                  {stage}
+                  currentImage={getCurrentImage(view_name)}
+                  {zoomFactor}
+                  {selectedItemId}
+                  {selectedTool}
+                  brushSettings={$brushSettingsStore}
+                  existingMaskRle={pendingBrushMask?.viewName === view_name
+                    ? pendingBrushMask.rle
+                    : null}
+                />
+              {/if}
               <CreatePolygon
                 {viewRef}
                 {stage}
@@ -1329,11 +1722,14 @@ License: CECILL-C
                     currentImage={getCurrentImage(view_name)}
                     {zoomFactor}
                     {mask}
-                    color={colorScale(
-                      mask.ui.top_entities && mask.ui.top_entities.length > 0
-                        ? mask.ui.top_entities[0].id
-                        : mask.data.entity_ref.id,
-                    )}
+                    color={isActivePaintingTool
+                      ? "#9CA3AF"
+                      : colorScale(
+                          mask.ui.top_entities && mask.ui.top_entities.length > 0
+                            ? mask.ui.top_entities[0].id
+                            : mask.data.entity_ref.id,
+                        )}
+                    ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
                     {selectedTool}
                   />
                 {/if}
@@ -1348,14 +1744,16 @@ License: CECILL-C
                   {viewRef}
                 />
               {/if}
-              <ShowKeypoints
-                {colorScale}
-                {stage}
-                {viewRef}
-                {keypoints}
-                zoomFactor={zoomFactor[view_name]}
-                bind:newShape
-              />
+              {#if !isActivePaintingTool}
+                <ShowKeypoints
+                  {colorScale}
+                  {stage}
+                  {viewRef}
+                  {keypoints}
+                  zoomFactor={zoomFactor[view_name]}
+                  bind:newShape
+                />
+              {/if}
             </Group>
             <Group config={{ id: "currentAnnotation" }} />
           {/if}

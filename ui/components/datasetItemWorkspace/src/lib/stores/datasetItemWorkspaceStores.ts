@@ -74,6 +74,12 @@ export const filters = writable<Filters>({
   u16BitRange: [0, 65535],
 });
 export const imageSmoothing = writable<boolean>(true);
+
+export const brushSettings = writable({
+  brushRadius: 20,
+  lazyRadius: 10,
+  friction: 0.15,
+});
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["template_id"] | null>(null);
 
 export const saveData = writable<SaveItem[]>([]);

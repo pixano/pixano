@@ -23,6 +23,7 @@ License: CECILL-C
     parseSvgPath,
     runLengthEncode,
     sceneFunc,
+    smoothSceneFunc,
   } from "../api/maskApi";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import { ToolType } from "../tools";
@@ -37,6 +38,7 @@ License: CECILL-C
   export let color: string;
   export let zoomFactor: Record<string, number>;
   export let selectedTool: SelectionTool;
+  export let ghostOpacity: number | undefined = undefined;
 
   let canEdit = false;
   let polygonShape: PolygonShape = {
@@ -122,8 +124,8 @@ License: CECILL-C
     id: `polygon-${mask.id}`,
     draggable: canEdit,
     visible: !mask.ui.displayControl.hidden,
-    opacity: mask.ui.opacity,
-    listening: selectedTool.type === ToolType.Pan,
+    opacity: ghostOpacity ?? mask.ui.opacity,
+    listening: ghostOpacity ? false : selectedTool.type === ToolType.Pan,
   }}
 >
   {#if canEdit}
@@ -148,13 +150,17 @@ License: CECILL-C
     />
   {:else}
     <KonvaShape
-      on:click={onClick}
+      on:click={ghostOpacity ? undefined : onClick}
       config={{
-        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.ui.svg),
+        sceneFunc: (ctx, shape) => smoothSceneFunc(ctx, shape, mask.ui.svg),
         stroke: color,
         strokeWidth: mask.ui.strokeFactor,
         closed: true,
-        fill: hexToRGBA(color, 0.5),
+        fill: hexToRGBA(color, ghostOpacity ? 1.0 : 0.35),
+        shadowColor: color,
+        shadowBlur: 2,
+        shadowOpacity: 0.4,
+        shadowEnabled: !ghostOpacity,
         id: mask.id,
       }}
     />

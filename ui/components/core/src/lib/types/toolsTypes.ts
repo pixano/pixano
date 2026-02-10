@@ -31,4 +31,8 @@ export type LabeledPointTool = BaseTool<ToolType.PointSelection> & {
   label: number;
 };
 
-export type SelectionTool = AllTool | LabeledPointTool;
+export type BrushSelectionTool = BaseTool<ToolType.Brush> & {
+  mode: "draw" | "erase";
+};
+
+export type SelectionTool = AllTool | LabeledPointTool | BrushSelectionTool;

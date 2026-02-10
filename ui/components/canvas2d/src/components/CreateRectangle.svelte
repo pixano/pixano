@@ -18,6 +18,7 @@ License: CECILL-C
   export let newShape: CreateRectangleShape | SaveRectangleShape;
   export let stage: Konva.Stage;
   export let viewRef: Reference;
+  export let editable: boolean = false;
 
   let rectangleGroup: Konva.Group;
 
@@ -62,7 +63,8 @@ License: CECILL-C
         stroke: "hsl(316deg 60% 29.41%)",
         fill: "#f9f4f773",
         strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor,
-        listening: false,
+        listening: editable,
+        draggable: editable,
       }}
     />
     {#if labelX && labelY}

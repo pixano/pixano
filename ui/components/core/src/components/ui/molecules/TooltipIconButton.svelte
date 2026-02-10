@@ -18,6 +18,9 @@ License: CECILL-C
   export let redconfirm: boolean = false;
   export let big: boolean = false;
 
+  let className: string | undefined = undefined;
+  export { className as class };
+
   let redConfirmState = false; // Internal state for double confirmation
   const dispatch = createEventDispatcher();
 
@@ -53,6 +56,7 @@ License: CECILL-C
           "bg-red-500 text-white hover:bg-red-600": redConfirmState,
           "bg-primary text-primary-foreground shadow-sm": selected,
         },
+        className,
       )}
       on:click={handleClick}
       on:mouseover

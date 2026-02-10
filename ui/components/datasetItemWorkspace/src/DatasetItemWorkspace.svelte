@@ -315,7 +315,18 @@ License: CECILL-C
     const delta = e.clientX - initialOIAreaX;
     objectInspectorAreaMaxWidth = Math.max(minOIAreaWidth, initialOIAreaWidth - delta);
   };
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+      event.preventDefault();
+      if ($canSave && !isSaving) {
+        void onSave();
+      }
+    }
+  };
 </script>
+
+<svelte:window on:keydown={handleKeyDown} />
 
 <div class="w-full h-full flex" role="tab" tabindex="0">
   {#if isSaving}

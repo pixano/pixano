@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { ToolType } from "@pixano/canvas2d/src/tools";
-import type { SelectionTool } from "@pixano/core";
+import type { BrushSelectionTool, SelectionTool } from "@pixano/core";
 
 export const panTool: SelectionTool = {
   name: "Selection & Move image",
@@ -62,4 +62,18 @@ export const smartRectangleTool: SelectionTool = {
   type: ToolType.Rectangle,
   cursor: "crosshair",
   isSmart: true,
+};
+
+export const brushDrawTool: BrushSelectionTool = {
+  name: "Brush (Draw)",
+  type: ToolType.Brush,
+  cursor: "none",
+  mode: "draw",
+};
+
+export const brushEraseTool: BrushSelectionTool = {
+  name: "Brush (Erase)",
+  type: ToolType.Brush,
+  cursor: "none",
+  mode: "erase",
 };

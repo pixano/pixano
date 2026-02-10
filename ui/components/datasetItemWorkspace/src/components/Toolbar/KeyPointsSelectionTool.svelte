@@ -44,29 +44,42 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("flex items-center gap-4", {
-    "bg-accent rounded-sm": $selectedTool?.type === ToolType.Keypoint,
-  })}
+  class={cn(
+    "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+    {
+      "bg-muted/40 border-border/20 shadow-inner": $selectedTool?.type === ToolType.Keypoint,
+    },
+  )}
 >
-  <IconButton tooltipContent={keyPointTool.name} on:click={() => selectTool(keyPointTool)}>
-    <img src={keypoints_icon} alt="keypoints icon" />
+  <IconButton
+    tooltipContent={keyPointTool.name}
+    on:click={() => selectTool(keyPointTool)}
+    class={cn(
+      "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+      $selectedTool?.type === ToolType.Keypoint ? "text-primary" : "text-foreground",
+    )}
+  >
+    <img src={keypoints_icon} alt="keypoints icon" class="h-4.5 w-4.5" />
   </IconButton>
   {#if $selectedTool?.type === ToolType.Keypoint}
-    {#each templates as template}
-      <IconButton
-        tooltipContent={template.template_id}
-        on:click={() => onTemplateClick(template.template_id)}
-        selected={$selectedKeypointsTemplate === template.template_id}
-      >
-        {#each template.vertices as vertex}
-          <div>
+    <div
+      class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
+    >
+      {#each templates as template}
+        <IconButton
+          tooltipContent={template.template_id}
+          on:click={() => onTemplateClick(template.template_id)}
+          selected={$selectedKeypointsTemplate === template.template_id}
+          class="h-8 w-8"
+        >
+          {#each template.vertices as vertex}
             <div
               class="w-1 h-1 bg-primary rounded-full absolute"
               style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.template_id === $selectedKeypointsTemplate)}`}
             />
-          </div>
-        {/each}
-      </IconButton>
-    {/each}
+          {/each}
+        </IconButton>
+      {/each}
+    </div>
   {/if}
 </div>
