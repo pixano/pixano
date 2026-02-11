@@ -1826,7 +1826,15 @@ License: CECILL-C
           />
           <!-- Note: prevent drawing shapes on the "cached" image -->
           {#if i === images.length - 1}
-            <Group config={{ id: `bboxes-${view_name}`, listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete || selectedTool?.type === ToolType.Rectangle }}>
+            <Group
+              config={{
+                id: `bboxes-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan ||
+                  selectedTool?.type === ToolType.Delete ||
+                  selectedTool?.type === ToolType.Rectangle,
+              }}
+            >
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
                 <CreateRectangle
                   zoomFactor={zoomFactor[view_name]}
@@ -1850,7 +1858,13 @@ License: CECILL-C
                 {/if}
               {/each}
             </Group>
-            <Group config={{ id: `masks-${view_name}`, listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete }}>
+            <Group
+              config={{
+                id: `masks-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+              }}
+            >
               {#if selectedTool?.type === ToolType.Brush}
                 <BrushCanvas
                   bind:this={brushCanvasRefs[view_name]}
@@ -1890,7 +1904,13 @@ License: CECILL-C
                 {/if}
               {/each}
             </Group>
-            <Group config={{ id: `keypoints-${view_name}`, listening: selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete }}>
+            <Group
+              config={{
+                id: `keypoints-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+              }}
+            >
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) || (newShape.status === "saving" && newShape.type === SaveShapeType.keypoints)}
                 <CreateKeypoint
                   zoomFactor={zoomFactor[view_name]}
