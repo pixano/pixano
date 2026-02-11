@@ -11,6 +11,38 @@ import type { MaskSVG } from "@pixano/core";
 
 import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
+// --- Parsed polygon cache for sceneFunc / smoothSceneFunc ---
+type ParsedPolygon = { start: { x: number; y: number }; rest: { x: number; y: number }[] };
+const parsedPolygonCache = new Map<string, ParsedPolygon>();
+
+function getCachedParsedPolygon(svgPath: string): ParsedPolygon {
+  let cached = parsedPolygonCache.get(svgPath);
+  if (!cached) {
+    const start = m_part(svgPath);
+    const rest = l_part(svgPath);
+    cached = { start, rest };
+    parsedPolygonCache.set(svgPath, cached);
+  }
+  return cached;
+}
+
+/** Clear the parsed polygon cache (call on item switch). */
+export function clearParsedCache(): void {
+  parsedPolygonCache.clear();
+}
+
+// --- Simplified polygon cache for smoothSceneFunc ---
+type SmoothedPolygon = {
+  points: { x: number; y: number }[];
+  segments: {
+    cp1: { x: number; y: number };
+    cp2: { x: number; y: number };
+    end: { x: number; y: number };
+    sharp: boolean;
+  }[];
+} | null;
+const smoothedPolygonCache = new Map<string, SmoothedPolygon>();
+
 export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
   const regex = /([ML]?)\s*([\d.]+)\s+([\d.]+)/g;
   let match: RegExpExecArray | null;
@@ -65,10 +97,9 @@ function l_part(svg: string) {
 export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[]) => {
   ctx.beginPath();
   for (let i = 0; i < svg.length; ++i) {
-    const start = m_part(svg[i]);
-    ctx.moveTo(start.x, start.y);
-    const l_pts = l_part(svg[i]);
-    for (const pt of l_pts) {
+    const cached = getCachedParsedPolygon(svg[i]);
+    ctx.moveTo(cached.start.x, cached.start.y);
+    for (const pt of cached.rest) {
       ctx.lineTo(pt.x, pt.y);
     }
     ctx.closePath();
@@ -227,10 +258,22 @@ export const smoothSceneFunc = (
 ) => {
   ctx.beginPath();
   for (let i = 0; i < svg.length; i++) {
-    let points = extractPoints(svg[i]);
-    points = simplify(points, epsilon, true);
+    // Use cache to avoid re-simplifying and re-computing bezier every frame
+    const cacheKey = `${svg[i]}|${epsilon}|${tension}`;
+    let cached = smoothedPolygonCache.get(cacheKey);
+    if (!cached) {
+      let points = extractPoints(svg[i]);
+      points = simplify(points, epsilon, true);
+      if (points.length < 4) {
+        cached = { points, segments: [] };
+      } else {
+        cached = { points, segments: catmullRomToBezier(points, tension) };
+      }
+      smoothedPolygonCache.set(cacheKey, cached);
+    }
 
-    if (points.length < 4) {
+    const { points, segments } = cached;
+    if (segments.length === 0) {
       // Too few points for spline — fall back to straight lines
       ctx.moveTo(points[0].x, points[0].y);
       for (let j = 1; j < points.length; j++) {
@@ -239,7 +282,6 @@ export const smoothSceneFunc = (
       ctx.closePath();
     } else {
       ctx.moveTo(points[0].x, points[0].y);
-      const segments = catmullRomToBezier(points, tension);
       for (const seg of segments) {
         if (seg.sharp) {
           ctx.lineTo(seg.end.x, seg.end.y);
