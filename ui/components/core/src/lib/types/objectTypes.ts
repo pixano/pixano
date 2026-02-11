@@ -132,6 +132,8 @@ export type CreateMaskShape = {
   status: "creating";
   type: SaveShapeType.mask;
   points: PolygonGroupPoint[];
+  closedPolygons: PolygonGroupPoint[][];
+  phase: "drawing" | "editing";
   viewRef: Reference;
 };
 

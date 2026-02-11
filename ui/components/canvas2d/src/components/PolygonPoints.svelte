@@ -20,7 +20,9 @@ License: CECILL-C
   export let polygonId: string;
   export let points: PolygonGroupPoint[][];
 
-  export let handlePolygonPointsClick: (i: number, viewRef: Reference) => void | null;
+  export let handlePolygonPointsClick:
+    | ((pointIndex: number, shapeIndex: number, viewRef: Reference) => void)
+    | null;
   export let handlePolygonPointsDragMove: (id: number, i: number) => void | null;
   export let handlePolygonPointsDragEnd: () => void | null;
 
@@ -35,7 +37,7 @@ License: CECILL-C
 {#each points as shape, i}
   {#each shape as point, pi}
     <Circle
-      on:click={() => handlePolygonPointsClick?.(pi, viewRef)}
+      on:click={() => handlePolygonPointsClick?.(pi, i, viewRef)}
       on:dragmove={() => handlePolygonPointsDragMove?.(point.id, i)}
       on:dragend={() => handlePolygonPointsDragEnd?.()}
       on:mouseover={(e) => {

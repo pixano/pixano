@@ -100,22 +100,35 @@ License: CECILL-C
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
       if (!isImage(value)) return;
+
+      // Probe bit depth with image-js to determine format
       const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
       if ($itemMetas.format === "16bit") {
+        // 16-bit images need normalization — keep the image-js path
         normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
+        const image: HTMLImageElement = document.createElement("img");
+        image.src = img.toDataURL();
+        images[key] = [{ id: value.id, element: image }];
+      } else {
+        // 8-bit: use original URL directly — browser decodes natively, skip toDataURL roundtrip
+        const image: HTMLImageElement = document.createElement("img");
+        image.src = `/${value.data.url}`;
+        images[key] = [{ id: value.id, element: image }];
       }
-
-      const image: HTMLImageElement = document.createElement("img");
-      image.src = img.toDataURL();
-      images[key] = [{ id: value.id, element: image }];
     });
 
     await Promise.all(promises);
-    return images;
+
+    // Rebuild with sorted keys for deterministic view ordering across items
+    const sorted: ImagesPerView = {};
+    for (const key of Object.keys(images).sort()) {
+      sorted[key] = images[key];
+    }
+    return sorted;
   };
 
   /**

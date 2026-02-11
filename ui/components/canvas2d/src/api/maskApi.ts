@@ -11,6 +11,38 @@ import type { MaskSVG } from "@pixano/core";
 
 import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
+// --- Parsed polygon cache for sceneFunc / smoothSceneFunc ---
+type ParsedPolygon = { start: { x: number; y: number }; rest: { x: number; y: number }[] };
+const parsedPolygonCache = new Map<string, ParsedPolygon>();
+
+function getCachedParsedPolygon(svgPath: string): ParsedPolygon {
+  let cached = parsedPolygonCache.get(svgPath);
+  if (!cached) {
+    const start = m_part(svgPath);
+    const rest = l_part(svgPath);
+    cached = { start, rest };
+    parsedPolygonCache.set(svgPath, cached);
+  }
+  return cached;
+}
+
+/** Clear the parsed polygon cache (call on item switch). */
+export function clearParsedCache(): void {
+  parsedPolygonCache.clear();
+}
+
+// --- Simplified polygon cache for smoothSceneFunc ---
+type SmoothedPolygon = {
+  points: { x: number; y: number }[];
+  segments: {
+    cp1: { x: number; y: number };
+    cp2: { x: number; y: number };
+    end: { x: number; y: number };
+    sharp: boolean;
+  }[];
+} | null;
+const smoothedPolygonCache = new Map<string, SmoothedPolygon>();
+
 export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
   const regex = /([ML]?)\s*([\d.]+)\s+([\d.]+)/g;
   let match: RegExpExecArray | null;
@@ -65,14 +97,19 @@ function l_part(svg: string) {
 export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[]) => {
   ctx.beginPath();
   for (let i = 0; i < svg.length; ++i) {
-    const start = m_part(svg[i]);
-    ctx.moveTo(start.x, start.y);
-    const l_pts = l_part(svg[i]);
-    for (const pt of l_pts) {
+    const cached = getCachedParsedPolygon(svg[i]);
+    ctx.moveTo(cached.start.x, cached.start.y);
+    for (const pt of cached.rest) {
       ctx.lineTo(pt.x, pt.y);
     }
+    ctx.closePath();
   }
-  ctx.fillStrokeShape(shape);
+  // Use even-odd fill to support holes (inner polygons)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+  rawCtx.fillStyle = shape.fill() as string;
+  rawCtx.fill("evenodd");
+  ctx.strokeShape(shape);
 };
 
 // --- Smooth contour rendering ---
@@ -221,10 +258,22 @@ export const smoothSceneFunc = (
 ) => {
   ctx.beginPath();
   for (let i = 0; i < svg.length; i++) {
-    let points = extractPoints(svg[i]);
-    points = simplify(points, epsilon, true);
+    // Use cache to avoid re-simplifying and re-computing bezier every frame
+    const cacheKey = `${svg[i]}|${epsilon}|${tension}`;
+    let cached = smoothedPolygonCache.get(cacheKey);
+    if (!cached) {
+      let points = extractPoints(svg[i]);
+      points = simplify(points, epsilon, true);
+      if (points.length < 4) {
+        cached = { points, segments: [] };
+      } else {
+        cached = { points, segments: catmullRomToBezier(points, tension) };
+      }
+      smoothedPolygonCache.set(cacheKey, cached);
+    }
 
-    if (points.length < 4) {
+    const { points, segments } = cached;
+    if (segments.length === 0) {
       // Too few points for spline — fall back to straight lines
       ctx.moveTo(points[0].x, points[0].y);
       for (let j = 1; j < points.length; j++) {
@@ -233,7 +282,6 @@ export const smoothSceneFunc = (
       ctx.closePath();
     } else {
       ctx.moveTo(points[0].x, points[0].y);
-      const segments = catmullRomToBezier(points, tension);
       for (const seg of segments) {
         if (seg.sharp) {
           ctx.lineTo(seg.end.x, seg.end.y);
@@ -244,7 +292,12 @@ export const smoothSceneFunc = (
       ctx.closePath();
     }
   }
-  ctx.fillStrokeShape(shape);
+  // Use even-odd fill to support holes (inner polygons)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCtx2 = (ctx as any)._context as CanvasRenderingContext2D;
+  rawCtx2.fillStyle = shape.fill() as string;
+  rawCtx2.fill("evenodd");
+  ctx.strokeShape(shape);
 };
 
 // Fonction de conversion RLE vers chaîne de caractères
@@ -316,11 +369,13 @@ function svgPathToBitmap(svgPath: string | string[], width: number, height: numb
     context.clearRect(0, 0, width, height);
     context.fillStyle = "black";
     if (Array.isArray(svgPath)) {
+      const combined = new Path2D();
       for (const path of svgPath) {
-        context.fill(new Path2D(path));
+        combined.addPath(new Path2D(path));
       }
+      context.fill(combined, "evenodd");
     } else {
-      context.fill(new Path2D(svgPath));
+      context.fill(new Path2D(svgPath), "evenodd");
     }
   }
 

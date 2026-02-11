@@ -131,7 +131,7 @@ class TestFolderBaseBuilder:
                 dataset_item=Schema,
             )
 
-        # test 4: schema with two views
+        # test 4: schema with two views should work (multi-view support)
         class Schema(DatasetItem):
             view: Image
             view2: Image
@@ -139,14 +139,14 @@ class TestFolderBaseBuilder:
             entities: list[entity_category]
             bbox: list[BBox]
 
-        with pytest.raises(ValueError, match="Only one view schema is supported in folder based builders."):
-            ImageFolderBuilder(
-                media_dir=source_dir.parent,
-                library_dir=target_dir,
-                info=DatasetInfo(name="test", description="test"),
-                dataset_path=source_dir.name,
-                dataset_item=Schema,
-            )
+        builder = ImageFolderBuilder(
+            media_dir=source_dir.parent,
+            library_dir=target_dir,
+            info=DatasetInfo(name="test", description="test"),
+            dataset_path=source_dir.name,
+            dataset_item=Schema,
+        )
+        assert builder.views_schema == {"view": Image, "view2": Image}
 
         # test 5: invalid dataset_path
         with pytest.raises(ValueError, match=r"A source path \(media_dir / dataset_path\) is required."):

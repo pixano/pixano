@@ -24,6 +24,7 @@ License: CECILL-C
   // Exports
   export let viewRef: Reference;
   export let stage: Konva.Stage;
+  export let viewLayer: Konva.Layer | undefined = undefined;
   export let currentImage: HTMLImageElement;
   export let zoomFactor: Record<string, number>;
   export let selectedItemId: string;
@@ -38,6 +39,8 @@ License: CECILL-C
   // Internal state
   let offscreenCanvas: HTMLCanvasElement;
   let offscreenCtx: CanvasRenderingContext2D;
+  let displayCanvas: HTMLCanvasElement; // Reusable canvas for Konva display (avoids GC from per-frame allocation)
+  let displayCtx: CanvasRenderingContext2D;
   let lazyBrush: LazyBrush;
   let isPainting = false;
   let konvaImage: Konva.Image | null = null;
@@ -53,6 +56,12 @@ License: CECILL-C
     offscreenCanvas.width = currentImage.width;
     offscreenCanvas.height = currentImage.height;
     offscreenCtx = offscreenCanvas.getContext("2d")!;
+
+    // Create reusable display canvas (avoids allocating a new ~32MB canvas per frame)
+    displayCanvas = document.createElement("canvas");
+    displayCanvas.width = currentImage.width;
+    displayCanvas.height = currentImage.height;
+    displayCtx = displayCanvas.getContext("2d")!;
 
     // Initialize LazyBrush
     lazyBrush = new LazyBrush({
@@ -108,20 +117,15 @@ License: CECILL-C
   }
 
   function updateKonvaImage() {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
-    if (!viewLayer) return;
+    const layer = viewLayer ?? stage.findOne(`#${viewRef.name}`);
+    if (!layer) return;
 
-    const masksGroup: Konva.Group = viewLayer.findOne(`#masks-${viewRef.name}`);
+    const masksGroup: Konva.Group = layer.findOne(`#masks-${viewRef.name}`);
     if (!masksGroup) return;
 
-    // Create a colored version of the mask for display
-    const displayCanvas = document.createElement("canvas");
-    displayCanvas.width = offscreenCanvas.width;
-    displayCanvas.height = offscreenCanvas.height;
-    const displayCtx = displayCanvas.getContext("2d");
-    if (!displayCtx) return;
-
-    // Draw the mask in green with transparency
+    // Reuse the display canvas instead of allocating a new one every frame
+    displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+    displayCtx.globalCompositeOperation = "source-over";
     displayCtx.drawImage(offscreenCanvas, 0, 0);
     displayCtx.globalCompositeOperation = "source-in";
     displayCtx.fillStyle = MASK_COLOR;
@@ -142,7 +146,7 @@ License: CECILL-C
       konvaImage.image(displayCanvas);
     }
 
-    viewLayer.batchDraw();
+    layer.batchDraw();
   }
 
   // Called from Canvas2D on pointerdown

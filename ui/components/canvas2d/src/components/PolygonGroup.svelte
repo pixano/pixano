@@ -51,11 +51,16 @@ License: CECILL-C
 
   $: canEdit = mask.ui.displayControl.editing;
 
+  // Guard: only re-parse SVG when the svg reference actually changes
+  let prevSvgRef: string[] | null = null;
   $: {
-    polygonShape.simplifiedPoints = mask.ui.svg.reduce(
-      (acc, val) => [...acc, parseSvgPath(val)],
-      [] as PolygonGroupPoint[][],
-    );
+    if (mask.ui.svg !== prevSvgRef) {
+      prevSvgRef = mask.ui.svg;
+      polygonShape.simplifiedPoints = mask.ui.svg.reduce(
+        (acc, val) => [...acc, parseSvgPath(val)],
+        [] as PolygonGroupPoint[][],
+      );
+    }
   }
 
   $: polygonShape.simplifiedSvg = polygonShape.simplifiedPoints.map((point) =>

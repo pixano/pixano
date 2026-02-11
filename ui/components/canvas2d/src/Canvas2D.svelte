@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
 
@@ -49,6 +49,7 @@ License: CECILL-C
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
   import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import { clearParsedCache, convertPointToSvg, runLengthEncode } from "./api/maskApi";
   import { resizeStroke } from "./api/rectangleApi";
   import BrushCanvas from "./components/BrushCanvas.svelte";
   import CreateKeypoint from "./components/CreateKeypoints.svelte";
@@ -65,6 +66,8 @@ License: CECILL-C
     POINT_SELECTION,
   } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
+  import { FilterManager } from "./lib/workers/filterManager";
+  import type { FilterParams } from "./lib/workers/filterWorker";
   import { createPanTool, ToolType } from "./tools";
 
   interface BrushCanvasRef {
@@ -114,6 +117,13 @@ License: CECILL-C
   let brushCanvasRefs: Record<string, BrushCanvasRef> = {};
   let brushCursor: Konva.Circle | null = null;
   let brushLazyLine: Konva.Line | null = null;
+  // Direct reference maps to avoid O(n) stage.findOne() lookups
+  let viewLayerRefs: Record<string, Konva.Layer> = {};
+  let imageRefs: Record<string, Konva.Image> = {};
+
+  // Web Worker-based filter manager (off-thread filter computation)
+  let filterManager: FilterManager | null = null;
+
   let bboxEditable = false;
   let pendingBrushMask: {
     rle: { counts: number[]; size: [number, number] };
@@ -228,6 +238,11 @@ License: CECILL-C
       if (stage.width() !== width || stage.height() !== height) {
         stage.width(width);
         stage.height(height);
+        if (isReady) {
+          for (const view_name of Object.keys(imagesPerView)) {
+            scaleView(view_name);
+          }
+        }
         stage.batchDraw();
       }
     }
@@ -239,6 +254,17 @@ License: CECILL-C
     Object.keys(imagesPerView).forEach((view_name) => {
       zoomFactor[view_name] = 1;
     });
+
+    // Initialize off-thread filter manager
+    filterManager = new FilterManager((viewName, filteredCanvas) => {
+      const image = getImageNode(viewName);
+      if (image) {
+        image.image(filteredCanvas);
+        image.clearCache();
+        image.getLayer()?.batchDraw();
+      }
+    });
+
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
@@ -246,31 +272,46 @@ License: CECILL-C
 
   onDestroy(() => {
     clearAnnotationAndInputs();
+    filterManager?.destroy();
+    filterManager = null;
   });
 
-  afterUpdate(() => {
-    if (currentId !== selectedItemId) loadItem();
+  // --- Targeted reactive statements (replaces monolithic afterUpdate) ---
 
-    if (selectedTool) {
-      handleChangeTool();
-    } else {
-      // reset
-      stage.container().style.cursor = "default";
-    }
-    if (currentAnn && currentAnn.validated) {
-      validateCurrentAnn();
-    }
+  // React to item changes
+  $: if (selectedItemId && currentId !== selectedItemId) {
+    loadItem();
+  }
 
-    // Add transformer to view layers
-    Object.keys(imagesPerView).forEach((view_name) => {
-      const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
-      if (viewLayer) viewLayer.add(transformer);
+  // React to tool changes
+  $: if (stage && selectedTool) {
+    handleChangeTool();
+  } else if (stage && !selectedTool) {
+    stage.container().style.cursor = "default";
+  }
+
+  // React to annotation validation
+  $: if (currentAnn && currentAnn.validated) {
+    validateCurrentAnn();
+  }
+
+  // Attach transformer when views change
+  $: if (stage && imagesPerView) {
+    // Use tick to ensure DOM is updated before accessing layers
+    void tick().then(() => {
+      Object.keys(imagesPerView).forEach((view_name) => {
+        const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
+        if (viewLayer) viewLayer.add(transformer);
+      });
     });
+  }
 
-    if (isVideo) return; // Only apply filters to images, because of performance issues
-
-    applyFilters();
-  });
+  // React to filter changes (debounced, skip for video)
+  let filterDebounceTimer: ReturnType<typeof setTimeout>;
+  $: if (!isVideo && stage && $filters) {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => applyFilters(), 50);
+  }
 
   let scaleOnFirstLoad = {};
   let viewReady = {};
@@ -279,6 +320,23 @@ License: CECILL-C
     scaleOnFirstLoad[view_name] = !isVideo;
     viewReady[view_name] = false;
   });
+
+  /** Get a view layer by name using cached ref (O(1)) with fallback. */
+  function getViewLayer(view_name: string): Konva.Layer | undefined {
+    return viewLayerRefs[view_name] ?? stage?.findOne(`#${view_name}`);
+  }
+
+  /** Get the image node for a view using cached ref (O(1)) with fallback. */
+  function getImageNode(view_name: string): Konva.Image | undefined {
+    return imageRefs[view_name] ?? stage?.findOne(`#image-${view_name}`);
+  }
+
+  /** Register an image ref when image loads. */
+  function registerImageRef(view_name: string) {
+    // Called after image onload; find the image node in the now-populated layer
+    const img: Konva.Image | undefined = stage?.findOne(`#image-${view_name}`);
+    if (img) imageRefs[view_name] = img;
+  }
 
   const getCurrentImage = (view_name: string) =>
     imagesPerView[view_name][imagesPerView[view_name].length - 1].element;
@@ -293,14 +351,26 @@ License: CECILL-C
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
+    clearParsedCache();
+
+    // Reset flags for the new item
+    isReady = false;
+    scaleOnFirstLoad = {};
+    viewReady = {};
+    keys.forEach((view_name) => {
+      scaleOnFirstLoad[view_name] = !isVideo;
+      viewReady[view_name] = false;
+    });
 
     keys.forEach((view_name) => {
       const currentImage = getCurrentImage(view_name);
 
-      currentImage.onload = () => {
+      const onImageReady = () => {
+        registerImageRef(view_name);
         if (scaleOnFirstLoad[view_name]) {
-          scaleView(view_name);
-          scaleOnFirstLoad[view_name] = false;
+          if (scaleView(view_name)) {
+            scaleOnFirstLoad[view_name] = false;
+          }
         }
         //scaleElements(view_name);
         viewReady[view_name] = true;
@@ -309,16 +379,22 @@ License: CECILL-C
         }
         if (!isVideo) cacheImage();
       };
+
+      currentImage.onload = onImageReady;
+      // Handle already-loaded images (e.g., from browser cache)
+      if (currentImage.complete && currentImage.naturalWidth > 0) {
+        onImageReady();
+      }
     });
 
     currentId = selectedItemId;
   }
 
-  function scaleView(view_name: string) {
-    const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
+  function scaleView(view_name: string): boolean {
+    const viewLayer = getViewLayer(view_name);
     if (!viewLayer) {
       console.log("Canvas2D.scaleView - Error: Cannot scale");
-      return;
+      return false;
     }
     // Calculate max dims for every image in the grid
     const maxWidth = stageContainer.getBoundingClientRect().width / gridSize.cols;
@@ -349,6 +425,7 @@ License: CECILL-C
     const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
     viewLayer.x(offsetX);
     viewLayer.y(offsetY);
+    return true;
   }
 
   // Unused ... We could remove ?
@@ -430,17 +507,11 @@ License: CECILL-C
   const cacheImage = () => {
     if (!stage) return;
 
-    let images = stage.find(
-      (node: { attrs: { id: string } }): boolean =>
-        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
-    );
-
-    if (!images) return;
-
-    images.forEach((image) => {
-      if (image.width() === 0 || image.height() === 0) return;
+    for (const view_name of Object.keys(imagesPerView)) {
+      const image = getImageNode(view_name);
+      if (!image || image.width() === 0 || image.height() === 0) continue;
       image.cache();
-    });
+    }
   };
 
   const AdjustChannels = (imageData: ImageData) => {
@@ -476,21 +547,46 @@ License: CECILL-C
   const applyFilters = () => {
     if (!stage) return;
 
-    let images = stage.find(
-      (node: { attrs: { id: string } }): boolean =>
-        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any type, which provokes linting errors
-    );
+    const workerFilters: FilterParams = {
+      brightness: $filters.brightness,
+      contrast: $filters.contrast,
+      redRange: $filters.redRange as [number, number],
+      greenRange: $filters.greenRange as [number, number],
+      blueRange: $filters.blueRange as [number, number],
+      equalizeHistogram: $filters.equalizeHistogram,
+    };
 
-    if (!images) return;
+    for (const view_name of Object.keys(imagesPerView)) {
+      const image = getImageNode(view_name);
+      if (!image) continue;
 
-    images.forEach((image) => {
+      // Try off-thread path via Web Worker
+      if (filterManager) {
+        // We need the original (uncached) image to get source pixel data.
+        // Use the source canvas/image element from imagesPerView.
+        const sourceElement = getCurrentImage(view_name);
+        if (sourceElement) {
+          // Draw source onto a temp canvas to get ImageData
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = sourceElement.width;
+          tempCanvas.height = sourceElement.height;
+          const tempCtx = tempCanvas.getContext("2d");
+          if (tempCtx) {
+            tempCtx.drawImage(sourceElement, 0, 0);
+            filterManager.applyFilters(view_name, tempCanvas, workerFilters);
+            continue;
+          }
+        }
+      }
+
+      // Fallback: synchronous Konva filter pipeline
       let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
       if ($filters.equalizeHistogram) filtersList.push(equalizeHistogram);
 
       image.filters(filtersList);
       image.brightness($filters.brightness);
       image.contrast($filters.contrast);
-    });
+    }
   };
 
   function findViewName(shape: Konva.Shape): string {
@@ -549,8 +645,7 @@ License: CECILL-C
 
     if (results) {
       const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
-      const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
+      const image = getImageNode(viewRef.name);
 
       // always clean existing masks before adding a new currentAnn
       currentMaskGroup.removeChildren();
@@ -652,7 +747,7 @@ License: CECILL-C
   }
 
   function clearInputs(view_name: string) {
-    const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     if (viewLayer) {
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.destroyChildren();
@@ -663,17 +758,37 @@ License: CECILL-C
 
   function drawPolygonPoints(viewRef: Reference) {
     if (newShape?.status === "saving") return;
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const viewLayer = getViewLayer(viewRef.name);
     const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
     const x = Math.round(cursorPositionOnImage.x);
     const y = Math.round(cursorPositionOnImage.y);
 
+    // If in editing phase, start a new polygon
+    if (
+      newShape.status === "creating" &&
+      newShape.type === SaveShapeType.mask &&
+      newShape.phase === "editing"
+    ) {
+      newShape = {
+        ...newShape,
+        phase: "drawing",
+        points: [{ x, y, id: 0 }],
+      };
+      return;
+    }
+
     const oldPoints =
       newShape.status === "creating" && newShape.type === SaveShapeType.mask ? newShape.points : [];
+    const closedPolygons =
+      newShape.status === "creating" && newShape.type === SaveShapeType.mask
+        ? newShape.closedPolygons
+        : [];
     newShape = {
       status: "creating",
       type: SaveShapeType.mask,
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+      closedPolygons,
+      phase: "drawing",
       viewRef,
     };
   }
@@ -682,7 +797,7 @@ License: CECILL-C
 
   function dragInputKeyPointRectMove(viewRef: Reference) {
     if (selectedTool?.type === ToolType.Keypoint && newShape.status !== "saving") {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+      const viewLayer = getViewLayer(viewRef.name);
 
       const pos = viewLayer.getRelativePointerPosition();
       const x =
@@ -710,7 +825,7 @@ License: CECILL-C
 
   function dragKeyPointInputRectEnd(viewRef: Reference) {
     if (selectedTool?.type === ToolType.Keypoint) {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+      const viewLayer = getViewLayer(viewRef.name);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
       if (rect && newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) {
         const vertices = newShape.keypoints.vertices.map((vertex) => {
@@ -836,7 +951,7 @@ License: CECILL-C
   }
 
   function handleBrushPointerDown(viewRef: Reference) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const viewLayer = getViewLayer(viewRef.name);
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
 
@@ -847,7 +962,7 @@ License: CECILL-C
   }
 
   function handleBrushPointerMove(view_name: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
 
@@ -863,7 +978,7 @@ License: CECILL-C
       brushCanvas.endStroke();
     }
     // Clean up layer-level drag listeners (same pattern as Rectangle/Keypoint)
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     if (viewLayer) {
       viewLayer.off("pointermove.brush");
       viewLayer.off("pointerup.brush");
@@ -951,7 +1066,7 @@ License: CECILL-C
   function getInputPoints(view_name: string): Array<LabeledClick> {
     //get points as Array<LabeledClick>
     const points: Array<LabeledClick> = [];
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
     for (const pt of inputGroup.children) {
       if (pt instanceof Konva.Text) {
@@ -984,8 +1099,7 @@ License: CECILL-C
   function dragInputPointMove(drag_point: Konva.Text, viewRef: Reference) {
     stage.container().style.cursor = "grabbing";
 
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
-    const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
+    const image = getImageNode(viewRef.name);
     const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
@@ -1093,7 +1207,7 @@ License: CECILL-C
   function getInputRect(view_name: string): Box {
     //get box as Box
     let box: Box = null;
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     const rect: Konva.Rect = viewLayer.findOne("#drag-rect");
     if (rect) {
       //need to convert rect pos / size to topleft/bottomright
@@ -1111,7 +1225,7 @@ License: CECILL-C
 
   function dragInputRectMove(viewRef: Reference) {
     if (selectedTool?.type === ToolType.Rectangle) {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+      const viewLayer = getViewLayer(viewRef.name);
 
       const pos = viewLayer.getRelativePointerPosition();
       const x =
@@ -1132,7 +1246,7 @@ License: CECILL-C
 
   async function dragInputRectEnd(viewRef: Reference) {
     if (selectedTool?.type === ToolType.Rectangle) {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+      const viewLayer = getViewLayer(viewRef.name);
       const rect: Konva.Rect = stage.findOne("#drag-rect");
       if (rect) {
         const { width, height } = rect.size();
@@ -1195,7 +1309,7 @@ License: CECILL-C
   }
 
   function validateBBox(viewRef: Reference) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const viewLayer = getViewLayer(viewRef.name);
     const rect: Konva.Rect = stage.findOne("#drag-rect");
     if (!rect) return;
 
@@ -1228,6 +1342,28 @@ License: CECILL-C
       itemId: selectedItemId,
       imageWidth: getCurrentImage(viewRef.name).width,
       imageHeight: getCurrentImage(viewRef.name).height,
+    };
+  }
+
+  function validatePolygon(viewRef: Reference) {
+    if (
+      newShape.status !== "creating" ||
+      newShape.type !== SaveShapeType.mask ||
+      newShape.phase !== "editing"
+    )
+      return;
+    const currentImage = getCurrentImage(viewRef.name);
+    const svg = newShape.closedPolygons.map((polygon) => convertPointToSvg(polygon));
+    const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
+    newShape = {
+      status: "saving",
+      masksImageSVG: svg,
+      rle: { counts, size: [currentImage.height, currentImage.width] },
+      type: SaveShapeType.mask,
+      viewRef,
+      itemId: selectedItemId,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
     };
   }
 
@@ -1331,13 +1467,13 @@ License: CECILL-C
   }
 
   function handleDragEndOnView(view_name: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
   }
 
   function handlePointerUpOnImage(viewRef: Reference) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const viewLayer = getViewLayer(viewRef.name);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
     if (selectedTool?.type === ToolType.Polygon) {
@@ -1361,14 +1497,14 @@ License: CECILL-C
 
   function handleDoubleClickOnImage(view_name: string) {
     // put double-clickd view on top of views
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
     viewLayer.moveToTop();
     //keeps tools on top
     toolsLayer.moveToTop();
   }
 
   async function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const viewLayer = getViewLayer(viewRef.name);
 
     if (
       (newShape.status === "none" || newShape.status === "editing") &&
@@ -1443,7 +1579,7 @@ License: CECILL-C
     // Defines zoom speed
     const zoomScale = 1.05;
 
-    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+    const viewLayer = getViewLayer(view_name);
 
     // Get old scaling
     const oldScale = viewLayer.scaleX();
@@ -1502,6 +1638,18 @@ License: CECILL-C
     }
 
     if (event.key === "Escape") {
+      // Polygon: if drawing a 2nd+ polygon, discard only in-progress and return to editing
+      if (
+        selectedTool?.type === ToolType.Polygon &&
+        newShape.status === "creating" &&
+        newShape.type === SaveShapeType.mask &&
+        newShape.phase === "drawing" &&
+        newShape.closedPolygons?.length > 0
+      ) {
+        newShape = { ...newShape, points: [], phase: "editing" };
+        return;
+      }
+
       // If brush tool is active, clean up before switching to pan
       if (selectedTool?.type === ToolType.Brush) {
         cleanupAllBrushCanvases();
@@ -1571,6 +1719,18 @@ License: CECILL-C
       validateBBox(newShape.viewRef);
     }
 
+    // Polygon: Enter to validate and open form
+    if (
+      event.key === "Enter" &&
+      selectedTool?.type === ToolType.Polygon &&
+      newShape.status === "creating" &&
+      newShape.type === SaveShapeType.mask &&
+      newShape.phase === "editing" &&
+      newShape.closedPolygons.length > 0
+    ) {
+      validatePolygon(newShape.viewRef);
+    }
+
     // Smart segmentation shortcuts
     if (event.key === "w" || event.key === "W") {
       selectedToolStore.set(addSmartPointTool);
@@ -1597,12 +1757,12 @@ License: CECILL-C
       to_destroy_hl_point.destroy();
 
       //if existing construct (points, box, ...)
-      const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+      const viewLayer = getViewLayer(view_name);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       if (inputGroup.children.length > 0) {
         //trigger a currentAnn with existing constructs
         //we do not have view id here, so get it from Konva image "name" field (TODO is it OK for video??)
-        const imageKonva: Konva.Image = viewLayer.findOne(`#image-${view_name}`);
+        const imageKonva = getImageNode(view_name);
         await updateCurrentMask({ id: imageKonva.attrs.name as string, name: view_name });
       } else {
         clearCurrentAnn(view_name, stage, selectedTool);
@@ -1616,10 +1776,10 @@ License: CECILL-C
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
       for (const view_name of Object.keys(imagesPerView)) {
-        const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
-        const maskGroup: Konva.Group = viewLayer.findOne(`#masks-${view_name}`);
-        const bboxGroup: Konva.Group = viewLayer.findOne(`#bboxes-${view_name}`);
-        const kptGroup: Konva.Group = viewLayer.findOne(`#keypoints-${view_name}`);
+        const viewLayer = getViewLayer(view_name);
+        const maskGroup: Konva.Group = viewLayer?.findOne(`#masks-${view_name}`);
+        const bboxGroup: Konva.Group = viewLayer?.findOne(`#bboxes-${view_name}`);
+        const kptGroup: Konva.Group = viewLayer?.findOne(`#keypoints-${view_name}`);
         console.log("view:", view_name);
         console.log("--masks Konva group:", maskGroup);
         console.log("--masks children length:", maskGroup.children?.length);
@@ -1649,6 +1809,7 @@ License: CECILL-C
       <Layer
         config={{ id: view_name, imageSmoothingEnabled: imageSmoothing }}
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, view_name)}
+        bind:handle={viewLayerRefs[view_name]}
       >
         {#each images as image, i}
           <!-- images contain the current image and previous one, to prevent flashing (should exist better way...) -->
@@ -1665,7 +1826,15 @@ License: CECILL-C
           />
           <!-- Note: prevent drawing shapes on the "cached" image -->
           {#if i === images.length - 1}
-            <Group config={{ id: `bboxes-${view_name}` }}>
+            <Group
+              config={{
+                id: `bboxes-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan ||
+                  selectedTool?.type === ToolType.Delete ||
+                  selectedTool?.type === ToolType.Rectangle,
+              }}
+            >
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
                 <CreateRectangle
                   zoomFactor={zoomFactor[view_name]}
@@ -1689,12 +1858,19 @@ License: CECILL-C
                 {/if}
               {/each}
             </Group>
-            <Group config={{ id: `masks-${view_name}` }}>
+            <Group
+              config={{
+                id: `masks-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+              }}
+            >
               {#if selectedTool?.type === ToolType.Brush}
                 <BrushCanvas
                   bind:this={brushCanvasRefs[view_name]}
                   {viewRef}
                   {stage}
+                  viewLayer={viewLayerRefs[view_name]}
                   currentImage={getCurrentImage(view_name)}
                   {zoomFactor}
                   {selectedItemId}
@@ -1705,14 +1881,7 @@ License: CECILL-C
                     : null}
                 />
               {/if}
-              <CreatePolygon
-                {viewRef}
-                {stage}
-                currentImage={getCurrentImage(view_name)}
-                {zoomFactor}
-                {selectedItemId}
-                bind:newShape
-              />
+              <CreatePolygon {viewRef} {stage} {zoomFactor} bind:newShape />
               {#each masks as mask (mask.id)}
                 {#if mask.data.view_ref.name === view_name}
                   <PolygonGroup
@@ -1735,7 +1904,13 @@ License: CECILL-C
                 {/if}
               {/each}
             </Group>
-            <Group config={{ id: `keypoints-${view_name}` }}>
+            <Group
+              config={{
+                id: `keypoints-${view_name}`,
+                listening:
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+              }}
+            >
               {#if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) || (newShape.status === "saving" && newShape.type === SaveShapeType.keypoints)}
                 <CreateKeypoint
                   zoomFactor={zoomFactor[view_name]}
