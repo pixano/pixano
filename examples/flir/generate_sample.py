@@ -134,12 +134,14 @@ def export_video_test(
             th_h = thermal_info.get("height", 1)
             for ann in thermal_annots.get(thermal_info["id"], []):
                 x, y, w, h = ann["bbox"]  # COCO: [x, y, w, h] in pixels
-                bboxes.append([
-                    round(x / th_w, 6),
-                    round(y / th_h, 6),
-                    round(w / th_w, 6),
-                    round(h / th_h, 6),
-                ])
+                bboxes.append(
+                    [
+                        round(x / th_w, 6),
+                        round(y / th_h, 6),
+                        round(w / th_w, 6),
+                        round(h / th_h, 6),
+                    ]
+                )
                 categories.append(category_map.get(ann.get("category_id", 0), "unknown"))
 
         entry: dict = {
@@ -204,8 +206,7 @@ def main():
     mapping_path = flir_root / "rgb_to_thermal_vid_map.json"
     if not mapping_path.is_file():
         parser.error(
-            f"Pairing map not found: '{mapping_path}'. "
-            "Ensure the FLIR root contains rgb_to_thermal_vid_map.json."
+            f"Pairing map not found: '{mapping_path}'. Ensure the FLIR root contains rgb_to_thermal_vid_map.json."
         )
 
     output_dir.mkdir(parents=True)
@@ -215,8 +216,10 @@ def main():
 
     print(f"\nDone. {total} frame pairs exported.")
     print("\nTo import into Pixano:")
-    print(f'  pixano data import ./my_data {output_dir} --name "FLIR ADAS Sample" '
-          f"--schema examples/flir/schema.py:FLIRDatasetItem")
+    print(
+        f'  pixano data import ./my_data {output_dir} --name "FLIR ADAS Sample" '
+        f"--schema examples/flir/schema.py:FLIRDatasetItem"
+    )
 
 
 if __name__ == "__main__":
