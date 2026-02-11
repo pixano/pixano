@@ -77,7 +77,10 @@ class FolderBaseBuilder(DatasetBuilder):
     ```
 
     Note:
-        Only one view is supported in folder builders. If you give a list of images, it will be put in a mosaic.
+        Multiple views are supported. When entity data in ``metadata.jsonl`` includes a ``"view_ref"`` key
+        whose value matches a view field name, that entity (and its annotations) will reference the specified
+        view. Without ``"view_ref"``, the first view is used by default.
+        If you give a list of images for a single view field, they will be put in a mosaic.
 
     Attributes:
         source_dir: The source directory for the dataset.
@@ -149,10 +152,6 @@ class FolderBaseBuilder(DatasetBuilder):
                 self.annotations_schema.update({k: s})
         if not self.views_schema or not self.entities_schema:
             raise ValueError("At least one View and one Entity schema must be defined in the schemas argument.")
-
-        # TODO - allow multiview in base FolderBuilder
-        if len(self.views_schema) > 1:
-            raise ValueError("Only one view schema is supported in folder based builders.")
 
     def generate_data(
         self,
@@ -418,8 +417,15 @@ class FolderBaseBuilder(DatasetBuilder):
         entities: dict[str, list[Entity]] = defaultdict(list)
         annotations: dict[str, list[Annotation]] = defaultdict(list)
 
-        # only one view
-        view_name, view = views_data[0]
+        # Resolve target view: use "view_ref" if provided, otherwise fall back to first view
+        view_ref_name = entities_data.pop("view_ref", None) if isinstance(entities_data, dict) else None
+        if view_ref_name is not None:
+            matched = [(n, v) for n, v in views_data if n == view_ref_name]
+            if not matched:
+                raise ValueError(f"view_ref '{view_ref_name}' not found in views: {[n for n, _ in views_data]}")
+            view_name, view = matched[0]
+        else:
+            view_name, view = views_data[0]
 
         entities_attrs = list(entities_data.keys())
         for attr in entities_attrs:
