@@ -270,7 +270,7 @@ License: CECILL-C
           : 'border-primary/10'}"
       >
         {#if isAnswering}
-          <Reply size={10} /> Answering Question #{pendingQuestion?.data.number + 1}
+          <Reply size={10} /> Answering Question #{(pendingQuestion?.data.number ?? 0) + 1}
         {:else}
           <MessageSquare size={10} /> New Question
         {/if}
@@ -338,10 +338,8 @@ License: CECILL-C
       Complete this question by providing an answer manually or using <strong>VLM</strong>
       .
     {:else}
-      Type a question and press <strong>Post</strong>
-      , or use
-      <strong>VLM</strong>
-       to suggest one.
+      Type a question or use <strong>VLM</strong>
+      to suggest one.
     {/if}
   </p>
 </div>
