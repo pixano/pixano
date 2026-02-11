@@ -1862,7 +1862,9 @@ License: CECILL-C
               config={{
                 id: `masks-${view_name}`,
                 listening:
-                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+                  selectedTool?.type === ToolType.Pan ||
+                  selectedTool?.type === ToolType.Delete ||
+                  selectedTool?.type === ToolType.Polygon,
               }}
             >
               {#if selectedTool?.type === ToolType.Brush}
