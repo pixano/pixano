@@ -13,6 +13,7 @@ License: CECILL-C
 
   export let answer: Message | null;
   export let questionId: string;
+  export let disabled = false;
 
   const answerId = answer?.id ?? null;
   let answerContent = answer?.data.content ?? "";
@@ -28,7 +29,11 @@ License: CECILL-C
 </script>
 
 <AutoResizeTextarea
-  placeholder="Your answer here"
+  placeholder="Type the answer here..."
   bind:value={answerContent}
   on:blur={validateChange}
+  {disabled}
+  class="w-full bg-transparent border-none focus:ring-0 p-0 text-sm text-slate-700 leading-relaxed placeholder:text-slate-300 {disabled
+    ? 'cursor-default'
+    : ''}"
 />

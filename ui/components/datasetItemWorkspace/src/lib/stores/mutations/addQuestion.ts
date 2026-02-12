@@ -27,8 +27,10 @@ export const addQuestion = ({
   const newQuestionNumber =
     messages.length === 0 ? 0 : Math.max(...messages.map((m) => m.data.number)) + 1;
 
+  const { labelFormat, ...questionData } = newQuestionData;
+
   const newQuestion = createNewMessage({
-    ...newQuestionData,
+    ...questionData,
     number: newQuestionNumber,
     entity_ref: { id: parentEntity.id, name: parentEntity.table_info.name },
     view_ref: parentEntity.data.view_ref,
@@ -37,6 +39,10 @@ export const addQuestion = ({
     user: "user",
     inference_metadata: {},
   });
+
+  if (labelFormat) {
+    (newQuestion.ui as Record<string, unknown>).labelFormat = labelFormat;
+  }
 
   annotations.update((prevAnnotations) => [...prevAnnotations, newQuestion]);
 

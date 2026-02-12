@@ -30,6 +30,7 @@ License: CECILL-C
     isNewAnswerEvent,
     isUpdatedMessageEvent,
     type ContentChangeEvent,
+    type DeleteQuestionEvent,
     type GenerateAnswerEvent,
   } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
@@ -55,6 +56,7 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
   import { addQuestion } from "../../lib/stores/mutations/addQuestion";
+  import { deleteQuestion } from "../../lib/stores/mutations/deleteQuestion";
   import { generateAnswer } from "../../lib/stores/mutations/generateAnswer";
   import { updateMessageContent } from "../../lib/stores/mutations/updateMessageContent";
 
@@ -195,6 +197,10 @@ License: CECILL-C
     addQuestion({ newQuestionData: event.detail, parentEntity: conversationEntities[0] });
   };
 
+  const handleDeleteQuestion = (event: CustomEvent<DeleteQuestionEvent>) => {
+    deleteQuestion(event.detail);
+  };
+
   const handleGenerateAnswer = async (event: CustomEvent<GenerateAnswerEvent>) => {
     const { questionId, completionModel } = event.detail;
 
@@ -234,6 +240,7 @@ License: CECILL-C
         on:answerContentChange={handleAnswerContentChange}
         on:storeQuestion={handleStoreQuestion}
         on:generateAnswer={handleGenerateAnswer}
+        on:deleteQuestion={handleDeleteQuestion}
       />
     </div>
     <button

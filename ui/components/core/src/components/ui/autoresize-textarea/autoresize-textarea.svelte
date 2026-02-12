@@ -9,6 +9,7 @@ License: CECILL-C
 
   export let placeholder: string;
   export let value: string;
+  export let disabled = false;
 
   let textarea: HTMLTextAreaElement | null = null;
 
@@ -28,8 +29,10 @@ License: CECILL-C
 
 <textarea
   {placeholder}
-  class="p-2 border rounded-lg border-border outline-none text-foreground focus:border-primary resize-none overflow-hidden"
+  {disabled}
+  class="p-2 border rounded-lg border-border outline-none text-foreground focus:border-primary resize-none overflow-hidden {$$props.class}"
   bind:this={textarea}
   bind:value
   on:blur
+  on:keydown
 />
