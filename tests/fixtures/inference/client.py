@@ -28,13 +28,16 @@ def simple_inference_provider() -> InferenceProvider:
     provider.get_capabilities = AsyncMock()
     provider.get_server_info = AsyncMock(
         return_value=ServerInfo(
-            version="0.1.0",
-            models_loaded=2,
+            app_name="pixano-inference",
+            app_version="0.5.6",
+            app_description="Pixano Inference Server",
+            num_cpus=8,
             num_gpus=1,
-            gpu_info={"gpu_0": "NVIDIA A100"},
+            num_nodes=1,
+            gpus_used=[0],
+            gpu_to_model={"0": "sam2"},
             models=["sam2", "grounding-dino"],
             models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
-            ready=True,
         )
     )
 
@@ -57,13 +60,16 @@ def simple_inference_provider_fn_scope() -> InferenceProvider:
     provider.get_capabilities = AsyncMock()
     provider.get_server_info = AsyncMock(
         return_value=ServerInfo(
-            version="0.1.0",
-            models_loaded=2,
+            app_name="pixano-inference",
+            app_version="0.5.6",
+            app_description="Pixano Inference Server",
+            num_cpus=8,
             num_gpus=1,
-            gpu_info={"gpu_0": "NVIDIA A100"},
+            num_nodes=1,
+            gpus_used=[0],
+            gpu_to_model={"0": "sam2"},
             models=["sam2", "grounding-dino"],
             models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
-            ready=True,
         )
     )
 

@@ -22,22 +22,28 @@ class ServerInfo:
     """Information about the inference server.
 
     Attributes:
-        version: Server version string.
-        models_loaded: Number of models currently loaded.
+        app_name: Application name.
+        app_version: Application version string.
+        app_description: Application description.
+        num_cpus: Number of CPUs available (None if unknown).
         num_gpus: Number of GPUs available.
-        gpu_info: Detailed GPU information.
+        num_nodes: Number of nodes in the cluster.
+        gpus_used: List of GPU indices currently in use.
+        gpu_to_model: Mapping of GPU index to model name.
         models: List of loaded model names.
         models_to_task: Mapping of model names to their tasks.
-        ready: Whether the server is ready to accept requests.
     """
 
-    version: str
-    models_loaded: int
+    app_name: str
+    app_version: str
+    app_description: str
+    num_cpus: int | None
     num_gpus: int
-    gpu_info: dict[str, Any]
+    num_nodes: int
+    gpus_used: list[int]
+    gpu_to_model: dict[str, str]
     models: list[str]
     models_to_task: dict[str, str]
-    ready: bool
 
 
 class InferenceTask(str, Enum):
@@ -85,10 +91,16 @@ class ModelInfo:
     Attributes:
         name: Name of the model.
         task: Task the model can perform.
+        model_path: Path to the model weights (optional).
+        model_class: Class name of the model (optional).
+        provider: Provider backend for the model (optional).
     """
 
     name: str
     task: str
+    model_path: str | None = None
+    model_class: str | None = None
+    provider: str | None = None
 
 
 @dataclass
@@ -218,12 +230,16 @@ class ImageMaskGenerationResult:
         timestamp: When the inference completed.
         processing_time: Time taken in seconds.
         metadata: Additional metadata from the model.
+        id: Unique identifier for the inference request.
+        status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
     data: ImageMaskGenerationOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
+    id: str = ""
+    status: str = "SUCCESS"
 
 
 # --- Video Mask Generation Types ---
@@ -277,6 +293,7 @@ class VideoMaskGenerationResult:
         timestamp: When the inference completed.
         processing_time: Time taken in seconds.
         metadata: Additional metadata from the model.
+        id: Unique identifier for the inference request.
     """
 
     data: VideoMaskGenerationOutput
@@ -284,6 +301,7 @@ class VideoMaskGenerationResult:
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
+    id: str = ""
 
 
 # --- Zero-Shot Detection Types ---
@@ -332,12 +350,16 @@ class ImageZeroShotDetectionResult:
         timestamp: When the inference completed.
         processing_time: Time taken in seconds.
         metadata: Additional metadata from the model.
+        id: Unique identifier for the inference request.
+        status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
     data: ImageZeroShotDetectionOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
+    id: str = ""
+    status: str = "SUCCESS"
 
 
 # --- Text-Image Conditional Generation Types ---
@@ -401,9 +423,13 @@ class TextImageConditionalGenerationResult:
         timestamp: When the inference completed.
         processing_time: Time taken in seconds.
         metadata: Additional metadata from the model.
+        id: Unique identifier for the inference request.
+        status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
     data: TextImageConditionalGenerationOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
+    id: str = ""
+    status: str = "SUCCESS"
