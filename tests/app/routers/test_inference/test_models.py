@@ -63,22 +63,26 @@ def test_get_server_info(app_and_settings_with_client: tuple[FastAPI, Settings, 
     # Set up the mock provider's return value
     provider = settings.inference_providers[settings.default_inference_provider]
     provider.get_server_info.return_value = ServerInfo(
-        version="0.1.0",
-        models_loaded=2,
+        app_name="pixano-inference",
+        app_version="0.5.6",
+        app_description="Pixano Inference Server",
+        num_cpus=8,
         num_gpus=1,
-        gpu_info={"gpu_0": "NVIDIA A100"},
+        num_nodes=1,
+        gpus_used=[0],
+        gpu_to_model={"0": "sam2"},
         models=["sam2", "grounding-dino"],
         models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
-        ready=True,
     )
 
     response = client.get(url)
     assert response.status_code == 200
     result = response.json()
 
-    assert result["version"] == "0.1.0"
-    assert result["models_loaded"] == 2
+    assert result["app_name"] == "pixano-inference"
+    assert result["app_version"] == "0.5.6"
     assert result["num_gpus"] == 1
-    assert result["ready"] is True
+    assert result["num_nodes"] == 1
+    assert result["gpus_used"] == [0]
     assert result["models"] == ["sam2", "grounding-dino"]
     assert result["models_to_task"]["sam2"] == "image_mask_generation"
