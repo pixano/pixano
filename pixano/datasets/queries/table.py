@@ -279,11 +279,12 @@ class TableQueryBuilder:
             db = self._db_connection if self._db_connection is not None else lancedb.connect(self.table._conn.uri)
             count_name = self._order_by[0][1:]
             if count_name in db.table_names():
-                count_table = db.open_table(count_name).search(None).select(["item_ref.id"]).limit(  # noqa: F841
-                    db.open_table(count_name).count_rows()
+                count_tbl = db.open_table(count_name)
+                count_table = count_tbl.search(None).select(["item_ref.id"]).limit(  # noqa: F841
+                    count_tbl.count_rows()
                 ).to_arrow()
                 SQL_WITH = """WITH counts AS(
-                SELECT item_ref['id'] as id, COUNT(*) as tbl_count FROM count_table GROUP BY item_ref['id'])"""
+                SELECT "item_ref.id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_ref.id")"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
             else:
                 self._order_by = []
