@@ -5338,7 +5338,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="ServerInfo(version, models_loaded, num_gpus, gpu_info, models, models_to_task, ready)
+                  <code><a class="autorefs autorefs-internal" title="ServerInfo(app_name, app_version, app_description, num_cpus, num_gpus, num_nodes, gpus_used, gpu_to_model, models, models_to_task)
 
   
       dataclass
@@ -5458,7 +5458,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="ImageMaskGenerationResult(data, timestamp, processing_time, metadata)
+                  <code><a class="autorefs autorefs-internal" title="ImageMaskGenerationResult(data, timestamp, processing_time, metadata, id='', status='SUCCESS')
 
   
       dataclass
@@ -5594,7 +5594,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="ImageZeroShotDetectionResult(data, timestamp, processing_time, metadata)
+                  <code><a class="autorefs autorefs-internal" title="ImageZeroShotDetectionResult(data, timestamp, processing_time, metadata, id='', status='SUCCESS')
 
   
       dataclass
@@ -5849,7 +5849,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="ModelInfo(name, task)
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3.12/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="ModelInfo(name, task, model_path=None, model_class=None, provider=None)
 
   
       dataclass
@@ -5975,7 +5975,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="TextImageConditionalGenerationResult(data, timestamp, processing_time, metadata)
+                  <code><a class="autorefs autorefs-internal" title="TextImageConditionalGenerationResult(data, timestamp, processing_time, metadata, id='', status='SUCCESS')
 
   
       dataclass
@@ -6111,7 +6111,7 @@ backends, allowing Pixano to be agnostic to the specific backend used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="VideoMaskGenerationResult(data, status, timestamp, processing_time, metadata)
+                  <code><a class="autorefs autorefs-internal" title="VideoMaskGenerationResult(data, status, timestamp, processing_time, metadata, id='')
 
   
       dataclass
