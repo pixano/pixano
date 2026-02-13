@@ -7,7 +7,6 @@
 import base64
 import hashlib
 import tempfile
-from io import BytesIO
 from pathlib import Path
 from typing import Annotated
 

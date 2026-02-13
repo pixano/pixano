@@ -551,7 +551,11 @@ class Dataset:
             is_collection = self.schema.relations[SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
-            rows = TableQueryBuilder(table, self._db_connection).where(f"item_ref.id in {sql_ids}").to_pydantic(table_schema)
+            rows = (
+                TableQueryBuilder(table, self._db_connection)
+                .where(f"item_ref.id in {sql_ids}")
+                .to_pydantic(table_schema)
+            )
 
             for row in rows:
                 row.dataset = self
@@ -581,7 +585,12 @@ class Dataset:
         if len(ids) == 0:
             return {}
         table = self.open_table(table_name)
-        ids_found = list(TableQueryBuilder(table, self._db_connection).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
+        ids_found = list(
+            TableQueryBuilder(table, self._db_connection)
+            .select(["id"])
+            .where(f"id in {to_sql_list(ids)}")
+            .to_polars()["id"]
+        )
         return {id: id in ids_found for id in ids}
 
     def get_all_ids(
@@ -740,7 +749,11 @@ class Dataset:
         sql_ids = to_sql_list(set_ids)
 
         ids_found = {
-            row["id"] for row in TableQueryBuilder(table, self._db_connection).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
+            row["id"]
+            for row in TableQueryBuilder(table, self._db_connection)
+            .select(["id"])
+            .where(f"id in {to_sql_list(ids)}")
+            .to_list()
         }
         ids_not_found = [id for id in set_ids if id not in ids_found]
 

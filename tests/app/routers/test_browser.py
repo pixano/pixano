@@ -43,7 +43,7 @@ def test_get_browser(
     assert response.status_code == 200
     browser = DatasetBrowser.model_validate(response.json())
     assert browser.pagination.total_size == 3
-    assert set(row["id"] for row in browser.table_data.rows) == {"0", "2", "4"}
+    assert {row["id"] for row in browser.table_data.rows} == {"0", "2", "4"}
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404

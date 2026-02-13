@@ -223,7 +223,10 @@ class TableQueryBuilder:
 
         if not needs_duckdb:
             # LanceDB native path — pushes predicates to storage layer, avoids full table materialization
-            limit = (self.table.count_rows(self._where) if self._where else self.table.count_rows()) if self._limit is None else self._limit
+            if self._limit is None:
+                limit = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            else:
+                limit = self._limit
             query = self.table.search(None).select(columns).limit(limit)
             if self._where is not None:
                 query = query.where(self._where)
@@ -319,7 +322,7 @@ class TableQueryBuilder:
             if self._offset is not None:
                 SQL_QUERY += f" OFFSET {self._offset}"
 
-            arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
+            arrow_results = duckdb.query(SQL_QUERY).to_arrow_table()
             arrow_results = arrow_results.rename_columns(columns)
             return arrow_results
 

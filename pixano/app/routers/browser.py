@@ -6,6 +6,7 @@
 
 import base64
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -16,7 +17,6 @@ from pixano.app.settings import Settings, get_settings
 from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import SchemaGroup, is_image, is_text, is_view_embedding
 from pixano.features.utils.image import generate_text_image_base64
-from pathlib import Path
 
 from .utils import assert_table_in_group, get_dataset, get_rows
 
@@ -142,7 +142,7 @@ def get_browser(
     # build rows
     rows: list[dict[str, Any]] = []
     for i, item in enumerate(item_rows):
-        row: dict[str, Any] = {}
+        row = {}
         # VIEWS -> thumbnails previews
         for view in tables_view:
             curr_view = item_first_media[view][item.id]
