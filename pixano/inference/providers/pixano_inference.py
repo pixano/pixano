@@ -77,9 +77,7 @@ class PixanoInferenceProvider(HTTPProvider):
                 try:
                     await provider.get("app/settings/")
                 except Exception as e:
-                    raise ProviderConnectionError(
-                        f"Failed to connect to pixano-inference at {url}: {e}"
-                    ) from e
+                    raise ProviderConnectionError(f"Failed to connect to pixano-inference at {url}: {e}") from e
         return provider
 
     async def get_capabilities(self) -> ProviderCapabilities:
