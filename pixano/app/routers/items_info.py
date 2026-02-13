@@ -6,7 +6,7 @@
 
 from typing import Annotated
 
-import pandas as pd
+import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models import ItemInfoModel, ItemModel
@@ -77,11 +77,14 @@ def get_items_info(
         group_name = dataset.schema.get_table_group(table_name).value
         if group_name in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
             continue
-        df: pd.DataFrame = (
-            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_pandas()
+        arrow_table = (  # noqa: F841
+            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_arrow()
         )
-        for id, count in df["item_ref.id"].value_counts().to_dict().items():
-            infos[id][group_name][table_name] = {"count": count}
+        counts = duckdb.query(
+            'SELECT "item_ref.id" AS item_id, COUNT(*) AS cnt FROM arrow_table GROUP BY "item_ref.id"'
+        ).fetchall()
+        for item_id, count in counts:
+            infos[item_id][group_name][table_name] = {"count": count}
 
     items_info = [ItemInfoModel(info=info, **item_models_identified[id].model_dump()) for id, info in infos.items()]
 

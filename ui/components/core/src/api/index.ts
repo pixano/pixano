@@ -10,6 +10,7 @@ export * from "./deleteSchemasByIds";
 export * from "./getBrowser";
 export * from "./getDataset";
 export * from "./getDatasetItem";
+export * from "./getDatasetStats";
 export * from "./getDatasetItemsIds";
 export * from "./getDatasetsInfo";
 export * from "./getItemsInfo";

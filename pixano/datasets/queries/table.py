@@ -223,7 +223,7 @@ class TableQueryBuilder:
 
         if not needs_duckdb:
             # LanceDB native path — pushes predicates to storage layer, avoids full table materialization
-            limit = self.table.count_rows() if self._limit is None else self._limit
+            limit = (self.table.count_rows(self._where) if self._where else self.table.count_rows()) if self._limit is None else self._limit
             query = self.table.search(None).select(columns).limit(limit)
             if self._where is not None:
                 query = query.where(self._where)
@@ -274,19 +274,26 @@ class TableQueryBuilder:
                 arrow_results = arrow_results.rename_columns(columns)
                 return arrow_results
         else:
-            # Count-join path — needs full to_arrow() for the JOIN with count table
-            count_table = None
+            # Count-join path — fetch only needed columns via LanceDB native, then JOIN with count table in DuckDB
+            count_table = None  # noqa: F841
             db = self._db_connection if self._db_connection is not None else lancedb.connect(self.table._conn.uri)
             count_name = self._order_by[0][1:]
             if count_name in db.table_names():
-                count_table = db.open_table(count_name).to_arrow()
+                count_table = db.open_table(count_name).search(None).select(["item_ref.id"]).limit(  # noqa: F841
+                    db.open_table(count_name).count_rows()
+                ).to_arrow()
                 SQL_WITH = """WITH counts AS(
-                SELECT item_ref.id as id, COUNT(*) as tbl_count FROM count_table GROUP BY item_ref.id)"""
+                SELECT item_ref['id'] as id, COUNT(*) as tbl_count FROM count_table GROUP BY item_ref['id'])"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
             else:
                 self._order_by = []
 
-            arrow_table = self.table.to_arrow()  # noqa: F841
+            # Fetch only needed columns from the item table, respecting WHERE filter
+            total = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            query = self.table.search(None).select(columns).limit(total)
+            if self._where is not None:
+                query = query.where(self._where)
+            arrow_table = query.to_arrow()  # noqa: F841
 
             def duckdb_format_column(column):
                 if "." in column:
@@ -300,8 +307,7 @@ class TableQueryBuilder:
             SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
             if count_table is not None:
                 SQL_QUERY = SQL_WITH + " " + SQL_QUERY + " LEFT JOIN counts c ON arrow_table.id = c.id"
-            if self._where is not None:
-                SQL_QUERY += f" WHERE {self._where}"
+            # WHERE already applied via LanceDB native filter above
             if self._order_by != []:
                 SQL_QUERY += " ORDER BY "
                 SQL_QUERY += ", ".join(
@@ -315,6 +321,14 @@ class TableQueryBuilder:
             arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
             arrow_results = arrow_results.rename_columns(columns)
             return arrow_results
+
+    def to_arrow(self) -> pa.Table:
+        """Builds the query and returns the result as a PyArrow Table.
+
+        Returns:
+            The result as a PyArrow Table.
+        """
+        return self._execute()
 
     def to_pandas(self) -> pd.DataFrame:
         """Builds the query and returns the result as a pandas DataFrame.

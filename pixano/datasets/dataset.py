@@ -1005,7 +1005,7 @@ class Dataset:
 
         table = self.open_table(table_name)
         semantic_results: pl.DataFrame = (
-            table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+            table.search(query).select(["item_ref.id"]).limit(table.count_rows()).to_polars()
         )  # TODO: change high limit if lancedb supports it
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
         full_item_ids = item_results["item_ref.id"].to_list()

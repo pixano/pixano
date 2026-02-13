@@ -14,6 +14,7 @@ from pixano.app.models.dataset_info import DatasetInfoModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import DatasetInfo
 from pixano.datasets.utils.errors import DatasetAccessError
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import get_dataset as get_dataset_utils
 
@@ -74,6 +75,39 @@ def get_dataset_info(
         )
 
     return DatasetInfoModel.from_dataset_info(info, path)
+
+
+@router.get("/{id}/stats", response_model=dict[str, dict[str, int]])
+def get_dataset_stats(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, dict[str, int]]:
+    """Get aggregate row counts per table, grouped by schema group.
+
+    This is a lightweight endpoint that only calls count_rows() per table,
+    avoiding any item-level data materialization.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        Dict of group_name -> {table_name: count}.
+    """
+    dataset = get_dataset_utils(id, settings.library_dir, settings.media_dir)
+    result: dict[str, dict[str, int]] = {}
+    for group, tables in dataset.schema.groups.items():
+        if group.value == SchemaGroup.ITEM.value:
+            continue
+        group_counts: dict[str, int] = {}
+        for table_name in tables:
+            try:
+                group_counts[table_name] = dataset.open_table(table_name).count_rows()
+            except Exception:
+                group_counts[table_name] = 0
+        if group_counts:
+            result[group.value] = group_counts
+    return result
 
 
 @router.get("/{id}", response_model=DatasetModel)

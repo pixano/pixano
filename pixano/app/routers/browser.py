@@ -23,24 +23,19 @@ from .utils import assert_table_in_group, get_dataset, get_rows
 
 router = APIRouter(prefix="/browser", tags=["Browser"])
 
-# In-memory cache of known media file paths to avoid repeated os.path.exists() syscalls
-_media_file_cache: dict[str, set[str]] = {}  # keyed by media_dir
+# Lazily-populated per-path cache: keyed by media_dir, maps relative_url → exists bool
+_media_file_cache: dict[str, dict[str, bool]] = {}
 
 
 def _media_file_exists(media_dir: Path, relative_url: str) -> bool:
-    """Check if a media file exists, using a lazily-populated in-memory cache."""
+    """Check if a media file exists, using a lazily-populated per-path cache."""
     cache_key = str(media_dir)
     if cache_key not in _media_file_cache:
-        # Populate cache on first access for this media dir
-        _media_file_cache[cache_key] = set()
-        if media_dir.exists():
-            for p in media_dir.rglob("*"):
-                if p.is_file():
-                    try:
-                        _media_file_cache[cache_key].add(str(p.relative_to(media_dir)))
-                    except ValueError:
-                        pass
-    return relative_url in _media_file_cache[cache_key]
+        _media_file_cache[cache_key] = {}
+    path_cache = _media_file_cache[cache_key]
+    if relative_url not in path_cache:
+        path_cache[relative_url] = (media_dir / relative_url).is_file()
+    return path_cache[relative_url]
 
 
 @router.get("/{id}", response_model=DatasetBrowser)

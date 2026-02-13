@@ -52,28 +52,17 @@ License: CECILL-C
 
   onMount(() => {
     api
-      .getItemsInfo(dataset.id, null, { signal: controller.signal })
-      .then((infos) => {
+      .getDatasetStats(dataset.id, { signal: controller.signal })
+      .then((groupStats) => {
         if (controller.signal.aborted) return;
-        let maxNumViews = 0;
-        let entitiesCounts = 0;
-        let annCounts: Record<string, number> = {};
-        for (const info of infos) {
-          maxNumViews = Math.max(maxNumViews, Object.keys(info.info.views).length);
-          if ("info" in info && "entities" in info.info) {
-            for (const ent of Object.values(info.info.entities)) {
-              entitiesCounts += ent.count;
-            }
-          }
-          for (const [annType, c] of Object.entries(info.info.annotations)) {
-            if (!(annType in annCounts)) annCounts[annType] = 0;
-            annCounts[annType] += c.count;
-          }
-        }
+        const viewTables = groupStats["views"] || {};
+        const entityTables = groupStats["entities"] || {};
+        const annTables = groupStats["annotations"] || {};
+
         stats = {
-          maxViews: maxNumViews,
-          entities: entitiesCounts,
-          annotations: annCounts,
+          maxViews: Object.keys(viewTables).length,
+          entities: Object.values(entityTables).reduce((a, b) => a + b, 0),
+          annotations: annTables,
         };
       })
       .catch((err) => {
