@@ -16,7 +16,7 @@ router = APIRouter(prefix="/models", tags=["Models"])
 
 
 @router.get("", response_model=list[str])
-async def get_models(
+def get_models(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[str]:
     """Get all models in the models directory with the extension `.onnx`.
@@ -34,7 +34,7 @@ async def get_models(
 
 
 @router.get("/{model_name}", response_class=FileResponse)
-async def get_model(
+def get_model(
     model_name: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> FileResponse:

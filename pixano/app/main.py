@@ -6,8 +6,10 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from s3path import S3Path
+from starlette.middleware.gzip import GZipMiddleware
 
 from pixano.app.routers.annotations import router as annotations_router
 from pixano.app.routers.browser import router as browser_router
@@ -35,7 +37,8 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI()
+    app = FastAPI(default_response_class=ORJSONResponse)
+    app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

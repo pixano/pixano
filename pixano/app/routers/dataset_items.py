@@ -19,7 +19,7 @@ router = APIRouter(prefix="/dataset_items", tags=["Dataset Items"])
 
 
 @router.get("/{dataset_id}", response_model=list[DatasetItemModel])
-async def get_dataset_items(
+def get_dataset_items(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
@@ -53,7 +53,7 @@ async def get_dataset_items(
 
 
 @router.get("/{dataset_id}/{id}", response_model=DatasetItemModel)
-async def get_dataset_item(
+def get_dataset_item(
     dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> DatasetItemModel:
     """Get dataset item from a dataset.
@@ -66,11 +66,11 @@ async def get_dataset_item(
     Returns:
         The dataset item.
     """
-    return (await get_dataset_items(dataset_id, settings, ids=[id]))[0]
+    return get_dataset_items(dataset_id, settings, ids=[id])[0]
 
 
 @router.post("/{dataset_id}", response_model=list[DatasetItemModel])
-async def create_dataset_items(
+def create_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -95,7 +95,7 @@ async def create_dataset_items(
 
 
 @router.post("/{dataset_id}/{id}", response_model=DatasetItemModel)
-async def create_dataset_item(
+def create_dataset_item(
     dataset_id: str,
     id: str,
     dataset_item: DatasetItemModel,
@@ -115,11 +115,11 @@ async def create_dataset_item(
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
 
-    return (await create_dataset_items(dataset_id, [dataset_item], settings))[0]
+    return create_dataset_items(dataset_id, [dataset_item], settings)[0]
 
 
 @router.put("/{dataset_id}", response_model=list[DatasetItemModel])
-async def update_dataset_items(
+def update_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -144,7 +144,7 @@ async def update_dataset_items(
 
 
 @router.put("/{dataset_id}/{id}", response_model=DatasetItemModel)
-async def update_dataset_item(
+def update_dataset_item(
     dataset_id: str,
     id: str,
     dataset_item: DatasetItemModel,
@@ -164,11 +164,11 @@ async def update_dataset_item(
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
 
-    return (await update_dataset_items(dataset_id, [dataset_item], settings))[0]
+    return update_dataset_items(dataset_id, [dataset_item], settings)[0]
 
 
 @router.delete("/{dataset_id}")
-async def delete_dataset_items(
+def delete_dataset_items(
     dataset_id: str,
     ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -187,7 +187,7 @@ async def delete_dataset_items(
 
 
 @router.delete("/{dataset_id}/{id}")
-async def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
+def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete a dataset item from a dataset.
 
     Args:
@@ -195,4 +195,4 @@ async def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Sett
         id: ID of the dataset item to delete.
         settings: App settings.
     """
-    return await delete_dataset_items(dataset_id, ids=[id], settings=settings)
+    return delete_dataset_items(dataset_id, ids=[id], settings=settings)

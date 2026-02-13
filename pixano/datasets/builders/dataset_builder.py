@@ -226,10 +226,7 @@ class DatasetBuilder(ABC):
             table_name: The name of the table to compact.
         """
         table = self.db.open_table(table_name)
-        table.compact_files(
-            target_rows_per_fragment=1048576, max_rows_per_group=1024, materialize_deletions=False, num_threads=None
-        )
-        table.cleanup_old_versions(older_than=timedelta(days=0), delete_unverified=True)
+        table.optimize(cleanup_older_than=timedelta(days=0), delete_unverified=True)
 
     def compact_dataset(self) -> None:
         """Compact the dataset by calling `compact_table` for each table in the database."""

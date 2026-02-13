@@ -42,7 +42,8 @@ def test_get_browser(
     response = client.get(f"/browser/{info_dataset_image_bboxes_keypoint.id}?limit=50&skip=0&where=split=%27test%27")
     assert response.status_code == 200
     browser = DatasetBrowser.model_validate(response.json())
-    assert browser.item_ids == ["0", "2", "4"]
+    assert browser.pagination.total_size == 3
+    assert set(row["id"] for row in browser.table_data.rows) == {"0", "2", "4"}
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
@@ -103,7 +104,6 @@ def test_get_browser_semantic_search(
 def test_get_item_ids(
     app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     info_dataset_image_bboxes_keypoint: DatasetInfo,
-    browser_dataset_image_bboxes_keypoint: DatasetBrowser,
 ):
     app, settings, client = app_and_settings_with_client
 
@@ -111,4 +111,4 @@ def test_get_item_ids(
 
     response = client.get(f"/browser/item_ids/{info_dataset_image_bboxes_keypoint.id}")
     assert response.status_code == 200
-    assert browser_dataset_image_bboxes_keypoint.item_ids == response.json()
+    assert set(response.json()) == {"0", "1", "2", "3", "4"}

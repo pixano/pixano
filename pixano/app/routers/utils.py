@@ -24,11 +24,14 @@ from pixano.utils import get_super_type_from_dict
 
 T = TypeVar("T", bound=BaseSchemaModel)
 
+_dataset_cache: dict[str, Dataset] = {}
+
 
 def get_dataset(dataset_id: str, dir: Path, media_dir: Path | None = None) -> Dataset:
     """Get a dataset.
 
     If the dataset is not found, raise a 404 error.
+    Results are cached to avoid re-scanning directories and re-connecting to LanceDB on every request.
 
     Args:
         dataset_id: Dataset ID.
@@ -38,6 +41,9 @@ def get_dataset(dataset_id: str, dir: Path, media_dir: Path | None = None) -> Da
     Returns:
         The dataset.
     """
+    cache_key = f"{dataset_id}:{dir}:{media_dir}"
+    if cache_key in _dataset_cache:
+        return _dataset_cache[cache_key]
     try:
         dataset = Dataset.find(dataset_id, dir, media_dir)
     except FileNotFoundError:
@@ -45,6 +51,7 @@ def get_dataset(dataset_id: str, dir: Path, media_dir: Path | None = None) -> Da
             status_code=404,
             detail=f"Dataset {dataset_id} not found in {dir.absolute()}.",
         )
+    _dataset_cache[cache_key] = dataset
     return dataset
 
 
@@ -309,7 +316,7 @@ def create_rows(
     return created_rows
 
 
-async def get_rows_handler(
+def get_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
@@ -346,7 +353,7 @@ async def get_rows_handler(
     return models
 
 
-async def get_row_handler(
+def get_row_handler(
     dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings
 ) -> BaseSchemaModel:
     """Get a row model.
@@ -361,10 +368,10 @@ async def get_row_handler(
     Returns:
         The model.
     """
-    return (await get_rows_handler(dataset_id, group, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
+    return get_rows_handler(dataset_id, group, table, settings, ids=[id], item_ids=None, limit=None, skip=0)[0]
 
 
-async def create_rows_handler(
+def create_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
@@ -391,7 +398,7 @@ async def create_rows_handler(
     return rows_models
 
 
-async def create_row_handler(
+def create_row_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
@@ -414,12 +421,10 @@ async def create_row_handler(
     """
     if id != row.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await create_rows_handler(dataset_id=dataset_id, group=group, table=table, rows=[row], settings=settings))[
-        0
-    ]
+    return create_rows_handler(dataset_id=dataset_id, group=group, table=table, rows=[row], settings=settings)[0]
 
 
-async def update_row_handler(
+def update_row_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
@@ -442,12 +447,10 @@ async def update_row_handler(
     """
     if id != row.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await update_rows_handler(dataset_id=dataset_id, group=group, table=table, rows=[row], settings=settings))[
-        0
-    ]
+    return update_rows_handler(dataset_id=dataset_id, group=group, table=table, rows=[row], settings=settings)[0]
 
 
-async def update_rows_handler(
+def update_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
@@ -474,7 +477,7 @@ async def update_rows_handler(
     return row_models
 
 
-async def delete_row_handler(dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings) -> None:
+def delete_row_handler(dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings) -> None:
     """Delete a row from a table.
 
     Args:
@@ -484,10 +487,10 @@ async def delete_row_handler(dataset_id: str, group: SchemaGroup, table: str, id
         id: ID of the row to delete.
         settings: App settings.
     """
-    return await delete_rows_handler(dataset_id, group, table, ids=[id], settings=settings)
+    return delete_rows_handler(dataset_id, group, table, ids=[id], settings=settings)
 
 
-async def delete_rows_handler(
+def delete_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,

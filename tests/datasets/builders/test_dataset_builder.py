@@ -50,7 +50,7 @@ class TestDatasetBuilder:
             assert key1 == key2
             assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
+        assert builder.db.uri == str(Path(target_dir) / Dataset._DB_PATH)
 
     @pytest.mark.parametrize(
         "target_dir",
@@ -79,22 +79,26 @@ class TestDatasetBuilder:
             assert key1 == key2
             assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
+        assert builder.db.uri == str(Path(target_dir) / Dataset._DB_PATH)
 
     def test_add_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
-        source_table = dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
+        dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
 
         id = dataset_builder_image_bboxes_keypoint.add_source("source", "model", {"model_id": "model_0"})
         assert len(id) == 22
         id = dataset_builder_image_bboxes_keypoint.add_source("source_2", SourceKind.OTHER, {}, "my_id")
         assert id == "my_id"
 
+        # Re-open to get latest version (LanceDB table handles are version-pinned)
+        source_table = dataset_builder_image_bboxes_keypoint.db.open_table("source")
         assert source_table.count_rows() == 2
 
     def test_add_ground_truth_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
-        source_table = dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
+        dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
         id = dataset_builder_image_bboxes_keypoint.add_ground_truth_source({"model_id": "model_0"})
         assert id == "ground_truth"
+        # Re-open to get latest version (LanceDB table handles are version-pinned)
+        source_table = dataset_builder_image_bboxes_keypoint.db.open_table("source")
         assert source_table.count_rows() == 1
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
@@ -146,7 +150,7 @@ class TestDatasetBuilder:
                 raise ValueError("Invalid flush_every_n_samples value, update test")
 
         if mode == "create":
-            with pytest.raises(OSError, match="Dataset already exists"):
+            with pytest.raises((OSError, ValueError), match="already exists"):
                 dataset_builder_image_bboxes_keypoint.build(
                     flush_every_n_samples=flush_every_n_samples,
                     compact_every_n_transactions=compact_every_n_transactions,
@@ -239,7 +243,7 @@ class TestDatasetBuilder:
                 raise ValueError("Invalid flush_every_n_samples value, update test")
 
         if mode == "create":
-            with pytest.raises(OSError, match="Dataset already exists"):
+            with pytest.raises((OSError, ValueError), match="already exists"):
                 dataset_builder_vqa.build(
                     flush_every_n_samples=flush_every_n_samples,
                     compact_every_n_transactions=compact_every_n_transactions,

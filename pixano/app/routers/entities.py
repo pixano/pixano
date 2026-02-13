@@ -28,7 +28,7 @@ router = APIRouter(prefix="/entities", tags=["Entitys"])
 
 
 @router.get("/{dataset_id}/{table}", response_model=list[EntityModel])
-async def get_entities(
+def get_entities(
     dataset_id: str,
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -55,7 +55,7 @@ async def get_entities(
     Returns:
         List of views.
     """
-    return await get_rows_handler(
+    return get_rows_handler(
         dataset_id=dataset_id,
         group=SchemaGroup.ENTITY,
         table=table,
@@ -69,7 +69,7 @@ async def get_entities(
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel)
-async def get_entity(
+def get_entity(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> EntityModel:
     """Get an entity from a table of a dataset.
@@ -83,11 +83,11 @@ async def get_entity(
     Returns:
         The entity.
     """
-    return await get_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
+    return get_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}", response_model=list[EntityModel])
-async def create_entities(
+def create_entities(
     dataset_id: str,
     table: str,
     entities: list[EntityModel],
@@ -104,11 +104,11 @@ async def create_entities(
     Returns:
         List of entities added.
     """
-    return await create_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
+    return create_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=EntityModel)
-async def create_entity(
+def create_entity(
     dataset_id: str,
     table: str,
     id: str,
@@ -127,11 +127,11 @@ async def create_entity(
     Returns:
         The entity added.
     """
-    return await create_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
+    return create_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=EntityModel)
-async def update_entity(
+def update_entity(
     dataset_id: str,
     table: str,
     id: str,
@@ -150,11 +150,11 @@ async def update_entity(
     Returns:
         The entity updated.
     """
-    return await update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
+    return update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
 @router.put("/{dataset_id}/{table}", response_model=list[EntityModel])
-async def update_entities(
+def update_entities(
     dataset_id: str,
     table: str,
     entities: list[EntityModel],
@@ -171,11 +171,11 @@ async def update_entities(
     Returns:
         List of entities updated.
     """
-    return await update_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
+    return update_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
-async def delete_entity(
+def delete_entity(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
     """Delete an entity from a table of a dataset.
@@ -186,11 +186,11 @@ async def delete_entity(
         id: ID of the entity to delete.
         settings: App settings.
     """
-    return await delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
+    return delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}")
-async def delete_entities(
+def delete_entities(
     dataset_id: str,
     table: str,
     ids: Annotated[list[str], Query()],
@@ -204,4 +204,4 @@ async def delete_entities(
         ids: IDs of the entities to delete.
         settings: App settings.
     """
-    return await delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)
+    return delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)

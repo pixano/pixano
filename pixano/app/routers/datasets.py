@@ -22,7 +22,7 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
 @router.get("/info", response_model=list[DatasetInfoModel])
-async def get_datasets_info(
+def get_datasets_info(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetInfoModel]:
     """Load a list of dataset information.
@@ -52,7 +52,7 @@ async def get_datasets_info(
 
 
 @router.get("/info/{id}", response_model=DatasetInfoModel)
-async def get_dataset_info(
+def get_dataset_info(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetInfoModel:
@@ -77,7 +77,7 @@ async def get_dataset_info(
 
 
 @router.get("/{id}", response_model=DatasetModel)
-async def get_dataset(
+def get_dataset(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetModel:
@@ -94,7 +94,7 @@ async def get_dataset(
 
 
 @router.get("/{id}/{table}/count", response_model=int)
-async def get_table_count(
+def get_table_count(
     id: str,
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],

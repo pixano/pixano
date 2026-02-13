@@ -135,7 +135,6 @@ class DatasetBrowser(BaseModel):
         table_data: table data
         pagination: pagination infos
         semantic_search: list of semantic search available models
-        item_ids: full list of item ids returned
     """
 
     id: str
@@ -143,4 +142,3 @@ class DatasetBrowser(BaseModel):
     table_data: TableData
     pagination: PaginationInfo
     semantic_search: list[str]
-    item_ids: list[str]

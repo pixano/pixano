@@ -10,5 +10,5 @@ License: CECILL-C
 </script>
 
 <div class="mx-4 h-16 aspect-square">
-  <img class="h-full w-full object-cover rounded-lg" src={value} alt={value} />
+  <img class="h-full w-full object-cover rounded-lg" src={value} alt={value} loading="lazy" />
 </div>

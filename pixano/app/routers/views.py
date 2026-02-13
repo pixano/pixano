@@ -28,7 +28,7 @@ router = APIRouter(prefix="/views", tags=["Views"])
 
 
 @router.get("/{dataset_id}/{table}", response_model=list[ViewModel])
-async def get_views(
+def get_views(
     dataset_id: str,
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -55,7 +55,7 @@ async def get_views(
     Returns:
         List of views.
     """
-    return await get_rows_handler(
+    return get_rows_handler(
         dataset_id=dataset_id,
         group=SchemaGroup.VIEW,
         table=table,
@@ -69,7 +69,7 @@ async def get_views(
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel)
-async def get_view(
+def get_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> ViewModel:
     """Get a view from a table of a dataset.
@@ -83,11 +83,11 @@ async def get_view(
     Returns:
         The view.
     """
-    return await get_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
+    return get_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}", response_model=list[ViewModel])
-async def create_views(
+def create_views(
     dataset_id: str,
     table: str,
     views: list[ViewModel],
@@ -104,11 +104,11 @@ async def create_views(
     Returns:
         List of views added.
     """
-    return await create_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
+    return create_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=ViewModel)
-async def create_view(
+def create_view(
     dataset_id: str,
     table: str,
     id: str,
@@ -127,11 +127,11 @@ async def create_view(
     Returns:
         The view added.
     """
-    return await create_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
+    return create_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=ViewModel)
-async def update_view(
+def update_view(
     dataset_id: str,
     table: str,
     id: str,
@@ -150,11 +150,11 @@ async def update_view(
     Returns:
         The view updated.
     """
-    return await update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
+    return update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
 @router.put("/{dataset_id}/{table}", response_model=list[ViewModel])
-async def update_views(
+def update_views(
     dataset_id: str,
     table: str,
     views: list[ViewModel],
@@ -171,11 +171,11 @@ async def update_views(
     Returns:
         List of views updated.
     """
-    return await update_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
+    return update_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
-async def delete_view(
+def delete_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
     """Delete an view from a table of a dataset.
@@ -186,11 +186,11 @@ async def delete_view(
         id: ID of the view to delete.
         settings: App settings.
     """
-    return await delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
+    return delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}")
-async def delete_views(
+def delete_views(
     dataset_id: str,
     table: str,
     ids: Annotated[list[str], Query()],
@@ -204,4 +204,4 @@ async def delete_views(
         ids: IDs of the views to delete.
         settings: App settings.
     """
-    return await delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)
+    return delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)
