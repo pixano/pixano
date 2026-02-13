@@ -213,9 +213,7 @@ class TableQueryBuilder:
 
         # Check if we have a count-join ORDER BY (the #table_name case)
         has_count_join = (
-            len(self._order_by) == 1
-            and self._order_by[0] not in columns
-            and self._order_by[0].startswith("#")
+            len(self._order_by) == 1 and self._order_by[0] not in columns and self._order_by[0].startswith("#")
         )
 
         # Determine if we need the DuckDB path
@@ -260,9 +258,7 @@ class TableQueryBuilder:
                         return f"{struct}['{prop}']"
                     return column
 
-                formatted_columns = [
-                    "arrow_table." + duckdb_format_column(col) for col in columns
-                ]
+                formatted_columns = ["arrow_table." + duckdb_format_column(col) for col in columns]
                 SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
                 SQL_QUERY += " ORDER BY "
                 SQL_QUERY += ", ".join(
@@ -283,9 +279,14 @@ class TableQueryBuilder:
             count_name = self._order_by[0][1:]
             if count_name in db.table_names():
                 count_tbl = db.open_table(count_name)
-                count_table = count_tbl.search(None).select(["item_ref.id"]).limit(  # noqa: F841
-                    count_tbl.count_rows()
-                ).to_arrow()
+                count_table = (
+                    count_tbl.search(None)
+                    .select(["item_ref.id"])
+                    .limit(  # noqa: F841
+                        count_tbl.count_rows()
+                    )
+                    .to_arrow()
+                )
                 SQL_WITH = """WITH counts AS(
                 SELECT "item_ref.id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_ref.id")"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
@@ -305,9 +306,7 @@ class TableQueryBuilder:
                     return f"{struct}['{prop}']"
                 return column
 
-            formatted_columns = [
-                "arrow_table." + duckdb_format_column(col) for col in columns
-            ]
+            formatted_columns = ["arrow_table." + duckdb_format_column(col) for col in columns]
             SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
             if count_table is not None:
                 SQL_QUERY = SQL_WITH + " " + SQL_QUERY + " LEFT JOIN counts c ON arrow_table.id = c.id"

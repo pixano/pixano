@@ -353,9 +353,7 @@ def get_rows_handler(
     return models
 
 
-def get_row_handler(
-    dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings
-) -> BaseSchemaModel:
+def get_row_handler(dataset_id: str, group: SchemaGroup, table: str, id: str, settings: Settings) -> BaseSchemaModel:
     """Get a row model.
 
     Args:

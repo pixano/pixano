@@ -69,9 +69,7 @@ def get_views(
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel)
-def get_view(
-    dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
-) -> ViewModel:
+def get_view(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ViewModel:
     """Get a view from a table of a dataset.
 
     Args:
@@ -175,9 +173,7 @@ def update_views(
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
-def delete_view(
-    dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
-) -> None:
+def delete_view(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete an view from a table of a dataset.
 
     Args:

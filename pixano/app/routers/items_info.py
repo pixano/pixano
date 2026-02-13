@@ -92,9 +92,7 @@ def get_items_info(
 
 
 @router.get("/{dataset_id}/{id}", response_model=ItemInfoModel)
-def get_item_info(
-    dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
-) -> ItemInfoModel:
+def get_item_info(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemInfoModel:
     """Get an item info.
 
     Args:

@@ -175,9 +175,7 @@ def update_entities(
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
-def delete_entity(
-    dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
-) -> None:
+def delete_entity(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete an entity from a table of a dataset.
 
     Args:
