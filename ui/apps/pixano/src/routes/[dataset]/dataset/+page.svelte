@@ -17,7 +17,7 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
-  import { datasetItemIds, datasetTableStore } from "$lib/stores/datasetStores";
+  import { datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDataset: DatasetBrowser;
   let showNoRowModal = false;
@@ -72,17 +72,17 @@ License: CECILL-C
         )
           .then((datasetItems) => {
             if (datasetItems.id) {
+              // Show browser data immediately without waiting for counts
+              selectedDataset = datasetItems;
+
+              // Then load counts asynchronously and update
               getCounts(datasetItems.id, datasetItems.table_data)
                 .then((table_counts) => {
                   datasetItems.table_data = table_counts;
+                  selectedDataset = datasetItems;
                 })
                 .catch((err) => {
                   console.warn("Could not get computed items infos", err);
-                })
-                .finally(() => {
-                  datasetItems.pagination.total_size = datasetItems.item_ids.length;
-                  selectedDataset = datasetItems;
-                  datasetItemIds.set(selectedDataset.item_ids);
                 });
             } else {
               showNoRowModal = true;

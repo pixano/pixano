@@ -120,13 +120,20 @@ License: CECILL-C
     return frontFV;
   };
 
+  let datasetSchemaLoaded = false;
+
+  const ensureDatasetSchema = async (dataset: DatasetInfo) => {
+    if (datasetSchemaLoaded) return;
+    const ds = await api.getDataset(dataset.id);
+    datasetSchema.set(ds.dataset_schema);
+    featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
+    datasetSchemaLoaded = true;
+  };
+
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
-    api
-      .getDataset(dataset.id)
-      .then((ds) => {
-        datasetSchema.set(ds.dataset_schema);
-        featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
+    ensureDatasetSchema(dataset)
+      .then(() => {
         api
           .getDatasetItem(dataset.id, encodeURIComponent(id))
           .then((item) => {

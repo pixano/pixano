@@ -6,6 +6,8 @@ License: CECILL-C
 
 import { DatasetBrowser, type DatasetBrowserType } from "../lib/types";
 
+let currentAbortController: AbortController | null = null;
+
 export async function getBrowser(
   datasetId: string,
   page: number = 1,
@@ -14,6 +16,13 @@ export async function getBrowser(
   where: string | undefined,
   sort: { col: string; order: string } | undefined,
 ): Promise<DatasetBrowser> {
+  // Cancel any previous in-flight request
+  if (currentAbortController) {
+    currentAbortController.abort();
+  }
+  currentAbortController = new AbortController();
+  const signal = currentAbortController.signal;
+
   let datasetItems: DatasetBrowser;
   let datasetItems_raw: DatasetBrowserType;
 
@@ -32,6 +41,7 @@ export async function getBrowser(
   try {
     const response = await fetch(
       `/browser/${datasetId}?skip=${(page - 1) * size}&limit=${size}${query_qparams}${where_qparams}${sort_qparams}`,
+      { signal },
     );
     if (response.ok) {
       datasetItems_raw = (await response.json()) as DatasetBrowserType;
@@ -41,6 +51,10 @@ export async function getBrowser(
       console.log("api.getBrowser -", response.status, response.statusText, await response.text());
     }
   } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      // Request was cancelled by a newer request — return empty
+      return {} as DatasetBrowser;
+    }
     datasetItems = {} as DatasetBrowser;
     console.log("api.getBrowser -", e);
   }

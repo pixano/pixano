@@ -25,7 +25,7 @@ class _PixanoEmptyQueryBuilder(LanceEmptyQueryBuilder):
     def __init__(self, arrow_table):
         self._arrow_table = arrow_table
 
-    def to_arrow(self) -> pa.Table:
+    def to_arrow(self, **kwargs) -> pa.Table:
         return self._arrow_table
 
 
@@ -46,16 +46,19 @@ class TableQueryBuilder:
         table: The LanceTable to query.
     """
 
-    def __init__(self, table: LanceTable):
+    def __init__(self, table: LanceTable, db_connection: lancedb.DBConnection | None = None):
         """Initializes the TableQueryBuilder.
 
         Args:
             table: The LanceTable to query.
+            db_connection: Optional LanceDB connection. Used for count-join queries
+                instead of accessing table._conn (private attribute).
         """
         if not isinstance(table, LanceTable):
             raise ValueError("table must be a LanceTable.")
 
         self.table: LanceTable = table
+        self._db_connection: lancedb.DBConnection | None = db_connection
         self._columns: list[str] | dict[str, str] | None = None
         self._where: str | None = None
         self._limit: int | None = None
@@ -205,70 +208,130 @@ class TableQueryBuilder:
         else:
             columns = self._columns
 
-        # #### DISABLED ######
-        # If order_by
-        #   build the query directly using DuckDB
-        # Else
-        #   build the query using Lance
-        # This is because Lance does not support order_by
-        # Also DuckDB is less memory efficient than Lance
-        # ###################
-
         # protection against not allowed columns
         self._order_by = [order for order in self._order_by if order.split(".")[0] in columns or order.startswith("#")]
 
-        # if order_by is a count computed column, we need a join on local count table
-        count_table = None
-        if len(self._order_by) == 1 and self._order_by[0] not in columns and self._order_by[0].startswith("#"):
-            # get lancedb connection, to check if #column is an existing table
-            db = lancedb.connect(self.table._conn.uri)
+        # Check if we have a count-join ORDER BY (the #table_name case)
+        has_count_join = (
+            len(self._order_by) == 1 and self._order_by[0] not in columns and self._order_by[0].startswith("#")
+        )
+
+        # Determine if we need the DuckDB path
+        needs_duckdb = len(self._order_by) > 0 or (self._offset is not None and self._offset > 0)
+
+        if not needs_duckdb:
+            # LanceDB native path — pushes predicates to storage layer, avoids full table materialization
+            if self._limit is None:
+                limit = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            else:
+                limit = self._limit
+            query = self.table.search(None).select(columns).limit(limit)
+            if self._where is not None:
+                query = query.where(self._where)
+            return query.to_arrow()
+        elif not has_count_join:
+            # Optimized path: avoid full table.to_arrow() by fetching bounded set from LanceDB
+            # then sorting/slicing with DuckDB over only that subset
+            offset = self._offset or 0
+            limit = self._limit
+
+            if len(self._order_by) == 0:
+                # No ORDER BY, just OFFSET — use LanceDB native with overfetch + slice
+                fetch_limit = offset + limit if limit is not None else self.table.count_rows()
+                query = self.table.search(None).select(columns).limit(fetch_limit)
+                if self._where is not None:
+                    query = query.where(self._where)
+                arrow_table = query.to_arrow()
+                return arrow_table.slice(offset, limit) if offset > 0 else arrow_table
+            else:
+                # ORDER BY on a regular column — need to fetch all matching rows, sort, then slice
+                # But we only fetch the columns we need via LanceDB native (no full to_arrow())
+                total = self.table.count_rows(self._where) if self._where is not None else self.table.count_rows()
+                query = self.table.search(None).select(columns).limit(total)
+                if self._where is not None:
+                    query = query.where(self._where)
+                arrow_table = query.to_arrow()  # noqa: F841
+
+                def duckdb_format_column(column):
+                    if "." in column:
+                        struct, prop = column.split(".")
+                        return f"{struct}['{prop}']"
+                    return column
+
+                formatted_columns = ["arrow_table." + duckdb_format_column(col) for col in columns]
+                SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
+                SQL_QUERY += " ORDER BY "
+                SQL_QUERY += ", ".join(
+                    [f"{col} {'DESC' if desc else 'ASC'}" for col, desc in zip(self._order_by, self._descending)]
+                )
+                if limit is not None:
+                    SQL_QUERY += f" LIMIT {limit}"
+                if offset > 0:
+                    SQL_QUERY += f" OFFSET {offset}"
+
+                arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
+                arrow_results = arrow_results.rename_columns(columns)
+                return arrow_results
+        else:
+            # Count-join path — fetch only needed columns via LanceDB native, then JOIN with count table in DuckDB
+            count_table = None  # noqa: F841
+            db = self._db_connection if self._db_connection is not None else lancedb.connect(self.table._conn.uri)
             count_name = self._order_by[0][1:]
             if count_name in db.table_names():
-                count_table = db.open_table(count_name).to_arrow()
+                count_tbl = db.open_table(count_name)
+                count_table = (
+                    count_tbl.search(None)
+                    .select(["item_ref.id"])
+                    .limit(  # noqa: F841
+                        count_tbl.count_rows()
+                    )
+                    .to_arrow()
+                )
                 SQL_WITH = """WITH counts AS(
-                SELECT item_ref.id as id, COUNT(*) as tbl_count FROM count_table GROUP BY item_ref.id)"""
+                SELECT "item_ref.id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_ref.id")"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
             else:
                 self._order_by = []
 
-        arrow_table = self.table.to_arrow()  # noqa: F841
+            # Fetch only needed columns from the item table, respecting WHERE filter
+            total = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            query = self.table.search(None).select(columns).limit(total)
+            if self._where is not None:
+                query = query.where(self._where)
+            arrow_table = query.to_arrow()  # noqa: F841
 
-        def duckdb_format_column(column):
-            if "." in column:
-                struct, property = column.split(".")
-                return f"{struct}['{property}']"
-            return column
+            def duckdb_format_column(column):
+                if "." in column:
+                    struct, prop = column.split(".")
+                    return f"{struct}['{prop}']"
+                return column
 
-        formatted_columns = [
-            "arrow_table." + duckdb_format_column(col) for col in columns
-        ]  # format columns to handle struct columns + add "arrow_table."" in case of join
-        SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
-        if count_table is not None:
-            SQL_QUERY = SQL_WITH + " " + SQL_QUERY + " LEFT JOIN counts c ON arrow_table.id = c.id"
-        if self._where is not None:
-            SQL_QUERY += f" WHERE {self._where}"
-        if self._order_by != []:
-            SQL_QUERY += " ORDER BY "
-            SQL_QUERY += ", ".join(
-                [f"{col} {'DESC' if desc else 'ASC'}" for col, desc in zip(self._order_by, self._descending)]
-            )
-        if self._limit is not None:
-            SQL_QUERY += f" LIMIT {self._limit}"
-        if self._offset is not None:
-            SQL_QUERY += f" OFFSET {self._offset}"
+            formatted_columns = ["arrow_table." + duckdb_format_column(col) for col in columns]
+            SQL_QUERY = f"SELECT {', '.join(formatted_columns)} FROM arrow_table"
+            if count_table is not None:
+                SQL_QUERY = SQL_WITH + " " + SQL_QUERY + " LEFT JOIN counts c ON arrow_table.id = c.id"
+            # WHERE already applied via LanceDB native filter above
+            if self._order_by != []:
+                SQL_QUERY += " ORDER BY "
+                SQL_QUERY += ", ".join(
+                    [f"{col} {'DESC' if desc else 'ASC'}" for col, desc in zip(self._order_by, self._descending)]
+                )
+            if self._limit is not None:
+                SQL_QUERY += f" LIMIT {self._limit}"
+            if self._offset is not None:
+                SQL_QUERY += f" OFFSET {self._offset}"
 
-        arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
-        arrow_results = arrow_results.rename_columns(columns)  # rename columns to match the requested columns
-        return arrow_results
-        # OLD Keep as reference for when lance will support ORDER BY
-        # else:
-        #     limit = self.table.count_rows() if self._limit is None else self._limit
-        #     query = self.table.search(None).select(columns).limit(limit)
-        #     if self._where is not None:
-        #         query = query.where(self._where)
-        #     if self._offset is not None:
-        #         query = query.offset(self._offset)
-        #     return query.to_arrow()
+            arrow_results = duckdb.query(SQL_QUERY).to_arrow_table()
+            arrow_results = arrow_results.rename_columns(columns)
+            return arrow_results
+
+    def to_arrow(self) -> pa.Table:
+        """Builds the query and returns the result as a PyArrow Table.
+
+        Returns:
+            The result as a PyArrow Table.
+        """
+        return self._execute()
 
     def to_pandas(self) -> pd.DataFrame:
         """Builds the query and returns the result as a pandas DataFrame.

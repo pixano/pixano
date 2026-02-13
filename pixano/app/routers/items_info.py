@@ -6,7 +6,7 @@
 
 from typing import Annotated
 
-import pandas as pd
+import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models import ItemInfoModel, ItemModel
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/items_info", tags=["Items"])
 
 
 @router.get("/{dataset_id}", response_model=list[ItemInfoModel])
-async def get_items_info(
+def get_items_info(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     where: str | None = None,
@@ -72,16 +72,19 @@ async def get_items_info(
         for id in set_ids
     }
 
+    sql_ids = to_sql_list(set_ids)
     for table_name, table in dataset.open_tables().items():
         group_name = dataset.schema.get_table_group(table_name).value
         if group_name in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
             continue
-        sql_ids = to_sql_list(set_ids)
-        df: pd.DataFrame = (
-            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_pandas()
+        arrow_table = (  # noqa: F841
+            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_arrow()
         )
-        for id, count in df["item_ref.id"].value_counts().to_dict().items():
-            infos[id][group_name][table_name] = {"count": count}
+        counts = duckdb.query(
+            'SELECT "item_ref.id" AS item_id, COUNT(*) AS cnt FROM arrow_table GROUP BY "item_ref.id"'
+        ).fetchall()
+        for item_id, count in counts:
+            infos[item_id][group_name][table_name] = {"count": count}
 
     items_info = [ItemInfoModel(info=info, **item_models_identified[id].model_dump()) for id, info in infos.items()]
 
@@ -89,9 +92,7 @@ async def get_items_info(
 
 
 @router.get("/{dataset_id}/{id}", response_model=ItemInfoModel)
-async def get_item_info(
-    dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
-) -> ItemInfoModel:
+def get_item_info(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemInfoModel:
     """Get an item info.
 
     Args:
@@ -102,6 +103,6 @@ async def get_item_info(
     Returns:
         The item info.
     """
-    items_info = await get_items_info(dataset_id=dataset_id, settings=settings, ids=[id], limit=None, skip=0)
+    items_info = get_items_info(dataset_id=dataset_id, settings=settings, ids=[id], limit=None, skip=0)
 
     return items_info[0]

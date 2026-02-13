@@ -30,7 +30,7 @@ router.include_router(mask_generation.router)
 
 
 @router.get("/status")
-async def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]):
+def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]):
     """Get current inference connection status."""
     providers = [
         {"name": name, "url": provider.url if hasattr(provider, "url") else None}
@@ -98,13 +98,13 @@ async def connect_inference(
 
 
 @router.get("/providers")
-async def list_available_providers() -> list[str]:
+def list_available_providers() -> list[str]:
     """List available provider types that can be connected to."""
     return list_providers()
 
 
 @router.get("/connected")
-async def list_connected_providers(
+def list_connected_providers(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, list[str] | str | None]:
     """List currently connected providers."""

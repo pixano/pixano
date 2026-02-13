@@ -111,8 +111,8 @@ class DatasetExporter(ABC):
         sources = self.dataset.get_data(SchemaGroup.SOURCE.value)
 
         item_table = self.dataset.open_table(SchemaGroup.ITEM.value)
-        item_table_lance = item_table.to_lance()  # noqa: F841
-        SQL_QUERY = "SELECT split, COUNT(*) FROM item_table_lance GROUP BY split"
+        item_table_arrow = item_table.to_arrow()  # noqa: F841
+        SQL_QUERY = "SELECT split, COUNT(*) FROM item_table_arrow GROUP BY split"
         arrow_results: pa.Table = duckdb.query(SQL_QUERY).to_arrow_table()
         splits: dict[str, list[Any]] = arrow_results.to_pydict()
 

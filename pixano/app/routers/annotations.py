@@ -28,7 +28,7 @@ router = APIRouter(prefix="/annotations", tags=["Annotations"])
 
 
 @router.get("/{dataset_id}/{table}", response_model=list[AnnotationModel])
-async def get_annotations(
+def get_annotations(
     dataset_id: str,
     table: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -55,7 +55,7 @@ async def get_annotations(
     Returns:
         List of annotations.
     """
-    return await get_rows_handler(
+    return get_rows_handler(
         dataset_id=dataset_id,
         group=SchemaGroup.ANNOTATION,
         table=table,
@@ -69,7 +69,7 @@ async def get_annotations(
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
-async def get_annotation(
+def get_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> AnnotationModel:
     """Get an annotation from a table of a dataset.
@@ -83,11 +83,11 @@ async def get_annotation(
     Returns:
         The annotation.
     """
-    return await get_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
+    return get_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}", response_model=list[AnnotationModel])
-async def create_annotations(
+def create_annotations(
     dataset_id: str,
     table: str,
     annotations: list[AnnotationModel],
@@ -104,11 +104,11 @@ async def create_annotations(
     Returns:
         List of annotations added.
     """
-    return await create_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
+    return create_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
-async def create_annotation(
+def create_annotation(
     dataset_id: str,
     table: str,
     id: str,
@@ -127,11 +127,11 @@ async def create_annotation(
     Returns:
         The annotation added.
     """
-    return await create_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
+    return create_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
-async def update_annotation(
+def update_annotation(
     dataset_id: str,
     table: str,
     id: str,
@@ -150,11 +150,11 @@ async def update_annotation(
     Returns:
         The annotation updated.
     """
-    return await update_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
+    return update_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
 
 @router.put("/{dataset_id}/{table}", response_model=list[AnnotationModel])
-async def update_annotations(
+def update_annotations(
     dataset_id: str,
     table: str,
     annotations: list[AnnotationModel],
@@ -171,11 +171,11 @@ async def update_annotations(
     Returns:
         List of annotations updated.
     """
-    return await update_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
+    return update_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
-async def delete_annotation(
+def delete_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
     """Delete an annotation from a table of a dataset.
@@ -186,11 +186,11 @@ async def delete_annotation(
         id: ID of the annotation to delete.
         settings: App settings.
     """
-    return await delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
+    return delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}")
-async def delete_annotations(
+def delete_annotations(
     dataset_id: str,
     table: str,
     ids: Annotated[list[str], Query()],
@@ -204,4 +204,4 @@ async def delete_annotations(
         ids: IDs of the annotations to delete.
         settings: App settings.
     """
-    return await delete_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, ids, settings)
+    return delete_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, ids, settings)

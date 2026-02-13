@@ -143,7 +143,6 @@ const datasetBrowserSchema = z
     table_data: tableDataSchema,
     pagination: paginationInfoSchema,
     semantic_search: z.array(z.string()),
-    item_ids: z.array(z.string()),
     isErrored: z.optional(z.boolean()),
   })
   .strict();
@@ -155,7 +154,6 @@ export class DatasetBrowser implements DatasetBrowserType {
   table_data: TableData;
   pagination: PaginationInfo;
   semantic_search: Array<string>;
-  item_ids: Array<string>;
   isErrored?: boolean;
 
   constructor(obj: DatasetBrowserType) {
@@ -165,7 +163,6 @@ export class DatasetBrowser implements DatasetBrowserType {
     this.table_data = obj.table_data;
     this.pagination = obj.pagination;
     this.semantic_search = obj.semantic_search;
-    this.item_ids = obj.item_ids;
     this.isErrored = obj.isErrored;
   }
 }

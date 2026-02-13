@@ -143,6 +143,7 @@ class Dataset:
         self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
+        self._num_rows_cache: int | None = None
 
         self._reload_schema()
 
@@ -198,8 +199,24 @@ class Dataset:
         Returns:
             Number of rows.
         """
-        # Return number of rows of item table
-        return self.open_table(SchemaGroup.ITEM.value).count_rows()
+        if self._num_rows_cache is None:
+            self._num_rows_cache = self.open_table(SchemaGroup.ITEM.value).count_rows()
+        return self._num_rows_cache
+
+    def count_rows_where(self, table_name: str = SchemaGroup.ITEM.value, where: str | None = None) -> int:
+        """Count rows in a table, optionally filtered by a WHERE clause.
+
+        Uses LanceDB native count_rows() which avoids full table materialization.
+
+        Args:
+            table_name: Table name.
+            where: Optional WHERE clause to filter rows.
+
+        Returns:
+            Number of matching rows.
+        """
+        table = self.open_table(table_name)
+        return table.count_rows(where)
 
     def _reload_schema(self) -> None:
         """Reload schema.
@@ -459,16 +476,16 @@ class Dataset:
         if ids is None:
             if item_ids is None:
                 if where is not None:
-                    query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+                    query = TableQueryBuilder(table, self._db_connection).where(where).limit(limit).offset(skip)
                 else:
-                    query = TableQueryBuilder(table).limit(limit).offset(skip)
+                    query = TableQueryBuilder(table, self._db_connection).limit(limit).offset(skip)
             else:
                 sql_item_ids = to_sql_list(item_ids)
                 if where is not None:
                     where += f" AND item_ref.id IN {sql_item_ids}"
                 else:
                     where = f"item_ref.id IN {sql_item_ids}"
-                query = TableQueryBuilder(table).where(where).limit(limit).offset(skip)
+                query = TableQueryBuilder(table, self._db_connection).where(where).limit(limit).offset(skip)
             if sortcol is not None and order is not None:
                 query = query.order_by(sortcol, order == "desc")
         else:
@@ -477,7 +494,7 @@ class Dataset:
                 where += f" AND id IN {sql_ids}"
             else:
                 where = f"id IN {sql_ids}"
-            query = TableQueryBuilder(table).where(where)
+            query = TableQueryBuilder(table, self._db_connection).where(where)
 
         schema = self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
 
@@ -534,7 +551,11 @@ class Dataset:
             is_collection = self.schema.relations[SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
-            rows = TableQueryBuilder(table).where(f"item_ref.id in {sql_ids}").to_pydantic(table_schema)
+            rows = (
+                TableQueryBuilder(table, self._db_connection)
+                .where(f"item_ref.id in {sql_ids}")
+                .to_pydantic(table_schema)
+            )
 
             for row in rows:
                 row.dataset = self
@@ -564,7 +585,12 @@ class Dataset:
         if len(ids) == 0:
             return {}
         table = self.open_table(table_name)
-        ids_found = list(TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_polars()["id"])
+        ids_found = list(
+            TableQueryBuilder(table, self._db_connection)
+            .select(["id"])
+            .where(f"id in {to_sql_list(ids)}")
+            .to_polars()["id"]
+        )
         return {id: id in ids_found for id in ids}
 
     def get_all_ids(
@@ -572,6 +598,7 @@ class Dataset:
         table_name: str = SchemaGroup.ITEM.value,
         sortcol: str | None = None,
         order: str | None = None,
+        where: str | None = None,
     ) -> list[str]:
         """Get all the ids from a table.
 
@@ -579,11 +606,14 @@ class Dataset:
             table_name: table to look for ids.
             sortcol: column to order by
             order: sort order (asc or desc)
+            where: where clause to filter ids.
 
         Returns:
             list of the ids.
         """
-        query = TableQueryBuilder(self.open_table(table_name)).select(["id"])
+        query = TableQueryBuilder(self.open_table(table_name), self._db_connection).select(["id"])
+        if where is not None:
+            query = query.where(where)
         if sortcol is not None and order is not None:
             query = query.order_by(order_by=sortcol, descending=order == "desc")
         return [row["id"] for row in query.to_list()]
@@ -649,6 +679,9 @@ class Dataset:
             d.created_at = datetime.now()
             d.updated_at = d.created_at
         table.add(data)
+
+        if table_name == SchemaGroup.ITEM.value:
+            self._num_rows_cache = None
 
         return data
 
@@ -716,11 +749,18 @@ class Dataset:
         sql_ids = to_sql_list(set_ids)
 
         ids_found = {
-            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
+            row["id"]
+            for row in TableQueryBuilder(table, self._db_connection)
+            .select(["id"])
+            .where(f"id in {to_sql_list(ids)}")
+            .to_list()
         }
         ids_not_found = [id for id in set_ids if id not in ids_found]
 
         table.delete(where=f"id in {sql_ids}")
+
+        if table_name == SchemaGroup.ITEM.value:
+            self._num_rows_cache = None
 
         return ids_not_found
 
@@ -817,7 +857,7 @@ class Dataset:
 
         ids_found = {
             row["id"]: row["created_at"]
-            for row in TableQueryBuilder(table)
+            for row in TableQueryBuilder(table, self._db_connection)
             .select(["id", "created_at"])
             .where(f"id in {to_sql_list(set_ids)}")
             .to_list()
@@ -931,11 +971,17 @@ class Dataset:
         Returns:
             The found dataset.
         """
-        # Browse directory
+        # Fast path: try direct path first (dataset dir often matches id)
+        direct = directory / id / "info.json"
+        if direct.exists():
+            info = DatasetInfo.from_json(direct)
+            if info.id == id:
+                return Dataset(direct.parent, media_dir)
+
+        # Fallback: scan all directories
         for json_fp in directory.glob("*/info.json"):
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
-                # Return dataset
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
 
@@ -972,7 +1018,7 @@ class Dataset:
 
         table = self.open_table(table_name)
         semantic_results: pl.DataFrame = (
-            table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+            table.search(query).select(["item_ref.id"]).limit(table.count_rows()).to_polars()
         )  # TODO: change high limit if lancedb supports it
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
         full_item_ids = item_results["item_ref.id"].to_list()
