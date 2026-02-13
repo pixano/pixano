@@ -50,7 +50,7 @@ License: CECILL-C
         x: point.x,
         y: point.y,
         radius: (pi === 0 ? 6 : 4) / zoomFactor[viewRef.name],
-        fill: pi === 0 ? "#781e60" : "rgb(0,128,0)",
+        fill: pi === 0 ? "hsl(330, 65%, 50%)" : "hsl(142, 60%, 40%)",
         stroke: "white",
         strokeWidth: 1 / zoomFactor[viewRef.name],
         id: `dot-${polygonId}-${i}-${point.id}`,

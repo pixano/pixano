@@ -27,7 +27,7 @@ License: CECILL-C
   {transitionConfig}
   {sideOffset}
   class={cn(
-    "z-50  overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md",
+    "z-50 overflow-hidden rounded-md border border-border/40 bg-popover/90 backdrop-blur-sm px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm",
     className,
   )}
   {...$$restProps}

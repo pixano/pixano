@@ -285,9 +285,9 @@ License: CECILL-C
       on:mouseleave={handleShapeMouseLeave}
       config={{
         sceneFunc: drawPolygonScene,
-        stroke: "hsl(316deg 60% 29.41%)",
+        stroke: "hsl(330, 65%, 50%)",
         strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
-        fill: "#f9f4f773",
+        fill: "hsla(330, 60%, 95%, 0.45)",
         hitFunc: drawPolygonHit,
       }}
     />
@@ -308,7 +308,7 @@ License: CECILL-C
           x: hoveredEdge.x,
           y: hoveredEdge.y,
           radius: 5 / zoomFactor[viewRef.name],
-          fill: "#781e60",
+          fill: "hsl(330, 65%, 50%)",
           stroke: "white",
           strokeWidth: 1.5 / zoomFactor[viewRef.name],
           listening: false,
@@ -321,9 +321,9 @@ License: CECILL-C
     <KonvaShape
       config={{
         sceneFunc: (ctx, shape) => sceneFunc(ctx, shape, newShape.masksImageSVG),
-        stroke: "hsl(316deg 60% 29.41%)",
+        stroke: "hsl(330, 65%, 50%)",
         strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
-        fill: "#f9f4f773",
+        fill: "hsla(330, 60%, 95%, 0.45)",
       }}
     />
   </Group>

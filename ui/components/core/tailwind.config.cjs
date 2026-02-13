@@ -3,7 +3,7 @@ import { theme } from "@pixano/core/theme/tailwindTheme";
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{svelte,js,ts}"],
-  darkMode: "media", // or 'class'
+  darkMode: "class",
   theme: {
     extend: {
       ...theme,

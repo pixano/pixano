@@ -664,7 +664,7 @@ License: CECILL-C
         currentAnn.output.masksImageSVG,
         true,
         1.0,
-        "#FF0050",
+        "hsl(330, 65%, 50%)",
         currentMaskGroup,
         image,
         viewRef.name,
@@ -1793,7 +1793,7 @@ License: CECILL-C
 </script>
 
 <div
-  class={cn("h-full bg-foreground transition-opacity duration-300 delay-100 relative", {
+  class={cn("h-full bg-canvas transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}

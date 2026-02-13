@@ -16,6 +16,7 @@ module.exports = {
       "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
     ],
   },
+  darkMode: "class",
   safelist: ["bg-primary", "text-3xl", "lg:text-4xl"],
   theme: {
     extend: {

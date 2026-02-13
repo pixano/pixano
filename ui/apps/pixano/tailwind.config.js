@@ -13,6 +13,7 @@ export default {
     "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/vqaCanvas/src/**/*.{svelte,js,ts,jsx,tsx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       ...theme,

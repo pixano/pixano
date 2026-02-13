@@ -55,7 +55,7 @@ License: CECILL-C
     tooltipContent={keyPointTool.name}
     on:click={() => selectTool(keyPointTool)}
     class={cn(
-      "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+      "h-8 w-8 transition-all duration-300 hover:bg-accent/60",
       $selectedTool?.type === ToolType.Keypoint ? "text-primary" : "text-foreground",
     )}
   >

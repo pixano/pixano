@@ -33,11 +33,11 @@ License: CECILL-C
 </script>
 
 <div class="fixed inset-0 z-50 overflow-y-auto">
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
+  <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" />
   <div class="flex min-h-full justify-center text-center items-center">
     <div
-      class="relative transform overflow-hidden rounded-xl p-6 max-w-2xl shadow-xl
-        bg-card text-foreground"
+      class="relative transform overflow-hidden rounded-2xl p-6 max-w-2xl shadow-glass-lg
+        bg-card/95 backdrop-blur-[24px] border border-border/40 text-foreground"
     >
       <p class="pb-1">{message}</p>
       {#if details}

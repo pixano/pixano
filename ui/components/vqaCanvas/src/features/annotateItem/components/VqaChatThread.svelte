@@ -32,7 +32,7 @@ License: CECILL-C
   {#if messagesByNumber.length === 0}
     <div class="flex flex-col items-center justify-center py-20 text-center space-y-4 m-auto">
       <div
-        class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"
+        class="w-16 h-16 bg-muted rounded-full flex items-center justify-center text-muted-foreground"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -52,8 +52,8 @@ License: CECILL-C
         </svg>
       </div>
       <div>
-        <h3 class="font-medium text-slate-900">No questions yet</h3>
-        <p class="text-sm text-slate-500 max-w-[200px] mx-auto">
+        <h3 class="font-medium text-foreground">No questions yet</h3>
+        <p class="text-sm text-muted-foreground max-w-[200px] mx-auto">
           Ask a question about the image to start the conversation.
         </p>
       </div>
@@ -75,10 +75,10 @@ License: CECILL-C
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
+    background: hsl(var(--border));
     border-radius: 3px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
+    background: hsl(var(--muted-foreground));
   }
 </style>

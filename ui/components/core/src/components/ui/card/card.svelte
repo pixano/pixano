@@ -16,7 +16,7 @@ License: CECILL-C
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class={cn("rounded-xl border bg-card text-card-foreground shadow", className)}
+  class={cn("rounded-xl border border-border bg-card text-card-foreground shadow-elevation-1", className)}
   {...$$restProps}
   on:click
   on:mouseenter

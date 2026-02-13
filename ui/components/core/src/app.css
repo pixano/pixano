@@ -4,68 +4,107 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 6% 16%;
+    /* Backgrounds — off-white, not pure white */
+    --background: 240 5% 96%;
+    --foreground: 240 6% 10%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 6% 16%;
-
+    /* Surfaces — 3 elevation levels */
     --card: 0 0% 100%;
-    --card-foreground: 240 6% 16%;
+    --card-foreground: 240 6% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+    --muted: 240 5% 92%;
+    --muted-foreground: 240 4% 46%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    /* Brand accent — modernized pink/magenta */
+    --primary: 330 65% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 330 60% 95%;
 
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --primary-light: 240 4.8% 95.9%;
+    /* Secondary — neutral with slight warmth */
+    --secondary: 240 5% 92%;
+    --secondary-foreground: 240 6% 10%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    /* Accent — subtle warm overlay */
+    --accent: 330 30% 95%;
+    --accent-foreground: 240 6% 10%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    /* Destructive — keep red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 98%;
+    /* Utilities */
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 330 65% 50%;
 
-    --ring: 240 5.9% 10%;
+    /* Surface elevation tokens */
+    --surface-1: 0 0% 100%;
+    --surface-2: 240 5% 97%;
+    --surface-3: 240 5% 93%;
 
-    --radius: 0.625rem;
+    /* Semantic status colors */
+    --success: 142 60% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 80% 52%;
+    --info-foreground: 0 0% 100%;
+
+    /* Canvas viewer background */
+    --canvas-bg: 240 5% 20%;
+
+    /* Radius scale */
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+
+    /* Transition durations */
+    --transition-fast: 150ms;
+    --transition-normal: 200ms;
+    --transition-slow: 300ms;
   }
 
   .dark {
-    --background: 240 6% 16%;
-    --foreground: 0 0% 98%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 95%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --card: 240 8% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 8% 14%;
+    --popover-foreground: 0 0% 95%;
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 4% 60%;
 
-    --popover: 240 6% 16%;
-    --popover-foreground: 0 0% 98%;
+    --primary: 330 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 330 40% 15%;
 
-    --card: 240 6% 16%;
-    --card-foreground: 0 0% 98%;
+    --secondary: 240 6% 20%;
+    --secondary-foreground: 0 0% 95%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --accent: 330 15% 25%;
+    --accent-foreground: 0 0% 95%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 0 0% 95%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --border: 240 5% 22%;
+    --input: 240 5% 22%;
+    --ring: 330 70% 60%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --surface-1: 240 8% 12%;
+    --surface-2: 240 8% 9%;
+    --surface-3: 240 10% 4%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --success: 142 55% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 55%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 75% 58%;
+    --info-foreground: 0 0% 100%;
 
-    --ring: 240 4.9% 83.9%;
+    --canvas-bg: 240 8% 14%;
   }
 }
 
@@ -74,7 +113,30 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: "DM Sans", sans-serif;
+    @apply bg-background text-foreground antialiased font-sans text-sm;
+  }
+  code, kbd, pre {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  /* Typography utilities */
+  .text-heading-lg { @apply text-lg font-semibold tracking-tight; }
+  .text-heading    { @apply text-base font-semibold tracking-tight; }
+  .text-heading-sm { @apply text-sm font-semibold; }
+  .text-label      { @apply text-xs font-medium uppercase tracking-wider text-muted-foreground; }
+  .text-caption    { @apply text-xs text-muted-foreground; }
+  .text-data       { @apply text-sm font-mono tabular-nums; }
+
+  /* Glassmorphism utilities */
+  .glass {
+    @apply bg-card/80 backdrop-blur-[16px] border border-border/40 shadow-glass;
+  }
+  .glass-subtle {
+    @apply bg-card/60 backdrop-blur-[12px] border border-border/30 shadow-glass-sm;
+  }
+  .glass-heavy {
+    @apply bg-card/90 backdrop-blur-[24px] border border-border/50 shadow-glass-lg;
   }
 }

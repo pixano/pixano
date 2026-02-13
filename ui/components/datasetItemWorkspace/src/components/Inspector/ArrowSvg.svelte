@@ -4,10 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------->
 
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0.00 0.00 300.00 170.00" height={30}>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0.00 0.00 300.00 170.00" height={30} class="text-info">
   <g stroke-width="2.00" stroke-linecap="butt">
     <path
-      stroke="#ade4de"
+      stroke="currentColor"
+      stroke-opacity="0.6"
       vector-effect="non-scaling-stroke"
       d="
   M 113.86 72.20
@@ -31,7 +32,8 @@ License: CECILL-C
   A 0.67 0.67 0.0 0 1 113.86 72.20"
     />
     <path
-      stroke="#ade4de"
+      stroke="currentColor"
+      stroke-opacity="0.6"
       vector-effect="non-scaling-stroke"
       d="
   M 94.22 82.99
@@ -43,7 +45,7 @@ License: CECILL-C
   </g>
 
   <path
-    fill="#5bc8bc"
+    fill="currentColor"
     d="
   M 114.50 72.68
   L 182.96 72.69
@@ -72,5 +74,5 @@ License: CECILL-C
   A 30.63 30.63 0.0 0 0 94.22 82.99
   Z"
   />
-  <circle fill="#fff" cx="63.59" cy="82.99" r="30.63" />
+  <circle class="fill-card" cx="63.59" cy="82.99" r="30.63" />
 </svg>

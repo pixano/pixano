@@ -8,4 +8,4 @@ License: CECILL-C
   // Imports
 </script>
 
-<div class="bg-white p-12">Display here the 3D viewer</div>
+<div class="bg-card p-12">Display here the 3D viewer</div>

@@ -23,6 +23,8 @@ export { default as SelectLocalOrDistantModelModal } from "./components/pixano_i
 export { default as ConnectToServerModal } from "./components/inference/ConnectToServerModal.svelte";
 export * from "./lib/services/inferenceService";
 export * from "./lib/stores/inferenceStore";
+export { themeMode, initTheme, toggleTheme } from "./lib/stores/themeStore";
+export type { ThemeMode } from "./lib/stores/themeStore";
 // ui
 export { AutoResizeTextarea } from "./components/ui/autoresize-textarea";
 export { Button } from "./components/ui/button";
@@ -40,6 +42,7 @@ export { Skeleton } from "./components/ui/skeleton";
 export { SliderRoot, SliderWithValue } from "./components/ui/slider";
 export { Switch } from "./components/ui/switch";
 export * as Tabs from "./components/ui/tabs";
+export { default as ThemeToggle } from "./components/ui/theme-toggle/ThemeToggle.svelte";
 
 // lib
 // utils

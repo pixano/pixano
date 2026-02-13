@@ -41,14 +41,14 @@ License: CECILL-C
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
   on:click={handleCancel}
 >
   <div
     on:click|stopPropagation={() => {}}
     class="w-96 rounded-xl bg-card text-foreground border border-border shadow-lg"
   >
-    <div class="bg-primary p-4 rounded-t-xl text-white font-medium">Add Inference Server</div>
+    <div class="bg-primary p-4 rounded-t-xl text-primary-foreground font-medium">Add Inference Server</div>
     <div class="p-4 flex flex-col gap-4">
       <div class="flex flex-col gap-1.5">
         <label for="inference-url" class="text-sm font-medium">Server URL</label>
@@ -67,7 +67,7 @@ License: CECILL-C
         />
       </div>
       {#if error}
-        <p class="text-sm text-red-500">{error}</p>
+        <p class="text-sm text-destructive">{error}</p>
       {/if}
       <div class="flex gap-3 justify-end">
         <PrimaryButton on:click={handleCancel}>Cancel</PrimaryButton>
