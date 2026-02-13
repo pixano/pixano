@@ -69,12 +69,15 @@ class PixanoInferenceProvider(HTTPProvider):
         """
         provider = cls(url=url)
         try:
-            await provider.get("health")
+            await provider.get("ready")
         except Exception:
             try:
-                await provider.get("app/settings/")
-            except Exception as e:
-                raise ProviderConnectionError(f"Failed to connect to pixano-inference at {url}: {e}") from e
+                await provider.get("health")
+            except Exception:
+                try:
+                    await provider.get("app/settings/")
+                except Exception as e:
+                    raise ProviderConnectionError(f"Failed to connect to pixano-inference at {url}: {e}") from e
         return provider
 
     async def get_capabilities(self) -> ProviderCapabilities:
@@ -94,7 +97,16 @@ class PixanoInferenceProvider(HTTPProvider):
         """List available models."""
         response = await self.get("app/models/")
         models_data = response.json()
-        models = [ModelInfo(name=m["name"], task=m["task"]) for m in models_data]
+        models = [
+            ModelInfo(
+                name=m["name"],
+                task=m["task"],
+                model_path=m.get("model_path"),
+                model_class=m.get("model_class"),
+                provider=m.get("provider"),
+            )
+            for m in models_data
+        ]
 
         if task is not None:
             models = [m for m in models if m.task == task.value]
@@ -106,13 +118,16 @@ class PixanoInferenceProvider(HTTPProvider):
         response = await self.get("app/settings/")
         data = response.json()
         return ServerInfo(
-            version=data.get("version", "unknown"),
-            models_loaded=data.get("models_loaded", 0),
+            app_name=data.get("app_name", ""),
+            app_version=data.get("app_version", "unknown"),
+            app_description=data.get("app_description", ""),
+            num_cpus=data.get("num_cpus"),
             num_gpus=data.get("num_gpus", 0),
-            gpu_info=data.get("gpu_info", {}),
+            num_nodes=data.get("num_nodes", 1),
+            gpus_used=data.get("gpus_used", []),
+            gpu_to_model=data.get("gpu_to_model", {}),
             models=data.get("models", []),
             models_to_task=data.get("models_to_task", {}),
-            ready=data.get("ready", False),
         )
 
     # --- Mask Generation ---
@@ -178,6 +193,8 @@ class PixanoInferenceProvider(HTTPProvider):
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
             metadata=response["metadata"],
+            id=response.get("id", ""),
+            status=response.get("status", "SUCCESS"),
         )
 
     async def image_mask_generation(
@@ -230,6 +247,7 @@ class PixanoInferenceProvider(HTTPProvider):
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
             metadata=response["metadata"],
+            id=response.get("id", ""),
         )
 
     async def video_mask_generation(
@@ -269,6 +287,8 @@ class PixanoInferenceProvider(HTTPProvider):
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
             metadata=response["metadata"],
+            id=response.get("id", ""),
+            status=response.get("status", "SUCCESS"),
         )
 
     async def image_zero_shot_detection(
@@ -320,6 +340,8 @@ class PixanoInferenceProvider(HTTPProvider):
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
             metadata=response.get("metadata", {}),
+            id=response.get("id", ""),
+            status=response.get("status", "SUCCESS"),
         )
 
     async def text_image_conditional_generation(
