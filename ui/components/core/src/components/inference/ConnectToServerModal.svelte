@@ -48,7 +48,9 @@ License: CECILL-C
     on:click|stopPropagation={() => {}}
     class="w-96 rounded-xl bg-card text-foreground border border-border shadow-lg"
   >
-    <div class="bg-primary p-4 rounded-t-xl text-primary-foreground font-medium">Add Inference Server</div>
+    <div class="bg-primary p-4 rounded-t-xl text-primary-foreground font-medium">
+      Add Inference Server
+    </div>
     <div class="p-4 flex flex-col gap-4">
       <div class="flex flex-col gap-1.5">
         <label for="inference-url" class="text-sm font-medium">Server URL</label>

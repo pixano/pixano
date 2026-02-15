@@ -59,10 +59,7 @@ export function isValidURL(urlString: string) {
  * Resolve a CSS custom property (e.g. "--primary") to a usable color string.
  * Useful for Konva canvas elements that cannot use CSS variables directly.
  */
-export function resolveThemeColor(
-  cssVar: string,
-  alpha: number = 1,
-): string {
+export function resolveThemeColor(cssVar: string, alpha: number = 1): string {
   if (typeof document === "undefined") return `hsla(330, 65%, 50%, ${alpha})`;
   const hsl = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
   if (!hsl) return `hsla(330, 65%, 50%, ${alpha})`;

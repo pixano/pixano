@@ -115,19 +115,33 @@
   body {
     @apply bg-background text-foreground antialiased font-sans text-sm;
   }
-  code, kbd, pre {
+  code,
+  kbd,
+  pre {
     @apply font-mono;
   }
 }
 
 @layer components {
   /* Typography utilities */
-  .text-heading-lg { @apply text-lg font-semibold tracking-tight; }
-  .text-heading    { @apply text-base font-semibold tracking-tight; }
-  .text-heading-sm { @apply text-sm font-semibold; }
-  .text-label      { @apply text-xs font-medium uppercase tracking-wider text-muted-foreground; }
-  .text-caption    { @apply text-xs text-muted-foreground; }
-  .text-data       { @apply text-sm font-mono tabular-nums; }
+  .text-heading-lg {
+    @apply text-lg font-semibold tracking-tight;
+  }
+  .text-heading {
+    @apply text-base font-semibold tracking-tight;
+  }
+  .text-heading-sm {
+    @apply text-sm font-semibold;
+  }
+  .text-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+  .text-caption {
+    @apply text-xs text-muted-foreground;
+  }
+  .text-data {
+    @apply text-sm font-mono tabular-nums;
+  }
 
   /* Glassmorphism utilities */
   .glass {

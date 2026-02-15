@@ -10,8 +10,8 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import { api, checkInferenceStatus, IconButton, initTheme } from "@pixano/core";
-  import ThemeToggle from "@pixano/core/src/components/ui/theme-toggle/ThemeToggle.svelte";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import ThemeToggle from "@pixano/core/src/components/ui/theme-toggle/ThemeToggle.svelte";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";

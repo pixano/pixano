@@ -184,7 +184,10 @@ License: CECILL-C
               rows="3"
             ></textarea>
             <div class="flex justify-end gap-1">
-              <button on:click={cancelEditing} class="p-1 text-muted-foreground hover:text-foreground">
+              <button
+                on:click={cancelEditing}
+                class="p-1 text-muted-foreground hover:text-foreground"
+              >
                 <X size={14} />
               </button>
               <button
@@ -292,7 +295,10 @@ License: CECILL-C
                   rows="3"
                 ></textarea>
                 <div class="flex justify-end gap-1">
-                  <button on:click={cancelEditing} class="p-1 text-muted-foreground hover:text-foreground">
+                  <button
+                    on:click={cancelEditing}
+                    class="p-1 text-muted-foreground hover:text-foreground"
+                  >
                     <X size={14} />
                   </button>
                   <button

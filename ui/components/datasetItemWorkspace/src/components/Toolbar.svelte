@@ -260,9 +260,7 @@ License: CECILL-C
     >
       <Wand2Icon class="h-4.5 w-4.5" />
       {#if noModelSelected && !showSmartTools}
-        <span
-          class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-warning animate-pulse"
-        />
+        <span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-warning animate-pulse" />
       {/if}
     </IconButton>
     {#if showSmartTools}
