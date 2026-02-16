@@ -257,16 +257,16 @@ License: CECILL-C
 </script>
 
 <div
-  class="p-4 bg-white border-t border-border space-y-3 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0"
+  class="p-4 bg-card border-t border-border space-y-3 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0"
 >
   <!-- Dynamic Status Label -->
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
       <div
         class="flex items-center gap-1.5 px-2 py-0.5 rounded-md {isAnswering
-          ? 'bg-amber-50 text-amber-600'
+          ? 'bg-warning/10 text-warning'
           : 'bg-primary/5 text-primary'} text-[10px] font-bold uppercase tracking-widest border {isAnswering
-          ? 'border-amber-100'
+          ? 'border-warning/20'
           : 'border-primary/10'}"
       >
         {#if isAnswering}
@@ -280,21 +280,21 @@ License: CECILL-C
 
   <div
     class="w-full relative {isAnswering
-      ? 'bg-amber-50/30'
-      : 'bg-slate-50'} rounded-xl border {isAnswering
-      ? 'border-amber-200 focus-within:border-amber-400 focus-within:ring-amber-400/5'
-      : 'border-slate-200 focus-within:border-primary/50 focus-within:ring-primary/5'} focus-within:bg-white focus-within:ring-4 transition-all overflow-hidden"
+      ? 'bg-warning/5'
+      : 'bg-muted/30'} rounded-xl border {isAnswering
+      ? 'border-warning/30 focus-within:border-warning/50 focus-within:ring-warning/5'
+      : 'border-border focus-within:border-primary/50 focus-within:ring-primary/5'} focus-within:bg-card focus-within:ring-4 transition-all overflow-hidden"
   >
     <AutoResizeTextarea
       placeholder={isAnswering ? "Provide the answer..." : "Ask a question..."}
       bind:value={questionContent}
       on:keydown={handleKeyDown}
-      class="w-full bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-slate-700 leading-relaxed placeholder:text-slate-400 resize-none min-h-[44px] max-h-32"
+      class="w-full bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-foreground leading-relaxed placeholder:text-muted-foreground resize-none min-h-[44px] max-h-32"
     />
   </div>
 
   <div class="flex items-center justify-between gap-3">
-    <div class="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
+    <div class="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
       {#if !isAnswering}
         {#each allowedTypes as item}
           <IconButton
@@ -314,7 +314,7 @@ License: CECILL-C
         on:click={handleVlmAction}
         disabled={!completionModel || isGenerating}
         tooltipContent={isAnswering ? "Generate answer with VLM" : "Generate question from VLM"}
-        class="h-10 w-10 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
+        class="h-10 w-10 bg-muted text-muted-foreground hover:bg-accent border border-border"
       >
         <Sparkles size={18} />
       </IconButton>
@@ -324,15 +324,15 @@ License: CECILL-C
         disabled={questionContent.trim() === ""}
         tooltipContent={isAnswering ? "Reply" : "Post"}
         class="h-10 w-10 {isAnswering
-          ? 'bg-amber-500 hover:bg-amber-600'
-          : 'bg-primary hover:bg-primary/90'} text-white shadow-md"
+          ? 'bg-warning hover:bg-warning/90'
+          : 'bg-primary hover:bg-primary/90'} text-primary-foreground shadow-md"
       >
         <Send size={18} />
       </IconButton>
     </div>
   </div>
 
-  <p class="text-[10px] text-slate-400 flex items-center gap-1 px-1">
+  <p class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
     <HelpCircle size={10} />
     {#if isAnswering}
       Complete this question by providing an answer manually or using <strong>VLM</strong>

@@ -9,8 +9,9 @@ License: CECILL-C
   import { onDestroy, onMount } from "svelte";
   import { fade } from "svelte/transition";
 
-  import { api, checkInferenceStatus, IconButton } from "@pixano/core";
+  import { api, checkInferenceStatus, IconButton, initTheme } from "@pixano/core";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import ThemeToggle from "@pixano/core/src/components/ui/theme-toggle/ThemeToggle.svelte";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
@@ -32,6 +33,7 @@ License: CECILL-C
   const HOME_ROUTE_ID = "/";
 
   onMount(() => {
+    initTheme();
     api
       .getDatasetsInfo()
       .then((loadedDatasetInfos) => {
@@ -87,12 +89,10 @@ License: CECILL-C
   <meta name="description" content="Pixano app" />
 </svelte:head>
 
-<div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-DM Sans">
-  <!-- Persistent Unified Header -->
+<div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-sans">
   <header
-    class="w-full h-16 px-6 flex items-center gap-6 bg-background border-b border-border z-50 shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+    class="w-full h-16 px-6 flex items-center gap-6 bg-card/80 backdrop-blur-[16px] border-b border-border/40 z-50 shrink-0 shadow-glass-sm"
   >
-    <!-- Branding (Always present) -->
     <div class="flex items-center shrink-0">
       <IconButton
         on:click={navigateToHome}
@@ -103,7 +103,6 @@ License: CECILL-C
       </IconButton>
     </div>
 
-    <!-- Contextual Header Content (Fills remaining space) -->
     <div class="flex-1 h-full">
       {#if $page.route.id !== HOME_ROUTE_ID}
         <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
@@ -111,10 +110,13 @@ License: CECILL-C
         </div>
       {/if}
     </div>
+
+    <div class="flex items-center shrink-0">
+      <ThemeToggle />
+    </div>
   </header>
 
-  <!-- Main Content Area -->
-  <main class="flex-1 flex flex-col min-h-0 relative bg-muted/5">
+  <main class="flex-1 flex flex-col min-h-0 relative bg-background">
     <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
       <slot />
     </div>

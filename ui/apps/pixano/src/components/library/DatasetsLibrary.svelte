@@ -138,7 +138,7 @@ License: CECILL-C
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
         <div
-          class="flex flex-col rounded-2xl border border-border/60 bg-card animate-pulse overflow-hidden"
+          class="flex flex-col rounded-2xl border border-border bg-card animate-pulse overflow-hidden"
         >
           <div class="aspect-video bg-muted/50 w-full"></div>
           <div class="p-5 space-y-4">

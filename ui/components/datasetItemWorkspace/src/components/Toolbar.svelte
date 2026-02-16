@@ -141,7 +141,7 @@ License: CECILL-C
 </script>
 
 <div
-  class="flex items-center gap-1.5 z-10 bg-background/50 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-background/80 hover:border-border/60 group/toolbar"
+  class="flex items-center gap-1.5 z-10 bg-card/90 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm transition-all duration-500 hover:bg-card hover:border-border/60 group/toolbar"
 >
   <!-- Selection & Move Tool Group -->
   <div class="flex items-center gap-0.5">
@@ -149,7 +149,7 @@ License: CECILL-C
       tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
       selected={$selectedTool?.type === ToolType.Pan}
-      class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <MousePointer2 class="h-4.5 w-4.5" />
     </IconButton>
@@ -163,7 +163,7 @@ License: CECILL-C
       tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
       selected={$selectedTool?.type === ToolType.Rectangle && !$selectedTool.isSmart}
-      class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <Square class="h-4.5 w-4.5" />
     </IconButton>
@@ -171,7 +171,7 @@ License: CECILL-C
       tooltipContent={polygonTool.name}
       on:click={() => selectTool(polygonTool)}
       selected={$selectedTool?.type === ToolType.Polygon}
-      class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <img src={polygon_icon} alt="polygon icon" class="h-4.5 w-4.5" />
     </IconButton>
@@ -204,7 +204,7 @@ License: CECILL-C
       tooltipContent="Brush Tool (B)"
       on:click={handleBrushToolClick}
       class={cn(
-        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/60",
         showBrushTools ? "text-primary" : "text-foreground",
       )}
     >
@@ -254,15 +254,13 @@ License: CECILL-C
         : "Smart Segmentation"}
       on:click={handleSmartToolClick}
       class={cn(
-        "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+        "h-8 w-8 transition-all duration-300 hover:bg-accent/60",
         showSmartTools ? "text-primary" : "text-foreground",
       )}
     >
       <Wand2Icon class="h-4.5 w-4.5" />
       {#if noModelSelected && !showSmartTools}
-        <span
-          class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 animate-pulse"
-        />
+        <span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-warning animate-pulse" />
       {/if}
     </IconButton>
     {#if showSmartTools}
@@ -299,7 +297,7 @@ License: CECILL-C
             tooltipContent={"Track"}
             on:click={() =>
               pixanoInferenceTracking.set({ ...$pixanoInferenceTracking, validated: true })}
-            class="h-8 w-8 text-green-600/80 hover:bg-green-50/40"
+            class="h-8 w-8 text-success/80 hover:bg-success/5"
           >
             <Check class="h-4.5 w-4.5" />
           </IconButton>
@@ -315,7 +313,7 @@ License: CECILL-C
         {#if noModelSelected}
           <button
             on:click={configSmartToolClick}
-            class="text-xs text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 transition-colors whitespace-nowrap"
+            class="text-xs text-warning dark:text-warning px-1.5 py-0.5 rounded bg-warning/10 hover:bg-warning/20 transition-colors whitespace-nowrap"
           >
             Select model
           </button>
@@ -325,7 +323,7 @@ License: CECILL-C
         <IconButton
           tooltipContent={"Settings"}
           on:click={() => configSmartToolClick()}
-          class="h-7 w-7 text-foreground hover:bg-accent/40 transition-all duration-200"
+          class="h-7 w-7 text-foreground hover:bg-accent/60 transition-all duration-200"
         >
           <Settings class="h-4.5 w-4.5" />
         </IconButton>
@@ -344,17 +342,17 @@ License: CECILL-C
           : "Connected — No model selected"
         : "Not connected"}
       on:click={() => (showConnectModal = true)}
-      class="h-8 w-8 hover:bg-accent/40 transition-all duration-200"
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <Sparkles
         size={18}
         class={$inferenceServerStore.connected
           ? $segmentationModels.length > 0
             ? $selectedSegmentationModelName
-              ? "text-green-500/80"
-              : "text-amber-500/70 animate-pulse"
-            : "text-yellow-500/60"
-          : "text-red-400/40"}
+              ? "text-success/80"
+              : "text-warning/70 animate-pulse"
+            : "text-warning/60"
+          : "text-destructive/40"}
       />
     </IconButton>
   </div>

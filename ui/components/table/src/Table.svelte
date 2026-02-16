@@ -119,8 +119,8 @@ License: CECILL-C
 <!-- Settings popup -->
 {#if popupOpened}
   <div
-    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-sm
-    flex items-center justify-center font-DM Sans"
+    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm
+    flex items-center justify-center font-sans"
   >
     <div
       class="px-8 pt-8 flex flex-col
@@ -164,7 +164,7 @@ License: CECILL-C
 {/if}
 
 <div
-  class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-sm font-DM Sans"
+  class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-elevation-1 font-sans"
 >
   <table
     {...$tableAttrs}
@@ -180,7 +180,7 @@ License: CECILL-C
                 <th
                   {...attrs}
                   on:click={() => handleSort(props, cell)}
-                  class="relative py-3 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider bg-muted border-b border-border"
+                  class="relative py-3 px-2 text-label bg-surface-2 border-b border-border/60"
                 >
                   <span class="whitespace-nowrap flex items-center gap-1 justify-center">
                     <Render of={cell.render()} />
@@ -197,8 +197,8 @@ License: CECILL-C
                 </th>
               </Subscribe>
             {/each}
-            <th class="w-full bg-muted border-b border-border"></th>
-            <th class="pr-4 bg-muted border-b border-border">
+            <th class="w-full bg-surface-2 border-b border-border/60"></th>
+            <th class="pr-4 bg-surface-2 border-b border-border/60">
               <!-- Settings button -->
               <Button
                 variant="ghost"
@@ -228,7 +228,7 @@ License: CECILL-C
         <Subscribe rowAttrs={row.attrs()} let:rowAttrs>
           <tr
             {...rowAttrs}
-            class="h-20 cursor-pointer hover:bg-muted/50 transition-colors"
+            class="h-20 cursor-pointer hover:bg-accent/60 transition-colors"
             on:click={() => {
               handleSelectItem(items.rows[row.id].id);
             }}

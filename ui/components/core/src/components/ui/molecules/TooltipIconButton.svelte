@@ -42,7 +42,7 @@ License: CECILL-C
   <Tooltip.Trigger tabindex={-1} class="relative">
     {#if redConfirmState}
       <div
-        class="absolute right-full top-1/2 -translate-y-1/2 mr-2 bg-foreground text-background text-sm px-3 py-1 rounded shadow-lg whitespace-nowrap z-10"
+        class="absolute right-full top-1/2 -translate-y-1/2 mr-2 bg-popover text-popover-foreground border border-border text-sm px-3 py-1 rounded shadow-lg whitespace-nowrap z-10"
       >
         Click again to confirm suppression
       </div>
@@ -51,9 +51,9 @@ License: CECILL-C
       {disabled}
       size={big ? "lg" : "icon"}
       class={cn(
-        "bg-transparent text-foreground hover:bg-accent transition-all duration-200 relative active:scale-95 rounded-xl",
+        "bg-accent/10 text-foreground hover:bg-accent transition-all duration-200 relative active:scale-95 rounded-xl",
         {
-          "bg-red-500 text-white hover:bg-red-600": redConfirmState,
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90": redConfirmState,
           "bg-primary text-primary-foreground shadow-sm": selected,
         },
         className,

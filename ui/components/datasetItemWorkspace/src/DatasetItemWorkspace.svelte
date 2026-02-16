@@ -331,7 +331,7 @@ License: CECILL-C
 <div class="w-full h-full flex" role="tab" tabindex="0">
   {#if isSaving}
     <div
-      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-foreground/10 z-50"
+      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-black/10 z-50"
     >
       <Loader2Icon class="animate-spin" />
     </div>
@@ -342,18 +342,18 @@ License: CECILL-C
   >
     {#if showAutogenBBoxAlert}
       <div
-        class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-300"
+        class="bg-warning/10 border-b border-warning/20 px-4 py-2 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-300"
         transition:fade
       >
         <div class="flex items-center gap-3">
-          <div class="p-1.5 rounded-full bg-amber-500/20 text-amber-500">
+          <div class="p-1.5 rounded-full bg-warning/20 text-warning">
             <ShieldAlertIcon size={18} />
           </div>
           <div class="flex flex-col">
-            <span class="text-sm font-bold text-amber-200">
+            <span class="text-sm font-bold text-warning-foreground">
               Bounding boxes automatically generated
             </span>
-            <span class="text-[11px] text-amber-200/60 leading-tight">
+            <span class="text-[11px] text-warning-foreground/60 leading-tight">
               Some masks were missing bounding boxes. They have been added for optimal visualization
               and thumbnails.
             </span>
@@ -362,7 +362,7 @@ License: CECILL-C
         <div class="flex items-center gap-2">
           <Button
             variant="outline"
-            class="h-8 px-3 border-amber-500/30 hover:bg-amber-500/20 text-amber-200 gap-2 text-xs"
+            class="h-8 px-3 border-warning/30 hover:bg-warning/20 text-warning-foreground gap-2 text-xs"
             on:click={() => {
               void onSave();
               showAutogenBBoxAlert = false;
@@ -372,7 +372,7 @@ License: CECILL-C
             Save All
           </Button>
           <button
-            class="p-1.5 rounded-md hover:bg-white/10 text-amber-200/40 hover:text-amber-200 transition-colors"
+            class="p-1.5 rounded-md hover:bg-card/10 text-warning-foreground/40 hover:text-warning-foreground transition-colors"
             on:click={() => (showAutogenBBoxAlert = false)}
             aria-label="Dismiss"
           >

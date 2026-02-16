@@ -77,12 +77,11 @@ License: CECILL-C
   });
 </script>
 
-<div class="relative group h-full font-DM Sans">
+<div class="relative group h-full font-sans">
   <button
-    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border/60 shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card"
+    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card"
     on:click={handleSelectDataset}
   >
-    <!-- Thumbnail Section -->
     <div class="relative aspect-video w-full overflow-hidden bg-muted">
       <img
         src={dataset.preview || pixanoLogo}
@@ -90,7 +89,6 @@ License: CECILL-C
         class="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-110"
       />
 
-      <!-- Glassmorphism Stats Overlay (Disruptive Hover) -->
       <div
         class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex flex-col justify-end p-4"
       >

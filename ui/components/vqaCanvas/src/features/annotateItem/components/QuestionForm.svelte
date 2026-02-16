@@ -130,7 +130,7 @@ License: CECILL-C
 <div class="relative pl-8 group/thread">
   <!-- Visual Link (Vertical Line) -->
   <div
-    class="absolute left-3.5 top-2 bottom-2 w-0.5 bg-slate-200 group-hover/thread:bg-primary/20 transition-colors"
+    class="absolute left-3.5 top-2 bottom-2 w-0.5 bg-border group-hover/thread:bg-primary/20 transition-colors"
   ></div>
 
   <div class="flex flex-col gap-6">
@@ -138,53 +138,56 @@ License: CECILL-C
     <div class="relative flex flex-col gap-1 items-start max-w-[90%] self-start">
       <!-- Node on the line -->
       <div
-        class="absolute -left-[25px] top-3.5 w-3 h-3 rounded-full border-2 border-slate-200 bg-white z-10 {questionCompleted
+        class="absolute -left-[25px] top-3.5 w-3 h-3 rounded-full border-2 border-border bg-card z-10 {questionCompleted
           ? 'border-green-500'
-          : 'border-amber-500'}"
+          : 'border-warning'}"
       ></div>
 
       <div
-        class="flex items-center gap-2 px-1 text-[10px] uppercase tracking-widest font-bold text-slate-400"
+        class="flex items-center gap-2 px-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground"
       >
         <span>Question #{questionNumber}</span>
         {#if isOpen}
           <span
-            class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] tracking-tight normal-case font-semibold"
+            class="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[9px] tracking-tight normal-case font-semibold"
           >
             Open question
           </span>
         {:else if isSingleChoice}
           <span
-            class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 text-[9px] tracking-tight normal-case font-semibold"
+            class="px-1.5 py-0.5 rounded bg-info/10 text-info text-[9px] tracking-tight normal-case font-semibold"
           >
             Yes / No
           </span>
         {:else if isMultiChoice}
           <span
-            class="px-1.5 py-0.5 rounded bg-violet-50 text-violet-500 text-[9px] tracking-tight normal-case font-semibold"
+            class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] tracking-tight normal-case font-semibold"
           >
             Multiple choice
           </span>
         {/if}
         {#if questionCompleted}
-          <CheckCircle2 size={12} class="text-green-500" />
+          <CheckCircle2 size={12} class="text-success" />
         {:else}
-          <Clock size={12} class="text-amber-500 animate-pulse" />
+          <Clock size={12} class="text-warning animate-pulse" />
         {/if}
       </div>
 
       <div
-        class="relative bg-white border border-slate-200 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm text-sm text-slate-800 leading-relaxed group/bubble transition-all hover:border-slate-300"
+        class="relative bg-card border border-border rounded-2xl rounded-tl-none px-5 py-4 shadow-sm text-sm text-foreground leading-relaxed group/bubble transition-all hover:border-border"
       >
         {#if editingId === question.id}
           <div class="flex flex-col gap-2 min-w-[240px]">
             <textarea
               bind:value={editContent}
-              class="w-full text-sm border-none focus:ring-0 p-0 resize-none bg-slate-50 rounded"
+              class="w-full text-sm border-none focus:ring-0 p-0 resize-none bg-muted/30 rounded"
               rows="3"
             ></textarea>
             <div class="flex justify-end gap-1">
-              <button on:click={cancelEditing} class="p-1 text-slate-400 hover:text-slate-600">
+              <button
+                on:click={cancelEditing}
+                class="p-1 text-muted-foreground hover:text-foreground"
+              >
                 <X size={14} />
               </button>
               <button
@@ -197,21 +200,21 @@ License: CECILL-C
           </div>
         {:else}
           <div class="space-y-3">
-            <p class="font-medium text-slate-900">{question.data.content}</p>
+            <p class="font-medium text-foreground">{question.data.content}</p>
 
             {#if choices && choices.length > 0 && !isSingleChoice}
-              <div class="pt-2 border-t border-slate-100 space-y-1.5">
+              <div class="pt-2 border-t border-border/50 space-y-1.5">
                 <div
-                  class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1"
+                  class="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight mb-1"
                 >
                   <ListOrdered size={12} /> Options
                 </div>
                 {#each choices as choice, i}
                   {@const label = getChoiceLabel(i, labelFormat)}
-                  <div class="flex gap-2 items-start text-xs text-slate-600">
+                  <div class="flex gap-2 items-start text-xs text-muted-foreground">
                     {#if label}
                       <span
-                        class="flex-none w-5 h-5 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-500"
+                        class="flex-none w-5 h-5 rounded bg-muted flex items-center justify-center font-bold text-muted-foreground"
                       >
                         {label}
                       </span>
@@ -228,7 +231,7 @@ License: CECILL-C
           >
             <button
               on:click={() => startEditing(question)}
-              class="p-1.5 text-slate-300 hover:text-primary transition-colors"
+              class="p-1.5 text-muted-foreground/50 hover:text-primary transition-colors"
               title="Edit question"
             >
               <PencilLine size={14} />
@@ -237,7 +240,7 @@ License: CECILL-C
               on:click={() => {
                 confirmingDelete = true;
               }}
-              class="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+              class="p-1.5 text-muted-foreground/50 hover:text-destructive transition-colors"
               title="Delete question"
             >
               <Trash2 size={14} />
@@ -246,7 +249,7 @@ License: CECILL-C
 
           {#if confirmingDelete}
             <div
-              class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center justify-between gap-2"
+              class="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive flex items-center justify-between gap-2"
             >
               <span>Delete this question and its answers?</span>
               <div class="flex gap-1 shrink-0">
@@ -254,13 +257,13 @@ License: CECILL-C
                   on:click={() => {
                     confirmingDelete = false;
                   }}
-                  class="px-2 py-0.5 rounded text-slate-500 hover:bg-white transition-colors"
+                  class="px-2 py-0.5 rounded text-muted-foreground hover:bg-card transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   on:click={handleDelete}
-                  class="px-2 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  class="px-2 py-0.5 rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
                 >
                   Delete
                 </button>
@@ -278,7 +281,7 @@ License: CECILL-C
           <!-- Node on the line -->
           <div class="absolute -left-[25px] top-3.5 w-2 h-2 rounded-full bg-primary/30 z-10"></div>
 
-          <div class="px-1 text-[10px] uppercase tracking-widest font-bold text-slate-400">
+          <div class="px-1 text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
             Answer
           </div>
           <div
@@ -288,11 +291,14 @@ License: CECILL-C
               <div class="flex flex-col gap-2">
                 <textarea
                   bind:value={editContent}
-                  class="w-full text-sm border-none focus:ring-0 p-0 resize-none bg-white/50 rounded"
+                  class="w-full text-sm border-none focus:ring-0 p-0 resize-none bg-card/50 rounded"
                   rows="3"
                 ></textarea>
                 <div class="flex justify-end gap-1">
-                  <button on:click={cancelEditing} class="p-1 text-slate-400 hover:text-slate-600">
+                  <button
+                    on:click={cancelEditing}
+                    class="p-1 text-muted-foreground hover:text-foreground"
+                  >
                     <X size={14} />
                   </button>
                   <button
@@ -305,19 +311,19 @@ License: CECILL-C
               </div>
             {:else}
               {@const display = getAnswerDisplay(answer)}
-              <div class="text-sm text-slate-700 leading-relaxed">
+              <div class="text-sm text-foreground leading-relaxed">
                 {#if display.selection}
                   <p class="font-medium">{display.selection}</p>
                 {/if}
                 {#if display.explanation}
-                  <p class="text-slate-500 italic {display.selection ? 'mt-1' : ''}">
+                  <p class="text-muted-foreground italic {display.selection ? 'mt-1' : ''}">
                     {display.explanation}
                   </p>
                 {/if}
               </div>
               <button
                 on:click={() => startEditing(answer)}
-                class="absolute -right-8 top-0 p-1.5 text-slate-300 hover:text-primary opacity-0 group-hover/bubble:opacity-100 transition-all"
+                class="absolute -right-8 top-0 p-1.5 text-muted-foreground/50 hover:text-primary opacity-0 group-hover/bubble:opacity-100 transition-all"
                 title="Edit answer"
               >
                 <PencilLine size={14} />
@@ -331,11 +337,11 @@ License: CECILL-C
         <div class="relative flex flex-col items-start gap-2 w-full">
           <!-- Node on the line (placeholder) -->
           <div
-            class="absolute -left-[25px] top-3.5 w-2 h-2 rounded-full bg-slate-100 border border-slate-300 z-10"
+            class="absolute -left-[25px] top-3.5 w-2 h-2 rounded-full bg-muted border border-border z-10"
           ></div>
 
           <button
-            class="ml-1 flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-bold uppercase tracking-tighter text-slate-400 hover:border-primary hover:text-primary transition-all group/btn shadow-sm"
+            class="ml-1 flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-[11px] font-bold uppercase tracking-tighter text-muted-foreground hover:border-primary hover:text-primary transition-all group/btn shadow-sm"
             on:click={handleGenerateAnswer}
           >
             <Sparkles size={12} class="group-hover/btn:animate-pulse" />

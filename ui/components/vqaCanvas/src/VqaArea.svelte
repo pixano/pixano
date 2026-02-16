@@ -29,7 +29,7 @@ License: CECILL-C
       : null;
 </script>
 
-<div class="flex flex-col h-full bg-slate-50 overflow-hidden">
+<div class="flex flex-col h-full bg-card overflow-hidden">
   <VqaHeader {vqaSectionWidth} />
 
   <div class="flex-1 overflow-hidden">

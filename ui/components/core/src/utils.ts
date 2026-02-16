@@ -55,6 +55,22 @@ export function isValidURL(urlString: string) {
   }
 }
 
+/**
+ * Resolve a CSS custom property (e.g. "--primary") to a usable color string.
+ * Useful for Konva canvas elements that cannot use CSS variables directly.
+ */
+export function resolveThemeColor(cssVar: string, alpha: number = 1): string {
+  if (typeof document === "undefined") return `hsla(330, 65%, 50%, ${alpha})`;
+  const hsl = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+  if (!hsl) return `hsla(330, 65%, 50%, ${alpha})`;
+  // CSS vars are stored as "H S% L%" (space-separated)
+  const parts = hsl.split(/\s+/);
+  if (parts.length >= 3) {
+    return `hsla(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+  }
+  return `hsla(330, 65%, 50%, ${alpha})`;
+}
+
 export function splitWithLimit(strings: string[], separator: string, limit: number): string[] {
   const result: string[] = [];
   let currentChunk: string[] = [];

@@ -73,8 +73,12 @@ License: CECILL-C
   };
 </script>
 
-<div class="bg-white p-2 flex flex-col gap-2 h-full">
-  <button class="bg-primary text-white p-2 rounded-md w-fit" on:click={onTagText} id="tagButton">
+<div class="bg-card p-2 flex flex-col gap-2 h-full">
+  <button
+    class="bg-primary text-primary-foreground p-2 rounded-md w-fit"
+    on:click={onTagText}
+    id="tagButton"
+  >
     Tag Selected Text
   </button>
   <div class="overflow-y-auto">

@@ -60,8 +60,8 @@ License: CECILL-C
         y,
         width,
         height,
-        stroke: "hsl(316deg 60% 29.41%)",
-        fill: "#f9f4f773",
+        stroke: "hsl(330, 65%, 50%)",
+        fill: "hsla(330, 60%, 95%, 0.45)",
         strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor,
         listening: editable,
         draggable: editable,
@@ -74,7 +74,7 @@ License: CECILL-C
         y={labelY}
         {zoomFactor}
         tooltip={`${Math.round(Math.abs(width))}px x ${Math.round(Math.abs(height))}px`}
-        color="#fff"
+        color="white"
       />
     {/if}
   </Group>

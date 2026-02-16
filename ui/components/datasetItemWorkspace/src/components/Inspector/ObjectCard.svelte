@@ -322,7 +322,7 @@ License: CECILL-C
     "shadow-none rounded-xl border-border/50 overflow-hidden transition-all duration-200",
     highlightState === "self"
       ? "ring-1 ring-primary/20 bg-primary/[0.03]"
-      : "hover:bg-accent/40 hover:border-border",
+      : "hover:bg-accent/60 hover:border-border",
   )}
   style={`
     border-left: ${highlightState === "self" ? `4px solid ${color}` : "4px solid transparent"};
@@ -377,7 +377,7 @@ License: CECILL-C
         </button>
       {:else}
         <button
-          class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-white shadow-sm
+          class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-card shadow-sm
                  transition-transform hover:scale-125"
           style="background:{color}"
           title="Highlight object"

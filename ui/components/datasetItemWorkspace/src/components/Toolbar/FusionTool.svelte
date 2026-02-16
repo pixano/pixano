@@ -123,7 +123,7 @@ License: CECILL-C
     tooltipContent={fusionTool.name}
     on:click={() => selectTool(fusionTool)}
     class={cn(
-      "h-8 w-8 transition-all duration-300 hover:bg-accent/40",
+      "h-8 w-8 transition-all duration-300 hover:bg-accent/60",
       $selectedTool?.type === ToolType.Fusion ? "text-primary" : "text-foreground",
     )}
   >
@@ -136,7 +136,7 @@ License: CECILL-C
       <IconButton
         tooltipContent={"Validate association (S / Enter)"}
         on:click={onValidate}
-        class="h-8 w-8 text-green-600/80 hover:bg-green-50/40"
+        class="h-8 w-8 text-success/80 hover:bg-success/5"
       >
         <Check class="h-4.5 w-4.5" />
       </IconButton>
