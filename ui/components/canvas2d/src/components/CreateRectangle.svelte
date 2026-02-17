@@ -9,15 +9,18 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Rect } from "svelte-konva";
 
-  import type { CreateRectangleShape, Reference, SaveRectangleShape } from "@pixano/core";
-
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
+  import type {
+    CanvasBBoxCreatingShape,
+    CanvasBBoxSavingShape,
+    CanvasReference,
+  } from "../lib/types/canvasData";
   import LabelTag from "./LabelTag.svelte";
 
   export let zoomFactor: number;
-  export let newShape: CreateRectangleShape | SaveRectangleShape;
+  export let newShape: CanvasBBoxCreatingShape | CanvasBBoxSavingShape;
   export let stage: Konva.Stage;
-  export let viewRef: Reference;
+  export let viewRef: CanvasReference;
   export let editable: boolean = false;
 
   let rectangleGroup: Konva.Group;

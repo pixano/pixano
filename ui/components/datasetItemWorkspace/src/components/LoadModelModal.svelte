@@ -8,12 +8,11 @@ License: CECILL-C
   import { onDestroy } from "svelte";
 
   import { LoadingModal, SelectLocalOrDistantModelModal } from "@pixano/core";
+  import { panTool } from "@pixano/tools";
   import {
     segmentationModels,
     selectedSegmentationModelName,
   } from "@pixano/core/src/lib/stores/inferenceStore";
-
-  import { panTool } from "../lib/settings/selectionTools";
   import { modelsUiStore, selectedTool } from "../lib/stores/datasetItemWorkspaceStores";
   import type { ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
 

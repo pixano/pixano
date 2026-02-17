@@ -5,100 +5,71 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
-
-  import { SaveShapeType, type Reference, type Shape } from "@pixano/core";
+  import type { ToolEvent } from "@pixano/tools";
 
   import { sceneFunc } from "../api/maskApi";
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
-  import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
+  import {
+    CanvasShapeType,
+    type CanvasPolygonCreatingShape,
+    type CanvasPolygonPoint,
+    type CanvasReference,
+    type CanvasShape,
+  } from "../lib/types/canvasData";
   import PolygonPoints from "./PolygonPoints.svelte";
 
-  // Exports
-  export let viewRef: Reference;
-  export let newShape: Shape;
-  export let stage: Konva.Stage;
+  export let viewRef: CanvasReference;
+  export let newShape: CanvasShape;
+  export let stage: Konva.Stage | undefined;
   export let zoomFactor: Record<string, number>;
-  const POLYGON_ID = "creating";
+  export let onToolEvent: (event: ToolEvent) => void = () => {
+    return;
+  };
 
-  // Distance threshold (in screen pixels) for snapping to an edge
+  const POLYGON_ID = "creating";
   const EDGE_SNAP_PX = 8;
 
-  let polygonPoints: PolygonGroupPoint[][] = [];
+  const asPolygonCreation = (shape: CanvasShape): CanvasPolygonCreatingShape =>
+    shape as CanvasPolygonCreatingShape;
+  const getSavedSvg = (shape: CanvasShape): string[] =>
+    "masksImageSVG" in shape &&
+    Array.isArray(shape.masksImageSVG) &&
+    shape.masksImageSVG.every((value) => typeof value === "string")
+      ? shape.masksImageSVG
+      : [];
+
+  const draftLineColor = "hsl(330, 65%, 50%)";
+  const draftFillColor = "hsla(330, 60%, 95%, 0.2)";
+
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null = null;
 
+  $: polygonCreation =
+    newShape.status === "creating" && newShape.type === CanvasShapeType.Polygon
+      ? asPolygonCreation(newShape)
+      : null;
+  $: polygonPoints =
+    polygonCreation?.phase === "drawing" && polygonCreation.points.length > 0
+      ? [...polygonCreation.closedPolygons, polygonCreation.points]
+      : (polygonCreation?.closedPolygons ?? []);
   $: {
-    if (newShape.status === "creating" && newShape.type === SaveShapeType.mask) {
-      const closedPolygons = newShape.closedPolygons || [];
-      const currentPoints = newShape.points || [];
-
-      if (newShape.phase === "editing") {
-        polygonPoints = closedPolygons;
-      } else {
-        // Drawing phase: show closed polygons + in-progress polygon
-        const lastPolygonDetailsPoint = currentPoints.at(-1);
-        const existingInProgress =
-          polygonPoints.length > closedPolygons.length
-            ? polygonPoints[polygonPoints.length - 1]
-            : [];
-        const lastSimplifiedPoint = existingInProgress.at(-1);
-
-        if (lastPolygonDetailsPoint && lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
-          const updatedInProgress = [...existingInProgress, lastPolygonDetailsPoint];
-          polygonPoints = [...closedPolygons, updatedInProgress];
-        } else if (currentPoints.length === 0) {
-          polygonPoints = closedPolygons;
-        }
-      }
-    }
-    if (newShape.status === "none") {
-      polygonPoints = [];
+    if (!polygonCreation || polygonCreation.phase !== "editing") {
       hoveredEdge = null;
     }
   }
 
-  function handlePolygonPointsClick(pointIndex: number, shapeIndex: number) {
-    if (newShape.status !== "creating" || newShape.type !== SaveShapeType.mask) return;
+  $: shouldRenderSavedPolygon =
+    newShape.status === "saving" &&
+    (newShape.type === CanvasShapeType.Polygon || newShape.type === CanvasShapeType.Mask) &&
+    "polygonMode" in newShape;
 
-    // Only close on click of point 0 of the in-progress (last) polygon during drawing
-    if (
-      newShape.phase === "drawing" &&
-      pointIndex === 0 &&
-      shapeIndex === polygonPoints.length - 1 &&
-      polygonPoints[shapeIndex]?.length >= 3
-    ) {
-      const closedPoly = polygonPoints[shapeIndex];
-      newShape = {
-        ...newShape,
-        closedPolygons: [...newShape.closedPolygons, closedPoly],
-        points: [],
-        phase: "editing",
-      };
-    }
+  function getRelativePointerOnView() {
+    const viewLayer = stage?.findOne(`#${viewRef.name}`);
+    if (!(viewLayer instanceof Konva.Layer)) return null;
+    return viewLayer?.getRelativePointerPosition();
   }
 
-  function handlePolygonPointsDragMove(id: number, i: number) {
-    const pos = stage.findOne(`#dot-${POLYGON_ID}-${i}-${id}`).position();
-    const newPolygonPoints = polygonPoints.map((points, pi) =>
-      pi === i
-        ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
-        : points,
-    );
-    polygonPoints = newPolygonPoints;
-
-    // Sync back to newShape.closedPolygons when editing
-    if (
-      newShape.status === "creating" &&
-      newShape.type === SaveShapeType.mask &&
-      newShape.phase === "editing"
-    ) {
-      newShape = { ...newShape, closedPolygons: newPolygonPoints };
-    }
-  }
-
-  // Project point p onto segment a→b, return distance and projected point
   function projectOnSegment(
     p: { x: number; y: number },
     a: { x: number; y: number },
@@ -110,44 +81,68 @@ License: CECILL-C
     if (len2 === 0) return { dist: Math.hypot(p.x - a.x, p.y - a.y), point: a };
     let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
     t = Math.max(0, Math.min(1, t));
-    const proj = { x: a.x + t * dx, y: a.y + t * dy };
-    return { dist: Math.hypot(p.x - proj.x, p.y - proj.y), point: proj };
+    const projected = { x: a.x + t * dx, y: a.y + t * dy };
+    return { dist: Math.hypot(p.x - projected.x, p.y - projected.y), point: projected };
   }
 
-  function findClosestEdge(pos: { x: number; y: number }, polys: PolygonGroupPoint[][]) {
-    let bestDist = Infinity;
+  function findClosestEdge(pos: { x: number; y: number }, polygons: CanvasPolygonPoint[][]) {
+    let bestDist = Number.POSITIVE_INFINITY;
     let bestShape = -1;
     let bestIdx = -1;
     let bestPoint = pos;
 
-    for (let si = 0; si < polys.length; si++) {
-      const poly = polys[si];
-      for (let pi = 0; pi < poly.length; pi++) {
-        const p1 = poly[pi];
-        const p2 = poly[(pi + 1) % poly.length];
-        const { dist, point } = projectOnSegment(pos, p1, p2);
+    for (let shapeIndex = 0; shapeIndex < polygons.length; shapeIndex++) {
+      const polygon = polygons[shapeIndex];
+      for (let pointIndex = 0; pointIndex < polygon.length; pointIndex++) {
+        const start = polygon[pointIndex];
+        const end = polygon[(pointIndex + 1) % polygon.length];
+        const { dist, point } = projectOnSegment(pos, start, end);
         if (dist < bestDist) {
           bestDist = dist;
-          bestShape = si;
-          bestIdx = pi;
+          bestShape = shapeIndex;
+          bestIdx = pointIndex;
           bestPoint = point;
         }
       }
     }
+
     return { bestDist, bestShape, bestIdx, bestPoint };
   }
 
+  function handlePolygonPointsClick(pointIndex: number, shapeIndex: number) {
+    if (!polygonCreation || polygonCreation.phase !== "drawing") return;
+    const inProgressIndex = polygonPoints.length - 1;
+    if (shapeIndex !== inProgressIndex || pointIndex !== 0) return;
+    const inProgressPolygon = polygonPoints[shapeIndex];
+    if (!inProgressPolygon || inProgressPolygon.length < 3) return;
+
+    const firstPoint = inProgressPolygon[0];
+    onToolEvent({
+      type: "pointerDown",
+      button: 0,
+      position: { x: firstPoint.x, y: firstPoint.y },
+    });
+  }
+
+  function handlePolygonPointsDragMove(id: number, shapeIndex: number) {
+    const pointNode = stage?.findOne(`#dot-${POLYGON_ID}-${shapeIndex}-${id}`);
+    if (!(pointNode instanceof Konva.Circle)) return;
+    const pos = pointNode.position();
+    onToolEvent({
+      type: "polygonMoveVertex",
+      polygonIndex: shapeIndex,
+      pointId: id,
+      position: { x: pos.x, y: pos.y },
+    });
+  }
+
   function handleShapeMouseMove() {
-    if (
-      newShape.status !== "creating" ||
-      newShape.type !== SaveShapeType.mask ||
-      newShape.phase !== "editing"
-    ) {
+    if (!polygonCreation || polygonCreation.phase !== "editing") {
       hoveredEdge = null;
       return;
     }
 
-    const pos = stage.findOne(`#${viewRef.name}`)?.getRelativePointerPosition();
+    const pos = getRelativePointerOnView();
     if (!pos) {
       hoveredEdge = null;
       return;
@@ -156,7 +151,7 @@ License: CECILL-C
     const threshold = EDGE_SNAP_PX / zoomFactor[viewRef.name];
     const { bestDist, bestShape, bestIdx, bestPoint } = findClosestEdge(
       pos,
-      newShape.closedPolygons,
+      polygonCreation.closedPolygons,
     );
 
     if (bestDist < threshold && bestShape >= 0) {
@@ -175,76 +170,79 @@ License: CECILL-C
     hoveredEdge = null;
   }
 
-  function handleEdgeClick(e: CustomEvent) {
-    if (
-      newShape.status !== "creating" ||
-      newShape.type !== SaveShapeType.mask ||
-      newShape.phase !== "editing"
-    )
-      return;
+  function handleEdgeClick(event: CustomEvent) {
+    if (!polygonCreation || polygonCreation.phase !== "editing") return;
 
-    const konvaEvt = e.detail as Konva.KonvaEventObject<MouseEvent>;
-    const pos = stage.findOne(`#${viewRef.name}`)?.getRelativePointerPosition();
-    if (!pos) return;
-
-    konvaEvt.cancelBubble = true; // always stop propagation in editing phase
+    const konvaEvent = event.detail as Konva.KonvaEventObject<MouseEvent>;
+    konvaEvent.cancelBubble = true;
 
     if (hoveredEdge) {
-      // Near an edge — insert vertex
-      const shape = newShape.closedPolygons[hoveredEdge.shapeIndex];
-      const newPoint: PolygonGroupPoint = {
-        x: Math.round(hoveredEdge.x),
-        y: Math.round(hoveredEdge.y),
-        id: Math.max(...shape.map((p) => p.id)) + 1,
-      };
-      const updated = [...newShape.closedPolygons];
-      const updatedPoly = [...shape];
-      updatedPoly.splice(hoveredEdge.afterIndex + 1, 0, newPoint);
-      updated[hoveredEdge.shapeIndex] = updatedPoly;
-      newShape = { ...newShape, closedPolygons: updated };
-      polygonPoints = updated;
+      onToolEvent({
+        type: "polygonInsertVertex",
+        polygonIndex: hoveredEdge.shapeIndex,
+        afterIndex: hoveredEdge.afterIndex,
+        position: {
+          x: Math.round(hoveredEdge.x),
+          y: Math.round(hoveredEdge.y),
+        },
+      });
       hoveredEdge = null;
-    } else {
-      // Not near an edge — start new polygon at click position
-      newShape = {
-        ...newShape,
-        phase: "drawing",
-        points: [{ x: Math.round(pos.x), y: Math.round(pos.y), id: 0 }],
-      };
+      return;
     }
+
+    const pos = getRelativePointerOnView();
+    if (!pos) return;
+    onToolEvent({
+      type: "pointerDown",
+      button: 0,
+      position: { x: Math.round(pos.x), y: Math.round(pos.y) },
+    });
   }
 
-  // Polygon arrays for custom sceneFunc rendering
-  $: closedPolygons =
-    newShape.status === "creating" && newShape.type === SaveShapeType.mask
-      ? newShape.closedPolygons
-      : [];
+  function handlePolygonDragEnd(event: CustomEvent<Konva.KonvaEventObject<DragEvent>>) {
+    if (!polygonCreation || polygonCreation.phase !== "editing") return;
 
-  $: inProgressPoints = (() => {
-    if (
-      newShape.status === "creating" &&
-      newShape.type === SaveShapeType.mask &&
-      newShape.phase === "drawing" &&
-      polygonPoints.length > (newShape.closedPolygons?.length || 0)
-    ) {
-      return polygonPoints[polygonPoints.length - 1] || [];
-    }
-    return [];
-  })();
+    const target = event.detail.target;
+    if (!(target instanceof Konva.Group)) return;
+    const { x, y } = target.position();
+    const deltaX = Math.round(x);
+    const deltaY = Math.round(y);
+    target.position({ x: 0, y: 0 });
+    target.getLayer()?.batchDraw();
+
+    if (deltaX === 0 && deltaY === 0) return;
+
+    onToolEvent({
+      type: "polygonTranslate",
+      delta: { x: deltaX, y: deltaY },
+    });
+  }
 
   function drawPolygonScene(ctx: Konva.Context, shape: Konva.Shape) {
     ctx.beginPath();
-    for (const poly of closedPolygons) {
-      if (poly.length < 2) continue;
-      ctx.moveTo(poly[0].x, poly[0].y);
-      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+
+    const closedPolygons = polygonCreation?.closedPolygons ?? [];
+    for (const polygon of closedPolygons) {
+      if (polygon.length < 2) continue;
+      ctx.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) {
+        ctx.lineTo(polygon[i].x, polygon[i].y);
+      }
       ctx.closePath();
     }
-    if (inProgressPoints.length > 0) {
-      ctx.moveTo(inProgressPoints[0].x, inProgressPoints[0].y);
-      for (let i = 1; i < inProgressPoints.length; i++)
-        ctx.lineTo(inProgressPoints[i].x, inProgressPoints[i].y);
+
+    const inProgress = polygonCreation?.phase === "drawing" ? polygonCreation.points : [];
+    const hasCurrent = !!polygonCreation?.current;
+    if (inProgress.length > 0) {
+      ctx.moveTo(inProgress[0].x, inProgress[0].y);
+      for (let i = 1; i < inProgress.length; i++) {
+        ctx.lineTo(inProgress[i].x, inProgress[i].y);
+      }
+      if (hasCurrent) {
+        ctx.lineTo(polygonCreation.current.x, polygonCreation.current.y);
+      }
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
     const fillColor = shape.fill() as string;
@@ -256,75 +254,78 @@ License: CECILL-C
   }
 
   function drawPolygonHit(ctx: Konva.Context, shape: Konva.Shape) {
-    // Only capture clicks during editing phase (edge insertion, start new polygon).
-    // During drawing, let clicks pass through to the Image node for point addition.
-    if (
-      newShape.status !== "creating" ||
-      newShape.type !== SaveShapeType.mask ||
-      newShape.phase !== "editing"
-    ) {
+    if (!polygonCreation || polygonCreation.phase !== "editing") {
       return;
     }
     ctx.beginPath();
-    for (const poly of closedPolygons) {
-      if (poly.length < 2) continue;
-      ctx.moveTo(poly[0].x, poly[0].y);
-      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+    for (const polygon of polygonCreation.closedPolygons) {
+      if (polygon.length < 2) continue;
+      ctx.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) {
+        ctx.lineTo(polygon[i].x, polygon[i].y);
+      }
       ctx.closePath();
     }
     ctx.fillStrokeShape(shape);
   }
 </script>
 
-{#if newShape.status === "creating" && newShape.type === SaveShapeType.mask && newShape.viewRef.name === viewRef.name}
-  <Group config={{ id: "polygon", draggable: true }}>
-    <!-- All polygons rendered with even-odd fill for hole support -->
-    <KonvaShape
-      on:click={handleEdgeClick}
-      on:mousemove={handleShapeMouseMove}
-      on:mouseleave={handleShapeMouseLeave}
-      config={{
-        sceneFunc: drawPolygonScene,
-        stroke: "hsl(330, 65%, 50%)",
-        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
-        fill: "hsla(330, 60%, 95%, 0.45)",
-        hitFunc: drawPolygonHit,
-      }}
-    />
-    <PolygonPoints
-      {viewRef}
-      {stage}
-      {zoomFactor}
-      polygonId={POLYGON_ID}
-      points={polygonPoints}
-      {handlePolygonPointsClick}
-      {handlePolygonPointsDragMove}
-      handlePolygonPointsDragEnd={null}
-    />
-    <!-- Edge hover indicator: shows where a new vertex will be inserted -->
-    {#if hoveredEdge}
-      <Circle
+{#if newShape.viewRef?.name === viewRef.name}
+  <Group
+    on:dragend={handlePolygonDragEnd}
+    config={{
+      id: "polygon-draft",
+      draggable: polygonCreation?.phase === "editing",
+    }}
+  >
+    {#if polygonCreation}
+      <KonvaShape
+        on:click={handleEdgeClick}
+        on:mousemove={handleShapeMouseMove}
+        on:mouseleave={handleShapeMouseLeave}
         config={{
-          x: hoveredEdge.x,
-          y: hoveredEdge.y,
-          radius: 5 / zoomFactor[viewRef.name],
-          fill: "hsl(330, 65%, 50%)",
-          stroke: "white",
-          strokeWidth: 1.5 / zoomFactor[viewRef.name],
+          sceneFunc: drawPolygonScene,
+          stroke: draftLineColor,
+          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
+          fill: draftFillColor,
+          hitFunc: drawPolygonHit,
+          listening: polygonCreation.phase === "editing",
+        }}
+      />
+      <PolygonPoints
+        {viewRef}
+        {stage}
+        {zoomFactor}
+        polygonId={POLYGON_ID}
+        points={polygonPoints}
+        {handlePolygonPointsClick}
+        {handlePolygonPointsDragMove}
+        handlePolygonPointsDragEnd={null}
+      />
+      {#if hoveredEdge}
+        <Circle
+          config={{
+            x: hoveredEdge.x,
+            y: hoveredEdge.y,
+            radius: 5 / zoomFactor[viewRef.name],
+            fill: draftLineColor,
+            stroke: "white",
+            strokeWidth: 1.5 / zoomFactor[viewRef.name],
+            listening: false,
+          }}
+        />
+      {/if}
+    {:else if shouldRenderSavedPolygon}
+      <KonvaShape
+        config={{
+          sceneFunc: (ctx, shape) => sceneFunc(ctx, shape, getSavedSvg(newShape)),
+          stroke: draftLineColor,
+          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
+          closed: true,
+          fill: draftFillColor,
           listening: false,
         }}
       />
     {/if}
-  </Group>
-{:else if newShape.status === "saving" && newShape.type === SaveShapeType.mask && newShape.viewRef.name === viewRef.name}
-  <Group config={{ id: "polygon" }}>
-    <KonvaShape
-      config={{
-        sceneFunc: (ctx, shape) => sceneFunc(ctx, shape, newShape.masksImageSVG),
-        stroke: "hsl(330, 65%, 50%)",
-        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
-        fill: "hsla(330, 60%, 95%, 0.45)",
-      }}
-    />
   </Group>
 {/if}

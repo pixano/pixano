@@ -79,11 +79,21 @@ License: CECILL-C
       //unpack Compressed RLE to uncompressed RLE
       const mask: Mask = ann as Mask;
       if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+      const metadata = mask.data.inference_metadata as Record<string, unknown>;
+      const metadataPolygonSvg = metadata.polygon_svg;
+      const isPolygonSvg =
+        metadata.geometry_mode === "polygon" &&
+        Array.isArray(metadataPolygonSvg) &&
+        metadataPolygonSvg.every((value) => typeof value === "string");
       if (!mask.ui.svg) {
-        const rle = mask.data.counts;
-        const size = mask.data.size;
-        const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-        mask.ui.svg = mask_utils.convertSegmentsToSVG(maskPoly);
+        if (isPolygonSvg) {
+          mask.ui.svg = metadataPolygonSvg;
+        } else {
+          const rle = mask.data.counts;
+          const size = mask.data.size;
+          const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+          mask.ui.svg = mask_utils.convertSegmentsToSVG(maskPoly);
+        }
       }
     }
     if (selectedItem.ui.type === WorkspaceType.VIDEO) {

@@ -26,9 +26,9 @@ import {
   type InteractiveImageSegmenter,
   type KeypointsTemplate,
   type SaveItem,
-  type SelectionTool,
   type Shape,
 } from "@pixano/core";
+import type { SelectionTool } from "@pixano/tools";
 
 import {
   mapObjectToBBox,

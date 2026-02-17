@@ -6,14 +6,15 @@ License: CECILL-C
 
 import Konva from "konva";
 
-import type { MaskSVG, SelectionTool } from "@pixano/core";
+import type { SelectionTool } from "@pixano/tools";
 
 import { MASK_STROKEWIDTH } from "../lib/constants";
+import type { CanvasMaskSVG } from "../lib/types/canvasData";
 import { smoothSceneFunc } from "./maskApi";
 
 export function addMask(
   mask_id: string,
-  mask_svg: MaskSVG,
+  mask_svg: CanvasMaskSVG,
   visible: boolean,
   opacity: number,
   color: string,

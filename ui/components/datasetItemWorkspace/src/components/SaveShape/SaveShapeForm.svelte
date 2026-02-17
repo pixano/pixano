@@ -99,7 +99,7 @@ License: CECILL-C
     let tracking_masks: Mask[] = [];
     const addedAnnotations: Annotation[] = [newObject];
 
-    if ($newShape.type === SaveShapeType.mask) {
+    if ($newShape.type === SaveShapeType.mask || $newShape.type === SaveShapeType.polygon) {
       const bboxCoords = getBoundingBoxFromMaskSVG($newShape.masksImageSVG);
       if (bboxCoords) {
         const bboxShape: SaveRectangleShape = {

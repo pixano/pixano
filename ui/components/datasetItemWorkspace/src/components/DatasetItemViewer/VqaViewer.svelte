@@ -15,13 +15,8 @@ License: CECILL-C
     DatasetItem,
     Image,
     LoadingModal,
-    Mask,
-    type Box,
     type ImagesPerView,
-    type LabeledClick,
-    type Reference,
   } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { VqaArea } from "@pixano/vqa-canvas";
   import type { StoreQuestionEvent } from "@pixano/vqa-canvas/src/features/addQuestion/types";
   // Import stores and API functions
@@ -35,9 +30,9 @@ License: CECILL-C
   } from "@pixano/vqa-canvas/src/features/annotateItem/types";
 
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
+    brushSettings,
     colorScale,
     embeddings,
     entities,
@@ -51,7 +46,6 @@ License: CECILL-C
     modelsUiStore,
     newShape,
     preAnnotationIsActive,
-    selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { addAnswer } from "../../lib/stores/mutations/addAnswer";
@@ -62,13 +56,7 @@ License: CECILL-C
 
   // Attributes
   export let selectedItem: DatasetItem;
-  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
-  export let pixanoInferenceSegmentation: (
-    viewRef: Reference,
-    points: LabeledClick[],
-    box: Box,
-  ) => Promise<Mask | undefined>;
 
   // utility vars for resizing with slide bar
   let vqaAreaMaxWidth = 500; //default width
@@ -257,15 +245,11 @@ License: CECILL-C
         bboxes={$itemBboxes}
         masks={$itemMasks}
         keypoints={$itemKeypoints}
-        selectedKeypointTemplate={templates.find(
-          (t) => t.template_id === $selectedKeypointsTemplate,
-        )}
         {filters}
-        {pixanoInferenceSegmentation}
         canvasSize={vqaAreaMaxWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
-        bind:currentAnn
+        bind:brushSettings={$brushSettings}
         bind:newShape={$newShape}
       />
     </div>

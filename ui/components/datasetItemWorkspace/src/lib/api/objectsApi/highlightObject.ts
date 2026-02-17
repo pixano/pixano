@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { get } from "svelte/store";
 
-import { ToolType } from "@pixano/canvas2d/src/tools";
+import { ToolType } from "@pixano/tools";
 import { BaseSchema, Tracklet } from "@pixano/core";
 
 import { annotations, selectedTool } from "../../stores/datasetItemWorkspaceStores";

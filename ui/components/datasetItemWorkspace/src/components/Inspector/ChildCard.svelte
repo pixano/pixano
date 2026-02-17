@@ -16,9 +16,10 @@ License: CECILL-C
     Square,
     Trash2,
     Type,
+    VenetianMask,
   } from "lucide-svelte";
 
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { ToolType } from "@pixano/tools";
   import {
     Annotation,
     BaseSchema,
@@ -104,6 +105,12 @@ License: CECILL-C
   };
 
   const isMultiView = Object.keys($mediaViews).length > 1;
+  const isRawPolygonMask = (annotation: Annotation): boolean => {
+    if (annotation.table_info.base_schema !== BaseSchema.Mask) return false;
+    const metadata = annotation.data.inference_metadata as Record<string, unknown> | undefined;
+    return metadata?.geometry_mode === "polygon";
+  };
+
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
@@ -129,7 +136,11 @@ License: CECILL-C
       {#if child.is_type(BaseSchema.BBox)}
         <Square class="h-3.5 w-3.5 mx-1" />
       {:else if child.is_type(BaseSchema.Mask)}
-        <img src={polygon_icon} alt="polygon icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
+        {#if isRawPolygonMask(child)}
+          <img src={polygon_icon} alt="raw polygon icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
+        {:else}
+          <VenetianMask class="h-3.5 w-3.5 mx-1 opacity-60" />
+        {/if}
       {:else if child.is_type(BaseSchema.Keypoints)}
         <img src={keypoints_icon} alt="keypoints icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
       {:else if child.is_type(BaseSchema.Tracklet)}
@@ -206,7 +217,11 @@ License: CECILL-C
             <Square class="h-4" />
           {/if}
           {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
-            <img src={polygon_icon} alt="polygon icon" class="h-4" />
+            {#if isRawPolygonMask(trackletChild)}
+              <img src={polygon_icon} alt="raw polygon icon" class="h-4" />
+            {:else}
+              <VenetianMask class="h-4" />
+            {/if}
           {/if}
           {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
             <img src={keypoints_icon} alt="keypoints icon" class="h-4" />

@@ -9,20 +9,20 @@ License: CECILL-C
   import type Konva from "konva";
   import { Circle } from "svelte-konva";
 
-  import type { Vertex, VertexStates } from "@pixano/core";
+  import type { CanvasVertex, CanvasVertexState } from "../../lib/types/canvasData";
 
   import LabelTag from "../LabelTag.svelte";
 
   export let stage: Konva.Stage;
   export let zoomFactor: number;
-  export let vertex: Vertex;
+  export let vertex: CanvasVertex;
   export let keypointsId: string;
   export let vertexIndex: number;
   export let draggable: boolean = false;
   export let color: string = "rgb(0,128,0)";
   export let opacity: number = 1;
   export let onPointDragMove: (pointId: number, event: Event) => void;
-  export let onPointStateChange: (pointId: number, value: VertexStates) => void;
+  export let onPointStateChange: (pointId: number, value: CanvasVertexState) => void;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
 
   let showLabel = false;
@@ -61,14 +61,14 @@ License: CECILL-C
     menuNode.style.display = "none";
   };
 
-  const onMenuClick = (state: VertexStates) => {
+  const onMenuClick = (state: CanvasVertexState) => {
     onPointStateChange(vertexIndex, state);
     menuNode.style.display = "none";
   };
 
   let fill = color;
 
-  const defineFill = (features: Vertex["features"]) => {
+  const defineFill = (features: CanvasVertex["features"]) => {
     if (features.state === "invisible") return "transparent";
     if (features.state === "hidden") return "white";
     if (features?.color) return features.color;

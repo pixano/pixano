@@ -9,19 +9,23 @@ License: CECILL-C
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
 
-  import { SaveShapeType, type KeypointsTemplate, type Reference, type Shape } from "@pixano/core";
-
   import { findRectBoundaries } from "../api/keypointsApi";
+  import {
+    CanvasShapeType,
+    type CanvasKeypoints,
+    type CanvasReference,
+    type CanvasShape,
+  } from "../lib/types/canvasData";
   import KeyPoints from "./keypoints/Keypoint.svelte";
 
   export let stage: Konva.Stage;
-  export let keypoints: KeypointsTemplate[] = [];
-  export let newShape: Shape;
+  export let keypoints: CanvasKeypoints[] = [];
+  export let newShape: CanvasShape;
   export let zoomFactor: number;
   export let colorScale: (id: string) => string;
-  export let viewRef: Reference;
+  export let viewRef: CanvasReference;
 
-  const onClick = (keypoint: KeypointsTemplate) => {
+  const onClick = (keypoint: CanvasKeypoints) => {
     newShape = {
       status: "editing",
       shapeId: keypoint.id,
@@ -32,7 +36,7 @@ License: CECILL-C
     };
   };
 
-  const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
+  const onKeypointsChange = (vertices: CanvasKeypoints["vertices"], id: string) => {
     const image = stage.findOne(`#image-${viewRef.name}`);
     const imageSize = image.getSize();
     const normalizedVertices = vertices.map((point) => ({
@@ -42,7 +46,7 @@ License: CECILL-C
     }));
     newShape = {
       status: "editing",
-      type: SaveShapeType.keypoints,
+      type: CanvasShapeType.Keypoints,
       vertices: normalizedVertices,
       shapeId: id,
       viewRef,

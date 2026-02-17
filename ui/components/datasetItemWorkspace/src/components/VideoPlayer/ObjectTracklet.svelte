@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
 
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { ToolType } from "@pixano/tools";
   import {
     Annotation,
     BaseSchema,

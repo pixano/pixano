@@ -8,12 +8,11 @@ License: CECILL-C
   // Imports
   import { onDestroy } from "svelte";
 
-  import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { cn, IconButton, type SelectionTool, type Vertex } from "@pixano/core/src";
+  import { ToolType, keyPointTool, type SelectionTool } from "@pixano/tools";
+  import { cn, IconButton, type Vertex } from "@pixano/core/src";
   import keypoints_icon from "@pixano/core/src/assets/lucide_keypoints_icon.svg";
 
   import { templates } from "../../lib/settings/keyPointsTemplates";
-  import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
     newShape,
     selectedKeypointsTemplate,

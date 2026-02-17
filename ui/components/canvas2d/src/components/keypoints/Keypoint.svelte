@@ -9,15 +9,15 @@ License: CECILL-C
   import Konva from "konva";
   import { Line } from "svelte-konva";
 
-  import type { KeypointsTemplate, VertexStates } from "@pixano/core";
+  import type { CanvasKeypoints, CanvasVertexState } from "../../lib/types/canvasData";
 
   import { videoControls } from "../../../../datasetItemWorkspace/src/lib/stores/videoViewerStores";
   import KeyPointCircle from "./KeypointsCircle.svelte";
 
   export let stage: Konva.Stage;
 
-  export let keypointStructure: KeypointsTemplate;
-  export let onPointChange: (vertices: KeypointsTemplate["vertices"]) => void = () => {};
+  export let keypointStructure: CanvasKeypoints;
+  export let onPointChange: (vertices: CanvasKeypoints["vertices"]) => void = () => {};
   export let zoomFactor: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
   export let color: string = "rgba(135, 47, 100)";
@@ -38,7 +38,7 @@ License: CECILL-C
     onPointChange(vertices);
   };
 
-  const onPointStateChange = (pointIndex: number, value: VertexStates) => {
+  const onPointStateChange = (pointIndex: number, value: CanvasVertexState) => {
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
         return { ...point, features: { ...point.features, state: value } };

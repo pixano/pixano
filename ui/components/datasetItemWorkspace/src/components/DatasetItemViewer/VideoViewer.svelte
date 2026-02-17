@@ -9,7 +9,7 @@ License: CECILL-C
   import { onMount } from "svelte";
 
   import { Canvas2D } from "@pixano/canvas2d";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { ToolType } from "@pixano/tools";
   import {
     Annotation,
     BaseSchema,
@@ -17,17 +17,12 @@ License: CECILL-C
     DatasetItem,
     Entity,
     Keypoints,
-    Mask,
     SaveShapeType,
     SequenceFrame,
     Tracklet,
-    type Box,
     type EditShape,
-    type LabeledClick,
-    type Reference,
     type SaveItem,
   } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import { sourcesStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import {
@@ -38,9 +33,9 @@ License: CECILL-C
     updateExistingObject,
   } from "../../lib/api/objectsApi";
   import { setBufferSpecs, updateView } from "../../lib/api/videoApi";
-  import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
+    brushSettings,
     colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
@@ -51,7 +46,6 @@ License: CECILL-C
     merges,
     newShape,
     saveData,
-    selectedKeypointsTemplate,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
@@ -64,13 +58,7 @@ License: CECILL-C
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
 
   export let selectedItem: DatasetItem;
-  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
-  export let pixanoInferenceSegmentation: (
-    viewRef: Reference,
-    points: LabeledClick[],
-    box: Box,
-  ) => Promise<Mask | undefined>;
 
   $: {
     if (selectedItem) {
@@ -345,7 +333,7 @@ License: CECILL-C
             newAnn = newKpt;
           }
         }
-      } else if (shape.type === SaveShapeType.mask) {
+      } else if (shape.type === SaveShapeType.mask || shape.type === SaveShapeType.polygon) {
         console.log("TODO! mask");
         //mask not implemented yet in video
       }
@@ -416,15 +404,11 @@ License: CECILL-C
         bboxes={$current_itemBBoxes}
         masks={$current_itemMasks}
         keypoints={$current_itemKeypoints}
-        selectedKeypointTemplate={templates.find(
-          (t) => t.template_id === $selectedKeypointsTemplate,
-        )}
-        {pixanoInferenceSegmentation}
         canvasSize={inspectorMaxHeight + resize}
         isVideo={true}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
-        bind:currentAnn
+        bind:brushSettings={$brushSettings}
         bind:newShape={$newShape}
         {merge}
       />

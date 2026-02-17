@@ -25,7 +25,10 @@
   "dependencies": {
     "@pixano/core": "workspace:^",
     "@pixano/dataset-item-workspace": "workspace:^",
+    "@pixano/document": "workspace:^",
     "@pixano/models": "workspace:^",
+    "@pixano/tools": "workspace:^",
+    "@pixano/store": "workspace:^",
     "konva": "^9.3.16",
     "lazy-brush": "^2.0.2",
     "nanoid": "^5.0.5",

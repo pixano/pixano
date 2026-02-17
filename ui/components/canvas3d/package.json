@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "@pixano/core": "workspace:^",
+    "@pixano/document": "workspace:^",
+    "@pixano/tools": "workspace:^",
     "vite-plugin-externals": "^0.6.2"
   }
 }

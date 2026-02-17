@@ -7,99 +7,97 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import Konva from "konva";
-  import { nanoid } from "nanoid";
   import { onDestroy, onMount, tick } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
 
   import {
-    Annotation,
-    BBox,
-    Mask,
-    SaveShapeType,
+    ToolType,
     type BrushSelectionTool,
-    type ImagesPerView,
-    type KeypointsTemplate,
-    type LabeledPointTool,
-    type Reference,
-    type SegmentationResult,
+    type PreviewShape,
     type SelectionTool,
-    type Shape,
-    type Vertex,
-  } from "@pixano/core";
-  import { cn } from "@pixano/core/src";
+    type ToolEvent,
+  } from "@pixano/tools";
   import {
-    pixanoInferenceToValidateTrackingMasks,
-    pixanoInferenceTracking,
-  } from "@pixano/core/src/components/pixano_inference_segmentation/inference";
-  import {
-    addSmartPointTool,
     brushDrawTool,
-    brushEraseTool,
+    panTool,
+    polygonTool,
     rectangleTool,
-    removeSmartPointTool,
-    smartRectangleTool,
-  } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
-  import {
-    brushSettings as brushSettingsStore,
-    selectedTool as selectedToolStore,
-  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+    toggleBrushMode,
+  } from "./tooling/toolPolicy";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
-  import type { Box, InteractiveImageSegmenterOutput, LabeledClick } from "@pixano/models";
-  import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
+  import type {
+    CanvasAnnotationLike,
+    CanvasBBox,
+    CanvasBBoxCreatingShape,
+    CanvasBBoxSavingShape,
+    CanvasImagesPerView,
+    CanvasKeypoints,
+    CanvasMask,
+    CanvasPolygonCreatingShape,
+    CanvasPolygonOutputMode,
+    CanvasPolygonPoint,
+    CanvasReference,
+    CanvasShape,
+  } from "./lib/types/canvasData";
+  import { CanvasShapeType } from "./lib/types/canvasData";
 
-  import { addMask, clearCurrentAnn, findOrCreateCurrentMask } from "./api/boundingBoxesApi";
+  import { clearCurrentAnn } from "./api/boundingBoxesApi";
   import { clearParsedCache, convertPointToSvg, runLengthEncode } from "./api/maskApi";
   import { resizeStroke } from "./api/rectangleApi";
   import BrushCanvas from "./components/BrushCanvas.svelte";
-  import CreateKeypoint from "./components/CreateKeypoints.svelte";
-  import CreatePolygon from "./components/CreatePolygon.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import CreatePolygon from "./components/CreatePolygon.svelte";
   import PolygonGroup from "./components/PolygonGroup.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import ShowKeypoints from "./components/ShowKeypoint.svelte";
-  import {
-    INPUTPOINT_RADIUS,
-    // INPUTRECT_STROKEWIDTH,
-    // BBOX_STROKEWIDTH,
-    // MASK_STROKEWIDTH,
-    POINT_SELECTION,
-  } from "./lib/constants";
   import { equalizeHistogram } from "./lib/utils/equalizeHistogram";
   import { FilterManager } from "./lib/workers/filterManager";
   import type { FilterParams } from "./lib/workers/filterWorker";
-  import { createPanTool, ToolType } from "./tools";
+  import type { ToolBridge } from "@pixano/store";
+
+  import {
+    createInternalToolBridge,
+    createToolFSMForSelection,
+  } from "./tooling/bridgeRuntime";
+  import { getFallbackCanvasTool, handleToolShortcuts, isSupportedCanvasTool } from "./tooling/toolPolicy";
 
   interface BrushCanvasRef {
     beginStroke(x: number, y: number): void;
     updateStroke(x: number, y: number): void;
     endStroke(): void;
-    getMaskData(): Shape | null;
+    getMaskData(): CanvasShape | null;
     clearCanvas(): void;
     destroy(): void;
   }
 
   // Exports
   export let selectedItemId: string;
-  export let masks: Mask[];
-  export let bboxes: BBox[];
-  export let keypoints: KeypointsTemplate[] = [];
-  export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
-  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let masks: CanvasMask[];
+  export let bboxes: CanvasBBox[];
+  export let keypoints: CanvasKeypoints[] = [];
   export let selectedTool: SelectionTool;
-  export let newShape: Shape;
-  export let imagesPerView: ImagesPerView;
+  export let newShape: CanvasShape;
+  export let imagesPerView: CanvasImagesPerView;
   export let colorScale: (value: string) => string;
   export let isVideo: boolean = false;
   export let imageSmoothing: boolean = true;
-  export let merge: (ann: Annotation) => void = () => {
+  export let merge: (ann: CanvasAnnotationLike) => void = () => {
     return;
   };
-  export let pixanoInferenceSegmentation: (
-    viewRef: Reference,
-    points: LabeledClick[],
-    box: Box,
-  ) => Promise<Mask | undefined>;
+  export let brushSettings: {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  } = {
+    brushRadius: 20,
+    lazyRadius: 10,
+    friction: 0.15,
+  };
+
+  // New architecture (default behavior for the ongoing migration)
+  export let useNewArchitecture: boolean = true;
+  export let toolBridge: ToolBridge | undefined = undefined;
 
   // Image settings
   export let filters: Writable<Filters> = writable<Filters>();
@@ -111,7 +109,7 @@ License: CECILL-C
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {view_name: zoomFactor}
 
-  let lastInputViewRef: Reference;
+  let lastInputViewRef: CanvasReference;
 
   // Brush tool state
   let brushCanvasRefs: Record<string, BrushCanvasRef> = {};
@@ -125,35 +123,18 @@ License: CECILL-C
   let filterManager: FilterManager | null = null;
 
   let bboxEditable = false;
-  let pendingBrushMask: {
-    rle: { counts: number[]; size: [number, number] };
-    maskId: string;
-    viewName: string;
-  } | null = null;
+  let internalToolBridge: ToolBridge | undefined;
+  let activeToolBridge: ToolBridge | undefined;
+  let cleanupToolBridgeSubscriptions: (() => void) | undefined;
 
-  // True for Brush tool AND all smart/AI segmentation tools
-  $: isActivePaintingTool = selectedTool?.type === ToolType.Brush || selectedTool?.isSmart === true;
+  // True for active painting flows in the reduced Pan/Rectangle/Brush architecture.
+  $: isActivePaintingTool = selectedTool?.type === ToolType.Brush;
 
   $: {
-    if (
-      !prevSelectedTool?.isSmart ||
-      !selectedTool?.isSmart ||
-      (newShape.status === "none" && newShape.shouldReset)
-    ) {
-      // Capture AI mask before clearing if switching to brush tool
-      if (
-        prevSelectedTool?.isSmart &&
-        selectedTool?.type === ToolType.Brush &&
-        currentAnn?.output?.rle
-      ) {
-        const rle = currentAnn.output.rle;
-        const counts = Array.isArray(rle.counts) ? rle.counts : [];
-        pendingBrushMask = {
-          rle: { counts, size: rle.size as [number, number] },
-          maskId: currentAnn.id,
-          viewName: currentAnn.viewRef.name,
-        };
-      }
+    const switchingBrushMode =
+      prevSelectedTool?.type === ToolType.Brush && selectedTool?.type === ToolType.Brush;
+
+    if (!switchingBrushMode || (newShape.status === "none" && newShape.shouldReset)) {
       clearAnnotationAndInputs();
     }
     prevSelectedTool = selectedTool;
@@ -171,6 +152,8 @@ License: CECILL-C
   $: {
     if (newShape.status === "none" && newShape.shouldReset) {
       clearAnnotationAndInputs();
+      // Consume the one-shot reset flag to avoid repeated cleanup on later tool toggles.
+      newShape = { status: "none" };
     }
   }
 
@@ -184,7 +167,285 @@ License: CECILL-C
     numberOfBBoxes = bboxes.length;
   }
 
-  let timerId: ReturnType<typeof setTimeout>;
+  function clearRectangleTransformer() {
+    const rect: Konva.Rect | undefined = stage?.findOne("#drag-rect");
+    if (rect) {
+      rect.off("transform.creation");
+      rect.off("transformend.creation");
+      rect.off("dragend.creation");
+    }
+    bboxEditable = false;
+    const tr: Konva.Transformer | undefined = stage?.findOne("#transformer");
+    if (tr) tr.nodes([]);
+  }
+
+  function enableRectangleEditing(viewRef: CanvasReference) {
+    const rect: Konva.Rect | undefined = stage?.findOne("#drag-rect");
+    if (!rect) return;
+
+    clearRectangleTransformer();
+    rect.on("transform.creation", () => {
+      resizeStroke(rect);
+    });
+    rect.on("transformend.creation dragend.creation", () => {
+      const viewLayer = getViewLayer(viewRef.name);
+      if (!viewLayer) return;
+      const correctedRect = rect.getClientRect({
+        skipTransform: false,
+        skipShadow: true,
+        skipStroke: true,
+        relativeTo: viewLayer,
+      });
+      newShape = {
+        status: "creating",
+        type: CanvasShapeType.BBox,
+        x: correctedRect.x,
+        y: correctedRect.y,
+        width: correctedRect.width,
+        height: correctedRect.height,
+        viewRef,
+      };
+    });
+
+    bboxEditable = true;
+    const tr: Konva.Transformer | undefined = stage?.findOne("#transformer");
+    if (tr) {
+      tr.nodes([rect]);
+      tr.getLayer()?.batchDraw();
+    }
+  }
+
+  function toPolygonPoints(
+    points: ReadonlyArray<{ x: number; y: number; id?: number }>,
+  ): CanvasPolygonPoint[] {
+    return points.map((point, index) => ({
+      x: point.x,
+      y: point.y,
+      id: typeof point.id === "number" ? point.id : index,
+    }));
+  }
+
+  function toClosedPolygonPoints(
+    polygons: ReadonlyArray<ReadonlyArray<{ x: number; y: number; id?: number }>>,
+  ): CanvasPolygonPoint[][] {
+    return polygons.map((polygon) => toPolygonPoints(polygon));
+  }
+
+  function syncToolPreview(preview: PreviewShape | null) {
+    const viewRef = lastInputViewRef;
+    if (!viewRef) {
+      if (
+        newShape.status === "creating" &&
+        (newShape.type === CanvasShapeType.BBox || newShape.type === CanvasShapeType.Polygon)
+      ) {
+        newShape = { status: "none" };
+      }
+      clearRectangleTransformer();
+      return;
+    }
+
+    if (preview?.type === "polygon") {
+      newShape = {
+        status: "creating",
+        type: CanvasShapeType.Polygon,
+        viewRef,
+        phase: preview.phase,
+        closedPolygons: toClosedPolygonPoints(preview.closedPolygons),
+        points: toPolygonPoints(preview.points),
+        current: preview.current,
+        hoveredEdge: preview.hoveredEdge ?? null,
+        outputMode: selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon",
+      } as CanvasPolygonCreatingShape;
+      if (bboxEditable) {
+        clearRectangleTransformer();
+      }
+      return;
+    }
+
+    if (preview?.type !== "rectangle") {
+      if (
+        newShape.status === "creating" &&
+        (newShape.type === CanvasShapeType.BBox || newShape.type === CanvasShapeType.Polygon)
+      ) {
+        newShape = { status: "none" };
+      }
+      clearRectangleTransformer();
+      return;
+    }
+
+    newShape = {
+      status: "creating",
+      type: CanvasShapeType.BBox,
+      x: preview.origin.x,
+      y: preview.origin.y,
+      width: preview.current.x - preview.origin.x,
+      height: preview.current.y - preview.origin.y,
+      viewRef,
+    };
+
+    if (preview.editable) {
+      void tick().then(() => {
+        enableRectangleEditing(viewRef);
+      });
+    } else {
+      if (bboxEditable) {
+        clearRectangleTransformer();
+      }
+    }
+  }
+
+  function handleRectangleRequestSave(geometry: unknown) {
+    const geo = geometry as { x: number; y: number; width: number; height: number };
+
+    // Read final position from the Konva Transformer if it exists
+    const rect: Konva.Rect | undefined = stage?.findOne("#drag-rect");
+    const viewLayer = lastInputViewRef ? getViewLayer(lastInputViewRef.name) : undefined;
+    const finalGeo =
+      rect && viewLayer
+        ? rect.getClientRect({
+            skipTransform: false,
+            skipShadow: true,
+            skipStroke: true,
+            relativeTo: viewLayer,
+          })
+        : geo;
+
+    clearRectangleTransformer();
+
+    const viewRef = lastInputViewRef;
+    if (viewRef) {
+      const currentImage = getCurrentImage(viewRef.name);
+      newShape = {
+        status: "saving",
+        attrs: {
+          x: finalGeo.x,
+          y: finalGeo.y,
+          width: finalGeo.width,
+          height: finalGeo.height,
+        },
+        type: CanvasShapeType.BBox,
+        viewRef,
+        itemId: selectedItemId,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
+      };
+    }
+  }
+
+  function handlePolygonRequestSave(geometry: unknown) {
+    const payload = geometry as {
+      polygons?: Array<Array<{ x: number; y: number; id?: number }>>;
+      points?: Array<{ x: number; y: number }>;
+      outputMode?: CanvasPolygonOutputMode;
+    };
+    const sourcePolygons: Array<Array<{ x: number; y: number; id?: number }>> =
+      Array.isArray(payload.polygons) && payload.polygons.length > 0
+        ? payload.polygons
+        : Array.isArray(payload.points) && payload.points.length > 0
+          ? [payload.points.map((point) => ({ x: point.x, y: point.y }))]
+          : [];
+    if (sourcePolygons.length === 0) return;
+
+    const viewRef = lastInputViewRef;
+    if (!viewRef) return;
+
+    const currentImage = getCurrentImage(viewRef.name);
+    const polygonMode: CanvasPolygonOutputMode = payload.outputMode ?? "polygon";
+    const polygonPoints = sourcePolygons
+      .map((polygon) =>
+        polygon.map((point, id) => ({
+          x: polygonMode === "mask" ? Math.round(point.x) : point.x,
+          y: polygonMode === "mask" ? Math.round(point.y) : point.y,
+          id: typeof point.id === "number" ? point.id : id,
+        })),
+      )
+      .filter((polygon) => polygon.length >= 3);
+    if (polygonPoints.length === 0) return;
+
+    const polygonSvg = polygonPoints.map((polygon) => convertPointToSvg(polygon));
+    cleanupPolygonPreviewListeners();
+
+    if (polygonMode === "mask") {
+      const counts = runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
+      newShape = {
+        status: "saving",
+        type: CanvasShapeType.Mask,
+        masksImageSVG: polygonSvg,
+        rle: {
+          counts,
+          size: [currentImage.height, currentImage.width],
+        },
+        viewRef,
+        itemId: selectedItemId,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
+        polygonMode,
+        polygonPoints,
+      };
+      return;
+    }
+
+    newShape = {
+      status: "saving",
+      type: CanvasShapeType.Polygon,
+      masksImageSVG: polygonSvg,
+      viewRef,
+      itemId: selectedItemId,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
+      polygonMode,
+      polygonPoints,
+    };
+  }
+
+  function handleToolRequestSave(
+    shapeType: "bbox" | "polygon" | "mask" | "keypoints",
+    geometry: unknown,
+  ) {
+    if (shapeType === "bbox") {
+      handleRectangleRequestSave(geometry);
+      return;
+    }
+
+    if (shapeType === "polygon") {
+      handlePolygonRequestSave(geometry);
+    }
+  }
+
+  function dispatchPolygonToolEvent(event: ToolEvent) {
+    activeToolBridge?.dispatchEvent(event);
+  }
+
+  $: if (useNewArchitecture && selectedTool && !isSupportedCanvasTool(selectedTool)) {
+    selectedTool = getFallbackCanvasTool();
+  }
+
+  $: {
+    const bridge = useNewArchitecture ? toolBridge ?? internalToolBridge : undefined;
+    if (bridge !== activeToolBridge) {
+      cleanupToolBridgeSubscriptions?.();
+      activeToolBridge = bridge;
+
+      if (bridge) {
+        bridge.onRequestSave(handleToolRequestSave);
+        const unsubscribePreview = bridge.preview.subscribe((preview) => {
+          syncToolPreview(preview);
+        });
+        cleanupToolBridgeSubscriptions = () => {
+          unsubscribePreview();
+        };
+      } else {
+        cleanupToolBridgeSubscriptions = undefined;
+      }
+    }
+  }
+
+  $: if (useNewArchitecture && activeToolBridge && selectedTool) {
+    const fsm = createToolFSMForSelection(selectedTool);
+    if (fsm) {
+      activeToolBridge.switchTool(fsm);
+    }
+  }
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -192,7 +453,6 @@ License: CECILL-C
   // References to Konva Elements
   let stage: Konva.Stage;
   let toolsLayer: Konva.Layer;
-  let highlighted_point: Konva.Text = null;
   let transformer = new Konva.Transformer({
     id: "transformer",
     rotateEnabled: false,
@@ -251,6 +511,10 @@ License: CECILL-C
   // ********** INIT ********** //
 
   onMount(() => {
+    if (useNewArchitecture && !toolBridge) {
+      internalToolBridge = createInternalToolBridge(selectedItemId);
+    }
+
     Object.keys(imagesPerView).forEach((view_name) => {
       zoomFactor[view_name] = 1;
     });
@@ -274,6 +538,8 @@ License: CECILL-C
     clearAnnotationAndInputs();
     filterManager?.destroy();
     filterManager = null;
+    cleanupToolBridgeSubscriptions?.();
+    cleanupToolBridgeSubscriptions = undefined;
   });
 
   // --- Targeted reactive statements (replaces monolithic afterUpdate) ---
@@ -288,11 +554,6 @@ License: CECILL-C
     handleChangeTool();
   } else if (stage && !selectedTool) {
     stage.container().style.cursor = "default";
-  }
-
-  // React to annotation validation
-  $: if (currentAnn && currentAnn.validated) {
-    validateCurrentAnn();
   }
 
   // Attach transformer when views change
@@ -393,7 +654,6 @@ License: CECILL-C
   function scaleView(view_name: string): boolean {
     const viewLayer = getViewLayer(view_name);
     if (!viewLayer) {
-      console.log("Canvas2D.scaleView - Error: Cannot scale");
       return false;
     }
     // Calculate max dims for every image in the grid
@@ -427,82 +687,6 @@ License: CECILL-C
     viewLayer.y(offsetY);
     return true;
   }
-
-  // Unused ... We could remove ?
-  // function scaleElements(view_name: string) {
-  //   const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
-  //   if (!viewLayer) {
-  //     console.log("Canvas2D.scaleElements - Error: Cannot scale");
-  //     return;
-  //   }
-
-  //   const zoom = zoomFactor[view_name];
-
-  //   const scaleCircle = (circle: Konva.Circle) => {
-  //     circle.radius(INPUTPOINT_RADIUS / zoom);
-  //     circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
-  //   };
-
-  //   const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
-  //     rect.strokeWidth(strokeWidth / zoom);
-  //   };
-
-  //   // Scale input points
-  //   const inputGroup: Konva.Group = viewLayer.findOne("#input");
-  //   if (inputGroup) {
-  //     inputGroup.children.forEach((point) => {
-  //       if (point instanceof Konva.Circle) {
-  //         scaleCircle(point);
-  //       } else if (point instanceof Konva.Rect) {
-  //         scaleRect(point, INPUTRECT_STROKEWIDTH);
-  //       }
-  //     });
-  //   }
-
-  //   // Scale bboxes
-  //   const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-  //   if (bboxGroup) {
-  //     bboxGroup.children.forEach((bboxKonva) => {
-  //       if (bboxKonva instanceof Konva.Group) {
-  //         bboxKonva.children.forEach((bboxElement) => {
-  //           if (bboxElement instanceof Konva.Rect) {
-  //             scaleRect(bboxElement, BBOX_STROKEWIDTH);
-  //           } else if (bboxElement instanceof Konva.Label) {
-  //             bboxElement.scale({
-  //               x: 1 / zoom,
-  //               y: 1 / zoom,
-  //             });
-  //           }
-  //         });
-  //       }
-  //     });
-  //   }
-
-  //   // Scale masks
-  //   const scaleMaskGroup = (maskGroup: Konva.Group) => {
-  //     maskGroup.children.forEach((maskKonva) => {
-  //       if (maskKonva instanceof Konva.Shape) {
-  //         maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
-  //       }
-  //     });
-  //   };
-
-  //   const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-  //   if (maskGroup) {
-  //     scaleMaskGroup(maskGroup);
-  //   }
-
-  //   const currentMaskGroup = findOrCreateCurrentMask(view_name, stage);
-  //   if (currentMaskGroup) {
-  //     scaleMaskGroup(currentMaskGroup);
-  //   }
-
-  //   // Scale keypoints //TODO?
-  //   // const scaleKptCircle = (circle: Konva.Circle) => {
-  //   //   circle.radius(INPUTPOINT_RADIUS / zoom);
-  //   //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
-  //   // };
-  // }
 
   const cacheImage = () => {
     if (!stage) return;
@@ -589,321 +773,39 @@ License: CECILL-C
     }
   };
 
-  function findViewName(shape: Konva.Shape): string {
-    let view_name: string;
-    shape.getAncestors().forEach((node) => {
-      if (node instanceof Konva.Layer) {
-        view_name = node.id();
-      }
-    });
-    return view_name;
-  }
-
-  // ********** BOUNDING BOXES AND MASKS ********** //
-
-  // launch tracking on validate
-  $: if (isVideo && $pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) {
-    if (lastInputViewRef != undefined) {
-      void updateCurrentMask(lastInputViewRef);
-    }
-  }
-
-  async function updateCurrentMask(viewRef: Reference) {
-    let results: SegmentationResult = null;
-
-    const points = getInputPoints(viewRef.name);
-    const box = getInputRect(viewRef.name);
-    const currentImage = getCurrentImage(viewRef.name);
-
-    // Remote inference via pixano-inference server
-    if (
-      (isVideo &&
-        (($pixanoInferenceTracking.mustValidate && $pixanoInferenceTracking.validated) ||
-          !$pixanoInferenceTracking.mustValidate)) ||
-      !isVideo
-    ) {
-      const pixinf_res = await pixanoInferenceSegmentation(viewRef, points, box);
-      $pixanoInferenceTracking.validated = false;
-      if (pixinf_res) {
-        const maskPolygons = generatePolygonSegments(
-          pixinf_res.data.counts as number[],
-          currentImage.height,
-        );
-        const masksSVG = convertSegmentsToSVG(maskPolygons);
-
-        results = {
-          masksImageSVG: masksSVG,
-          rle: {
-            counts: pixinf_res.data.counts,
-            size: pixinf_res.data.size,
-            id: pixinf_res.id,
-            ref_name: pixinf_res.table_info.name,
-          },
-        };
-      }
-    }
-
-    if (results) {
-      const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
-      const image = getImageNode(viewRef.name);
-
-      // always clean existing masks before adding a new currentAnn
-      currentMaskGroup.removeChildren();
-
-      currentAnn = {
-        id: nanoid(10),
-        viewRef,
-        label: "",
-        output: results,
-        input_points: points,
-        input_box: box,
-        validated: false,
-      };
-      addMask(
-        currentAnn.id,
-        currentAnn.output.masksImageSVG,
-        true,
-        1.0,
-        "hsl(330, 65%, 50%)",
-        currentMaskGroup,
-        image,
-        viewRef.name,
-        stage,
-        zoomFactor,
-      );
-    }
-  }
-
-  function validateSmartMask() {
-    if (!currentAnn?.output) return;
-    const currentImage = getCurrentImage(currentAnn.viewRef.name);
-    newShape = {
-      masksImageSVG: currentAnn.output.masksImageSVG,
-      rle: currentAnn.output.rle,
-      type: SaveShapeType.mask,
-      viewRef: currentAnn.viewRef,
-      itemId: selectedItemId,
-      imageWidth: currentImage.width,
-      imageHeight: currentImage.height,
-      status: "saving",
-    };
-  }
-
-  // ********** CURRENT ANNOTATION ********** //
-
-  function validateCurrentAnn() {
-    if (currentAnn.validated) {
-      const currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewRef.name, stage);
-      if (currentMaskGroup) currentMaskGroup.destroyChildren();
-      if (highlighted_point) unhighlightInputPoint(highlighted_point);
-      clearInputs(currentAnn.viewRef.name);
-      currentAnn = null;
-    }
-  }
-
   // ********** TOOLS ********** //
 
   function handleChangeTool() {
-    //make sure tools layer is on front
+    // make sure tools layer is always on top
     if (toolsLayer) toolsLayer.moveToTop();
 
-    // Update the behavior of the canvas stage based on the selected tool
-    // You can add more cases for different tools as needed
-    switch (selectedTool.type) {
-      case ToolType.PointSelection:
-        displayInputPointTool(selectedTool);
-        displayCrosshair(selectedTool);
-        break;
-      case ToolType.Rectangle:
-        displayCrosshair(selectedTool);
-        // Enable box creation or change cursor style
-        break;
-      case ToolType.Polygon:
-        displayCrosshair(selectedTool);
-        break;
-      case ToolType.Keypoint:
-        displayCrosshair(selectedTool);
-        // Enable keypoint creation or change cursor style
-        break;
-      case ToolType.Delete:
-        clearAnnotationAndInputs();
-        displayInputDeleteTool(selectedTool);
-        break;
-      case ToolType.Pan:
-        displayPanTool(selectedTool);
-        // Enable box creation or change cursor style
-        break;
-      case ToolType.Classification:
-        displayClassificationTool(selectedTool);
-        break;
-      case ToolType.Brush:
-        displayBrushTool(selectedTool);
-        break;
-
-      default:
-        // Reset or disable any specific behavior
-        break;
-    }
-  }
-
-  function clearInputs(view_name: string) {
-    const viewLayer = getViewLayer(view_name);
-    if (viewLayer) {
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      inputGroup.destroyChildren();
-    }
-  }
-
-  // ********** POLYGON TOOL ********** //
-
-  function drawPolygonPoints(viewRef: Reference) {
-    if (newShape?.status === "saving") return;
-    const viewLayer = getViewLayer(viewRef.name);
-    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
-    const x = Math.round(cursorPositionOnImage.x);
-    const y = Math.round(cursorPositionOnImage.y);
-
-    // If in editing phase, start a new polygon
-    if (
-      newShape.status === "creating" &&
-      newShape.type === SaveShapeType.mask &&
-      newShape.phase === "editing"
-    ) {
-      newShape = {
-        ...newShape,
-        phase: "drawing",
-        points: [{ x, y, id: 0 }],
-      };
+    if (selectedTool?.type === ToolType.Pan) {
+      const crossline = stage.findOne("#crossline");
+      if (crossline) crossline.destroy();
+      cleanupPolygonPreviewListeners();
+      stage.container().style.cursor = panTool.cursor;
       return;
     }
 
-    const oldPoints =
-      newShape.status === "creating" && newShape.type === SaveShapeType.mask ? newShape.points : [];
-    const closedPolygons =
-      newShape.status === "creating" && newShape.type === SaveShapeType.mask
-        ? newShape.closedPolygons
-        : [];
-    newShape = {
-      status: "creating",
-      type: SaveShapeType.mask,
-      points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
-      closedPolygons,
-      phase: "drawing",
-      viewRef,
-    };
-  }
-
-  // ********** KEY_POINT TOOL ********** //
-
-  function dragInputKeyPointRectMove(viewRef: Reference) {
-    if (selectedTool?.type === ToolType.Keypoint && newShape.status !== "saving") {
-      const viewLayer = getViewLayer(viewRef.name);
-
-      const pos = viewLayer.getRelativePointerPosition();
-      const x =
-        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
-          ? newShape.x
-          : pos.x;
-      const y =
-        newShape.status === "creating" && newShape.type === SaveShapeType.keypoints
-          ? newShape.y
-          : pos.y;
-      const width = pos.x - x;
-      const height = pos.y - y;
-      newShape = {
-        status: "creating",
-        type: SaveShapeType.keypoints,
-        x,
-        y,
-        width,
-        height,
-        viewRef,
-        keypoints: selectedKeypointTemplate,
-      };
+    if (selectedTool?.type === ToolType.Rectangle) {
+      cleanupPolygonPreviewListeners();
+      displayCrosshair(rectangleTool.cursor);
+      return;
     }
-  }
 
-  function dragKeyPointInputRectEnd(viewRef: Reference) {
-    if (selectedTool?.type === ToolType.Keypoint) {
-      const viewLayer = getViewLayer(viewRef.name);
-      const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
-      if (rect && newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) {
-        const vertices = newShape.keypoints.vertices.map((vertex) => {
-          if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints)
-            return {
-              ...vertex,
-              x: newShape.x + vertex.x * newShape.width,
-              y: newShape.y + vertex.y * newShape.height,
-            } as Required<Vertex>;
-        });
-        newShape = {
-          status: "saving",
-          type: SaveShapeType.keypoints,
-          viewRef,
-          itemId: selectedItemId,
-          imageWidth: getCurrentImage(viewRef.name).width,
-          imageHeight: getCurrentImage(viewRef.name).height,
-          keypoints: { ...newShape.keypoints, vertices },
-        };
-        viewLayer.off("pointermove");
-        viewLayer.off("pointerup");
-      }
+    if (selectedTool?.type === ToolType.Polygon) {
+      displayCrosshair(polygonTool.cursor);
+      return;
     }
-  }
 
-  // ********** PAN TOOL ********** //
-
-  function displayPanTool(tool: SelectionTool) {
-    if (toolsLayer) {
-      //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer) pointer.destroy();
-      const crossline = stage.findOne("#crossline");
-      if (crossline) crossline.destroy();
-      if (!highlighted_point) {
-        stage.container().style.cursor = tool.cursor;
-      }
-      // deactivate drag on input points
-      toggleInputPointDrag(false);
-    }
-  }
-
-  // ********** CLASSIFICATION TOOL ********** //
-
-  function displayClassificationTool(tool: SelectionTool) {
-    if (toolsLayer) {
-      //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer) pointer.destroy();
-      const crossline = stage.findOne("#crossline");
-      if (crossline) crossline.destroy();
-      if (!highlighted_point) {
-        stage.container().style.cursor = tool.cursor;
-      }
-      // deactivate drag on input points
-      toggleInputPointDrag(false);
-    }
-  }
-
-  // ********** BRUSH TOOL ********** //
-
-  function displayBrushTool(tool: SelectionTool) {
-    if (toolsLayer) {
-      // Clean other tools
-      const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer) pointer.destroy();
-
-      // Show crosshair like other drawing tools
-      displayCrosshair(tool);
-
-      // Hide native cursor, we'll show a custom brush cursor
+    if (selectedTool?.type === ToolType.Brush) {
+      cleanupPolygonPreviewListeners();
       stage.container().style.cursor = "none";
-
-      // Deactivate drag on input points
-      toggleInputPointDrag(false);
+      return;
     }
+
+    cleanupPolygonPreviewListeners();
+    stage.container().style.cursor = "default";
   }
 
   function updateBrushCursor(mousePos: Konva.Vector2d) {
@@ -917,7 +819,7 @@ License: CECILL-C
         id: "brush-cursor",
         x: 0,
         y: 0,
-        radius: $brushSettingsStore.brushRadius,
+        radius: brushSettings.brushRadius,
         stroke: cursorColor,
         strokeWidth: 2,
         fill: mode === "draw" ? "rgba(0, 200, 0, 0.1)" : "rgba(200, 0, 0, 0.1)",
@@ -926,7 +828,7 @@ License: CECILL-C
       toolsLayer.add(brushCursor);
     }
 
-    brushCursor.radius($brushSettingsStore.brushRadius);
+    brushCursor.radius(brushSettings.brushRadius);
     brushCursor.stroke(cursorColor);
     brushCursor.fill(mode === "draw" ? "rgba(0, 200, 0, 0.1)" : "rgba(200, 0, 0, 0.1)");
     brushCursor.x(mousePos.x);
@@ -935,7 +837,7 @@ License: CECILL-C
   }
 
   $: if (brushCursor && selectedTool?.type === ToolType.Brush) {
-    brushCursor.radius($brushSettingsStore.brushRadius);
+    brushCursor.radius(brushSettings.brushRadius);
     brushCursor.getLayer()?.batchDraw();
   }
 
@@ -950,7 +852,7 @@ License: CECILL-C
     }
   }
 
-  function handleBrushPointerDown(viewRef: Reference) {
+  function handleBrushPointerDown(viewRef: CanvasReference) {
     const viewLayer = getViewLayer(viewRef.name);
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
@@ -1004,157 +906,22 @@ License: CECILL-C
     }
     brushCanvasRefs = {};
     cleanupBrushCursor();
-    pendingBrushMask = null;
   }
 
-  // ********** INPUT POINTS TOOL ********** //
-
-  function displayInputPointTool(tool: LabeledPointTool) {
-    if (toolsLayer) {
-      //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != Point
-      const crossline = toolsLayer.findOne("#crossline");
-      if (crossline) crossline.destroy();
-
-      const pointer = findOrCreateInputPointPointer(tool.type);
-      pointer.text(tool.label === 1 ? "+" : "\u2212");
-      if (!highlighted_point) {
-        stage.container().style.cursor = tool.cursor;
-      }
-      // activate drag on input points
-      toggleInputPointDrag(true);
-    }
-  }
-
-  function updateInputPointStage(mousePos: Konva.Vector2d) {
-    const pointer = findOrCreateInputPointPointer(selectedTool.type);
-    const scale = stage.scaleX();
-    const pointerScale = Math.max(1, 1 / scale);
-    pointer.scaleX(pointerScale);
-    pointer.scaleY(pointerScale);
-    const indicatorOffset = 16 * pointerScale;
-    pointer.x(mousePos.x - indicatorOffset);
-    pointer.y(mousePos.y - indicatorOffset);
-  }
-
-  function findOrCreateInputPointPointer(id: string, view_name: string = null): Konva.Text {
-    let pointer: Konva.Text = stage.findOne(`#${id}`);
-    if (!pointer) {
-      let zoomF = 1.0; // in some cases we aren't in a view, so we use default scaling
-      if (view_name) zoomF = zoomFactor[view_name];
-      pointer = new Konva.Text({
-        id,
-        x: 0,
-        y: 0,
-        text: "+",
-        fontSize: (INPUTPOINT_RADIUS * 4) / zoomF,
-        fontStyle: "bold",
-        fill: "white",
-        stroke: "black",
-        strokeWidth: 1 / zoomF,
-        offsetX: (INPUTPOINT_RADIUS * 2) / zoomF,
-        offsetY: (INPUTPOINT_RADIUS * 2) / zoomF,
-        visible: false,
-        listening: false,
-        opacity: 0.9,
-      });
-      toolsLayer.add(pointer);
-    }
-    return pointer;
-  }
-
-  function getInputPoints(view_name: string): Array<LabeledClick> {
-    //get points as Array<LabeledClick>
-    const points: Array<LabeledClick> = [];
-    const viewLayer = getViewLayer(view_name);
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    for (const pt of inputGroup.children) {
-      if (pt instanceof Konva.Text) {
-        const lblclick: LabeledClick = {
-          x: pt.x(),
-          y: pt.y(),
-          label: parseInt(pt.name()),
-        };
-        points.push(lblclick);
+  function cleanupPolygonPreviewListeners() {
+    for (const view_name of Object.keys(imagesPerView)) {
+      const viewLayer = getViewLayer(view_name);
+      if (viewLayer) {
+        viewLayer.off("pointermove.polygon");
       }
     }
-    return points;
-  }
-
-  function toggleInputPointDrag(toggle: boolean) {
-    const input_groups = stage.find("#input");
-    for (const input_group of input_groups) {
-      for (const node of (input_group as Konva.Group).children) {
-        if (node instanceof Konva.Text) {
-          node.listening(toggle);
-        }
-      }
-    }
-  }
-
-  function dragInputPointEnd() {
-    stage.container().style.cursor = "grab";
-  }
-
-  function dragInputPointMove(drag_point: Konva.Text, viewRef: Reference) {
-    stage.container().style.cursor = "grabbing";
-
-    const image = getImageNode(viewRef.name);
-    const img_size = image.getSize();
-    if (drag_point.x() < 0) {
-      drag_point.x(0);
-    } else if (drag_point.x() > img_size.width) {
-      drag_point.x(img_size.width);
-    }
-    if (drag_point.y() < 0) {
-      drag_point.y(0);
-    } else if (drag_point.y() > img_size.height) {
-      drag_point.y(img_size.height);
-    }
-    lastInputViewRef = viewRef;
-
-    // new currentAnn on new location
-    clearTimeout(timerId); // reinit timer on each move move
-    timerId = setTimeout(() => updateCurrentMask(viewRef), 50); // delay before predict to spare CPU
-  }
-
-  function highlightInputPoint(hl_point: Konva.Text, view_name: string) {
-    const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
-    pointer.hide();
-    hl_point.fontSize((1.5 * INPUTPOINT_RADIUS * 4) / zoomFactor[view_name]);
-    hl_point.offsetX((1.5 * INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
-    hl_point.offsetY((1.5 * INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
-    highlighted_point = hl_point;
-    stage.container().style.cursor = "grab";
-  }
-
-  function unhighlightInputPoint(hl_point: Konva.Text, view_name: string = null) {
-    const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
-    pointer.show();
-    if (!view_name) {
-      view_name = findViewName(hl_point);
-    }
-    hl_point.fontSize((INPUTPOINT_RADIUS * 4) / zoomFactor[view_name]);
-    hl_point.offsetX((INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
-    hl_point.offsetY((INPUTPOINT_RADIUS * 2) / zoomFactor[view_name]);
-    highlighted_point = null;
-    stage.container().style.cursor = selectedTool.cursor;
-    stage.batchDraw();
   }
 
   // ********** CROSSHAIR TOOL ********** //
 
-  function displayCrosshair(tool: SelectionTool) {
-    if (toolsLayer) {
-      //clean other tools
-      const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer && tool.type !== ToolType.PointSelection) pointer.destroy();
-      if (!highlighted_point) {
-        stage.container().style.cursor = tool.cursor;
-      }
-      // activate drag on input points
-      toggleInputPointDrag(true);
-    }
+  function displayCrosshair(cursor: string) {
+    if (!toolsLayer) return;
+    stage.container().style.cursor = cursor;
   }
 
   function updateCrosshairState(mousePos: Konva.Vector2d) {
@@ -1204,203 +971,18 @@ License: CECILL-C
     return [xLimit, yLimit];
   }
 
-  function getInputRect(view_name: string): Box {
-    //get box as Box
-    let box: Box = null;
-    const viewLayer = getViewLayer(view_name);
-    const rect: Konva.Rect = viewLayer.findOne("#drag-rect");
-    if (rect) {
-      //need to convert rect pos / size to topleft/bottomright
-      const size = rect.size();
-      const pos = rect.position();
-      box = {
-        x: pos.x,
-        y: pos.y,
-        width: size.width,
-        height: size.height,
-      };
-    }
-    return box;
-  }
-
-  function dragInputRectMove(viewRef: Reference) {
-    if (selectedTool?.type === ToolType.Rectangle) {
-      const viewLayer = getViewLayer(viewRef.name);
-
-      const pos = viewLayer.getRelativePointerPosition();
-      const x =
-        newShape.status === "creating" && newShape.type === SaveShapeType.bbox ? newShape.x : pos.x;
-      const y =
-        newShape.status === "creating" && newShape.type === SaveShapeType.bbox ? newShape.y : pos.y;
-      newShape = {
-        status: "creating",
-        type: SaveShapeType.bbox,
-        x,
-        y,
-        width: pos.x - x,
-        height: pos.y - y,
-        viewRef,
-      };
-    }
-  }
-
-  async function dragInputRectEnd(viewRef: Reference) {
-    if (selectedTool?.type === ToolType.Rectangle) {
-      const viewLayer = getViewLayer(viewRef.name);
-      const rect: Konva.Rect = stage.findOne("#drag-rect");
-      if (rect) {
-        const { width, height } = rect.size();
-        if (width === 0 || height === 0) {
-          //rect with area = 0 -> delete it
-          newShape = { status: "none" };
-        } else {
-          if (!selectedTool.isSmart) {
-            const correctedRect = rect.getClientRect({
-              skipTransform: false,
-              skipShadow: true,
-              skipStroke: true,
-              relativeTo: viewLayer,
-            });
-            // Keep in "creating" state so user can adjust before pressing Enter
-            newShape = {
-              status: "creating",
-              type: SaveShapeType.bbox,
-              x: correctedRect.x,
-              y: correctedRect.y,
-              width: correctedRect.width,
-              height: correctedRect.height,
-              viewRef,
-            };
-            // Attach Transformer for resize/move
-            bboxEditable = true;
-            const tr: Konva.Transformer = stage.findOne("#transformer");
-            if (tr) {
-              tr.nodes([rect]);
-              tr.getLayer()?.batchDraw();
-            }
-            // Sync Transformer changes back to newShape so Svelte doesn't revert them
-            rect.on("transform.creation", () => {
-              resizeStroke(rect);
-            });
-            rect.on("transformend.creation dragend.creation", () => {
-              newShape = {
-                status: "creating",
-                type: SaveShapeType.bbox,
-                x: rect.x(),
-                y: rect.y(),
-                width: rect.width(),
-                height: rect.height(),
-                viewRef,
-              };
-            });
-          }
-          if (selectedTool.isSmart) {
-            lastInputViewRef = viewRef;
-            await updateCurrentMask(viewRef);
-          }
-        }
-        viewLayer.off("pointermove");
-        viewLayer.off("pointerup");
-      }
-      if (selectedTool.isSmart && !$pixanoInferenceTracking.mustValidate) {
-        rect.destroy();
-      }
-    }
-  }
-
-  function validateBBox(viewRef: Reference) {
-    const viewLayer = getViewLayer(viewRef.name);
-    const rect: Konva.Rect = stage.findOne("#drag-rect");
-    if (!rect) return;
-
-    // Read final position after any Transformer edits
-    const correctedRect = rect.getClientRect({
-      skipTransform: false,
-      skipShadow: true,
-      skipStroke: true,
-      relativeTo: viewLayer,
-    });
-
-    // Clean up creation listeners and detach Transformer
-    rect.off("transform.creation");
-    rect.off("transformend.creation");
-    rect.off("dragend.creation");
-    bboxEditable = false;
-    const tr: Konva.Transformer = stage.findOne("#transformer");
-    if (tr) tr.nodes([]);
-
-    newShape = {
-      status: "saving",
-      attrs: {
-        x: correctedRect.x,
-        y: correctedRect.y,
-        width: correctedRect.width,
-        height: correctedRect.height,
-      },
-      type: SaveShapeType.bbox,
-      viewRef,
-      itemId: selectedItemId,
-      imageWidth: getCurrentImage(viewRef.name).width,
-      imageHeight: getCurrentImage(viewRef.name).height,
-    };
-  }
-
-  function validatePolygon(viewRef: Reference) {
-    if (
-      newShape.status !== "creating" ||
-      newShape.type !== SaveShapeType.mask ||
-      newShape.phase !== "editing"
-    )
-      return;
-    const currentImage = getCurrentImage(viewRef.name);
-    const svg = newShape.closedPolygons.map((polygon) => convertPointToSvg(polygon));
-    const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
-    newShape = {
-      status: "saving",
-      masksImageSVG: svg,
-      rle: { counts, size: [currentImage.height, currentImage.width] },
-      type: SaveShapeType.mask,
-      viewRef,
-      itemId: selectedItemId,
-      imageWidth: currentImage.width,
-      imageHeight: currentImage.height,
-    };
-  }
-
-  // ********** INPUT DELETE TOOL ********** //
-
-  function displayInputDeleteTool(tool: SelectionTool) {
-    if (toolsLayer) {
-      //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != DELETE
-      const pointer = stage.findOne(`#${POINT_SELECTION}`);
-      if (pointer) pointer.destroy();
-      const crossline = stage.findOne("#crossline");
-      if (crossline) crossline.destroy();
-
-      if (!highlighted_point) {
-        stage.container().style.cursor = tool.cursor;
-      }
-      // deactivate drag on input points
-      toggleInputPointDrag(false);
-    }
-  }
-
   function clearAnnotationAndInputs() {
     if (!stage) return;
     for (const view_name of Object.keys(imagesPerView)) {
-      clearInputs(view_name);
       clearCurrentAnn(view_name, stage, selectedTool);
-      pixanoInferenceToValidateTrackingMasks.set([]);
     }
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
     }
-    const pointer: Konva.Text = stage.findOne(`#${POINT_SELECTION}`);
-    if (pointer) pointer.destroy();
     const crossline = toolsLayer?.findOne("#crossline");
     if (crossline) crossline.destroy();
     cleanupBrushCursor();
+    cleanupPolygonPreviewListeners();
     // Only clear brush canvases after the user confirms (shouldReset) or
     // when leaving the brush tool — NOT while the save form is open.
     if (newShape.status !== "saving") {
@@ -1409,39 +991,25 @@ License: CECILL-C
           brushCanvasRefs[key]?.clearCanvas();
         }
       }
-      if (selectedTool?.type !== ToolType.Brush) {
-        pendingBrushMask = null;
-      }
     }
-    currentAnn = null;
   }
 
   // ********** MOUSE EVENTS ********** //
 
   function handleMouseMoveStage() {
     const position = stage.getRelativePointerPosition();
-
-    // Update tools states
-    if (selectedTool?.type === ToolType.PointSelection) {
-      updateInputPointStage(position);
-    }
+    if (!position) return;
 
     if (
-      [
-        ToolType.Rectangle,
-        ToolType.Polygon,
-        ToolType.Keypoint,
-        ToolType.PointSelection,
-        ToolType.Brush,
-      ].includes(selectedTool?.type)
+      selectedTool?.type === ToolType.Rectangle ||
+      selectedTool?.type === ToolType.Polygon ||
+      selectedTool?.type === ToolType.Brush
     ) {
       updateCrosshairState(position);
     }
 
-    // Update brush cursor and brush stroke
     if (selectedTool?.type === ToolType.Brush) {
       updateBrushCursor(position);
-      // Update brush stroke for all views (the active one will handle it)
       for (const view_name of Object.keys(imagesPerView)) {
         handleBrushPointerMove(view_name);
       }
@@ -1472,26 +1040,13 @@ License: CECILL-C
     viewLayer.off("dragend dragmove");
   }
 
-  function handlePointerUpOnImage(viewRef: Reference) {
+  function handlePointerUpOnImage(viewRef: CanvasReference) {
     const viewLayer = getViewLayer(viewRef.name);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
-    if (selectedTool?.type === ToolType.Polygon) {
-      drawPolygonPoints(viewRef);
-    }
 
     if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerUp(viewRef.name);
-    }
-
-    if (highlighted_point) {
-      //hack to unhiglight when we drag while predicting...
-      //try to determine if we are still on highlighted point
-      //Note: could be better, but usually it will work
-      const pos = viewLayer.getRelativePointerPosition();
-      const hl_pos = highlighted_point.position();
-      if (pos.x !== hl_pos.x || pos.y !== hl_pos.y)
-        unhighlightInputPoint(highlighted_point, viewRef.name);
     }
   }
 
@@ -1503,12 +1058,13 @@ License: CECILL-C
     toolsLayer.moveToTop();
   }
 
-  async function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
+  function handleClickOnImage(event: PointerEvent, viewRef: CanvasReference) {
     const viewLayer = getViewLayer(viewRef.name);
 
     if (
       (newShape.status === "none" || newShape.status === "editing") &&
-      selectedTool?.type !== ToolType.Brush
+      selectedTool?.type !== ToolType.Brush &&
+      selectedTool?.type !== ToolType.Polygon
     ) {
       newShape = {
         status: "editing",
@@ -1518,60 +1074,68 @@ License: CECILL-C
         highlighted: "all",
       };
     }
-    // Perform tool action if any active tool
-    // For convenience: bypass tool on mouse middle-button click
     if (selectedTool?.type === ToolType.Pan || event.button === 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewRef.name));
-    } else if (selectedTool?.type === ToolType.PointSelection) {
-      const clickOnViewPos = viewLayer.getRelativePointerPosition();
-
-      //add Konva Point
-      const input_point = new Konva.Text({
-        name: `${selectedTool.label}`,
-        x: clickOnViewPos.x,
-        y: clickOnViewPos.y,
-        text: selectedTool.label === 1 ? "+" : "\u2212",
-        fontSize: (INPUTPOINT_RADIUS * 4) / zoomFactor[viewRef.name],
-        fontStyle: "bold",
-        fill: "white",
-        stroke: "black",
-        strokeWidth: 1 / zoomFactor[viewRef.name],
-        offsetX: (INPUTPOINT_RADIUS * 2) / zoomFactor[viewRef.name],
-        offsetY: (INPUTPOINT_RADIUS * 2) / zoomFactor[viewRef.name],
-        visible: true,
-        listening: true,
-        opacity: 0.9,
-        draggable: true,
-      });
-      input_point.on("pointerenter", (event) =>
-        highlightInputPoint(event.target as Konva.Text, viewRef.name),
-      );
-      input_point.on("pointerout", (event) =>
-        unhighlightInputPoint(event.target as Konva.Text, viewRef.name),
-      );
-      input_point.on(
-        "dragmove",
-        (event) => void dragInputPointMove(event.target as Konva.Text, viewRef),
-      );
-      input_point.on("dragend", () => dragInputPointEnd());
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      inputGroup.add(input_point);
-      inputGroup.moveToTop(); //ensure input points stay over other groups
-      highlightInputPoint(input_point, viewRef.name);
-      lastInputViewRef = viewRef;
-      await updateCurrentMask(viewRef);
     } else if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerDown(viewRef);
       viewLayer.on("pointermove.brush", () => handleBrushPointerMove(viewRef.name));
       viewLayer.on("pointerup.brush", () => handleBrushPointerUp(viewRef.name));
     } else if (selectedTool?.type === ToolType.Rectangle && !bboxEditable) {
-      viewLayer.on("pointermove", () => dragInputRectMove(viewRef));
-      viewLayer.on("pointerup", () => void dragInputRectEnd(viewRef));
-    } else if (selectedTool?.type === ToolType.Keypoint) {
-      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewRef));
-      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewRef));
+      const bridge = activeToolBridge;
+      if (!bridge) return;
+
+      lastInputViewRef = viewRef;
+      bridge.setCanvasContext(viewRef.name, stage.width(), stage.height());
+      const pos = viewLayer.getRelativePointerPosition();
+      if (!pos) return;
+      bridge.dispatchEvent({
+        type: "pointerDown",
+        position: { x: pos.x, y: pos.y },
+        button: event.button,
+      });
+      viewLayer.on("pointermove", () => {
+        const movePos = viewLayer.getRelativePointerPosition();
+        bridge.dispatchEvent({
+          type: "pointerMove",
+          position: { x: movePos.x, y: movePos.y },
+        });
+      });
+      viewLayer.on("pointerup", () => {
+        const upPos = viewLayer.getRelativePointerPosition();
+        bridge.dispatchEvent({
+          type: "pointerUp",
+          position: { x: upPos.x, y: upPos.y },
+        });
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      });
+    } else if (selectedTool?.type === ToolType.Polygon) {
+      if (event.button !== 0) return;
+      const bridge = activeToolBridge;
+      if (!bridge) return;
+
+      lastInputViewRef = viewRef;
+      bridge.setCanvasContext(viewRef.name, stage.width(), stage.height());
+      const pos = viewLayer.getRelativePointerPosition();
+      if (!pos) return;
+
+      bridge.dispatchEvent({
+        type: "pointerDown",
+        position: { x: pos.x, y: pos.y },
+        button: event.button,
+      });
+
+      viewLayer.off("pointermove.polygon");
+      viewLayer.on("pointermove.polygon", () => {
+        const movePos = viewLayer.getRelativePointerPosition();
+        if (!movePos) return;
+        bridge.dispatchEvent({
+          type: "pointerMove",
+          position: { x: movePos.x, y: movePos.y },
+        });
+      });
     }
   }
 
@@ -1619,15 +1183,16 @@ License: CECILL-C
 
     // Zoom
     zoomFactor[view_name] = zoom(stage, direction, view_name);
-    //scaleElements(view_name);
-
-    // Keep highlighted point scaling
-    if (highlighted_point) highlightInputPoint(highlighted_point, view_name);
   }
+
+  const asRectangleShape = (
+    shape: CanvasShape,
+  ): CanvasBBoxCreatingShape | CanvasBBoxSavingShape =>
+    shape as CanvasBBoxCreatingShape | CanvasBBoxSavingShape;
 
   // ********** KEY EVENTS ********** //
 
-  async function handleKeyDown(event: KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     const activeElement = document.activeElement;
     if (
       activeElement instanceof HTMLInputElement ||
@@ -1638,164 +1203,79 @@ License: CECILL-C
     }
 
     if (event.key === "Escape") {
-      // Polygon: if drawing a 2nd+ polygon, discard only in-progress and return to editing
-      if (
+      const shouldKeepPolygonTool =
         selectedTool?.type === ToolType.Polygon &&
         newShape.status === "creating" &&
-        newShape.type === SaveShapeType.mask &&
-        newShape.phase === "drawing" &&
-        newShape.closedPolygons?.length > 0
-      ) {
-        newShape = { ...newShape, points: [], phase: "editing" };
+        newShape.type === CanvasShapeType.Polygon &&
+        (newShape as CanvasPolygonCreatingShape).phase === "drawing" &&
+        (newShape as CanvasPolygonCreatingShape).closedPolygons.length > 0;
+
+      if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon) {
+        activeToolBridge?.dispatchEvent({ type: "cancel" });
+      }
+
+      if (shouldKeepPolygonTool) {
         return;
       }
 
-      // If brush tool is active, clean up before switching to pan
       if (selectedTool?.type === ToolType.Brush) {
         cleanupAllBrushCanvases();
       }
-      // Clean up creation listeners and detach transformer (for bbox editing)
-      const dragRect: Konva.Rect = stage?.findOne("#drag-rect");
-      if (dragRect) {
-        dragRect.off("transform.creation");
-        dragRect.off("transformend.creation");
-        dragRect.off("dragend.creation");
-      }
-      bboxEditable = false;
-      const tr: Konva.Transformer = stage?.findOne("#transformer");
-      if (tr) tr.nodes([]);
+
+      clearRectangleTransformer();
       newShape = { status: "none", shouldReset: true };
-      selectedToolStore.set(createPanTool());
+      selectedTool = panTool;
+      return;
     }
 
-    // Brush tool shortcuts
-    if (event.key === "b" || event.key === "B") {
-      selectedToolStore.set(brushDrawTool);
+    const shortcutHandled = handleToolShortcuts(event, selectedTool, {
+      selectPan: () => (selectedTool = panTool),
+      selectRectangle: () => (selectedTool = rectangleTool),
+      selectPolygon: () => (selectedTool = polygonTool),
+      selectBrushDraw: () => (selectedTool = brushDrawTool),
+      toggleBrushMode: () => {
+        if (selectedTool?.type === ToolType.Brush) {
+          selectedTool = toggleBrushMode(selectedTool);
+        }
+      },
+      adjustBrushRadius: (delta) => {
+        brushSettings = {
+          ...brushSettings,
+          brushRadius: Math.max(1, Math.min(100, brushSettings.brushRadius + delta)),
+        };
+      },
+      saveBrushMask: () => {
+        for (const view_name of Object.keys(imagesPerView)) {
+          saveBrushMask(view_name);
+        }
+      },
+    });
+
+    if (shortcutHandled && event.key !== "Enter") {
+      return;
     }
-    if (event.key === "x" || event.key === "X") {
-      if (selectedTool?.type === ToolType.Brush) {
-        selectedToolStore.set(selectedTool.mode === "draw" ? brushEraseTool : brushDrawTool);
-      }
-    }
-    if (event.key === "[" || event.key === "q" || event.key === "Q") {
-      if (selectedTool?.type === ToolType.Brush) {
-        brushSettingsStore.update((s) => ({
-          ...s,
-          brushRadius: Math.max(1, s.brushRadius - 5),
-        }));
-      }
-    }
-    if (event.key === "]" || event.key === "e" || event.key === "E") {
-      if (selectedTool?.type === ToolType.Brush) {
-        brushSettingsStore.update((s) => ({
-          ...s,
-          brushRadius: Math.min(100, s.brushRadius + 5),
-        }));
-      }
-    }
+
     if (
-      (event.key === "Enter" || event.key === "s" || event.key === "S") &&
-      selectedTool?.type === ToolType.Brush
+      (event.key === "Enter" || event.key === "Backspace") &&
+      (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon)
     ) {
-      // Save brush mask for all active views
-      for (const view_name of Object.keys(imagesPerView)) {
-        saveBrushMask(view_name);
-      }
-    }
-
-    // Smart segmentation: Enter to validate mask and open form
-    if (event.key === "Enter" && selectedTool?.isSmart && currentAnn?.output) {
-      validateSmartMask();
-    }
-
-    // Manual bounding box: Enter to validate and open form
-    if (
-      event.key === "Enter" &&
-      selectedTool?.type === ToolType.Rectangle &&
-      !selectedTool.isSmart &&
-      newShape.status === "creating" &&
-      newShape.type === SaveShapeType.bbox
-    ) {
-      validateBBox(newShape.viewRef);
-    }
-
-    // Polygon: Enter to validate and open form
-    if (
-      event.key === "Enter" &&
-      selectedTool?.type === ToolType.Polygon &&
-      newShape.status === "creating" &&
-      newShape.type === SaveShapeType.mask &&
-      newShape.phase === "editing" &&
-      newShape.closedPolygons.length > 0
-    ) {
-      validatePolygon(newShape.viewRef);
-    }
-
-    // Smart segmentation shortcuts
-    if (event.key === "w" || event.key === "W") {
-      selectedToolStore.set(addSmartPointTool);
-    }
-    if (event.key === "x" || event.key === "X") {
-      if (selectedTool?.type === ToolType.PointSelection) {
-        selectedToolStore.set(selectedTool.label === 1 ? removeSmartPointTool : addSmartPointTool);
-      }
-    }
-    if (event.key === "r" || event.key === "R") {
-      if (selectedTool?.isSmart) {
-        selectedToolStore.set(smartRectangleTool);
-      } else {
-        selectedToolStore.set(rectangleTool);
-      }
-    }
-
-    if ((event.key === "Delete" || event.key === "Backspace") && highlighted_point != null) {
-      //get view_name of highlighted_point
-      const view_name = findViewName(highlighted_point);
-      const to_destroy_hl_point = highlighted_point;
-      unhighlightInputPoint(highlighted_point, view_name);
-      //remove Konva Circle
-      to_destroy_hl_point.destroy();
-
-      //if existing construct (points, box, ...)
-      const viewLayer = getViewLayer(view_name);
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      if (inputGroup.children.length > 0) {
-        //trigger a currentAnn with existing constructs
-        //we do not have view id here, so get it from Konva image "name" field (TODO is it OK for video??)
-        const imageKonva = getImageNode(view_name);
-        await updateCurrentMask({ id: imageKonva.attrs.name as string, name: view_name });
-      } else {
-        clearCurrentAnn(view_name, stage, selectedTool);
-      }
-    }
-    if (event.key === "i") {
-      console.log("Canvas2D - Infos");
-      console.log("masks", masks);
-      console.log("bboxes", bboxes);
-      console.log("keypoints", keypoints);
-      console.log("currentAnn", currentAnn);
-      console.log("stage", stage);
-      for (const view_name of Object.keys(imagesPerView)) {
-        const viewLayer = getViewLayer(view_name);
-        const maskGroup: Konva.Group = viewLayer?.findOne(`#masks-${view_name}`);
-        const bboxGroup: Konva.Group = viewLayer?.findOne(`#bboxes-${view_name}`);
-        const kptGroup: Konva.Group = viewLayer?.findOne(`#keypoints-${view_name}`);
-        console.log("view:", view_name);
-        console.log("--masks Konva group:", maskGroup);
-        console.log("--masks children length:", maskGroup.children?.length);
-        console.log("--bboxes Konva group:", bboxGroup);
-        console.log("--bboxes children length:", bboxGroup.children?.length);
-        console.log("--keypoints Konva group:", kptGroup);
-        console.log("--keypoints children length:", kptGroup.children?.length);
-      }
+      activeToolBridge?.dispatchEvent({
+        type: "keyDown",
+        key: event.key,
+        modifiers: {
+          shift: event.shiftKey,
+          ctrl: event.ctrlKey,
+          alt: event.altKey,
+          meta: event.metaKey,
+        },
+      });
+      return;
     }
   }
 </script>
 
 <div
-  class={cn("h-full bg-canvas transition-opacity duration-300 delay-100 relative", {
-    "opacity-0": !isReady,
-  })}
+  class={`h-full bg-canvas transition-opacity duration-300 delay-100 relative ${isReady ? "" : "opacity-0"}`}
   bind:this={stageContainer}
 >
   <Stage
@@ -1830,15 +1310,13 @@ License: CECILL-C
               config={{
                 id: `bboxes-${view_name}`,
                 listening:
-                  selectedTool?.type === ToolType.Pan ||
-                  selectedTool?.type === ToolType.Delete ||
-                  selectedTool?.type === ToolType.Rectangle,
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Rectangle,
               }}
             >
-              {#if (newShape.status === "creating" && newShape.type === SaveShapeType.bbox) || (newShape.status === "saving" && newShape.type === SaveShapeType.bbox)}
+              {#if (newShape.status === "creating" && newShape.type === CanvasShapeType.BBox) || (newShape.status === "saving" && newShape.type === CanvasShapeType.BBox)}
                 <CreateRectangle
                   zoomFactor={zoomFactor[view_name]}
-                  {newShape}
+                  newShape={asRectangleShape(newShape)}
                   {stage}
                   {viewRef}
                   editable={bboxEditable}
@@ -1862,11 +1340,18 @@ License: CECILL-C
               config={{
                 id: `masks-${view_name}`,
                 listening:
-                  selectedTool?.type === ToolType.Pan ||
-                  selectedTool?.type === ToolType.Delete ||
-                  selectedTool?.type === ToolType.Polygon,
+                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Polygon,
               }}
             >
+              {#if (newShape.status === "creating" && newShape.type === CanvasShapeType.Polygon) || (newShape.status === "saving" && (newShape.type === CanvasShapeType.Polygon || (newShape.type === CanvasShapeType.Mask && "polygonMode" in newShape)))}
+                <CreatePolygon
+                  {viewRef}
+                  {newShape}
+                  {stage}
+                  {zoomFactor}
+                  onToolEvent={dispatchPolygonToolEvent}
+                />
+              {/if}
               {#if selectedTool?.type === ToolType.Brush}
                 <BrushCanvas
                   bind:this={brushCanvasRefs[view_name]}
@@ -1877,13 +1362,9 @@ License: CECILL-C
                   {zoomFactor}
                   {selectedItemId}
                   {selectedTool}
-                  brushSettings={$brushSettingsStore}
-                  existingMaskRle={pendingBrushMask?.viewName === view_name
-                    ? pendingBrushMask.rle
-                    : null}
+                  {brushSettings}
                 />
               {/if}
-              <CreatePolygon {viewRef} {stage} {zoomFactor} bind:newShape />
               {#each masks as mask (mask.id)}
                 {#if mask.data.view_ref.name === view_name}
                   <PolygonGroup
@@ -1909,18 +1390,9 @@ License: CECILL-C
             <Group
               config={{
                 id: `keypoints-${view_name}`,
-                listening:
-                  selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Delete,
+                listening: false,
               }}
             >
-              {#if (newShape.status === "creating" && newShape.type === SaveShapeType.keypoints) || (newShape.status === "saving" && newShape.type === SaveShapeType.keypoints)}
-                <CreateKeypoint
-                  zoomFactor={zoomFactor[view_name]}
-                  bind:newShape
-                  {stage}
-                  {viewRef}
-                />
-              {/if}
               {#if !isActivePaintingTool}
                 <ShowKeypoints
                   {colorScale}
@@ -1928,14 +1400,13 @@ License: CECILL-C
                   {viewRef}
                   {keypoints}
                   zoomFactor={zoomFactor[view_name]}
-                  bind:newShape
+                  {newShape}
                 />
               {/if}
             </Group>
             <Group config={{ id: "currentAnnotation" }} />
           {/if}
         {/each}
-        <Group config={{ id: "input" }} />
       </Layer>
     {/each}
 

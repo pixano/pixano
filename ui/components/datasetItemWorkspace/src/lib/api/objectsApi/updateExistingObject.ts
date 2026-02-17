@@ -52,8 +52,42 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     // Check if the object is an image Annotation (not a video -- shouldn't video don't go here)
     if (ann.ui.datasetItemType !== WorkspaceType.VIDEO) {
       let changed = false;
-      if (newShape.type === SaveShapeType.mask && ann.is_type(BaseSchema.Mask)) {
-        (ann as Mask).data.counts = newShape.counts;
+      if (
+        (newShape.type === SaveShapeType.mask || newShape.type === SaveShapeType.polygon) &&
+        ann.is_type(BaseSchema.Mask)
+      ) {
+        if ("counts" in newShape && Array.isArray(newShape.counts)) {
+          (ann as Mask).data.counts = newShape.counts;
+        }
+        if (newShape.type === SaveShapeType.polygon) {
+          const polygonSvg =
+            Array.isArray(newShape.masksImageSVG) &&
+            newShape.masksImageSVG.every((value) => typeof value === "string")
+              ? newShape.masksImageSVG
+              : [];
+          const polygonPoints =
+            Array.isArray(newShape.polygonPoints) &&
+            newShape.polygonPoints.every(
+              (polygon) =>
+                Array.isArray(polygon) &&
+                polygon.every(
+                  (point) =>
+                    typeof point === "object" &&
+                    point !== null &&
+                    "x" in point &&
+                    "y" in point &&
+                    "id" in point,
+                ),
+            )
+              ? newShape.polygonPoints
+              : [];
+          ann.data.inference_metadata = {
+            ...ann.data.inference_metadata,
+            geometry_mode: "polygon",
+            polygon_svg: polygonSvg,
+            polygon_points: polygonPoints,
+          };
+        }
         changed = true;
       }
       if (newShape.type === SaveShapeType.bbox && ann.is_type(BaseSchema.BBox)) {

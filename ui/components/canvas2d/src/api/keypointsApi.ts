@@ -4,9 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { KeypointsTemplate } from "@pixano/core";
+import type { CanvasKeypoints } from "../lib/types/canvasData";
 
-export const findRectBoundaries = (vertices: KeypointsTemplate["vertices"]) => {
+export const findRectBoundaries = (vertices: CanvasKeypoints["vertices"]) => {
   const x = Math.min(...vertices.map((point) => point.x));
   const y = Math.min(...vertices.map((point) => point.y));
   const width = Math.max(...vertices.map((point) => point.x)) - x;

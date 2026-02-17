@@ -11,7 +11,7 @@ License: CECILL-C
   import { derived } from "svelte/store";
 
   import { TextSpansContent } from "@pixano/canvas2d";
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { ToolType, panTool } from "@pixano/tools";
   import {
     Annotation,
     BaseSchema,
@@ -39,7 +39,6 @@ License: CECILL-C
   } from "../../lib/api/objectsApi";
   import { updateView } from "../../lib/api/videoApi";
   import { getDefaultDisplayFeat } from "../../lib/settings/defaultFeatures";
-  import { panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     colorScale,

@@ -7,19 +7,10 @@ License: CECILL-C
 // Imports
 import { icons } from "@pixano/core";
 import type { InteractiveImageSegmenter } from "@pixano/models";
+import { ToolType } from "@pixano/tools";
 
 // Exports
-export enum ToolType {
-  PointSelection = "POINT_SELECTION",
-  Rectangle = "RECTANGLE",
-  Polygon = "POLYGON",
-  Keypoint = "KEY_POINT",
-  Delete = "DELETE",
-  Pan = "PAN",
-  Fusion = "FUSION",
-  Classification = "CLASSIFICATION",
-  Brush = "BRUSH",
-}
+export { ToolType } from "@pixano/tools";
 
 interface Tool {
   name: string;

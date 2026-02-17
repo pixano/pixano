@@ -8,11 +8,10 @@ License: CECILL-C
   // Imports
   import { Check, ReplaceAll, X } from "lucide-svelte";
 
-  import { ToolType } from "@pixano/canvas2d/src/tools";
-  import { Annotation, cn, IconButton, type SaveItem, type SelectionTool } from "@pixano/core/src";
+  import { ToolType, fusionTool, panTool, type SelectionTool } from "@pixano/tools";
+  import { Annotation, cn, IconButton, type SaveItem } from "@pixano/core/src";
 
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
-  import { fusionTool, panTool } from "../../lib/settings/selectionTools";
   import {
     annotations,
     entities,

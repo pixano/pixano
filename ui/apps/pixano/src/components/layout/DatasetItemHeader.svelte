@@ -9,7 +9,7 @@ License: CECILL-C
   import { ArrowLeft, ArrowRight, ChevronLeft, Loader2Icon, Save } from "lucide-svelte";
   import { fade } from "svelte/transition";
 
-  import { cn, IconButton, WorkspaceType } from "@pixano/core";
+  import { cn, IconButton } from "@pixano/core";
   import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
   import { saveData } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
@@ -123,7 +123,7 @@ License: CECILL-C
       >
         <div class="pointer-events-auto">
           {#if $currentDatasetStore}
-            <Toolbar isVideo={$currentDatasetStore.workspace === WorkspaceType.VIDEO} />
+            <Toolbar />
           {/if}
         </div>
       </div>

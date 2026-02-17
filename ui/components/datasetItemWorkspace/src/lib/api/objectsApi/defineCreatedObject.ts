@@ -76,17 +76,39 @@ export const defineCreatedObject = (
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.BBox },
       data: { ...baseData, ...bbox },
     });
-  } else if (shape.type === SaveShapeType.mask) {
-    const mask: MaskType = {
-      counts: shape.rle.counts,
-      size: shape.rle.size,
-    };
+  } else if (shape.type === SaveShapeType.mask || shape.type === SaveShapeType.polygon) {
+    const emptyMaskCounts = [shape.imageWidth * shape.imageHeight];
+    const mask: MaskType =
+      shape.type === SaveShapeType.mask
+        ? {
+            counts: shape.rle.counts,
+            size: shape.rle.size,
+          }
+        : shape.polygonMode === "mask"
+          ? {
+              counts: shape.rle?.counts ?? emptyMaskCounts,
+              size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
+            }
+          : {
+              // Raw polygon mode keeps vector geometry as primary payload.
+              counts: emptyMaskCounts,
+              size: [shape.imageHeight, shape.imageWidth],
+            };
+
+    const inferenceMetadata =
+      shape.type === SaveShapeType.polygon && shape.polygonMode === "polygon"
+        ? {
+            geometry_mode: "polygon",
+            polygon_svg: shape.masksImageSVG,
+            polygon_points: shape.polygonPoints,
+          }
+        : {};
 
     const table = getTable(dataset_schema, "annotations", BaseSchema.Mask);
     newObject = new Mask({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Mask },
-      data: { ...baseData, ...mask },
+      data: { ...baseData, inference_metadata: inferenceMetadata, ...mask },
     });
   } else if (shape.type === SaveShapeType.keypoints) {
     const coords = [];

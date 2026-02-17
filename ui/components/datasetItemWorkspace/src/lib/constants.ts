@@ -19,6 +19,7 @@ export const mapShapeType2BaseSchema: Record<SaveShapeType, BaseSchema> = {
   bbox: BaseSchema.BBox,
   keypoints: BaseSchema.Keypoints,
   mask: BaseSchema.Mask,
+  polygon: BaseSchema.Mask,
   tracklet: BaseSchema.Tracklet,
   textSpan: BaseSchema.TextSpan,
 };

@@ -26,6 +26,7 @@ export enum SaveShapeType {
   bbox = "bbox",
   keypoints = "keypoints",
   mask = "mask",
+  polygon = "polygon",
   tracklet = "tracklet",
   textSpan = "textSpan",
 }
@@ -48,6 +49,14 @@ export type SaveRectangleShape = SaveShapeBase & {
 type SaveMaskShape = SegmentationResult &
   SaveShapeBase & {
     type: SaveShapeType.mask;
+  };
+
+export type SavePolygonShape = SaveShapeBase & {
+    type: SaveShapeType.polygon;
+    polygonMode: "polygon" | "mask";
+    masksImageSVG: string[];
+    polygonPoints: PolygonGroupPoint[][];
+    rle?: SegmentationResult["rle"];
   };
 
 export type SaveTrackletShape = SaveShapeBase & {
@@ -74,6 +83,7 @@ export type TextSpanShape = SaveShapeBase & {
 export type SaveShape =
   | SaveRectangleShape
   | SaveMaskShape
+  | SavePolygonShape
   | SaveKeyBoxShape
   | SaveTrackletShape
   | TextSpanShape;
@@ -154,6 +164,13 @@ export type EditMaskShape = {
   counts: number[];
 };
 
+export type EditPolygonShape = {
+  type: SaveShapeType.polygon;
+  counts?: number[];
+  masksImageSVG?: string[];
+  polygonPoints?: PolygonGroupPoint[][];
+};
+
 export type EditRectangleShape = {
   type: SaveShapeType.bbox;
   coords: number[];
@@ -170,7 +187,7 @@ export type EditShape = {
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
   top_entity_id?: string;
-} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
+} & (EditRectangleShape | EditMaskShape | EditPolygonShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

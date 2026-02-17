@@ -27,7 +27,8 @@ License: CECILL-C
   export let handlePolygonPointsDragEnd: () => void | null;
 
   function scaleCircleRadius(id: number, i: number, scale: number) {
-    const point: Konva.Circle = stage.findOne(`#dot-${polygonId}-${i}-${id}`);
+    const point: Konva.Circle | undefined = stage.findOne(`#dot-${polygonId}-${i}-${id}`);
+    if (!point) return;
 
     point.scaleX(scale);
     point.scaleY(scale);
@@ -37,7 +38,10 @@ License: CECILL-C
 {#each points as shape, i}
   {#each shape as point, pi}
     <Circle
-      on:click={() => handlePolygonPointsClick?.(pi, i, viewRef)}
+      on:click={(event) => {
+        event.detail.cancelBubble = true;
+        handlePolygonPointsClick?.(pi, i, viewRef);
+      }}
       on:dragmove={() => handlePolygonPointsDragMove?.(point.id, i)}
       on:dragend={() => handlePolygonPointsDragEnd?.()}
       on:mouseover={(e) => {

@@ -8,12 +8,11 @@ License: CECILL-C
   // Imports
   import { onDestroy, onMount } from "svelte";
 
-  import { ToolType } from "@pixano/canvas2d/src/tools";
+  import { ToolType, panTool } from "@pixano/tools";
   import { BBox, Entity, SliderRoot, type KeypointsTemplate } from "@pixano/core";
 
   import { clearHighlighting } from "../../lib/api/objectsApi/clearHighlighting";
   import { updateView } from "../../lib/api/videoApi";
-  import { panTool } from "../../lib/settings/selectionTools";
   import { entities, mediaViews, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     currentFrameIndex,

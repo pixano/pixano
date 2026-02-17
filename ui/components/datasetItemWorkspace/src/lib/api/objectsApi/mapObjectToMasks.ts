@@ -20,10 +20,37 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
     !obj.ui.review_state &&
     !(obj.data.source_ref.name === PRE_ANNOTATION && obj.ui.review_state === "accepted")
   ) {
-    const rle = obj.data.counts as number[];
-    const size = obj.data.size;
-    const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-    const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+    const metadata = obj.data.inference_metadata as Record<string, unknown>;
+    const metadataPolygonSvg = metadata.polygon_svg;
+    const metadataPolygonPoints = metadata.polygon_points;
+    const isPolygonSvg =
+      metadata.geometry_mode === "polygon" &&
+      Array.isArray(metadataPolygonSvg) &&
+      metadataPolygonSvg.every((value) => typeof value === "string");
+    const isPolygonPoints =
+      metadata.geometry_mode === "polygon" &&
+      Array.isArray(metadataPolygonPoints) &&
+      metadataPolygonPoints.every(
+        (polygon) =>
+          Array.isArray(polygon) &&
+          polygon.every(
+            (point) =>
+              typeof point === "object" &&
+              point !== null &&
+              "x" in point &&
+              "y" in point &&
+              "id" in point,
+          ),
+      );
+
+    const masksSVG = isPolygonSvg
+      ? metadataPolygonSvg
+      : (() => {
+          const rle = obj.data.counts as number[];
+          const size = obj.data.size;
+          const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+          return mask_utils.convertSegmentsToSVG(maskPoly);
+        })();
 
     return {
       id: obj.id,
@@ -31,6 +58,7 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
       ui: {
         ...obj.ui,
         svg: masksSVG,
+        ...(isPolygonPoints ? { rawPoints: metadataPolygonPoints } : {}),
         opacity: obj.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
         strokeFactor:
           obj.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,

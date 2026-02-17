@@ -7,12 +7,12 @@ License: CECILL-C
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 
-import { BBox, type Reference } from "@pixano/core";
+import type { CanvasBBox, CanvasReference } from "../lib/types/canvasData";
 
 export const toggleIsEditingBBox = (
   value: "on" | "off",
   stage: Konva.Stage,
-  bboxId: BBox["id"],
+  bboxId: CanvasBBox["id"],
 ) => {
   const rect: Konva.Rect = stage.findOne(`#rect${bboxId}`);
   const transformer: Konva.Transformer = stage.findOne("#transformer");
@@ -30,7 +30,7 @@ export const toggleIsEditingBBox = (
 export const onDragMove = (
   e: KonvaEventObject<"dragmove">,
   stage: Konva.Stage,
-  viewRef: Reference,
+  viewRef: CanvasReference,
   currentRect: Konva.Rect,
   bboxId: string,
 ) => {
@@ -60,7 +60,7 @@ export const onDragMove = (
 export const getNewRectangleDimensions = (
   rect: Konva.Rect,
   stage: Konva.Stage,
-  viewRef: Reference,
+  viewRef: CanvasReference,
 ) => {
   const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
   const image = viewLayer.findOne(`#image-${viewRef.name}`);

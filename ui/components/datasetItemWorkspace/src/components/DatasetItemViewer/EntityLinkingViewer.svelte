@@ -14,22 +14,17 @@ License: CECILL-C
     DatasetItem,
     Image,
     isImage,
-    Mask,
     Message,
-    type Box,
     type ImagesPerView,
-    type LabeledClick,
-    type Reference,
     type SaveItem,
   } from "@pixano/core";
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { TextSpanArea } from "@pixano/text-canvas";
 
   // Import stores and API functions
   import { addOrUpdateSaveItem, updateExistingObject } from "../../lib/api/objectsApi";
-  import { templates } from "../../lib/settings/keyPointsTemplates";
   import {
     annotations,
+    brushSettings,
     colorScale,
     embeddings,
     filters,
@@ -42,7 +37,6 @@ License: CECILL-C
     newShape,
     preAnnotationIsActive,
     saveData,
-    selectedKeypointsTemplate,
     selectedTool,
     textSpans,
     textViews,
@@ -50,13 +44,7 @@ License: CECILL-C
 
   // Attributes
   export let selectedItem: DatasetItem;
-  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let resize: number;
-  export let pixanoInferenceSegmentation: (
-    viewRef: Reference,
-    points: LabeledClick[],
-    box: Box,
-  ) => Promise<Mask | undefined>;
 
   // Images per view type
   let imagesPerView: ImagesPerView = {};
@@ -222,15 +210,11 @@ License: CECILL-C
         bboxes={$itemBboxes}
         masks={$itemMasks}
         keypoints={$itemKeypoints}
-        selectedKeypointTemplate={templates.find(
-          (t) => t.template_id === $selectedKeypointsTemplate,
-        )}
         {filters}
-        {pixanoInferenceSegmentation}
         canvasSize={entityLinkingAreaWidth + resize}
         imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
-        bind:currentAnn
+        bind:brushSettings={$brushSettings}
         bind:newShape={$newShape}
       />
     </div>

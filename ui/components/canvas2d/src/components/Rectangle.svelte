@@ -10,13 +10,7 @@ License: CECILL-C
   import { onDestroy, tick } from "svelte";
   import { Group, Rect } from "svelte-konva";
 
-  import {
-    Annotation,
-    SaveShapeType,
-    type BBox,
-    type SelectionTool,
-    type Shape,
-  } from "@pixano/core";
+  import { ToolType, type SelectionTool } from "@pixano/tools";
 
   import {
     getNewRectangleDimensions,
@@ -25,22 +19,27 @@ License: CECILL-C
     toggleIsEditingBBox,
   } from "../api/rectangleApi";
   import { BBOX_STROKEWIDTH } from "../lib/constants";
-  import { ToolType } from "../tools";
+  import {
+    CanvasShapeType,
+    type CanvasAnnotationLike,
+    type CanvasBBox,
+    type CanvasShape,
+  } from "../lib/types/canvasData";
   import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;
-  export let bbox: BBox;
+  export let bbox: CanvasBBox;
   export let colorScale: (id: string) => string;
   export let zoomFactor: number;
-  export let newShape: Shape;
+  export let newShape: CanvasShape;
   export let selectedTool: SelectionTool;
-  export let merge: (ann: Annotation) => void;
+  export let merge: (ann: CanvasAnnotationLike) => void;
 
   const updateDimensions = (rect: Konva.Rect) => {
     const coords = getNewRectangleDimensions(rect, stage, bbox.data.view_ref);
     newShape = {
       status: "editing",
-      type: SaveShapeType.bbox,
+      type: CanvasShapeType.BBox,
       shapeId: bbox.id,
       viewRef: bbox.data.view_ref,
       coords,

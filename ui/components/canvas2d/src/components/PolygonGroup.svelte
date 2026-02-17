@@ -9,13 +9,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import {
-    SaveShapeType,
-    type Mask,
-    type Reference,
-    type SelectionTool,
-    type Shape,
-  } from "@pixano/core";
+  import { ToolType, type SelectionTool } from "@pixano/tools";
 
   import {
     convertPointToSvg,
@@ -25,36 +19,89 @@ License: CECILL-C
     sceneFunc,
     smoothSceneFunc,
   } from "../api/maskApi";
+  import {
+    CanvasShapeType,
+    type CanvasMask,
+    type CanvasReference,
+    type CanvasShape,
+  } from "../lib/types/canvasData";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
-  import { ToolType } from "../tools";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
-  export let viewRef: Reference;
-  export let newShape: Shape;
+  export let viewRef: CanvasReference;
+  export let newShape: CanvasShape;
   export let stage: Konva.Stage;
   export let currentImage: HTMLImageElement;
-  export let mask: Mask;
+  export let mask: CanvasMask;
   export let color: string;
   export let zoomFactor: Record<string, number>;
   export let selectedTool: SelectionTool;
   export let ghostOpacity: number | undefined = undefined;
 
   let canEdit = false;
+  let isRawPolygon = false;
+  const asPolygonPoint = (value: unknown): PolygonGroupPoint | null => {
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "x" in value &&
+      "y" in value &&
+      "id" in value &&
+      typeof value.x === "number" &&
+      typeof value.y === "number" &&
+      typeof value.id === "number"
+    ) {
+      return { x: value.x, y: value.y, id: value.id };
+    }
+    return null;
+  };
+  const getRawPolygonPoints = (): PolygonGroupPoint[][] => {
+    const rawPoints = mask.ui.rawPoints;
+    if (!Array.isArray(rawPoints)) return [];
+    const polygons: PolygonGroupPoint[][] = [];
+    for (const polygon of rawPoints) {
+      if (!Array.isArray(polygon)) return [];
+      const parsedPolygon: PolygonGroupPoint[] = [];
+      for (const point of polygon) {
+        const parsedPoint = asPolygonPoint(point);
+        if (!parsedPoint) return [];
+        parsedPolygon.push(parsedPoint);
+      }
+      polygons.push(parsedPolygon);
+    }
+    return polygons;
+  };
   let polygonShape: PolygonShape = {
     simplifiedSvg: mask.ui.svg,
-    simplifiedPoints: mask.ui.svg.reduce(
-      (acc, val) => [...acc, parseSvgPath(val)],
-      [] as PolygonGroupPoint[][],
-    ),
+    simplifiedPoints:
+      mask.data.inference_metadata?.geometry_mode === "polygon" && getRawPolygonPoints().length > 0
+        ? getRawPolygonPoints()
+        : mask.ui.svg.reduce((acc, val) => [...acc, parseSvgPath(val)], [] as PolygonGroupPoint[][]),
   };
 
   $: canEdit = mask.ui.displayControl.editing;
+  $: isRawPolygon = mask.data.inference_metadata?.geometry_mode === "polygon";
 
   // Guard: only re-parse SVG when the svg reference actually changes
   let prevSvgRef: string[] | null = null;
+  let prevRawPointsRef: unknown = null;
   $: {
-    if (mask.ui.svg !== prevSvgRef) {
+    if (isRawPolygon) {
+      if (mask.ui.rawPoints !== prevRawPointsRef) {
+        prevRawPointsRef = mask.ui.rawPoints;
+        const rawPoints = getRawPolygonPoints();
+        if (rawPoints.length > 0) {
+          polygonShape.simplifiedPoints = rawPoints;
+        } else if (mask.ui.svg !== prevSvgRef) {
+          prevSvgRef = mask.ui.svg;
+          polygonShape.simplifiedPoints = mask.ui.svg.reduce(
+            (acc, val) => [...acc, parseSvgPath(val)],
+            [] as PolygonGroupPoint[][],
+          );
+        }
+      }
+    } else if (mask.ui.svg !== prevSvgRef) {
       prevSvgRef = mask.ui.svg;
       polygonShape.simplifiedPoints = mask.ui.svg.reduce(
         (acc, val) => [...acc, parseSvgPath(val)],
@@ -78,19 +125,24 @@ License: CECILL-C
   };
 
   const handlePolygonPointsDragEnd = (svg?: string[]) => {
-    const counts = runLengthEncode(
-      svg || polygonShape.simplifiedSvg,
-      currentImage.width,
-      currentImage.height,
-    );
+    const polygonSvg = svg || polygonShape.simplifiedSvg;
 
     if (mask.ui.displayControl.editing) {
+      const counts = isRawPolygon
+        ? undefined
+        : runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
       newShape = {
         status: "editing",
-        type: SaveShapeType.mask,
+        type: isRawPolygon ? CanvasShapeType.Polygon : CanvasShapeType.Mask,
         viewRef,
         shapeId: mask.id,
-        counts,
+        ...(counts ? { counts } : {}),
+        ...(isRawPolygon
+          ? {
+              masksImageSVG: polygonSvg,
+              polygonPoints: polygonShape.simplifiedPoints,
+            }
+          : {}),
       };
     }
   };
@@ -121,6 +173,23 @@ License: CECILL-C
       };
     }
   };
+
+  const drawRawPolygonScene = (ctx: Konva.Context, shape: Konva.Shape) => {
+    ctx.beginPath();
+    for (const polygon of polygonShape.simplifiedPoints) {
+      if (polygon.length < 2) continue;
+      ctx.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) {
+        ctx.lineTo(polygon[i].x, polygon[i].y);
+      }
+      ctx.closePath();
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+    rawCtx.fillStyle = shape.fill() as string;
+    rawCtx.fill("evenodd");
+    ctx.strokeShape(shape);
+  };
 </script>
 
 <Group
@@ -136,7 +205,10 @@ License: CECILL-C
   {#if canEdit}
     <KonvaShape
       config={{
-        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
+        sceneFunc: (ctx, shape) =>
+          isRawPolygon
+            ? drawRawPolygonScene(ctx, shape)
+            : sceneFunc(ctx, shape, polygonShape.simplifiedSvg),
         stroke: color,
         strokeWidth: 2 / zoomFactor[viewRef.name],
         closed: true,
@@ -157,7 +229,10 @@ License: CECILL-C
     <KonvaShape
       on:click={ghostOpacity ? undefined : onClick}
       config={{
-        sceneFunc: (ctx, shape) => smoothSceneFunc(ctx, shape, mask.ui.svg),
+        sceneFunc: (ctx, shape) =>
+          isRawPolygon
+            ? drawRawPolygonScene(ctx, shape)
+            : smoothSceneFunc(ctx, shape, mask.ui.svg),
         stroke: color,
         strokeWidth: mask.ui.strokeFactor,
         closed: true,

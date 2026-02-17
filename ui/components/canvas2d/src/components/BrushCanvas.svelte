@@ -10,7 +10,7 @@ License: CECILL-C
   import { LazyBrush } from "lazy-brush";
   import { onDestroy, onMount } from "svelte";
 
-  import { SaveShapeType, type BrushSelectionTool, type Reference, type Shape } from "@pixano/core";
+  import type { BrushSelectionTool } from "@pixano/tools";
   import { convertSegmentsToSVG, generatePolygonSegments } from "@pixano/models/src/mask_utils";
 
   import {
@@ -20,9 +20,14 @@ License: CECILL-C
     isMaskEmpty,
     rleToBitmap,
   } from "../api/brushApi";
+  import {
+    CanvasShapeType,
+    type CanvasMaskSavingShape,
+    type CanvasReference,
+  } from "../lib/types/canvasData";
 
   // Exports
-  export let viewRef: Reference;
+  export let viewRef: CanvasReference;
   export let stage: Konva.Stage;
   export let viewLayer: Konva.Layer | undefined = undefined;
   export let currentImage: HTMLImageElement;
@@ -47,6 +52,7 @@ License: CECILL-C
   let lastBrushPos: { x: number; y: number } | null = null;
   let rafId: number | null = null;
   let needsUpdate = false;
+  let previousMode: BrushSelectionTool["mode"] | null = null;
 
   const MASK_COLOR = "rgba(255, 0, 80, 0.5)";
 
@@ -105,6 +111,12 @@ License: CECILL-C
     }
   }
 
+  // Force a redraw when switching between pencil and eraser.
+  $: if (selectedTool?.mode && selectedTool.mode !== previousMode) {
+    previousMode = selectedTool.mode;
+    needsUpdate = true;
+  }
+
   function startRenderLoop() {
     const loop = () => {
       if (needsUpdate) {
@@ -143,6 +155,10 @@ License: CECILL-C
       });
       masksGroup.add(konvaImage);
     } else {
+      // The parent group can be reconciled by Svelte/Konva updates; re-attach if detached.
+      if (konvaImage.getParent() !== masksGroup) {
+        masksGroup.add(konvaImage);
+      }
       konvaImage.image(displayCanvas);
     }
 
@@ -195,7 +211,7 @@ License: CECILL-C
   }
 
   // Called to get mask data for saving — returns the shape data without assigning it
-  export function getMaskData(): Shape | null {
+  export function getMaskData(): CanvasMaskSavingShape | null {
     if (isMaskEmpty(offscreenCanvas)) return null;
 
     const counts = bitmapToRle(offscreenCanvas);
@@ -209,7 +225,7 @@ License: CECILL-C
         counts,
         size: [currentImage.height, currentImage.width],
       },
-      type: SaveShapeType.mask,
+      type: CanvasShapeType.Mask,
       viewRef,
       itemId: selectedItemId,
       imageWidth: currentImage.width,
