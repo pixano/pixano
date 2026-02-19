@@ -46,6 +46,7 @@ class ViewModel(BaseSchemaModel[View]):
 
     def to_row(self, dataset: Dataset) -> View:
         """Create a [View][pixano.features.View] from the model."""
-        if not is_view(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_view(schema):
             raise ValueError(f"Schema type must be a subclass of {View.__name__}.")
         return super().to_row(dataset)

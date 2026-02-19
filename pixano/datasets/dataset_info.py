@@ -35,6 +35,7 @@ class DatasetInfo(BaseModel):
     size: str = "Unknown"
     preview: str = ""
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
+    storage_mode: str = "filesystem"  # "filesystem", "embedded", or "mixed"
 
     @field_serializer("workspace")
     def serialize_workspace(self, workspace: WorkspaceType):

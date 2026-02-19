@@ -179,9 +179,8 @@ def check_table_integrity(
                     ids_to_check[schema_id] = check_id
             elif check_type == IntegrityCheck.REF_NAME:
                 field = cast(SchemaRef, field)
-                if field.name != "" and field.name not in (
-                    list(dataset.schema.schemas.keys()) + ["source"]
-                ):  # ref name is not defined
+                valid_names = set(dataset.schema.schemas.keys()) | {"source"} | set(dataset.schema.view_columns.keys())
+                if field.name != "" and field.name not in valid_names:  # ref name is not defined
                     check_errors[check_id] = (check_type, table_name, field_name, schema_id, field)
             elif check_type == IntegrityCheck.REF_TYPE:
                 field = cast(SchemaRef, field)
@@ -190,7 +189,10 @@ def check_table_integrity(
                 field_type = type(field)
                 if is_view_ref(field_type):  # field is a view ref
                     field = cast(ViewRef, field)
-                    if field.name not in dataset.schema.groups[SchemaGroup.VIEW]:  # field name is not a view
+                    valid_view_names = dataset.schema.groups.get(SchemaGroup.VIEW, set()) | set(
+                        dataset.schema.view_columns.keys()
+                    )
+                    if field.name not in valid_view_names:  # field name is not a view
                         check_errors[check_id] = (check_type, table_name, field_name, schema_id, field)
                 elif is_annotation_ref(field_type):  # field is an annotation ref
                     field = cast(AnnotationRef, field)
@@ -234,8 +236,12 @@ def check_table_integrity(
     for ref_schema_name, refs in schemas_refs_to_check.items():
         if ref_schema_name == "":
             continue
+        # Map view column names to their media table for lookup
+        actual_table_name = ref_schema_name
+        if ref_schema_name in dataset.schema.view_columns:
+            actual_table_name = dataset.schema.view_columns[ref_schema_name].media_table
         ref_ids_to_check = {field_ref.id for check_id, _, field_ref, _ in refs if check_id not in check_errors}
-        found_ref_ids = dataset.find_ids_in_table(ref_schema_name, ref_ids_to_check)
+        found_ref_ids = dataset.find_ids_in_table(actual_table_name, ref_ids_to_check)
         for check_id, schema_id, field_ref, field_name in refs:
             if check_id in check_errors:
                 continue

@@ -49,7 +49,14 @@ def get_dataset_items(
     if rows == []:
         raise HTTPException(status_code=404, detail="Dataset items not found.")
 
-    return DatasetItemModel.from_dataset_items(rows, dataset.schema)
+    models = DatasetItemModel.from_dataset_items(rows, dataset.schema)
+    for model in models:
+        for view_name, view_or_views in model.views.items():
+            views_list = view_or_views if isinstance(view_or_views, list) else [view_or_views] if view_or_views else []
+            for v in views_list:
+                if not v.data.get("url"):
+                    v.data["url"] = f"views/{dataset_id}/{view_name}/{v.id}/blob"
+    return models
 
 
 @router.get("/{dataset_id}/{id}", response_model=DatasetItemModel)

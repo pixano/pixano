@@ -78,7 +78,7 @@ async def call_image_mask_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_image(dataset.schema.schemas[image.table_info.name]):
+    if not is_image(dataset.schema.resolve_schema(image.table_info.name)):
         raise HTTPException(status_code=400, detail="Image must be an image.")
 
     image_row: Image = image.to_row(dataset)
@@ -154,7 +154,7 @@ async def call_video_mask_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_sequence_frame(dataset.schema.schemas[video[0].table_info.name]):
+    if not is_sequence_frame(dataset.schema.resolve_schema(video[0].table_info.name)):
         raise HTTPException(status_code=400, detail="Video must be a list of SequenceFrame.")
 
     video_row: list[SequenceFrame] = [vm.to_row(dataset) for vm in video]

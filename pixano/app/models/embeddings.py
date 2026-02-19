@@ -48,6 +48,7 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
 
     def to_row(self, dataset: Dataset) -> Embedding:
         """Create an [Embedding][pixano.features.Embedding] from the model."""
-        if not is_embedding(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_embedding(schema):
             raise ValueError(f"Schema type must be a subclass of {Embedding.__name__}.")
         return super().to_row(dataset)

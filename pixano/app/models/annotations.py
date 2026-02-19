@@ -57,7 +57,11 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
 
     def to_row(self, dataset: Dataset) -> Annotation:
         """Create an [Annotation][pixano.features.Annotation] from the model."""
-        if not is_annotation(dataset.schema.schemas[self.table_info.name]):
+        try:
+            schema = dataset.schema.resolve_schema(self.table_info.name)
+        except KeyError:
+            schema = None
+        if schema is None or not is_annotation(schema):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
         row = super().to_row(dataset)
         row.inference_metadata = json.dumps(self.data["inference_metadata"])

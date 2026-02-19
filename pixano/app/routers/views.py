@@ -4,12 +4,18 @@
 # License: CECILL-C
 # =====================================
 
+import io
+from collections.abc import Generator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+import pyarrow as pa
+import pyarrow.compute as pc
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from pixano.app.models.views import ViewModel
 from pixano.app.settings import Settings, get_settings
+from pixano.datasets.queries import TableQueryBuilder
 from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
@@ -17,6 +23,7 @@ from .utils import (
     create_rows_handler,
     delete_row_handler,
     delete_rows_handler,
+    get_dataset,
     get_row_handler,
     get_rows_handler,
     update_row_handler,
@@ -25,6 +32,208 @@ from .utils import (
 
 
 router = APIRouter(prefix="/views", tags=["Views"])
+
+# MIME type mapping for common media formats
+_FORMAT_TO_MIME: dict[str, str] = {
+    "JPEG": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "PNG": "image/png",
+    "png": "image/png",
+    "WEBP": "image/webp",
+    "webp": "image/webp",
+    "TIFF": "image/tiff",
+    "tiff": "image/tiff",
+    "BMP": "image/bmp",
+    "bmp": "image/bmp",
+    "GIF": "image/gif",
+    "gif": "image/gif",
+    "pdf": "application/pdf",
+    "PDF": "application/pdf",
+    "ply": "application/x-ply",
+    "pcd": "application/x-pcd",
+}
+
+_BOUNDARY = b"frame_boundary"
+
+
+def _generate_multipart_frames(
+    arrow_table: pa.Table,
+    view_name: str,
+    format_col: str,
+) -> Generator[bytes, None, None]:
+    """Yield multipart/x-mixed-replace parts from an Arrow table of frames.
+
+    Each part contains the frame blob with appropriate headers.
+
+    Args:
+        arrow_table: Sorted Arrow table with frame data.
+        view_name: Column name containing the blob data.
+        format_col: Column name containing the format string.
+    """
+    has_format = format_col in arrow_table.column_names
+    frame_index_col = arrow_table.column("frame_index")
+    blob_col = arrow_table.column(view_name)
+
+    for i in range(arrow_table.num_rows):
+        blob = blob_col[i].as_py()
+        if not blob:
+            continue
+        fmt = arrow_table.column(format_col)[i].as_py() if has_format else "bin"
+        mime = _FORMAT_TO_MIME.get(fmt, "application/octet-stream")
+        idx = frame_index_col[i].as_py()
+
+        header = (
+            b"--" + _BOUNDARY + b"\r\n"
+            b"Content-Type: " + mime.encode() + b"\r\n"
+            b"Content-Length: " + str(len(blob)).encode() + b"\r\n"
+            b"X-Frame-Index: " + str(idx).encode() + b"\r\n"
+            b"\r\n"
+        )
+        yield header
+        yield blob
+        yield b"\r\n"
+
+    yield b"--" + _BOUNDARY + b"--\r\n"
+
+
+@router.get("/{dataset_id}/{view_name}/{row_id}/blob")
+def get_view_blob(
+    dataset_id: str,
+    view_name: str,
+    row_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> StreamingResponse:
+    """Stream the raw blob of a specific view at a specific row.
+
+    Args:
+        dataset_id: Dataset ID.
+        view_name: View name (column prefix in media-type table).
+        row_id: Row ID in the media-type table.
+        settings: App settings.
+
+    Returns:
+        StreamingResponse with the raw blob bytes.
+    """
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
+
+    # Resolve view_name -> media_table via schema.view_columns
+    if view_name not in dataset.schema.view_columns:
+        raise HTTPException(status_code=404, detail=f"View '{view_name}' not found in dataset schema.")
+
+    vc = dataset.schema.view_columns[view_name]
+    table = dataset.open_table(vc.media_table)
+
+    # Fetch only the blob column and format for this view
+    select_cols = ["id", view_name]
+    format_col = f"{view_name}_format"
+    if format_col in [f.name for f in table.schema]:
+        select_cols.append(format_col)
+
+    rows = (
+        TableQueryBuilder(table, dataset._db_connection)
+        .select(select_cols)
+        .where(f"id = '{row_id}'")
+        .to_list()
+    )
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Row '{row_id}' not found in table '{vc.media_table}'.")
+
+    blob = rows[0].get(view_name, b"")
+    if not blob:
+        raise HTTPException(status_code=404, detail="No blob data found for this view.")
+
+    fmt = rows[0].get(format_col, "bin")
+    mime_type = _FORMAT_TO_MIME.get(fmt, "application/octet-stream")
+
+    return StreamingResponse(
+        io.BytesIO(blob),
+        media_type=mime_type,
+        headers={"Content-Length": str(len(blob))},
+    )
+
+
+@router.get("/{dataset_id}/{view_name}/batch")
+def get_view_blob_batch(
+    dataset_id: str,
+    view_name: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    item_id: str = Query(..., description="Item ID for the video/sequence"),
+    start_frame: int = Query(0, ge=0),
+    batch_size: int = Query(100, ge=1, le=1000),
+) -> StreamingResponse:
+    """Stream a batch of video/sequence frames as multipart/x-mixed-replace.
+
+    Returns multiple frames in a single response, reducing HTTP round-trips
+    for temporal views (e.g., SequenceFrame).
+
+    Args:
+        dataset_id: Dataset ID.
+        view_name: View name (column prefix in media-type table).
+        settings: App settings.
+        item_id: Item ID to fetch frames for.
+        start_frame: Starting frame index (inclusive).
+        batch_size: Number of frames to return (max 1000).
+
+    Returns:
+        StreamingResponse with multipart/x-mixed-replace body.
+    """
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
+
+    # Resolve view_name -> media table
+    if view_name not in dataset.schema.view_columns:
+        raise HTTPException(status_code=404, detail=f"View '{view_name}' not found in dataset schema.")
+
+    vc = dataset.schema.view_columns[view_name]
+    table = dataset.open_table(vc.media_table)
+
+    # Validate that this is a temporal view (has frame_index column)
+    table_column_names = [f.name for f in table.schema]
+    if "frame_index" not in table_column_names:
+        raise HTTPException(status_code=400, detail=f"View '{view_name}' is not a temporal view (no frame_index).")
+
+    # Sanitize item_id to prevent injection
+    if "'" in item_id:
+        raise HTTPException(status_code=400, detail="Invalid item_id.")
+
+    # Build query
+    end_frame = start_frame + batch_size
+    where_clause = (
+        f"item_ref.id = '{item_id}' "
+        f"AND frame_index >= {start_frame} "
+        f"AND frame_index < {end_frame}"
+    )
+
+    select_cols = ["id", view_name, "frame_index"]
+    format_col = f"{view_name}_format"
+    if format_col in table_column_names:
+        select_cols.append(format_col)
+
+    arrow_table = (
+        TableQueryBuilder(table, dataset._db_connection)
+        .select(select_cols)
+        .where(where_clause)
+        .limit(batch_size)
+        .to_arrow()
+    )
+
+    if arrow_table.num_rows == 0:
+        raise HTTPException(status_code=404, detail="No frames found for the given parameters.")
+
+    # Sort by frame_index
+    sorted_indices = pc.sort_indices(arrow_table, sort_keys=[("frame_index", "ascending")])
+    arrow_table = arrow_table.take(sorted_indices)
+
+    return StreamingResponse(
+        _generate_multipart_frames(arrow_table, view_name, format_col),
+        media_type=f"multipart/x-mixed-replace; boundary={_BOUNDARY.decode()}",
+        headers={
+            "X-Total-Frames": str(arrow_table.num_rows),
+            "X-Start-Frame": str(start_frame),
+            "X-Batch-Size": str(batch_size),
+        },
+    )
 
 
 @router.get("/{dataset_id}/{table}", response_model=list[ViewModel])

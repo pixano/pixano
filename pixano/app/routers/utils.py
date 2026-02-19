@@ -84,15 +84,20 @@ def assert_table_in_group(dataset: Dataset, table: str, group: SchemaGroup) -> N
     """Assert that a table belongs to a group.
 
     If the table does not belong to the group, raise a 404 error.
+    For the VIEW group, view column names are also accepted.
 
     Args:
         dataset: Dataset.
-        table: Table name.
+        table: Table name or view column name.
         group: Group.
     """
     if table in [SchemaGroup.ITEM.value, SchemaGroup.SOURCE.value]:
         return
-    elif table not in dataset.schema.groups[group]:
+    elif table in dataset.schema.groups[group]:
+        return
+    elif group == SchemaGroup.VIEW and table in dataset.schema.view_columns:
+        return
+    else:
         raise HTTPException(
             status_code=404,
             detail=f"Table {table} is not in the {group.value} group table.",

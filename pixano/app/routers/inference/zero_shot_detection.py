@@ -67,7 +67,7 @@ async def call_image_zero_shot_detection(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_image(dataset.schema.schemas[image.table_info.name]):
+    if not is_image(dataset.schema.resolve_schema(image.table_info.name)):
         raise HTTPException(status_code=400, detail="Image must be an image.")
 
     image_row: Image = image.to_row(dataset)

@@ -99,6 +99,10 @@ class BaseSchemaModel(BaseModel, Generic[T]):
             if key in ["id", "created_at", "updated_at"]:
                 model_dict[key] = value
                 continue
+            # Skip bytes fields (e.g., blob) — they can't be JSON-serialized.
+            # Binary media is served via a dedicated streaming endpoint.
+            if isinstance(value, bytes):
+                continue
             data[key] = value
         model_dict["data"] = data
         model_dict["table_info"] = table_info
@@ -128,7 +132,7 @@ class BaseSchemaModel(BaseModel, Generic[T]):
             The created row.
         """
         schema_dict = self.model_dump()
-        schema = dataset.schema.schemas[self.table_info.name]
+        schema = dataset.schema.resolve_schema(self.table_info.name)
         row = schema.model_validate(
             {
                 "id": schema_dict["id"],

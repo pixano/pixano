@@ -43,6 +43,10 @@ class DefaultJSONDatasetExporter(DatasetExporter):
                 continue
             elif group == SchemaGroup.ITEM:
                 export_data[group_to_str(group, plural=True)] = []
+            elif group == SchemaGroup.VIEW and self.dataset.schema.view_columns:
+                # Use view column names (field names) instead of media table names
+                view_names = set(self.dataset.schema.view_columns.keys())
+                export_data[group_to_str(group, plural=True)] = {name: [] for name in view_names}
             else:
                 export_data[group_to_str(group, plural=True)] = {schema: [] for schema in schemas}
         export_data[group_to_str(SchemaGroup.SOURCE, plural=True)] = [

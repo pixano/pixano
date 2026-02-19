@@ -107,14 +107,20 @@ class DatasetItemModel(BaseModel):
         }
         for key, value in dataset_item.to_schemas_data(dataset_schema).items():
             if value is None or value == []:
-                if issubclass(dataset_schema.schemas[key], View):
+                # Resolve schema type: may be a view column name or a table name
+                if key in dataset_schema.view_columns:
                     model_dict["views"][key] = None if value is None else []
-                elif issubclass(dataset_schema.schemas[key], Entity):
-                    model_dict["entities"][key] = None if value is None else []
-                elif issubclass(dataset_schema.schemas[key], Annotation):
-                    model_dict["annotations"][key] = None if value is None else []
+                elif key in dataset_schema.schemas:
+                    if issubclass(dataset_schema.schemas[key], View):
+                        model_dict["views"][key] = None if value is None else []
+                    elif issubclass(dataset_schema.schemas[key], Entity):
+                        model_dict["entities"][key] = None if value is None else []
+                    elif issubclass(dataset_schema.schemas[key], Annotation):
+                        model_dict["annotations"][key] = None if value is None else []
+                    else:
+                        raise ValueError(f"Unsupported schema type {type(value)}")
                 else:
-                    raise ValueError(f"Unsupported schema type {type(value)}")
+                    raise ValueError(f"Unknown schema key: {key}")
             elif isinstance(value, Item) or isinstance(value, list) and isinstance(value[0], Item):
                 model_dict[key] = _row_or_rows_to_model_or_models(value, key, SchemaGroup.ITEM, ItemModel)
             elif isinstance(value, Annotation) or isinstance(value, list) and isinstance(value[0], Annotation):

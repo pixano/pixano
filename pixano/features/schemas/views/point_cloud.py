@@ -16,10 +16,12 @@ class PointCloud(View):
     """Point Cloud view.
 
     Attributes:
-        url: The point cloud URL.
+        url: The point cloud URL. Empty when embedded.
+        blob: Raw point cloud bytes. Empty when using filesystem URL.
     """
 
-    url: str
+    url: str = ""
+    blob: bytes = b""
 
 
 def is_point_cloud(cls: type, strict: bool = False) -> bool:
@@ -28,17 +30,22 @@ def is_point_cloud(cls: type, strict: bool = False) -> bool:
 
 
 def create_point_cloud(
-    url: str, id: str = "", item_ref: ItemRef = ItemRef.none(), parent_ref: ViewRef = ViewRef.none()
+    url: str = "",
+    id: str = "",
+    item_ref: ItemRef = ItemRef.none(),
+    parent_ref: ViewRef = ViewRef.none(),
+    blob: bytes | None = None,
 ) -> PointCloud:
     """Create a `PointCloud` instance.
 
     Args:
-        url: The point cloud URL.
+        url: The point cloud URL. Can be empty when using embedded blob.
         id: Point cloud ID.
         item_ref: Item reference.
         parent_ref: Parent view reference.
+        blob: Raw point cloud bytes.
 
     Returns:
         The created `PointCloud` instance.
     """
-    return PointCloud(url=url, id=id, item_ref=item_ref, parent_ref=parent_ref)
+    return PointCloud(url=url, id=id, item_ref=item_ref, parent_ref=parent_ref, blob=blob or b"")

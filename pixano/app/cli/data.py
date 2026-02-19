@@ -88,10 +88,14 @@ def import_data(
     ),
     mode: ImportMode = typer.Option(ImportMode.create, help="Import mode: create, overwrite, or add."),
     use_image_name_as_id: bool = typer.Option(False, help="Use image file name as item ID."),
+    embed_media: bool = typer.Option(
+        False, help="Embed media bytes directly in the database instead of storing filesystem URLs."
+    ),
 ) -> None:
     """Import a dataset from an external source directory.
 
     Copies media from SOURCE_DIR into data_dir/media/<dataset_name>/ and builds the dataset.
+    When --embed-media is used, media bytes are stored directly in the database and no copy is made.
     """
     from pixano.datasets import DatasetInfo
 
@@ -123,26 +127,6 @@ def import_data(
     resolved_library_dir = data_dir / "library"
     resolved_media_dir = data_dir / "media"
 
-    # Copy media from source_dir into data_dir/media/<dataset_name>/
-    dest_media = resolved_media_dir / dataset_name
-
-    if mode == ImportMode.create:
-        if dest_media.exists():
-            typer.echo(f"Error: '{dest_media}' already exists. Use --mode overwrite or --mode add.", err=True)
-            raise typer.Exit(code=1)
-        dest_media.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(source_dir, dest_media)
-    elif mode == ImportMode.overwrite:
-        if dest_media.exists():
-            shutil.rmtree(dest_media)
-        dest_media.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(source_dir, dest_media)
-    elif mode == ImportMode.add:
-        dest_media.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(source_dir, dest_media, dirs_exist_ok=True)
-
-    typer.echo(f"Copied media from '{source_dir}' to '{dest_media}'.")
-
     # Resolve builder class
     import importlib
 
@@ -157,14 +141,47 @@ def import_data(
 
     info = DatasetInfo(name=dataset_name, description=description)
 
-    builder = builder_cls(
-        media_dir=resolved_media_dir,
-        library_dir=resolved_library_dir,
-        dataset_item=dataset_item,
-        info=info,
-        dataset_path=dataset_name,
-        use_image_name_as_id=use_image_name_as_id,
-    )
+    if embed_media:
+        # No copy needed — read directly from source and embed in DB
+        resolved_library_dir.mkdir(parents=True, exist_ok=True)
+        builder = builder_cls(
+            media_dir=source_dir.parent,
+            library_dir=resolved_library_dir,
+            dataset_item=dataset_item,
+            info=info,
+            dataset_path=source_dir.name,
+            use_image_name_as_id=use_image_name_as_id,
+            embed_media=True,
+        )
+    else:
+        # Copy media from source_dir into data_dir/media/<dataset_name>/
+        dest_media = resolved_media_dir / dataset_name
+
+        if mode == ImportMode.create:
+            if dest_media.exists():
+                typer.echo(f"Error: '{dest_media}' already exists. Use --mode overwrite or --mode add.", err=True)
+                raise typer.Exit(code=1)
+            dest_media.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_dir, dest_media)
+        elif mode == ImportMode.overwrite:
+            if dest_media.exists():
+                shutil.rmtree(dest_media)
+            dest_media.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_dir, dest_media)
+        elif mode == ImportMode.add:
+            dest_media.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source_dir, dest_media, dirs_exist_ok=True)
+
+        typer.echo(f"Copied media from '{source_dir}' to '{dest_media}'.")
+
+        builder = builder_cls(
+            media_dir=resolved_media_dir,
+            library_dir=resolved_library_dir,
+            dataset_item=dataset_item,
+            info=info,
+            dataset_path=dataset_name,
+            use_image_name_as_id=use_image_name_as_id,
+        )
 
     dataset = builder.build(mode=mode.value)
     typer.echo(f"Dataset '{dataset_name}' built successfully ({dataset.num_rows} items).")

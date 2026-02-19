@@ -48,6 +48,7 @@ class EntityModel(BaseSchemaModel[Entity]):
 
     def to_row(self, dataset: Dataset) -> Entity:
         """Create an [Entity][pixano.features.Entity] from the model."""
-        if not is_entity(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_entity(schema):
             raise ValueError(f"Schema type must be a subclass of {Entity.__name__}.")
         return super().to_row(dataset)

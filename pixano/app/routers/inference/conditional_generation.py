@@ -68,7 +68,7 @@ async def call_text_image_conditional_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_conversation(dataset.schema.schemas[conversation.table_info.name]):
+    if not is_conversation(dataset.schema.resolve_schema(conversation.table_info.name)):
         raise HTTPException(status_code=400, detail="Conversation must be a conversation.")
 
     conversation_row: Conversation = conversation.to_row(dataset)
@@ -76,7 +76,7 @@ async def call_text_image_conditional_generation(
     messages_in_one_table = len({m.table_info.name for m in messages}) == 1
     if not messages_in_one_table:
         raise HTTPException(status_code=400, detail="Only one table for messages is allowed.")
-    elif not is_message(dataset.schema.schemas[messages[0].table_info.name]):
+    elif not is_message(dataset.schema.resolve_schema(messages[0].table_info.name)):
         raise HTTPException(status_code=400, detail="Messages must be a message.")
 
     messages_rows: list[Message] = []

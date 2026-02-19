@@ -5,6 +5,7 @@
 # =====================================
 
 import json
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -17,11 +18,139 @@ from typing_extensions import TYPE_CHECKING, Self
 from pixano.features import BaseSchema, Item
 from pixano.features.schemas.registry import _SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
+from pixano.features.schemas.views import (
+    View,
+    get_media_type_table,
+    is_image,
+    is_pdf,
+    is_point_cloud,
+    is_sequence_frame,
+    is_text,
+    is_video,
+)
 from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
 
 if TYPE_CHECKING:
     from pixano.datasets.dataset import Dataset
+
+
+class ViewColumnInfo(BaseModel):
+    """Metadata about a view column group in a media-type table.
+
+    Attributes:
+        view_name: The view name (e.g., "cam_front").
+        view_type: The view type name (e.g., "Image", "SequenceFrame").
+        media_table: The media-type table name (e.g., "images", "frames").
+        columns: Generated column names for this view group.
+    """
+
+    view_name: str
+    view_type: str
+    media_table: str
+    columns: list[str]
+
+
+# Standard fields already handled at the row level or mapped to known columns.
+# Any field NOT in this set is a custom field and gets a {view_name}_{field_name} column.
+_STANDARD_VIEW_FIELDS = {
+    # BaseSchema
+    "id", "created_at", "updated_at",
+    # View
+    "item_ref", "parent_ref",
+    # Image / media fields
+    "url", "width", "height", "format", "blob",
+    # SequenceFrame temporal
+    "timestamp", "frame_index",
+    # PDF
+    "num_pages",
+    # Text
+    "content",
+    # Video
+    "num_frames", "fps", "duration",
+}
+
+# Default values by type for custom fields in media tables
+_TYPE_DEFAULTS: dict[type, Any] = {
+    str: "",
+    int: 0,
+    float: 0.0,
+    bool: False,
+    bytes: b"",
+}
+
+
+def _view_to_column_fields(name: str, view_type: type[View]) -> dict[str, tuple]:
+    """Convert a View type to flat column field definitions for a media-type table.
+
+    Args:
+        name: The view name prefix (e.g., "cam_front").
+        view_type: The View subclass.
+
+    Returns:
+        Dictionary of field_name -> (type, default) tuples for create_model.
+    """
+    fields: dict[str, tuple] = {}
+    if is_text(view_type):
+        fields[f"{name}_content"] = (str, "")
+    elif is_video(view_type):
+        # Video: metadata only (no blob), URL + dimensions + video metadata
+        fields[f"{name}_url"] = (str, "")
+        fields[f"{name}_width"] = (int, 0)
+        fields[f"{name}_height"] = (int, 0)
+        fields[f"{name}_format"] = (str, "")
+        fields[f"{name}_num_frames"] = (int, 0)
+        fields[f"{name}_fps"] = (float, 0.0)
+        fields[f"{name}_duration"] = (float, 0.0)
+    else:
+        # All other types have blob + url
+        fields[name] = (bytes, b"")
+        fields[f"{name}_url"] = (str, "")
+        if is_image(view_type) or is_sequence_frame(view_type):
+            fields[f"{name}_width"] = (int, 0)
+            fields[f"{name}_height"] = (int, 0)
+            fields[f"{name}_format"] = (str, "")
+        elif is_pdf(view_type):
+            fields[f"{name}_num_pages"] = (int, 0)
+        # PointCloud: just blob + url
+
+    # Add custom fields (not part of standard View hierarchy)
+    for field_name, field_info in view_type.model_fields.items():
+        if field_name in _STANDARD_VIEW_FIELDS:
+            continue
+        annotation = field_info.annotation
+        default = field_info.default
+        if default is None or repr(default) == "PydanticUndefined":
+            default = _TYPE_DEFAULTS.get(annotation, None)
+        fields[f"{name}_{field_name}"] = (annotation, default)
+
+    return fields
+
+
+def generate_media_table_schema(
+    views: dict[str, type[View]],
+    include_temporal: bool = False,
+) -> type[BaseSchema]:
+    """Generate a Pydantic model for a media-type table with view column groups.
+
+    Args:
+        views: Dictionary mapping view names to their View types.
+        include_temporal: Whether to include timestamp and frame_index fields (for frames table).
+
+    Returns:
+        A dynamically generated BaseSchema subclass.
+    """
+    from pixano.features.schemas.views.view import View as ViewBase
+
+    fields: dict[str, Any] = {}
+    for name, view_type in views.items():
+        fields.update(_view_to_column_fields(name, view_type))
+
+    if include_temporal:
+        fields["timestamp"] = (float, 0.0)
+        fields["frame_index"] = (int, 0)
+
+    return create_model("MediaTable", **fields, __base__=ViewBase)
 
 
 class SchemaRelation(Enum):
@@ -47,11 +176,13 @@ class DatasetSchema(BaseModel):
         schemas: The mapping between the table names and their schema.
         relations: The relations between the item table and the other tables.
         groups: The groups of tables. It is filled automatically based on the schemas.
+        view_columns: Mapping of view names to their column metadata in media-type tables.
     """
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
     groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup if key != SchemaGroup.SOURCE}
+    view_columns: dict[str, ViewColumnInfo] = {}
 
     def add_schema(
         self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation, overwrite_schema: bool = False
@@ -197,6 +328,28 @@ class DatasetSchema(BaseModel):
                 return group
         raise ValueError(f"Table {table_name} not found in groups.")
 
+    def resolve_schema(self, name: str) -> type[BaseSchema]:
+        """Resolve a schema by table name or view column name.
+
+        If the name is a direct table name, returns the table schema.
+        If the name is a view column, resolves the original View type from the schema registry.
+
+        Args:
+            name: Table name or view column name.
+
+        Returns:
+            The resolved schema type.
+        """
+        if name in self.schemas:
+            return self.schemas[name]
+        if name in self.view_columns:
+            vc = self.view_columns[name]
+            view_type = _SCHEMA_REGISTRY.get(vc.view_type)
+            if view_type is not None:
+                return view_type
+            raise KeyError(f"View type '{vc.view_type}' not found in schema registry.")
+        raise KeyError(f"Schema '{name}' not found in dataset.")
+
     @model_serializer
     def serialize(self) -> dict[str, dict[str, Any]]:
         """Serialize the dataset schema.
@@ -239,6 +392,10 @@ class DatasetSchema(BaseModel):
             "schemas": {},
             "groups": {group.value: list(schemas) for group, schemas in self.groups.items()},
         }
+        if self.view_columns:
+            dataset_schema_json["view_columns"] = {
+                name: vc.model_dump() for name, vc in self.view_columns.items()
+            }
         for table_name, schema in self.schemas.items():
             dataset_schema_json["schemas"][table_name] = schema.serialize()
         return dataset_schema_json
@@ -261,6 +418,10 @@ class DatasetSchema(BaseModel):
             "schemas": {},
             "groups": {SchemaGroup(group): set(schemas) for group, schemas in dataset_schema_json["groups"].items()},
         }
+        if "view_columns" in dataset_schema_json:
+            dataset_schema_dict["view_columns"] = {
+                name: ViewColumnInfo(**vc) for name, vc in dataset_schema_json["view_columns"].items()
+            }
         for table_name, schema in dataset_schema_json["schemas"].items():
             dataset_schema_dict["schemas"][table_name] = BaseSchema.deserialize(schema)
         return DatasetSchema(**dataset_schema_dict)
@@ -302,6 +463,10 @@ class DatasetSchema(BaseModel):
     def from_dataset_item(dataset_item: type["DatasetItem"]) -> "DatasetSchema":
         """Create a dataset schema from a [DatasetItem][pixano.datasets.DatasetItem].
 
+        Views are grouped by media type into shared media-type tables (e.g., "images", "frames").
+        Each view becomes a column group within its media-type table.
+        Non-view schemas (entities, annotations) remain as separate tables.
+
         Args:
             dataset_item: The dataset item.
 
@@ -314,6 +479,10 @@ class DatasetSchema(BaseModel):
         dataset_schema_dict: dict[str, Any] = {}
         dataset_schema_dict["relations"] = {SchemaGroup.ITEM.value: {}}
         schemas = {}
+        view_columns: dict[str, ViewColumnInfo] = {}
+
+        # Group views by media type
+        media_type_views: dict[str, dict[str, type[View]]] = defaultdict(dict)
 
         for field_name, field in dataset_item.model_fields.items():
             # Check if field is a generic alias (list or tuple)
@@ -323,15 +492,26 @@ class DatasetSchema(BaseModel):
 
                 # Check if field is list or tuple
                 if origin in [list, tuple]:
-                    # Categorizing list of schemas as schemas and keeping track of the relation
                     if issubclass(args[0], tuple(_SCHEMA_REGISTRY.values())):
-                        schemas[field_name] = args[0]
-                        dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = (
-                            SchemaRelation.ONE_TO_MANY
-                        )
-                        dataset_schema_dict["relations"][field_name] = {
-                            SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
-                        }
+                        if issubclass(args[0], View):
+                            # ONE_TO_MANY view -> temporal media table
+                            media_table = get_media_type_table(args[0])
+                            media_type_views[media_table][field_name] = args[0]
+                            view_columns[field_name] = ViewColumnInfo(
+                                view_name=field_name,
+                                view_type=args[0].__name__,
+                                media_table=media_table,
+                                columns=list(_view_to_column_fields(field_name, args[0]).keys()),
+                            )
+                        else:
+                            # Entity/Annotation -> separate table (unchanged)
+                            schemas[field_name] = args[0]
+                            dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = (
+                                SchemaRelation.ONE_TO_MANY
+                            )
+                            dataset_schema_dict["relations"][field_name] = {
+                                SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
+                            }
                     else:
                         item_fields[field_name] = (list[args[0]], ...)  # type: ignore[valid-type]
                 else:
@@ -339,19 +519,143 @@ class DatasetSchema(BaseModel):
                     item_fields[field_name] = (args[0], ...)  # type: ignore[valid-type]
             # Check if field is a schema
             elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
-                schemas[field_name] = field.annotation
-                dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_ONE
-                dataset_schema_dict["relations"][field_name] = {SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
+                if issubclass(field.annotation, View):
+                    # ONE_TO_ONE view -> static media table
+                    media_table = get_media_type_table(field.annotation)
+                    media_type_views[media_table][field_name] = field.annotation
+                    view_columns[field_name] = ViewColumnInfo(
+                        view_name=field_name,
+                        view_type=field.annotation.__name__,
+                        media_table=media_table,
+                        columns=list(_view_to_column_fields(field_name, field.annotation).keys()),
+                    )
+                else:
+                    # Non-view schema -> separate table (unchanged)
+                    schemas[field_name] = field.annotation
+                    dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_ONE
+                    dataset_schema_dict["relations"][field_name] = {
+                        SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE
+                    }
             else:
                 # Default case: item attribute
                 item_fields[field_name] = (field.annotation, ...)
+
+        # Generate media-type table schemas
+        for media_table, views in media_type_views.items():
+            include_temporal = media_table in ("frames",)
+            schema = generate_media_table_schema(views, include_temporal)
+            schemas[media_table] = schema
+            # Determine relation: ONE_TO_MANY if any view is a SequenceFrame subclass
+            has_temporal = any(
+                vc.media_table == media_table and is_sequence_frame(views.get(vc.view_name, type(None)))
+                for vc in view_columns.values()
+            )
+            if has_temporal:
+                dataset_schema_dict["relations"][SchemaGroup.ITEM.value][media_table] = SchemaRelation.ONE_TO_MANY
+                dataset_schema_dict["relations"][media_table] = {
+                    SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
+                }
+            else:
+                dataset_schema_dict["relations"][SchemaGroup.ITEM.value][media_table] = SchemaRelation.ONE_TO_ONE
+                dataset_schema_dict["relations"][media_table] = {
+                    SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE
+                }
 
         CustomItem = create_model("Item", **item_fields, __base__=Item)
 
         schemas[SchemaGroup.ITEM.value] = CustomItem
         dataset_schema_dict["schemas"] = schemas
+        dataset_schema_dict["view_columns"] = view_columns
 
         return DatasetSchema(**dataset_schema_dict)
+
+
+_KNOWN_VIEW_COLUMN_MAP = {
+    "blob": "",         # Maps to view name itself
+    "url": "_url",
+    "width": "_width",
+    "height": "_height",
+    "format": "_format",
+    "num_pages": "_num_pages",
+    "content": "_content",
+    "num_frames": "_num_frames",
+    "fps": "_fps",
+    "duration": "_duration",
+}
+
+# Fields that go at the row level (not prefixed with view name)
+_ROW_LEVEL_FIELDS = {"id", "item_ref", "parent_ref", "created_at", "updated_at"}
+_TEMPORAL_FIELDS = {"timestamp", "frame_index"}
+
+
+def _view_instance_to_columns(name: str, view_data: Any) -> dict[str, Any]:
+    """Convert a View instance (or dict) to flat column values for a media-type table row.
+
+    Args:
+        name: The view name prefix (e.g., "cam_front").
+        view_data: The View instance or dict with view data.
+
+    Returns:
+        Dictionary of column_name -> value.
+    """
+    if view_data is None:
+        return {}
+    if isinstance(view_data, BaseModel):
+        data = view_data.model_dump()
+    elif isinstance(view_data, dict):
+        data = view_data
+    else:
+        return {}
+
+    columns: dict[str, Any] = {}
+    for key, value in data.items():
+        if key in _ROW_LEVEL_FIELDS or key in _TEMPORAL_FIELDS:
+            continue
+        if key in _KNOWN_VIEW_COLUMN_MAP:
+            suffix = _KNOWN_VIEW_COLUMN_MAP[key]
+            columns[f"{name}{suffix}"] = value
+        else:
+            # Custom field
+            columns[f"{name}_{key}"] = value
+    return columns
+
+
+_REVERSE_COLUMN_MAP = {v: k for k, v in _KNOWN_VIEW_COLUMN_MAP.items()}
+
+
+def _columns_to_view_dict(name: str, row_data: dict[str, Any]) -> dict[str, Any]:
+    """Extract view column group from a media-type table row and reconstruct a view dict.
+
+    Args:
+        name: The view name prefix (e.g., "cam_front").
+        row_data: The row data dictionary.
+
+    Returns:
+        Dictionary with view fields (blob, url, width, height, format, etc.)
+        plus shared row-level fields (id, item_ref, created_at, updated_at).
+    """
+    view_dict: dict[str, Any] = {}
+    prefix = f"{name}_"
+    for col_name, value in row_data.items():
+        if col_name == name:
+            # The blob column (named exactly as the view)
+            view_dict["blob"] = value
+        elif col_name.startswith(prefix):
+            suffix = col_name[len(prefix):]
+            # Check known suffixes first
+            candidate_suffix = f"_{suffix}"
+            if candidate_suffix in _REVERSE_COLUMN_MAP:
+                view_dict[_REVERSE_COLUMN_MAP[candidate_suffix]] = value
+            else:
+                # Custom field
+                view_dict[suffix] = value
+        elif col_name in _TEMPORAL_FIELDS:
+            # Row-level temporal fields belong to SequenceFrame views
+            view_dict[col_name] = value
+        elif col_name in _ROW_LEVEL_FIELDS:
+            # Shared row-level fields (id, item_ref, created_at, updated_at)
+            view_dict[col_name] = value
+    return view_dict
 
 
 class DatasetItem(BaseModel):
@@ -391,37 +695,66 @@ class DatasetItem(BaseModel):
     def to_schemas_data(self, dataset_schema: DatasetSchema) -> dict[str, BaseSchema | list[BaseSchema] | None]:
         """Convert DatasetItem to schemas data.
 
+        View fields are returned under their view names (e.g., "image", "video")
+        with their original View instances. Non-view schema fields remain as
+        separate table entries.
+
         Args:
             dataset_schema: DatasetSchema to convert to.
 
         Returns:
-            Schemas data.
+            Schemas data indexed by field name.
         """
-        schemas_data = {}
+        schemas_data: dict[str, Any] = {}
         item_data = {}
         for field_name in self.model_fields.keys():
-            if field_name in dataset_schema.schemas:
+            if field_name in dataset_schema.view_columns:
+                # View field -> keep under view name with original data
+                schemas_data[field_name] = getattr(self, field_name)
+            elif field_name in dataset_schema.schemas:
                 schemas_data[field_name] = getattr(self, field_name)
             else:
                 item_data[field_name] = getattr(self, field_name)
         schemas_data[SchemaGroup.ITEM.value] = dataset_schema.schemas[SchemaGroup.ITEM.value](**item_data)
+
         return schemas_data
 
     @staticmethod
     def from_schemas_data(
-        cls: "DatasetItem", schemas_data: dict[str, BaseSchema | list[BaseSchema] | None]
+        cls: "DatasetItem",
+        schemas_data: dict[str, BaseSchema | list[BaseSchema] | None],
+        dataset_schema: "DatasetSchema | None" = None,
     ) -> "DatasetItem":
         """Create a DatasetItem from schemas data.
+
+        If dataset_schema is provided, media-type table rows are unpacked into
+        individual view fields.
 
         Args:
             cls: The DatasetItem class.
             schemas_data: Schemas data.
+            dataset_schema: Optional DatasetSchema for view column unpacking.
 
         Returns:
             The created DatasetItem.
         """
         if SchemaGroup.ITEM.value not in schemas_data:
             raise ValueError("Item schema data not found.")
+
+        # Unpack media-type table rows into view fields
+        if dataset_schema is not None and dataset_schema.view_columns:
+            for view_name, vc in dataset_schema.view_columns.items():
+                if vc.media_table in schemas_data and view_name not in schemas_data:
+                    media_row = schemas_data[vc.media_table]
+                    if media_row is not None:
+                        row_data = media_row.model_dump() if isinstance(media_row, BaseModel) else media_row
+                        view_dict = _columns_to_view_dict(view_name, row_data)
+                        if view_dict:
+                            schemas_data[view_name] = view_dict
+            # Remove media-type table keys (they've been unpacked into view fields)
+            media_tables = {vc.media_table for vc in dataset_schema.view_columns.values()}
+            for mt in media_tables:
+                schemas_data.pop(mt, None)
 
         schemas_data.update(schemas_data.pop(SchemaGroup.ITEM.value).model_dump())  # type: ignore[union-attr]
         return cls(**schemas_data)
@@ -484,6 +817,9 @@ class DatasetItem(BaseModel):
     def from_dataset_schema(dataset_schema: DatasetSchema, exclude_embeddings: bool = True) -> type["DatasetItem"]:
         """Create a dataset item model based on the schema.
 
+        For media-type tables, view column groups are exposed as individual view fields
+        (dict | None) rather than the full media table schema.
+
         Args:
             dataset_schema: The dataset schema.
             exclude_embeddings: Exclude embeddings from the dataset item model to reduce the size.
@@ -494,9 +830,15 @@ class DatasetItem(BaseModel):
         item_type = dataset_schema.schemas[SchemaGroup.ITEM.value]
         fields: dict[str, Any] = {}
 
+        # Collect media-type table names so we handle them specially
+        media_table_names = {vc.media_table for vc in dataset_schema.view_columns.values()}
+
         if dataset_schema.relations != {} and SchemaGroup.ITEM.value in dataset_schema.relations:
             for schema, relation in dataset_schema.relations[SchemaGroup.ITEM.value].items():
                 if exclude_embeddings and schema in dataset_schema.groups[SchemaGroup.EMBEDDING]:
+                    continue
+                if schema in media_table_names:
+                    # Skip media-type tables; they'll be exposed as individual view fields below
                     continue
                 # Add default value in case an item does not have a specific view or entity.
                 schema_type = dataset_schema.schemas[schema]
@@ -504,6 +846,22 @@ class DatasetItem(BaseModel):
                     fields[schema] = (list[schema_type], [])  # type: ignore[valid-type]
                 else:
                     fields[schema] = (schema_type | None, None)
+
+        # Add individual view fields from view_columns with their actual View types
+        for view_name, vc in dataset_schema.view_columns.items():
+            view_type = _SCHEMA_REGISTRY.get(vc.view_type)
+            if view_type is None:
+                # Fallback to dict if type not found in registry
+                fields[view_name] = (dict | None, None)
+                continue
+            # Determine ONE_TO_MANY or ONE_TO_ONE from the media table relation
+            media_relation = dataset_schema.relations.get(
+                SchemaGroup.ITEM.value, {}
+            ).get(vc.media_table)
+            if media_relation == SchemaRelation.ONE_TO_MANY:
+                fields[view_name] = (list[view_type], [])  # type: ignore[valid-type]
+            else:
+                fields[view_name] = (view_type | None, None)
 
         for field_name, field in item_type.model_fields.items():
             # No default value as all items metadata should be retrieved.

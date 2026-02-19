@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -18,6 +19,8 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import get_dataset as get_dataset_utils
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
@@ -44,12 +47,20 @@ def get_datasets_info(
             detail=f"No datasets found in {settings.library_dir.absolute()}.",
         )
 
-    if len(infos_and_paths) > 0:
-        return [DatasetInfoModel.from_dataset_info(info, path) for info, path in infos_and_paths]
-    raise HTTPException(
-        status_code=404,
-        detail=f"No datasets found in {settings.library_dir.absolute()}.",
-    )
+    result = []
+    for info, path in infos_and_paths:
+        try:
+            result.append(DatasetInfoModel.from_dataset_info(info, path))
+        except Exception:
+            logger.warning(f"Failed to load dataset info for {path}, skipping.")
+            continue
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No datasets found in {settings.library_dir.absolute()}.",
+        )
+    return result
 
 
 @router.get("/info/{id}", response_model=DatasetInfoModel)
