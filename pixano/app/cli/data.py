@@ -13,6 +13,7 @@ from typing import Optional
 import typer
 
 from pixano.app.cli._schema_loader import load_schema
+from pixano.datasets.builders import DatasetBuilder
 
 
 class DatasetType(str, Enum):
@@ -21,6 +22,7 @@ class DatasetType(str, Enum):
     image = "image"
     video = "video"
     vqa = "vqa"
+    mel = "mel"
 
 
 def _detect_dataset_type(source_dir: Path) -> DatasetType:
@@ -45,6 +47,8 @@ def _detect_dataset_type(source_dir: Path) -> DatasetType:
                     record = json.loads(first_line)
                     if "conversations" in record:
                         return DatasetType.vqa
+                    elif "image" in record and "text" in record and "objects" in record:
+                        return DatasetType.mel
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -99,6 +103,7 @@ def import_data(
         DatasetType.image: "pixano.datasets.builders.folders.image.ImageFolderBuilder",
         DatasetType.video: "pixano.datasets.builders.folders.video.VideoFolderBuilder",
         DatasetType.vqa: "pixano.datasets.builders.folders.vqa.VQAFolderBuilder",
+        DatasetType.mel: "pixano.datasets.builders.folders.mel.MELFolderBuilder",
     }
 
     # Resolve dataset name
@@ -111,6 +116,7 @@ def import_data(
         typer.echo("  image - Image dataset with optional object annotations")
         typer.echo("  video - Video dataset")
         typer.echo("  vqa   - Visual Question Answering (image + conversations)")
+        typer.echo("  mel   - Multimodal Entity Linking")
         type_str = typer.prompt("Select dataset type", default=detected.value)
         try:
             dataset_type = DatasetType(type_str)
@@ -157,7 +163,7 @@ def import_data(
 
     info = DatasetInfo(name=dataset_name, description=description)
 
-    builder = builder_cls(
+    builder: DatasetBuilder = builder_cls(
         media_dir=resolved_media_dir,
         library_dir=resolved_library_dir,
         dataset_item=dataset_item,
@@ -166,5 +172,5 @@ def import_data(
         use_image_name_as_id=use_image_name_as_id,
     )
 
-    dataset = builder.build(mode=mode.value)
+    dataset = builder.build(mode=mode.value, check_integrity="raise")
     typer.echo(f"Dataset '{dataset_name}' built successfully ({dataset.num_rows} items).")

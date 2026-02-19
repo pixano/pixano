@@ -9,13 +9,16 @@ import pytest
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
+from pixano.features.schemas.annotations.info_extraction import TextSpan
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.schemas.annotations.text_generation import Message
 from pixano.features.schemas.annotations.tracklet import Tracklet
 from pixano.features.schemas.entities.conversation import Conversation
 from pixano.features.schemas.entities.entity import Entity
+from pixano.features.schemas.entities.multi_modal_entity import MultiModalEntity
 from pixano.features.schemas.entities.track import Track
 from pixano.features.schemas.views.image import Image
+from pixano.features.schemas.views.text import Text
 from pixano.features.schemas.views.video import Video
 
 
@@ -37,6 +40,18 @@ def dataset_item_vqa():
         image: Image
         conversations: list[Conversation]
         messages: list[Message]
+
+    return Schema
+
+
+@pytest.fixture(scope="session")
+def dataset_item_mel():
+    class Schema(DatasetItem):
+        image: Image
+        text: Text
+        objects: list[MultiModalEntity]
+        text_spans: list[TextSpan]
+        bboxes: list[BBox]
 
     return Schema
 

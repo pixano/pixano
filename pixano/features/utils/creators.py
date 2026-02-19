@@ -24,6 +24,7 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
         create_keypoints,
         create_keypoints3d,
         create_sequence_frame,
+        create_text,
         create_track,
         create_tracklet,
         create_video,
@@ -36,6 +37,7 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
         is_keypoints,
         is_keypoints3d,
         is_sequence_frame,
+        is_text,
         is_track,
         is_tracklet,
         is_video,
@@ -49,6 +51,9 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
 
     elif is_sequence_frame(schema, strict=True):
         return create_sequence_frame(**data)
+
+    elif is_text(schema, strict=True):
+        return create_text(**data)
 
     elif is_tracklet(schema, strict=True):
         return create_tracklet(**data)
