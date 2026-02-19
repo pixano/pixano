@@ -35,3 +35,12 @@ def info_dataset_multi_view_tracking_and_image():
         description="Description dataset_multi_view_tracking_and_image.",
         workspace=WorkspaceType.VIDEO,
     )
+
+
+@pytest.fixture()
+def info_dataset_mel():
+    return DatasetInfo(
+        name="dataset_mel",
+        description="Description dataset_mel.",
+        workspace=WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+    )

@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+
 from pixano.features import (
     BBox,
     CompressedRLE,
@@ -12,7 +13,10 @@ from pixano.features import (
     Image,
     KeyPoints,
     Message,
+    MultiModalEntity,
     SequenceFrame,
+    Text,
+    TextSpan,
     Track,
     Tracklet,
 )
@@ -48,6 +52,18 @@ class DefaultImageDatasetItem(DatasetItem):
 
     image: Image
     objects: list[Entity]
+    bboxes: list[BBox]
+    masks: list[CompressedRLE]
+    keypoints: list[KeyPoints]
+
+
+class DefaultMelDatasetItem(DatasetItem):
+    """Default Multimodal Entity Linking DatasetItem Schema."""
+
+    image: Image
+    text: Text
+    objects: list[MultiModalEntity]
+    text_spans: list[TextSpan]
     bboxes: list[BBox]
     masks: list[CompressedRLE]
     keypoints: list[KeyPoints]

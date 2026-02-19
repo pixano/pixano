@@ -68,6 +68,7 @@ test = [
   "pytest_asyncio",
   "pytest-cov",
   "pytest-mock",
+  "ffprobe"
 ]
 
 [project.urls]

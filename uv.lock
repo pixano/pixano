@@ -449,6 +449,12 @@ wheels = [
 ]
 
 [[package]]
+name = "ffprobe"
+version = "0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/95/9c/adf90d21108d41f611aa921defd2f2e56d3f92724e4b5aa41fae7a9972aa/ffprobe-0.5.zip", hash = "sha256:f7dc048df62c6ccc1c602c865a7f0976b2679200fd07ebdc34ce51e9a8205b76", size = 3530, upload-time = "2013-10-30T12:40:42.67Z" }
+
+[[package]]
 name = "fonttools"
 version = "4.59.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1484,6 +1490,7 @@ docs = [
 ]
 test = [
     { name = "ffmpeg-python" },
+    { name = "ffprobe" },
     { name = "mediapy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1530,6 +1537,7 @@ docs = [
 ]
 test = [
     { name = "ffmpeg-python", specifier = ">=0.2.0,<0.3.0" },
+    { name = "ffprobe" },
     { name = "mediapy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },

@@ -12,8 +12,10 @@ import pytest
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import BBox, Conversation, Entity, Image, Message, Source
+from pixano.features import BBox, Conversation, Entity, Image, Message, Source, Text
+from pixano.features.schemas.annotations.info_extraction import TextSpan
 from pixano.features.schemas.base_schema import BaseSchema
+from pixano.features.schemas.entities.multi_modal_entity import MultiModalEntity
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 
 
@@ -155,6 +157,94 @@ def generate_data_item_vqa(num_rows: int, item_schema_name, item_schema):
             ),
             "conversations": conversations,
             "messages": messages,
+        }
+
+
+def generate_data_item_mel(num_rows: int, item_schema_name, item_schema):
+    yield {
+        "source": [
+            Source(id="source_0", name="source_0", kind="model", metadata={"key_0": "value_0"}),
+            Source(id="source_1", name="source_1", kind="human", metadata={"key_1": "value_1"}),
+        ],
+    }
+    for i in range(num_rows):
+        item_id = str(i)
+        image = Image(
+            id=f"image_{i}",
+            item_ref=ItemRef(id=item_id),
+            url=f"image_{i}.jpg",
+            width=100 - i,
+            height=100 + i,
+            format="jpg",
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
+        text = Text(
+            id=f"text_{i}",
+            item_ref=ItemRef(id=item_id),
+            content=f"Lorem ipsum : {str(list(range(i)))}",
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
+
+        objects = []
+        bboxes = []
+        text_spans = []
+
+        for j in range(0 if not (i % 2) else 2):
+            objects.append(
+                MultiModalEntity(
+                    id=f"entity_{i}_{j}",
+                    item_ref=ItemRef(id=item_id),
+                    view_ref=ViewRef(id=f"image_{i}", name="image"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                )
+            )
+
+            bboxes.append(
+                BBox(
+                    coords=[0, 0, 100, 100],
+                    format="xywh",
+                    is_normalized=False,
+                    confidence=0.9,
+                    id=f"bbox_{i}_{j}",
+                    item_ref=ItemRef(id=item_id),
+                    view_ref=ViewRef(id=f"image_{i}", name="image"),
+                    entity_ref=EntityRef(id=f"entity_{i}_{j}", name="entities"),
+                    source_ref=SourceRef(id=f"source_{j % 2}", name="source"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                )
+            )
+
+            text_spans.append(
+                TextSpan(
+                    id=f"textspan_{i}_{j}",
+                    mention="Lorem" if i % 2 else "ipsum",
+                    spans_start=[0 if i % 2 else 7],
+                    spans_end=[6 if i % 2 else 11],
+                    item_ref=ItemRef(id=item_id),
+                    view_ref=ViewRef(id=f"text_{i}", name="text"),
+                    entity_ref=EntityRef(id=f"entity_{i}_{j}", name="entities"),
+                    source_ref=SourceRef(id=f"source_{j % 2}", name="source"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                )
+            )
+
+        yield {
+            "image": image,
+            "text": text,
+            item_schema_name: item_schema(
+                id=item_id,
+                split="train" if i % 2 else "test",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            "objects": objects,
+            "text_spans": text_spans,
+            "bbloxes": bboxes,
         }
 
 
@@ -449,6 +539,15 @@ class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
         return generate_data_multi_view_tracking_and_image(self.num_rows, self.schemas)
 
 
+class DatasetBuilderMEL(DatasetBuilder):
+    def __init__(self, num_rows: int = 4, *args, **kwargs):
+        self.num_rows = num_rows
+        super().__init__(*args, **kwargs)
+
+    def generate_data(self):
+        return generate_data_item_mel(self.num_rows, self.item_schema_name, self.item_schema)
+
+
 @pytest.fixture()
 def dataset_builder_image_bboxes_keypoint(
     dataset_item_image_bboxes_keypoint,
@@ -474,6 +573,20 @@ def dataset_builder_vqa(
         tempfile.mkdtemp(),
         dataset_item_vqa,
         info_dataset_vqa,
+    )
+
+
+@pytest.fixture()
+def dataset_builder_mel(
+    dataset_item_mel,
+    info_dataset_mel,
+    num_rows=4,
+):
+    return DatasetBuilderMEL(
+        num_rows,
+        tempfile.mkdtemp(),
+        dataset_item_mel,
+        info_dataset_mel,
     )
 
 

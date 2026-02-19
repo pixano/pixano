@@ -6,6 +6,7 @@
 
 
 import re
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -981,8 +982,8 @@ class TestDataset:
         with pytest.raises(
             DatasetIntegrityError,
             match=(
-                "Integrity check errors:\n- The id 0 is not unique in table item.\n- The id 0 is not unique in "
-                "table item.\n"
+                "Integrity check errors:\n\
+- The id 0 is not unique in table item.\n- The id 0 is not unique in table item.\n"
             ),
         ):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
@@ -1083,8 +1084,8 @@ class TestDataset:
         with pytest.raises(
             ValueError,
             match=(
-                "Integrity check errors:\n- The id 1 is not unique in table item.\n- The "
-                "id 1 is not unique in table item.\n"
+                "Integrity check errors:\n\
+- The id 1 is not unique in table item.\n- The id 1 is not unique in table item.\n"
             ),
         ):
             dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
@@ -1093,9 +1094,18 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"All data must be instances of the table type <class '[\w|\.]+\.Item'>"):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
+    def _sort_attr_by_id(self, orig_object: dict) -> dict:
+        obj = deepcopy(orig_object)
+        for attr, value in orig_object.items():
+            if isinstance(value, list):
+                obj[attr].sort(key=lambda val: (val.get("id"), val.get("entity_ref", {}).get("id")))
+            if isinstance(value, dict):
+                obj[attr] = self._sort_attr_by_id(value)
+        return obj
+
     def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        updated_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
+        updated_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy, deep=True)
         updated_item.metadata = "new_metadata"
         updated_item.image.width = 200
         updated_item.bboxes[0].coords = [1, 1, 25, 25]
@@ -1105,9 +1115,11 @@ class TestDataset:
         assert updated_dataset_items[0].updated_at > item.updated_at
 
         assert (
-            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0].model_dump(exclude_timestamps=True)
-            == updated_item.model_dump(exclude_timestamps=True)
-            == updated_dataset_items[0].model_dump(exclude_timestamps=True)
+            self._sort_attr_by_id(
+                dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0].model_dump(exclude_timestamps=True)
+            )
+            == self._sort_attr_by_id(updated_item.model_dump(exclude_timestamps=True))
+            == self._sort_attr_by_id(updated_dataset_items[0].model_dump(exclude_timestamps=True))
         )
 
         added_item = type(item).model_validate(item.model_dump())

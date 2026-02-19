@@ -17,7 +17,11 @@ from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.schemas.source import Source, SourceKind
-from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint, DatasetBuilderVQA
+from tests.fixtures.datasets.builders.builder import (
+    DatasetBuilderImageBboxesKeypoint,
+    DatasetBuilderMEL,
+    DatasetBuilderVQA,
+)
 
 
 class TestDatasetBuilder:
@@ -28,7 +32,7 @@ class TestDatasetBuilder:
             (Path(tempfile.gettempdir())),
         ],
     )
-    def test_init(
+    def test_init_image(
         self,
         dataset_item_image_bboxes_keypoint,
         info_dataset_image_bboxes_keypoint,
@@ -74,6 +78,42 @@ class TestDatasetBuilder:
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(),
             dataset_item_vqa.to_dataset_schema().schemas.items(),
+            strict=True,
+        ):
+            assert key1 == key2
+            assert type(value1) is type(value2)
+        assert isinstance(builder.db, lancedb.DBConnection)
+        assert builder.db.uri == str(Path(target_dir) / Dataset._DB_PATH)
+
+    @pytest.mark.parametrize(
+        "target_dir",
+        [
+            (tempfile.gettempdir()),
+            (Path(tempfile.gettempdir())),
+        ],
+    )
+    def test_init_mel(
+        self,
+        dataset_item_mel,
+        info_dataset_mel,
+        target_dir,
+    ):
+        builder = DatasetBuilderMEL(4, target_dir, dataset_item_mel, info_dataset_mel)
+        assert builder.target_dir == Path(target_dir)
+        assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
+        assert builder.info == info_dataset_mel
+        assert isinstance(builder.dataset_schema, DatasetSchema)
+        assert set(builder.dataset_schema.schemas.keys()) == {
+            "image",
+            "item",
+            "text",
+            "objects",
+            "text_spans",
+            "bboxes",
+        }
+        for (key1, value1), (key2, value2) in zip(
+            builder.schemas.items(),
+            dataset_item_mel.to_dataset_schema().schemas.items(),
             strict=True,
         ):
             assert key1 == key2
