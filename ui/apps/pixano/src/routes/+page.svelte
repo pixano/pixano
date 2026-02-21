@@ -5,16 +5,18 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import type { PageProps } from "./$types";
   import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
-  import ModelsPanel from "../components/models/ModelsPanel.svelte";
-  import { datasetsStore } from "../lib/stores/datasetStores";
+  import ModelsPanel from "../components/inference/ModelsPanel.svelte";
+
+  let { data }: PageProps = $props();
 </script>
 
 <div class="h-full flex">
   <!-- Dataset library: scrollable main area -->
   <div class="flex-1 min-w-0 overflow-y-auto px-6 py-8">
     <div class="max-w-[1200px] mx-auto">
-      <DatasetsLibrary datasets={$datasetsStore} />
+      <DatasetsLibrary datasets={data.datasets} />
     </div>
   </div>
   <!-- Models sidebar: full height, right edge -->

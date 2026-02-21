@@ -5,24 +5,26 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  
   import { CircleSlash2 } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { IconButton } from "$lib/ui";
 
-  import { IconButton } from "@pixano/core";
+  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants";
 
-  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
+  interface Props {
+    columns?: { type: string; name: string }[];
+    handleFilter: (where: string) => void;
+  }
 
-  export let columns: { type: string; name: string }[] = [];
-  export let handleFilter: (where: string) => void;
+  let { columns = [], handleFilter }: Props = $props();
 
-  let selectEl: HTMLSelectElement;
-  let ghostEl: HTMLSpanElement;
-  let selectWidth = 50;
+  let selectEl: HTMLSelectElement = $state();
+  let ghostEl: HTMLSpanElement = $state();
+  let selectWidth = $state(50);
 
   const allowedTypes = ["str", "int", "float"];
-  let filterText: string = "";
-  let selectedCol: string =
-    columns.find((col) => allowedTypes.includes(col.type) && col.name)?.name ?? "";
+  let filterText: string = $state("");
+  let selectedCol: string = $state("");
 
   //Note: as we adjust select size depending on value, chars here are "important"
   //also, it should be something a user won't use as an attribute, hopefully
@@ -55,14 +57,18 @@ License: CECILL-C
     selectWidth = Math.max(width, 50); // min width
   }
 
-  $: if (selectedCol) updateWidth();
+  $effect(() => {
+    if (!selectedCol) {
+      selectedCol = columns.find((col) => allowedTypes.includes(col.type) && col.name)?.name ?? "";
+    }
+    if (selectedCol) updateWidth();
+  });
 
-  onMount(updateWidth);
 </script>
 
 <div class="flex justify-end gap-2 mr-4">
   <!-- Hidden ghost element for measuring -->
-  <span bind:this={ghostEl} class="invisible absolute whitespace-nowrap px-2 font-normal" />
+  <span bind:this={ghostEl} class="invisible absolute whitespace-nowrap px-2 font-normal"></span>
   <select
     title="Select column to filter on (equality), or Free mode"
     class="rounded-lg font-normal"
@@ -84,9 +90,9 @@ License: CECILL-C
     bind:value={filterText}
     placeholder="filter value"
     class="h-10 pl-10 pr-4 rounded-lg border font-normal text-foreground placeholder-muted-foreground bg-background border-border shadow-sm"
-    on:change={handleFilterText}
+    onchange={handleFilterText}
   />
-  <IconButton on:click={handleClearFilter} tooltipContent={"Clear filter"}>
+  <IconButton onclick={handleClearFilter} tooltipContent={"Clear filter"}>
     <CircleSlash2 />
   </IconButton>
 </div>

@@ -6,28 +6,28 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
 
-  import type { DatasetInfo } from "@pixano/core";
-  import { icons } from "@pixano/core";
-  import { panTool } from "@pixano/dataset-item-workspace/src/lib/settings/selectionTools";
+  import type { DatasetInfo } from "$lib/ui";
+  import { icons } from "$lib/ui";
+  import { panTool } from "../workspace";
   import {
     modelsUiStore,
     resetColorScale,
     selectedTool,
-  } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+  } from "$lib/stores/workspaceStores.svelte";
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { goto } from "$app/navigation";
   import {
-    currentDatasetStore,
     datasetFilter,
     datasetsStore,
-    datasetTableStore,
-    defaultDatasetTableValues,
-  } from "$lib/stores/datasetStores";
+  } from "$lib/stores/appStores.svelte";
 
-  /**
+  
+
+  interface Props {
+    /**
    * DatasetsLibrary Component
    *
    * This component displays a list of datasets. Each dataset is represented by a
@@ -40,18 +40,18 @@ License: CECILL-C
    * Events:
    *   - selectDataset: Triggered when a dataset is selected.
    */
+    datasets: Array<DatasetInfo>;
+  }
 
-  export let datasets: Array<DatasetInfo>;
+  let { datasets }: Props = $props();
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
-    currentDatasetStore.set(dataset);
-    datasetTableStore.set(defaultDatasetTableValues);
-    await goto(`${dataset.id}/dataset`);
+    await goto(`/${dataset.id}/dataset`);
   };
 
   const handleSearch = (e: Event) => {
     const target = e.currentTarget as HTMLInputElement;
-    datasetFilter.set(target.value);
+    datasetFilter.value = target.value;
     datasetsStore.update((value = []) =>
       value.map((dataset) => ({
         ...dataset,
@@ -60,17 +60,19 @@ License: CECILL-C
     );
   };
 
-  onMount(() => {
-    resetColorScale();
-    //reset interactive segmentation model & table
-    modelsUiStore.set({
-      currentModalOpen: "none",
-      selectedModelName: "",
-      selectedTableName: "",
-      yetToLoadEmbedding: true,
+  $effect(() => {
+    untrack(() => {
+      resetColorScale();
+      //reset interactive segmentation model & table
+      modelsUiStore.value = {
+        currentModalOpen: "none",
+        selectedModelName: "",
+        selectedTableName: "",
+        yetToLoadEmbedding: true,
+      };
+      //reset Tool
+      selectedTool.value = panTool;
     });
-    //reset Tool
-    selectedTool.set(panTool);
   });
 </script>
 
@@ -84,8 +86,8 @@ License: CECILL-C
         placeholder="Search datasets..."
         class="h-10 w-72 pl-10 pr-4 rounded-xl bg-muted/50 border border-border
         text-foreground placeholder-muted-foreground/60 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all duration-200 shadow-sm"
-        on:input={handleSearch}
-        value={$datasetFilter}
+        oninput={handleSearch}
+        value={datasetFilter.value}
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -129,7 +131,7 @@ License: CECILL-C
       {#each datasets as dataset}
         {#if !dataset.isFiltered}
           <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+            <DatasetPreviewCard {dataset} onSelectDataset={() => handleSelectDataset(dataset)} />
           </div>
         {/if}
       {/each}

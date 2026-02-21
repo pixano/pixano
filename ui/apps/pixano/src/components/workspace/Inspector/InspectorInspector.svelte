@@ -1,0 +1,74 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
+<script lang="ts">
+  // Imports
+  import { Skeleton, Tabs } from "$lib/ui";
+
+  import { newShape } from "$lib/stores/workspaceStores.svelte";
+  import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
+  import EntitiesInspector from "./EntitiesInspector.svelte";
+  import SceneInspector from "./SceneInspector.svelte";
+
+  interface Props {
+    isLoading: boolean;
+  }
+
+  let { isLoading }: Props = $props();
+
+  let currentTab: "scene" | "objects" = $state("objects");
+</script>
+
+<div class="h-full flex flex-col border-l border-border bg-card font-sans overflow-hidden">
+  {#if newShape.value?.status === "saving"}
+    <SaveShapeForm bind:currentTab />
+  {:else}
+    <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
+      <Tabs.List class="flex h-12 bg-muted/20 border-b border-border/50 px-1.5 gap-1">
+        <Tabs.Trigger
+          value="objects"
+          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+        >
+          Objects
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          value="scene"
+          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
+        >
+          Scene
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content
+        value="objects"
+        class="flex-1 overflow-y-auto scroll-smooth"
+        id="card-object-container"
+      >
+        {#if isLoading}
+          <div class="p-4 flex flex-col gap-4">
+            <Skeleton class="h-8 w-full" />
+            <Skeleton class="h-8 w-full" />
+            <Skeleton class="h-8 w-full" />
+          </div>
+        {:else}
+          <EntitiesInspector />
+        {/if}
+      </Tabs.Content>
+      <Tabs.Content value="scene" class="flex-1 overflow-y-auto scroll-smooth">
+        {#if currentTab === "scene"}
+          {#if isLoading}
+            <div class="p-4 flex flex-col gap-4">
+              <Skeleton class="h-8 w-full" />
+              <Skeleton class="h-8 w-full" />
+              <Skeleton class="h-8 w-full" />
+            </div>
+          {:else}
+            <SceneInspector />
+          {/if}
+        {/if}
+      </Tabs.Content>
+    </Tabs.Root>
+  {/if}
+</div>

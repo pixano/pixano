@@ -7,30 +7,31 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ArrowRight, Database, Eye, Layers, Shapes } from "lucide-svelte";
-  import { createEventDispatcher, onDestroy, onMount } from "svelte";
-
-  import { api, WorkspaceType, type DatasetInfo } from "@pixano/core";
-  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import * as api from "$lib/api";
+  import { WorkspaceType, type DatasetInfo } from "$lib/ui";
+  import { pixanoLogo } from "$lib/assets";
 
   /**
    * DatasetPreviewCard Component
    * Improved, professional grade dataset preview with disruptive hover stats.
    */
 
-  // Exports
-  export let dataset: DatasetInfo;
+  
+  interface Props {
+    dataset: DatasetInfo;
+    onSelectDataset?: () => void;
+  }
+
+  let { dataset, onSelectDataset }: Props = $props();
 
   let stats: {
     maxViews: number;
     entities: number;
     annotations: Record<string, number>;
-  } | null = null;
-
-  const controller = new AbortController();
-  const dispatch = createEventDispatcher();
+  } | null = $state(null);
 
   function handleSelectDataset() {
-    dispatch("selectDataset");
+    onSelectDataset?.();
   }
 
   function displayWorkspaceType(workspace: WorkspaceType) {
@@ -50,7 +51,8 @@ License: CECILL-C
     }
   }
 
-  onMount(() => {
+  $effect(() => {
+    const controller = new AbortController();
     api
       .getDatasetStats(dataset.id, { signal: controller.signal })
       .then((groupStats) => {
@@ -70,17 +72,14 @@ License: CECILL-C
           console.log("Error collecting additional dataset infos", err);
         }
       });
-  });
-
-  onDestroy(() => {
-    controller.abort("aborted");
+    return () => controller.abort("aborted");
   });
 </script>
 
 <div class="relative group h-full font-sans">
   <button
     class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card"
-    on:click={handleSelectDataset}
+    onclick={handleSelectDataset}
   >
     <div class="relative aspect-video w-full overflow-hidden bg-muted">
       <img

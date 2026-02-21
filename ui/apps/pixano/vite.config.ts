@@ -1,5 +1,6 @@
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
+import { pixanoAliases } from "./pixano-aliases.js";
 
 const proxies_list = [
   "datasets",
@@ -21,6 +22,9 @@ const proxies_list = [
 
 export default defineConfig({
   plugins: [sveltekit()],
+  resolve: {
+    alias: pixanoAliases,
+  },
   server: {
     proxy: {
       [`^/(?:${proxies_list.map((s) => `${s}`).join("|")})(?:/|$).*`]: {

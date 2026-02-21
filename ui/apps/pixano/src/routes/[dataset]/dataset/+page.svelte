@@ -5,26 +5,43 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
-  import { onDestroy, onMount } from "svelte";
-  import type { Unsubscriber } from "svelte/motion";
-
-  import { api, type DatasetBrowser, type TableData, type TableRow } from "@pixano/core/src";
-  import { getBrowser } from "@pixano/core/src/api";
-  import WarningModal from "@pixano/core/src/components/modals/WarningModal.svelte";
+  import type { PageProps } from "./$types";
+  import * as api from "$lib/api";
+  import { WarningModal, type TableData, type TableRow } from "$lib/ui";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants/pixanoConstants";
-  import { datasetTableStore } from "$lib/stores/datasetStores";
+  import { page } from "$app/state";
+  import { COUNTS_COLUMNS_PREFIX } from "$lib/constants";
 
-  let selectedDataset: DatasetBrowser;
-  let showNoRowModal = false;
+  let { data }: PageProps = $props();
+
+  let showNoRowModal = $state(false);
+
+  // Enhance browser data with counts asynchronously
+  let enhancedBrowserData = $state<typeof data.browserData>();
+
+  $effect(() => {
+    const bd = data.browserData;
+    if (!bd?.id) {
+      showNoRowModal = true;
+      return;
+    }
+    showNoRowModal = false;
+    enhancedBrowserData = bd;
+
+    // Load counts asynchronously
+    void getCounts(bd.id, bd.table_data)
+      .then((tableCounts) => {
+        enhancedBrowserData = { ...bd, table_data: tableCounts };
+      })
+      .catch((err) => {
+        console.warn("Could not get computed items infos", err);
+      });
+  });
 
   const getCounts = async (datasetId: string, tableData: TableData) => {
     let extendedTableData = tableData;
-    //retrieve objects counts
     const page_item_ids = tableData.rows.map((row) => row.id as string);
     const counts = await api.getItemsInfo(datasetId, page_item_ids);
     const count_cols = [
@@ -58,58 +75,37 @@ License: CECILL-C
     return extendedTableData;
   };
 
-  let unsubscribe2datasetTableStore: Unsubscriber;
-  onMount(() => {
-    unsubscribe2datasetTableStore = datasetTableStore.subscribe((pagination) => {
-      if ($page.params.dataset) {
-        getBrowser(
-          $page.params.dataset,
-          pagination.currentPage,
-          pagination.pageSize,
-          pagination.query,
-          pagination.where,
-          pagination.sort,
-        )
-          .then((datasetItems) => {
-            if (datasetItems.id) {
-              // Show browser data immediately without waiting for counts
-              selectedDataset = datasetItems;
+  function updateSearchParams(updates: Record<string, string | undefined>) {
+    const params = new URLSearchParams(page.url.searchParams);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === "") params.delete(key);
+      else params.set(key, value);
+    }
+    return params.toString();
+  }
 
-              // Then load counts asynchronously and update
-              getCounts(datasetItems.id, datasetItems.table_data)
-                .then((table_counts) => {
-                  datasetItems.table_data = table_counts;
-                  selectedDataset = datasetItems;
-                })
-                .catch((err) => {
-                  console.warn("Could not get computed items infos", err);
-                });
-            } else {
-              showNoRowModal = true;
-              //do not change current selectedDataset if error / no row.
-            }
-          })
-          .catch((err) => console.log("ERROR: Couldn't get dataset items", err));
-      }
-    });
-  });
+  function navigateTable(updates: Record<string, string | undefined>) {
+    const qs = updateSearchParams(updates);
+    void goto(qs ? `?${qs}` : "?", { replaceState: false, noScroll: true });
+  }
 
-  const handleSelectItem = async (event: CustomEvent) => {
-    await goto(`/${selectedDataset.id}/dataset/${event.detail}`);
+  const handleSelectItem = async (itemId: string) => {
+    await goto(`/${data.dataset.id}/dataset/${itemId}`);
   };
-
-  onDestroy(() => {
-    unsubscribe2datasetTableStore();
-  });
 </script>
 
-{#if selectedDataset?.table_data}
-  <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
+{#if enhancedBrowserData?.table_data}
+  <DatasetExplorer
+    selectedDataset={enhancedBrowserData}
+    onSelectItem={handleSelectItem}
+    onNavigate={navigateTable}
+    pagination={data.pagination}
+  />
 {/if}
 {#if showNoRowModal}
   <WarningModal
     message="No rows found. Keeping previous state."
-    on:confirm={() => {
+    onConfirm={() => {
       showNoRowModal = false;
     }}
   />

@@ -7,89 +7,87 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Loader2Icon } from "lucide-svelte";
-  import { createEventDispatcher } from "svelte";
 
-  import type { DatasetBrowser } from "@pixano/core";
-  import { LoadingModal, PrimaryButton, WarningModal } from "@pixano/core";
-  import { Table } from "@pixano/table";
+  import type { DatasetBrowser } from "$lib/ui";
+  import { LoadingModal, PrimaryButton, WarningModal } from "$lib/ui";
+  import { Table } from "./table";
 
-  import { datasetTableStore } from "../../lib/stores/datasetStores";
   import DatasetBrowserForm from "./DatasetBrowserForm.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
 
-  // Exports
-  export let selectedDataset: DatasetBrowser;
-  let isLoadingTableItems = false;
+  interface Props {
+    selectedDataset: DatasetBrowser;
+    onSelectItem?: (itemId: string) => void;
+    onNavigate: (updates: Record<string, string | undefined>) => void;
+    pagination: {
+      currentPage: number;
+      size: number;
+      sort?: { col: string; order: string };
+      query?: { model: string; search: string };
+      where: string;
+    };
+  }
 
-  // Reactive statement to set isLoadingTableItems to false when table data is available
-  $: {
-    if (selectedDataset.table_data) {
+  let { selectedDataset, onSelectItem, onNavigate, pagination }: Props = $props();
+  let isLoadingTableItems = $state(false);
+
+  // Reactive statement to set isLoadingTableItems to false when table data is available or on error
+  $effect(() => {
+    if (selectedDataset.table_data || selectedDataset.isErrored) {
       isLoadingTableItems = false;
     }
-  }
+  });
 
   // Modals
   let loadingResultsModal = false;
-  let datasetErrorModal = false;
+  let datasetErrorModal = $state(false);
 
-  // Semantic search
-  let searchInput: string = $datasetTableStore.query?.search ?? "";
-  let selectedSearchModel: string | undefined;
+  // Semantic search — local editable copies, re-synced when URL params change
+  let searchInput: string = $state("");
+  let selectedSearchModel: string | undefined = $state();
 
-  const dispatch = createEventDispatcher();
+  $effect(() => {
+    searchInput = pagination.query?.search ?? "";
+    selectedSearchModel = pagination.query?.model;
+  });
 
   // Function to handle item selection
   function handleSelectItem(itemId: string) {
-    dispatch("selectItem", itemId);
+    onSelectItem?.(itemId);
   }
 
   // Function to clear the search input and trigger a new empty search
   function handleClearSearch() {
     searchInput = "";
-    handleSearch();
+    isLoadingTableItems = true;
+    onNavigate({ page: "1", q: undefined, model: undefined });
   }
 
   // Function to handle search input changes
   function handleSearch() {
-    let query = { model: selectedSearchModel as string, search: searchInput };
     isLoadingTableItems = true;
-    datasetTableStore.update((value) => ({
-      ...value,
-      currentPage: 1,
-      query,
-    }));
+    onNavigate({ page: "1", q: searchInput, model: selectedSearchModel });
   }
 
   // Function to handle filter changes
   function handleFilter(where: string) {
-    datasetTableStore.update((value) => ({
-      ...value,
-      currentPage: 1,
-      where,
-    }));
+    onNavigate({ page: "1", filter: where || undefined });
   }
 
   function handleColSort(colsorts: { id: string; order: string }[]) {
     if (colsorts.length === 0) {
-      //reset sort
-      datasetTableStore.update((value) => {
-        value = {
-          ...value,
-          currentPage: 1, //reset page
-        };
-        delete value.sort;
-        return value;
-      });
+      onNavigate({ page: "1", sort: undefined, order: undefined });
     } else if (colsorts.length === 1) {
       const { id, order } = colsorts[0];
-      datasetTableStore.update((value) => ({
-        ...value,
-        currentPage: 1, //reset page
-        sort: { col: id, order },
-      }));
+      onNavigate({ page: "1", sort: id, order });
     } else {
       console.error("ERROR: MultiSort on columns is not managed nor allowed");
     }
+  }
+
+  function handlePageChange(newPage: number) {
+    isLoadingTableItems = true;
+    onNavigate({ page: String(newPage) });
   }
 </script>
 
@@ -102,9 +100,9 @@ License: CECILL-C
           {selectedDataset}
           bind:selectedSearchModel
           bind:searchInput
-          on:search={handleSearch}
-          on:clearSearch={handleClearSearch}
-          on:filter={(event) => handleFilter(event.detail)}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
+          onFilter={handleFilter}
         />
       </div>
 
@@ -122,8 +120,8 @@ License: CECILL-C
             <Table
               items={selectedDataset.table_data}
               disableSort={searchInput !== ""}
-              on:selectItem={(event) => handleSelectItem(event.detail)}
-              on:colsort={(event) => handleColSort(event.detail)}
+              onSelectItem={handleSelectItem}
+              onColsort={handleColSort}
             />
           </div>
           <!-- Display error message if items could not be loaded -->
@@ -132,14 +130,19 @@ License: CECILL-C
             class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
           >
             <p class="text-muted-foreground italic">Error: dataset items could not be loaded</p>
-            <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
+            <PrimaryButton onclick={handleClearSearch}>Try again</PrimaryButton>
           </div>
         {/if}
       </div>
 
       <!-- DatasetPagination component for page navigation - Always visible at bottom -->
       <div class="shrink-0 pt-2">
-        <DatasetPagination {selectedDataset} bind:isLoadingTableItems />
+        <DatasetPagination
+          {selectedDataset}
+          currentPage={pagination.currentPage}
+          pageSize={pagination.size}
+          onPageChange={handlePageChange}
+        />
       </div>
     {/if}
   </div>
@@ -149,7 +152,7 @@ License: CECILL-C
     <WarningModal
       message="Error while retrieving dataset items."
       details="Please look at the application logs for more information, and report this issue if the error persists."
-      on:confirm={() => (datasetErrorModal = false)}
+      onConfirm={() => (datasetErrorModal = false)}
     />
   {/if}
 

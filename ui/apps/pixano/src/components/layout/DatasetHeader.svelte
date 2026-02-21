@@ -8,48 +8,51 @@ License: CECILL-C
   // Imports
   import { fade } from "svelte/transition";
 
-  import { ConfirmModal, PrimaryButton } from "@pixano/core";
+  import { ConfirmModal, PrimaryButton } from "$lib/ui";
 
   import DatasetItemHeader from "./DatasetItemHeader.svelte";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
-  import { navItems } from "$lib/constants/headerConstants";
+  import { page } from "$app/state";
+  import { findNeighborItemId, getPageFromItemId } from "$lib/utils/navigationUtils";
+  import { navItems } from "$lib/constants";
   import {
     currentDatasetStore,
     datasetItemIds,
-    datasetTableStore,
     saveCurrentItemStore,
-  } from "$lib/stores/datasetStores";
+  } from "$lib/stores/appStores.svelte";
 
-  export let pageId: string | null;
+  interface Props {
+    pageId: string | null;
+  }
 
-  let showConfirmModal: string = "none";
+  let { pageId }: Props = $props();
+
+  let showConfirmModal: string = $state("none");
   let newItemId: string = "none";
 
   const DATASET_ITEM_ROUTE = `/[dataset]/dataset/[itemId]`;
 
-  $: currentItemId = $page.params.itemId;
+  let currentItemId = $derived(page.params.itemId);
 
   const getDatasetItemDisplayCount = () => {
-    const index = $datasetItemIds.indexOf(currentItemId);
+    const index = datasetItemIds.value.indexOf(currentItemId);
     if (index === -1) return "0 of 0";
-    return `${index + 1} of ${$datasetItemIds.length}`;
+    return `${index + 1} of ${datasetItemIds.value.length}`;
   };
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    if (!$currentDatasetStore) return;
+    if (!currentDatasetStore.value) return;
 
     // Find the neighbor item id
-    const neighborId = findNeighborItemId($datasetItemIds, direction, currentItemId);
+    const neighborId = findNeighborItemId(datasetItemIds.value, direction, currentItemId);
 
     // If a neighbor item has been found
     if (neighborId) {
-      const route = `/${$currentDatasetStore.id}/dataset/${neighborId}`;
+      const route = `/${currentDatasetStore.value.id}/dataset/${neighborId}`;
 
       // Ask for confirmation if modifications have been made to the item
-      if ($saveCurrentItemStore.canSave) {
+      if (saveCurrentItemStore.value.canSave) {
         newItemId = neighborId;
         return (showConfirmModal = route);
       }
@@ -74,24 +77,20 @@ License: CECILL-C
     }
     await goto(showConfirmModal);
     showConfirmModal = "none";
-    saveCurrentItemStore.set({ canSave: false, shouldSave: false });
+    saveCurrentItemStore.value = { canSave: false, shouldSave: false };
   };
 
   // Return to the previous page
   const handleReturnToPreviousPage = async () => {
-    if (!$currentDatasetStore) return;
+    if (!currentDatasetStore.value) return;
     if (currentItemId) {
-      // Update the current page to ensure that we follow the selected item
-      datasetTableStore.update((pagination) => {
-        pagination.currentPage = getPageFromItemId($datasetItemIds, currentItemId);
-        return pagination;
-      });
-      await navigateTo(`/${$currentDatasetStore.id}/dataset`);
+      const targetPage = getPageFromItemId(datasetItemIds.value, currentItemId);
+      await navigateTo(`/${currentDatasetStore.value.id}/dataset?page=${targetPage}`);
     } else await navigateTo("/");
   };
 
   const navigateTo = async (route: string) => {
-    if ($saveCurrentItemStore.canSave) {
+    if (saveCurrentItemStore.value.canSave) {
       return (showConfirmModal = route);
     }
     await goto(route);
@@ -105,7 +104,7 @@ License: CECILL-C
   // eslint-disable-next-line
   function preventUnsavedUnload(_: HTMLElement) {
     function checkNavigation(e: BeforeUnloadEvent) {
-      if ($saveCurrentItemStore.canSave) {
+      if (saveCurrentItemStore.value.canSave) {
         e.preventDefault();
       }
     }
@@ -119,7 +118,7 @@ License: CECILL-C
 </script>
 
 <div class="h-full w-full flex items-center" use:preventUnsavedUnload>
-  {#if $page.route.id === DATASET_ITEM_ROUTE}
+  {#if page.route.id === DATASET_ITEM_ROUTE}
     <DatasetItemHeader
       {currentItemId}
       {handleSave}
@@ -130,12 +129,12 @@ License: CECILL-C
   {:else}
     <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">
       <div class="flex items-center gap-6">
-        {#if $currentDatasetStore}
+        {#if currentDatasetStore.value}
           <div
             class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]"
           >
             <span class="text-sm font-bold text-foreground truncate">
-              {$currentDatasetStore.name}
+              {currentDatasetStore.value.name}
             </span>
           </div>
         {/if}
@@ -144,7 +143,7 @@ License: CECILL-C
           {#each navItems as { name, Icon }}
             <PrimaryButton
               isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-              on:click={() => navigateTo(`/${$currentDatasetStore.id}/${name.toLocaleLowerCase()}`)}
+              onclick={() => navigateTo(`/${currentDatasetStore.value.id}/${name.toLocaleLowerCase()}`)}
               class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
             >
               <Icon class="h-3.5 w-3.5" />
@@ -164,8 +163,8 @@ License: CECILL-C
     message="You have unsaved changes"
     confirm="Save and continue"
     alternativeAction="Continue without saving"
-    on:confirm={handleSaveAndContinue}
-    on:alternative={handleContinue}
-    on:cancel={() => (showConfirmModal = "none")}
+    onConfirm={handleSaveAndContinue}
+    onAlternative={handleContinue}
+    onCancel={() => (showConfirmModal = "none")}
   />
 {/if}

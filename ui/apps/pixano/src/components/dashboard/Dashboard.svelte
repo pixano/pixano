@@ -6,15 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { DatasetInfo } from "@pixano/core";
-  import { cn, Histogram } from "@pixano/core";
+  import type { DatasetInfo, DatasetStat } from "$lib/ui";
+  import { cn, Histogram } from "$lib/ui";
 
-  import { dashboardTabs } from "../../lib/constants/dashboardsConstants";
+  import { dashboardTabs } from "$lib/constants";
 
-  // Exports
-  export let selectedDataset: DatasetInfo;
+  
+  interface Props {
+    // Exports
+    selectedDataset: DatasetInfo & { stats?: DatasetStat[] };
+  }
 
-  let selectedTab: (typeof dashboardTabs)[number] = dashboardTabs[0];
+  let { selectedDataset }: Props = $props();
+  let datasetStats = $derived(selectedDataset.stats ?? []);
+
+  let selectedTab: (typeof dashboardTabs)[number] = $state(dashboardTabs[0]);
 </script>
 
 <div class="h-full flex flex-row bg-background p-20 gap-6 text-foreground font-sans">
@@ -23,7 +29,7 @@ License: CECILL-C
   >
     {#each dashboardTabs as tab}
       <button
-        on:click={() => (selectedTab = tab)}
+        onclick={() => (selectedTab = tab)}
         class={cn("p-4 text-left first-letter:capitalize hover:bg-accent transition-colors", {
           "bg-muted text-foreground font-medium": tab === selectedTab,
         })}
@@ -57,11 +63,11 @@ License: CECILL-C
       </div>
     {:else if selectedTab === "derived source feature"}
       <!-- Stats -->
-      {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
+      {#if datasetStats.length > 0}
         <span class="text-5xl font-bold">Statistics</span>
         <div class="mt-6 h-full overflow-y-auto flex flex-wrap justify-between gap-6">
           <!-- If charts are ready to be displayed, display them -->
-          {#each selectedDataset.stats as chart}
+          {#each datasetStats as chart}
             <div class="w-[47%] min-h-80">
               <Histogram hist={chart} />
             </div>

@@ -6,73 +6,39 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onDestroy } from "svelte";
+  import type { DatasetBrowser } from "$lib/ui";
+  import { icons } from "$lib/ui";
 
-  import type { DatasetBrowser } from "@pixano/core";
-  import { icons } from "@pixano/core";
+  interface Props {
+    selectedDataset: DatasetBrowser;
+    currentPage: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+  }
 
-  import { datasetTableStore } from "../../lib/stores/datasetStores";
-  import {
-    DEFAULT_DATASET_TABLE_PAGE,
-    DEFAULT_DATASET_TABLE_SIZE,
-  } from "$lib/constants/pixanoConstants";
-
-  // Exports
-  export let selectedDataset: DatasetBrowser;
-  export let isLoadingTableItems: boolean;
-
-  // Page navigation
-  let currentPage: number;
-  let pageSize: number;
-
-  const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
-    currentPage = value?.currentPage || DEFAULT_DATASET_TABLE_PAGE;
-    pageSize = value?.pageSize || DEFAULT_DATASET_TABLE_SIZE;
-  });
-
-  onDestroy(unsubscribeDatasetTableStore);
+  let { selectedDataset, currentPage, pageSize, onPageChange }: Props = $props();
 
   function handleGoToFirstPage() {
     if (currentPage > 1) {
-      isLoadingTableItems = true;
-      datasetTableStore.update((value) => ({
-        ...value,
-        pageSize: value?.pageSize || pageSize,
-        currentPage: 1,
-      }));
+      onPageChange(1);
     }
   }
 
   function handleGoToPreviousPage() {
     if (currentPage > 1) {
-      isLoadingTableItems = true;
-      datasetTableStore.update((value) => ({
-        ...value,
-        pageSize: value?.pageSize || pageSize,
-        currentPage: currentPage - 1,
-      }));
+      onPageChange(currentPage - 1);
     }
   }
 
   function handleGoToNextPage() {
     if (selectedDataset.pagination.total_size > currentPage * pageSize) {
-      isLoadingTableItems = true;
-      datasetTableStore.update((value) => ({
-        ...value,
-        pageSize: value?.pageSize || pageSize,
-        currentPage: currentPage + 1,
-      }));
+      onPageChange(currentPage + 1);
     }
   }
 
   function handleGoToLastPage() {
     if (selectedDataset.pagination.total_size > currentPage * pageSize) {
-      isLoadingTableItems = true;
-      datasetTableStore.update((value) => ({
-        ...value,
-        pageSize: value?.pageSize || pageSize,
-        currentPage: Math.ceil((selectedDataset.pagination.total_size || 1) / pageSize),
-      }));
+      onPageChange(Math.ceil((selectedDataset.pagination.total_size || 1) / pageSize));
     }
   }
 </script>
@@ -80,7 +46,7 @@ License: CECILL-C
 {#if !selectedDataset.isErrored}
   <div class="w-full py-5 h-20 flex justify-center items-center text-foreground">
     {#if selectedDataset.pagination.total_size > pageSize}
-      <button on:click={handleGoToFirstPage}>
+      <button onclick={handleGoToFirstPage} aria-label="Go to first page">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="48"
@@ -92,7 +58,7 @@ License: CECILL-C
         </svg>
       </button>
 
-      <button on:click={handleGoToPreviousPage}>
+      <button onclick={handleGoToPreviousPage} aria-label="Go to previous page">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="48"
@@ -114,7 +80,7 @@ License: CECILL-C
     </span>
 
     {#if selectedDataset.pagination.total_size > pageSize}
-      <button on:click={handleGoToNextPage}>
+      <button onclick={handleGoToNextPage} aria-label="Go to next page">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="48"
@@ -126,7 +92,7 @@ License: CECILL-C
         </svg>
       </button>
 
-      <button on:click={handleGoToLastPage}>
+      <button onclick={handleGoToLastPage} aria-label="Go to last page">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="48"

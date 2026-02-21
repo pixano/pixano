@@ -1,0 +1,1444 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
+<script lang="ts">
+  
+  // Imports
+  import Konva from "konva";
+  import { untrack } from "svelte";
+  import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+
+
+  import {
+    ToolType,
+    type BrushSelectionTool,
+    type PreviewShape,
+    type SelectionTool,
+    type ToolEvent,
+  } from "$lib/tools";
+  import {
+    brushDrawTool,
+    panTool,
+    polygonTool,
+    rectangleTool,
+    toggleBrushMode,
+  } from "$lib/tools/canvasToolPolicy";
+  import {
+    ShapeType,
+    type CreateRectangleShape,
+    type CreatePolygonShape,
+    type ImageFilters,
+    type PolygonOutputMode,
+    type SaveRectangleShape,
+    type Shape,
+  } from "$lib/types/shapeTypes";
+  import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
+  import type { KeypointGraph, PolygonVertex } from "$lib/types/shapeTypes";
+
+  import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
+  import { clearParsedCache } from "./konvaMaskOps";
+  import BBox2D from "./BBox2D.svelte";
+  import BrushCursor from "./BrushCursor.svelte";
+  import BrushMask from "./BrushMask.svelte";
+  import CreateRectangle from "./CreateRectangle.svelte";
+  import CreatePolygon from "./CreatePolygon.svelte";
+  import Crosshair from "./Crosshair.svelte";
+  import PolygonShape from "./PolygonShape.svelte";
+  import ShowKeypoints from "./ShowKeypoint.svelte";
+  import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
+  import { FilterManager } from "./workers/filterManager";
+  import type { FilterParams } from "./workers/filterWorker";
+  import type { ToolBridge } from "$lib/types/store";
+
+  import { effectProbe } from "$lib/utils/effectProbe";
+  import {
+    createInternalToolBridge,
+    createToolFSMForSelection,
+  } from "$lib/tools/canvasBridgeRuntime";
+  import { getFallbackCanvasTool, handleToolShortcuts, isSupportedCanvasTool } from "$lib/tools/canvasToolPolicy";
+
+  interface BrushMaskRef {
+    beginStroke(x: number, y: number): void;
+    updateStroke(x: number, y: number): void;
+    endStroke(): void;
+    getMaskData(): Shape | null;
+    clearCanvas(): void;
+    destroy(): void;
+  }
+
+  
+
+  
+
+  
+  interface Props {
+    // Exports
+    selectedItemId: string;
+    masks: Mask[];
+    bboxes: BBox[];
+    keypoints?: KeypointGraph[];
+    selectedTool: SelectionTool;
+    newShape: Shape;
+    imagesPerView: LoadedImagesPerView;
+    colorScale: (value: string) => string;
+    isVideo?: boolean;
+    imageSmoothing?: boolean;
+    isPlaybackActive?: boolean;
+    merge?: (ann: unknown) => void;
+    brushSettings?: {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  };
+    onSelectedToolChange?: (tool: SelectionTool) => void;
+    onNewShapeChange?: (shape: Shape) => void;
+    onBrushSettingsChange?: (settings: { brushRadius: number; lazyRadius: number; friction: number }) => void;
+    // New architecture (default behavior for the ongoing migration)
+    useNewArchitecture?: boolean;
+    toolBridge?: ToolBridge | undefined;
+    // Image settings
+    filters?: ImageFilters;
+    canvasSize?: number;
+  }
+
+  let {
+    selectedItemId,
+    masks,
+    bboxes,
+    keypoints = [],
+    selectedTool,
+    newShape,
+    imagesPerView,
+    colorScale,
+    isVideo = false,
+    imageSmoothing = true,
+    isPlaybackActive = false,
+    merge = () => {
+    return;
+  },
+    brushSettings = {
+    brushRadius: 20,
+    lazyRadius: 10,
+    friction: 0.15,
+  },
+    onSelectedToolChange,
+    onNewShapeChange,
+    onBrushSettingsChange,
+    useNewArchitecture = true,
+    toolBridge = undefined,
+    filters = {
+    brightness: 0,
+    contrast: 0,
+    equalizeHistogram: false,
+    redRange: [0, 255],
+    greenRange: [0, 255],
+    blueRange: [0, 255],
+    u16BitRange: [0, 65535],
+  },
+    canvasSize = 0
+  }: Props = $props();
+
+  let isReady = $state(false);
+
+  let prevSelectedTool: SelectionTool;
+  let zoomFactor: Record<string, number> = $state({}); // {view_name: zoomFactor}
+
+  let lastInputViewRef: Reference;
+
+  // Brush tool state
+  let brushMaskRefs: Record<string, BrushMaskRef | undefined> = {};
+  let activeBrushViewName: string | null = null;
+  // Declarative crosshair & brush cursor state (replaces imperative Konva creation)
+  let crosshairPosition = $state<{ x: number; y: number } | null>(null);
+  let brushCursorState = $state<{ x: number; y: number; radius: number; mode: "draw" | "erase" } | null>(null);
+  let cursor = $state("default");
+  // Direct reference maps to avoid O(n) stage.findOne() lookups
+  let viewLayerRefs: Record<string, { node: Konva.Group } | undefined> = {};
+  let imageRefs: Record<string, Konva.Image> = {};
+
+  // Web Worker-based filter manager (off-thread filter computation)
+  let filterManager: FilterManager | null = null;
+
+  // Reusable temp canvas for filter application (avoids per-call allocation)
+  let filterTempCanvas: HTMLCanvasElement | null = null;
+  let filterTempCtx: CanvasRenderingContext2D | null = null;
+
+  let bboxEditable = $state(false);
+  let rectangleSavePending = false;
+  let internalToolBridge: ToolBridge | undefined = $state();
+  let activeToolBridge: ToolBridge | undefined = $state();
+
+
+
+
+
+
+  function clearRectangleTransformer() {
+    bboxEditable = false;
+  }
+
+  function toPolygonPoints(
+    points: ReadonlyArray<{ x: number; y: number; id?: number }>,
+  ): PolygonVertex[] {
+    return points.map((point, index) => ({
+      x: point.x,
+      y: point.y,
+      id: typeof point.id === "number" ? point.id : index,
+    }));
+  }
+
+  function toClosedPolygonPoints(
+    polygons: ReadonlyArray<ReadonlyArray<{ x: number; y: number; id?: number }>>,
+  ): PolygonVertex[][] {
+    return polygons.map((polygon) => toPolygonPoints(polygon));
+  }
+
+  function syncToolPreview(preview: PreviewShape | null) {
+    if (rectangleSavePending) {
+      rectangleSavePending = false;
+      return;
+    }
+    const viewRef = lastInputViewRef;
+    if (!viewRef) {
+      if (
+        newShape.status === "creating" &&
+        (newShape.type === ShapeType.bbox || newShape.type === ShapeType.polygon)
+      ) {
+        onNewShapeChange?.({ status: "none" });
+      }
+      clearRectangleTransformer();
+      return;
+    }
+
+    if (preview?.type === "polygon") {
+      onNewShapeChange?.({
+        status: "creating",
+        type: ShapeType.polygon,
+        viewRef,
+        phase: preview.phase,
+        closedPolygons: toClosedPolygonPoints(preview.closedPolygons),
+        points: toPolygonPoints(preview.points),
+        current: preview.current,
+        hoveredEdge: preview.hoveredEdge ?? null,
+        outputMode: selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon",
+      } as CreatePolygonShape);
+      if (bboxEditable) {
+        clearRectangleTransformer();
+      }
+      return;
+    }
+
+    if (preview?.type !== "rectangle") {
+      if (
+        newShape.status === "creating" &&
+        (newShape.type === ShapeType.bbox || newShape.type === ShapeType.polygon)
+      ) {
+        onNewShapeChange?.({ status: "none" });
+      }
+      clearRectangleTransformer();
+      return;
+    }
+
+    onNewShapeChange?.({
+      status: "creating",
+      type: ShapeType.bbox,
+      x: preview.origin.x,
+      y: preview.origin.y,
+      width: preview.current.x - preview.origin.x,
+      height: preview.current.y - preview.origin.y,
+      viewRef,
+    });
+
+    if (preview.editable) {
+      bboxEditable = true;
+    } else {
+      if (bboxEditable) {
+        clearRectangleTransformer();
+      }
+    }
+  }
+
+  function handleRectangleRequestSave(geometry: unknown) {
+    const geo = geometry as { x: number; y: number; width: number; height: number };
+
+    // Prefer the current newShape geometry (updated by Transformer/drag) over FSM's stale geometry
+    let finalGeo = geo;
+    if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
+      const shape = newShape as CreateRectangleShape;
+      const w = shape.width < 0 ? -shape.width : shape.width;
+      const h = shape.height < 0 ? -shape.height : shape.height;
+      const x = shape.width < 0 ? shape.x + shape.width : shape.x;
+      const y = shape.height < 0 ? shape.y + shape.height : shape.y;
+      finalGeo = { x, y, width: w, height: h };
+    }
+
+    clearRectangleTransformer();
+
+    const viewRef = lastInputViewRef;
+    if (viewRef) {
+      const currentImage = getCurrentImage(viewRef.name);
+      rectangleSavePending = true;
+      onNewShapeChange?.({
+        status: "saving",
+        attrs: {
+          x: finalGeo.x,
+          y: finalGeo.y,
+          width: finalGeo.width,
+          height: finalGeo.height,
+        },
+        type: ShapeType.bbox,
+        viewRef,
+        itemId: selectedItemId,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
+      });
+    }
+  }
+
+  function handlePolygonRequestSave(geometry: unknown) {
+    const payload = geometry as {
+      polygons?: Array<Array<{ x: number; y: number; id?: number }>>;
+      points?: Array<{ x: number; y: number }>;
+      outputMode?: PolygonOutputMode;
+    };
+    const sourcePolygons: Array<Array<{ x: number; y: number; id?: number }>> =
+      Array.isArray(payload.polygons) && payload.polygons.length > 0
+        ? payload.polygons
+        : Array.isArray(payload.points) && payload.points.length > 0
+          ? [payload.points.map((point) => ({ x: point.x, y: point.y }))]
+          : [];
+    if (sourcePolygons.length === 0) return;
+
+    const viewRef = lastInputViewRef;
+    if (!viewRef) return;
+
+    const currentImage = getCurrentImage(viewRef.name);
+    const polygonMode: PolygonOutputMode = payload.outputMode ?? "polygon";
+    const polygonPoints = sourcePolygons
+      .map((polygon) =>
+        polygon.map((point, id) => ({
+          x: polygonMode === "mask" ? Math.round(point.x) : point.x,
+          y: polygonMode === "mask" ? Math.round(point.y) : point.y,
+          id: typeof point.id === "number" ? point.id : id,
+        })),
+      )
+      .filter((polygon) => polygon.length >= 3);
+    if (polygonPoints.length === 0) return;
+
+    const polygonSvg = polygonPoints.map((polygon) => convertPointToSvg(polygon));
+    cleanupPolygonPreviewListeners();
+
+    if (polygonMode === "mask") {
+      const counts = runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
+      onNewShapeChange?.({
+        status: "saving",
+        type: ShapeType.mask,
+        masksImageSVG: polygonSvg,
+        rle: {
+          counts,
+          size: [currentImage.height, currentImage.width],
+        },
+        viewRef,
+        itemId: selectedItemId,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
+        polygonMode,
+        polygonPoints,
+      });
+      return;
+    }
+
+    onNewShapeChange?.({
+      status: "saving",
+      type: ShapeType.polygon,
+      masksImageSVG: polygonSvg,
+      viewRef,
+      itemId: selectedItemId,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
+      polygonMode,
+      polygonPoints,
+    });
+  }
+
+  function handleToolRequestSave(
+    shapeType: "bbox" | "polygon" | "mask" | "keypoints",
+    geometry: unknown,
+  ) {
+    if (shapeType === "bbox") {
+      handleRectangleRequestSave(geometry);
+      return;
+    }
+
+    if (shapeType === "polygon") {
+      handlePolygonRequestSave(geometry);
+    }
+  }
+
+  function dispatchPolygonToolEvent(event: ToolEvent) {
+    activeToolBridge?.dispatchEvent(event);
+  }
+
+
+
+
+  // References to HTML Elements
+  let stageContainer: HTMLElement = $state();
+
+  // References to Konva Elements — bind:this on svelte-konva v1.0.1 gives { node: Konva.X }
+  let stageComponent: { node: Konva.Stage } | undefined = $state();
+  let stage: Konva.Stage | undefined = $derived(stageComponent?.node);
+
+  // Stage size driven by $state (ResizeObserver updates these)
+  let stageWidth = $state(512);
+  let stageHeight = $state(780);
+
+  // Multiview image grid
+  let gridSize = {
+    rows: 0,
+    cols: 0,
+  };
+
+  let currentId: string;
+
+  // Dynamically set the canvas stage size
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target !== stageContainer) continue;
+
+      let width: number;
+      let height: number;
+
+      if (entry.contentBoxSize) {
+        // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
+        const contentBoxSize: ResizeObserverSize = (
+          Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize
+        ) as ResizeObserverSize;
+        width = contentBoxSize.inlineSize;
+        height = contentBoxSize.blockSize;
+      } else {
+        width = entry.contentRect.width;
+        height = entry.contentRect.height;
+      }
+
+      // Check if the dimensions have actually changed to avoid unnecessary redraws
+      if (stageWidth !== width || stageHeight !== height) {
+        stageWidth = width;
+        stageHeight = height;
+        if (isReady) {
+          for (const view_name of Object.keys(imagesPerView)) {
+            scaleView(view_name);
+          }
+        }
+        stage?.batchDraw();
+      }
+    }
+  });
+
+  // ********** INIT ********** //
+
+  $effect(() => {
+    if (useNewArchitecture && !toolBridge) {
+      internalToolBridge = createInternalToolBridge(selectedItemId);
+    }
+
+    Object.keys(imagesPerView).forEach((view_name) => {
+      zoomFactor[view_name] = 1;
+    });
+
+    // Initialize off-thread filter manager
+    filterManager = new FilterManager((viewName, filteredCanvas) => {
+      const image = getImageNode(viewName);
+      if (image) {
+        image.image(filteredCanvas);
+        image.clearCache();
+        image.getLayer()?.batchDraw();
+      }
+    });
+
+    // Fire stage events observers
+    resizeObserver.observe(stageContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+      const pendingFilterTimer = untrack(() => filterDebounceTimer);
+      if (pendingFilterTimer) {
+        clearTimeout(pendingFilterTimer);
+      }
+      clearAnnotationAndInputs();
+      filterManager?.destroy();
+      filterManager = null;
+    };
+  });
+
+
+
+
+  // React to filter changes (debounced, skip for video)
+  let filterDebounceTimer: ReturnType<typeof setTimeout>;
+
+  let scaleOnFirstLoad: Record<string, boolean> = {};
+  let viewReady: Record<string, boolean> = {};
+  let loadCycle = 0;
+
+  const resetViewFlags = (viewNames: string[]) => {
+    scaleOnFirstLoad = {};
+    viewReady = {};
+    for (const view_name of viewNames) {
+      //we need a first scaleView for image only. If video, the scale is done elsewhere
+      scaleOnFirstLoad[view_name] = !isVideo;
+      viewReady[view_name] = false;
+    }
+  };
+
+  /** Get a view layer by name using cached ref (O(1)) with fallback. */
+  function getViewLayer(view_name: string): Konva.Group | undefined {
+    return viewLayerRefs[view_name]?.node ?? stage?.findOne(`#${view_name}`);
+  }
+
+  /** Get the image node for a view using cached ref (O(1)) with fallback. */
+  function getImageNode(view_name: string): Konva.Image | undefined {
+    return imageRefs[view_name] ?? stage?.findOne(`#image-${view_name}`);
+  }
+
+  /** Register an image ref when image loads. */
+  function registerImageRef(view_name: string) {
+    // Called after image onload; find the image node in the now-populated layer
+    const img: Konva.Image | undefined = stage?.findOne(`#image-${view_name}`);
+    if (img) imageRefs[view_name] = img;
+  }
+
+  const getCurrentImage = (view_name: string): HTMLImageElement | undefined => {
+    const viewImages = imagesPerView[view_name];
+    if (!Array.isArray(viewImages) || viewImages.length === 0) return undefined;
+    const latestViewImage = viewImages[viewImages.length - 1];
+    return latestViewImage?.element;
+  };
+
+  function loadItem() {
+    const thisLoadCycle = ++loadCycle;
+    const keys = Object.keys(imagesPerView);
+    const totalKeys = keys.length;
+
+    if (totalKeys === 0) {
+      isReady = false;
+      currentId = selectedItemId;
+      return;
+    }
+
+    // Calculate new grid size
+    gridSize.cols = Math.ceil(Math.sqrt(totalKeys));
+    gridSize.rows = Math.ceil(totalKeys / gridSize.cols);
+
+    // Clear annotations in case a previous item was already loaded
+    if (currentId) clearAnnotationAndInputs();
+    clearParsedCache();
+
+    // Reset flags for the new item
+    isReady = false;
+    resetViewFlags(keys);
+
+    keys.forEach((view_name) => {
+      const currentImage = getCurrentImage(view_name);
+      if (!currentImage) {
+        viewReady[view_name] = true;
+        if (Object.values(viewReady).every(Boolean)) {
+          isReady = true;
+        }
+        console.warn(`[Canvas2D] Missing current image for view '${view_name}' on item '${selectedItemId}'.`);
+        return;
+      }
+
+      const onImageReady = () => {
+        if (thisLoadCycle !== loadCycle) return;
+        registerImageRef(view_name);
+        if (scaleOnFirstLoad[view_name]) {
+          if (scaleView(view_name)) {
+            scaleOnFirstLoad[view_name] = false;
+          }
+        }
+        //scaleElements(view_name);
+        viewReady[view_name] = true;
+        if (Object.values(viewReady).every(Boolean)) {
+          isReady = true;
+        }
+        if (!isVideo) cacheImage();
+      };
+      const onImageError = () => {
+        if (thisLoadCycle !== loadCycle) return;
+        const failedUrl = currentImage.currentSrc || currentImage.src || "<unknown>";
+        console.warn(
+          `[Canvas2D] Failed to load image for view '${view_name}' on item '${selectedItemId}': ${failedUrl}`,
+        );
+        viewReady[view_name] = true;
+        if (Object.values(viewReady).every(Boolean)) {
+          isReady = true;
+        }
+      };
+
+      currentImage.onload = onImageReady;
+      currentImage.onerror = onImageError;
+      // Handle already-loaded images (e.g., from browser cache)
+      if (currentImage.complete && currentImage.naturalWidth > 0) {
+        onImageReady();
+      } else if (currentImage.complete && currentImage.naturalWidth === 0) {
+        onImageError();
+      }
+    });
+
+    currentId = selectedItemId;
+  }
+
+  function scaleView(view_name: string): boolean {
+    const viewLayer = getViewLayer(view_name);
+    if (!viewLayer) {
+      return false;
+    }
+    // Calculate max dims for every image in the grid
+    const maxWidth = stageContainer.getBoundingClientRect().width / gridSize.cols;
+    const maxHeight = stageContainer.getBoundingClientRect().height / gridSize.rows;
+
+    // Get view index
+    const keys = Object.keys(imagesPerView);
+    const i = keys.findIndex((view) => view === view_name);
+
+    // Calculate view position in grid
+    const grid_pos = {
+      x: i % gridSize.cols,
+      y: Math.floor(i / gridSize.cols),
+    };
+
+    // Fit stage
+    const currentImage = getCurrentImage(view_name);
+    if (!currentImage) {
+      return false;
+    }
+    const scaleByHeight = maxHeight / currentImage.height;
+    const scaleByWidth = maxWidth / currentImage.width;
+    const scale = Math.min(scaleByWidth, scaleByHeight);
+
+    // Set zoomFactor for view
+    zoomFactor[view_name] = scale;
+    viewLayer.scale({ x: scale, y: scale });
+
+    // Center view
+    const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
+    const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
+    viewLayer.x(offsetX);
+    viewLayer.y(offsetY);
+    return true;
+  }
+
+  const cacheImage = () => {
+    if (!stage) return;
+
+    for (const view_name of Object.keys(imagesPerView)) {
+      const image = getImageNode(view_name);
+      if (!image || image.width() === 0 || image.height() === 0) continue;
+      image.cache();
+    }
+  };
+
+  const AdjustChannels = (imageData: ImageData) => {
+    const { data } = imageData;
+
+    const redMin = filters.redRange[0];
+    const redMax = filters.redRange[1];
+    const greenMin = filters.greenRange[0];
+    const greenMax = filters.greenRange[1];
+    const blueMin = filters.blueRange[0];
+    const blueMax = filters.blueRange[1];
+
+    for (let i = 0; i < data.length; i += 4) {
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+
+      if (
+        red < redMin ||
+        red > redMax ||
+        green < greenMin ||
+        green > greenMax ||
+        blue < blueMin ||
+        blue > blueMax
+      ) {
+        data[i] = 0; // Red channel
+        data[i + 1] = 0; // Green channel
+        data[i + 2] = 0; // Blue channel
+      }
+    }
+  };
+
+  const applyFilters = () => {
+    if (!stage) return;
+
+    const workerFilters: FilterParams = {
+      brightness: filters.brightness,
+      contrast: filters.contrast,
+      redRange: [...filters.redRange] as [number, number],
+      greenRange: [...filters.greenRange] as [number, number],
+      blueRange: [...filters.blueRange] as [number, number],
+      equalizeHistogram: filters.equalizeHistogram,
+    };
+
+    for (const view_name of Object.keys(imagesPerView)) {
+      const image = getImageNode(view_name);
+      if (!image) continue;
+
+      // Try off-thread path via Web Worker
+      if (filterManager) {
+        // We need the original (uncached) image to get source pixel data.
+        // Use the source canvas/image element from imagesPerView.
+        const sourceElement = getCurrentImage(view_name);
+        if (sourceElement) {
+          // Reuse a single temp canvas for filter source data
+          if (!filterTempCanvas) {
+            filterTempCanvas = document.createElement("canvas");
+            filterTempCtx = filterTempCanvas.getContext("2d");
+          }
+          filterTempCanvas.width = sourceElement.width;
+          filterTempCanvas.height = sourceElement.height;
+          if (filterTempCtx) {
+            filterTempCtx.drawImage(sourceElement, 0, 0);
+            filterManager.applyFilters(view_name, filterTempCanvas, workerFilters);
+            continue;
+          }
+        }
+      }
+
+      // Fallback: synchronous Konva filter pipeline
+      let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
+      if (filters.equalizeHistogram) filtersList.push(equalizeHistogram);
+
+      image.filters(filtersList);
+      image.brightness(filters.brightness);
+      image.contrast(filters.contrast);
+    }
+  };
+
+  // ********** TOOLS ********** //
+
+  function handleChangeTool() {
+    if (selectedTool?.type === ToolType.Pan) {
+      crosshairPosition = null;
+      brushCursorState = null;
+      cleanupPolygonPreviewListeners();
+      cursor = panTool.cursor;
+      return;
+    }
+
+    if (selectedTool?.type === ToolType.Rectangle) {
+      cleanupPolygonPreviewListeners();
+      brushCursorState = null;
+      cursor = rectangleTool.cursor;
+      return;
+    }
+
+    if (selectedTool?.type === ToolType.Polygon) {
+      brushCursorState = null;
+      cursor = polygonTool.cursor;
+      return;
+    }
+
+    if (selectedTool?.type === ToolType.Brush) {
+      cleanupPolygonPreviewListeners();
+      crosshairPosition = null;
+      cursor = "none";
+      return;
+    }
+
+    cleanupPolygonPreviewListeners();
+    crosshairPosition = null;
+    brushCursorState = null;
+    cursor = "default";
+  }
+
+  function updateBrushCursor(mousePos: Konva.Vector2d) {
+    const mode = (selectedTool as BrushSelectionTool).mode;
+    brushCursorState = {
+      x: mousePos.x,
+      y: mousePos.y,
+      radius: brushSettings.brushRadius,
+      mode,
+    };
+  }
+
+  function cleanupBrushCursor() {
+    brushCursorState = null;
+  }
+
+  // Keep brush cursor in sync when brushSettings/mode change (Q/E/X keys)
+  $effect(() => {
+    const radius = brushSettings.brushRadius;
+    const mode = selectedTool?.type === ToolType.Brush ? (selectedTool as BrushSelectionTool).mode : null;
+    const current = untrack(() => brushCursorState);
+    if (current && mode) {
+      brushCursorState = { ...current, radius, mode };
+    }
+  });
+
+  function handleBrushPointerDown(viewRef: Reference) {
+    const viewLayer = getViewLayer(viewRef.name);
+    if (!viewLayer) return;
+    const pos = viewLayer.getRelativePointerPosition();
+    if (!pos) return;
+
+    activeBrushViewName = viewRef.name;
+    const brushRef = brushMaskRefs[viewRef.name];
+    if (brushRef) {
+      brushRef.beginStroke(pos.x, pos.y);
+    }
+  }
+
+  function handleBrushPointerMove(view_name: string) {
+    const viewLayer = getViewLayer(view_name);
+    if (!viewLayer) return;
+    const pos = viewLayer.getRelativePointerPosition();
+    if (!pos) return;
+
+    const brushRef = brushMaskRefs[view_name];
+    if (brushRef) {
+      brushRef.updateStroke(pos.x, pos.y);
+    }
+  }
+
+  function handleBrushPointerUp(view_name: string) {
+    activeBrushViewName = null;
+    const brushCanvas = brushMaskRefs[view_name];
+    if (brushCanvas) {
+      brushCanvas.endStroke();
+    }
+  }
+
+  function saveBrushMask(view_name: string) {
+    const brushCanvas = brushMaskRefs[view_name];
+    if (brushCanvas) {
+      const maskData = brushCanvas.getMaskData();
+      if (maskData) {
+        onNewShapeChange?.(maskData);
+      }
+    }
+  }
+
+  function cleanupAllBrushCanvases() {
+    for (const key of Object.keys(brushMaskRefs)) {
+      const brushRef = brushMaskRefs[key];
+      if (brushRef) {
+        brushRef.destroy();
+      }
+      delete brushMaskRefs[key];
+    }
+    cleanupBrushCursor();
+  }
+
+  function cleanupPolygonPreviewListeners() {
+    for (const view_name of Object.keys(imagesPerView)) {
+      const viewLayer = getViewLayer(view_name);
+      if (viewLayer) {
+        viewLayer.off("pointermove.polygon");
+      }
+    }
+  }
+
+  // ********** CROSSHAIR TOOL ********** //
+
+  function updateCrosshairState(mousePos: Konva.Vector2d) {
+    crosshairPosition = { x: mousePos.x, y: mousePos.y };
+  }
+
+  function clearAnnotationAndInputs() {
+    if (!stage) return;
+    for (const view_name of Object.keys(imagesPerView)) {
+      // Inline of old clearCurrentAnn: destroy currentMask group and reset postProcessor
+      const viewLayer = getViewLayer(view_name);
+      if (viewLayer) {
+        const currentAnnGroup: Konva.Group | undefined = viewLayer.findOne("#currentAnnotation");
+        const currentMaskGroup: Konva.Group | undefined = currentAnnGroup?.findOne("#currentMask");
+        if (currentMaskGroup) currentMaskGroup.destroy();
+        if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
+      }
+    }
+    if (selectedTool) {
+      cursor = selectedTool.cursor;
+    }
+    // Declarative cleanup — just reset state, Svelte will remove the components
+    crosshairPosition = null;
+    cleanupBrushCursor();
+    cleanupPolygonPreviewListeners();
+    // Only clear brush canvases after the user confirms (shouldReset) or
+    // when leaving the brush tool — NOT while the save form is open.
+    if (newShape.status !== "saving") {
+      if (selectedTool?.type !== ToolType.Brush || ("shouldReset" in newShape && newShape.shouldReset)) {
+        for (const key of Object.keys(brushMaskRefs)) {
+          brushMaskRefs[key]?.clearCanvas();
+        }
+      }
+    }
+  }
+
+  // ********** MOUSE EVENTS ********** //
+
+  function handleMouseMoveStage() {
+    if (!stage) return;
+    const position = stage.getRelativePointerPosition();
+    if (!position) return;
+
+    if (
+      selectedTool?.type === ToolType.Rectangle ||
+      selectedTool?.type === ToolType.Polygon ||
+      selectedTool?.type === ToolType.Brush
+    ) {
+      updateCrosshairState(position);
+    }
+
+    if (selectedTool?.type === ToolType.Brush) {
+      updateBrushCursor(position);
+      if (activeBrushViewName) {
+        handleBrushPointerMove(activeBrushViewName);
+      }
+    }
+  }
+
+  function handleMouseEnterStage() {
+    // Declarative: crosshair/brushCursor are conditionally rendered,
+    // they become visible via their $state conditions
+  }
+
+  function handleMouseLeaveStage() {
+    // Hide crosshair and brush cursor when mouse leaves stage
+    crosshairPosition = null;
+    brushCursorState = null;
+    // End any ongoing brush stroke when mouse leaves
+    if (selectedTool?.type === ToolType.Brush && activeBrushViewName) {
+      handleBrushPointerUp(activeBrushViewName);
+    }
+  }
+
+  function handleDragEndOnView(view_name: string) {
+    const viewLayer = getViewLayer(view_name);
+    if (!viewLayer) return;
+    viewLayer.draggable(false);
+    viewLayer.off("dragend dragmove");
+  }
+
+  function handlePointerUpOnImage(viewRef: Reference) {
+    const viewLayer = getViewLayer(viewRef.name);
+    if (!viewLayer) return;
+    viewLayer.draggable(false);
+    viewLayer.off("dragend dragmove");
+
+    if (selectedTool?.type === ToolType.Brush) {
+      handleBrushPointerUp(viewRef.name);
+    }
+  }
+
+  function handleDoubleClickOnImage(view_name: string) {
+    // put double-clicked view on top of views
+    const viewLayer = getViewLayer(view_name);
+    if (viewLayer?.getParent()) viewLayer.moveToTop();
+  }
+
+  function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
+    const viewLayer = getViewLayer(viewRef.name);
+    if (!viewLayer) return;
+
+    if (
+      (newShape.status === "none" || newShape.status === "editing") &&
+      selectedTool?.type !== ToolType.Brush &&
+      selectedTool?.type !== ToolType.Polygon
+    ) {
+      onNewShapeChange?.({
+        status: "editing",
+        viewRef,
+        type: "none",
+        shapeId: null,
+        highlighted: "all",
+      });
+    }
+    if (selectedTool?.type === ToolType.Pan || event.button === 1) {
+      viewLayer.draggable(true);
+      viewLayer.on("dragmove", handleMouseMoveStage);
+      viewLayer.on("dragend", () => handleDragEndOnView(viewRef.name));
+    } else if (selectedTool?.type === ToolType.Brush) {
+      handleBrushPointerDown(viewRef);
+    } else if (selectedTool?.type === ToolType.Rectangle && !bboxEditable) {
+      const bridge = activeToolBridge;
+      if (!bridge) return;
+
+      lastInputViewRef = viewRef;
+      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      const pos = viewLayer.getRelativePointerPosition();
+      if (!pos) return;
+      bridge.dispatchEvent({
+        type: "pointerDown",
+        position: { x: pos.x, y: pos.y },
+        button: event.button,
+      });
+      viewLayer.on("pointermove", () => {
+        const movePos = viewLayer.getRelativePointerPosition();
+        if (!movePos) return;
+        bridge.dispatchEvent({
+          type: "pointerMove",
+          position: { x: movePos.x, y: movePos.y },
+        });
+      });
+      viewLayer.on("pointerup", () => {
+        const upPos = viewLayer.getRelativePointerPosition();
+        if (!upPos) return;
+        bridge.dispatchEvent({
+          type: "pointerUp",
+          position: { x: upPos.x, y: upPos.y },
+        });
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      });
+    } else if (selectedTool?.type === ToolType.Polygon) {
+      if (event.button !== 0) return;
+      const bridge = activeToolBridge;
+      if (!bridge) return;
+
+      lastInputViewRef = viewRef;
+      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      const pos = viewLayer.getRelativePointerPosition();
+      if (!pos) return;
+
+      bridge.dispatchEvent({
+        type: "pointerDown",
+        position: { x: pos.x, y: pos.y },
+        button: event.button,
+      });
+
+      viewLayer.off("pointermove.polygon");
+      viewLayer.on("pointermove.polygon", () => {
+        const movePos = viewLayer.getRelativePointerPosition();
+        if (!movePos) return;
+        bridge.dispatchEvent({
+          type: "pointerMove",
+          position: { x: movePos.x, y: movePos.y },
+        });
+      });
+    }
+  }
+
+  function zoom(stageNode: Konva.Stage, direction: number, view_name: string): number {
+    // Defines zoom speed
+    const zoomScale = 1.05;
+
+    const viewLayer = getViewLayer(view_name);
+    if (!viewLayer) return 1;
+
+    // Get old scaling
+    const oldScale = viewLayer.scaleX();
+
+    // Get mouse position
+    const pointer = stageNode.getRelativePointerPosition();
+    const mousePointTo = {
+      x: (pointer.x - viewLayer.x()) / oldScale,
+      y: (pointer.y - viewLayer.y()) / oldScale,
+    };
+
+    // Calculate new scaling
+    const newScale = direction > 0 ? oldScale * zoomScale : oldScale / zoomScale;
+
+    // Calculate new position
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+
+    // Change scaling and position
+    viewLayer.scale({ x: newScale, y: newScale });
+    viewLayer.position(newPos);
+
+    return newScale;
+  }
+
+  function handleWheelOnImage(event: WheelEvent, view_name: string) {
+    // Prevent default scrolling
+    event.preventDefault();
+    if (!stage) return;
+
+    // Get zoom direction
+    let direction = event.deltaY < 0 ? 1 : -1;
+
+    // Revert direction for trackpad
+    if (event.ctrlKey) direction = -direction;
+
+    // Zoom
+    zoomFactor[view_name] = zoom(stage, direction, view_name);
+  }
+
+  const asRectangleShape = (
+    shape: Shape,
+  ): CreateRectangleShape | SaveRectangleShape =>
+    shape as CreateRectangleShape | SaveRectangleShape;
+
+  // ********** KEY EVENTS ********** //
+
+  function handleKeyDown(event: KeyboardEvent) {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true"
+    ) {
+      return; // Ignore shortcut when typing text
+    }
+
+    if (event.key === "Escape") {
+      const shouldKeepPolygonTool =
+        selectedTool?.type === ToolType.Polygon &&
+        newShape.status === "creating" &&
+        newShape.type === ShapeType.polygon &&
+        (newShape as CreatePolygonShape).phase === "drawing" &&
+        (newShape as CreatePolygonShape).closedPolygons.length > 0;
+
+      if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon) {
+        activeToolBridge?.dispatchEvent({ type: "cancel" });
+      }
+
+      if (shouldKeepPolygonTool) {
+        return;
+      }
+
+      if (selectedTool?.type === ToolType.Brush) {
+        cleanupAllBrushCanvases();
+      }
+
+      clearRectangleTransformer();
+      onNewShapeChange?.({ status: "none", shouldReset: true });
+      onSelectedToolChange?.(panTool);
+      return;
+    }
+
+    const shortcutHandled = handleToolShortcuts(event, selectedTool, {
+      selectPan: () => onSelectedToolChange?.(panTool),
+      selectRectangle: () => onSelectedToolChange?.(rectangleTool),
+      selectPolygon: () => onSelectedToolChange?.(polygonTool),
+      selectBrushDraw: () => onSelectedToolChange?.(brushDrawTool),
+      toggleBrushMode: () => {
+        if (selectedTool?.type === ToolType.Brush) {
+          onSelectedToolChange?.(toggleBrushMode(selectedTool));
+        }
+      },
+      adjustBrushRadius: (delta) => {
+        onBrushSettingsChange?.({
+          ...brushSettings,
+          brushRadius: Math.max(1, Math.min(100, brushSettings.brushRadius + delta)),
+        });
+      },
+      saveBrushMask: () => {
+        for (const view_name of Object.keys(imagesPerView)) {
+          saveBrushMask(view_name);
+        }
+      },
+    });
+
+    if (shortcutHandled && event.key !== "Enter") {
+      return;
+    }
+
+    if (
+      (event.key === "Enter" || event.key === "Backspace") &&
+      (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon)
+    ) {
+      activeToolBridge?.dispatchEvent({
+        type: "keyDown",
+        key: event.key,
+        modifiers: {
+          shift: event.shiftKey,
+          ctrl: event.ctrlKey,
+          alt: event.altKey,
+          meta: event.metaKey,
+        },
+      });
+      return;
+    }
+  }
+  $effect(() => {
+    effectProbe("Canvas2D.toolFallback");
+    const currentTool = selectedTool;
+    const shouldFallback = useNewArchitecture && currentTool && !isSupportedCanvasTool(currentTool);
+    if (shouldFallback) {
+      const fallback = getFallbackCanvasTool();
+      if (currentTool !== fallback) {
+        onSelectedToolChange?.(fallback);
+      }
+    }
+  });
+  // True for active painting flows in the reduced Pan/Rectangle/Brush architecture.
+  let isActivePaintingTool = $derived(selectedTool?.type === ToolType.Brush);
+  $effect(() => {
+    effectProbe("Canvas2D.shouldReset");
+    const shapeStatus = newShape.status;
+    const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
+    if (shapeStatus === "none" && shouldReset) {
+      untrack(() => {
+        clearAnnotationAndInputs();
+      });
+      onNewShapeChange?.({ status: "none" });
+    }
+  });
+  $effect(() => {
+    effectProbe("Canvas2D.toolCleanup");
+    const currentTool = selectedTool;
+    const previousTool = prevSelectedTool;
+    const shapeStatus = newShape.status;
+    const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
+
+    const switchingBrushMode =
+      previousTool?.type === ToolType.Brush && currentTool?.type === ToolType.Brush;
+
+    if (!switchingBrushMode || (shapeStatus === "none" && shouldReset)) {
+      untrack(() => {
+        clearAnnotationAndInputs();
+      });
+    }
+    prevSelectedTool = currentTool;
+  });
+  let lastAppliedCanvasSize: number | null = null;
+  $effect(() => {
+    effectProbe("Canvas2D.canvasSize");
+    if (!isReady || !canvasSize) return;
+    if (lastAppliedCanvasSize === canvasSize) return;
+    for (const view_name of Object.keys(imagesPerView)) {
+      scaleView(view_name);
+    }
+    lastAppliedCanvasSize = canvasSize;
+  });
+  $effect(() => {
+    effectProbe("Canvas2D.toolBridge");
+    const bridge = useNewArchitecture ? toolBridge ?? internalToolBridge : undefined;
+    const currentBridge = untrack(() => activeToolBridge);
+    if (bridge !== currentBridge) {
+      activeToolBridge = bridge;
+      if (bridge) {
+        bridge.onRequestSave(handleToolRequestSave);
+      }
+    }
+  });
+  $effect(() => {
+    effectProbe("Canvas2D.previewSync");
+    const bridge = activeToolBridge;
+    if (!bridge) return;
+    const preview = bridge.preview.value;
+    untrack(() => syncToolPreview(preview));
+  });
+  $effect(() => {
+    effectProbe("Canvas2D.fsmSwitch");
+    if (useNewArchitecture && activeToolBridge && selectedTool) {
+      const fsm = createToolFSMForSelection(selectedTool);
+      if (fsm) {
+        activeToolBridge.switchTool(fsm);
+      }
+    }
+  });
+  // --- Targeted reactive statements (replaces monolithic afterUpdate) ---
+
+  // React to item changes
+  $effect(() => {
+    effectProbe("Canvas2D.itemChange");
+    if (selectedItemId && currentId !== selectedItemId) {
+      loadItem();
+    }
+  });
+  // React to tool changes
+  $effect(() => {
+    effectProbe("Canvas2D.toolChangeHandler");
+    const currentTool = selectedTool;
+    const currentStage = untrack(() => stage);
+    if (currentStage && currentTool) {
+      untrack(() => {
+        handleChangeTool();
+      });
+    } else if (currentStage && !currentTool) {
+      cursor = "default";
+    }
+  });
+  // Transformer is now declarative inside BBox2D.svelte — no manual attachment needed
+  $effect(() => {
+    effectProbe("Canvas2D.filter");
+    if (!isVideo && stage && filters) {
+      const previousTimer = untrack(() => filterDebounceTimer);
+      if (previousTimer) {
+        clearTimeout(previousTimer);
+      }
+      filterDebounceTimer = setTimeout(() => applyFilters(), 50);
+    }
+  });
+  // Brush cursor is now declarative — BrushCursor.svelte renders from brushCursorState
+</script>
+
+<div
+  class={`h-full bg-canvas transition-opacity duration-300 delay-100 relative ${isReady ? "" : "opacity-0"}`}
+  bind:this={stageContainer}
+>
+  <Stage
+    bind:this={stageComponent}
+    width={stageWidth}
+    height={stageHeight}
+    name="konva"
+    id="stage"
+    divWrapperProps={{ style: `cursor: ${cursor}` }}
+    onmousemove={handleMouseMoveStage}
+    onmouseenter={handleMouseEnterStage}
+    onmouseleave={handleMouseLeaveStage}
+  >
+    <Layer id="views" imageSmoothingEnabled={imageSmoothing}>
+    {#each Object.entries(imagesPerView) as [view_name, images]}
+      <Group
+        id={view_name}
+        onwheel={(event: Konva.KonvaEventObject<WheelEvent>) => handleWheelOnImage(event.evt, view_name)}
+        bind:this={viewLayerRefs[view_name]}
+      >
+        {#each images as image, i}
+          <!-- images contain the current image and previous one, to prevent flashing -->
+          {@const viewRef = { id: image.id, name: view_name }}
+          <KonvaImage
+            image={image.element}
+            name={image.id}
+            id={`image-${view_name}`}
+            onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => handleClickOnImage(event.evt, viewRef)}
+            onpointerup={() => handlePointerUpOnImage(viewRef)}
+            ondblclick={() => handleDoubleClickOnImage(view_name)}
+          />
+          <!-- Note: prevent drawing shapes on the "cached" image -->
+          {#if i === images.length - 1}
+            <Group
+              id={`bboxes-${view_name}`}
+              listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Rectangle}
+            >
+              {#if (newShape.status === "creating" && newShape.type === ShapeType.bbox) || (newShape.status === "saving" && newShape.type === ShapeType.bbox)}
+                <CreateRectangle
+                  zoomFactor={zoomFactor[view_name]}
+                  newShape={asRectangleShape(newShape)}
+                  {viewRef}
+                  editable={bboxEditable}
+                  onTransformEnd={(geo) => {
+                    onNewShapeChange?.({
+                      status: "creating",
+                      type: ShapeType.bbox,
+                      x: geo.x,
+                      y: geo.y,
+                      width: geo.width,
+                      height: geo.height,
+                      viewRef,
+                    });
+                  }}
+                  onDragEnd={(pos) => {
+                    if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
+                      onNewShapeChange?.({
+                        status: "creating",
+                        type: ShapeType.bbox,
+                        x: pos.x,
+                        y: pos.y,
+                        width: (newShape as CreateRectangleShape).width,
+                        height: (newShape as CreateRectangleShape).height,
+                        viewRef,
+                      });
+                    }
+                  }}
+                />
+              {/if}
+              {#each bboxes as bbox}
+                {#if bbox.data.view_ref.name === view_name && !isActivePaintingTool}
+                  <BBox2D
+                    {bbox}
+                    {colorScale}
+                    zoomFactor={zoomFactor[view_name]}
+                    listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Rectangle}
+                    imageWidth={getCurrentImage(view_name)?.width ?? 0}
+                    imageHeight={getCurrentImage(view_name)?.height ?? 0}
+                    {merge}
+                    {onNewShapeChange}
+                  />
+                {/if}
+              {/each}
+            </Group>
+            <Group
+              id={`masks-${view_name}`}
+              listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Polygon}
+            >
+              {#if (newShape.status === "creating" && newShape.type === ShapeType.polygon) || (newShape.status === "saving" && (newShape.type === ShapeType.polygon || (newShape.type === ShapeType.mask && "polygonMode" in newShape)))}
+                <CreatePolygon
+                  {viewRef}
+                  {newShape}
+                  {zoomFactor}
+                  getRelativePointerOnView={() => getViewLayer(view_name)?.getRelativePointerPosition() ?? null}
+                  onToolEvent={dispatchPolygonToolEvent}
+                />
+              {/if}
+              {#if selectedTool?.type === ToolType.Brush}
+                <BrushMask
+                  bind:this={brushMaskRefs[view_name]}
+                  {viewRef}
+                  currentImage={getCurrentImage(view_name)}
+                  {zoomFactor}
+                  {selectedItemId}
+                  {selectedTool}
+                  {brushSettings}
+                />
+              {/if}
+              {#each masks as mask (mask.id)}
+                {#if mask.data.view_ref.name === view_name}
+                  <PolygonShape
+                    {viewRef}
+                    {newShape}
+                    {onNewShapeChange}
+                    currentImage={getCurrentImage(view_name)}
+                    {zoomFactor}
+                    {mask}
+                    color={isActivePaintingTool
+                      ? "#9CA3AF"
+                      : colorScale(
+                          mask.ui.top_entities && mask.ui.top_entities.length > 0
+                            ? mask.ui.top_entities[0].id
+                            : mask.data.entity_ref.id,
+                        )}
+                    ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
+                    {selectedTool}
+                  />
+                {/if}
+              {/each}
+            </Group>
+            <Group
+              id={`keypoints-${view_name}`}
+              listening={false}
+            >
+              {#if !isActivePaintingTool}
+                <ShowKeypoints
+                  {colorScale}
+                  {viewRef}
+                  {keypoints}
+                  zoomFactor={zoomFactor[view_name]}
+                  imageSize={{ width: getCurrentImage(view_name)?.width ?? 1, height: getCurrentImage(view_name)?.height ?? 1 }}
+                  {newShape}
+                  {onNewShapeChange}
+                  {isPlaybackActive}
+                />
+              {/if}
+            </Group>
+            <Group id="currentAnnotation" />
+          {/if}
+        {/each}
+      </Group>
+    {/each}
+    </Layer>
+
+    <Layer id="tools">
+      <Crosshair position={crosshairPosition} {stageWidth} {stageHeight} />
+      {#if brushCursorState}
+        <BrushCursor
+          x={brushCursorState.x}
+          y={brushCursorState.y}
+          radius={brushCursorState.radius}
+          mode={brushCursorState.mode}
+        />
+      {/if}
+    </Layer>
+  </Stage>
+</div>
+<svelte:window onkeydown={handleKeyDown} />

@@ -1,17 +1,11 @@
-import { theme } from "@pixano/core/theme/tailwindTheme";
+import { theme } from "./src/lib/ui/tailwindTheme.js";
 
 export default {
   content: [
     "./src/app.html",
     "./src/routes/**/*.{svelte,js,ts,jsx,tsx}",
     "./src/components/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/core/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/datasetItemWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/textCanvas/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/vqaCanvas/src/**/*.{svelte,js,ts,jsx,tsx}",
+    "./src/lib/ui/core/**/*.{js,ts}",
   ],
   darkMode: "class",
   theme: {

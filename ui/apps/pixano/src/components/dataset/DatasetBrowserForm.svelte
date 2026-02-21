@@ -7,52 +7,64 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { createEventDispatcher } from "svelte";
-
-  import type { DatasetBrowser } from "@pixano/core";
-  import { icons } from "@pixano/core";
+  import type { DatasetBrowser } from "$lib/ui";
+  import { icons } from "$lib/ui";
 
   import FilterTable from "./FilterTable.svelte";
 
-  // Exports
-  export let selectedDataset: DatasetBrowser;
-  export let selectedSearchModel: string | undefined;
-  export let searchInput: string;
-
-  const searchModels: string[] = [];
-  if (selectedDataset.semantic_search.length > 0) {
-    for (const model of selectedDataset.semantic_search) {
-      // Initialize selected search model
-      if (!selectedSearchModel) {
-        selectedSearchModel = model;
-      }
-      searchModels.push(model);
-    }
+  
+  interface Props {
+    selectedDataset: DatasetBrowser;
+    selectedSearchModel: string | undefined;
+    searchInput: string;
+    onSearch?: (searchInput: string) => void;
+    onClearSearch?: () => void;
+    onFilter?: (where: string) => void;
   }
 
-  const dispatch = createEventDispatcher();
+  let {
+    selectedDataset,
+    selectedSearchModel = $bindable(),
+    searchInput = $bindable(),
+    onSearch,
+    onClearSearch,
+    onFilter,
+  }: Props = $props();
+  let filterColumns = $derived(
+    (selectedDataset.table_data.columns ?? []).flatMap((col) =>
+      col?.name && col?.type ? [{ name: col.name, type: col.type }] : [],
+    ),
+  );
+  const searchModels = $derived(selectedDataset.semantic_search);
+
+  $effect(() => {
+    if (!selectedSearchModel && searchModels.length > 0) {
+      selectedSearchModel = searchModels[0];
+    }
+  });
 
   const handleSearch = () => {
-    dispatch("search", searchInput);
+    onSearch?.(searchInput);
   };
 
   const handleClearSearch = () => {
-    dispatch("clearSearch");
+    onClearSearch?.();
   };
 
   const handleFilter = (where: string) => {
-    dispatch("filter", where);
+    onFilter?.(where);
   };
 </script>
 
 <div class="ml-auto relative flex items-center py-5 h-20">
-  <FilterTable columns={selectedDataset.table_data.columns} {handleFilter} />
+  <FilterTable columns={filterColumns} {handleFilter} />
   {#if searchModels.length > 0}
     <select
       class="h-10 px-4 mx-4 border rounded-lg bg-background border-border text-foreground text-sm"
+      bind:value={selectedSearchModel}
     >
       {#each searchModels as model}
-        <option value={selectedSearchModel}>
+        <option value={model}>
           {model}
         </option>
       {/each}
@@ -63,7 +75,7 @@ License: CECILL-C
         bind:value={searchInput}
         placeholder="Semantic search using {selectedSearchModel}"
         class="h-10 pl-10 pr-4 rounded-lg border text-sm text-foreground placeholder-muted-foreground bg-background border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-        on:change={handleSearch}
+        onchange={handleSearch}
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -77,7 +89,8 @@ License: CECILL-C
       {#if searchInput !== ""}
         <button
           class="absolute right-2 p-1 rounded-full transition-colors hover:bg-accent"
-          on:click={handleClearSearch}
+          onclick={handleClearSearch}
+          aria-label="Clear search"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

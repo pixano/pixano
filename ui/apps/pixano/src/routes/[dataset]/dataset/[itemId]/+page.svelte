@@ -5,242 +5,46 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
-  import { onDestroy } from "svelte";
-
+  import * as api from "$lib/api";
   import {
-    api,
     BaseSchema,
     Entity,
-    Image,
     PrimaryButton,
-    SequenceFrame,
-    WorkspaceType,
-    type DatasetInfo,
-    type DatasetItem,
-    type FeaturesValues,
+    effectProbe,
     type SaveItem,
     type Schema,
-  } from "@pixano/core";
-  import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
+  } from "$lib/ui";
+  import { canSave } from "$lib/stores/workspaceStores.svelte";
+  import WorkspaceShell from "../../../../components/workspace/WorkspaceShell.svelte";
+  import { resolveWorkspaceVariant } from "../../../../components/workspace/workspaceRegistry";
 
-  import {
-    datasetSchema,
-    datasetsStore,
-    isLoadingNewItemStore,
-    saveCurrentItemStore,
-    sourcesStore,
-  } from "../../../../lib/stores/datasetStores";
+  import { saveCurrentItemStore } from "$lib/stores/appStores.svelte";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { navigating } from "$app/state";
+  import type { PageProps } from "./$types";
 
-  let selectedItem: DatasetItem;
-  let selectedDataset: DatasetInfo;
-  let currentDatasetId: string;
-  let currentItemId: string;
-  let isLoadingNewItem: boolean = false;
-  let canSaveCurrentItem: boolean = false;
-  let shouldSaveCurrentItem: boolean = false;
-  let noItemFound: boolean = false;
-  let featureValues: FeaturesValues = { main: {}, objects: {} };
+  let { data }: PageProps = $props();
 
-  const unsubscribeSaveCurrentItemStore = saveCurrentItemStore.subscribe((value) => {
-    canSaveCurrentItem = value.canSave;
-    shouldSaveCurrentItem = value.shouldSave;
-  });
+  const isLoading = $derived(navigating.from !== null);
+  const shouldSaveCurrentItem = $derived(saveCurrentItemStore.value.shouldSave);
+  const Variant = $derived(resolveWorkspaceVariant(data.item?.ui?.type));
 
-  $: saveCurrentItemStore.update((old) => ({ ...old, canSave: canSaveCurrentItem }));
-
-  //TODO test quick & dirty -- WIP -- should use a common type from back & front
-  // also should use zod, etc.
-  type backFV = {
-    name: string;
-    restricted: boolean;
-    values: string[];
-  };
-  type backFVS = Record<string, Record<string, backFV[]>>;
-
-  const mapBackFeaturesValues2FrontFeaturesValues = (feature_values: backFVS) => {
-    //console.log("--- back feature_values", feature_values);
-    /*
-    --- current back format for features values (most probably to be changed)
-    {
-        "items": {}, //??
-        "views": {},
-        "entities": {"objects": [{"name": "category", "restricted": true, "values": ["rose", "orange"]}]},
-        "annotations": {}
-    }
-
-    --- current front format for features values (probably to change also -- but it "works" with this)
-    {
-      "main": {
-        "label": { "restricted": true, "values": ["nice", "very nice"] }
-      },
-      "objects": {
-        "category_name": {"restricted": true, "values": ["rose", "orange"]}
-    }
-    */
-    const frontFV: FeaturesValues = { main: {}, objects: {} };
-    if ("item" in feature_values && feature_values["item"] && feature_values["item"]["item"]) {
-      for (const feat of feature_values["item"]["item"]) {
-        let { name, ...fv } = feat;
-        frontFV.main[name] = fv;
-      }
-    }
-    if (
-      "entities" in feature_values &&
-      feature_values["entities"] &&
-      Object.keys(feature_values["entities"]).length > 0
-    ) {
-      for (const entity_group of $datasetSchema.groups.entities) {
-        if (feature_values["entities"][entity_group]) {
-          for (const feat of feature_values["entities"][entity_group]) {
-            let { name, ...fv } = feat;
-            frontFV.objects[name] = fv;
-          }
-        }
-      }
-    }
-    if (
-      "annotations" in feature_values &&
-      feature_values["annotations"] &&
-      Object.keys(feature_values["annotations"]).length > 0
-    ) {
-      for (const ann_group of $datasetSchema.groups.annotations) {
-        if (feature_values["annotations"][ann_group]) {
-          for (const feat of feature_values["annotations"][ann_group]) {
-            let { name, ...fv } = feat;
-            frontFV.objects[name] = fv;
-          }
-        }
-      }
-    }
-
-    //console.log("--- front feature_values", frontFV);
-    return frontFV;
-  };
-
-  let datasetSchemaLoaded = false;
-
-  const ensureDatasetSchema = async (dataset: DatasetInfo) => {
-    if (datasetSchemaLoaded) return;
-    const ds = await api.getDataset(dataset.id);
-    datasetSchema.set(ds.dataset_schema);
-    featureValues = mapBackFeaturesValues2FrontFeaturesValues(ds.feature_values as backFVS);
-    datasetSchemaLoaded = true;
-  };
-
-  const handleSelectItem = (dataset: DatasetInfo, id: string) => {
-    if (!dataset) return;
-    ensureDatasetSchema(dataset)
-      .then(() => {
-        api
-          .getDatasetItem(dataset.id, encodeURIComponent(id))
-          .then((item) => {
-            //if workspace type not defined, infer type from datasetItem content
-            if (dataset.workspace === WorkspaceType.UNDEFINED) {
-              for (const viewname in item.views) {
-                if (Array.isArray(item.views[viewname])) {
-                  dataset.workspace = WorkspaceType.VIDEO;
-                  break;
-                } else {
-                  // VQA items have a "conversations" field in the entities
-                  const is_vqa = "conversations" in item.entities;
-                  if (is_vqa) {
-                    dataset.workspace = WorkspaceType.IMAGE_VQA;
-                    break;
-                  } else {
-                    dataset.workspace = WorkspaceType.IMAGE;
-                  }
-                }
-              }
-            }
-
-            //append media_dir tu url + set image/sequence frame type (ui field)
-            const media_dir = "media/";
-            if (dataset.workspace === WorkspaceType.VIDEO) {
-              for (const viewname in item.views) {
-                let view = item.views[viewname];
-                if (Array.isArray(view)) {
-                  const video = view as SequenceFrame[];
-                  video.forEach((sf) => {
-                    sf.data.type = WorkspaceType.VIDEO;
-                    sf.data.url = media_dir + sf.data.url;
-                  });
-                  video.sort((a, b) => a.data.frame_index - b.data.frame_index);
-                } else {
-                  throw Error("Video workspace without SequenceFrames.");
-                }
-              }
-            } else {
-              for (const viewname in item.views) {
-                let view = item.views[viewname];
-                if (Array.isArray(view)) {
-                  throw Error("Not video workspace with SequenceFrames.");
-                } else {
-                  const image = view as Image;
-                  image.data.type = WorkspaceType.IMAGE;
-                  image.data.url = media_dir + image.data.url;
-                }
-              }
-            }
-            selectedItem = item;
-            selectedItem.ui = { type: dataset.workspace, datasetId: dataset.id };
-            if (Object.keys(selectedItem).length === 0) {
-              noItemFound = true;
-            } else {
-              noItemFound = false;
-            }
-          })
-          .then(() => isLoadingNewItemStore.set(false))
-          .catch((err) => console.error(err));
-      })
-      .catch((err) => console.error(err));
-  };
-
-  const unsubscribePage = page.subscribe((value) => {
-    currentDatasetId = value.params.dataset;
-    currentItemId = value.params.itemId;
-  });
-
-  const unsubscribeDatasetsStore = datasetsStore.subscribe((value) => {
-    const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
-    if (foundDataset) {
-      selectedDataset = foundDataset;
-      api
-        .getSources(selectedDataset.id)
-        .then((sources) => sourcesStore.set(sources))
-        .catch((err) => console.error("ERROR: Unable to get sources", err));
-    }
-  });
-
-  $: {
-    if (currentItemId !== selectedItem?.item.id) {
-      isLoadingNewItemStore.set(true);
-      handleSelectItem(selectedDataset, currentItemId);
-    }
-  }
-
-  $: unsubscibeIsLoadingNewItemStore = isLoadingNewItemStore.subscribe((value) => {
-    isLoadingNewItem = value;
-  });
-
-  onDestroy(() => {
-    unsubscribeDatasetsStore();
-    unsubscribePage();
-    unsubscribeSaveCurrentItemStore();
-    unsubscibeIsLoadingNewItemStore();
+  $effect(() => {
+    const value = canSave.value;
+    const current = saveCurrentItemStore.value;
+    if (current.canSave === value) return;
+    saveCurrentItemStore.value = { ...current, canSave: value };
   });
 
   function reduceByTypeAndGroupAndTable(
-    data: SaveItem[],
+    saveData: SaveItem[],
     type: string,
   ): Record<string, Record<string, (Schema | string)[]>> {
-    const type_data = data.filter((d) => d.change_type === type);
+    const type_data = saveData.filter((d) => d.change_type === type);
     return type_data.reduce(
       (acc, item) => {
-        const group = item.object.table_info.group;
-        const table = item.object.table_info.name;
+        const group = item.data.table_info.group;
+        const table = item.data.table_info.name;
         if (!acc[group]) {
           acc[group] = {};
         }
@@ -248,11 +52,11 @@ License: CECILL-C
           acc[group][table] = [];
         }
         if (type === "delete") {
-          acc[group][table].push(item.object.id);
+          acc[group][table].push(item.data.id);
         } else {
           //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
           // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
-          const { ui, ...bodyObj } = item.object; // eslint-disable-line @typescript-eslint/no-unused-vars
+          const { ui, ...bodyObj } = item.data; // eslint-disable-line @typescript-eslint/no-unused-vars
           acc[group][table].push(bodyObj as Schema);
         }
         return acc;
@@ -261,24 +65,21 @@ License: CECILL-C
     );
   }
 
-  async function handleSaveItem(data: SaveItem[]) {
+  async function handleSaveItem(saveData: SaveItem[]) {
     //entities first to avoid database consistency checks issues
-    data.sort((a, b) => {
+    saveData.sort((a, b) => {
       const priority = (object: Schema) => {
-        // Highest priority: Track
         if (object.table_info.base_schema === BaseSchema.Track) return 0;
-        // Second priority : Entity as top entity
         if (object.table_info.base_schema === BaseSchema.Entity) {
           if ((object as Entity).data.parent_ref.id === "") return 1;
-          else return 2; //Third priority: Entity as sub entity
+          else return 2;
         }
-        return 3; // Lowest priority
+        return 3;
       };
-      return priority(a.object) - priority(b.object);
+      return priority(a.data) - priority(b.data);
     });
 
-    //gather adds by group and table
-    const add_data_by_group_and_table = reduceByTypeAndGroupAndTable(data, "add");
+    const add_data_by_group_and_table = reduceByTypeAndGroupAndTable(saveData, "add");
     for (const group in add_data_by_group_and_table) {
       for (const [table, schs] of Object.entries(add_data_by_group_and_table[group])) {
         let no_table = false;
@@ -291,12 +92,11 @@ License: CECILL-C
           route = "sources";
           no_table = true;
         }
-        await api.addSchemas(route, selectedDataset.id, schs as Schema[], table, no_table);
+        await api.addSchemas(route, data.dataset.id, schs as Schema[], table, no_table);
       }
     }
 
-    //gather updates by group and table
-    const update_data_by_group_and_table = reduceByTypeAndGroupAndTable(data, "update");
+    const update_data_by_group_and_table = reduceByTypeAndGroupAndTable(saveData, "update");
     for (const group in update_data_by_group_and_table) {
       for (const [table, schs] of Object.entries(update_data_by_group_and_table[group])) {
         let no_table = false;
@@ -309,12 +109,11 @@ License: CECILL-C
           route = "sources";
           no_table = true;
         }
-        await api.updateSchemas(route, selectedDataset.id, schs as Schema[], table, no_table);
+        await api.updateSchemas(route, data.dataset.id, schs as Schema[], table, no_table);
       }
     }
 
-    //gather deletes by group and table
-    const delete_ids_by_group_and_table = reduceByTypeAndGroupAndTable(data, "delete");
+    const delete_ids_by_group_and_table = reduceByTypeAndGroupAndTable(saveData, "delete");
     for (const group in delete_ids_by_group_and_table) {
       for (const [table, ids] of Object.entries(delete_ids_by_group_and_table[group])) {
         let no_table = false;
@@ -323,28 +122,37 @@ License: CECILL-C
           route = "items";
           no_table = true;
         }
-        await api.deleteSchemasByIds(route, selectedDataset.id, ids as string[], table, no_table);
+        await api.deleteSchemasByIds(route, data.dataset.id, ids as string[], table, no_table);
       }
     }
 
-    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
+    const current = saveCurrentItemStore.value;
+    effectProbe("WorkspacePage.resetShouldSave", {
+      shouldSaveBeforeReset: current.shouldSave,
+      saveItemCount: saveData.length,
+    });
+    if (!current.shouldSave) return;
+    saveCurrentItemStore.value = { ...current, shouldSave: false };
   }
 </script>
 
-{#if selectedItem && selectedDataset}
-  <DatasetItemWorkspace
-    {selectedItem}
-    {featureValues}
+{#if data.item && data.dataset}
+  <WorkspaceShell
+    selectedItem={data.item}
+    featureValues={data.featureValues}
     {handleSaveItem}
-    isLoading={isLoadingNewItem}
-    bind:canSaveCurrentItem
+    {isLoading}
     {shouldSaveCurrentItem}
-  />
+  >
+    {#snippet viewer({ resize })}
+      <Variant selectedItem={data.item} {resize} />
+    {/snippet}
+  </WorkspaceShell>
 {/if}
-{#if !selectedItem && noItemFound}
+{#if !data.item}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
-    <PrimaryButton on:click={() => goto(`/${currentDatasetId}/dataset`)}>
+    <PrimaryButton onclick={() => goto(`/${data.dataset.id}/dataset`)}>
       Back to dataset
     </PrimaryButton>
   </div>

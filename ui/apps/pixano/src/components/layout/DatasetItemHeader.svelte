@@ -9,17 +9,28 @@ License: CECILL-C
   import { ArrowLeft, ArrowRight, ChevronLeft, Loader2Icon, Save } from "lucide-svelte";
   import { fade } from "svelte/transition";
 
-  import { cn, IconButton } from "@pixano/core";
-  import Toolbar from "@pixano/dataset-item-workspace/src/components/Toolbar.svelte";
-  import { saveData } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
+  import { cn, IconButton } from "$lib/ui";
+  import { Toolbar } from "../workspace";
+  import { saveData } from "$lib/stores/workspaceStores.svelte";
 
-  import { currentDatasetStore, isLoadingNewItemStore } from "$lib/stores/datasetStores";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
+  import { navigating } from "$app/state";
 
-  export let currentItemId: string;
-  export let goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
-  export let handleReturnToPreviousPage: () => void;
-  export let handleSave: () => void;
-  export let getDatasetItemDisplayCount: () => string;
+  interface Props {
+    currentItemId: string;
+    goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
+    handleReturnToPreviousPage: () => void;
+    handleSave: () => void;
+    getDatasetItemDisplayCount: () => string;
+  }
+
+  let {
+    currentItemId,
+    goToNeighborItem,
+    handleReturnToPreviousPage,
+    handleSave,
+    getDatasetItemDisplayCount
+  }: Props = $props();
 
   const onKeyUp = async (event: KeyboardEvent) => {
     // Item navigation shortcuts should work globally, even when typing in a textarea
@@ -56,7 +67,7 @@ License: CECILL-C
     in:fade={{ duration: 200 }}
     class="flex-1 flex items-center justify-between h-full relative px-2"
   >
-    {#if $isLoadingNewItemStore}
+    {#if navigating.from !== null}
       <div class="flex items-center gap-3 px-4">
         <Loader2Icon class="animate-spin text-primary h-4 w-4" />
         <span
@@ -69,7 +80,7 @@ License: CECILL-C
       <!-- LEFT: Navigation & Context -->
       <div class="flex items-center gap-3 min-w-[240px]">
         <button
-          on:click={handleReturnToPreviousPage}
+          onclick={handleReturnToPreviousPage}
           class="group flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-all duration-200 border border-transparent hover:border-primary/10"
           title="Back to dataset"
         >
@@ -79,7 +90,7 @@ License: CECILL-C
           <span
             class="text-[13px] font-black uppercase tracking-tighter text-foreground/80 group-hover:text-primary transition-colors"
           >
-            {$currentDatasetStore?.name}
+            {currentDatasetStore.value?.name}
           </span>
         </button>
 
@@ -89,7 +100,7 @@ License: CECILL-C
           class="flex items-center gap-1 bg-muted/20 rounded-xl border border-border/30 p-0.5 shadow-inner"
         >
           <IconButton
-            on:click={() => goToNeighborItem("previous")}
+            onclick={() => goToNeighborItem("previous")}
             tooltipContent="Previous (Shift + ←)"
             class="h-7 w-7 hover:bg-background/80"
           >
@@ -108,7 +119,7 @@ License: CECILL-C
           </div>
 
           <IconButton
-            on:click={() => goToNeighborItem("next")}
+            onclick={() => goToNeighborItem("next")}
             tooltipContent="Next (Shift + →)"
             class="h-7 w-7 hover:bg-background/80"
           >
@@ -122,7 +133,7 @@ License: CECILL-C
         class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
       >
         <div class="pointer-events-auto">
-          {#if $currentDatasetStore}
+          {#if currentDatasetStore.value}
             <Toolbar />
           {/if}
         </div>
@@ -131,14 +142,14 @@ License: CECILL-C
       <!-- RIGHT: Action Group -->
       <div class="flex items-center justify-end min-w-[60px]">
         <IconButton
-          disabled={$saveData.length === 0}
-          on:click={handleSave}
-          tooltipContent={$saveData.length > 0
-            ? `Save ${$saveData.length} changes`
+          disabled={saveData.value.length === 0}
+          onclick={handleSave}
+          tooltipContent={saveData.value.length > 0
+            ? `Save ${saveData.value.length} changes`
             : "No changes to save"}
           class={cn(
             "h-10 w-10 transition-all duration-500 rounded-xl border",
-            $saveData.length > 0
+            saveData.value.length > 0
               ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-110 animate-pulse"
               : "bg-background border-border text-muted-foreground opacity-40",
           )}
@@ -146,10 +157,10 @@ License: CECILL-C
           <Save
             class={cn(
               "h-5 w-5 transition-transform duration-300",
-              $saveData.length > 0 && "scale-110",
+              saveData.value.length > 0 && "scale-110",
             )}
           />
-          {#if $saveData.length > 0}
+          {#if saveData.value.length > 0}
             <span class="absolute -top-1 -right-1 flex h-4 w-4">
               <span
                 class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-foreground opacity-75"
@@ -157,7 +168,7 @@ License: CECILL-C
               <span
                 class="relative inline-flex rounded-full h-4 w-4 bg-primary-foreground text-[9px] font-black text-primary items-center justify-center shadow-sm"
               >
-                {$saveData.length}
+                {saveData.value.length}
               </span>
             </span>
           {/if}
@@ -166,4 +177,4 @@ License: CECILL-C
     {/if}
   </div>
 {/if}
-<svelte:window on:keyup={onKeyUp} />
+<svelte:window onkeyup={onKeyUp} />

@@ -5,13 +5,14 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
+  import type { PageProps } from "./$types";
   import Dashboard from "../../../components/dashboard/Dashboard.svelte";
-  import { currentDatasetStore } from "$lib/stores/datasetStores";
+
+  let { data }: PageProps = $props();
 </script>
 
-{#if $currentDatasetStore}
+{#if data.dataset}
   <div class="pt-20 h-1 min-h-screen">
-    <Dashboard selectedDataset={$currentDatasetStore} />
+    <Dashboard selectedDataset={data.dataset} />
   </div>
 {/if}
