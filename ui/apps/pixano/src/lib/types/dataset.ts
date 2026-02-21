@@ -7,8 +7,6 @@ License: CECILL-C
 import { createTypedAnnotation } from "$lib/utils/domainFactories";
 import { createTypedEntity } from "$lib/utils/domainFactories";
 import { createTypedView } from "$lib/utils/domainFactories";
-import type { KeypointGraph, KeypointVertex } from "./shapeTypes";
-
 // ─── BaseSchema ────────────────────────────────────────────────────────────────
 
 export enum BaseSchema {
@@ -209,12 +207,6 @@ export type TrackletTimelineEntry = {
   is_thumbnail?: boolean;
   hidden?: boolean;
 };
-
-// Backward-compatible aliases kept during the workspace migration.
-export type TrackletItem = TrackletTimelineEntry;
-export type ObjectThumbnail = AnnotationThumbnail;
-export type KeypointsTemplate = KeypointGraph;
-export type Vertex = KeypointVertex;
 
 // ─── Item Data Types ───────────────────────────────────────────────────────────
 

@@ -68,8 +68,6 @@ License: CECILL-C
     if (!success) {
       console.error(`Couldn't instantiate model '${model_config.config.name}'`);
       return;
-    } else {
-      console.log(`Model '${model_config.config.name}' added.`);
     }
 
     isAddingModelRequestPending = false;

@@ -8,7 +8,8 @@ License: CECILL-C
   // Imports
 
   import { ToolType, keyPointTool, type SelectionTool } from "$lib/tools";
-  import { IconButton, cn, type Vertex } from "$lib/ui";
+  import { IconButton, cn } from "$lib/ui";
+  import type { KeypointVertex } from "$lib/types/shapeTypes";
   import { keypointsIcon } from "$lib/assets";
 
   import { templates } from "$lib/utils/keyPointsTemplates";
@@ -24,7 +25,7 @@ License: CECILL-C
 
   let { selectTool }: Props = $props();
 
-  const defineDotColor = (vertex: Vertex, selected: boolean) => {
+  const defineDotColor = (vertex: KeypointVertex, selected: boolean) => {
     if (vertex.features?.color) return vertex.features.color;
     if (selected) return "white";
   };

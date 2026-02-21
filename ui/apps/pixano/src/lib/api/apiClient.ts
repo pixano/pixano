@@ -28,9 +28,9 @@ export async function apiFetch<T>(
       const json: unknown = await response.json();
       return transform ? transform(json) : (json as T);
     }
-    console.log(`api.${label} -`, response.status, response.statusText, await response.text());
+    console.error(`api.${label} -`, response.status, response.statusText, await response.text());
   } catch (e) {
-    console.log(`api.${label} -`, e);
+    console.error(`api.${label} -`, e);
   }
   return fallback;
 }
@@ -46,9 +46,9 @@ export async function apiMutate(
   try {
     const response = await fetch(url, init);
     if (!response.ok) {
-      console.log(`api.${label} -`, response.status, response.statusText, await response.text());
+      console.error(`api.${label} -`, response.status, response.statusText, await response.text());
     }
   } catch (e) {
-    console.log(`api.${label} -`, e);
+    console.error(`api.${label} -`, e);
   }
 }

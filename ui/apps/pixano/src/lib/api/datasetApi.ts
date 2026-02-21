@@ -61,12 +61,12 @@ export async function getBrowser(
       const raw = (await response.json()) as DatasetBrowserType;
       return new DatasetBrowser(raw);
     }
-    console.log("api.getBrowser -", response.status, response.statusText, await response.text());
+    console.error("api.getBrowser -", response.status, response.statusText, await response.text());
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
       return {} as DatasetBrowser;
     }
-    console.log("api.getBrowser -", e);
+    console.error("api.getBrowser -", e);
   }
   return {} as DatasetBrowser;
 }
@@ -79,17 +79,14 @@ export function getDataset(datasetId: string): Promise<Dataset> {
 
 // ─── getDatasetItem ─────────────────────────────────────────────────────────────
 
-export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
-  const start = Date.now();
-  const item = await apiFetch(
+export function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
+  return apiFetch(
     `/dataset_items/${datasetId}/${itemId}`,
     {},
     {} as DatasetItem,
     "getDatasetItem",
     (json) => new DatasetItem(json as DatasetItemType),
   );
-  console.log("api.getDatasetItem - Done in", Date.now() - start);
-  return item;
 }
 
 // ─── getDatasetItemsIds ─────────────────────────────────────────────────────────
@@ -101,14 +98,14 @@ export async function getDatasetItemsIds(datasetId: string): Promise<Array<strin
       return (await response.json()) as string[];
     }
     if (response.status != 404)
-      console.log(
+      console.error(
         "api.getDatasetItemsIds -",
         response.status,
         response.statusText,
         await response.text(),
       );
   } catch (e) {
-    console.log("api.getDatasetItemsIds -", e);
+    console.error("api.getDatasetItemsIds -", e);
   }
   return [];
 }
@@ -129,14 +126,14 @@ export async function getDatasetStats(
     if (response.ok) {
       return (await response.json()) as DatasetStats;
     }
-    console.log(
+    console.error(
       "api.getDatasetStats -",
       response.status,
       response.statusText,
       await response.text(),
     );
   } catch (e) {
-    if (!(typeof e === "string" && e === "aborted")) console.log("api.getDatasetStats -", e);
+    if (!(typeof e === "string" && e === "aborted")) console.error("api.getDatasetStats -", e);
   }
   return {};
 }
@@ -176,14 +173,14 @@ export async function getItemsInfo(
     if (response.ok) {
       return (await response.json()) as Array<DatasetMoreInfo>;
     }
-    console.log(
+    console.error(
       "api.getItemsInfo -",
       response.status,
       response.statusText,
       await response.text(),
     );
   } catch (e) {
-    if (!(typeof e === "string" && e === "aborted")) console.log("api.getItemsInfo -", e);
+    if (!(typeof e === "string" && e === "aborted")) console.error("api.getItemsInfo -", e);
   }
   return [];
 }
@@ -196,7 +193,7 @@ export async function getSources(datasetId: string): Promise<Source[]> {
     return (await response.json()) as Source[];
   } else {
     if (response.status != 404)
-      console.log("api.getSources -", response.status, response.statusText, await response.text());
+      console.error("api.getSources -", response.status, response.statusText, await response.text());
   }
   return [];
 }

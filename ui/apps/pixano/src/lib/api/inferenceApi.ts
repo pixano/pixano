@@ -97,13 +97,13 @@ export async function instantiateModel(model_config: ModelConfig): Promise<boole
     });
 
     if (!response.ok) {
-      console.log("api.instantiateModel -", response.status, response.statusText);
+      console.error("api.instantiateModel -", response.status, response.statusText);
       return false;
     }
 
     return true;
   } catch (e) {
-    console.log("api.instantiateModel -", e);
+    console.error("api.instantiateModel -", e);
     return false;
   }
 }

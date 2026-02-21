@@ -77,7 +77,6 @@ License: CECILL-C
     }
 
     isAddingModelRequestPending = false;
-    console.log(`Model '${model_config.config.name}' added.`);
 
     onListModels?.();
     onCancelAddModel?.();
