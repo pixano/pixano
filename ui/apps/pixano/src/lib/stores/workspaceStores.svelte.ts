@@ -117,6 +117,42 @@ export function resetColorScale() {
   _colorScale = initialColorScale;
 }
 
+export function resetWorkspaceStores() {
+  newShape.value = undefined as unknown as Shape;
+  selectedTool.value = undefined as unknown as SelectionTool;
+  annotations.value = [];
+  entities.value = [];
+  views.value = {};
+  merges.value = { to_fuse: [], forbids: [] };
+  interactiveSegmenterModel.value = undefined;
+  itemMetas.value = undefined;
+  preAnnotationIsActive.value = false;
+  modelsUiStore.value = {
+    currentModalOpen: "none",
+    selectedModelName: "",
+    selectedTableName: "",
+    yetToLoadEmbedding: true,
+  };
+  embeddings.value = {};
+  filters.value = {
+    brightness: 0,
+    contrast: 0,
+    equalizeHistogram: false,
+    redRange: [0, 255],
+    greenRange: [0, 255],
+    blueRange: [0, 255],
+    u16BitRange: [0, 65535],
+  };
+  imageSmoothing.value = true;
+  brushSettings.value = { brushRadius: 20, lazyRadius: 10, friction: 0.15 };
+  selectedKeypointsTemplate.value = null;
+  saveData.value = [];
+  interpolate.value = true;
+  confidenceThreshold.value = [0.0];
+  entityFilters.value = [];
+  resetColorScale();
+}
+
 // --- Derived stores as computed getters ---
 
 export const mediaViews = {

@@ -202,7 +202,7 @@ License: CECILL-C
             {#each selectedEntitiesId as selectedEntity}
               {#if thumbnailsByEntityId[selectedEntity]}
                 {@const selectedThumbnail = thumbnailsByEntityId[selectedEntity]}
-                {#key selectedThumbnail.coords[0]}
+                {#key selectedThumbnail.coords?.[0]}
                   <div class="animate-in fade-in zoom-in-95 duration-300">
                     <Thumbnail
                       imageDimension={selectedThumbnail.baseImageDimensions}

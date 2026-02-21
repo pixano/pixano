@@ -27,6 +27,7 @@ License: CECILL-C
     itemMetas,
     modelsUiStore,
     newShape,
+    resetWorkspaceStores,
     saveData,
     views,
   } from "$lib/stores/workspaceStores.svelte";
@@ -54,6 +55,16 @@ License: CECILL-C
     shouldSaveCurrentItem,
     viewer,
   }: Props = $props();
+
+  // Reset stores synchronously on mount to clear stale data from previous session
+  resetWorkspaceStores();
+
+  // Also reset on unmount to leave clean state
+  $effect(() => {
+    return () => {
+      resetWorkspaceStores();
+    };
+  });
 
   // Utility vars for resizing with slide bar
   const defaultOIWidth = 450;

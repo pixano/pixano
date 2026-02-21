@@ -55,6 +55,7 @@ License: CECILL-C
   });
 
   const onAcceptItem = () => {
+    if (!annotationToReview) return;
     annotationToReview.ui.review_state = "accepted";
     annotationToReview.ui.displayControl.highlighted = "none";
 
@@ -65,6 +66,7 @@ License: CECILL-C
   };
 
   const onRejectItem = () => {
+    if (!annotationToReview) return;
     annotations.update((objects) =>
       mapAnnotationWithNewStatus(objects, filteredAnnotationsToReview, "rejected"),
     );
