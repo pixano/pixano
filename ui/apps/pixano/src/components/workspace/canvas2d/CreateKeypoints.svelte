@@ -2,7 +2,7 @@
 Copyright: CEA-LIST/DIASI/SIALV/LVA
 Author : pixano@cea.fr
 License: CECILL-C
--------------------------------------->
+--------------------------------------->
 
 <script lang="ts">
   // Imports
@@ -10,7 +10,7 @@ License: CECILL-C
 
   import type { Reference } from "$lib/types/dataset";
   import type { CreateKeypointShape, SaveKeyBoxShape } from "$lib/types/shapeTypes";
-  import type { KeypointGraph } from "$lib/types/shapeTypes";
+  import type { KeypointAnnotation, KeypointVertex } from "$lib/types/shapeTypes";
   import { initDisplayControl } from "$lib/types/dataset";
 
   import { findRectBoundaries } from "$lib/utils/keypointsUtils";
@@ -39,19 +39,25 @@ License: CECILL-C
     return point;
   };
 
-  const onPointChange = (vertices: KeypointGraph["vertices"]) => {
+  const onPointChange = (vertices: KeypointVertex[]) => {
+    const graphVertices = vertices.map(({ x, y }) => ({ x, y }));
+    const vertexMetadata = vertices.map((v) => v.features);
     onNewShapeChange?.({
       ...newShape,
       keypoints: {
         ...newShape.keypoints,
-        vertices,
+        graph: { ...newShape.keypoints.graph, vertices: graphVertices },
+        vertexMetadata,
       },
     });
   };
 
   let keypointStructure = $derived({
-    edges: newShape.keypoints.edges,
-    vertices: newShape.keypoints.vertices,
+    graph: {
+      edges: newShape.keypoints.graph.edges,
+      vertices: newShape.keypoints.graph.vertices,
+    },
+    vertexMetadata: newShape.keypoints.vertexMetadata,
     id: newShape.keypoints.id ?? keypointsId,
     entityRef: { id: newShape.keypoints.entityRef?.id ?? "" },
     viewRef: newShape.viewRef,
@@ -59,10 +65,10 @@ License: CECILL-C
       displayControl: { ...initDisplayControl, editing: true },
       top_entities: [],
     },
-  } as KeypointGraph);
+  } as KeypointAnnotation);
 
   const findCreationRectangleDimensions = (shape: CreateKeypointShape) => {
-    const { x, y, width, height } = findRectBoundaries(keypointStructure.vertices);
+    const { x, y, width, height } = findRectBoundaries(keypointStructure.graph.vertices);
     return {
       x: x * shape.width + shape.x,
       y: y * shape.height + shape.y,

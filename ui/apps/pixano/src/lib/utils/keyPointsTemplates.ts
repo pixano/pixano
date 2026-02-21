@@ -4,228 +4,108 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { KeypointGraph } from "$lib/types/shapeTypes";
+import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 
-const face: KeypointGraph = {
+const face: KeypointAnnotation = {
   id: "id_face",
   template_id: "face",
-  vertices: [
-    {
-      x: 0.3,
-      y: 0.25,
-      features: {
-        label: "eye left",
-        color: "blue",
-      },
-    },
-    {
-      x: 0.6,
-      y: 0.25,
-      features: {
-        label: "eye right",
-        color: "blue",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.45,
-      features: {
-        label: "nose",
-        color: "green",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.75,
-      features: {
-        label: "mouth",
-        color: "red",
-      },
-    },
-  ],
-  edges: [
-    [0, 2],
-    [1, 2],
-    [2, 3],
+  graph: {
+    vertices: [
+      { x: 0.3, y: 0.25 },
+      { x: 0.6, y: 0.25 },
+      { x: 0.45, y: 0.45 },
+      { x: 0.45, y: 0.75 },
+    ],
+    edges: [
+      [0, 2],
+      [1, 2],
+      [2, 3],
+    ],
+  },
+  vertexMetadata: [
+    { state: "visible", label: "eye left", color: "blue" },
+    { state: "visible", label: "eye right", color: "blue" },
+    { state: "visible", label: "nose", color: "green" },
+    { state: "visible", label: "mouth", color: "red" },
   ],
 };
 
-const person: KeypointGraph = {
+const person: KeypointAnnotation = {
   id: "id_person",
   template_id: "person",
-  vertices: [
-    {
-      x: 0.45,
-      y: 0.1,
-      features: {
-        label: "head",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.3,
-      features: {
-        label: "middle",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.25,
-      y: 0.3,
-      features: {
-        label: "left arm",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.65,
-      y: 0.3,
-      features: {
-        label: "right arm",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.5,
-      features: {
-        label: "belly",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.25,
-      y: 0.8,
-      features: {
-        label: "left foot",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.65,
-      y: 0.8,
-      features: {
-        label: "right foot",
-        state: "visible",
-      },
-    },
-  ],
-  edges: [
-    [0, 1],
-    [1, 2],
-    [1, 3],
-    [1, 4],
-    [4, 5],
-    [4, 6],
+  graph: {
+    vertices: [
+      { x: 0.45, y: 0.1 },
+      { x: 0.45, y: 0.3 },
+      { x: 0.25, y: 0.3 },
+      { x: 0.65, y: 0.3 },
+      { x: 0.45, y: 0.5 },
+      { x: 0.25, y: 0.8 },
+      { x: 0.65, y: 0.8 },
+    ],
+    edges: [
+      [0, 1],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+      [4, 5],
+      [4, 6],
+    ],
+  },
+  vertexMetadata: [
+    { state: "visible", label: "head", color: "" },
+    { state: "visible", label: "middle", color: "" },
+    { state: "visible", label: "left arm", color: "" },
+    { state: "visible", label: "right arm", color: "" },
+    { state: "visible", label: "belly", color: "" },
+    { state: "visible", label: "left foot", color: "" },
+    { state: "visible", label: "right foot", color: "" },
   ],
 };
 
-const cow: KeypointGraph = {
+const cow: KeypointAnnotation = {
   id: "id_cow",
   template_id: "cow",
-  vertices: [
-    {
-      x: 0.45,
-      y: 0.1,
-      features: {
-        label: "museau",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.4,
-      features: {
-        label: "dosA",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.8,
-      features: {
-        label: "dosD",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.2,
-      features: {
-        label: "chignon",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.3,
-      features: {
-        label: "cou",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.53,
-      features: {
-        label: "dosB",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.45,
-      y: 0.66,
-      features: {
-        label: "dosC",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.25,
-      y: 0.4,
-      features: {
-        label: "AG",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.65,
-      y: 0.4,
-      features: {
-        label: "AD",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.65,
-      y: 0.8,
-      features: {
-        label: "PD",
-        state: "visible",
-      },
-    },
-    {
-      x: 0.25,
-      y: 0.8,
-      features: {
-        label: "PG",
-        state: "visible",
-      },
-    },
-  ],
-  edges: [
-    [0, 3],
-    [3, 4],
-    [4, 1],
-    [1, 5],
-    [5, 6],
-    [6, 2],
-    [1, 7],
-    [1, 8],
-    [2, 9],
-    [2, 10],
+  graph: {
+    vertices: [
+      { x: 0.45, y: 0.1 },
+      { x: 0.45, y: 0.4 },
+      { x: 0.45, y: 0.8 },
+      { x: 0.45, y: 0.2 },
+      { x: 0.45, y: 0.3 },
+      { x: 0.45, y: 0.53 },
+      { x: 0.45, y: 0.66 },
+      { x: 0.25, y: 0.4 },
+      { x: 0.65, y: 0.4 },
+      { x: 0.65, y: 0.8 },
+      { x: 0.25, y: 0.8 },
+    ],
+    edges: [
+      [0, 3],
+      [3, 4],
+      [4, 1],
+      [1, 5],
+      [5, 6],
+      [6, 2],
+      [1, 7],
+      [1, 8],
+      [2, 9],
+      [2, 10],
+    ],
+  },
+  vertexMetadata: [
+    { state: "visible", label: "museau", color: "" },
+    { state: "visible", label: "dosA", color: "" },
+    { state: "visible", label: "dosD", color: "" },
+    { state: "visible", label: "chignon", color: "" },
+    { state: "visible", label: "cou", color: "" },
+    { state: "visible", label: "dosB", color: "" },
+    { state: "visible", label: "dosC", color: "" },
+    { state: "visible", label: "AG", color: "" },
+    { state: "visible", label: "AD", color: "" },
+    { state: "visible", label: "PD", color: "" },
+    { state: "visible", label: "PG", color: "" },
   ],
 };
 
-export const templates: KeypointGraph[] = [face, person, cow];
+export const templates: KeypointAnnotation[] = [face, person, cow];

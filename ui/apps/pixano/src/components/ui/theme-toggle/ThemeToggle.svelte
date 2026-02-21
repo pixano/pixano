@@ -21,8 +21,8 @@ License: CECILL-C
   title={mode === "dark" ? "Dark mode" : "Light mode"}
 >
   {#if mode === "dark"}
-    <Moon size={18} />
-  {:else}
     <Sun size={18} />
+  {:else}
+    <Moon size={18} />
   {/if}
 </button>

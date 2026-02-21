@@ -6,7 +6,7 @@ License: CECILL-C
 
 import type {
   Point2D,
-  PolygonPoint2D,
+  IndexedPoint2D,
   ToolContext,
   ToolEvent,
   ToolFSM,
@@ -247,7 +247,7 @@ export class PolygonToolFSM implements ToolFSM {
   }
 
   private confirmPolygon(
-    polygons: readonly (readonly PolygonPoint2D[])[],
+    polygons: readonly (readonly IndexedPoint2D[])[],
     outputMode: PolygonOutputMode,
   ): ToolTransition {
     const sideEffects: ToolSideEffect[] = [
@@ -289,7 +289,7 @@ export class PolygonToolFSM implements ToolFSM {
     };
   }
 
-  private createPoint(position: Point2D, id: number): PolygonPoint2D {
+  private createPoint(position: Point2D, id: number): IndexedPoint2D {
     return {
       x: position.x,
       y: position.y,
@@ -297,7 +297,7 @@ export class PolygonToolFSM implements ToolFSM {
     };
   }
 
-  private findNextPointId(points: readonly PolygonPoint2D[]): number {
+  private findNextPointId(points: readonly IndexedPoint2D[]): number {
     if (points.length === 0) return 0;
     return points.reduce((maxId, point) => Math.max(maxId, point.id), -1) + 1;
   }
@@ -306,7 +306,7 @@ export class PolygonToolFSM implements ToolFSM {
     state: Extract<ToolState, { phase: "drawingPolygon" }>,
     event: Extract<ToolEvent, { type: "polygonMoveVertex" }>,
   ): ToolState | null {
-    const updatePoint = (points: readonly PolygonPoint2D[]) => {
+    const updatePoint = (points: readonly IndexedPoint2D[]) => {
       let changed = false;
       const nextPoints = points.map((point) => {
         if (point.id !== event.pointId) return point;
@@ -354,7 +354,7 @@ export class PolygonToolFSM implements ToolFSM {
     if (!target || target.length < 2) return null;
     if (event.afterIndex < 0 || event.afterIndex >= target.length) return null;
 
-    const newPoint: PolygonPoint2D = this.createPoint(
+    const newPoint: IndexedPoint2D = this.createPoint(
       {
         x: event.position.x,
         y: event.position.y,
@@ -387,7 +387,7 @@ export class PolygonToolFSM implements ToolFSM {
       return state;
     }
 
-    const translatePoint = (point: PolygonPoint2D): PolygonPoint2D => ({
+    const translatePoint = (point: IndexedPoint2D): IndexedPoint2D => ({
       ...point,
       x: point.x + delta.x,
       y: point.y + delta.y,

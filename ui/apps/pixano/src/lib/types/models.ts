@@ -8,22 +8,9 @@ License: CECILL-C
 import { Tensor } from "onnxruntime-web";
 
 import type { MaskSvgPaths, MaskData, Reference } from "$lib/types/dataset";
+import type { LabeledClick, BoundingBox } from "$lib/types/geometry";
 
 export type { Tensor };
-
-// Exports
-export interface SamLabeledClick {
-  x: number;
-  y: number;
-  label: number;
-}
-
-export interface Box {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 export interface LabeledPointsTensor {
   points: Tensor;
@@ -33,8 +20,8 @@ export interface LabeledPointsTensor {
 export interface InteractiveImageSegmenterInput {
   image: HTMLImageElement;
   embedding?: Tensor;
-  points?: Array<SamLabeledClick>;
-  box?: Box;
+  points?: Array<LabeledClick>;
+  box?: BoundingBox;
   mask?: Tensor;
 }
 
@@ -54,7 +41,7 @@ export interface InteractiveImageSegmenterOutput {
   viewRef: Reference;
   label: string;
   output: SegmentationResult; //??? or already transformed polygon ????
-  input_points: Array<SamLabeledClick>;
-  input_box: Box;
+  input_points: Array<LabeledClick>;
+  input_box: BoundingBox;
   validated: boolean;
 }

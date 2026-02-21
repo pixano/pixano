@@ -9,13 +9,12 @@ import { nanoid } from "nanoid";
 import * as ort from "onnxruntime-web";
 
 import type {
-  Box,
   InteractiveImageSegmenter,
   InteractiveImageSegmenterInput,
-  SamLabeledClick,
   LabeledPointsTensor,
   SegmentationResult,
 } from "$lib/types/models";
+import type { BoundingBox, LabeledClick } from "$lib/types/geometry";
 import {
   convertSegmentsToSVG,
   generatePolygonSegments,
@@ -63,8 +62,8 @@ export class SAM implements InteractiveImageSegmenter {
 
   /** Pre-process UI inputs before feeding them into SAM */
   preProcessInputs(
-    clicks: Array<SamLabeledClick>,
-    box: Box | null | undefined,
+    clicks: Array<LabeledClick>,
+    box: BoundingBox | null | undefined,
     imageWidth: number,
     imageHeight: number,
   ): LabeledPointsTensor {

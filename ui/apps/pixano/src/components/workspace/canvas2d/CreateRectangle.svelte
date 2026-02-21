@@ -11,6 +11,7 @@ License: CECILL-C
   import { INPUTRECT_STROKEWIDTH } from "./konvaConstants";
   import type { CreateRectangleShape, SaveRectangleShape } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
+  import type { BoundingBox, Point2D } from "$lib/types/geometry";
   import LabelTag from "./LabelTag.svelte";
 
   interface Props {
@@ -18,8 +19,8 @@ License: CECILL-C
     newShape: CreateRectangleShape | SaveRectangleShape;
     viewRef: Reference;
     editable?: boolean;
-    onTransformEnd?: (geometry: { x: number; y: number; width: number; height: number }) => void;
-    onDragEnd?: (position: { x: number; y: number }) => void;
+    onTransformEnd?: (geometry: BoundingBox) => void;
+    onDragEnd?: (position: Point2D) => void;
   }
 
   let {

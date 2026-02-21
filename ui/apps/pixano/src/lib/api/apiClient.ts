@@ -9,6 +9,10 @@ export const JSON_HEADERS = {
   "Content-Type": "application/json",
 } as const;
 
+function logApiError(label: string, error: unknown): void {
+  console.error(`api.${label} -`, error);
+}
+
 /**
  * Shared fetch wrapper that handles try/catch, response.ok check, error logging, and fallback.
  *
@@ -28,9 +32,9 @@ export async function apiFetch<T>(
       const json: unknown = await response.json();
       return transform ? transform(json) : (json as T);
     }
-    console.error(`api.${label} -`, response.status, response.statusText, await response.text());
+    logApiError(label, [response.status, response.statusText, await response.text()]);
   } catch (e) {
-    console.error(`api.${label} -`, e);
+    logApiError(label, e);
   }
   return fallback;
 }
@@ -46,9 +50,9 @@ export async function apiMutate(
   try {
     const response = await fetch(url, init);
     if (!response.ok) {
-      console.error(`api.${label} -`, response.status, response.statusText, await response.text());
+      logApiError(label, [response.status, response.statusText, await response.text()]);
     }
   } catch (e) {
-    console.error(`api.${label} -`, e);
+    logApiError(label, e);
   }
 }

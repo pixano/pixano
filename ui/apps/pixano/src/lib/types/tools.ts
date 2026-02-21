@@ -11,26 +11,17 @@ License: CECILL-C
 import type { Command } from "$lib/commands";
 import type { Document, NodeId } from "$lib/document";
 
-// --------------- Geometry Primitives ---------------
+// --------------- Geometry Primitives (re-exported from geometry.ts) ---------------
 
-export interface Point2D {
-  readonly x: number;
-  readonly y: number;
-}
+export type {
+  Point2D,
+  IndexedPoint2D,
+  PolygonEdgeHint,
+  LabeledClick,
+  PolygonOutputMode,
+} from "$lib/types/geometry";
 
-export interface PolygonPoint2D extends Point2D {
-  readonly id: number;
-}
-
-export interface PolygonEdgeHint extends Point2D {
-  readonly shapeIndex: number;
-  readonly afterIndex: number;
-}
-
-export interface LabeledClick {
-  readonly point: Point2D;
-  readonly label: number; // 1 = positive, 0 = negative
-}
+import type { Point2D, IndexedPoint2D, LabeledClick, PolygonEdgeHint, PolygonOutputMode } from "$lib/types/geometry";
 
 // --------------- AI Types ---------------
 
@@ -51,8 +42,8 @@ export type PreviewShape =
   | {
       readonly type: "polygon";
       readonly phase: "drawing" | "editing";
-      readonly closedPolygons: readonly (readonly PolygonPoint2D[])[];
-      readonly points: readonly PolygonPoint2D[];
+      readonly closedPolygons: readonly (readonly IndexedPoint2D[])[];
+      readonly points: readonly IndexedPoint2D[];
       readonly current?: Point2D;
       readonly hoveredEdge?: PolygonEdgeHint | null;
     }
@@ -76,8 +67,8 @@ export type ToolState =
   | {
       readonly phase: "drawingPolygon";
       readonly mode: "drawing" | "editing";
-      readonly closedPolygons: readonly (readonly PolygonPoint2D[])[];
-      readonly points: readonly PolygonPoint2D[];
+      readonly closedPolygons: readonly (readonly IndexedPoint2D[])[];
+      readonly points: readonly IndexedPoint2D[];
       readonly current?: Point2D;
     }
   | { readonly phase: "brushing"; readonly path: readonly Point2D[] }
@@ -213,8 +204,6 @@ type BaseTool<T extends ToolType> = {
   isSmart?: boolean;
   postProcessor?: ToolPostProcessor;
 };
-
-export type PolygonOutputMode = "polygon" | "mask";
 
 export type AllTool = BaseTool<
   | ToolType.Rectangle

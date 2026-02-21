@@ -22,7 +22,43 @@ import { apiFetch } from "./apiClient";
 
 // ─── getBrowser ─────────────────────────────────────────────────────────────────
 
+interface BrowserSort {
+  col: string;
+  order: string;
+}
+
 let currentAbortController: AbortController | null = null;
+
+function isAbortLikeError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
+  return typeof error === "string" && error === "aborted";
+}
+
+function getBrowserQueryParams(
+  page: number,
+  size: number,
+  query: Record<string, string> | undefined,
+  where: string | undefined,
+  sort: BrowserSort | undefined,
+): string {
+  let queryParams = `skip=${(page - 1) * size}&limit=${size}`;
+
+  if (query && query.model !== "" && query.search !== "") {
+    queryParams += `&query=${encodeURIComponent(query.search)}&embedding_table=${query.model}`;
+  }
+
+  if (where && where !== "") {
+    queryParams += `&where=${encodeURIComponent(where)}`;
+  }
+
+  if (sort && sort.col !== "" && (sort.order === "asc" || sort.order === "desc")) {
+    queryParams += `&sortcol=${encodeURIComponent(sort.col)}&order=${sort.order}`;
+  }
+
+  return queryParams;
+}
 
 export async function getBrowser(
   datasetId: string,
@@ -30,7 +66,7 @@ export async function getBrowser(
   size: number = 100,
   query: Record<string, string> | undefined,
   where: string | undefined,
-  sort: { col: string; order: string } | undefined,
+  sort: BrowserSort | undefined,
 ): Promise<DatasetBrowser> {
   // Cancel any previous in-flight request
   if (currentAbortController) {
@@ -38,32 +74,17 @@ export async function getBrowser(
   }
   currentAbortController = new AbortController();
   const signal = currentAbortController.signal;
-
-  let query_qparams = "";
-  if (query && query.model !== "" && query.search !== "") {
-    query_qparams = `&query=${encodeURIComponent(query.search)}&embedding_table=${query.model}`;
-  }
-  let where_qparams = "";
-  if (where && where !== "") {
-    where_qparams = `&where=${encodeURIComponent(where)}`;
-  }
-  let sort_qparams = "";
-  if (sort && sort.col !== "" && ["asc", "desc"].includes(sort.order)) {
-    sort_qparams = `&sortcol=${encodeURIComponent(sort.col)}&order=${sort.order}`;
-  }
+  const queryParams = getBrowserQueryParams(page, size, query, where, sort);
 
   try {
-    const response = await fetch(
-      `/browser/${datasetId}?skip=${(page - 1) * size}&limit=${size}${query_qparams}${where_qparams}${sort_qparams}`,
-      { signal },
-    );
+    const response = await fetch(`/browser/${datasetId}?${queryParams}`, { signal });
     if (response.ok) {
       const raw = (await response.json()) as DatasetBrowserType;
       return new DatasetBrowser(raw);
     }
     console.error("api.getBrowser -", response.status, response.statusText, await response.text());
   } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") {
+    if (isAbortLikeError(e)) {
       return {} as DatasetBrowser;
     }
     console.error("api.getBrowser -", e);
@@ -97,13 +118,14 @@ export async function getDatasetItemsIds(datasetId: string): Promise<Array<strin
     if (response.ok) {
       return (await response.json()) as string[];
     }
-    if (response.status != 404)
+    if (response.status !== 404) {
       console.error(
         "api.getDatasetItemsIds -",
         response.status,
         response.statusText,
         await response.text(),
       );
+    }
   } catch (e) {
     console.error("api.getDatasetItemsIds -", e);
   }
@@ -133,7 +155,9 @@ export async function getDatasetStats(
       await response.text(),
     );
   } catch (e) {
-    if (!(typeof e === "string" && e === "aborted")) console.error("api.getDatasetStats -", e);
+    if (!isAbortLikeError(e)) {
+      console.error("api.getDatasetStats -", e);
+    }
   }
   return {};
 }
@@ -154,13 +178,13 @@ export function getDatasetsInfo(): Promise<Array<DatasetInfo>> {
 
 export async function getItemsInfo(
   datasetId: string,
-  item_ids: string[] | null = null,
+  itemIds: string[] | null = null,
   options?: { signal?: AbortSignal },
 ): Promise<Array<DatasetMoreInfo>> {
   let url: string;
-  if (item_ids && item_ids.length > 0) {
-    const ids_chunks = utils.splitWithLimit(item_ids, "&ids=", 8000);
-    url = `/items_info/${datasetId}?ids=${ids_chunks[0]}`;
+  if (itemIds && itemIds.length > 0) {
+    const idsChunks = utils.splitWithLimit(itemIds, "&ids=", 8000);
+    url = `/items_info/${datasetId}?ids=${idsChunks[0]}`;
   } else {
     url = `/items_info/${datasetId}`;
   }
@@ -180,7 +204,9 @@ export async function getItemsInfo(
       await response.text(),
     );
   } catch (e) {
-    if (!(typeof e === "string" && e === "aborted")) console.error("api.getItemsInfo -", e);
+    if (!isAbortLikeError(e)) {
+      console.error("api.getItemsInfo -", e);
+    }
   }
   return [];
 }
@@ -191,9 +217,9 @@ export async function getSources(datasetId: string): Promise<Source[]> {
   const response = await fetch(`/sources/${datasetId}`);
   if (response.ok) {
     return (await response.json()) as Source[];
-  } else {
-    if (response.status != 404)
-      console.error("api.getSources -", response.status, response.statusText, await response.text());
+  }
+  if (response.status !== 404) {
+    console.error("api.getSources -", response.status, response.statusText, await response.text());
   }
   return [];
 }
@@ -206,10 +232,12 @@ export function getViewEmbeddings(
   tableName: string,
   where: string,
 ): Promise<Array<ViewEmbedding>> {
-  let ifWhere = "";
-  if (where !== "") ifWhere = `&where=${where}`;
+  let whereQuery = "";
+  if (where !== "") {
+    whereQuery = `&where=${where}`;
+  }
   return apiFetch(
-    `/embeddings/${datasetId}/${tableName}?item_ids=${itemId}${ifWhere}`,
+    `/embeddings/${datasetId}/${tableName}?item_ids=${itemId}${whereQuery}`,
     {},
     [] as ViewEmbedding[],
     "getViewEmbeddings",

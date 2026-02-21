@@ -5,12 +5,15 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type Konva from "konva";
   import { untrack } from "svelte";
+  import type Konva from "konva";
   import { LazyBrush } from "lazy-brush";
   import { Image as KonvaImage } from "svelte-konva";
 
   import { mask_utils } from "$lib/models";
+  import type { Reference } from "$lib/types/dataset";
+  import type { Point2D } from "$lib/types/geometry";
+  import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
   import type { BrushSelectionTool } from "$lib/tools";
   import {
     bitmapToRle,
@@ -19,8 +22,11 @@ License: CECILL-C
     isMaskEmpty,
     rleToBitmap,
   } from "./brushOps";
-  import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
-  import type { Reference } from "$lib/types/dataset";
+
+  interface MaskRle {
+    counts: number[];
+    size: [number, number];
+  }
 
   interface Props {
     viewRef: Reference;
@@ -33,7 +39,7 @@ License: CECILL-C
       lazyRadius: number;
       friction: number;
     };
-    existingMaskRle?: { counts: number[]; size: [number, number] } | null;
+    existingMaskRle?: MaskRle | null;
   }
 
   let {
@@ -53,7 +59,7 @@ License: CECILL-C
   let displayCtx: CanvasRenderingContext2D;
   let lazyBrush: LazyBrush = $state();
   let isPainting = false;
-  let lastBrushPos: { x: number; y: number } | null = null;
+  let lastBrushPos: Point2D | null = null;
   let rafId: number | null = null;
   let needsUpdate = false;
   let previousMode: BrushSelectionTool["mode"] | null = null;
@@ -130,18 +136,18 @@ License: CECILL-C
     }
   });
 
-  function startRenderLoop() {
-    const loop = () => {
+  function startRenderLoop(): void {
+    function loop(): void {
       if (needsUpdate) {
         updateDisplay();
         needsUpdate = false;
       }
       rafId = requestAnimationFrame(loop);
-    };
+    }
     loop();
   }
 
-  function updateDisplay() {
+  function updateDisplay(): void {
     if (!displayCtx || !offscreenCanvas) return;
 
     displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
@@ -156,7 +162,7 @@ License: CECILL-C
   }
 
   // Public API — called from Canvas2D
-  export function beginStroke(x: number, y: number) {
+  export function beginStroke(x: number, y: number): void {
     isPainting = true;
     const point = { x, y };
     lazyBrush.update(point, { both: true });
@@ -166,7 +172,7 @@ License: CECILL-C
     needsUpdate = true;
   }
 
-  export function updateStroke(x: number, y: number) {
+  export function updateStroke(x: number, y: number): void {
     if (!isPainting) return;
     const point = { x, y };
     lazyBrush.update(point, { friction: brushSettings.friction });
@@ -185,7 +191,7 @@ License: CECILL-C
     }
   }
 
-  export function endStroke() {
+  export function endStroke(): void {
     isPainting = false;
     lastBrushPos = null;
   }
@@ -212,30 +218,30 @@ License: CECILL-C
     };
   }
 
-  export function clearCanvas() {
+  export function clearCanvas(): void {
     if (offscreenCtx) {
       offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
       needsUpdate = true;
     }
   }
 
-  export function destroy() {
+  export function destroy(): void {
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
   }
 
-  export function getIsPainting() {
+  export function getIsPainting(): boolean {
     return isPainting;
   }
 
-  export function getBrushCoordinates(): { x: number; y: number } | null {
+  export function getBrushCoordinates(): Point2D | null {
     if (!lazyBrush) return null;
     return lazyBrush.getBrushCoordinates();
   }
 
-  export function getPointerCoordinates(): { x: number; y: number } | null {
+  export function getPointerCoordinates(): Point2D | null {
     if (!lazyBrush) return null;
     return lazyBrush.getPointerCoordinates();
   }

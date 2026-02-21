@@ -7,10 +7,11 @@ License: CECILL-C
 import Konva from "konva";
 import simplify from "simplify-js";
 
+import type { Point2D } from "$lib/types/geometry";
 import { m_part, l_part } from "$lib/utils/maskUtils";
 
 // --- Parsed polygon cache for sceneFunc / smoothSceneFunc ---
-type ParsedPolygon = { start: { x: number; y: number }; rest: { x: number; y: number }[] };
+type ParsedPolygon = { start: Point2D; rest: Point2D[] };
 const parsedPolygonCache = new Map<string, ParsedPolygon>();
 
 function getCachedParsedPolygon(svgPath: string): ParsedPolygon {
@@ -30,14 +31,15 @@ export function clearParsedCache(): void {
 }
 
 // --- Simplified polygon cache for smoothSceneFunc ---
+type BezierSegment = {
+  cp1: Point2D;
+  cp2: Point2D;
+  end: Point2D;
+  sharp: boolean;
+};
 type SmoothedPolygon = {
-  points: { x: number; y: number }[];
-  segments: {
-    cp1: { x: number; y: number };
-    cp2: { x: number; y: number };
-    end: { x: number; y: number };
-    sharp: boolean;
-  }[];
+  points: Point2D[];
+  segments: BezierSegment[];
 } | null;
 const smoothedPolygonCache = new Map<string, SmoothedPolygon>();
 
@@ -71,9 +73,9 @@ const SHARP_CORNER_THRESHOLD = Math.PI * 0.4; // ~72° — angles below this use
  * Returns angle in radians [0, π].
  */
 function angleBetween(
-  p0: { x: number; y: number },
-  p1: { x: number; y: number },
-  p2: { x: number; y: number },
+  p0: Point2D,
+  p1: Point2D,
+  p2: Point2D,
 ): number {
   const ax = p0.x - p1.x;
   const ay = p0.y - p1.y;
@@ -88,7 +90,7 @@ function angleBetween(
 }
 
 /** Extract all {x, y} points from one SVG path string. */
-function extractPoints(svgPath: string): { x: number; y: number }[] {
+function extractPoints(svgPath: string): Point2D[] {
   const start = m_part(svgPath);
   const rest = l_part(svgPath);
   return [start, ...rest];
@@ -105,21 +107,11 @@ function extractPoints(svgPath: string): { x: number; y: number }[] {
  * Control point displacement is also clamped to half the segment length.
  */
 function catmullRomToBezier(
-  points: { x: number; y: number }[],
+  points: Point2D[],
   tension: number = SMOOTH_TENSION,
-): {
-  cp1: { x: number; y: number };
-  cp2: { x: number; y: number };
-  end: { x: number; y: number };
-  sharp: boolean;
-}[] {
+): BezierSegment[] {
   const n = points.length;
-  const segments: {
-    cp1: { x: number; y: number };
-    cp2: { x: number; y: number };
-    end: { x: number; y: number };
-    sharp: boolean;
-  }[] = [];
+  const segments: BezierSegment[] = [];
   const t6 = 6 * tension;
 
   // Precompute angles at each vertex

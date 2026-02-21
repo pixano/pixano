@@ -43,7 +43,7 @@ export class PointSelectionToolFSM implements ToolFSM {
     switch (state.phase) {
       case "idle":
         if (event.type === "pointerDown" && event.button === 0) {
-          const click: LabeledClick = { point: event.position, label: this.label };
+          const click: LabeledClick = { ...event.position, label: this.label };
           const requestId = `point-sel-${Date.now()}`;
           return {
             newState: { phase: "collectingPoints", points: [click] },
@@ -69,7 +69,7 @@ export class PointSelectionToolFSM implements ToolFSM {
         const existingPoints = state.points;
 
         if (event.type === "pointerDown" && event.button === 0) {
-          const click: LabeledClick = { point: event.position, label: this.label };
+          const click: LabeledClick = { ...event.position, label: this.label };
           const newPoints = [...existingPoints, click];
           const requestId = `point-sel-${Date.now()}`;
           return {
@@ -106,7 +106,7 @@ export class PointSelectionToolFSM implements ToolFSM {
       case "previewingAIResult":
         // Allow adding more points to refine
         if (event.type === "pointerDown" && event.button === 0) {
-          const click: LabeledClick = { point: event.position, label: this.label };
+          const click: LabeledClick = { ...event.position, label: this.label };
           const requestId = `point-sel-${Date.now()}`;
           return {
             newState: { phase: "collectingPoints", points: [click] },

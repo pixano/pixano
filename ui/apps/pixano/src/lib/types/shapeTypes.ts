@@ -5,9 +5,17 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { MaskSvgPaths, MaskData, Reference } from "./dataset";
-import type { PolygonEdgeHint, PolygonOutputMode } from "./tools";
-
-export type { PolygonEdgeHint, PolygonOutputMode };
+import type {
+  Mutable,
+  IndexedPoint2D,
+  Point2D,
+  BoundingBox,
+  KeypointGraph as KeypointSkeleton,
+  KeypointVisibility,
+  KeypointVertexMetadata,
+  PolygonEdgeHint,
+  PolygonOutputMode,
+} from "./geometry";
 
 // ─── ShapeType ─────────────────────────────────────────────────────────────────
 
@@ -33,6 +41,47 @@ export interface ImageFilters {
   readonly u16BitRange: readonly [number, number];
 }
 
+// ─── Vertex Types ──────────────────────────────────────────────────────────────
+
+/** Mutable polygon vertex for canvas/editing code. */
+export type PolygonVertex = Mutable<IndexedPoint2D>;
+
+/**
+ * A keypoint vertex combining position and per-vertex metadata.
+ * Used in editing/rendering components that need both position and features together.
+ */
+export type KeypointVertex = Mutable<Point2D> & {
+  features: {
+    state: KeypointVisibility;
+    label: string;
+    color: string;
+  };
+};
+
+// ─── Keypoint Annotation ──────────────────────────────────────────────────────
+
+/**
+ * A keypoint annotation: geometry + identity + metadata + rendering state.
+ *
+ * The pure geometric primitive (vertices + edges) lives in `graph`.
+ * Per-vertex annotation metadata (visibility, label, color) lives in `vertexMetadata`.
+ */
+export type KeypointAnnotation = {
+  id: string;
+  template_id: string;
+  viewRef?: Reference;
+  entityRef?: Reference;
+  graph: KeypointSkeleton;
+  vertexMetadata: Mutable<KeypointVertexMetadata>[];
+  ui?: {
+    frame_index?: number;
+    displayControl: import("./dataset").DisplayControl;
+    startRef?: KeypointAnnotation;
+    top_entities?: import("./dataset").Entity[];
+  };
+  table_info?: import("./dataset").TableInfo;
+};
+
 // ─── Save Shape Types ──────────────────────────────────────────────────────────
 
 export type SaveShapeBase = {
@@ -45,17 +94,12 @@ export type SaveShapeBase = {
 
 export type SaveKeyBoxShape = SaveShapeBase & {
   type: ShapeType.keypoints;
-  keypoints: KeypointGraph;
+  keypoints: KeypointAnnotation;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
   type: ShapeType.bbox;
-  attrs: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  attrs: Mutable<BoundingBox>;
 };
 
 export type SaveMaskShape = SaveShapeBase & {
@@ -110,42 +154,6 @@ export type IdleState = {
   shouldReset?: boolean;
 };
 
-// ─── Vertex Types ──────────────────────────────────────────────────────────────
-
-export type PolygonVertex = {
-  x: number;
-  y: number;
-  id: number;
-};
-
-export type KeypointVisibility = "hidden" | "visible" | "invisible";
-
-export type KeypointVertex = {
-  x: number;
-  y: number;
-  features?: {
-    state?: KeypointVisibility;
-    label?: string;
-    color?: string;
-  };
-};
-
-export type KeypointGraph = {
-  id: string;
-  template_id: string;
-  viewRef?: Reference;
-  entityRef?: Reference;
-  edges: [number, number][];
-  vertices: Required<KeypointVertex>[];
-  ui?: {
-    frame_index?: number;
-    displayControl: import("./dataset").DisplayControl;
-    startRef?: KeypointGraph;
-    top_entities?: import("./dataset").Entity[];
-  };
-  table_info?: import("./dataset").TableInfo;
-};
-
 // ─── Create Shape Types ────────────────────────────────────────────────────────
 
 export type CreateKeypointShape = {
@@ -156,7 +164,7 @@ export type CreateKeypointShape = {
   y: number;
   width: number;
   height: number;
-  keypoints: KeypointGraph;
+  keypoints: KeypointAnnotation;
 };
 
 export type CreatePolygonShape = {
@@ -166,7 +174,7 @@ export type CreatePolygonShape = {
   closedPolygons: PolygonVertex[][];
   phase: "drawing" | "editing";
   viewRef: Reference;
-  current?: { readonly x: number; readonly y: number };
+  current?: Point2D;
   hoveredEdge?: PolygonEdgeHint | null;
   outputMode?: PolygonOutputMode;
 };
@@ -204,7 +212,7 @@ export type EditRectangleShape = {
 
 export type EditKeypointsShape = {
   type: ShapeType.keypoints;
-  vertices: KeypointGraph["vertices"];
+  vertices: KeypointVertex[];
 };
 
 export type EditShape = {

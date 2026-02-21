@@ -264,10 +264,12 @@ export const defineCreatedAnnotation = (
     const coords = [];
     const states = [];
 
-    for (const vertex of shape.keypoints.vertices) {
+    for (let vi = 0; vi < shape.keypoints.graph.vertices.length; vi++) {
+      const vertex = shape.keypoints.graph.vertices[vi];
       coords.push(vertex.x / shape.imageWidth);
       coords.push(vertex.y / shape.imageHeight);
-      states.push(vertex.features.state ? vertex.features.state : "visible");
+      const meta = shape.keypoints.vertexMetadata[vi];
+      states.push(meta?.state ? meta.state : "visible");
     }
 
     const keypoints = {

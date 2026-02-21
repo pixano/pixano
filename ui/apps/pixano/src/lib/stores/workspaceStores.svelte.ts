@@ -23,7 +23,7 @@ import {
   View,
   type SaveItem,
 } from "$lib/types/dataset";
-import type { KeypointGraph, Shape } from "$lib/types/shapeTypes";
+import type { KeypointAnnotation, Shape } from "$lib/types/shapeTypes";
 import * as utils from "$lib/utils/coreUtils";
 import type { InteractiveImageSegmenter } from "$lib/models";
 import type { SelectionTool } from "$lib/tools";
@@ -74,7 +74,7 @@ export const filters = reactiveStore<Filters>({
 });
 export const imageSmoothing = reactiveStore<boolean>(true);
 export const brushSettings = reactiveStore({ brushRadius: 20, lazyRadius: 10, friction: 0.15 });
-export const selectedKeypointsTemplate = reactiveStore<KeypointGraph["template_id"] | null>(null);
+export const selectedKeypointsTemplate = reactiveStore<KeypointAnnotation["template_id"] | null>(null);
 export const saveData = reactiveStore<SaveItem[]>([]);
 
 export const canSave = {
@@ -203,7 +203,7 @@ export const itemMasks = {
 export const itemKeypoints = {
   get value() {
     const mViews = mediaViews.value;
-    const m_keypoints: KeypointGraph[] = [];
+    const m_keypoints: KeypointAnnotation[] = [];
     for (const ann of annotations.value) {
       if (ann.is_type(BaseSchema.Keypoints)) {
         const kpt = mapKeypointsForDisplay(ann as Keypoints, mViews);
@@ -281,7 +281,7 @@ export const current_itemKeypoints = {
     const mViews = mediaViews.value;
     const doInterpolate = interpolate.value;
 
-    const current_kpts_and_interpolated: KeypointGraph[] = [];
+    const current_kpts_and_interpolated: KeypointAnnotation[] = [];
     const current_tracklets = trks.filter(
       (tracklet) =>
         tracklet.data.start_timestep <= frameIdx &&

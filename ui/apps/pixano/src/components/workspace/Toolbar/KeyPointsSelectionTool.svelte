@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { ToolType, keyPointTool, type SelectionTool } from "$lib/tools";
   import { IconButton, cn } from "$lib/ui";
-  import type { KeypointVertex } from "$lib/types/shapeTypes";
+  import type { KeypointVertexMetadata } from "$lib/types/geometry";
   import { keypointsIcon } from "$lib/assets";
 
   import { templates } from "$lib/utils/keyPointsTemplates";
@@ -25,15 +25,20 @@ License: CECILL-C
 
   let { selectTool }: Props = $props();
 
-  const defineDotColor = (vertex: KeypointVertex, selected: boolean) => {
-    if (vertex.features?.color) return vertex.features.color;
-    if (selected) return "white";
-  };
+  function defineDotColor(metadata: KeypointVertexMetadata, selected: boolean): string | undefined {
+    if (metadata.color) {
+      return metadata.color;
+    }
+    if (selected) {
+      return "white";
+    }
+    return undefined;
+  }
 
-  const onTemplateClick = (templateId: string) => {
+  function onTemplateClick(templateId: string): void {
     selectedKeypointsTemplate.value = templateId;
     newShape.value = { status: "none" };
-  };
+  }
 
   $effect(() => {
     const tool = selectedTool.value;
@@ -74,10 +79,10 @@ License: CECILL-C
           selected={selectedKeypointsTemplate.value === template.template_id}
           class="h-8 w-8"
         >
-          {#each template.vertices as vertex}
+          {#each template.graph.vertices as vertex, i}
             <div
               class="w-1 h-1 bg-primary rounded-full absolute"
-              style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.template_id === selectedKeypointsTemplate.value)}`}
+              style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(template.vertexMetadata[i], template.template_id === selectedKeypointsTemplate.value)}`}
 ></div>
           {/each}
         </IconButton>

@@ -6,9 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   import { Group, Line } from "svelte-konva";
+  import type { Point2D } from "$lib/types/geometry";
 
   interface Props {
-    position: { x: number; y: number } | null;
+    position: Point2D | null;
     stageWidth: number;
     stageHeight: number;
   }

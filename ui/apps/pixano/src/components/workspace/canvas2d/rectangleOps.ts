@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { BoundingBox, Point2D } from "$lib/types/geometry";
+
 /**
  * Pure geometry helpers for rectangle/bbox calculations.
  * No Konva stage lookups — all data is passed as parameters.
@@ -19,7 +21,7 @@ export function normalizeRectAfterTransform(attrs: {
   height: number;
   scaleX: number;
   scaleY: number;
-}): { x: number; y: number; width: number; height: number } {
+}): BoundingBox {
   return {
     x: attrs.x,
     y: attrs.y,
@@ -57,7 +59,7 @@ export function clampRectToImage(
   rectHeight: number,
   imageWidth: number,
   imageHeight: number,
-): { x: number; y: number } {
+): Point2D {
   return {
     x: Math.max(0, Math.min(rectX, imageWidth - rectWidth)),
     y: Math.max(0, Math.min(rectY, imageHeight - rectHeight)),

@@ -7,7 +7,7 @@ License: CECILL-C
 import { nanoid } from "nanoid";
 
 import { BBox } from "$lib/types/dataset";
-import type { KeypointGraph } from "$lib/types/shapeTypes";
+import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 
 import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
 
@@ -70,10 +70,10 @@ export const boxLinearInterpolation = (
 };
 
 export const keypointsLinearInterpolation = (
-  keypoints: KeypointGraph[], //keypoints of the tracklet
+  keypoints: KeypointAnnotation[], //keypoints of the tracklet
   imageIndex: number,
   view_id: string,
-): KeypointGraph | undefined => {
+): KeypointAnnotation | undefined => {
   //Note: this suppose keypoints are sorted by frame_index (it should)
   const endIndex = keypoints.findIndex((kpt) => kpt.ui!.frame_index! >= imageIndex);
   if (endIndex < 0) {
@@ -89,16 +89,18 @@ export const keypointsLinearInterpolation = (
   if (endKpt.ui!.frame_index === startKpt.ui!.frame_index) {
     return startKpt;
   } else {
-    const vertices = startKpt.vertices.map((vertex, i) => {
+    const startVertices = startKpt.graph.vertices;
+    const endVertices = endKpt.graph.vertices;
+    const vertices = startVertices.map((vertex, i) => {
       const xInterpolation =
-        (endKpt.vertices[i].x - vertex.x) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
+        (endVertices[i].x - vertex.x) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
       const yInterpolation =
-        (endKpt.vertices[i].y - vertex.y) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
+        (endVertices[i].y - vertex.y) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
       const x = vertex.x + xInterpolation * (imageIndex - startKpt.ui!.frame_index!);
       const y = vertex.y + yInterpolation * (imageIndex - startKpt.ui!.frame_index!);
-      return { ...vertex, x, y };
+      return { x, y };
     });
-    // make a new KeypointGraph with interpolated coords
+    // make a new KeypointAnnotation with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.ui!.frame_index = imageIndex;
@@ -115,7 +117,7 @@ export const keypointsLinearInterpolation = (
     interpolatedKpt.ui!.startRef = startKpt;
     // top_entities (if exist) lost class with structuredClone: replace it
     interpolatedKpt.ui!.top_entities = startKpt.ui!.top_entities;
-    interpolatedKpt.vertices = vertices;
+    interpolatedKpt.graph = { ...startKpt.graph, vertices };
     return interpolatedKpt;
   }
 };

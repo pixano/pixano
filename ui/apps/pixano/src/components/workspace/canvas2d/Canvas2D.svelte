@@ -5,60 +5,92 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   // Imports
-  import Konva from "konva";
   import { untrack } from "svelte";
+  import Konva from "konva";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
-
 
   import {
     ToolType,
-    type BrushSelectionTool,
+    type Point2D,
     type PreviewShape,
     type SelectionTool,
     type ToolEvent,
   } from "$lib/tools";
   import {
     brushDrawTool,
+    getFallbackCanvasTool,
+    handleToolShortcuts,
+    isSupportedCanvasTool,
     panTool,
     polygonTool,
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
   import {
-    ShapeType,
-    type CreateRectangleShape,
-    type CreatePolygonShape,
-    type ImageFilters,
-    type PolygonOutputMode,
-    type SaveRectangleShape,
-    type Shape,
-  } from "$lib/types/shapeTypes";
-  import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
-  import type { KeypointGraph, PolygonVertex } from "$lib/types/shapeTypes";
-
-  import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
-  import { clearParsedCache } from "./konvaMaskOps";
-  import BBox2D from "./BBox2D.svelte";
-  import BrushCursor from "./BrushCursor.svelte";
-  import BrushMask from "./BrushMask.svelte";
-  import CreateRectangle from "./CreateRectangle.svelte";
-  import CreatePolygon from "./CreatePolygon.svelte";
-  import Crosshair from "./Crosshair.svelte";
-  import PolygonShape from "./PolygonShape.svelte";
-  import ShowKeypoints from "./ShowKeypoint.svelte";
-  import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
-  import { FilterManager } from "./workers/filterManager";
-  import type { FilterParams } from "./workers/filterWorker";
-  import type { ToolBridge } from "$lib/types/store";
-
-  import { effectProbe } from "$lib/utils/effectProbe";
-  import {
     createInternalToolBridge,
     createToolFSMForSelection,
   } from "$lib/tools/canvasBridgeRuntime";
-  import { getFallbackCanvasTool, handleToolShortcuts, isSupportedCanvasTool } from "$lib/tools/canvasToolPolicy";
+  import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
+  import type { ToolBridge } from "$lib/types/store";
+  import {
+    ShapeType,
+    type CreatePolygonShape,
+    type CreateRectangleShape,
+    type ImageFilters,
+    type KeypointAnnotation,
+    type PolygonOutputMode,
+    type PolygonVertex,
+    type SaveRectangleShape,
+    type Shape,
+  } from "$lib/types/shapeTypes";
+  import { effectProbe } from "$lib/utils/effectProbe";
+  import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
+  import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
+
+  import BBox2D from "./BBox2D.svelte";
+  import BrushCursor from "./BrushCursor.svelte";
+  import BrushMask from "./BrushMask.svelte";
+  import CreatePolygon from "./CreatePolygon.svelte";
+  import CreateRectangle from "./CreateRectangle.svelte";
+  import Crosshair from "./Crosshair.svelte";
+  import PolygonShape from "./PolygonShape.svelte";
+  import ShowKeypoints from "./ShowKeypoint.svelte";
+  import { clearParsedCache } from "./konvaMaskOps";
+  import { FilterManager } from "./workers/filterManager";
+  import type { FilterParams } from "./workers/filterWorker";
+  
+  interface BrushSettings {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  }
+
+  interface PolygonSavePayload {
+    polygons?: PolygonVertex[][];
+    points?: Point2D[];
+    outputMode?: PolygonOutputMode;
+  }
+
+  function noopMerge(ann: unknown): void {
+    void ann;
+  }
+
+  const DEFAULT_BRUSH_SETTINGS: BrushSettings = {
+    brushRadius: 20,
+    lazyRadius: 10,
+    friction: 0.15,
+  };
+
+  const DEFAULT_FILTERS: ImageFilters = {
+    brightness: 0,
+    contrast: 0,
+    equalizeHistogram: false,
+    redRange: [0, 255],
+    greenRange: [0, 255],
+    blueRange: [0, 255],
+    u16BitRange: [0, 65535],
+  };
 
   interface BrushMaskRef {
     beginStroke(x: number, y: number): void;
@@ -68,18 +100,12 @@ License: CECILL-C
     clearCanvas(): void;
     destroy(): void;
   }
-
-  
-
-  
-
-  
   interface Props {
     // Exports
     selectedItemId: string;
     masks: Mask[];
     bboxes: BBox[];
-    keypoints?: KeypointGraph[];
+    keypoints?: KeypointAnnotation[];
     selectedTool: SelectionTool;
     newShape: Shape;
     imagesPerView: LoadedImagesPerView;
@@ -88,14 +114,10 @@ License: CECILL-C
     imageSmoothing?: boolean;
     isPlaybackActive?: boolean;
     merge?: (ann: unknown) => void;
-    brushSettings?: {
-    brushRadius: number;
-    lazyRadius: number;
-    friction: number;
-  };
+    brushSettings?: BrushSettings;
     onSelectedToolChange?: (tool: SelectionTool) => void;
     onNewShapeChange?: (shape: Shape) => void;
-    onBrushSettingsChange?: (settings: { brushRadius: number; lazyRadius: number; friction: number }) => void;
+    onBrushSettingsChange?: (settings: BrushSettings) => void;
     // New architecture (default behavior for the ongoing migration)
     useNewArchitecture?: boolean;
     toolBridge?: ToolBridge | undefined;
@@ -116,29 +138,15 @@ License: CECILL-C
     isVideo = false,
     imageSmoothing = true,
     isPlaybackActive = false,
-    merge = () => {
-    return;
-  },
-    brushSettings = {
-    brushRadius: 20,
-    lazyRadius: 10,
-    friction: 0.15,
-  },
+    merge = noopMerge,
+    brushSettings = DEFAULT_BRUSH_SETTINGS,
     onSelectedToolChange,
     onNewShapeChange,
     onBrushSettingsChange,
     useNewArchitecture = true,
     toolBridge = undefined,
-    filters = {
-    brightness: 0,
-    contrast: 0,
-    equalizeHistogram: false,
-    redRange: [0, 255],
-    greenRange: [0, 255],
-    blueRange: [0, 255],
-    u16BitRange: [0, 65535],
-  },
-    canvasSize = 0
+    filters = DEFAULT_FILTERS,
+    canvasSize = 0,
   }: Props = $props();
 
   let isReady = $state(false);
@@ -152,7 +160,7 @@ License: CECILL-C
   let brushMaskRefs: Record<string, BrushMaskRef | undefined> = {};
   let activeBrushViewName: string | null = null;
   // Declarative crosshair & brush cursor state (replaces imperative Konva creation)
-  let crosshairPosition = $state<{ x: number; y: number } | null>(null);
+  let crosshairPosition = $state<Point2D | null>(null);
   let brushCursorState = $state<{ x: number; y: number; radius: number; mode: "draw" | "erase" } | null>(null);
   let cursor = $state("default");
   // Direct reference maps to avoid O(n) stage.findOne() lookups
@@ -180,20 +188,30 @@ License: CECILL-C
     bboxEditable = false;
   }
 
-  function toPolygonPoints(
-    points: ReadonlyArray<{ x: number; y: number; id?: number }>,
-  ): PolygonVertex[] {
+  function toPolygonPoints(points: ReadonlyArray<PolygonVertex | Point2D>): PolygonVertex[] {
     return points.map((point, index) => ({
       x: point.x,
       y: point.y,
-      id: typeof point.id === "number" ? point.id : index,
+      id: "id" in point ? point.id : index,
     }));
   }
 
   function toClosedPolygonPoints(
-    polygons: ReadonlyArray<ReadonlyArray<{ x: number; y: number; id?: number }>>,
+    polygons: ReadonlyArray<ReadonlyArray<PolygonVertex | Point2D>>,
   ): PolygonVertex[][] {
     return polygons.map((polygon) => toPolygonPoints(polygon));
+  }
+
+  function getSourcePolygons(payload: PolygonSavePayload): Array<Array<PolygonVertex | Point2D>> {
+    if (Array.isArray(payload.polygons) && payload.polygons.length > 0) {
+      return payload.polygons;
+    }
+
+    if (Array.isArray(payload.points) && payload.points.length > 0) {
+      return [payload.points.map((point) => ({ x: point.x, y: point.y }))];
+    }
+
+    return [];
   }
 
   function syncToolPreview(preview: PreviewShape | null) {
@@ -267,7 +285,7 @@ License: CECILL-C
     // Prefer the current newShape geometry (updated by Transformer/drag) over FSM's stale geometry
     let finalGeo = geo;
     if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
-      const shape = newShape as CreateRectangleShape;
+      const shape = newShape;
       const w = shape.width < 0 ? -shape.width : shape.width;
       const h = shape.height < 0 ? -shape.height : shape.height;
       const x = shape.width < 0 ? shape.x + shape.width : shape.x;
@@ -298,18 +316,9 @@ License: CECILL-C
     }
   }
 
-  function handlePolygonRequestSave(geometry: unknown) {
-    const payload = geometry as {
-      polygons?: Array<Array<{ x: number; y: number; id?: number }>>;
-      points?: Array<{ x: number; y: number }>;
-      outputMode?: PolygonOutputMode;
-    };
-    const sourcePolygons: Array<Array<{ x: number; y: number; id?: number }>> =
-      Array.isArray(payload.polygons) && payload.polygons.length > 0
-        ? payload.polygons
-        : Array.isArray(payload.points) && payload.points.length > 0
-          ? [payload.points.map((point) => ({ x: point.x, y: point.y }))]
-          : [];
+  function handlePolygonRequestSave(geometry: unknown): void {
+    const payload = geometry as PolygonSavePayload;
+    const sourcePolygons = getSourcePolygons(payload);
     if (sourcePolygons.length === 0) return;
 
     const viewRef = lastInputViewRef;
@@ -322,7 +331,7 @@ License: CECILL-C
         polygon.map((point, id) => ({
           x: polygonMode === "mask" ? Math.round(point.x) : point.x,
           y: polygonMode === "mask" ? Math.round(point.y) : point.y,
-          id: typeof point.id === "number" ? point.id : id,
+          id: "id" in point ? point.id : id,
         })),
       )
       .filter((polygon) => polygon.length >= 3);
@@ -484,7 +493,7 @@ License: CECILL-C
   let viewReady: Record<string, boolean> = {};
   let loadCycle = 0;
 
-  const resetViewFlags = (viewNames: string[]) => {
+  function resetViewFlags(viewNames: string[]): void {
     scaleOnFirstLoad = {};
     viewReady = {};
     for (const view_name of viewNames) {
@@ -492,7 +501,7 @@ License: CECILL-C
       scaleOnFirstLoad[view_name] = !isVideo;
       viewReady[view_name] = false;
     }
-  };
+  }
 
   /** Get a view layer by name using cached ref (O(1)) with fallback. */
   function getViewLayer(view_name: string): Konva.Group | undefined {
@@ -505,18 +514,18 @@ License: CECILL-C
   }
 
   /** Register an image ref when image loads. */
-  function registerImageRef(view_name: string) {
+  function registerImageRef(view_name: string): void {
     // Called after image onload; find the image node in the now-populated layer
     const img: Konva.Image | undefined = stage?.findOne(`#image-${view_name}`);
     if (img) imageRefs[view_name] = img;
   }
 
-  const getCurrentImage = (view_name: string): HTMLImageElement | undefined => {
+  function getCurrentImage(view_name: string): HTMLImageElement | undefined {
     const viewImages = imagesPerView[view_name];
     if (!Array.isArray(viewImages) || viewImages.length === 0) return undefined;
     const latestViewImage = viewImages[viewImages.length - 1];
     return latestViewImage?.element;
-  };
+  }
 
   function loadItem() {
     const thisLoadCycle = ++loadCycle;
@@ -606,7 +615,7 @@ License: CECILL-C
     const i = keys.findIndex((view) => view === view_name);
 
     // Calculate view position in grid
-    const grid_pos = {
+    const gridPosition = {
       x: i % gridSize.cols,
       y: Math.floor(i / gridSize.cols),
     };
@@ -625,14 +634,14 @@ License: CECILL-C
     viewLayer.scale({ x: scale, y: scale });
 
     // Center view
-    const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
-    const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
+    const offsetX = (maxWidth - currentImage.width * scale) / 2 + gridPosition.x * maxWidth;
+    const offsetY = (maxHeight - currentImage.height * scale) / 2 + gridPosition.y * maxHeight;
     viewLayer.x(offsetX);
     viewLayer.y(offsetY);
     return true;
   }
 
-  const cacheImage = () => {
+  function cacheImage(): void {
     if (!stage) return;
 
     for (const view_name of Object.keys(imagesPerView)) {
@@ -640,9 +649,9 @@ License: CECILL-C
       if (!image || image.width() === 0 || image.height() === 0) continue;
       image.cache();
     }
-  };
+  }
 
-  const AdjustChannels = (imageData: ImageData) => {
+  function adjustChannels(imageData: ImageData): void {
     const { data } = imageData;
 
     const redMin = filters.redRange[0];
@@ -670,9 +679,9 @@ License: CECILL-C
         data[i + 2] = 0; // Blue channel
       }
     }
-  };
+  }
 
-  const applyFilters = () => {
+  function applyFilters(): void {
     if (!stage) return;
 
     const workerFilters: FilterParams = {
@@ -710,14 +719,14 @@ License: CECILL-C
       }
 
       // Fallback: synchronous Konva filter pipeline
-      let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
+      const filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, adjustChannels];
       if (filters.equalizeHistogram) filtersList.push(equalizeHistogram);
 
       image.filters(filtersList);
       image.brightness(filters.brightness);
       image.contrast(filters.contrast);
     }
-  };
+  }
 
   // ********** TOOLS ********** //
 
@@ -757,7 +766,8 @@ License: CECILL-C
   }
 
   function updateBrushCursor(mousePos: Konva.Vector2d) {
-    const mode = (selectedTool as BrushSelectionTool).mode;
+    if (selectedTool?.type !== ToolType.Brush) return;
+    const mode = selectedTool.mode;
     brushCursorState = {
       x: mousePos.x,
       y: mousePos.y,
@@ -773,7 +783,7 @@ License: CECILL-C
   // Keep brush cursor in sync when brushSettings/mode change (Q/E/X keys)
   $effect(() => {
     const radius = brushSettings.brushRadius;
-    const mode = selectedTool?.type === ToolType.Brush ? (selectedTool as BrushSelectionTool).mode : null;
+    const mode = selectedTool?.type === ToolType.Brush ? selectedTool.mode : null;
     const current = untrack(() => brushCursorState);
     if (current && mode) {
       brushCursorState = { ...current, radius, mode };
@@ -1071,10 +1081,9 @@ License: CECILL-C
     zoomFactor[view_name] = zoom(stage, direction, view_name);
   }
 
-  const asRectangleShape = (
-    shape: Shape,
-  ): CreateRectangleShape | SaveRectangleShape =>
-    shape as CreateRectangleShape | SaveRectangleShape;
+  function asRectangleShape(shape: Shape): CreateRectangleShape | SaveRectangleShape {
+    return shape as CreateRectangleShape | SaveRectangleShape;
+  }
 
   // ********** KEY EVENTS ********** //
 
@@ -1093,8 +1102,8 @@ License: CECILL-C
         selectedTool?.type === ToolType.Polygon &&
         newShape.status === "creating" &&
         newShape.type === ShapeType.polygon &&
-        (newShape as CreatePolygonShape).phase === "drawing" &&
-        (newShape as CreatePolygonShape).closedPolygons.length > 0;
+        newShape.phase === "drawing" &&
+        newShape.closedPolygons.length > 0;
 
       if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon) {
         activeToolBridge?.dispatchEvent({ type: "cancel" });
@@ -1317,7 +1326,7 @@ License: CECILL-C
                   newShape={asRectangleShape(newShape)}
                   {viewRef}
                   editable={bboxEditable}
-                  onTransformEnd={(geo) => {
+                  onTransformEnd={(geo: { x: number; y: number; width: number; height: number }) => {
                     onNewShapeChange?.({
                       status: "creating",
                       type: ShapeType.bbox,
@@ -1328,15 +1337,16 @@ License: CECILL-C
                       viewRef,
                     });
                   }}
-                  onDragEnd={(pos) => {
+                  onDragEnd={(pos: Point2D) => {
                     if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
+                      const creatingRectangle = newShape;
                       onNewShapeChange?.({
                         status: "creating",
                         type: ShapeType.bbox,
                         x: pos.x,
                         y: pos.y,
-                        width: (newShape as CreateRectangleShape).width,
-                        height: (newShape as CreateRectangleShape).height,
+                        width: creatingRectangle.width,
+                        height: creatingRectangle.height,
                         viewRef,
                       });
                     }

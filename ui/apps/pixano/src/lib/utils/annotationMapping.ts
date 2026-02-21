@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { BaseSchema, WorkspaceType, type BBox, type Entity, type Keypoints, type Mask, type Source } from "$lib/types/dataset";
-import type { KeypointGraph } from "$lib/types/shapeTypes";
+import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { isPolygonSvgMetadata, isPolygonPointsMetadata, generateSvgFromMaskRle } from "$lib/utils/maskUtils";
 
@@ -95,7 +95,7 @@ export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined =>
 export const mapKeypointsForDisplay = (
   keypoints: Keypoints,
   views: MView,
-): KeypointGraph | undefined => {
+): KeypointAnnotation | undefined => {
   if (
     !keypoints ||
     !keypoints.data.view_ref.name ||
@@ -111,25 +111,26 @@ export const mapKeypointsForDisplay = (
   const imageHeight = image.data.height || 1;
   const imageWidth = image.data.width || 1;
   const vertices = [];
+  const vertexMetadata = [];
   for (let i = 0; i < keypoints.data.coords.length / 2; i++) {
     const x = keypoints.data.coords[i * 2] * imageWidth;
     const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
-    const features = {
-      ...(template.vertices[i].features || {}),
-      ...{ state: keypoints.data.states[i] },
-    };
-    vertices.push({ x, y, features });
+    vertices.push({ x, y });
+    vertexMetadata.push({
+      ...(template.vertexMetadata[i] || { state: "visible", label: "", color: "" }),
+      state: keypoints.data.states[i] as KeypointAnnotation["vertexMetadata"][number]["state"],
+    });
   }
   const kptTemplate = {
     id: keypoints.id,
     template_id: keypoints.data.template_id,
     viewRef: keypoints.data.view_ref,
     entityRef: keypoints.data.entity_ref,
-    vertices,
-    edges: template.edges,
+    graph: { vertices, edges: [...template.graph.edges] },
+    vertexMetadata,
     ui: keypoints.ui,
     table_info: keypoints.table_info,
-  } as KeypointGraph;
+  } as KeypointAnnotation;
   if ("frame_index" in keypoints.ui) kptTemplate.ui!.frame_index = keypoints.ui.frame_index;
   if ("top_entities" in keypoints.ui) kptTemplate.ui!.top_entities = keypoints.ui.top_entities;
   return kptTemplate;

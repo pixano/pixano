@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { ToolType } from "$lib/tools";
   import type {
-    KeypointGraph,
+    KeypointAnnotation,
     SequenceFrame,
     TrackletTimelineEntry,
     View,
@@ -53,7 +53,7 @@ License: CECILL-C
     views: MView;
     onTimeTrackClick: (imageIndex: number) => void;
     bboxes: BBox[];
-    keypoints: KeypointGraph[];
+    keypoints: KeypointAnnotation[];
     resetTool: () => void;
   }
 
@@ -200,10 +200,12 @@ License: CECILL-C
         ];
         const coords = [];
         const states = [];
-        for (const vertex of interpolatedKpt.vertices) {
+        for (let vi = 0; vi < interpolatedKpt.graph.vertices.length; vi++) {
+          const vertex = interpolatedKpt.graph.vertices[vi];
           coords.push(vertex.x / current_sf.data.width);
           coords.push(vertex.y / current_sf.data.height);
-          states.push(vertex.features.state ? vertex.features.state : "visible");
+          const meta = interpolatedKpt.vertexMetadata[vi];
+          states.push(meta?.state ? meta.state : "visible");
         }
         newItemKpt.data.coords = coords;
         newItemKpt.data.states = states;

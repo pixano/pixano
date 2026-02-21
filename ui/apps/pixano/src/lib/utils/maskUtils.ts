@@ -7,6 +7,7 @@ License: CECILL-C
 import simplify from "simplify-js";
 
 import { BaseSchema, type MaskSvgPaths } from "$lib/types/dataset";
+import type { Point2D } from "$lib/types/geometry";
 
 import type { PolygonVertex } from "$lib/types/shapeTypes";
 import { mask_utils } from "$lib/models";
@@ -14,7 +15,7 @@ import { mask_utils } from "$lib/models";
 export const parseSvgPath = (svgPath: string): PolygonVertex[] => {
   const regex = /([ML]?)\s*([\d.]+)\s+([\d.]+)/g;
   let match: RegExpExecArray | null;
-  let result: { x: number; y: number }[] = [];
+  let result: Point2D[] = [];
   while ((match = regex.exec(svgPath)) !== null) {
     const [, , x, y] = match;
     result.push({ x: parseFloat(x), y: parseFloat(y) });

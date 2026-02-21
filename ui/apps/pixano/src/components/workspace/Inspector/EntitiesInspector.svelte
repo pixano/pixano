@@ -11,9 +11,8 @@ License: CECILL-C
   import { Thumbnail } from "$components/workspace/canvas2d";
   import { BaseSchema, BBox, Entity, Source, type AnnotationThumbnail } from "$lib/ui";
 
-  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
+  import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
     annotations,
     confidenceThreshold,
@@ -27,7 +26,7 @@ License: CECILL-C
   import EntityCard from "./EntityCard.svelte";
   import EntitiesSection from "./EntitiesSection.svelte";
 
-  let filteredEntities: Entity[] = $state([]);
+  let filteredEntities = $state<Entity[]>([]);
   let hasAppliedFilter = $state(false);
 
   //Note: Previously Entities where grouped by source
@@ -63,7 +62,7 @@ License: CECILL-C
       : `${nextTopCount}`;
   });
 
-  const applyAnnotationsVisibility = () => {
+  function applyAnnotationsVisibility(): void {
     // This function writes annotation/entity visibility based on filter criteria.
     // Untrack to prevent circular dependency: we write to stores we also read.
     untrack(() => {
@@ -126,13 +125,13 @@ License: CECILL-C
         }),
       );
     });
-  };
+  }
 
-  const hasSameEntitySelection = (a: Entity[], b: Entity[]) => {
+  function hasSameEntitySelection(a: Entity[], b: Entity[]): boolean {
     if (a.length !== b.length) return false;
     const ids = new Set(b.map((ent) => ent.id));
     return a.every((ent) => ids.has(ent.id));
-  };
+  }
 
   const thumbnailsByEntityId = $derived.by<Record<string, AnnotationThumbnail | null>>(() => {
     const nextThumbnails: Record<string, AnnotationThumbnail | null> = {};
@@ -161,7 +160,7 @@ License: CECILL-C
   });
   const selectedEntitiesId = $derived.by(() => Object.keys(thumbnailsByEntityId));
 
-  const handleFilter = (filteredEnts: Entity[]) => {
+  function handleFilter(filteredEnts: Entity[]): void {
     const shouldApplyFilter = !hasSameEntitySelection(filteredEnts, currentEntities);
     if (hasAppliedFilter === shouldApplyFilter && hasSameEntitySelection(filteredEnts, filteredEntities)) {
       return;
@@ -169,11 +168,11 @@ License: CECILL-C
     hasAppliedFilter = shouldApplyFilter;
     filteredEntities = filteredEnts;
     applyAnnotationsVisibility();
-  };
+  }
 
-  const handleConfidenceThresholdChange = () => {
+  function handleConfidenceThresholdChange(): void {
     applyAnnotationsVisibility();
-  };
+  }
 
   $effect(() => {
     const confidenceLimit = confidenceThreshold.value[0] ?? 0;

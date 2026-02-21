@@ -8,7 +8,8 @@ License: CECILL-C
   import type Konva from "konva";
   import { Circle } from "svelte-konva";
 
-  import type { KeypointVertex, KeypointVisibility } from "$lib/types/shapeTypes";
+  import type { KeypointVisibility } from "$lib/types/geometry";
+  import type { KeypointVertex } from "$lib/types/shapeTypes";
   import LabelTag from "../LabelTag.svelte";
 
   interface Props {

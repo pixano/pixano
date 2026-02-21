@@ -12,7 +12,7 @@ License: CECILL-C
   import { ZoomIn, ZoomOut } from "lucide-svelte";
 
   import { ToolType, panTool } from "$lib/tools";
-  import { BBox, Entity, type KeypointGraph } from "$lib/ui";
+  import { BBox, Entity, type KeypointAnnotation } from "$lib/ui";
 
   import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
@@ -30,7 +30,7 @@ License: CECILL-C
 
   interface Props {
     bboxes: BBox[];
-    keypoints: KeypointGraph[];
+    keypoints: KeypointAnnotation[];
   }
 
   let { bboxes, keypoints }: Props = $props();

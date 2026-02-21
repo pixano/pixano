@@ -14,12 +14,13 @@ License: CECILL-C
   import { ShapeType, type CreatePolygonShape, type Shape } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
   import type { PolygonVertex } from "$lib/types/shapeTypes";
+  import type { Point2D } from "$lib/types/geometry";
   import PolygonVertices from "./PolygonVertices.svelte";
 
   interface Props {
     viewRef: Reference;
     newShape: Shape;
-    getRelativePointerOnView?: () => { x: number; y: number } | null;
+    getRelativePointerOnView?: () => Point2D | null;
     zoomFactor: Record<string, number>;
     onToolEvent?: (event: ToolEvent) => void;
   }
@@ -76,9 +77,9 @@ License: CECILL-C
   );
 
   function projectOnSegment(
-    p: { x: number; y: number },
-    a: { x: number; y: number },
-    b: { x: number; y: number },
+    p: Point2D,
+    a: Point2D,
+    b: Point2D,
   ) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -90,7 +91,7 @@ License: CECILL-C
     return { dist: Math.hypot(p.x - projected.x, p.y - projected.y), point: projected };
   }
 
-  function findClosestEdge(pos: { x: number; y: number }, polygons: PolygonVertex[][]) {
+  function findClosestEdge(pos: Point2D, polygons: PolygonVertex[][]) {
     let bestDist = Number.POSITIVE_INFINITY;
     let bestShape = -1;
     let bestIdx = -1;

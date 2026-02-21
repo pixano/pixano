@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { Point2D } from "$lib/types/geometry";
+
 /**
  * Converts the alpha channel of an offscreen canvas to a column-major binary bitmap,
  * then RLE-encodes it.
@@ -114,17 +116,17 @@ export function drawBrushCircle(
  * Uses spacing based on brush radius to avoid gaps.
  */
 export function interpolatePoints(
-  p1: { x: number; y: number },
-  p2: { x: number; y: number },
+  p1: Point2D,
+  p2: Point2D,
   spacing: number,
-): Array<{ x: number; y: number }> {
+): Point2D[] {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
   if (dist < spacing) return [p2];
 
-  const points: Array<{ x: number; y: number }> = [];
+  const points: Point2D[] = [];
   const steps = Math.ceil(dist / spacing);
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;

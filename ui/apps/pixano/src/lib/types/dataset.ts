@@ -4,9 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { createTypedAnnotation } from "$lib/utils/domainFactories";
-import { createTypedEntity } from "$lib/utils/domainFactories";
-import { createTypedView } from "$lib/utils/domainFactories";
+import {
+  createTypedAnnotation,
+  createTypedEntity,
+  createTypedView,
+} from "$lib/utils/domainFactories";
+import type { Mutable, IndexedPoint2D } from "$lib/types/geometry";
 // ─── BaseSchema ────────────────────────────────────────────────────────────────
 
 export enum BaseSchema {
@@ -215,7 +218,6 @@ export type LoadedImage = {
   element: HTMLImageElement;
 };
 export type LoadedImagesPerView = Record<string, LoadedImage[]>;
-export type ImagesPerView = LoadedImagesPerView;
 
 export interface ItemFeature {
   name: string;
@@ -526,7 +528,7 @@ export class Mask extends Annotation {
     strokeFactor?: number;
     svg?: string[];
     tooltip?: string;
-    rawPoints?: { x: number; y: number; id: number }[][];
+    rawPoints?: Mutable<IndexedPoint2D>[][];
   } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
 
   constructor(obj: RawSchemaData) {
@@ -699,7 +701,7 @@ export abstract class View extends BaseData<ViewData> {
   ): Record<string, View | View[]> {
     const newObj: Record<string, View | View[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
-      const view = createTypedView(vs as RawSchemaData | RawSchemaData[]);
+      const view = createTypedView(vs);
       newObj[k] = view;
     }
     return newObj;

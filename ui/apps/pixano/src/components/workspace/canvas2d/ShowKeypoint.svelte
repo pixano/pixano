@@ -2,7 +2,7 @@
 Copyright: CEA-LIST/DIASI/SIALV/LVA
 Author : pixano@cea.fr
 License: CECILL-C
--------------------------------------->
+--------------------------------------->
 
 <script lang="ts">
   import { Rect } from "svelte-konva";
@@ -10,11 +10,11 @@ License: CECILL-C
   import { findRectBoundaries } from "$lib/utils/keypointsUtils";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
-  import type { KeypointGraph } from "$lib/types/shapeTypes";
+  import type { KeypointAnnotation, KeypointVertex } from "$lib/types/shapeTypes";
   import KeyPoints from "./keypoints/Keypoint.svelte";
 
   interface Props {
-    keypoints?: KeypointGraph[];
+    keypoints?: KeypointAnnotation[];
     newShape: Shape;
     zoomFactor: number;
     colorScale: (id: string) => string;
@@ -35,7 +35,7 @@ License: CECILL-C
     onNewShapeChange,
   }: Props = $props();
 
-  const onClick = (keypoint: KeypointGraph) => {
+  const onClick = (keypoint: KeypointAnnotation) => {
     onNewShapeChange?.({
       status: "editing",
       shapeId: keypoint.id,
@@ -46,7 +46,7 @@ License: CECILL-C
     });
   };
 
-  const onKeypointsChange = (vertices: KeypointGraph["vertices"], id: string) => {
+  const onKeypointsChange = (vertices: KeypointVertex[], id: string) => {
     const normalizedVertices = vertices.map((point) => ({
       ...point,
       x: point.x / imageSize.width,
@@ -77,10 +77,10 @@ License: CECILL-C
         {isPlaybackActive}
       >
         <Rect
-          x={findRectBoundaries(keypointStructure.vertices).x - 10 / zoomFactor}
-          y={findRectBoundaries(keypointStructure.vertices).y - 10 / zoomFactor}
-          width={findRectBoundaries(keypointStructure.vertices).width + 20 / zoomFactor}
-          height={findRectBoundaries(keypointStructure.vertices).height + 20 / zoomFactor}
+          x={findRectBoundaries(keypointStructure.graph.vertices).x - 10 / zoomFactor}
+          y={findRectBoundaries(keypointStructure.graph.vertices).y - 10 / zoomFactor}
+          width={findRectBoundaries(keypointStructure.graph.vertices).width + 20 / zoomFactor}
+          height={findRectBoundaries(keypointStructure.graph.vertices).height + 20 / zoomFactor}
           fill={colorScale(
             (keypointStructure.ui?.top_entities ?? []).length > 0
               ? (keypointStructure.ui?.top_entities ?? [])[0].id

@@ -20,10 +20,17 @@ License: CECILL-C
     onListModels?: () => void;
   }
 
+  interface ModelFormData {
+    provider: string;
+    model_name: string;
+    model_path: string;
+    dtype: string;
+  }
+
   let { vqaSectionWidth, onCancelAddModel, onListModels }: Props = $props();
 
   //TMP: default values
-  const modelChoices = {
+  const modelChoices: Record<string, ModelFormData> = {
     "llava-qwen": {
       provider: "vllm",
       model_name: "llava-qwen",
@@ -51,14 +58,22 @@ License: CECILL-C
     onCancelAddModel?.();
   }
 
-  const handleChange = (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => {
+  function stopPropagation(event: Event): void {
+    event.stopPropagation();
+  }
+
+  function stopKeyupPropagation(event: KeyboardEvent): void {
+    event.stopPropagation();
+  }
+
+  function handleChange(event: Event & { currentTarget: EventTarget & HTMLInputElement }): void {
     const { name, value } = event.currentTarget;
     formData = { ...formData, [name]: value };
-  };
+  }
 
-  const handleAddModel = async () => {
+  async function handleAddModel(): Promise<void> {
     isAddingModelRequestPending = true;
-    const model_config: ModelConfig = {
+    const modelConfig: ModelConfig = {
       config: {
         name: formData.model_name,
         task: MultimodalImageNLPTask.CONDITIONAL_GENERATION,
@@ -69,10 +84,10 @@ License: CECILL-C
       provider: formData.provider,
     };
 
-    const success = await api.instantiateModel(model_config); //NOTE: take some time (~40sec)
+    const success = await api.instantiateModel(modelConfig); //NOTE: take some time (~40sec)
 
     if (!success) {
-      console.error(`Couldn't instantiate model '${model_config.config.name}'`);
+      console.error(`Couldn't instantiate model '${modelConfig.config.name}'`);
       return;
     }
 
@@ -80,14 +95,14 @@ License: CECILL-C
 
     onListModels?.();
     onCancelAddModel?.();
-  };
+  }
 </script>
 
 <!-- stop propagation to prevent from closing the modal when clicking on the background -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  onclick={(event) => event.stopPropagation()}
+  onclick={stopPropagation}
   class="fixed top-[calc(80px+5px)] z-50 overflow-y-auto w-68 rounded-md bg-card text-foreground flex flex-col gap-3 item-center pb-3 max-h-[calc(100vh-80px-10px)]"
   style={`left: calc(${vqaSectionWidth}px + 10px);`}
 >
@@ -101,7 +116,7 @@ License: CECILL-C
       value={formData.provider}
       type="string"
       onchange={handleChange}
-      onkeyup={(e) => e.stopPropagation()}
+      onkeyup={stopKeyupPropagation}
     />
     <h5 class="font-medium">Name</h5>
     <Input
@@ -109,7 +124,7 @@ License: CECILL-C
       value={formData.model_name}
       type="string"
       onchange={handleChange}
-      onkeyup={(e) => e.stopPropagation()}
+      onkeyup={stopKeyupPropagation}
     />
     <h5 class="font-medium">Path</h5>
     <Input
@@ -117,7 +132,7 @@ License: CECILL-C
       value={formData.model_path}
       type="string"
       onchange={handleChange}
-      onkeyup={(e) => e.stopPropagation()}
+      onkeyup={stopKeyupPropagation}
     />
     <h5 class="font-medium">Data Type (advanced users)</h5>
     <Input
@@ -125,7 +140,7 @@ License: CECILL-C
       value={formData.dtype}
       type="string"
       onchange={handleChange}
-      onkeyup={(e) => e.stopPropagation()}
+      onkeyup={stopKeyupPropagation}
     />
   </div>
   <div class="flex flex-row gap-2 px-3 justify-center">

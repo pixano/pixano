@@ -14,6 +14,8 @@ export type {
   ToolRegistry,
   ToolTransition,
   Point2D,
+  IndexedPoint2D,
+  IndexedPoint2D,
   PreviewShape,
   LabeledClick,
   AIResult,

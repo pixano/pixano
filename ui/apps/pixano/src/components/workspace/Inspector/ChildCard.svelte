@@ -32,7 +32,7 @@ License: CECILL-C
     Mask,
     Tracklet,
     type DisplayControl,
-    type KeypointGraph,
+    type KeypointAnnotation,
   } from "$lib/ui";
   import { cn } from "$lib/utils/styleUtils";
   import { buttonVariants } from "$lib/utils/buttonVariants";
@@ -92,7 +92,7 @@ License: CECILL-C
       ...current_itemBBoxes.value,
       ...current_itemKeypoints.value,
       ...current_itemMasks.value,
-    ] as (BBox | KeypointGraph | Mask)[];
+    ] as (BBox | KeypointAnnotation | Mask)[];
 
     const result: { trackletChild: Annotation; interpolated: boolean }[] = [];
     current_Anns.forEach((cann) => {

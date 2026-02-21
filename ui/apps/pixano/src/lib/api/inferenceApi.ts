@@ -15,11 +15,18 @@ import { createTypedAnnotation } from "$lib/utils/domainFactories";
 
 import { apiFetch, apiMutate, JSON_HEADERS } from "./apiClient";
 
+function buildModelsUrl(basePath: string, task: Task | null): string {
+  if (task === null) {
+    return basePath;
+  }
+  return `${basePath}?task=${encodeURIComponent(task)}`;
+}
+
 // ─── deleteModel ────────────────────────────────────────────────────────────────
 
-export function deleteModel(model_name: string) {
+export function deleteModel(modelName: string): Promise<void> {
   return apiMutate(
-    `/inference/models/delete/${model_name}`,
+    `/inference/models/delete/${modelName}`,
     { headers: JSON_HEADERS, method: "DELETE" },
     "deleteModel",
   );
@@ -69,6 +76,12 @@ export interface InferenceStatusResponse {
   default: string | null;
 }
 
+const DEFAULT_INFERENCE_STATUS: InferenceStatusResponse = {
+  connected: false,
+  providers: [],
+  default: null,
+};
+
 export async function getInferenceStatus(): Promise<InferenceStatusResponse> {
   try {
     const response = await fetch("/inference/status", {
@@ -77,23 +90,23 @@ export async function getInferenceStatus(): Promise<InferenceStatusResponse> {
     });
 
     if (!response.ok) {
-      return { connected: false, providers: [], default: null };
+      return DEFAULT_INFERENCE_STATUS;
     }
 
     return (await response.json()) as InferenceStatusResponse;
   } catch {
-    return { connected: false, providers: [], default: null };
+    return DEFAULT_INFERENCE_STATUS;
   }
 }
 
 // ─── instantiateModel ───────────────────────────────────────────────────────────
 
-export async function instantiateModel(model_config: ModelConfig): Promise<boolean> {
+export async function instantiateModel(modelConfig: ModelConfig): Promise<boolean> {
   try {
     const response = await fetch(`/inference/models/instantiate`, {
       headers: JSON_HEADERS,
       method: "POST",
-      body: JSON.stringify(model_config),
+      body: JSON.stringify(modelConfig),
     });
 
     if (!response.ok) {
@@ -132,10 +145,7 @@ export interface ModelWithProvider {
 }
 
 export function listAllModels(task: Task | null = null): Promise<ModelWithProvider[]> {
-  const url =
-    task === null
-      ? "/inference/models/list-all"
-      : `/inference/models/list-all?task=${encodeURIComponent(task)}`;
+  const url = buildModelsUrl("/inference/models/list-all", task);
 
   return apiFetch(
     url,
@@ -153,10 +163,7 @@ interface Model {
 }
 
 export function listModels(task: Task | null = null): Promise<Model[]> {
-  const url =
-    task === null
-      ? "/inference/models/list"
-      : `/inference/models/list?task=${encodeURIComponent(task)}`;
+  const url = buildModelsUrl("/inference/models/list", task);
 
   return apiFetch(
     url,
