@@ -21,7 +21,7 @@ License: CECILL-C
     Keypoints,
     ShapeType,
     SequenceFrame,
-    Tracklet,
+    Track,
     type EditShape,
     type SaveItem,
   } from "$lib/ui";
@@ -107,48 +107,48 @@ License: CECILL-C
   });
 
   function mergeFusionRangesByView(to_fuse: Entity[]): Record<string, [number, number][]> {
-    //build combined tracklet ranges for each view of to_fuse entities
-    const trackletsByView: Record<string, Tracklet[]> = {};
+    //build combined track ranges for each view of to_fuse entities
+    const tracksByView: Record<string, Track[]> = {};
     to_fuse
       .flatMap((ent) =>
         ent.ui.childs
-          ? (ent.ui.childs.filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[])
+          ? (ent.ui.childs.filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Track[])
           : [],
       )
-      .forEach((tracklet) => {
-        if (!(tracklet.data.view_ref.name in trackletsByView))
-          trackletsByView[tracklet.data.view_ref.name] = [];
-        trackletsByView[tracklet.data.view_ref.name].push(tracklet);
+      .forEach((trk) => {
+        if (!(trk.data.view_ref.name in tracksByView))
+          tracksByView[trk.data.view_ref.name] = [];
+        tracksByView[trk.data.view_ref.name].push(trk);
       });
 
     const mergedByView: Record<string, [number, number][]> = {};
-    Object.entries(trackletsByView).forEach(([view, tracklets]) => {
+    Object.entries(tracksByView).forEach(([view, viewTracks]) => {
       mergedByView[view] = [];
-      if (tracklets.length > 0) {
+      if (viewTracks.length > 0) {
         // sort to ease merge
-        tracklets.sort((a, b) => a.data.start_timestep - b.data.start_timestep);
-        let currentTracklet = { ...tracklets[0] };
-        for (let i = 1; i < tracklets.length; i++) {
-          const tracklet = tracklets[i];
-          if (tracklet.data.start_timestep <= currentTracklet.data.end_timestep) {
+        viewTracks.sort((a, b) => a.data.start_timestep - b.data.start_timestep);
+        let currentTrack = { ...viewTracks[0] };
+        for (let i = 1; i < viewTracks.length; i++) {
+          const trk = viewTracks[i];
+          if (trk.data.start_timestep <= currentTrack.data.end_timestep) {
             // Merge range if overlap (or touching)
-            currentTracklet.data.end_timestep = Math.max(
-              currentTracklet.data.end_timestep,
-              tracklet.data.end_timestep,
+            currentTrack.data.end_timestep = Math.max(
+              currentTrack.data.end_timestep,
+              trk.data.end_timestep,
             );
           } else {
             // Add merged range and start a new one
             mergedByView[view].push([
-              currentTracklet.data.start_timestep,
-              currentTracklet.data.end_timestep,
+              currentTrack.data.start_timestep,
+              currentTrack.data.end_timestep,
             ]);
-            currentTracklet = { ...tracklet };
+            currentTrack = { ...trk };
           }
         }
         // Add last range
         mergedByView[view].push([
-          currentTracklet.data.start_timestep,
-          currentTracklet.data.end_timestep,
+          currentTrack.data.start_timestep,
+          currentTrack.data.end_timestep,
         ]);
       }
     });

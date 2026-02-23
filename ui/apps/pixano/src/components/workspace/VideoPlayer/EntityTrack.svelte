@@ -11,7 +11,7 @@ License: CECILL-C
   import type {
     KeypointAnnotation,
     SequenceFrame,
-    TrackletTimelineEntry,
+    TrackTimelineEntry,
     View,
   } from "$lib/ui";
   import {
@@ -21,8 +21,9 @@ License: CECILL-C
     cn,
     ContextMenu,
     Entity,
+    isVideoEntity,
     Keypoints,
-    Tracklet,
+    Track,
   } from "$lib/ui";
 
   import { sourcesStore } from "$lib/stores/appStores.svelte";
@@ -31,7 +32,7 @@ License: CECILL-C
   import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { deleteEntity } from "$lib/utils/entityMutations";
   import { highlightEntity } from "$lib/utils/highlightOperations";
-  import { splitTrackletInTwo, updateView } from "$lib/utils/videoOperations";
+  import { splitTrackInTwo, updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
   import {
     annotations,
@@ -44,7 +45,7 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "$lib/stores/videoStores.svelte";
-  import EntityTracklet from "./EntityTracklet.svelte";
+  import EntityVideoTrack from "./EntityVideoTrack.svelte";
 
   type MView = Record<string, View | View[]>;
 
@@ -75,10 +76,10 @@ License: CECILL-C
   let totalWidth = $derived((lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100);
   let color = $derived(colorScale.value[1](track.id));
 
-  let tracklets: Tracklet[] = $derived(
+  let videoTracks: Track[] = $derived(
     annotations.value.filter(
       (ann) => ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id,
-    ) as Tracklet[],
+    ) as Track[],
   );
 
   let highlightState: string = $derived.by(() => {
@@ -102,13 +103,13 @@ License: CECILL-C
     onTimeTrackClick(newFrameIndex);
   };
 
-  const onContextMenu = (tracklet: Tracklet | null = null) => {
-    if (tracklet && selectedTool.value.type !== ToolType.Fusion) {
-      const tracklet_childs_ids = (tracklet.ui.childs ?? []).map((ann) => ann.id);
+  const onContextMenu = (videoTrack: Track | null = null) => {
+    if (videoTrack && selectedTool.value.type !== ToolType.Fusion) {
+      const track_childs_ids = (videoTrack.ui.childs ?? []).map((ann) => ann.id);
       annotations.update((oldObjects) =>
         oldObjects.map((ann) => {
           ann.ui.displayControl.highlighted =
-            ann.id === tracklet.id || tracklet_childs_ids.includes(ann.id) ? "self" : "none";
+            ann.id === videoTrack.id || track_childs_ids.includes(ann.id) ? "self" : "none";
           return ann;
         }),
       );
@@ -121,7 +122,7 @@ License: CECILL-C
     onContextMenu();
   };
 
-  const onEditKeyItemClick = (frameIndex: TrackletTimelineEntry["frame_index"], viewname: string) => {
+  const onEditKeyItemClick = (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => {
     onTimeTrackClick(frameIndex);
     annotations.update((objects) =>
       objects.map((ann) => {
@@ -141,7 +142,7 @@ License: CECILL-C
     );
   };
 
-  const onAddKeyItemClick = (tracklet: Tracklet) => {
+  const onAddKeyItemClick = (videoTrack: Track) => {
     let newItemBBox: BBox | undefined = undefined;
     let newItemKpt: Keypoints | undefined = undefined;
     const pixSource = getPixanoSource(sourcesStore);
@@ -149,7 +150,7 @@ License: CECILL-C
     const interpolatedBox = bboxes.find(
       (box) =>
         box.ui.frame_index === currentFrameIndex.value &&
-        tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
+        videoTrack.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
     );
     if (interpolatedBox) {
       const newItemOrig = structuredClone(interpolatedBox);
@@ -177,7 +178,7 @@ License: CECILL-C
     const interpolatedKpt = keypoints.find(
       (kpt) =>
         kpt.ui!.frame_index === currentFrameIndex.value &&
-        tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
+        videoTrack.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
     );
     if (interpolatedKpt && interpolatedKpt.ui?.startRef) {
       const keypointsRef = annotations.value.find(
@@ -218,12 +219,12 @@ License: CECILL-C
     if (newItemBBox || newItemKpt) {
       annotations.update((objects) => {
         objects.map((obj) => {
-          if (obj.is_type(BaseSchema.Tracklet) && obj.id === tracklet.id) {
-            const obj_tracket = obj as Tracklet;
+          if (obj.is_type(BaseSchema.Tracklet) && obj.id === videoTrack.id) {
+            const objTrack = obj as Track;
             // add item in childs
-            if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];
-            if (newItemKpt) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemKpt];
-            obj_tracket.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+            if (newItemBBox) objTrack.ui.childs = [...objTrack.ui.childs, newItemBBox];
+            if (newItemKpt) objTrack.ui.childs = [...objTrack.ui.childs, newItemKpt];
+            objTrack.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
           }
           return obj;
         });
@@ -234,7 +235,7 @@ License: CECILL-C
       });
       entities.update((objects) =>
         objects.map((entity) => {
-          if (entity.id === tracklet.data.entity_ref.id) {
+          if (entity.id === videoTrack.data.entity_ref.id) {
             if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
             if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
             entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
@@ -243,24 +244,24 @@ License: CECILL-C
         }),
       );
     }
-    onEditKeyItemClick(currentFrameIndex.value, tracklet.data.view_ref.name);
+    onEditKeyItemClick(currentFrameIndex.value, videoTrack.data.view_ref.name);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
-  const findPreviousAndNext = (tracklet: Tracklet): [number, number] => {
+  const findPreviousAndNext = (videoTrack: Track): [number, number] => {
     let low = 0;
-    let high = tracklet.ui.childs.length - 1;
+    let high = videoTrack.ui.childs.length - 1;
     let mid;
     let previousItem: Annotation | null = null;
     let nextItem: Annotation | null = null;
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (tracklet.ui.childs[mid].ui.frame_index! <= currentFrameIndex.value) {
-        previousItem = tracklet.ui.childs[mid];
+      if (videoTrack.ui.childs[mid].ui.frame_index! <= currentFrameIndex.value) {
+        previousItem = videoTrack.ui.childs[mid];
         low = mid + 1;
       } else {
-        nextItem = tracklet.ui.childs[mid];
+        nextItem = videoTrack.ui.childs[mid];
         high = mid - 1;
       }
     }
@@ -270,13 +271,13 @@ License: CECILL-C
     ];
   };
 
-  const onSplitTrackletClick = (tracklet: Tracklet) => {
-    const [prev, next] = findPreviousAndNext(tracklet);
-    const newOnRight = splitTrackletInTwo(tracklet, prev, next);
+  const onSplitTrackClick = (videoTrack: Track) => {
+    const [prev, next] = findPreviousAndNext(videoTrack);
+    const newOnRight = splitTrackInTwo(videoTrack, prev, next);
     //add Entity child
     entities.update((objects) =>
       objects.map((entity) => {
-        if (entity.is_track && entity.id === track.id) {
+        if (isVideoEntity(entity) && entity.id === track.id) {
           entity.ui.childs = [...entity.ui.childs!, newOnRight];
           entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
         }
@@ -286,12 +287,12 @@ License: CECILL-C
     annotations.update((objects) => objects.concat(newOnRight));
   };
 
-  const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
+  const findNeighborItems = (videoTrack: Track, frameIndex: number): [number, number] => {
     let previous: number = 0;
     let next: number = lastFrameIndex.value;
-    for (const subtracklet of tracklets) {
-      if (subtracklet.data.view_ref.name === tracklet.data.view_ref.name) {
-        for (const child of subtracklet.ui.childs) {
+    for (const subtrack of videoTracks) {
+      if (subtrack.data.view_ref.name === videoTrack.data.view_ref.name) {
+        for (const child of subtrack.ui.childs) {
           if (child.ui.frame_index! < frameIndex && child.ui.frame_index! > previous) {
             previous = child.ui.frame_index!;
           } else if (child.ui.frame_index! > frameIndex && child.ui.frame_index! < next) {
@@ -375,16 +376,16 @@ License: CECILL-C
       </ContextMenu.Content>
       -->
     </ContextMenu.Root>
-    {#each tracklets as tracklet (tracklet.id)}
-      <EntityTracklet
-        {tracklet}
+    {#each videoTracks as videoTrack (videoTrack.id)}
+      <EntityVideoTrack
+        track={videoTrack}
         trackId={track.id}
         {views}
-        onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
+        onAddKeyItemClick={() => onAddKeyItemClick(videoTrack)}
         {onContextMenu}
         {onEditKeyItemClick}
-        onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
-        onDeleteTrackletClick={() => deleteEntity(track, tracklet)}
+        onSplitTrackClick={() => onSplitTrackClick(videoTrack)}
+        onDeleteTrackClick={() => deleteEntity(track, videoTrack)}
         {findNeighborItems}
         {moveCursorToPosition}
         {resetTool}

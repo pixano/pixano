@@ -12,7 +12,7 @@ License: CECILL-C
   import { ZoomIn, ZoomOut } from "lucide-svelte";
 
   import { ToolType, panTool } from "$lib/tools";
-  import { BBox, Entity, type KeypointAnnotation } from "$lib/ui";
+  import { BBox, Entity, isVideoEntity, type KeypointAnnotation } from "$lib/ui";
 
   import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
@@ -35,7 +35,7 @@ License: CECILL-C
 
   let { bboxes, keypoints }: Props = $props();
 
-  let tracks: Entity[] = $derived(entities.value.filter((entity) => entity.is_track).sort(sortEntities));
+  let tracks: Entity[] = $derived(entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities));
 
   $effect(() => {
     untrack(() => videoControls.update((old) => ({ ...old, isLoaded: true })));

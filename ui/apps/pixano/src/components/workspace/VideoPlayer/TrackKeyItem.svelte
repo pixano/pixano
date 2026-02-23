@@ -5,11 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
+
   // Imports
-  import type { TrackletTimelineEntry } from "$lib/ui";
-  import { ContextMenu, Tracklet, cn, isLuminanceHigh } from "$lib/ui";
-  import { onDeleteTrackletItemClick } from "$lib/utils/entityMutations";
+  import type { TrackTimelineEntry } from "$lib/ui";
+  import { ContextMenu, Track, cn, isLuminanceHigh } from "$lib/ui";
+  import { onDeleteTrackItemClick } from "$lib/utils/entityMutations";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 
@@ -17,23 +17,23 @@ License: CECILL-C
   interface Props {
     trackId: string;
     itemFrameIndex: number;
-    tracklet: Tracklet;
+    track: Track;
     color: string;
     height: number;
     top: number;
     oneFrameInPixel: number;
     onEditKeyItemClick: (
-    frameIndex: TrackletTimelineEntry["frame_index"],
+    frameIndex: TrackTimelineEntry["frame_index"],
     viewname: string,
   ) => void;
     onClick: (button: number, clientX: number) => void;
-    updateTrackletWidth: (
-    newIndex: TrackletTimelineEntry["frame_index"],
-    draggedIndex: TrackletTimelineEntry["frame_index"],
+    updateTrackWidth: (
+    newIndex: TrackTimelineEntry["frame_index"],
+    draggedIndex: TrackTimelineEntry["frame_index"],
   ) => void;
     canContinueDragging: (
-    newIndex: TrackletTimelineEntry["frame_index"],
-    draggedIndex: TrackletTimelineEntry["frame_index"],
+    newIndex: TrackTimelineEntry["frame_index"],
+    draggedIndex: TrackTimelineEntry["frame_index"],
   ) => boolean;
     resetTool: () => void;
   }
@@ -41,14 +41,14 @@ License: CECILL-C
   let {
     trackId,
     itemFrameIndex,
-    tracklet,
+    track: videoTrack,
     color,
     height,
     top,
     oneFrameInPixel,
     onEditKeyItemClick,
     onClick,
-    updateTrackletWidth,
+    updateTrackWidth,
     canContinueDragging,
     resetTool
   }: Props = $props();
@@ -57,7 +57,7 @@ License: CECILL-C
     annotations.value.filter(
       (ann) =>
         ann.ui.displayControl.editing &&
-        (tracklet.ui.childs ?? []).includes(ann) &&
+        (videoTrack.ui.childs ?? []).includes(ann) &&
         ann.ui.frame_index === itemFrameIndex &&
         ann.ui.frame_index === currentFrameIndex.value &&
         ann.data.entity_ref.id === trackId,
@@ -65,8 +65,8 @@ License: CECILL-C
   );
 
   export const getKeyItemLeftPosition = (frameIndex: number) => {
-    const itemFrameIndex = frameIndex > lastFrameIndex.value ? lastFrameIndex.value : frameIndex;
-    const leftPosition = (itemFrameIndex / (lastFrameIndex.value + 1)) * 100;
+    const itemFrame = frameIndex > lastFrameIndex.value ? lastFrameIndex.value : frameIndex;
+    const leftPosition = (itemFrame / (lastFrameIndex.value + 1)) * 100;
     return leftPosition;
   };
 
@@ -78,9 +78,9 @@ License: CECILL-C
 
   const dragMe = (node: HTMLButtonElement) => {
     if (
-      !tracklet.ui.childs?.length ||
-      (tracklet.ui.childs[0].ui.frame_index !== itemFrameIndex &&
-      tracklet.ui.childs[tracklet.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
+      !videoTrack.ui.childs?.length ||
+      (videoTrack.ui.childs[0].ui.frame_index !== itemFrameIndex &&
+      videoTrack.ui.childs[videoTrack.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
     )
       return;
 
@@ -122,7 +122,7 @@ License: CECILL-C
           if (newFrameIndex !== undefined) {
             if (newFrameIndex < 0) newFrameIndex = 0;
             if (newFrameIndex > lastFrameIndex.value) newFrameIndex = lastFrameIndex.value;
-            updateTrackletWidth(newFrameIndex, itemFrameIndex);
+            updateTrackWidth(newFrameIndex, itemFrameIndex);
           }
           newFrameIndex = undefined;
           dragController.abort();
@@ -148,16 +148,16 @@ License: CECILL-C
   >
     <button
       class="w-full h-full rounded-full absolute"
-      aria-label="Tracklet keyframe handle"
+      aria-label="Track keyframe handle"
       style={`background-color: ${color}`}
       use:dragMe
       onclick={(e) => onClick(e.button, e.clientX)}
 ></button>
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if tracklet.ui.childs?.length > 2}
+    {#if videoTrack.ui.childs?.length > 2}
       <ContextMenu.Item
-        onclick={() => onDeleteTrackletItemClick(tracklet, itemFrameIndex)}
+        onclick={() => onDeleteTrackItemClick(videoTrack, itemFrameIndex)}
         title="Remove all shapes under this key. For selective delete, use Objects panel."
       >
         Remove item
@@ -165,7 +165,7 @@ License: CECILL-C
     {/if}
     {#if !isItemBeingEdited}
       <ContextMenu.Item
-        onclick={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_ref.name)}
+        onclick={() => onEditKeyItemClick(itemFrameIndex, videoTrack.data.view_ref.name)}
       >
         Edit item
       </ContextMenu.Item>

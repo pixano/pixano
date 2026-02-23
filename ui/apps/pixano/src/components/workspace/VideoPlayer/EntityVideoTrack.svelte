@@ -16,9 +16,9 @@ License: CECILL-C
     cn,
     ContextMenu,
     SequenceFrame,
-    Tracklet,
+    Track,
     View,
-    type TrackletTimelineEntry,
+    type TrackTimelineEntry,
   } from "$lib/ui";
 
   import { sourcesStore } from "$lib/stores/appStores.svelte";
@@ -34,36 +34,36 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
-  import TrackletKeyItem from "./TrackletKeyItem.svelte";
+  import TrackKeyItem from "./TrackKeyItem.svelte";
 
   type MView = Record<string, View | View[]>;
 
   interface Props {
     trackId: string;
-    tracklet: Tracklet;
+    track: Track;
     views: MView;
-    onContextMenu: (tracklet: Tracklet) => void;
+    onContextMenu: (track: Track) => void;
     onEditKeyItemClick: (
-    frameIndex: TrackletTimelineEntry["frame_index"],
+    frameIndex: TrackTimelineEntry["frame_index"],
     viewname: string,
   ) => void;
     onAddKeyItemClick: (event: MouseEvent) => void;
-    onSplitTrackletClick: () => void;
-    onDeleteTrackletClick: () => void;
-    findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
+    onSplitTrackClick: () => void;
+    onDeleteTrackClick: () => void;
+    findNeighborItems: (track: Track, frameIndex: number) => [number, number];
     moveCursorToPosition: (clientX: number) => void;
     resetTool: () => void;
   }
 
   let {
     trackId,
-    tracklet = $bindable(),
+    track: videoTrack = $bindable(),
     views,
     onContextMenu,
     onEditKeyItemClick,
     onAddKeyItemClick,
-    onSplitTrackletClick,
-    onDeleteTrackletClick,
+    onSplitTrackClick,
+    onDeleteTrackClick,
     findNeighborItems,
     moveCursorToPosition,
     resetTool
@@ -74,44 +74,44 @@ License: CECILL-C
   let mustMerge: boolean = $state(false);
   let overlapTargetId: string = $state("");
 
-  const tracklet_margin = 0.3;
-  const getLeft = (tracklet: Tracklet) => {
-    let start = Math.max(0, tracklet.data.start_timestep - tracklet_margin);
+  const track_margin = 0.3;
+  const getLeft = (trk: Track) => {
+    let start = Math.max(0, trk.data.start_timestep - track_margin);
     return (start / (lastFrameIndex.value + 1)) * 100;
   };
-  const getRight = (tracklet: Tracklet) => {
-    let end = Math.max(tracklet.data.start_timestep, tracklet.data.end_timestep) + tracklet_margin;
+  const getRight = (trk: Track) => {
+    let end = Math.max(trk.data.start_timestep, trk.data.end_timestep) + track_margin;
     return (end / (lastFrameIndex.value + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
-  const getTop = (tracklet: Tracklet, views: MView) => {
+  const getTop = (trk: Track, views: MView) => {
     return (
       10 +
-      (80 * Object.keys(views).indexOf(tracklet.data.view_ref.name)) / Object.keys(views).length
+      (80 * Object.keys(views).indexOf(trk.data.view_ref.name)) / Object.keys(views).length
     );
   };
 
-  let left = $derived(getLeft(tracklet));
-  let right = $derived(getRight(tracklet));
+  let left = $derived(getLeft(videoTrack));
+  let right = $derived(getRight(videoTrack));
   let height = $derived(getHeight(views));
-  let top = $derived(getTop(tracklet, views));
-  let trackletElement: HTMLElement = $state();
+  let top = $derived(getTop(videoTrack, views));
+  let trackElement: HTMLElement = $state();
 
   let resizeObs: ResizeObserver = $state();
   let oneFrameInPixel: number = $state();
   const calcOneFrameInPixel = () => {
     oneFrameInPixel =
-      trackletElement?.getBoundingClientRect().width /
-      (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+      trackElement?.getBoundingClientRect().width /
+      (videoTrack.data.end_timestep - videoTrack.data.start_timestep + 1);
   };
   calcOneFrameInPixel();
 
   $effect(() => {
     if (resizeObs) {
-      if (tracklet.ui.displayControl.highlighted) {
-        resizeObs.observe(trackletElement);
+      if (videoTrack.ui.displayControl.highlighted) {
+        resizeObs.observe(trackElement);
       } else {
-        resizeObs.unobserve(trackletElement);
+        resizeObs.unobserve(trackElement);
       }
     }
   });
@@ -123,30 +123,30 @@ License: CECILL-C
 
   let color = $derived(colorScale.value[1](trackId));
 
-  let tracklet_annotations_frame_indexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index!));
+  let track_annotations_frame_indexes = $derived((videoTrack.ui.childs ?? []).map((ann) => ann.ui.frame_index!));
 
   let canAddKeyFrame =
-    $derived(currentFrameIndex.value > tracklet.data.start_timestep &&
-    currentFrameIndex.value < tracklet.data.end_timestep &&
-    !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
+    $derived(currentFrameIndex.value > videoTrack.data.start_timestep &&
+    currentFrameIndex.value < videoTrack.data.end_timestep &&
+    !(videoTrack.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
 
   let canSplit =
-    $derived(currentFrameIndex.value >= tracklet.data.start_timestep &&
-    currentFrameIndex.value < tracklet.data.end_timestep);
+    $derived(currentFrameIndex.value >= videoTrack.data.start_timestep &&
+    currentFrameIndex.value < videoTrack.data.end_timestep);
 
-  const getNeighborTracklet = (
+  const getNeighborTrack = (
     annotations: Annotation[],
     direction: "left" | "right",
   ): Annotation | null => {
     const isLeft = direction === "left";
 
-    const refCompareTimestep = isLeft ? tracklet.data.start_timestep : tracklet.data.end_timestep;
+    const refCompareTimestep = isLeft ? videoTrack.data.start_timestep : videoTrack.data.end_timestep;
 
-    const tracklets = annotations.filter((ann) => {
+    const neighborTracks = annotations.filter((ann) => {
       if (!ann.is_type(BaseSchema.Tracklet)) return false;
-      const t = ann as Tracklet;
+      const t = ann as Track;
       return (
-        t.data.view_ref.name === tracklet.data.view_ref.name &&
+        t.data.view_ref.name === videoTrack.data.view_ref.name &&
         t.data.entity_ref.id === trackId &&
         (isLeft
           ? t.data.end_timestep < refCompareTimestep
@@ -154,11 +154,11 @@ License: CECILL-C
       );
     });
 
-    if (tracklets.length === 0) return null;
+    if (neighborTracks.length === 0) return null;
 
-    return tracklets.reduce((best, curr) => {
-      const tBest = best as Tracklet;
-      const tCurr = curr as Tracklet;
+    return neighborTracks.reduce((best, curr) => {
+      const tBest = best as Track;
+      const tCurr = curr as Track;
 
       const bestVal = isLeft ? tBest.data.end_timestep : tBest.data.start_timestep;
       const currVal = isLeft ? tCurr.data.end_timestep : tCurr.data.start_timestep;
@@ -174,50 +174,50 @@ License: CECILL-C
   };
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(videoTrack, draggedFrameIndex);
     if (
       (prevFrameIndex !== 0 && newFrameIndex < prevFrameIndex + 1) ||
       (nextFrameIndex !== lastFrameIndex.value && newFrameIndex > nextFrameIndex - 1)
     )
       return false;
-    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
-    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
+    const isStart = draggedFrameIndex === videoTrack.data.start_timestep;
+    const isEnd = draggedFrameIndex === videoTrack.data.end_timestep;
     if (!(isStart || isEnd)) return false;
     if (isStart) {
-      if (newFrameIndex >= tracklet.data.end_timestep) return false;
+      if (newFrameIndex >= videoTrack.data.end_timestep) return false;
       left = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
-      right = (tracklet.data.end_timestep / (lastFrameIndex.value + 1)) * 100;
+      right = (videoTrack.data.end_timestep / (lastFrameIndex.value + 1)) * 100;
     }
     if (isEnd) {
-      if (newFrameIndex <= tracklet.data.start_timestep) return false;
+      if (newFrameIndex <= videoTrack.data.start_timestep) return false;
       right = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
     }
     return true;
   };
 
-  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
-    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
-    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
-    const viewFrames = views[tracklet.data.view_ref.name] as SequenceFrame[] | undefined;
-    if (!viewFrames?.[newFrameIndex] || !tracklet.ui.childs?.length) return;
+  const updateTrackWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
+    const isStart = draggedFrameIndex === videoTrack.data.start_timestep;
+    const isEnd = draggedFrameIndex === videoTrack.data.end_timestep;
+    const viewFrames = views[videoTrack.data.view_ref.name] as SequenceFrame[] | undefined;
+    if (!viewFrames?.[newFrameIndex] || !videoTrack.ui.childs?.length) return;
     const newViewId = viewFrames[newFrameIndex].id;
-    let movedAnn = tracklet.ui.childs[0];
-    if (isStart) tracklet.data.start_timestep = newFrameIndex;
+    let movedAnn = videoTrack.ui.childs[0];
+    if (isStart) videoTrack.data.start_timestep = newFrameIndex;
     if (isEnd) {
-      movedAnn = tracklet.ui.childs[tracklet.ui.childs.length - 1];
-      tracklet.data.end_timestep = newFrameIndex;
+      movedAnn = videoTrack.ui.childs[videoTrack.ui.childs.length - 1];
+      videoTrack.data.end_timestep = newFrameIndex;
     }
     movedAnn.ui.frame_index = newFrameIndex;
     movedAnn.data.view_ref.id = newViewId;
 
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
+        if (ann.is_type(BaseSchema.Tracklet) && ann.id === videoTrack.id) {
           if (isStart) {
-            (ann as Tracklet).data.start_timestep = newFrameIndex;
+            (ann as Track).data.start_timestep = newFrameIndex;
           }
           if (isEnd) {
-            (ann as Tracklet).data.end_timestep = newFrameIndex;
+            (ann as Track).data.end_timestep = newFrameIndex;
           }
         }
         if (ann.id === movedAnn.id) {
@@ -228,39 +228,39 @@ License: CECILL-C
       }),
     );
     const pixSource = getPixanoSource(sourcesStore);
-    tracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
-    saveTo("update", tracklet);
+    videoTrack.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+    saveTo("update", videoTrack);
     movedAnn.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
     saveTo("update", movedAnn);
     currentFrameIndex.value = newFrameIndex;
   };
 
-  let leftTracklet = $derived(getNeighborTracklet(annotations.value, "left"));
-  let rightTracklet = $derived(getNeighborTracklet(annotations.value, "right"));
+  let leftTrack = $derived(getNeighborTrack(annotations.value, "left"));
+  let rightTrack = $derived(getNeighborTrack(annotations.value, "right"));
 
-  const onGlueTrackletClick = (direction: "left" | "right") => {
-    const neighbor = direction === "left" ? leftTracklet : rightTracklet;
+  const onGlueTrackClick = (direction: "left" | "right") => {
+    const neighbor = direction === "left" ? leftTrack : rightTrack;
     if (!neighbor) return;
 
     annotations.update((anns) => {
       // Remove neighbor
       let new_anns = anns.filter((ann) => ann.id !== neighbor.id);
       return new_anns.map((ann) => {
-        if (ann.id === tracklet.id) {
-          const currentTracklet = ann as Tracklet;
-          const neighborTracklet = neighbor as Tracklet;
+        if (ann.id === videoTrack.id) {
+          const currentTrack = ann as Track;
+          const neighborTrack = neighbor as Track;
 
           // Add neighbor's childs
-          currentTracklet.ui.childs = [
-            ...currentTracklet.ui.childs,
-            ...neighborTracklet.ui.childs,
+          currentTrack.ui.childs = [
+            ...currentTrack.ui.childs,
+            ...neighborTrack.ui.childs,
           ].sort(sortByFrameIndex);
 
           // Update range
           if (direction === "left") {
-            currentTracklet.data.start_timestep = neighborTracklet.data.start_timestep;
+            currentTrack.data.start_timestep = neighborTrack.data.start_timestep;
           } else {
-            currentTracklet.data.end_timestep = neighborTracklet.data.end_timestep;
+            currentTrack.data.end_timestep = neighborTrack.data.end_timestep;
           }
         }
         return ann;
@@ -286,18 +286,18 @@ License: CECILL-C
     }
   };
 
-  const handleTrackletContextMenu = (event: MouseEvent) => {
+  const handleTrackContextMenu = (event: MouseEvent) => {
     event.preventDefault();
-    onContextMenu(tracklet);
+    onContextMenu(videoTrack);
   };
 
-  const onRelinkTrackletClick = (event: MouseEvent) => {
+  const onRelinkTrackClick = (event: MouseEvent) => {
     event.preventDefault(); //avoid context menu close
     showRelink = !showRelink;
   };
 
   const handleRelink = () => {
-    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
+    relink(videoTrack, getTopEntity(videoTrack), selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
   };
 </script>
@@ -305,19 +305,19 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
-      "opacity-100": tracklet.ui.displayControl.highlighted === "self",
+      "opacity-100": videoTrack.ui.displayControl.highlighted === "self",
       "opacity-30":
-        (tracklet.ui.displayControl.highlighted === "none" &&
+        (videoTrack.ui.displayControl.highlighted === "none" &&
           selectedTool.value.type === ToolType.Fusion) ||
-        tracklet.ui.displayControl.hidden,
+        videoTrack.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      oncontextmenu={handleTrackletContextMenu}
-      aria-label="Tracklet segment handle"
+      oncontextmenu={handleTrackContextMenu}
+      aria-label="Track segment handle"
       class="absolute h-full w-full"
-      bind:this={trackletElement}
+      bind:this={trackElement}
       onclick={(e) => onClick(e.button, e.clientX)}
 ></button>
   </ContextMenu.Trigger>
@@ -331,31 +331,31 @@ License: CECILL-C
         </ContextMenu.Item>
       {/if}
       {#if canSplit}
-        <ContextMenu.Item onclick={onSplitTrackletClick}>
-          Split tracklet after frame {currentFrameIndex.value}
+        <ContextMenu.Item onclick={onSplitTrackClick}>
+          Split track after frame {currentFrameIndex.value}
         </ContextMenu.Item>
       {/if}
-      {#if leftTracklet}
-        <ContextMenu.Item onclick={() => onGlueTrackletClick("left")}>
+      {#if leftTrack}
+        <ContextMenu.Item onclick={() => onGlueTrackClick("left")}>
           Glue to left
         </ContextMenu.Item>
       {/if}
-      {#if rightTracklet}
-        <ContextMenu.Item onclick={() => onGlueTrackletClick("right")}>
+      {#if rightTrack}
+        <ContextMenu.Item onclick={() => onGlueTrackClick("right")}>
           Glue to right
         </ContextMenu.Item>
       {/if}
-      <ContextMenu.Item onclick={onRelinkTrackletClick}>Relink tracklet</ContextMenu.Item>
-      <ContextMenu.Item onclick={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
+      <ContextMenu.Item onclick={onRelinkTrackClick}>Relink track</ContextMenu.Item>
+      <ContextMenu.Item onclick={onDeleteTrackClick}>Delete track</ContextMenu.Item>
       {#if showRelink}
         <div class="flex flex-row gap-4 items-center mr-4">
           <RelinkAnnotation
             bind:selectedEntityId
             bind:mustMerge
             bind:overlapTargetId
-            baseSchema={tracklet.table_info.base_schema}
-            viewRef={tracklet.data.view_ref}
-            {tracklet}
+            baseSchema={videoTrack.table_info.base_schema}
+            viewRef={videoTrack.data.view_ref}
+            track={videoTrack}
           />
           <Button.Root type="button" class={cn(buttonVariants(), "text-white mt-4")} onclick={handleRelink}>OK</Button.Root>
         </div>
@@ -363,12 +363,12 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
-  {#key tracklet_annotations_frame_indexes.length}
-    {#each tracklet_annotations_frame_indexes as itemFrameIndex}
-      <TrackletKeyItem
+{#if videoTrack.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
+  {#key track_annotations_frame_indexes.length}
+    {#each track_annotations_frame_indexes as itemFrameIndex}
+      <TrackKeyItem
         {itemFrameIndex}
-        {tracklet}
+        track={videoTrack}
         {color}
         {height}
         {top}
@@ -377,7 +377,7 @@ License: CECILL-C
         {onClick}
         {trackId}
         {canContinueDragging}
-        {updateTrackletWidth}
+        updateTrackWidth={updateTrackWidth}
         {resetTool}
       />
     {/each}

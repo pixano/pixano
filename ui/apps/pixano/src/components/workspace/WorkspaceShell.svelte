@@ -33,7 +33,7 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { videoControls } from "$lib/stores/videoStores.svelte";
 
-  import { attachTrackletChildren, processDatasetItem } from "$lib/utils/itemDataProcessing";
+  import { attachTrackChildren, processDatasetItem } from "$lib/utils/itemDataProcessing";
   import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
   import { prepareSaveData } from "$lib/utils/saveDataProcessing";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
@@ -110,14 +110,14 @@ License: CECILL-C
     // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
 
-    // Attach tracklet children & top entities BEFORE writing to the store,
+    // Attach track children & top entities BEFORE writing to the store,
     // using the pure getTopEntityFromList to avoid reading entities through the proxy.
     // This collapses 2 annotation writes into 1.
-    const withTracklets = attachTrackletChildren(
+    const withTracks = attachTrackChildren(
       result.annotations,
       (ann) => getTopEntityFromList(ann, result.entities),
     );
-    annotations.value = withTracklets;
+    annotations.value = withTracks;
 
     itemMetas.value = {
       featuresList: featureValues || { main: {}, objects: {} },
