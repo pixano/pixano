@@ -6,7 +6,6 @@
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .entity import Entity
 
@@ -32,26 +31,23 @@ def is_named_entity(cls: type, strict: bool = False) -> bool:
 def create_named_entity(
     name: str,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    parent_ref: EntityRef = EntityRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
 ) -> NamedEntity:
     """Create a `NamedEntity` instance.
 
     Args:
         name: The name of the entity.
         id: NamedEntity ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        parent_ref: Entity reference.
+        item_id: Item ID.
+        parent_id: Parent entity ID.
 
     Returns:
         The created `NamedEntity` instance.
     """
     return NamedEntity(
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
         name=name,
     )

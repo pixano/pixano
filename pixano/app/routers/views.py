@@ -12,6 +12,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from starlette.responses import Response
 
 from pixano.app.models.views import ViewModel
 from pixano.app.settings import Settings, get_settings
@@ -59,7 +60,7 @@ _BOUNDARY = b"frame_boundary"
 
 def _generate_multipart_frames(
     arrow_table: pa.Table,
-    view_name: str,
+    blob_col_name: str,
     format_col: str,
 ) -> Generator[bytes, None, None]:
     """Yield multipart/x-mixed-replace parts from an Arrow table of frames.
@@ -68,12 +69,12 @@ def _generate_multipart_frames(
 
     Args:
         arrow_table: Sorted Arrow table with frame data.
-        view_name: Column name containing the blob data.
+        blob_col_name: Column name containing the blob data.
         format_col: Column name containing the format string.
     """
     has_format = format_col in arrow_table.column_names
     frame_index_col = arrow_table.column("frame_index")
-    blob_col = arrow_table.column(view_name)
+    blob_col = arrow_table.column(blob_col_name)
 
     for i in range(arrow_table.num_rows):
         blob = blob_col[i].as_py()
@@ -97,7 +98,16 @@ def _generate_multipart_frames(
     yield b"--" + _BOUNDARY + b"--\r\n"
 
 
-@router.get("/{dataset_id}/{view_name}/{row_id}/blob")
+@router.get(
+    "/{dataset_id}/{view_name}/{row_id}/blob",
+    operation_id="get_view_blob",
+    responses={
+        200: {
+            "description": "Raw blob bytes for the requested view.",
+            "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
 def get_view_blob(
     dataset_id: str,
     view_name: str,
@@ -125,22 +135,22 @@ def get_view_blob(
     table = dataset.open_table(vc.media_table)
 
     # Fetch only the blob column and format for this view
-    select_cols = ["id", view_name]
-    format_col = f"{view_name}_format"
+    select_cols = ["id", "blob"]
+    format_col = "format"
     if format_col in [f.name for f in table.schema]:
         select_cols.append(format_col)
 
     rows = (
         TableQueryBuilder(table, dataset._db_connection)
         .select(select_cols)
-        .where(f"id = '{row_id}'")
+        .where(f"id = '{row_id}' AND view_name = '{view_name}'")
         .to_list()
     )
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"Row '{row_id}' not found in table '{vc.media_table}'.")
 
-    blob = rows[0].get(view_name, b"")
+    blob = rows[0].get("blob", b"")
     if not blob:
         raise HTTPException(status_code=404, detail="No blob data found for this view.")
 
@@ -154,7 +164,16 @@ def get_view_blob(
     )
 
 
-@router.get("/{dataset_id}/{view_name}/batch")
+@router.get(
+    "/{dataset_id}/{view_name}/batch",
+    operation_id="get_view_blob_batch",
+    responses={
+        200: {
+            "description": "Batch of video/sequence frames as multipart stream.",
+            "content": {"multipart/x-mixed-replace": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
 def get_view_blob_batch(
     dataset_id: str,
     view_name: str,
@@ -200,13 +219,14 @@ def get_view_blob_batch(
     # Build query
     end_frame = start_frame + batch_size
     where_clause = (
-        f"item_ref.id = '{item_id}' "
+        f"item_id = '{item_id}' "
+        f"AND view_name = '{view_name}' "
         f"AND frame_index >= {start_frame} "
         f"AND frame_index < {end_frame}"
     )
 
-    select_cols = ["id", view_name, "frame_index"]
-    format_col = f"{view_name}_format"
+    select_cols = ["id", "blob", "frame_index"]
+    format_col = "format"
     if format_col in table_column_names:
         select_cols.append(format_col)
 
@@ -226,7 +246,7 @@ def get_view_blob_batch(
     arrow_table = arrow_table.take(sorted_indices)
 
     return StreamingResponse(
-        _generate_multipart_frames(arrow_table, view_name, format_col),
+        _generate_multipart_frames(arrow_table, "blob", format_col),
         media_type=f"multipart/x-mixed-replace; boundary={_BOUNDARY.decode()}",
         headers={
             "X-Total-Frames": str(arrow_table.num_rows),
@@ -236,7 +256,7 @@ def get_view_blob_batch(
     )
 
 
-@router.get("/{dataset_id}/{table}", response_model=list[ViewModel])
+@router.get("/{dataset_id}/{table}", response_model=list[ViewModel], operation_id="list_views")
 def get_views(
     dataset_id: str,
     table: str,
@@ -277,7 +297,7 @@ def get_views(
     )
 
 
-@router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel)
+@router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel, operation_id="get_view")
 def get_view(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ViewModel:
     """Get a view from a table of a dataset.
 
@@ -293,7 +313,7 @@ def get_view(dataset_id: str, table: str, id: str, settings: Annotated[Settings,
     return get_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}", response_model=list[ViewModel])
+@router.post("/{dataset_id}/{table}", response_model=list[ViewModel], status_code=201, operation_id="create_views")
 def create_views(
     dataset_id: str,
     table: str,
@@ -314,7 +334,7 @@ def create_views(
     return create_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
-@router.post("/{dataset_id}/{table}/{id}", response_model=ViewModel)
+@router.post("/{dataset_id}/{table}/{id}", response_model=ViewModel, status_code=201, operation_id="create_view")
 def create_view(
     dataset_id: str,
     table: str,
@@ -322,7 +342,7 @@ def create_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Add an view in a table of a dataset.
+    """Add a view in a table of a dataset.
 
     Args:
         dataset_id: Dataset ID containing the table.
@@ -337,7 +357,7 @@ def create_view(
     return create_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
-@router.put("/{dataset_id}/{table}/{id}", response_model=ViewModel)
+@router.put("/{dataset_id}/{table}/{id}", response_model=ViewModel, operation_id="update_view")
 def update_view(
     dataset_id: str,
     table: str,
@@ -345,7 +365,7 @@ def update_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Update an view in a table of a dataset.
+    """Update a view in a table of a dataset.
 
     Args:
         dataset_id: Dataset ID containing the table.
@@ -360,7 +380,7 @@ def update_view(
     return update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
-@router.put("/{dataset_id}/{table}", response_model=list[ViewModel])
+@router.put("/{dataset_id}/{table}", response_model=list[ViewModel], operation_id="update_views")
 def update_views(
     dataset_id: str,
     table: str,
@@ -381,9 +401,9 @@ def update_views(
     return update_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
-@router.delete("/{dataset_id}/{table}/{id}")
+@router.delete("/{dataset_id}/{table}/{id}", status_code=204, response_class=Response, operation_id="delete_view")
 def delete_view(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
-    """Delete an view from a table of a dataset.
+    """Delete a view from a table of a dataset.
 
     Args:
         dataset_id: Dataset ID containing the table.
@@ -391,10 +411,10 @@ def delete_view(dataset_id: str, table: str, id: str, settings: Annotated[Settin
         id: ID of the view to delete.
         settings: App settings.
     """
-    return delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
+    delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}")
+@router.delete("/{dataset_id}/{table}", status_code=204, response_class=Response, operation_id="delete_views")
 def delete_views(
     dataset_id: str,
     table: str,
@@ -409,4 +429,4 @@ def delete_views(
         ids: IDs of the views to delete.
         settings: App settings.
     """
-    return delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)
+    delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)

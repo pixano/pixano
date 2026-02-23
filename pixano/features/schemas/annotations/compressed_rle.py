@@ -15,7 +15,6 @@ from typing_extensions import Self
 from pixano.features.utils import image as image_utils
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -63,9 +62,6 @@ class CompressedRLE(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
             size=[0, 0],
             counts=b"",
             created_at=datetime(1970, 1, 1),
@@ -177,10 +173,14 @@ def create_compressed_rle(
     size: list[int],
     counts: bytes,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
+    tracklet_id: str = "",
+    entity_dynamic_state_id: str = "",
+    frame_id: str = "",
+    frame_index: int = -1,
 ) -> CompressedRLE:
     """Create a `CompressedRLE` instance.
 
@@ -188,10 +188,14 @@ def create_compressed_rle(
         size: Mask size.
         counts: Mask RLE encoding.
         id: `CompressedRLE` ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
+        tracklet_id: Tracklet ID.
+        entity_dynamic_state_id: Entity dynamic state ID.
+        frame_id: Frame/view row ID.
+        frame_index: Frame index.
 
     Returns:
         The compressed RLE instance.
@@ -200,8 +204,12 @@ def create_compressed_rle(
         size=size,
         counts=counts,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
+        tracklet_id=tracklet_id,
+        entity_dynamic_state_id=entity_dynamic_state_id,
+        frame_id=frame_id,
+        frame_index=frame_index,
     )

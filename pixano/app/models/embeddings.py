@@ -28,8 +28,9 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
                     "id": "embedding_orange_cats",
                     "table_info": {"group": "embeddings", "name": "cat_embeddings", "base_schema": "ViewEmbedding"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
+                        "item_id": "1",
+                        "view_name": "image",
+                        "frame_id": "orange_cats",
                         "vector": [0.0, 1.0, 2.0, -1.0, -2.0, 0.0],
                         "shape": [6],
                     },

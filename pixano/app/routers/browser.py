@@ -7,7 +7,7 @@
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import NonNegativeInt, PositiveInt
@@ -44,7 +44,7 @@ def _media_file_exists(media_dir: Path, relative_url: str) -> bool:
     return path_cache[relative_url]
 
 
-@router.get("/{id}", response_model=DatasetBrowser)
+@router.get("/{id}", response_model=DatasetBrowser, operation_id="get_browser")
 def get_browser(
     request: Request,
     id: str,
@@ -55,7 +55,7 @@ def get_browser(
     embedding_table: str = "",
     where: str | None = None,
     sortcol: str | None = None,
-    order: str | None = None,
+    order: Literal["asc", "desc"] | None = None,
 ) -> DatasetBrowser:  # type: ignore
     """Load dataset items for the explorer page.
 
@@ -141,7 +141,9 @@ def get_browser(
             view_by_item: dict[str, Any] = {}
             media_rows = media_results.get(vc.media_table, [])
             for row in media_rows:
-                rid = row.item_ref.id
+                rid = row.item_id
+                if getattr(row, "view_name", "") != view_name:
+                    continue
                 if rid in item_id_set and rid not in view_by_item:
                     view_by_item[rid] = row
             item_first_media[view_name] = {item_id: view_by_item.get(item_id) for item_id in item_ids}
@@ -163,7 +165,7 @@ def get_browser(
         for view, view_rows in view_results:
             view_by_item = {}
             for row in view_rows:
-                rid = row.item_ref.id
+                rid = row.item_id
                 if rid in item_id_set and rid not in view_by_item:
                     view_by_item[rid] = row
             item_first_media[view] = {item_id: view_by_item.get(item_id) for item_id in item_ids}
@@ -187,25 +189,26 @@ def get_browser(
             curr_view = item_first_media[view][item.id]
             if curr_view is not None:
                 if has_media_type_tables:
-                    # New media-type table: check for embedded blob via URL column
-                    vc = view_columns[view]
-                    url_col = f"{view}_url"
-                    url_val = getattr(curr_view, url_col, "") if hasattr(curr_view, url_col) else ""
-                    if url_val and url_val != "":
-                        # Filesystem mode: use URL for thumbnail
-                        if _media_file_exists(settings.media_dir, url_val):
-                            encoded_url = base64.b64encode(url_val.encode("utf-8")).decode("utf-8")
-                            row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
-                        else:
-                            row_view_url = ""
+                    # Media-type tables store one row per view, with canonical "url/blob/content" fields.
+                    if hasattr(curr_view, "content"):
+                        row_view_url = generate_text_image_base64(curr_view.content[:80])
                     else:
-                        # Embedded mode: use embedded thumbnail endpoint
-                        row_view_url = str(request.url_for(
-                            "get_embedded_thumbnail",
-                            dataset_id=id,
-                            view_name=view,
-                            row_id=curr_view.id,
-                        ))
+                        url_val = getattr(curr_view, "url", "")
+                        if not _is_embedded_view(curr_view) and url_val:
+                            if _media_file_exists(settings.media_dir, url_val):
+                                encoded_url = base64.b64encode(url_val.encode("utf-8")).decode("utf-8")
+                                row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
+                            else:
+                                row_view_url = ""
+                        else:
+                            row_view_url = str(
+                                request.url_for(
+                                    "get_embedded_thumbnail",
+                                    dataset_id=id,
+                                    view_name=view,
+                                    row_id=curr_view.id,
+                                )
+                            )
                     row[view] = row_view_url
                 else:
                     # Legacy: per-view table
@@ -245,7 +248,7 @@ def get_browser(
     )
 
 
-@router.get("/item_ids/{id}", response_model=list[str])
+@router.get("/item_ids/{id}", response_model=list[str], operation_id="get_item_ids")
 def get_items_ids(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],

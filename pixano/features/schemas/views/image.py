@@ -17,7 +17,6 @@ from PIL.Image import Image as PILImage
 from pixano.features.utils.image import image_to_base64
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -171,8 +170,9 @@ def is_image(cls: type, strict: bool = False) -> bool:
 def create_image(
     url: Path | str = "",
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
     width: int | None = None,
     height: int | None = None,
     format: str | None = None,
@@ -185,8 +185,9 @@ def create_image(
         url: The image URL. If not relative, the URL is converted to a relative path using `url_relative_path`.
             Can be empty when using embedded blob.
         id: Image ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
         width: The image width. If None, the width is extracted from the image file or blob.
         height: The image height. If None, the height is extracted from the image file or blob.
         format: The image format. If None, the format is extracted from the image file or blob.
@@ -209,8 +210,9 @@ def create_image(
         format = img.format
         return Image(
             id=id,
-            item_ref=item_ref,
-            parent_ref=parent_ref,
+            item_id=item_id,
+            parent_id=parent_id,
+            view_name=view_name,
             url="",
             width=width,
             height=height,
@@ -232,8 +234,9 @@ def create_image(
 
     return Image(
         id=id,
-        item_ref=item_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
         url=str(url.as_posix()),
         width=width,
         height=height,

@@ -27,7 +27,7 @@ from .utils import (
 router = APIRouter(prefix="/items_info", tags=["Items"])
 
 
-@router.get("/{dataset_id}", response_model=list[ItemInfoModel])
+@router.get("/{dataset_id}", response_model=list[ItemInfoModel], operation_id="list_items_info")
 def get_items_info(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -78,10 +78,10 @@ def get_items_info(
         if group_name in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
             continue
         arrow_table = (  # noqa: F841
-            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_arrow()
+            TableQueryBuilder(table).select(["item_id"]).where(f"item_id in {sql_ids}").to_arrow()
         )
         counts = duckdb.query(
-            'SELECT "item_ref.id" AS item_id, COUNT(*) AS cnt FROM arrow_table GROUP BY "item_ref.id"'
+            'SELECT "item_id" AS item_id, COUNT(*) AS cnt FROM arrow_table GROUP BY "item_id"'
         ).fetchall()
         for item_id, count in counts:
             infos[item_id][group_name][table_name] = {"count": count}
@@ -91,7 +91,7 @@ def get_items_info(
     return items_info
 
 
-@router.get("/{dataset_id}/{id}", response_model=ItemInfoModel)
+@router.get("/{dataset_id}/{id}", response_model=ItemInfoModel, operation_id="get_item_info")
 def get_item_info(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemInfoModel:
     """Get an item info.
 

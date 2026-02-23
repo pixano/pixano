@@ -25,7 +25,6 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
         create_keypoints3d,
         create_pdf,
         create_sequence_frame,
-        create_track,
         create_tracklet,
         create_video,
         is_base_schema,
@@ -38,7 +37,6 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
         is_keypoints3d,
         is_pdf,
         is_sequence_frame,
-        is_track,
         is_tracklet,
         is_video,
     )
@@ -57,9 +55,6 @@ def create_instance_of_schema(schema: type["BaseSchema"], **data) -> "BaseSchema
 
     elif is_tracklet(schema, strict=True):
         return create_tracklet(**data)
-
-    elif is_track(schema, True):
-        return create_track(**data)
 
     elif is_bbox(schema, True):
         return create_bbox(**data)
@@ -89,48 +84,13 @@ def create_instance_of_pixano_type(pix_type: type["BaseType"], **data) -> "BaseT
     """Create a pixano object."""
     # Import here to avoid circular imports
     from pixano.features.types import (
-        create_annotation_ref,
-        create_embedding_ref,
-        create_entity_ref,
-        create_item_ref,
         create_ndarray_float,
-        create_schema_ref,
-        create_source_ref,
-        create_view_ref,
-        is_annotation_ref,
         is_base_type,
-        is_embedding_ref,
-        is_entity_ref,
-        is_item_ref,
         is_ndarray_float,
-        is_schema_ref,
-        is_source_ref,
-        is_view_ref,
     )
 
     if is_ndarray_float(pix_type, True):
         return create_ndarray_float(**data)
-
-    elif is_schema_ref(pix_type, True):
-        return create_schema_ref(**data)
-
-    elif is_item_ref(pix_type, True):
-        return create_item_ref(**data)
-
-    elif is_view_ref(pix_type, True):
-        return create_view_ref(**data)
-
-    elif is_entity_ref(pix_type, True):
-        return create_entity_ref(**data)
-
-    elif is_annotation_ref(pix_type, True):
-        return create_annotation_ref(**data)
-
-    elif is_embedding_ref(pix_type, True):
-        return create_embedding_ref(**data)
-
-    elif is_source_ref(pix_type, True):
-        return create_source_ref(**data)
 
     elif is_base_type(pix_type, False):
         return pix_type(**data)

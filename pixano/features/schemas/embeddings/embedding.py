@@ -20,7 +20,6 @@ from pixano.features.schemas.views.image import Image, is_image
 from pixano.features.schemas.views.sequence_frame import is_sequence_frame
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..base_schema import BaseSchema
 from ..registry import _register_schema_internal
 
@@ -43,11 +42,15 @@ class Embedding(BaseSchema, ABC):
     """Embeddings are used to define an embedding vector for an item in a dataset.
 
     Attributes:
-        item_ref: Reference to the embedding's item.
+        item_id: ID of the embedding's item.
+        view_name: Logical view name.
+        frame_id: ID of the view row used for this embedding.
         vector: The embedding vector that should be defined by subclasses.
     """
 
-    item_ref: ItemRef = ItemRef.none()
+    item_id: str = ""
+    view_name: str = ""
+    frame_id: str = ""
     vector: Any  # TODO: change to Vector exposed parametrized type when LanceDB is updated
     shape: list[int] = []
 
@@ -62,7 +65,9 @@ class Embedding(BaseSchema, ABC):
     @property
     def item(self) -> "Item":
         """Get the embedding's item."""
-        return self.resolve_ref(self.item_ref)
+        if self.item_id == "":
+            raise ValueError("item_id is not set.")
+        return self.dataset.get_data("item", ids=[self.item_id])[0]
 
     @classmethod
     def to_arrow_schema(
@@ -95,15 +100,28 @@ class ViewEmbedding(Embedding, ABC):
     """ViewEmbeddings are used to define an embedding vector for a view in a dataset.
 
     Attributes:
-        view_ref: Reference to the embedding's view.
+        frame_id: ID of the media row used as embedding source.
     """
-
-    view_ref: ViewRef = ViewRef.none()
 
     @property
     def view(self) -> "View":
         """Get the embedding's view."""
-        return self.resolve_ref(self.view_ref)
+        if self.frame_id == "":
+            raise ValueError("frame_id is not set.")
+        # Try targeted lookup first when view_name is available.
+        if self.view_name:
+            view = self.dataset.get_data(self.view_name, ids=self.frame_id)
+            if view is not None:
+                return view
+        # Fallback: search all view tables.
+        for group, tables in self.dataset.schema.groups.items():
+            if getattr(group, "value", "") != "views":
+                continue
+            for table_name in tables:
+                view = self.dataset.get_data(table_name, ids=self.frame_id)
+                if view is not None:
+                    return view
+        raise ValueError(f"View '{self.frame_id}' not found.")
 
     @staticmethod
     def get_embedding_fn_from_table(dataset: "Dataset", table_name: str, metadata: dict) -> EmbeddingFunction:
@@ -167,7 +185,7 @@ class ViewEmbedding(Embedding, ABC):
 
         embedding_fields = {
             "vector": (Vector(view_embedding_function.ndims()), view_embedding_function.VectorField()),
-            "view_ref": (ViewRef, view_embedding_function.SourceField()),
+            "frame_id": (str, view_embedding_function.SourceField()),
         }
         return create_model(
             "ViewEmbedding",
@@ -201,9 +219,23 @@ def create_view_embedding_function(
             """Open the views in the dataset."""
             return [view.open(dataset.media_dir, "image") for view in views]
 
-        def compute_source_embeddings(self, view_refs: pa.Table, *args, **kwargs) -> list:
+        def compute_source_embeddings(self, frame_ids: pa.Table, *args, **kwargs) -> list:
             """Compute the embeddings for the source column in the database."""
-            views = [dataset.resolve_ref(ViewRef(**view_ref)) for view_ref in view_refs.to_pylist()]
+            views = []
+            for frame_id in frame_ids.to_pylist():
+                view = None
+                for group, tables in dataset.schema.groups.items():
+                    if getattr(group, "value", "") != "views":
+                        continue
+                    for table_name in tables:
+                        view = dataset.get_data(table_name, ids=frame_id)
+                        if view is not None:
+                            break
+                    if view is not None:
+                        break
+                if view is None:
+                    raise ValueError(f"Could not resolve view id '{frame_id}' for embedding.")
+                views.append(view)
             view_type = type(views[0])
             if is_image(view_type) or is_sequence_frame(view_type):
                 views = cast(list[Image], views)

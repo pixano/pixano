@@ -7,7 +7,7 @@
 """Media-type table routing utility.
 
 Maps View subclasses to their fixed media-type table names.
-Each media type has a single table with column-per-view layout.
+Each media type has a single narrow table with a `view_name` discriminator.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from .image import Image, is_image
 from .pdf import PDF, is_pdf
+from .point_cloud_frame import PointCloudFrame, is_point_cloud_frame
 from .point_cloud import PointCloud, is_point_cloud
 from .sequence_frame import SequenceFrame, is_sequence_frame
 from .text import Text, is_text
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
 MEDIA_TYPE_TABLES: dict[str, tuple[type, ...]] = {
     "images": (Image,),
     "frames": (SequenceFrame,),
+    "point_cloud_frames": (PointCloudFrame,),
     "point_clouds": (PointCloud,),
     "texts": (Text,),
     "pdfs": (PDF,),
@@ -56,6 +58,8 @@ def get_media_type_table(view_type: type["View"]) -> str:
         return "videos"
     elif is_sequence_frame(view_type):
         return "frames"
+    elif is_point_cloud_frame(view_type):
+        return "point_cloud_frames"
     elif is_image(view_type):
         return "images"
     elif is_point_cloud(view_type):

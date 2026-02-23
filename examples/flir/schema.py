@@ -12,7 +12,7 @@ Usage:
 """
 
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import Entity, Image
+from pixano.features import Entity, EntityDynamicState, Image, SequenceFrame, Tracklet
 from pixano.features.schemas.annotations.bbox import BBox
 
 
@@ -27,5 +27,26 @@ class FLIRDatasetItem(DatasetItem):
 
     rgb_image: Image
     thermal_image: Image
-    objects: list[FLIRObject]
+    entities: list[FLIRObject]
+    bboxes: list[BBox]
+
+
+class FLIRVideoObject(Entity):
+    """A tracked object across frames in FLIR video sequences."""
+
+    category: str = ""
+
+
+class FLIRVideoObjectState(EntityDynamicState):
+    """Per-frame dynamic state for a FLIR object."""
+
+
+class FLIRVideoDatasetItem(DatasetItem):
+    """Dataset item for FLIR ADAS v2 multi-view video."""
+
+    rgb_image: list[SequenceFrame]
+    thermal_image: list[SequenceFrame]
+    entities: list[FLIRVideoObject]
+    entity_dynamic_states: list[FLIRVideoObjectState]
+    tracklets: list[Tracklet]
     bboxes: list[BBox]

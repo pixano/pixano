@@ -9,6 +9,7 @@ from typing import Annotated
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel
 
 from pixano.app.settings import Settings, get_settings
 from pixano.inference import (
@@ -29,18 +30,54 @@ router.include_router(zero_shot_detection.router)
 router.include_router(mask_generation.router)
 
 
-@router.get("/status")
-def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]):
+class ProviderInfo(BaseModel):
+    """Information about a connected provider."""
+
+    name: str
+    url: str | None = None
+
+
+class InferenceStatusResponse(BaseModel):
+    """Response model for inference status."""
+
+    connected: bool
+    providers: list[ProviderInfo]
+    default: str | None = None
+
+
+class ConnectedProvidersResponse(BaseModel):
+    """Response model for connected providers."""
+
+    providers: list[str]
+    default: str | None = None
+
+
+class ConnectRequest(BaseModel):
+    """Request body for connecting to an inference provider."""
+
+    url: str
+    provider_type: str = "pixano-inference"
+
+
+class ConnectResponse(BaseModel):
+    """Response model for connect/disconnect operations."""
+
+    status: str
+    provider: str
+
+
+@router.get("/status", response_model=InferenceStatusResponse, operation_id="get_inference_status")
+def get_inference_status(settings: Annotated[Settings, Depends(get_settings)]) -> InferenceStatusResponse:
     """Get current inference connection status."""
     providers = [
-        {"name": name, "url": provider.url if hasattr(provider, "url") else None}
+        ProviderInfo(name=name, url=provider.url if hasattr(provider, "url") else None)
         for name, provider in settings.inference_providers.items()
     ]
-    return {
-        "connected": len(providers) > 0,
-        "providers": providers,
-        "default": settings.default_inference_provider,
-    }
+    return InferenceStatusResponse(
+        connected=len(providers) > 0,
+        providers=providers,
+        default=settings.default_inference_provider,
+    )
 
 
 def _provider_key(provider: InferenceProvider, url: str) -> str:
@@ -49,29 +86,30 @@ def _provider_key(provider: InferenceProvider, url: str) -> str:
     return f"{provider.name}@{parsed.hostname}:{parsed.port or 80}"
 
 
-@router.post("/connect")
+@router.post("/connect", response_model=ConnectResponse, status_code=201, operation_id="connect_inference")
 async def connect_inference(
-    url: str,
+    body: ConnectRequest,
     settings: Annotated[Settings, Depends(get_settings)],
-    provider_type: Annotated[str, Body(embed=True)] = "pixano-inference",
-) -> dict[str, str]:
+) -> ConnectResponse:
     """Connect to an inference provider.
 
     Args:
-        url: The URL of the inference server.
+        body: Connection request with URL and provider type.
         settings: App settings.
-        provider_type: The type of provider to connect to (default: "pixano-inference").
 
     Returns:
-        A dict with status and provider name.
+        Connection status and provider name.
 
     Raises:
         HTTPException: If connection fails.
     """
+    url = body.url
+    provider_type = body.provider_type
+
     # Check if a provider with this URL is already connected
     for key, existing in settings.inference_providers.items():
         if hasattr(existing, "url") and existing.url.rstrip("/") == url.rstrip("/"):
-            return {"status": "already_connected", "provider": key}
+            return ConnectResponse(status="already_connected", provider=key)
 
     provider: InferenceProvider
     try:
@@ -94,31 +132,31 @@ async def connect_inference(
     if settings.default_inference_provider is None:
         settings.default_inference_provider = provider_key
 
-    return {"status": "connected", "provider": provider_key}
+    return ConnectResponse(status="connected", provider=provider_key)
 
 
-@router.get("/providers")
+@router.get("/providers", response_model=list[str], operation_id="list_available_providers")
 def list_available_providers() -> list[str]:
     """List available provider types that can be connected to."""
     return list_providers()
 
 
-@router.get("/connected")
+@router.get("/connected", response_model=ConnectedProvidersResponse, operation_id="list_connected_providers")
 def list_connected_providers(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, list[str] | str | None]:
+) -> ConnectedProvidersResponse:
     """List currently connected providers."""
-    return {
-        "providers": list(settings.inference_providers.keys()),
-        "default": settings.default_inference_provider,
-    }
+    return ConnectedProvidersResponse(
+        providers=list(settings.inference_providers.keys()),
+        default=settings.default_inference_provider,
+    )
 
 
-@router.post("/disconnect/{provider_name}")
+@router.post("/disconnect/{provider_name}", response_model=ConnectResponse, operation_id="disconnect_provider")
 async def disconnect_provider(
     provider_name: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, str]:
+) -> ConnectResponse:
     """Disconnect from an inference provider.
 
     Args:
@@ -126,7 +164,7 @@ async def disconnect_provider(
         settings: App settings.
 
     Returns:
-        A dict with status.
+        Disconnection status.
 
     Raises:
         HTTPException: If provider is not connected.
@@ -147,7 +185,7 @@ async def disconnect_provider(
         else:
             settings.default_inference_provider = None
 
-    return {"status": "disconnected", "provider": provider_name}
+    return ConnectResponse(status="disconnected", provider=provider_name)
 
 
 __all__ = ["router"]

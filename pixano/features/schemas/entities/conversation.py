@@ -6,7 +6,6 @@
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .entity import Entity
 
@@ -16,7 +15,7 @@ class Conversation(Entity):
     """A `Conversation` entity.
 
     A conversation is an object holding messages ordered by their attribute `number`.
-    The Message annotations refer to the conversatioin via their `entity_ref` attribute.
+    The Message annotations refer to the conversation via their `entity_id` attribute.
 
     Attributes:
         kind: Agnostic metadata to store information of the conversation.
@@ -33,26 +32,23 @@ def is_conversation(cls: type, strict: bool = False) -> bool:
 def create_conversation(
     kind: str,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    parent_ref: EntityRef = EntityRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
 ) -> Conversation:
     """Create a `Conversation` instance.
 
     Args:
         kind: Agnostic metadata to store information of the conversation.
         id: Conversation ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        parent_ref: Entity reference.
+        item_id: Item ID.
+        parent_id: Parent entity ID.
 
     Returns:
         The created `Conversation` instance.
     """
     return Conversation(
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
         kind=kind,
     )

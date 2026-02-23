@@ -11,7 +11,7 @@ from pixano.features.schemas.source import Source
 from .annotations import Annotation
 from .base_schema import BaseSchema
 from .embeddings import Embedding
-from .entities import Entity
+from .entities import Entity, EntityDynamicState
 from .items import Item
 from .views import View
 
@@ -33,6 +33,7 @@ class SchemaGroup(Enum):
     EMBEDDING = "embeddings"
     ITEM = "item"
     ENTITY = "entities"
+    ENTITY_DYNAMIC_STATE = "entity_dynamic_states"
     VIEW = "views"
     SOURCE = "source"
 
@@ -47,6 +48,7 @@ _SCHEMA_GROUP_TO_SCHEMA_DICT = {
     SchemaGroup.EMBEDDING: Embedding,
     SchemaGroup.ITEM: Item,
     SchemaGroup.ENTITY: Entity,
+    SchemaGroup.ENTITY_DYNAMIC_STATE: EntityDynamicState,
     SchemaGroup.ANNOTATION: Annotation,
     SchemaGroup.VIEW: View,
     SchemaGroup.SOURCE: Source,
@@ -67,6 +69,8 @@ def schema_to_group(schema_type: BaseSchema | type) -> SchemaGroup:
         return SchemaGroup.ITEM
     elif isinstance(schema_type, Entity) or is_class and issubclass(schema_type, Entity):
         return SchemaGroup.ENTITY
+    elif isinstance(schema_type, EntityDynamicState) or is_class and issubclass(schema_type, EntityDynamicState):
+        return SchemaGroup.ENTITY_DYNAMIC_STATE
     elif isinstance(schema_type, Annotation) or is_class and issubclass(schema_type, Annotation):
         return SchemaGroup.ANNOTATION
     elif isinstance(schema_type, View) or is_class and issubclass(schema_type, View):
@@ -93,6 +97,8 @@ def group_to_str(group: SchemaGroup, plural: bool = False) -> str:
         return "items" if plural else "item"
     elif group == SchemaGroup.ENTITY:
         return "entities" if plural else "entity"
+    elif group == SchemaGroup.ENTITY_DYNAMIC_STATE:
+        return "entity_dynamic_states" if plural else "entity_dynamic_state"
     elif group == SchemaGroup.VIEW:
         return "views" if plural else "view"
     elif group == SchemaGroup.ANNOTATION:

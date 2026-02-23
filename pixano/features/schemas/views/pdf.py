@@ -8,7 +8,6 @@ from pathlib import Path
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -54,8 +53,9 @@ def is_pdf(cls: type, strict: bool = False) -> bool:
 def create_pdf(
     url: str = "",
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
     num_pages: int = 0,
     blob: bytes | None = None,
 ) -> PDF:
@@ -64,8 +64,9 @@ def create_pdf(
     Args:
         url: The PDF URL. Can be empty when using embedded blob.
         id: PDF ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
         num_pages: The number of pages in the PDF.
         blob: Raw PDF bytes.
 
@@ -74,8 +75,9 @@ def create_pdf(
     """
     return PDF(
         id=id,
-        item_ref=item_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
         url=url,
         num_pages=num_pages,
         blob=blob or b"",

@@ -30,12 +30,12 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
                     "id": "bbox_orange_cat_n1",
                     "table_info": {"group": "annotations", "name": "bboxes", "base_schema": "BBox"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
-                        "entity_ref": {
-                            "name": "cats",
-                            "id": "cat_n1",
-                        },
+                        "item_id": "1",
+                        "entity_id": "cat_n1",
+                        "source_id": "source_0",
+                        "view_name": "image",
+                        "frame_id": "orange_cats",
+                        "frame_index": -1,
                         "coords": [0, 0, 2, 2],
                         "format": "xywh",
                         "is_normalized": False,

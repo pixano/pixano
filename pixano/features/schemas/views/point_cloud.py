@@ -6,7 +6,6 @@
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -32,8 +31,9 @@ def is_point_cloud(cls: type, strict: bool = False) -> bool:
 def create_point_cloud(
     url: str = "",
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
     blob: bytes | None = None,
 ) -> PointCloud:
     """Create a `PointCloud` instance.
@@ -41,11 +41,19 @@ def create_point_cloud(
     Args:
         url: The point cloud URL. Can be empty when using embedded blob.
         id: Point cloud ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
         blob: Raw point cloud bytes.
 
     Returns:
         The created `PointCloud` instance.
     """
-    return PointCloud(url=url, id=id, item_ref=item_ref, parent_ref=parent_ref, blob=blob or b"")
+    return PointCloud(
+        url=url,
+        id=id,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
+        blob=blob or b"",
+    )

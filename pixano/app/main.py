@@ -37,7 +37,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(default_response_class=ORJSONResponse)
+    app = FastAPI(title="Pixano", version="0.1.0", default_response_class=ORJSONResponse)
     app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(
         CORSMiddleware,
@@ -80,6 +80,12 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             StaticFiles(directory=settings.models_dir),
             name="models",
         )
+
+    # Health endpoint
+    @app.get("/health", tags=["Health"], operation_id="health_check")
+    def health_check() -> dict[str, str]:
+        """Health check endpoint."""
+        return {"status": "ok"}
 
     # Include routers
     app.include_router(annotations_router)

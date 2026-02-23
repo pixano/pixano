@@ -446,7 +446,7 @@ class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
         super().__init__(*args, **kwargs)
 
     def generate_data(self):
-        return generate_data_multi_view_tracking_and_image(self.num_rows, self.schemas)
+        return generate_data_multi_view_tracking_and_image(self.num_rows, self.all_schemas)
 
 
 @pytest.fixture()

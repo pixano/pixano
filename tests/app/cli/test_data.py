@@ -209,3 +209,106 @@ class TestImportCopiesMedia:
             assert (dest / "train" / "img_001.jpg").exists()
             # Original name dir should not exist
             assert not (data_dir / "media" / "my_dataset").exists()
+
+
+class TestImportEmbedMedia:
+    @patch("importlib.import_module")
+    def test_embed_media_skips_copy(self, mock_import_module):
+        """--embed-media should NOT copy media to data_dir/media/."""
+        mock_builder_cls, _ = _mock_builder()
+        mock_module = MagicMock()
+        mock_module.ImageFolderBuilder = mock_builder_cls
+        mock_import_module.return_value = mock_module
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            source = _create_source_dir(base)
+            data_dir = base / "data"
+            data_dir.mkdir()
+
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--type",
+                    "image",
+                    "--embed-media",
+                ],
+            )
+
+            assert result.exit_code == 0, result.stdout
+            # Media should NOT have been copied
+            dest_media = data_dir / "media" / "my_dataset"
+            assert not dest_media.exists()
+            # Library dir should still be created
+            assert (data_dir / "library").is_dir()
+
+    @patch("importlib.import_module")
+    def test_embed_media_passes_flag_to_builder(self, mock_import_module):
+        """embed_media=True should be passed to the builder constructor."""
+        mock_builder_cls, _ = _mock_builder()
+        mock_module = MagicMock()
+        mock_module.ImageFolderBuilder = mock_builder_cls
+        mock_import_module.return_value = mock_module
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            source = _create_source_dir(base)
+            data_dir = base / "data"
+            data_dir.mkdir()
+
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--type",
+                    "image",
+                    "--embed-media",
+                ],
+            )
+
+            assert result.exit_code == 0, result.stdout
+            # Builder should have been called with embed_media=True
+            mock_builder_cls.assert_called_once()
+            call_kwargs = mock_builder_cls.call_args
+            assert call_kwargs.kwargs.get("embed_media") is True
+
+    @patch("importlib.import_module")
+    def test_embed_media_uses_source_dir(self, mock_import_module):
+        """Builder should be pointed at source_dir, not data_dir/media/."""
+        mock_builder_cls, _ = _mock_builder()
+        mock_module = MagicMock()
+        mock_module.ImageFolderBuilder = mock_builder_cls
+        mock_import_module.return_value = mock_module
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            source = _create_source_dir(base)
+            data_dir = base / "data"
+            data_dir.mkdir()
+
+            result = runner.invoke(
+                app,
+                [
+                    "data",
+                    "import",
+                    str(data_dir),
+                    str(source),
+                    "--type",
+                    "image",
+                    "--embed-media",
+                ],
+            )
+
+            assert result.exit_code == 0, result.stdout
+            call_kwargs = mock_builder_cls.call_args
+            # media_dir should be source_dir's parent
+            assert call_kwargs.kwargs.get("media_dir") == source.parent
+            # dataset_path should be source_dir's name
+            assert call_kwargs.kwargs.get("dataset_path") == source.name

@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-import json
 import shutil
 from enum import Enum
 from pathlib import Path
@@ -144,6 +143,14 @@ def import_data(
     if embed_media:
         # No copy needed — read directly from source and embed in DB
         resolved_library_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = resolved_library_dir / dataset_name
+        if mode == ImportMode.create and target_dir.exists():
+            typer.echo(
+                f"Error: Dataset '{dataset_name}' already exists at '{target_dir}'. "
+                "Use --mode overwrite or --mode add.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
         builder = builder_cls(
             media_dir=source_dir.parent,
             library_dir=resolved_library_dir,
@@ -152,6 +159,7 @@ def import_data(
             dataset_path=source_dir.name,
             use_image_name_as_id=use_image_name_as_id,
             embed_media=True,
+            target_name=dataset_name,
         )
     else:
         # Copy media from source_dir into data_dir/media/<dataset_name>/
@@ -160,6 +168,14 @@ def import_data(
         if mode == ImportMode.create:
             if dest_media.exists():
                 typer.echo(f"Error: '{dest_media}' already exists. Use --mode overwrite or --mode add.", err=True)
+                raise typer.Exit(code=1)
+            target_dir = resolved_library_dir / dataset_name
+            if target_dir.exists():
+                typer.echo(
+                    f"Error: Dataset '{dataset_name}' already exists at '{target_dir}'. "
+                    "Use --mode overwrite or --mode add.",
+                    err=True,
+                )
                 raise typer.Exit(code=1)
             dest_media.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(source_dir, dest_media)

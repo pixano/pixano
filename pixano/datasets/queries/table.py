@@ -293,14 +293,14 @@ class TableQueryBuilder:
                 count_tbl = db.open_table(count_name)
                 count_table = (
                     count_tbl.search(None)
-                    .select(["item_ref.id"])
+                    .select(["item_id"])
                     .limit(  # noqa: F841
                         count_tbl.count_rows()
                     )
                     .to_arrow()
                 )
                 SQL_WITH = """WITH counts AS(
-                SELECT "item_ref.id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_ref.id")"""
+                SELECT "item_id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_id")"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
             else:
                 self._order_by = []

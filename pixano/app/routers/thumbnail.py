@@ -24,7 +24,17 @@ THUMBNAIL_CACHE_DIR = Path(tempfile.gettempdir()) / "pixano_thumbnails"
 THUMBNAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.get("/{b64_image_path}", name="get_thumbnail")
+@router.get(
+    "/{b64_image_path}",
+    name="get_thumbnail",
+    operation_id="get_thumbnail",
+    responses={
+        200: {
+            "description": "Thumbnail image.",
+            "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
 def get_thumbnail(
     b64_image_path: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -76,7 +86,17 @@ def get_thumbnail(
     )
 
 
-@router.get("/embedded/{dataset_id}/{view_name}/{row_id}", name="get_embedded_thumbnail")
+@router.get(
+    "/embedded/{dataset_id}/{view_name}/{row_id}",
+    name="get_embedded_thumbnail",
+    operation_id="get_embedded_thumbnail",
+    responses={
+        200: {
+            "description": "Embedded thumbnail image.",
+            "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
 def get_embedded_thumbnail(
     dataset_id: str,
     view_name: str,
@@ -122,15 +142,15 @@ def get_embedded_thumbnail(
 
     rows = (
         TableQueryBuilder(table, dataset._db_connection)
-        .select(["id", view_name])
-        .where(f"id = '{row_id}'")
+        .select(["id", "blob"])
+        .where(f"id = '{row_id}' AND view_name = '{view_name}'")
         .to_list()
     )
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"Row '{row_id}' not found.")
 
-    blob = rows[0].get(view_name, b"")
+    blob = rows[0].get("blob", b"")
     if not blob:
         raise HTTPException(status_code=404, detail="No blob data found for this view.")
 

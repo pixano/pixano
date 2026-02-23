@@ -98,7 +98,9 @@ def test_get_browser_semantic_search(
         "/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=text&embedding_table=image"
     )
     assert response.status_code == 400
-    assert response.json() == {"detail": "Table image is not a view embedding table."}
+    assert response.json() == {
+        "detail": "Table image not found in dataset dataset_multi_view_tracking_and_image."
+    }
 
 
 def test_get_item_ids(

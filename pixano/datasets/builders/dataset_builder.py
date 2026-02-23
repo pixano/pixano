@@ -6,7 +6,6 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
 from types import GenericAlias
@@ -19,7 +18,7 @@ import tqdm
 from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
-from pixano.datasets.dataset_schema import _ROW_LEVEL_FIELDS, _TEMPORAL_FIELDS, _view_instance_to_columns
+from pixano.datasets.dataset_schema import _view_instance_to_columns
 from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source, SourceKind
@@ -318,134 +317,54 @@ class DatasetBuilder(ABC):
         Returns:
             The modified Arrow schema, or None if no overrides needed.
         """
-        blob_cols = set()
-        for vc in self.dataset_schema.view_columns.values():
-            if vc.media_table == table_name:
-                blob_cols.add(vc.view_name)
-        if not blob_cols:
+        if "blob" not in schema.model_fields:
             return None
         arrow_schema = schema.to_arrow_schema()
         modified = False
         for i, field in enumerate(arrow_schema):
-            if field.name in blob_cols:
+            if field.name == "blob":
                 arrow_schema = arrow_schema.set(i, pa.field(field.name, pa.large_binary()))
                 modified = True
         return arrow_schema if modified else None
 
     def _translate_view_fields(self, items: dict[str, Any]) -> dict[str, Any]:
-        """Translate view field names to media-type table names and convert View instances.
+        """Translate view field names to media table rows.
 
         When generate_data() yields {"image": image_instance, ...}, this translates
-        it to {"images": [wide_row_dict], ...} using view_columns metadata.
+        it to {"images": [Image(...)], ...} where each media row keeps `view_name`.
 
         Args:
             items: The raw items dict from generate_data().
 
         Returns:
-            Translated items dict with media table names as keys and wide-row dicts as values.
+            Translated items dict with media table names as keys.
         """
         if not self.dataset_schema.view_columns:
             return items
 
         translated: dict[str, Any] = {}
-        # Group view fields by media table
-        media_table_views: dict[str, dict[str, Any]] = defaultdict(dict)
 
         for key, value in items.items():
-            if key in self.dataset_schema.view_columns:
-                vc = self.dataset_schema.view_columns[key]
-                media_table_views[vc.media_table][key] = value
-            else:
+            if key not in self.dataset_schema.view_columns:
                 translated[key] = value
+                continue
 
-        # Process each media table group
-        for media_table, views_data in media_table_views.items():
-            include_temporal = media_table == "frames"
+            vc = self.dataset_schema.view_columns[key]
+            media_table = vc.media_table
+            schema = self.schemas[media_table]
+            values = value if isinstance(value, list) else [value]
 
-            # Check if we have any list views (ONE_TO_MANY)
-            has_list = any(isinstance(v, list) for v in views_data.values())
+            rows = translated.setdefault(media_table, [])
+            if not isinstance(rows, list):
+                rows = [rows]
 
-            if has_list:
-                # ONE_TO_MANY: each list element becomes a row
-                max_len = max(
-                    (len(v) for v in views_data.values() if isinstance(v, list)),
-                    default=0,
-                )
-                rows = []
-                for i in range(max_len):
-                    row: dict[str, Any] = {}
-                    for view_name, value in views_data.items():
-                        if isinstance(value, list):
-                            if i < len(value) and value[i] is not None:
-                                self._merge_view_to_row(row, view_name, value[i], include_temporal)
-                        elif value is not None:
-                            # Single view in same table as list views
-                            self._merge_view_to_row(row, view_name, value, include_temporal)
-                    if row:
-                        self._fill_missing_view_defaults(row, media_table)
-                        rows.append(row)
-                if rows:
-                    translated[media_table] = rows
-            else:
-                # ONE_TO_ONE: merge all views into one row
-                row = {}
-                for view_name, value in views_data.items():
-                    if value is not None:
-                        self._merge_view_to_row(row, view_name, value, include_temporal)
-                if row:
-                    self._fill_missing_view_defaults(row, media_table)
-                    translated[media_table] = row
+            for view_instance in values:
+                if view_instance is None:
+                    continue
+                row_dict = _view_instance_to_columns(key, view_instance)
+                row = schema.model_validate(row_dict)
+                rows.append(row)
+
+            translated[media_table] = rows
 
         return translated
-
-    @staticmethod
-    def _merge_view_to_row(
-        row: dict[str, Any], view_name: str, view_instance: Any, include_temporal: bool
-    ) -> None:
-        """Merge a View instance's data into a wide-table row dict.
-
-        Args:
-            row: The row dict to merge into.
-            view_name: The view name prefix.
-            view_instance: The View instance.
-            include_temporal: Whether to include temporal fields at the row level.
-        """
-        from pydantic import BaseModel as PydanticBaseModel
-
-        if isinstance(view_instance, PydanticBaseModel):
-            data = view_instance.model_dump()
-        elif isinstance(view_instance, dict):
-            data = view_instance
-        else:
-            return
-
-        # Row-level fields (take from first view)
-        for field_name in _ROW_LEVEL_FIELDS:
-            if field_name not in row and field_name in data:
-                row[field_name] = data[field_name]
-
-        if include_temporal:
-            for field_name in _TEMPORAL_FIELDS:
-                if field_name in data:
-                    row[field_name] = data[field_name]
-
-        # View-specific columns (prefixed)
-        row.update(_view_instance_to_columns(view_name, view_instance))
-
-    def _fill_missing_view_defaults(self, row: dict[str, Any], media_table: str) -> None:
-        """Fill missing columns in a media-table row with schema defaults.
-
-        When a row only contains columns for a subset of camera views (e.g., rgb
-        but not thermal), this fills the missing view columns with their default
-        values so that every row matches the full table schema.
-
-        Args:
-            row: The row dict to fill (modified in place).
-            media_table: The media table name to look up the schema.
-        """
-        schema_model = self.schemas.get(media_table)
-        if schema_model is None:
-            return
-        for field_name, field_info in schema_model.model_fields.items():
-            if field_name not in row and not field_info.is_required():
-                row[field_name] = field_info.default

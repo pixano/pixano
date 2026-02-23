@@ -350,6 +350,7 @@ class TestDataset:
                         "width": 100,
                         "height": 100,
                         "format": "jpg",
+                        "blob": b"",
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
@@ -361,6 +362,7 @@ class TestDataset:
                         "width": 99,
                         "height": 101,
                         "format": "jpg",
+                        "blob": b"",
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
@@ -383,6 +385,7 @@ class TestDataset:
                         "width": 100,
                         "height": 100,
                         "format": "jpg",
+                        "blob": b"",
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
@@ -394,6 +397,7 @@ class TestDataset:
                         "width": 99,
                         "height": 101,
                         "format": "jpg",
+                        "blob": b"",
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
@@ -416,6 +420,7 @@ class TestDataset:
                         "width": 100,
                         "height": 100,
                         "format": "jpg",
+                        "blob": b"",
                         "created_at": datetime(2021, 1, 1, 0, 0),
                         "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
@@ -581,6 +586,7 @@ class TestDataset:
                             "width": 100,
                             "height": 100,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -602,6 +608,7 @@ class TestDataset:
                             "width": 99,
                             "height": 101,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -669,6 +676,7 @@ class TestDataset:
                             "width": 98,
                             "height": 102,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -697,6 +705,7 @@ class TestDataset:
                             "width": 98,
                             "height": 102,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -718,6 +727,7 @@ class TestDataset:
                             "width": 97,
                             "height": 103,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -785,6 +795,7 @@ class TestDataset:
                             "width": 96,
                             "height": 104,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -813,6 +824,7 @@ class TestDataset:
                             "width": 100,
                             "height": 100,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -834,6 +846,7 @@ class TestDataset:
                             "width": 99,
                             "height": 101,
                             "format": "jpg",
+                            "blob": b"",
                             "created_at": datetime(2021, 1, 1, 0, 0),
                             "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
@@ -913,6 +926,7 @@ class TestDataset:
                 "width": 100,
                 "height": 100,
                 "format": "jpg",
+                "blob": b"",
                 "created_at": datetime(2021, 1, 1, 0, 0),
                 "updated_at": datetime(2021, 1, 1, 0, 0),
             },
@@ -992,21 +1006,22 @@ class TestDataset:
         new_item = item.model_copy(dataset=dataset_image_bboxes_keypoint_copy)
         new_item.id = "new_item"
 
-        for table_name in dataset_image_bboxes_keypoint_copy.schema.schemas.keys():
-            if table_name == "item":
+        # Iterate over DatasetItem field names (not table names)
+        for field_name in new_item.model_fields.keys():
+            if field_name in ("id", "split", "metadata", "created_at", "updated_at"):
                 continue
-            field_schema = getattr(new_item, table_name)
+            field_schema = getattr(new_item, field_name)
             if isinstance(field_schema, list):
                 for i, field in enumerate(field_schema):
-                    setattr(field, "id", f"new_{table_name}_{i}")
+                    setattr(field, "id", f"new_{field_name}_{i}")
                     setattr(field, "item_ref", {"id": "new_item", "name": "item"})
-                    assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}_{i}"]) == []
+                    assert dataset_image_bboxes_keypoint_copy.get_data(field_name, ids=[f"new_{field_name}_{i}"]) == []
             else:
                 if field_schema is None:
                     continue
-                setattr(field_schema, "id", f"new_{table_name}")
+                setattr(field_schema, "id", f"new_{field_name}")
                 setattr(field_schema, "item_ref", {"id": "new_item", "name": "item"})
-                assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}"]) == []
+                assert dataset_image_bboxes_keypoint_copy.get_data(field_name, ids=[f"new_{field_name}"]) == []
 
         assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"]) == []
 

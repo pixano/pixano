@@ -34,6 +34,7 @@ router = APIRouter(prefix="/tasks/conditional_generation", tags=["Task", "Condit
 @router.post(
     "/text-image",
     response_model=AnnotationModel,
+    operation_id="call_text_image_conditional_generation",
 )
 async def call_text_image_conditional_generation(
     dataset_id: Annotated[str, Body(embed=True)],

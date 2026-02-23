@@ -24,8 +24,9 @@ class ViewModel(BaseSchemaModel[View]):
                     "id": "orange_cats",
                     "table_info": {"group": "views", "name": "image", "base_schema": "Image"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "parent_ref": {"name": "", "id": ""},
+                        "item_id": "1",
+                        "parent_id": "",
+                        "view_name": "image",
                         "url": "/path/to/chat/orange_left.jpg",
                         "format": "JPEG",
                         "width": 100,

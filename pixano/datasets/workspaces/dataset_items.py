@@ -9,11 +9,11 @@ from pixano.features import (
     CompressedRLE,
     Conversation,
     Entity,
+    EntityDynamicState,
     Image,
     KeyPoints,
     Message,
     SequenceFrame,
-    Track,
     Tracklet,
 )
 
@@ -36,7 +36,8 @@ class DefaultVideoDatasetItem(DatasetItem):
     """Default Video DatasetItem Schema."""
 
     image: list[SequenceFrame]
-    tracks: list[Track]
+    objects: list[Entity]
+    states: list[EntityDynamicState]
     tracklets: list[Tracklet]
     bboxes: list[BBox]
     masks: list[CompressedRLE]

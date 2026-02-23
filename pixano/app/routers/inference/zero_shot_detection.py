@@ -32,6 +32,7 @@ class ZeroShotOutput(BaseModel):
 @router.post(
     "/image",
     response_model=list[ZeroShotOutput],
+    operation_id="call_image_zero_shot_detection",
 )
 async def call_image_zero_shot_detection(
     dataset_id: Annotated[str, Body(embed=True)],

@@ -12,7 +12,6 @@ from fastapi.encoders import jsonable_encoder
 
 from pixano.features import BBox, Classification, Image, Source
 from pixano.features.schemas.entities.entity import Entity
-from pixano.features.types.schema_reference import EntityRef, SourceRef, ViewRef
 
 from .provider import InferenceProvider
 from .types import ImageZeroShotDetectionInput
@@ -77,17 +76,15 @@ async def image_zero_shot_detection(
     output: list[tuple[BBox, Classification]] = []
 
     for b, s, c in zip(boxes, scores, detected_classes, strict=True):
-        view_ref = ViewRef(name=image.table_name, id=image.id)
-        entity_ref = EntityRef(name=entity.table_name, id=entity.id)
-        source_ref = SourceRef(id=source.id)
         output.append(
             (
                 BBox(
                     id=shortuuid.uuid(),
-                    item_ref=image.item_ref,
-                    view_ref=view_ref,
-                    entity_ref=entity_ref,
-                    source_ref=source_ref,
+                    item_id=image.item_id,
+                    frame_id=image.id,
+                    view_name=image.view_name or image.table_name,
+                    entity_id=entity.id,
+                    source_id=source.id,
                     inference_metadata=inference_metadata,
                     coords=b,
                     format="xyxy",
@@ -96,10 +93,11 @@ async def image_zero_shot_detection(
                 ),
                 Classification(
                     id=shortuuid.uuid(),
-                    item_ref=image.item_ref,
-                    view_ref=view_ref,
-                    entity_ref=entity_ref,
-                    source_ref=source_ref,
+                    item_id=image.item_id,
+                    frame_id=image.id,
+                    view_name=image.view_name or image.table_name,
+                    entity_id=entity.id,
+                    source_id=source.id,
                     inference_metadata=inference_metadata,
                     labels=[c],
                     confidences=[s],

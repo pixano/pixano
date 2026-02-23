@@ -49,7 +49,7 @@ from pixano.features import (
     create_video,
     create_view_ref,
 )
-from pixano.features.schemas.annotations.camcalibration import BaseIntrinsics, Extrinsics, Intrinsics
+from pixano.features.schemas.views.camcalibration import BaseIntrinsics, Extrinsics, Intrinsics
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.schemas.source import create_source
 from pixano.features.types.schema_reference import SourceRef, create_source_ref

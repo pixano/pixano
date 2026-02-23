@@ -11,7 +11,7 @@ import shortuuid
 from fastapi.encoders import jsonable_encoder
 
 from pixano.datasets import Dataset
-from pixano.features import Conversation, EntityRef, Message, SchemaGroup, Source, SourceRef, is_bbox
+from pixano.features import Conversation, Message, SchemaGroup, Source, is_bbox
 
 from .provider import InferenceProvider
 from .types import TextImageConditionalGenerationInput
@@ -68,7 +68,7 @@ def messages_to_prompt(
         # add images to prompt
         tables_view = sorted(dataset.schema.groups[SchemaGroup.VIEW])
         for table_view in tables_view:
-            images = dataset.get_data(table_view, item_ids=[conversation.item_ref.id])
+            images = dataset.get_data(table_view, item_ids=[conversation.item_id])
             if len(images) > 0:
                 image = images[0]  # there should be only one image per view, except for video (out of scope now)
                 message_prompt["content"].append(
@@ -84,11 +84,11 @@ def messages_to_prompt(
         if len(tables_bbox) > 0:
             table_bbox = tables_bbox[0]  # assume there is only one bbox table
             for table_entity in tables_entities:
-                entities = dataset.get_data(table_entity, item_ids=[conversation.item_ref.id])
+                entities = dataset.get_data(table_entity, item_ids=[conversation.item_id])
                 for entity in entities:
                     if not isinstance(entity, Conversation):
                         bboxes = dataset.get_data(
-                            table_bbox, item_ids=[conversation.item_ref.id], where=f"entity_ref.id == '{entity.id}'"
+                            table_bbox, item_ids=[conversation.item_id], where=f"entity_id == '{entity.id}'"
                         )
                         if len(bboxes) == 0:
                             continue
@@ -190,10 +190,11 @@ async def text_image_conditional_generation(
 
     message = Message(
         id=shortuuid.uuid(),
-        item_ref=last_message.item_ref,
-        view_ref=last_message.view_ref,
-        entity_ref=EntityRef(id=conversation.id, name=conversation.table_name),
-        source_ref=SourceRef(id=source.id),
+        item_id=last_message.item_id,
+        view_name=last_message.view_name,
+        frame_id=last_message.frame_id,
+        entity_id=conversation.id,
+        source_id=source.id,
         type=response_type,
         content=result.data.generated_text,
         number=number,

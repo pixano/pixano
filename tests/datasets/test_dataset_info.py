@@ -30,7 +30,7 @@ class TestDatasetInfo:
             workspace=WorkspaceType.IMAGE,
         )
 
-        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview", "workspace"}
+        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview", "workspace", "storage_mode"}
 
         with pytest.raises(ValueError, match="id must not contain spaces"):
             DatasetInfo(
@@ -61,7 +61,8 @@ class TestDatasetInfo:
     "description": "PASCAL VOC 2007",
     "size": "8GB",
     "preview": "/preview",
-    "workspace": "image"
+    "workspace": "image",
+    "storage_mode": "filesystem"
 }"""
         )
 

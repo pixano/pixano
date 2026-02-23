@@ -28,9 +28,8 @@ class EntityModel(BaseSchemaModel[Entity]):
                     "id": "cat_n1",
                     "table_info": {"group": "entities", "name": "cats", "base_schema": "Entity"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
-                        "parent_ref": {"name": "", "id": ""},
+                        "item_id": "1",
+                        "parent_id": "",
                         "category": "orange",
                     },
                 }

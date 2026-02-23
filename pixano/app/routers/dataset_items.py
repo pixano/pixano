@@ -7,6 +7,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from starlette.responses import Response
 
 from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.settings import Settings, get_settings
@@ -18,7 +19,7 @@ from .utils import get_dataset
 router = APIRouter(prefix="/dataset_items", tags=["Dataset Items"])
 
 
-@router.get("/{dataset_id}", response_model=list[DatasetItemModel])
+@router.get("/{dataset_id}", response_model=list[DatasetItemModel], operation_id="list_dataset_items")
 def get_dataset_items(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -59,7 +60,7 @@ def get_dataset_items(
     return models
 
 
-@router.get("/{dataset_id}/{id}", response_model=DatasetItemModel)
+@router.get("/{dataset_id}/{id}", response_model=DatasetItemModel, operation_id="get_dataset_item")
 def get_dataset_item(
     dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> DatasetItemModel:
@@ -76,7 +77,9 @@ def get_dataset_item(
     return get_dataset_items(dataset_id, settings, ids=[id])[0]
 
 
-@router.post("/{dataset_id}", response_model=list[DatasetItemModel])
+@router.post(
+    "/{dataset_id}", response_model=list[DatasetItemModel], status_code=201, operation_id="create_dataset_items"
+)
 def create_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
@@ -101,7 +104,9 @@ def create_dataset_items(
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
-@router.post("/{dataset_id}/{id}", response_model=DatasetItemModel)
+@router.post(
+    "/{dataset_id}/{id}", response_model=DatasetItemModel, status_code=201, operation_id="create_dataset_item"
+)
 def create_dataset_item(
     dataset_id: str,
     id: str,
@@ -125,7 +130,7 @@ def create_dataset_item(
     return create_dataset_items(dataset_id, [dataset_item], settings)[0]
 
 
-@router.put("/{dataset_id}", response_model=list[DatasetItemModel])
+@router.put("/{dataset_id}", response_model=list[DatasetItemModel], operation_id="update_dataset_items")
 def update_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
@@ -150,7 +155,7 @@ def update_dataset_items(
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
-@router.put("/{dataset_id}/{id}", response_model=DatasetItemModel)
+@router.put("/{dataset_id}/{id}", response_model=DatasetItemModel, operation_id="update_dataset_item")
 def update_dataset_item(
     dataset_id: str,
     id: str,
@@ -174,7 +179,7 @@ def update_dataset_item(
     return update_dataset_items(dataset_id, [dataset_item], settings)[0]
 
 
-@router.delete("/{dataset_id}")
+@router.delete("/{dataset_id}", status_code=204, response_class=Response, operation_id="delete_dataset_items")
 def delete_dataset_items(
     dataset_id: str,
     ids: Annotated[list[str], Query()],
@@ -188,12 +193,10 @@ def delete_dataset_items(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.library_dir, None)
-
     dataset.delete_dataset_items(ids)
-    return
 
 
-@router.delete("/{dataset_id}/{id}")
+@router.delete("/{dataset_id}/{id}", status_code=204, response_class=Response, operation_id="delete_dataset_item")
 def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete a dataset item from a dataset.
 
@@ -202,4 +205,4 @@ def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Settings, 
         id: ID of the dataset item to delete.
         settings: App settings.
     """
-    return delete_dataset_items(dataset_id, ids=[id], settings=settings)
+    delete_dataset_items(dataset_id, ids=[id], settings=settings)
