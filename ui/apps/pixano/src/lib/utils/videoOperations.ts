@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { nanoid } from "nanoid";
 
-import { Tracklet, type Annotation } from "$lib/types/dataset";
+import { Track, type Annotation } from "$lib/types/dataset";
 import { sourcesStore } from "$lib/stores/appStores.svelte";
 
 import {
@@ -26,30 +26,30 @@ const bufferSize = 200;
 let previousCount: number = 0;
 let nextCount: number = 0;
 
-export const splitTrackletInTwo = (
-  tracklet2split: Tracklet,
+export const splitTrackInTwo = (
+  track2split: Track,
   prev: number,
   next: number,
 ): Annotation => {
-  const rightTrackletOrig = structuredClone(tracklet2split);
-  const { ui, ...noUIfieldsTracklet } = rightTrackletOrig;
-  const rightTracklet = new Tracklet(noUIfieldsTracklet);
-  rightTracklet.id = nanoid(10);
-  rightTracklet.data.start_timestep = next;
-  rightTracklet.ui = ui;
+  const rightTrackOrig = structuredClone(track2split);
+  const { ui, ...noUIfieldsTrack } = rightTrackOrig;
+  const rightTrack = new Track(noUIfieldsTrack);
+  rightTrack.id = nanoid(10);
+  rightTrack.data.start_timestep = next;
+  rightTrack.ui = ui;
   //note: get object links from original object, as structuredClone lose class specifics
-  rightTracklet.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
-  rightTracklet.ui.top_entities = tracklet2split.ui.top_entities;
-  //tracklet2split become left tracklet
-  tracklet2split.data.end_timestep = prev;
-  tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
+  rightTrack.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
+  rightTrack.ui.top_entities = track2split.ui.top_entities;
+  //track2split become left track
+  track2split.data.end_timestep = prev;
+  track2split.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
 
   const pixSource = getPixanoSource(sourcesStore);
-  tracklet2split.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
-  saveTo("update", tracklet2split);
-  rightTracklet.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
-  saveTo("add", rightTracklet);
-  return rightTracklet;
+  track2split.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+  saveTo("update", track2split);
+  rightTrack.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+  saveTo("add", rightTrack);
+  return rightTrack;
 };
 
 export const setBufferSpecs = () => {

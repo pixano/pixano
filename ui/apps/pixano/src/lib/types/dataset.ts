@@ -178,7 +178,7 @@ export interface DatasetSchema {
   };
 }
 
-// ─── DisplayControl, AnnotationThumbnail, TrackletTimelineEntry ─────────────────────────────
+// ─── DisplayControl, AnnotationThumbnail, TrackTimelineEntry ─────────────────────────────────
 
 export interface DisplayControl {
   hidden: boolean;
@@ -203,9 +203,9 @@ export interface AnnotationThumbnail {
   coords: Array<number>;
 }
 
-export type TrackletTimelineEntry = {
+export type TrackTimelineEntry = {
   frame_index: number;
-  tracklet_id: string;
+  track_id: string;
   is_key?: boolean;
   is_thumbnail?: boolean;
   hidden?: boolean;
@@ -412,12 +412,14 @@ export class Entity extends BaseData<EntityData> {
     return this.table_info.base_schema === type;
   }
 
-  get is_track(): boolean {
-    return this.is_type(BaseSchema.Track);
-  }
   get is_conversation(): boolean {
     return this.is_type(BaseSchema.Conversation);
   }
+}
+
+/** Detect video entities by checking if they have Track (was Tracklet) annotation children. */
+export function isVideoEntity(entity: Entity): boolean {
+  return entity.is_type(BaseSchema.Track) || (entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Tracklet)) ?? false);
 }
 
 // ─── BBox ──────────────────────────────────────────────────────────────────────
@@ -575,9 +577,9 @@ export class TextSpan extends Annotation {
   }
 }
 
-// ─── Tracklet ──────────────────────────────────────────────────────────────────
+// ─── Track (annotation — temporal container, was Tracklet) ─────────────────────
 
-export interface TrackletData {
+export interface TrackData {
   start_timestep: number;
   end_timestep: number;
   start_timestamp: number;
@@ -585,8 +587,8 @@ export interface TrackletData {
   [key: string]: unknown;
 }
 
-export class Tracklet extends Annotation {
-  declare data: TrackletData & AnnotationData;
+export class Track extends Annotation {
+  declare data: TrackData & AnnotationData;
 
   //UI only fields
   ui: AnnotationUIFields & {
@@ -595,7 +597,7 @@ export class Tracklet extends Annotation {
 
   constructor(obj: RawSchemaData) {
     super(obj);
-    this.data = obj.data as TrackletData & AnnotationData;
+    this.data = obj.data as TrackData & AnnotationData;
   }
 
   static nonFeaturesFields(): string[] {

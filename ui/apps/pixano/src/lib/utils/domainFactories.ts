@@ -12,7 +12,7 @@ import {
   Mask,
   Message,
   TextSpan,
-  Tracklet,
+  Track,
   BaseSchema,
   Entity,
   Image,
@@ -43,7 +43,7 @@ export const createTypedAnnotation = (
     return new TextSpan(annotation);
   }
   if (annotation.table_info.base_schema === BaseSchema.Tracklet) {
-    return new Tracklet(annotation);
+    return new Track(annotation);
   }
   console.error("createTypedAnnotation: No type found for annotation", annotation);
   return null;

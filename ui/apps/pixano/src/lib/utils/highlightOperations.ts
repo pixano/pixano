@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { ToolType } from "$lib/tools";
-import { BaseSchema, Tracklet } from "$lib/types/dataset";
+import { BaseSchema, Track } from "$lib/types/dataset";
 
 import {
   annotations,
@@ -44,8 +44,8 @@ export const highlightEntity = (entity_id: string, isHighlighted: boolean): numb
         };
       }
       if (getTopEntity(ann).id === entity_id && ann.is_type(BaseSchema.Tracklet)) {
-        trackStart = Math.min(trackStart, (ann as Tracklet).data.start_timestep);
-        trackEnd = Math.max(trackEnd, (ann as Tracklet).data.end_timestep);
+        trackStart = Math.min(trackStart, (ann as Track).data.start_timestep);
+        trackEnd = Math.max(trackEnd, (ann as Track).data.end_timestep);
       }
       return ann;
     }),

@@ -21,7 +21,7 @@ License: CECILL-C
     Keypoints,
     Mask,
     TextSpan,
-    Tracklet,
+    Track,
   } from "$lib/ui";
 
   import { datasetSchema } from "$lib/stores/appStores.svelte";
@@ -70,7 +70,7 @@ License: CECILL-C
       if (baseSchema === BaseSchema.Mask)
         nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
       if (baseSchema === BaseSchema.Tracklet)
-        nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
+        nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
       //keep (start/end_timestep/stamp)
       nonFeatsFields = removeFields(nonFeatsFields, [
         "start_timestep",

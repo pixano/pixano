@@ -30,7 +30,7 @@ License: CECILL-C
     Entity,
     IconButton,
     Mask,
-    Tracklet,
+    Track,
     type DisplayControl,
     type KeypointAnnotation,
   } from "$lib/ui";
@@ -38,7 +38,7 @@ License: CECILL-C
   import { buttonVariants } from "$lib/utils/buttonVariants";
   import { keypointsIcon, polygonIcon } from "$lib/assets";
 
-  import { deleteEntity, onDeleteTrackletItemClick, relink } from "$lib/utils/entityMutations";
+  import { deleteEntity, onDeleteTrackItemClick, relink } from "$lib/utils/entityMutations";
   import { isRawPolygonMask } from "$lib/utils/maskUtils";
   import {
     annotations,
@@ -84,23 +84,23 @@ License: CECILL-C
     return !child.ui.displayControl.hidden;
   });
 
-  const currentTrackletChilds = $derived.by(() => {
+  const currentTrackChilds = $derived.by(() => {
     if (!child.is_type(BaseSchema.Tracklet)) return [];
     void interpolate.value;
-    const trackletChilds = (child as Tracklet).ui.childs;
+    const trackChilds = (child as Track).ui.childs;
     const current_Anns = [
       ...current_itemBBoxes.value,
       ...current_itemKeypoints.value,
       ...current_itemMasks.value,
     ] as (BBox | KeypointAnnotation | Mask)[];
 
-    const result: { trackletChild: Annotation; interpolated: boolean }[] = [];
+    const result: { trackChild: Annotation; interpolated: boolean }[] = [];
     current_Anns.forEach((cann) => {
-      const directMatch = trackletChilds.find((ann) => ann.id === cann.id);
+      const directMatch = trackChilds.find((ann) => ann.id === cann.id);
       if (directMatch) {
-        result.push({ trackletChild: directMatch, interpolated: false });
+        result.push({ trackChild: directMatch, interpolated: false });
       } else if (
-        trackletChilds.some(
+        trackChilds.some(
           (ann) =>
             cann.ui &&
             "startRef" in cann.ui &&
@@ -108,7 +108,7 @@ License: CECILL-C
             ann.id === cann.ui.startRef.id,
         )
       ) {
-        result.push({ trackletChild: cann as Annotation, interpolated: true });
+        result.push({ trackChild: cann as Annotation, interpolated: true });
       }
     });
     return result;
@@ -204,49 +204,49 @@ License: CECILL-C
       bind:overlapTargetId
       baseSchema={child.table_info.base_schema}
       viewRef={child.data.view_ref}
-      tracklet={child}
+      track={child}
     />
     <Button.Root type="button" class={cn(buttonVariants(), "text-primary-foreground mt-4")} onclick={handleRelink}>OK</Button.Root>
   </div>
 {/if}
 {#if child.is_type(BaseSchema.Tracklet)}
-  <!-- NOTE: trackletChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
-  {#each currentTrackletChilds as { trackletChild, interpolated }}
+  <!-- NOTE: trackChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
+  {#each currentTrackChilds as { trackChild, interpolated }}
     {@const displayName = interpolated
-      ? `<i>interpolated</i> (${trackletChild.id})`
-      : trackletChild.id}
+      ? `<i>interpolated</i> (${trackChild.id})`
+      : trackChild.id}
     <div class="flex items-center justify-between w-full overflow-hidden pl-6 py-0.5">
       <div class="flex items-center flex-1 min-w-0 overflow-hidden">
-        <IconButton disabled tooltipContent={trackletChild.table_info.base_schema}>
-          {#if trackletChild.table_info.base_schema === BaseSchema.BBox}
+        <IconButton disabled tooltipContent={trackChild.table_info.base_schema}>
+          {#if trackChild.table_info.base_schema === BaseSchema.BBox}
             <Square class="h-4" />
           {/if}
-          {#if trackletChild.table_info.base_schema === BaseSchema.Mask}
-            {#if isRawPolygonMask(trackletChild)}
+          {#if trackChild.table_info.base_schema === BaseSchema.Mask}
+            {#if isRawPolygonMask(trackChild)}
               <img src={polygonIcon} alt="raw polygon icon" class="h-4" />
             {:else}
               <VenetianMask class="h-4" />
             {/if}
           {/if}
-          {#if trackletChild.table_info.base_schema === BaseSchema.Keypoints}
+          {#if trackChild.table_info.base_schema === BaseSchema.Keypoints}
             <img src={keypointsIcon} alt="keypoints icon" class="h-4" />
           {/if}
-          {#if trackletChild.table_info.base_schema === BaseSchema.TextSpan}
+          {#if trackChild.table_info.base_schema === BaseSchema.TextSpan}
             <Type class="h-4" />
           {/if}
         </IconButton>
 
-        <span class="block w-full truncate ml-2" title={trackletChild.id}>
+        <span class="block w-full truncate ml-2" title={trackChild.id}>
           {@html displayName}
         </span>
       </div>
       {#if selectedTool.value.type !== ToolType.Fusion && !interpolated}
         <div class="flex items-center mr-4">
-          {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackletChild.table_info.base_schema)}
+          {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
             <IconButton
               tooltipContent="Edit object"
-              selected={trackletChild.ui.displayControl.editing}
-              onclick={() => onEditIconClick(trackletChild)}
+              selected={trackChild.ui.displayControl.editing}
+              onclick={() => onEditIconClick(trackChild)}
             >
               <Pencil class="h-4" />
             </IconButton>
@@ -254,7 +254,7 @@ License: CECILL-C
           <IconButton
             tooltipContent="Delete object"
             redconfirm
-            onclick={() => onDeleteTrackletItemClick(child, trackletChild.ui.frame_index, trackletChild)}
+            onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
           >
             <Trash2 class="h-4" />
           </IconButton>

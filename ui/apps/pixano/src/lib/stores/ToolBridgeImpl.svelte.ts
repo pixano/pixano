@@ -5,8 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { PreviewShape, ToolContext, ToolEvent, ToolFSM, ToolSideEffect, ToolState } from "$lib/tools";
+import type { AIRequestParams } from "$lib/types/tools";
 
 import type { ReactiveReadonly, ReactiveValue, ToolBridge } from "$lib/types/store";
+import type { ComputeJob } from "$lib/types/services";
+import type { TrackerService } from "$lib/types/tracker";
 import type { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
 import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
 
@@ -14,6 +17,8 @@ type RequestSaveCallback = (
   shapeType: "bbox" | "polygon" | "mask" | "keypoints",
   geometry: unknown,
 ) => void;
+
+type AIRequestCallback = (requestId: string, params: AIRequestParams) => void;
 
 /**
  * Bridges tool FSMs to Svelte reactivity.
@@ -32,12 +37,15 @@ export class ToolBridgeImpl implements ToolBridge {
 
   private readonly commandBridge: CommandBridgeImpl;
   private readonly documentStore: DocumentStoreImpl;
+  private trackerService: TrackerService | null = null;
 
   private canvasViewName = "";
   private canvasWidth = 0;
   private canvasHeight = 0;
 
   private requestSaveCallback: RequestSaveCallback | null = null;
+  private aiRequestCallback: AIRequestCallback | null = null;
+  private readonly activeAIJobs = new Map<string, ComputeJob>();
 
   constructor(
     initialTool: ToolFSM,
@@ -73,6 +81,16 @@ export class ToolBridgeImpl implements ToolBridge {
 
   onRequestSave(callback: RequestSaveCallback): void {
     this.requestSaveCallback = callback;
+  }
+
+  /** Register a callback for AI requests (allows custom handling). */
+  onAIRequest(callback: AIRequestCallback): void {
+    this.aiRequestCallback = callback;
+  }
+
+  /** Inject a TrackerService for handling AI tracking side effects. */
+  setTrackerService(service: TrackerService): void {
+    this.trackerService = service;
   }
 
   dispatchEvent(event: ToolEvent): void {
@@ -119,12 +137,20 @@ export class ToolBridgeImpl implements ToolBridge {
         this.commandBridge.abortTransaction();
         break;
       case "requestAI":
-        // AI requests will be handled by the ComputeService in Phase 5
-        console.warn("AI request side effect not yet implemented:", effect.requestId);
+        if (this.aiRequestCallback) {
+          this.aiRequestCallback(effect.requestId, effect.params);
+        } else if (!this.trackerService) {
+          console.warn("AI request received but no TrackerService or callback registered:", effect.requestId);
+        }
         break;
-      case "cancelAI":
-        console.warn("AI cancel side effect not yet implemented:", effect.requestId);
+      case "cancelAI": {
+        const job = this.activeAIJobs.get(effect.requestId);
+        if (job) {
+          job.cancel();
+          this.activeAIJobs.delete(effect.requestId);
+        }
         break;
+      }
       case "requestSave":
         if (this.requestSaveCallback) {
           this.requestSaveCallback(effect.shapeType, effect.geometry);

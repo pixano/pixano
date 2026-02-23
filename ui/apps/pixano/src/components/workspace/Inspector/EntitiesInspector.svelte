@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { untrack } from "svelte";
   import { Thumbnail } from "$components/workspace/canvas2d";
-  import { BaseSchema, BBox, Entity, Source, type AnnotationThumbnail } from "$lib/ui";
+  import { BaseSchema, BBox, Entity, Source, isVideoEntity, type AnnotationThumbnail } from "$lib/ui";
 
   import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
@@ -71,12 +71,12 @@ License: CECILL-C
 
       // for video: show/hide track in Video inspector depending on filter
       const hasTrackChange = currentEntities.some(
-        (ent) => ent.is_track && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
+        (ent) => isVideoEntity(ent) && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
       );
       if (hasTrackChange) {
         entities.update((current) =>
           current.map((ent) => {
-            if (!ent.is_track) return ent;
+            if (!isVideoEntity(ent)) return ent;
             const shouldHide = !visibleEntityIds.has(ent.id);
             if (ent.ui.displayControl.hidden !== shouldHide) {
               ent.ui.displayControl.hidden = shouldHide;

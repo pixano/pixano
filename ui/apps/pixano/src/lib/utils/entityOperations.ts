@@ -14,7 +14,7 @@ import {
   Keypoints,
   Mask,
   TextSpan,
-  Tracklet,
+  Track,
   WorkspaceType,
   type BBoxData,
   type DatasetSchema,
@@ -289,10 +289,10 @@ export const defineCreatedAnnotation = (
       },
       data: { ...baseData, ...keypoints },
     });
-  } else if (shape.type === ShapeType.tracklet) {
+  } else if (shape.type === ShapeType.track) {
     const table = getTable(dataset_schema, "annotations", BaseSchema.Tracklet);
 
-    newAnnotation = new Tracklet({
+    newAnnotation = new Track({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
       data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
@@ -314,7 +314,7 @@ export const defineCreatedAnnotation = (
       ? WorkspaceType.IMAGE_TEXT_ENTITY_LINKING
       : WorkspaceType.IMAGE;
 
-  if (isVideo && shape.type !== ShapeType.tracklet)
+  if (isVideo && shape.type !== ShapeType.track)
     newAnnotation.ui.frame_index = currentFrameIndex;
 
   //add extra features if any

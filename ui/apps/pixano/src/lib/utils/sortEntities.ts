@@ -4,14 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, Entity, Tracklet } from "$lib/types/dataset";
+import { BaseSchema, Entity, Track } from "$lib/types/dataset";
 
 const getFirstFrame = (track: Entity): number => {
   return track.ui.childs && track.ui.childs.length > 0
     ? Math.min(
         ...track.ui.childs
           .filter((ann) => ann.is_type(BaseSchema.Tracklet))
-          .map((tracklet) => (tracklet as Tracklet).data.start_timestep),
+          .map((trk) => (trk as Track).data.start_timestep),
       )
     : Infinity;
 };

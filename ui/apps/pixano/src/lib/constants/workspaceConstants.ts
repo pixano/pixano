@@ -21,7 +21,7 @@ export const mapShapeType2BaseSchema: Partial<Record<ShapeType, BaseSchema>> = {
   [ShapeType.keypoints]: BaseSchema.Keypoints,
   [ShapeType.mask]: BaseSchema.Mask,
   [ShapeType.polygon]: BaseSchema.Mask,
-  [ShapeType.tracklet]: BaseSchema.Tracklet,
+  [ShapeType.track]: BaseSchema.Tracklet,
   [ShapeType.textSpan]: BaseSchema.TextSpan,
 };
 

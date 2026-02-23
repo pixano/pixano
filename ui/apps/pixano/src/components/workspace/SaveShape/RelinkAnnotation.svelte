@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/ui";
+  import { Annotation, BaseSchema, Entity, Track, type Reference } from "$lib/ui";
 
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityMutations";
@@ -20,7 +20,7 @@ License: CECILL-C
     overlapTargetId?: string;
     baseSchema: BaseSchema;
     viewRef: Reference;
-    tracklet?: Annotation | null;
+    track?: Annotation | null;
   }
 
   let {
@@ -29,7 +29,7 @@ License: CECILL-C
     overlapTargetId = $bindable(""),
     baseSchema,
     viewRef,
-    tracklet = null
+    track = null
   }: Props = $props();
 
   const entityAllowInfo = (
@@ -43,7 +43,7 @@ License: CECILL-C
     if (
       entity.data.parent_ref.id !== "" ||
       entity.is_conversation ||
-      (tracklet && getTopEntity(tracklet).id === entity.id)
+      (track && getTopEntity(track).id === entity.id)
     )
       return {
         hard_forbidden: true,
@@ -51,13 +51,13 @@ License: CECILL-C
         numSameKindInSameView: 0,
         overlapTargetIds: [],
       };
-    const tracklets = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
-    const annsNotTracklets = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+    const entityTracks = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
+    const annsNotTracks = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
     let numSameKindInSameView: number = 0;
     let overlap: boolean | undefined = undefined;
     let overlapTargetIds: string[] = [];
-    if (tracklet && tracklet.is_type(BaseSchema.Tracklet)) {
-      const trackletBaseSchemaByFrameIndex = (tracklet as Tracklet).ui.childs.reduce(
+    if (track && track.is_type(BaseSchema.Tracklet)) {
+      const trackBaseSchemaByFrameIndex = (track as Track).ui.childs.reduce(
         (acc, ann) => {
           if (ann.ui.frame_index) {
             acc[ann.ui.frame_index] = ann.table_info.base_schema;
@@ -66,27 +66,27 @@ License: CECILL-C
         },
         {} as Record<number, BaseSchema>,
       );
-      const sameKindInSameView_anns = annsNotTracklets?.filter(
+      const sameKindInSameView_anns = annsNotTracks?.filter(
         //NOTE we "miss" interpolated shapes. So we can "insert"
         (ann) =>
           ann.ui.frame_index
             ? ann.data.view_ref.name === viewRef.name &&
-              trackletBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
+              trackBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
             : false,
       );
       numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
 
-      const overlap_tracklets = tracklets?.filter(
+      const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Tracklet).data.view_ref.name === viewRef.name &&
-          (ann as Tracklet).data.start_timestep <= (tracklet as Tracklet).data.end_timestep &&
-          (ann as Tracklet).data.end_timestep >= (tracklet as Tracklet).data.start_timestep,
+          (ann as Track).data.view_ref.name === viewRef.name &&
+          (ann as Track).data.start_timestep <= (track as Track).data.end_timestep &&
+          (ann as Track).data.end_timestep >= (track as Track).data.start_timestep,
       );
-      overlap = overlap_tracklets ? overlap_tracklets.length > 0 : false;
-      if (overlap_tracklets && overlap_tracklets.length > 0)
-        overlapTargetIds = overlap_tracklets.map((ann) => ann.id);
+      overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
+      if (overlap_tracks && overlap_tracks.length > 0)
+        overlapTargetIds = overlap_tracks.map((ann) => ann.id);
     } else {
-      const sameKindInSameView_anns = annsNotTracklets?.filter(
+      const sameKindInSameView_anns = annsNotTracks?.filter(
         //NOTE we "miss" interpolated shapes. So we can "insert"
         (ann) => ann.data.view_ref.id === viewRef.id && baseSchema === ann.table_info.base_schema,
       );
@@ -94,15 +94,15 @@ License: CECILL-C
       //WARNING : if we allow relinking of a tracklet child (not allowed now)
       //$curentFrameIndex will not be reliable !
       //anyway, we should find a more reliable frame index
-      const overlap_tracklets = tracklets?.filter(
+      const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Tracklet).data.view_ref.name === viewRef.name &&
-          (ann as Tracklet).data.start_timestep <= currentFrameIndex.value &&
-          (ann as Tracklet).data.end_timestep >= currentFrameIndex.value,
+          (ann as Track).data.view_ref.name === viewRef.name &&
+          (ann as Track).data.start_timestep <= currentFrameIndex.value &&
+          (ann as Track).data.end_timestep >= currentFrameIndex.value,
       );
-      overlap = overlap_tracklets ? overlap_tracklets.length > 0 : false;
-      if (overlap_tracklets && overlap_tracklets.length > 0)
-        overlapTargetIds = overlap_tracklets.map((ann) => ann.id);
+      overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
+      if (overlap_tracks && overlap_tracks.length > 0)
+        overlapTargetIds = overlap_tracks.map((ann) => ann.id);
     }
     // ! overlap --> Move
     // overlap && numSameKindInSameView === 0 --> Merge -- need to keep target tracklet

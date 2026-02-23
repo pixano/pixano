@@ -71,7 +71,7 @@ export type RelationType =
   | "item_ref"
   | "source_ref"
   | "parent_ref"
-  | "tracklet_child";
+  | "track_child";
 
 /** A directed edge between two nodes. */
 export interface Relation {

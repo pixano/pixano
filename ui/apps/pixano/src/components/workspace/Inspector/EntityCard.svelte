@@ -18,7 +18,8 @@ License: CECILL-C
     Entity,
     IconButton,
     Item,
-    Tracklet,
+    Track,
+    isVideoEntity,
     WorkspaceType,
     type DisplayControl,
     type AnnotationThumbnail,
@@ -70,8 +71,8 @@ License: CECILL-C
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
       child.is_type(BaseSchema.Tracklet) &&
-      (child as Tracklet).data.start_timestep <= currentFrameIndex.value &&
-      (child as Tracklet).data.end_timestep >= currentFrameIndex.value
+      (child as Track).data.start_timestep <= currentFrameIndex.value &&
+      (child as Track).data.end_timestep >= currentFrameIndex.value
     )
       return true;
     return false;
@@ -126,7 +127,7 @@ License: CECILL-C
     return nextHighlightState;
   });
   const isVisible = $derived(entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false);
-  const hiddenTrack = $derived(entity.is_track ? entityDisplayControl.hidden : false);
+  const hiddenTrack = $derived(isVideoEntity(entity) ? entityDisplayControl.hidden : false);
 
   const features = $derived.by(() => {
     const currentSchema = datasetSchema.value;
@@ -135,7 +136,7 @@ License: CECILL-C
     void annotations.value;
     const feats: Record<string, Feature[]> = {};
     let childAnns: Annotation[] = [];
-    if (entity.is_track) {
+    if (isVideoEntity(entity)) {
       if (frameIndex !== null) {
         childAnns = (entity.ui.childs ?? []).filter(
           (ann) => !ann.is_type(BaseSchema.Tracklet) && ann.ui.frame_index === frameIndex,
@@ -232,16 +233,16 @@ License: CECILL-C
     if (!child && displayControlProperty === "editing") {
       setEntityDisplayControl({ editing: new_value });
     } else {
-      let tracklet_childs_ids = new Set<string>();
+      let track_childs_ids = new Set<string>();
       if (child && child.is_type(BaseSchema.Tracklet)) {
-        tracklet_childs_ids = new Set((child as Tracklet).ui.childs.map((ann) => ann.id));
+        track_childs_ids = new Set((child as Track).ui.childs.map((ann) => ann.id));
       }
       annotations.update((anns) => {
         let hasChanged = false;
         const nextAnnotations = anns.map((ann) => {
           const shouldUpdate =
             (child && ann.id === child.id) ||
-            tracklet_childs_ids.has(ann.id) ||
+            track_childs_ids.has(ann.id) ||
             (!child && getTopEntity(ann).id === entity.id);
           if (
             shouldUpdate
@@ -314,7 +315,7 @@ License: CECILL-C
   };
 
   const onTrackVisClick = () => {
-    if (!entity.is_track) return;
+    if (!isVideoEntity(entity)) return;
     setEntityDisplayControl({ hidden: !hiddenTrack });
   };
 
@@ -437,7 +438,7 @@ License: CECILL-C
             <Trash2 class="h-4 w-4" />
           </IconButton>
         {/if}
-        {#if entity.is_track && (showIcons || entityDisplayControl.editing || hiddenTrack)}
+        {#if isVideoEntity(entity) && (showIcons || entityDisplayControl.editing || hiddenTrack)}
           <IconButton
             tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
             onclick={onTrackVisClick}

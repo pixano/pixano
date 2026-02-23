@@ -30,7 +30,6 @@
   "dependencies": {
     "@pixano/canvas2d": "workspace:*",
     "@pixano/core": "workspace:^",
-    "@pixano/dataset-item-workspace": "workspace:^",
     "@pixano/models": "workspace:^",
     "@pixano/table": "workspace:^",
     "@storybook/test": "^8.1.5",

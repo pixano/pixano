@@ -19,7 +19,7 @@ import {
   Message,
   SequenceFrame,
   TextSpan,
-  Tracklet,
+  Track,
   View,
   type SaveItem,
 } from "$lib/types/dataset";
@@ -214,9 +214,9 @@ export const itemKeypoints = {
   },
 };
 
-export const tracklets = {
+export const tracks = {
   get value() {
-    return annotations.value.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Tracklet[];
+    return annotations.value.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Track[];
   },
 };
 
@@ -242,7 +242,7 @@ export const current_itemBBoxes = {
   get value() {
     const bboxes = itemBboxes.value;
     const frameIdx = currentFrameIndex.value;
-    const trks = tracklets.value;
+    const trks = tracks.value;
     const mViews = mediaViews.value;
     const doInterpolate = interpolate.value;
 
@@ -277,7 +277,7 @@ export const current_itemKeypoints = {
   get value() {
     const kpts = itemKeypoints.value;
     const frameIdx = currentFrameIndex.value;
-    const trks = tracklets.value;
+    const trks = tracks.value;
     const mViews = mediaViews.value;
     const doInterpolate = interpolate.value;
 
@@ -316,7 +316,7 @@ export const current_itemMasks = {
   get value() {
     const masks = itemMasks.value;
     const frameIdx = currentFrameIndex.value;
-    const trks = tracklets.value;
+    const trks = tracks.value;
 
     const current_masks: Mask[] = [];
     const current_tracklets = trks.filter(

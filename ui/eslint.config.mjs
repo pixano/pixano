@@ -67,6 +67,17 @@ export default [
     },
 
     rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@pixano/*/src", "@pixano/*/src/*"],
+              message: "Use the package public API instead of internal src paths.",
+            },
+          ],
+        },
+      ],
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
 

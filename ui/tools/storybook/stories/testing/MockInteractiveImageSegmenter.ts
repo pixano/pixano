@@ -7,7 +7,7 @@ License: CECILL-C
 // Imports
 import { mask_utils } from "@pixano/models";
 import type { InteractiveImageSegmenter, InteractiveImageSegmenterInput } from "@pixano/models";
-import type { SegmentationResult } from "@pixano/models/src/interfaces";
+import type { SegmentationResult } from "@pixano/models";
 
 // Exports
 export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter {

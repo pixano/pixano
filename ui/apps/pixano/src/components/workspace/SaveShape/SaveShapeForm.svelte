@@ -14,10 +14,10 @@ License: CECILL-C
     BaseSchema,
     Mask,
     ShapeType,
-    Tracklet,
+    Track,
     WorkspaceType,
     type SaveRectangleShape,
-    type SaveTrackletShape,
+    type SaveTrackShape,
   } from "$lib/ui";
   import { cn } from "$lib/utils/styleUtils";
   import { buttonVariants } from "$lib/utils/buttonVariants";
@@ -68,7 +68,7 @@ License: CECILL-C
     }
 
     let newAnnotation: Annotation | undefined = undefined;
-    let newTracklet: Annotation | undefined = undefined;
+    let newTrack: Annotation | undefined = undefined;
 
     const isVideo = itemMetas.value?.type === WorkspaceType.VIDEO;
     const isFromTracking = isVideo && pixanoInferenceToValidateTrackingMasks.value.length > 1;
@@ -149,28 +149,28 @@ License: CECILL-C
           lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
         }
       }
-      // for video, there is 1 anns, 1 track (may have 1 sub entity), 1 tracklet
-      // -> add tracklet
-      const candidate_tracklets = topEntity.ui.childs?.filter(
+      // for video, there is 1 anns, 1 track (may have 1 sub entity), 1 track annotation
+      // -> add track annotation
+      const candidate_tracks = topEntity.ui.childs?.filter(
         (ann) =>
           ann.is_type(BaseSchema.Tracklet) &&
           ann.data.view_ref.name === newShape.value.viewRef.name &&
-          (ann as Tracklet).data.start_timestep <= currentFrameIndex.value &&
-          (ann as Tracklet).data.end_timestep >= lastFrameIndex,
+          (ann as Track).data.start_timestep <= currentFrameIndex.value &&
+          (ann as Track).data.end_timestep >= lastFrameIndex,
       );
-      if (candidate_tracklets && candidate_tracklets.length === 1) {
-        const candidate_tracklet = candidate_tracklets[0] as Tracklet;
-        //NOTE: we add the new object "as it is" in the candidate tracklet
-        //it means that the tracklet may be wider than the new shape "range" (1 frame at creation)
+      if (candidate_tracks && candidate_tracks.length === 1) {
+        const candidate_track = candidate_tracks[0] as Track;
+        //NOTE: we add the new object "as it is" in the candidate track
+        //it means that the track may be wider than the new shape "range" (1 frame at creation)
         //-- this is potentially dangerous... but *should* be fine --
-        candidate_tracklet.ui.childs.push(newAnnotation);
+        candidate_track.ui.childs.push(newAnnotation);
         if (isFromTracking) {
-          for (const tr_mask of tracking_masks) candidate_tracklet.ui.childs.push(tr_mask);
+          for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
         }
-        candidate_tracklet.ui.childs.sort(sortByFrameIndex);
+        candidate_track.ui.childs.sort(sortByFrameIndex);
       } else {
-        const trackletShape: SaveTrackletShape = {
-          type: ShapeType.tracklet,
+        const trackShape: SaveTrackShape = {
+          type: ShapeType.track,
           status: newShape.value.status,
           itemId: "", //unused from SaveShapeBase
           imageWidth: 0, //unused from SaveShapeBase
@@ -184,25 +184,25 @@ License: CECILL-C
             end_timestamp: lastFrameIndex,
           },
         };
-        newTracklet = defineCreatedAnnotation(
+        newTrack = defineCreatedAnnotation(
           topEntity,
           features,
-          trackletShape,
-          trackletShape.viewRef,
+          trackShape,
+          trackShape.viewRef,
           datasetSchema.value,
           isVideo,
           currentFrameIndex.value,
         );
-        if (!newTracklet) return;
-        newTracklet.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-        (newTracklet as Tracklet).ui.childs = [newAnnotation];
+        if (!newTrack) return;
+        newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
+        (newTrack as Track).ui.childs = [newAnnotation];
         if (isFromTracking) {
-          for (const tr_mask of tracking_masks) (newTracklet as Tracklet).ui.childs.push(tr_mask);
+          for (const tr_mask of tracking_masks) (newTrack as Track).ui.childs.push(tr_mask);
         }
 
-        saveTo("add", newTracklet);
+        saveTo("add", newTrack);
         //TODO Note: we may have to manage "spatial object" entity too...
-        topEntity.ui.childs?.push(newTracklet);
+        topEntity.ui.childs?.push(newTrack);
       }
     }
 
@@ -240,7 +240,7 @@ License: CECILL-C
         ...objectsWithoutHighlighted,
         ...addedAnnotations,
         ...(isFromTracking ? tracking_masks : []),
-        ...(newTracklet ? [newTracklet] : []),
+        ...(newTrack ? [newTrack] : []),
       ];
     });
 

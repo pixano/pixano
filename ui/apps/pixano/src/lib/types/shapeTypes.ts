@@ -25,7 +25,7 @@ export enum ShapeType {
   keypoints = "keypoints",
   mask = "mask",
   polygon = "polygon",
-  tracklet = "tracklet",
+  track = "track",
   textSpan = "textSpan",
 }
 
@@ -118,8 +118,8 @@ export type SavePolygonShape = SaveShapeBase & {
   rle?: MaskData;
 };
 
-export type SaveTrackletShape = SaveShapeBase & {
-  type: ShapeType.tracklet;
+export type SaveTrackShape = SaveShapeBase & {
+  type: ShapeType.track;
   attrs: {
     start_timestep: number;
     end_timestep: number;
@@ -144,7 +144,7 @@ export type SaveShape =
   | SaveMaskShape
   | SavePolygonShape
   | SaveKeyBoxShape
-  | SaveTrackletShape
+  | SaveTrackShape
   | TextSpanShape;
 
 // ─── Idle State ────────────────────────────────────────────────────────────────

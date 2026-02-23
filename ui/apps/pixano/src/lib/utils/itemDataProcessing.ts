@@ -15,7 +15,8 @@ import {
   initDisplayControl,
   isSequenceFrameArray,
   Mask,
-  Tracklet,
+  Track,
+  isVideoEntity,
   WorkspaceType,
   type BBoxData,
   type FeaturesValues,
@@ -166,7 +167,7 @@ function buildEntityHierarchy(
 
   if (Object.keys(subEntitiesChilds).length > 0) {
     newEntities = newEntities.map((entity) => {
-      if (entity.is_track && entity.id in subEntitiesChilds) {
+      if (isVideoEntity(entity) && entity.id in subEntitiesChilds) {
         entity.ui.childs = [...entity.ui.childs!, ...subEntitiesChilds[entity.id]];
       }
       return entity;
@@ -180,24 +181,24 @@ function buildEntityHierarchy(
  * Attach tracklet children and top entities to annotations.
  * Must be called after entities are set in the store (uses getTopEntity which reads the store).
  */
-export function attachTrackletChildren(
+export function attachTrackChildren(
   anns: Annotation[],
   getTopEntity: (ann: Annotation) => Entity,
 ): Annotation[] {
   return anns.map((ann) => {
     const topEntity = getTopEntity(ann);
     if (ann.is_type(BaseSchema.Tracklet)) {
-      const tracklet = ann as Tracklet;
+      const track = ann as Track;
       if (topEntity) {
-        tracklet.ui.childs =
+        track.ui.childs =
           topEntity.ui.childs?.filter(
             (child) =>
               child.ui.frame_index !== undefined &&
-              child.ui.frame_index <= tracklet.data.end_timestep &&
-              child.ui.frame_index >= tracklet.data.start_timestep &&
-              child.data.view_ref.name === tracklet.data.view_ref.name,
+              child.ui.frame_index <= track.data.end_timestep &&
+              child.ui.frame_index >= track.data.start_timestep &&
+              child.data.view_ref.name === track.data.view_ref.name,
           ) || [];
-        tracklet.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
+        track.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
       }
     }
     return ann;
