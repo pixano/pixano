@@ -13,7 +13,6 @@ from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -183,10 +182,6 @@ class Message(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
-            source_ref=SourceRef.none(),
             number=0,
             user="",
             type="QUESTION",
@@ -209,10 +204,10 @@ def create_message(
     choices: list[str] = [],
     timestamp: datetime = datetime(1, 1, 1, 0, 0, 0, 0),
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
 ) -> Message:
     """Create a Message instance.
 
@@ -224,10 +219,10 @@ def create_message(
         choices: list of allowed answers
         timestamp: creation date of the message
         id: object id
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
 
     Returns:
         The created `Message` instance.
@@ -240,8 +235,8 @@ def create_message(
         choices=choices,
         timestamp=timestamp,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
     )

@@ -28,9 +28,8 @@ class EntityModel(BaseSchemaModel[Entity]):
                     "id": "cat_n1",
                     "table_info": {"group": "entities", "name": "cats", "base_schema": "Entity"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
-                        "parent_ref": {"name": "", "id": ""},
+                        "item_id": "1",
+                        "parent_id": "",
                         "category": "orange",
                     },
                 }
@@ -48,6 +47,7 @@ class EntityModel(BaseSchemaModel[Entity]):
 
     def to_row(self, dataset: Dataset) -> Entity:
         """Create an [Entity][pixano.features.Entity] from the model."""
-        if not is_entity(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_entity(schema):
             raise ValueError(f"Schema type must be a subclass of {Entity.__name__}.")
         return super().to_row(dataset)

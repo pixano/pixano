@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from types import GenericAlias
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, get_origin
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import ConfigDict, PrivateAttr, create_model, field_validator
@@ -23,21 +23,6 @@ from ..types.registry import _TYPES_REGISTRY
 
 if TYPE_CHECKING:
     from pixano.datasets.dataset import Dataset
-    from pixano.features import (
-        Annotation,
-        AnnotationRef,
-        Embedding,
-        EmbeddingRef,
-        Entity,
-        EntityRef,
-        Item,
-        ItemRef,
-        SchemaRef,
-        Source,
-        SourceRef,
-        View,
-        ViewRef,
-    )
 
 
 class BaseSchema(LanceModel):
@@ -144,33 +129,6 @@ class BaseSchema(LanceModel):
         copy.dataset = dataset
         return copy
 
-    @overload
-    def resolve_ref(self, ref: "ItemRef") -> "Item": ...
-    @overload
-    def resolve_ref(self, ref: "ViewRef") -> "View": ...
-    @overload
-    def resolve_ref(self, ref: "EmbeddingRef") -> "Embedding": ...
-    @overload
-    def resolve_ref(self, ref: "EntityRef") -> "Entity": ...
-    @overload
-    def resolve_ref(self, ref: "AnnotationRef") -> "Annotation": ...
-    @overload
-    def resolve_ref(self, ref: "SourceRef") -> "Source": ...
-    @overload
-    def resolve_ref(self, ref: "SchemaRef") -> "BaseSchema": ...
-    def resolve_ref(
-        self, ref: "SchemaRef" | "ItemRef" | "ViewRef" | "EmbeddingRef" | "EntityRef" | "AnnotationRef" | "SourceRef"
-    ) -> "BaseSchema" | "Item" | "View" | "Embedding" | "Entity" | "Annotation" | "Source":
-        """Resolve a reference to a schema object in the dataset.
-
-        Args:
-            ref: The reference to resolve.
-
-        Returns:
-            The resolved schema object.
-        """
-        return self.dataset.resolve_ref(ref)
-
     @classmethod
     def serialize(cls) -> dict[str, str | dict[str, Any]]:
         """Serialize the table."""
@@ -205,7 +163,19 @@ class BaseSchema(LanceModel):
                 else:
                     raise NotImplementedError("Should be a list or tuple.")
             else:
-                if issubclass(field.annotation, tuple(_TYPES_REGISTRY.values())):
+                # Handle Literal and other non-class annotations
+                import typing
+                if get_origin(field.annotation) is typing.Literal:
+                    fields[field_name] = {
+                        "type": "str",
+                        "collection": False,
+                    }
+                elif not isinstance(field.annotation, type):
+                    fields[field_name] = {
+                        "type": str(field.annotation),
+                        "collection": False,
+                    }
+                elif issubclass(field.annotation, tuple(_TYPES_REGISTRY.values())):
                     fields[field_name] = {
                         "type": field.annotation.__name__,
                         "collection": False,

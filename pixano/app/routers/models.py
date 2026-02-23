@@ -15,7 +15,7 @@ from pixano.app.settings import Settings, get_settings
 router = APIRouter(prefix="/models", tags=["Models"])
 
 
-@router.get("", response_model=list[str])
+@router.get("", response_model=list[str], operation_id="list_onnx_models")
 def get_models(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[str]:
@@ -33,7 +33,7 @@ def get_models(
     return models
 
 
-@router.get("/{model_name}", response_class=FileResponse)
+@router.get("/{model_name}", response_class=FileResponse, operation_id="get_onnx_model")
 def get_model(
     model_name: str,
     settings: Annotated[Settings, Depends(get_settings)],

@@ -7,6 +7,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from starlette.responses import Response
 
 from pixano.app.models.entities import EntityModel
 from pixano.app.settings import Settings, get_settings
@@ -24,10 +25,10 @@ from .utils import (
 )
 
 
-router = APIRouter(prefix="/entities", tags=["Entitys"])
+router = APIRouter(prefix="/entities", tags=["Entities"])
 
 
-@router.get("/{dataset_id}/{table}", response_model=list[EntityModel])
+@router.get("/{dataset_id}/{table}", response_model=list[EntityModel], operation_id="list_entities")
 def get_entities(
     dataset_id: str,
     table: str,
@@ -46,14 +47,14 @@ def get_entities(
         dataset_id: Dataset ID containing the table.
         table: Table name.
         settings: App settings.
-        ids: IDs of the views.
-        limit: Limit number of views.
-        skip: Skip number of views.
+        ids: IDs of the entities.
+        limit: Limit number of entities.
+        skip: Skip number of entities.
         where: Where clause.
         item_ids: Item IDs.
 
     Returns:
-        List of views.
+        List of entities.
     """
     return get_rows_handler(
         dataset_id=dataset_id,
@@ -68,7 +69,7 @@ def get_entities(
     )
 
 
-@router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+@router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel, operation_id="get_entity")
 def get_entity(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> EntityModel:
@@ -86,7 +87,9 @@ def get_entity(
     return get_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}", response_model=list[EntityModel])
+@router.post(
+    "/{dataset_id}/{table}", response_model=list[EntityModel], status_code=201, operation_id="create_entities"
+)
 def create_entities(
     dataset_id: str,
     table: str,
@@ -107,7 +110,9 @@ def create_entities(
     return create_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
-@router.post("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+@router.post(
+    "/{dataset_id}/{table}/{id}", response_model=EntityModel, status_code=201, operation_id="create_entity"
+)
 def create_entity(
     dataset_id: str,
     table: str,
@@ -130,7 +135,7 @@ def create_entity(
     return create_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
-@router.put("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+@router.put("/{dataset_id}/{table}/{id}", response_model=EntityModel, operation_id="update_entity")
 def update_entity(
     dataset_id: str,
     table: str,
@@ -153,7 +158,7 @@ def update_entity(
     return update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
-@router.put("/{dataset_id}/{table}", response_model=list[EntityModel])
+@router.put("/{dataset_id}/{table}", response_model=list[EntityModel], operation_id="update_entities")
 def update_entities(
     dataset_id: str,
     table: str,
@@ -174,7 +179,7 @@ def update_entities(
     return update_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
-@router.delete("/{dataset_id}/{table}/{id}")
+@router.delete("/{dataset_id}/{table}/{id}", status_code=204, response_class=Response, operation_id="delete_entity")
 def delete_entity(dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete an entity from a table of a dataset.
 
@@ -184,10 +189,10 @@ def delete_entity(dataset_id: str, table: str, id: str, settings: Annotated[Sett
         id: ID of the entity to delete.
         settings: App settings.
     """
-    return delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
+    delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}")
+@router.delete("/{dataset_id}/{table}", status_code=204, response_class=Response, operation_id="delete_entities")
 def delete_entities(
     dataset_id: str,
     table: str,
@@ -202,4 +207,4 @@ def delete_entities(
         ids: IDs of the entities to delete.
         settings: App settings.
     """
-    return delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)
+    delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)

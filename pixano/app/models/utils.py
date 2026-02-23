@@ -9,6 +9,7 @@ from pixano.features.schemas.schema_group import SchemaGroup
 from .annotations import AnnotationModel
 from .base_schema import BaseSchemaModel
 from .embeddings import EmbeddingModel
+from .entity_dynamic_states import EntityDynamicStateModel
 from .entities import EntityModel
 from .items import ItemModel
 from .sources import SourceModel
@@ -19,6 +20,7 @@ _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT: dict[SchemaGroup, type[BaseSchemaModel]] = {
     SchemaGroup.EMBEDDING: EmbeddingModel,
     SchemaGroup.ITEM: ItemModel,
     SchemaGroup.ENTITY: EntityModel,
+    SchemaGroup.ENTITY_DYNAMIC_STATE: EntityDynamicStateModel,
     SchemaGroup.ANNOTATION: AnnotationModel,
     SchemaGroup.VIEW: ViewModel,
     SchemaGroup.SOURCE: SourceModel,

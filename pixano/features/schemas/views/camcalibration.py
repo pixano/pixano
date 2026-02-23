@@ -11,9 +11,8 @@ from pixano.utils import issubclass_strict
 
 from ...types import BaseType
 from ...types.registry import _register_type_internal
-from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
-from . import Annotation
+from .view import View
 
 
 @_register_type_internal
@@ -120,7 +119,7 @@ class Extrinsics(BaseType):
 
 
 @_register_schema_internal
-class CamCalibration(Annotation):
+class CamCalibration(View):
     """Camera calibration.
 
     Attributes:
@@ -145,9 +144,6 @@ class CamCalibration(Annotation):
         """
         return cls(
             id="",
-            item_ref=ItemRef.none(),
-            view_ref=ViewRef.none(),
-            entity_ref=EntityRef.none(),
             type="",
             base_intrinsics=BaseIntrinsics(
                 cx_offset_px=0.0,
@@ -199,10 +195,8 @@ def create_cam_calibration(
     c4: float | None = None,
     pixel_aspect_ratio: float | None = None,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
     validate: bool = True,
 ) -> CamCalibration:
     """Create a `CamCalibration` instance.
@@ -228,10 +222,8 @@ def create_cam_calibration(
         c4: c4.
         pixel_aspect_ratio: pixel_aspect_ratio.
         id: `CamCalibration` ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
         validate: Set to False to skip pydantic validation.
 
     Returns:
@@ -351,10 +343,8 @@ def create_cam_calibration(
             extrinsics=extrinsics,
             intrinsics=intrinsics,
             id=id,
-            item_ref=item_ref,
-            view_ref=view_ref,
-            entity_ref=entity_ref,
-            source_ref=source_ref,
+            item_id=item_id,
+            view_name=view_name,
         )
     else:
         return CamCalibration.construct(
@@ -363,8 +353,6 @@ def create_cam_calibration(
             extrinsics=extrinsics,
             intrinsics=intrinsics,
             id=id,
-            item_ref=item_ref,
-            view_ref=view_ref,
-            entity_ref=entity_ref,
-            source_ref=source_ref,
+            item_id=item_id,
+            view_name=view_name,
         )

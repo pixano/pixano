@@ -46,19 +46,28 @@ class TableQueryBuilder:
         table: The LanceTable to query.
     """
 
-    def __init__(self, table: LanceTable, db_connection: lancedb.DBConnection | None = None):
+    def __init__(
+        self,
+        table: LanceTable,
+        db_connection: lancedb.DBConnection | None = None,
+        blob_columns: set[str] | None = None,
+    ):
         """Initializes the TableQueryBuilder.
 
         Args:
             table: The LanceTable to query.
             db_connection: Optional LanceDB connection. Used for count-join queries
                 instead of accessing table._conn (private attribute).
+            blob_columns: Set of column names containing blob data. These columns are excluded
+                from default projections (when no explicit select is called) to avoid loading
+                large binary data into memory unnecessarily.
         """
         if not isinstance(table, LanceTable):
             raise ValueError("table must be a LanceTable.")
 
         self.table: LanceTable = table
         self._db_connection: lancedb.DBConnection | None = db_connection
+        self._blob_columns: set[str] = blob_columns or set()
         self._columns: list[str] | dict[str, str] | None = None
         self._where: str | None = None
         self._limit: int | None = None
@@ -202,9 +211,12 @@ class TableQueryBuilder:
         self._check_called("build")
 
         if self._columns is None or self._columns == ["*"]:
-            # If no columns are selected, select all columns
+            # If no columns are selected, select all columns except blob columns
             # Can have better performance than *
-            columns = self.table.schema.names
+            columns = [
+                name for name in self.table.schema.names
+                if name not in self._blob_columns
+            ]
         else:
             columns = self._columns
 
@@ -281,14 +293,14 @@ class TableQueryBuilder:
                 count_tbl = db.open_table(count_name)
                 count_table = (
                     count_tbl.search(None)
-                    .select(["item_ref.id"])
+                    .select(["item_id"])
                     .limit(  # noqa: F841
                         count_tbl.count_rows()
                     )
                     .to_arrow()
                 )
                 SQL_WITH = """WITH counts AS(
-                SELECT "item_ref.id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_ref.id")"""
+                SELECT "item_id" as id, COUNT(*) as tbl_count FROM count_table GROUP BY "item_id")"""
                 self._order_by = ["IFNULL(c.tbl_count, 0)"]
             else:
                 self._order_by = []
@@ -355,7 +367,14 @@ class TableQueryBuilder:
         Returns:
             The result as a list of Pydantic models.
         """
-        return _PixanoEmptyQueryBuilder(self._execute()).to_pydantic(model)
+        result = self._execute()
+        # Add back excluded blob columns with empty defaults for Pydantic validation
+        if self._blob_columns:
+            for blob_col in self._blob_columns:
+                if blob_col not in result.column_names:
+                    null_col = pa.array([b""] * result.num_rows, type=pa.binary())
+                    result = result.append_column(blob_col, null_col)
+        return _PixanoEmptyQueryBuilder(result).to_pydantic(model)
 
     def to_polars(self) -> pl.DataFrame:
         """Builds the query and returns the result as a polars DataFrame.

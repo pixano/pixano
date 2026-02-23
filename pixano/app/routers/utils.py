@@ -9,7 +9,15 @@ from pathlib import Path
 from fastapi import HTTPException
 from typing_extensions import TypeVar
 
-from pixano.app.models import AnnotationModel, BaseSchemaModel, EmbeddingModel, EntityModel, ItemModel, ViewModel
+from pixano.app.models import (
+    AnnotationModel,
+    BaseSchemaModel,
+    EmbeddingModel,
+    EntityDynamicStateModel,
+    EntityModel,
+    ItemModel,
+    ViewModel,
+)
 from pixano.app.models.sources import SourceModel
 from pixano.app.models.table_info import TableInfo
 from pixano.app.models.utils import _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT
@@ -23,6 +31,9 @@ from pixano.utils import get_super_type_from_dict
 
 
 T = TypeVar("T", bound=BaseSchemaModel)
+
+# Maximum number of rows returned by a single list query.
+MAX_QUERY_LIMIT: int = 1000
 
 _dataset_cache: dict[str, Dataset] = {}
 
@@ -84,15 +95,20 @@ def assert_table_in_group(dataset: Dataset, table: str, group: SchemaGroup) -> N
     """Assert that a table belongs to a group.
 
     If the table does not belong to the group, raise a 404 error.
+    For the VIEW group, view column names are also accepted.
 
     Args:
         dataset: Dataset.
-        table: Table name.
+        table: Table name or view column name.
         group: Group.
     """
     if table in [SchemaGroup.ITEM.value, SchemaGroup.SOURCE.value]:
         return
-    elif table not in dataset.schema.groups[group]:
+    elif table in dataset.schema.groups[group]:
+        return
+    elif group == SchemaGroup.VIEW and table in dataset.schema.view_columns:
+        return
+    else:
         raise HTTPException(
             status_code=404,
             detail=f"Table {table} is not in the {group.value} group table.",
@@ -175,6 +191,8 @@ def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
         group = SchemaGroup.EMBEDDING
     elif issubclass(model_type, EntityModel):
         group = SchemaGroup.ENTITY
+    elif issubclass(model_type, EntityDynamicStateModel):
+        group = SchemaGroup.ENTITY_DYNAMIC_STATE
     elif issubclass(model_type, ItemModel):
         group = SchemaGroup.ITEM
     elif issubclass(model_type, SourceModel):
@@ -348,6 +366,10 @@ def get_rows_handler(
     group = validate_group(group)
     dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
     assert_table_in_group(dataset, table, group)
+    # Enforce maximum query limit to prevent unbounded queries (only for unfiltered list queries)
+    if ids is None and item_ids is None:
+        if limit is None or limit > MAX_QUERY_LIMIT:
+            limit = MAX_QUERY_LIMIT
     rows = get_rows(dataset=dataset, table=table, where=where, ids=ids, item_ids=item_ids, limit=limit, skip=skip)
     models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows)
     return models

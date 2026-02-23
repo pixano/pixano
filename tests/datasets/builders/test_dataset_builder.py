@@ -41,7 +41,7 @@ class TestDatasetBuilder:
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info_dataset_image_bboxes_keypoint
         assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
+        assert set(builder.dataset_schema.schemas.keys()) == {"images", "item", "entities", "bboxes", "keypoint"}
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(),
             dataset_item_image_bboxes_keypoint.to_dataset_schema().schemas.items(),
@@ -70,7 +70,7 @@ class TestDatasetBuilder:
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info_dataset_vqa
         assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "conversations", "messages"}
+        assert set(builder.dataset_schema.schemas.keys()) == {"images", "item", "conversations", "messages"}
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(),
             dataset_item_vqa.to_dataset_schema().schemas.items(),
@@ -102,7 +102,7 @@ class TestDatasetBuilder:
         assert source_table.count_rows() == 1
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
-    @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
+    @pytest.mark.parametrize("flush_every_n_samples", [1, 3])
     @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
     @pytest.mark.parametrize("check_integrity", ["raise", "warn", "none"])
     def test_build(
@@ -136,13 +136,13 @@ class TestDatasetBuilder:
         assert isinstance(dataset, Dataset)
         assert dataset.info == dataset_builder_image_bboxes_keypoint.info
         assert dataset.num_rows == 5
-        assert set(dataset.open_tables().keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
+        assert set(dataset.open_tables().keys()) == {"images", "item", "entities", "bboxes", "keypoint"}
 
         assert compact_dataset_mock.call_count == 1
         if compact_every_n_transactions is None:
             assert compact_table_mock.call_count == 0
         else:
-            if flush_every_n_samples is None:
+            if flush_every_n_samples == 1:
                 assert compact_table_mock.call_count == 6
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 0
@@ -184,7 +184,7 @@ class TestDatasetBuilder:
         if compact_every_n_transactions is None:
             assert compact_table_mock.call_count == 0
         else:
-            if flush_every_n_samples is None:
+            if flush_every_n_samples == 1:
                 assert compact_table_mock.call_count == 14
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 2
@@ -192,10 +192,10 @@ class TestDatasetBuilder:
                 raise ValueError("Invalid flush_every_n_samples value, update test")
 
         for mock in table_mocks:
-            mock.call_count == 2 if flush_every_n_samples is None else 1
+            mock.call_count == 2 if flush_every_n_samples == 1 else 1
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
-    @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
+    @pytest.mark.parametrize("flush_every_n_samples", [1, 3])
     @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
     @pytest.mark.parametrize("check_integrity", ["raise", "warn", "none"])
     def test_build_vqa(
@@ -229,13 +229,13 @@ class TestDatasetBuilder:
         assert isinstance(dataset, Dataset)
         assert dataset.info == dataset_builder_vqa.info
         assert dataset.num_rows == 4
-        assert set(dataset.open_tables().keys()) == {"image", "item", "conversations", "messages"}
+        assert set(dataset.open_tables().keys()) == {"images", "item", "conversations", "messages"}
 
         assert compact_dataset_mock.call_count == 1
         if compact_every_n_transactions is None:
             assert compact_table_mock.call_count == 0
         else:
-            if flush_every_n_samples is None:
+            if flush_every_n_samples == 1:
                 assert compact_table_mock.call_count == 8
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 1
@@ -277,7 +277,7 @@ class TestDatasetBuilder:
         if compact_every_n_transactions is None:
             assert compact_table_mock.call_count == 0
         else:
-            if flush_every_n_samples is None:
+            if flush_every_n_samples == 1:
                 assert compact_table_mock.call_count == 16
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 3
@@ -285,7 +285,7 @@ class TestDatasetBuilder:
                 raise ValueError("Invalid flush_every_n_samples value, update test")
 
         for mock in table_mocks:
-            mock.call_count == 2 if flush_every_n_samples is None else 1
+            mock.call_count == 2 if flush_every_n_samples == 1 else 1
 
     def test_build_error(self, dataset_builder_image_bboxes_keypoint):
         class WrongIdBuilder(DatasetBuilder):

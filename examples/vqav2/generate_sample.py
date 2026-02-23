@@ -20,6 +20,7 @@ Usage:
 
 Then import into Pixano:
     pixano data import ./my_data ./vqav2_sample --name "VQAv2 Sample" --type vqa
+    pixano data import ./my_data ./vqav2_sample --name "VQAv2 Sample" --type vqa --embed-media
 """
 
 import argparse
@@ -126,6 +127,7 @@ def main():
     print(f"\nDone. {total} images exported.")
     print("\nTo import into Pixano:")
     print(f'  pixano data import ./my_data {output_dir} --name "VQAv2 Sample" --type vqa')
+    print(f'  pixano data import ./my_data {output_dir} --name "VQAv2 Sample" --type vqa --embed-media')
 
 
 if __name__ == "__main__":

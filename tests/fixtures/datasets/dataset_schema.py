@@ -70,6 +70,7 @@ def json_dataset_schema_item_categories_image_bbox():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -205,6 +206,7 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -402,6 +404,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "timestamp": {"type": "float", "collection": False},
                     "frame_index": {"type": "int", "collection": False},
                     "category": {"type": "str", "collection": False},
@@ -420,6 +423,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -610,36 +614,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
 
 
 @pytest.fixture()
-def dataset_schema_image_bboxes_keypoint(item_metadata):
-    return DatasetSchema(
-        schemas={
-            "item": item_metadata,
-            "image": Image,
-            "entities": Entity,
-            "bboxes": BBox,
-            "keypoint": KeyPoints,
-        },
-        relations={
-            "item": {
-                "image": SchemaRelation.ONE_TO_ONE,
-                "entities": SchemaRelation.ONE_TO_MANY,
-                "bboxes": SchemaRelation.ONE_TO_MANY,
-                "keypoint": SchemaRelation.ONE_TO_ONE,
-            },
-            "image": {
-                "item": SchemaRelation.ONE_TO_ONE,
-            },
-            "entities": {
-                "item": SchemaRelation.MANY_TO_ONE,
-            },
-            "bboxes": {
-                "item": SchemaRelation.MANY_TO_ONE,
-            },
-            "keypoint": {
-                "item": SchemaRelation.ONE_TO_ONE,
-            },
-        },
-    )
+def dataset_schema_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint):
+    return DatasetSchema.from_dataset_item(dataset_item_image_bboxes_keypoint)
 
 
 @pytest.fixture(scope="session")

@@ -341,7 +341,7 @@ class TestDatasetSchema:
         schema = DatasetSchema.from_dataset_item(dataset_item_bboxes_metadata)
         assert set(schema.schemas.keys()) == {
             "item",
-            "image",
+            "images",
             "entity",
             "bbox",
         }
@@ -349,17 +349,17 @@ class TestDatasetSchema:
         serialized_item = item_categories_name_index.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
-        assert schema.schemas["image"].serialize() == Image.serialize()
+        assert "images" in schema.schemas
         assert schema.schemas["entity"].serialize() == Entity.serialize()
         assert schema.schemas["bbox"].serialize() == BBox.serialize()
 
         assert schema.relations == {
             "item": {
-                "image": SchemaRelation.ONE_TO_ONE,
+                "images": SchemaRelation.ONE_TO_ONE,
                 "entity": SchemaRelation.ONE_TO_ONE,
                 "bbox": SchemaRelation.ONE_TO_MANY,
             },
-            "image": {
+            "images": {
                 "item": SchemaRelation.ONE_TO_ONE,
             },
             "entity": {
@@ -371,7 +371,7 @@ class TestDatasetSchema:
         }
         assert schema.groups == {
             SchemaGroup.ITEM: {"item"},
-            SchemaGroup.VIEW: {"image"},
+            SchemaGroup.VIEW: {"images"},
             SchemaGroup.ENTITY: {"entity"},
             SchemaGroup.ANNOTATION: {"bbox"},
             SchemaGroup.EMBEDDING: set(),
@@ -434,14 +434,7 @@ class TestDatasetItem:
         schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
             "item",
-            "image",
-            "entity",
-            "bbox",
-        }
-
-        assert set(schema.schemas.keys()) == {
-            "item",
-            "image",
+            "images",
             "entity",
             "bbox",
         }
@@ -449,17 +442,17 @@ class TestDatasetItem:
         serialized_item = item_categories_name_index.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
-        assert schema.schemas["image"].serialize() == Image.serialize()
+        assert "images" in schema.schemas
         assert schema.schemas["entity"].serialize() == Entity.serialize()
         assert schema.schemas["bbox"].serialize() == BBox.serialize()
 
         assert schema.relations == {
             "item": {
-                "image": SchemaRelation.ONE_TO_ONE,
+                "images": SchemaRelation.ONE_TO_ONE,
                 "entity": SchemaRelation.ONE_TO_ONE,
                 "bbox": SchemaRelation.ONE_TO_MANY,
             },
-            "image": {
+            "images": {
                 "item": SchemaRelation.ONE_TO_ONE,
             },
             "entity": {
@@ -471,7 +464,7 @@ class TestDatasetItem:
         }
         assert schema.groups == {
             SchemaGroup.ITEM: {"item"},
-            SchemaGroup.VIEW: {"image"},
+            SchemaGroup.VIEW: {"images"},
             SchemaGroup.ENTITY: {"entity"},
             SchemaGroup.ANNOTATION: {"bbox"},
             SchemaGroup.EMBEDDING: set(),

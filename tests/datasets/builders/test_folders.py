@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
+from pixano.datasets import Dataset
 from pixano.datasets.builders.folders import (
     FolderBaseBuilder,
     ImageFolderBuilder,
@@ -19,7 +20,7 @@ from pixano.datasets.builders.folders import (
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.workspaces.dataset_items import DefaultImageDatasetItem
-from pixano.features import Conversation, Entity, Image, Item, Message, Video
+from pixano.features import Conversation, Entity, Image, Item, Message, SequenceFrame, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
@@ -37,6 +38,57 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
+    def test_generate_data_maps_objects_to_entities_alias(self, entity_category):
+        class Schema(DatasetItem):
+            image: Image
+            entities: list[entity_category]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            media_root = Path(tmp_dir)
+            split_dir = media_root / "test_dataset" / "train"
+            split_dir.mkdir(parents=True, exist_ok=True)
+            (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
+            (split_dir / "metadata.jsonl").write_text(
+                '{"image":"item_0.jpg","objects":{"category":["person"]}}\n',
+                encoding="utf-8",
+            )
+
+            builder = ImageFolderBuilder(
+                media_dir=media_root,
+                library_dir=media_root / "library",
+                info=DatasetInfo(name="alias_entities", description=""),
+                dataset_item=Schema,
+                dataset_path="test_dataset",
+            )
+            dataset = builder.build(mode="create", check_integrity="none")
+
+            assert dataset.open_table("entities").count_rows() == 1
+
+    def test_generate_data_maps_image_to_sequence_frame_alias(self, entity_category):
+        class Schema(DatasetItem):
+            frames: list[SequenceFrame]
+            entities: list[entity_category]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            media_root = Path(tmp_dir)
+            split_dir = media_root / "test_dataset" / "train"
+            split_dir.mkdir(parents=True, exist_ok=True)
+            (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
+            (split_dir / "metadata.jsonl").write_text('{"image":"item_0.jpg"}\n', encoding="utf-8")
+
+            builder = VideoFolderBuilder(
+                media_dir=media_root,
+                library_dir=media_root / "library",
+                info=DatasetInfo(name="alias_views", description=""),
+                dataset_item=Schema,
+                dataset_path="test_dataset",
+            )
+            dataset = builder.build(mode="create", check_integrity="none")
+
+            assert dataset.open_table("frames").count_rows() == 1
+            dataset_with_media = Dataset(dataset.path, media_dir=media_root)
+            assert dataset_with_media.generate_preview() != ""
+
     def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)

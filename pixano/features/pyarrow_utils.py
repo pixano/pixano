@@ -20,6 +20,7 @@ SERIALIZE_PYARROW_DATATYPE = {
     pa.uint32(): "uint32",
     pa.uint64(): "uint64",
     pa.binary(): "binary",
+    pa.large_binary(): "large_binary",
     pa.bool_(): "bool",
 }
 

@@ -24,8 +24,9 @@ class ViewModel(BaseSchemaModel[View]):
                     "id": "orange_cats",
                     "table_info": {"group": "views", "name": "image", "base_schema": "Image"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "parent_ref": {"name": "", "id": ""},
+                        "item_id": "1",
+                        "parent_id": "",
+                        "view_name": "image",
                         "url": "/path/to/chat/orange_left.jpg",
                         "format": "JPEG",
                         "width": 100,
@@ -46,6 +47,7 @@ class ViewModel(BaseSchemaModel[View]):
 
     def to_row(self, dataset: Dataset) -> View:
         """Create a [View][pixano.features.View] from the model."""
-        if not is_view(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_view(schema):
             raise ValueError(f"Schema type must be a subclass of {View.__name__}.")
         return super().to_row(dataset)

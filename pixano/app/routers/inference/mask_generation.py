@@ -43,6 +43,7 @@ class ImageMaskGenerationOutput(BaseModel):
 @router.post(
     "/image",
     response_model=ImageMaskGenerationOutput,
+    operation_id="call_image_mask_generation",
 )
 async def call_image_mask_generation(
     dataset_id: Annotated[str, Body(embed=True)],
@@ -78,7 +79,7 @@ async def call_image_mask_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_image(dataset.schema.schemas[image.table_info.name]):
+    if not is_image(dataset.schema.resolve_schema(image.table_info.name)):
         raise HTTPException(status_code=400, detail="Image must be an image.")
 
     image_row: Image = image.to_row(dataset)
@@ -125,6 +126,7 @@ class VideoMaskGenerationOutput(BaseModel):
 @router.post(
     "/video",
     response_model=VideoMaskGenerationOutput,
+    operation_id="call_video_mask_generation",
 )
 async def call_video_mask_generation(
     dataset_id: Annotated[str, Body(embed=True)],
@@ -154,7 +156,7 @@ async def call_video_mask_generation(
     dataset = get_dataset(dataset_id=dataset_id, dir=settings.library_dir, media_dir=settings.media_dir)
     provider = get_provider_from_settings(settings=settings, provider_name=provider_name)
 
-    if not is_sequence_frame(dataset.schema.schemas[video[0].table_info.name]):
+    if not is_sequence_frame(dataset.schema.resolve_schema(video[0].table_info.name)):
         raise HTTPException(status_code=400, detail="Video must be a list of SequenceFrame.")
 
     video_row: list[SequenceFrame] = [vm.to_row(dataset) for vm in video]
@@ -177,7 +179,7 @@ async def call_video_mask_generation(
         masks=[
             AnnotationModel.from_row(
                 row=m,  # only use mask (don't send obj_ids & frame_idx => viewRef has the frame_index info)
-                table_info=TableInfo(name="mask_table_name", group="annotations", base_schema="CompressedRLE"),
+                table_info=TableInfo(name=mask_table_name, group="annotations", base_schema="CompressedRLE"),
             )
             for m in mask_output[0]
         ]

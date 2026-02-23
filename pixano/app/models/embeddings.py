@@ -28,8 +28,9 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
                     "id": "embedding_orange_cats",
                     "table_info": {"group": "embeddings", "name": "cat_embeddings", "base_schema": "ViewEmbedding"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
+                        "item_id": "1",
+                        "view_name": "image",
+                        "frame_id": "orange_cats",
                         "vector": [0.0, 1.0, 2.0, -1.0, -2.0, 0.0],
                         "shape": [6],
                     },
@@ -48,6 +49,7 @@ class EmbeddingModel(BaseSchemaModel[Embedding]):
 
     def to_row(self, dataset: Dataset) -> Embedding:
         """Create an [Embedding][pixano.features.Embedding] from the model."""
-        if not is_embedding(dataset.schema.schemas[self.table_info.name]):
+        schema = dataset.schema.resolve_schema(self.table_info.name)
+        if not is_embedding(schema):
             raise ValueError(f"Schema type must be a subclass of {Embedding.__name__}.")
         return super().to_row(dataset)

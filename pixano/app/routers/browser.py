@@ -7,7 +7,7 @@
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import NonNegativeInt, PositiveInt
@@ -19,6 +19,12 @@ from pixano.features import SchemaGroup, is_image, is_text, is_view_embedding
 from pixano.features.utils.image import generate_text_image_base64
 
 from .utils import assert_table_in_group, get_dataset, get_rows
+
+# Embedded media view detection helper
+def _is_embedded_view(row: Any, url_attr: str = "url") -> bool:
+    """Check if a view row uses embedded blob (no URL)."""
+    url = getattr(row, url_attr, None)
+    return url is None or url == ""
 
 
 router = APIRouter(prefix="/browser", tags=["Browser"])
@@ -38,7 +44,7 @@ def _media_file_exists(media_dir: Path, relative_url: str) -> bool:
     return path_cache[relative_url]
 
 
-@router.get("/{id}", response_model=DatasetBrowser)
+@router.get("/{id}", response_model=DatasetBrowser, operation_id="get_browser")
 def get_browser(
     request: Request,
     id: str,
@@ -49,7 +55,7 @@ def get_browser(
     embedding_table: str = "",
     where: str | None = None,
     sortcol: str | None = None,
-    order: str | None = None,
+    order: Literal["asc", "desc"] | None = None,
 ) -> DatasetBrowser:  # type: ignore
     """Load dataset items for the explorer page.
 
@@ -108,30 +114,65 @@ def get_browser(
 
     item_ids = [item.id for item in item_rows]
 
-    # Fetch view data in parallel (each view is a separate LanceDB table)
-    def _fetch_view(view_name):
-        try:
-            return view_name, get_rows(dataset=dataset, table=view_name, item_ids=item_ids)
-        except Exception:
-            return view_name, []
+    # Determine view display names: use view_columns if available, else legacy table names
+    view_columns = dataset.schema.view_columns
+    has_media_type_tables = len(view_columns) > 0
 
+    # Fetch view data
     item_first_media: dict[str, dict] = {}
-    with ThreadPoolExecutor(max_workers=len(tables_view) or 1) as executor:
-        view_results = list(executor.map(_fetch_view, tables_view))
 
-    # Build item_id → first media mapping per view
-    item_id_set = set(item_ids)
-    for view, view_rows in view_results:
-        view_by_item: dict[str, Any] = {}
-        for row in view_rows:
-            rid = row.item_ref.id
-            if rid in item_id_set and rid not in view_by_item:
-                view_by_item[rid] = row
-        item_first_media[view] = {item_id: view_by_item.get(item_id) for item_id in item_ids}
+    if has_media_type_tables:
+        # New: fetch from media-type tables (one per media type, not per view)
+        media_tables = set(vc.media_table for vc in view_columns.values())
+        view_display_names = sorted(view_columns.keys())
+
+        def _fetch_media_table(media_table):
+            try:
+                return media_table, get_rows(dataset=dataset, table=media_table, item_ids=item_ids)
+            except Exception:
+                return media_table, []
+
+        with ThreadPoolExecutor(max_workers=len(media_tables) or 1) as executor:
+            media_results = dict(executor.map(_fetch_media_table, media_tables))
+
+        # Build item_id -> first media mapping per view from media-type table rows
+        item_id_set = set(item_ids)
+        for view_name, vc in view_columns.items():
+            view_by_item: dict[str, Any] = {}
+            media_rows = media_results.get(vc.media_table, [])
+            for row in media_rows:
+                rid = row.item_id
+                if getattr(row, "view_name", "") != view_name:
+                    continue
+                if rid in item_id_set and rid not in view_by_item:
+                    view_by_item[rid] = row
+            item_first_media[view_name] = {item_id: view_by_item.get(item_id) for item_id in item_ids}
+    else:
+        # Legacy: fetch from separate view tables
+        view_display_names = sorted(tables_view)
+
+        def _fetch_view(view_name):
+            try:
+                return view_name, get_rows(dataset=dataset, table=view_name, item_ids=item_ids)
+            except Exception:
+                return view_name, []
+
+        with ThreadPoolExecutor(max_workers=len(tables_view) or 1) as executor:
+            view_results = list(executor.map(_fetch_view, tables_view))
+
+        # Build item_id -> first media mapping per view
+        item_id_set = set(item_ids)
+        for view, view_rows in view_results:
+            view_by_item = {}
+            for row in view_rows:
+                rid = row.item_id
+                if rid in item_id_set and rid not in view_by_item:
+                    view_by_item[rid] = row
+            item_first_media[view] = {item_id: view_by_item.get(item_id) for item_id in item_ids}
 
     # build column headers (PaginationColumn)
     cols = []
-    for view in tables_view:
+    for view in view_display_names:
         view_type = "image"
         cols.append(PaginationColumn(name=view, type=view_type))
     for feat in vars(item_rows[0]).keys():
@@ -144,19 +185,42 @@ def get_browser(
     for i, item in enumerate(item_rows):
         row = {}
         # VIEWS -> thumbnails previews
-        for view in tables_view:
+        for view in view_display_names:
             curr_view = item_first_media[view][item.id]
             if curr_view is not None:
-                if is_image(type(curr_view)):
-                    # Check media file cache instead of disk I/O
-                    if _media_file_exists(settings.media_dir, curr_view.url):
-                        encoded_url = base64.b64encode(curr_view.url.encode("utf-8")).decode("utf-8")
-                        row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
+                if has_media_type_tables:
+                    # Media-type tables store one row per view, with canonical "url/blob/content" fields.
+                    if hasattr(curr_view, "content"):
+                        row_view_url = generate_text_image_base64(curr_view.content[:80])
                     else:
-                        row_view_url = ""
-                elif is_text(type(curr_view)):
-                    row_view_url = generate_text_image_base64(curr_view.content[:80])
-                row[view] = row_view_url
+                        url_val = getattr(curr_view, "url", "")
+                        if not _is_embedded_view(curr_view) and url_val:
+                            if _media_file_exists(settings.media_dir, url_val):
+                                encoded_url = base64.b64encode(url_val.encode("utf-8")).decode("utf-8")
+                                row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
+                            else:
+                                row_view_url = ""
+                        else:
+                            row_view_url = str(
+                                request.url_for(
+                                    "get_embedded_thumbnail",
+                                    dataset_id=id,
+                                    view_name=view,
+                                    row_id=curr_view.id,
+                                )
+                            )
+                    row[view] = row_view_url
+                else:
+                    # Legacy: per-view table
+                    if is_image(type(curr_view)):
+                        if _media_file_exists(settings.media_dir, curr_view.url):
+                            encoded_url = base64.b64encode(curr_view.url.encode("utf-8")).decode("utf-8")
+                            row_view_url = str(request.url_for("get_thumbnail", b64_image_path=encoded_url))
+                        else:
+                            row_view_url = ""
+                    elif is_text(type(curr_view)):
+                        row_view_url = generate_text_image_base64(curr_view.content[:80])
+                    row[view] = row_view_url
 
         # ITEM features
         for feat in vars(item).keys():
@@ -184,7 +248,7 @@ def get_browser(
     )
 
 
-@router.get("/item_ids/{id}", response_model=list[str])
+@router.get("/item_ids/{id}", response_model=list[str], operation_id="get_item_ids")
 def get_items_ids(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],

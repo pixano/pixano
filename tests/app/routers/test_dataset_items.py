@@ -191,7 +191,7 @@ def test_create_dataset_items(
         json=jsonable_encoder(list(new_dataset_items_models.values())),
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     for model_json in response.json():
         model = DatasetItemModel.model_validate(model_json)
         assert model.model_dump(exclude_timestamps=True) == new_dataset_items_models[model.id].model_dump(
@@ -260,7 +260,7 @@ def test_create_dataset_item(
         json=jsonable_encoder(new_dataset_item_model),
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     model = DatasetItemModel.model_validate(response.json())
     assert model.model_dump(exclude_timestamps=True) == new_dataset_item_model.model_dump(exclude_timestamps=True)
 
@@ -464,7 +464,7 @@ def test_delete_dataset_items(
     )
     response = client.delete(delete_url)
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # Check that the dataset_items were deleted from the dataset
     sql_item_ids = f"('{deleted_ids[0]}')" if len(deleted_ids) == 1 else str(tuple(set(deleted_ids)))
@@ -506,7 +506,7 @@ def test_delete_dataset_item(
 
     response = client.delete("/dataset_items/dataset_multi_view_tracking_and_image/0")
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # Check that the dataset_item was deleted from the dataset
     sql_item_ids = f"('{dataset_item.id}')"

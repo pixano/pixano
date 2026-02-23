@@ -11,7 +11,6 @@ from typing_extensions import Self
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import AnnotationRef, EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -54,9 +53,6 @@ class TextSpan(Annotation):
         """
         return cls(
             id="",
-            item_ref=ItemRef.none(),
-            view_ref=ViewRef.none(),
-            entity_ref=EntityRef.none(),
             mention="",
             spans_start=[],
             spans_end=[],
@@ -80,13 +76,13 @@ class Relation(Annotation):
 
     Attributes:
         predicate: type of relation, as in semantic-web (OWL, RDF, etc)
-        subject_ref: annotation_ref to the subject Annotation (eg TextSpan)
-        object_ref: annotation_ref to the object Annotation (eg TextSpan)
+        subject_id: ID of the subject annotation (eg TextSpan)
+        object_id: ID of the object annotation (eg TextSpan)
     """
 
     predicate: str
-    subject_ref: AnnotationRef
-    object_ref: AnnotationRef
+    subject_id: str = ""
+    object_id: str = ""
 
     @classmethod
     def none(cls) -> Self:
@@ -99,11 +95,8 @@ class Relation(Annotation):
         return cls(
             id="",
             predicate="",
-            item_ref=ItemRef.none(),
-            view_ref=ViewRef.none(),
-            entity_ref=EntityRef.none(),
-            subject_ref=AnnotationRef.none(),
-            object_ref=AnnotationRef.none(),
+            subject_id="",
+            object_id="",
         )
 
 
@@ -122,10 +115,10 @@ def create_text_span(
     spans_start: list[int],
     spans_end: list[int],
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
 ) -> TextSpan:
     """Create a TextSpan instance.
 
@@ -134,10 +127,10 @@ def create_text_span(
         spans_start: List of start offsets of the spans in the text.
         spans_end: List of end offsets of the spans in the text.
         id: TextSpan ID.
-        item_ref: Item reference.
-        view_ref: View reference toward a Text view having a str 'content' attribute.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name toward a Text view having a `content` attribute.
+        entity_id: Entity ID.
+        source_id: Source ID.
 
     Returns:
         The created `TextSpan` instance.
@@ -147,45 +140,45 @@ def create_text_span(
         spans_start=spans_start,
         spans_end=spans_end,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
     )
 
 
 def create_relation(
     predicate: str,
-    subject_ref: AnnotationRef = AnnotationRef.none(),
-    object_ref: AnnotationRef = AnnotationRef.none(),
+    subject_id: str = "",
+    object_id: str = "",
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
 ) -> Relation:
     """Create a `Relation` instance.
 
     Args:
         predicate: type of relation
-        subject_ref: annotation_ref to the subject TextSpan
-        object_ref: annotation_ref to the object TextSpan
+        subject_id: ID of the subject TextSpan
+        object_id: ID of the object TextSpan
         id: Relation ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
 
     Returns:
         The created `Relation` instance.
     """
     return Relation(
         predicate=predicate,
-        subject_ref=subject_ref,
-        object_ref=object_ref,
+        subject_id=subject_id,
+        object_id=object_id,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
     )

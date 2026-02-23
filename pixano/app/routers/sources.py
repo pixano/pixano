@@ -7,6 +7,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from starlette.responses import Response
 
 from pixano.app.models.sources import SourceModel
 from pixano.app.settings import Settings, get_settings
@@ -27,7 +28,7 @@ from .utils import (
 router = APIRouter(prefix="/sources", tags=["Sources"])
 
 
-@router.get("/{dataset_id}", response_model=list[SourceModel])
+@router.get("/{dataset_id}", response_model=list[SourceModel], operation_id="list_sources")
 def get_sources(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -64,7 +65,7 @@ def get_sources(
     )
 
 
-@router.get("/{dataset_id}/{id}", response_model=SourceModel)
+@router.get("/{dataset_id}/{id}", response_model=SourceModel, operation_id="get_source")
 def get_source(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> SourceModel:
     """Get a source from the `'source'` table of a dataset.
 
@@ -79,7 +80,7 @@ def get_source(dataset_id: str, id: str, settings: Annotated[Settings, Depends(g
     return get_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
 
 
-@router.post("/{dataset_id}", response_model=list[SourceModel])
+@router.post("/{dataset_id}", response_model=list[SourceModel], status_code=201, operation_id="create_sources")
 def create_sources(
     dataset_id: str,
     sources: list[SourceModel],
@@ -98,7 +99,7 @@ def create_sources(
     return create_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, sources, settings)
 
 
-@router.post("/{dataset_id}/{id}", response_model=SourceModel)
+@router.post("/{dataset_id}/{id}", response_model=SourceModel, status_code=201, operation_id="create_source")
 def create_source(
     dataset_id: str,
     id: str,
@@ -119,7 +120,7 @@ def create_source(
     return create_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, source, settings)
 
 
-@router.put("/{dataset_id}/{id}", response_model=SourceModel)
+@router.put("/{dataset_id}/{id}", response_model=SourceModel, operation_id="update_source")
 def update_source(
     dataset_id: str,
     id: str,
@@ -140,7 +141,7 @@ def update_source(
     return update_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, source, settings)
 
 
-@router.put("/{dataset_id}", response_model=list[SourceModel])
+@router.put("/{dataset_id}", response_model=list[SourceModel], operation_id="update_sources")
 def update_sources(
     dataset_id: str,
     sources: list[SourceModel],
@@ -159,7 +160,7 @@ def update_sources(
     return update_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, sources, settings)
 
 
-@router.delete("/{dataset_id}/{id}")
+@router.delete("/{dataset_id}/{id}", status_code=204, response_class=Response, operation_id="delete_source")
 def delete_source(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
     """Delete a source from the `'source'` table of a dataset.
 
@@ -168,10 +169,10 @@ def delete_source(dataset_id: str, id: str, settings: Annotated[Settings, Depend
         id: ID of the source to delete.
         settings: App settings.
     """
-    return delete_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
+    delete_row_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, id, settings)
 
 
-@router.delete("/{dataset_id}")
+@router.delete("/{dataset_id}", status_code=204, response_class=Response, operation_id="delete_sources")
 def delete_sources(
     dataset_id: str,
     ids: Annotated[list[str], Query()],
@@ -184,4 +185,4 @@ def delete_sources(
         ids: IDs of the sources to delete.
         settings: App settings.
     """
-    return delete_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, ids, settings)
+    delete_rows_handler(dataset_id, SchemaGroup.SOURCE, SchemaGroup.SOURCE.value, ids, settings)

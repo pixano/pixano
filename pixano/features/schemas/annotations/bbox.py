@@ -13,7 +13,6 @@ from typing_extensions import Self
 from pixano.features.utils import boxes as bbox_utils
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 from .compressed_rle import CompressedRLE
@@ -59,9 +58,6 @@ class BBox(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
             coords=[0.0, 0.0, 0.0, 0.0],
             format="xywh",
             is_normalized=True,
@@ -262,9 +258,6 @@ class BBox3D(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
             coords=[0, 0, 0, 0, 0, 0],
             format="xyzwhd",
             heading=[0, 0, 0],
@@ -289,10 +282,14 @@ def create_bbox(
     is_normalized: bool,
     confidence: float = -1,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
+    tracklet_id: str = "",
+    entity_dynamic_state_id: str = "",
+    frame_id: str = "",
+    frame_index: int = -1,
 ) -> BBox:
     """Create a `BBox` instance.
 
@@ -302,20 +299,28 @@ def create_bbox(
         is_normalized: True if coordinates are normalized to image size.
         confidence: Bounding box confidence if predicted.
         id: BBox ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
+        tracklet_id: Tracklet ID.
+        entity_dynamic_state_id: Entity dynamic state ID.
+        frame_id: Frame/view row ID.
+        frame_index: Frame index.
 
     Returns:
         The created `BBox` instance.
     """
     return BBox(
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
+        tracklet_id=tracklet_id,
+        entity_dynamic_state_id=entity_dynamic_state_id,
+        frame_id=frame_id,
+        frame_index=frame_index,
         coords=coords,
         format=str(format),
         is_normalized=is_normalized,
@@ -330,10 +335,14 @@ def create_bbox3d(
     is_normalized: bool,
     confidence: float = -1.0,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
+    tracklet_id: str = "",
+    entity_dynamic_state_id: str = "",
+    frame_id: str = "",
+    frame_index: int = -1,
 ) -> BBox3D:
     """Create a `BBox3D` instance.
 
@@ -344,20 +353,28 @@ def create_bbox3d(
         is_normalized: True if coordinates are normalized to image size.
         confidence: Bounding box confidence if predicted.
         id: BBox3D ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
+        tracklet_id: Tracklet ID.
+        entity_dynamic_state_id: Entity dynamic state ID.
+        frame_id: Frame/view row ID.
+        frame_index: Frame index.
 
     Returns:
         The created `BBox3D` instance.
     """
     return BBox3D(
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
+        tracklet_id=tracklet_id,
+        entity_dynamic_state_id=entity_dynamic_state_id,
+        frame_id=frame_id,
+        frame_index=frame_index,
         coords=coords,
         format=str(format),
         heading=heading,

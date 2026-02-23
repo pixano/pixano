@@ -9,6 +9,7 @@ from .base_schema import BaseSchemaModel
 from .dataset_info import DatasetInfoModel
 from .dataset_items import DatasetItemModel
 from .datasets import DatasetBrowser, DatasetModel, PaginationColumn, PaginationInfo, TableData
+from .entity_dynamic_states import EntityDynamicStateModel
 from .embeddings import EmbeddingModel
 from .entities import EntityModel
 from .item_info import ItemInfoModel
@@ -26,6 +27,7 @@ __all__ = [
     "DatasetInfoModel",
     "DatasetItemModel",
     "DatasetModel",
+    "EntityDynamicStateModel",
     "EmbeddingModel",
     "EntityModel",
     "ItemInfoModel",

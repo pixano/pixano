@@ -7,6 +7,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from starlette.responses import Response
 
 from pixano.app.models.annotations import AnnotationModel
 from pixano.app.settings import Settings, get_settings
@@ -27,7 +28,7 @@ from .utils import (
 router = APIRouter(prefix="/annotations", tags=["Annotations"])
 
 
-@router.get("/{dataset_id}/{table}", response_model=list[AnnotationModel])
+@router.get("/{dataset_id}/{table}", response_model=list[AnnotationModel], operation_id="list_annotations")
 def get_annotations(
     dataset_id: str,
     table: str,
@@ -68,7 +69,7 @@ def get_annotations(
     )
 
 
-@router.get("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
+@router.get("/{dataset_id}/{table}/{id}", response_model=AnnotationModel, operation_id="get_annotation")
 def get_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> AnnotationModel:
@@ -86,7 +87,12 @@ def get_annotation(
     return get_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}", response_model=list[AnnotationModel])
+@router.post(
+    "/{dataset_id}/{table}",
+    response_model=list[AnnotationModel],
+    status_code=201,
+    operation_id="create_annotations",
+)
 def create_annotations(
     dataset_id: str,
     table: str,
@@ -107,7 +113,12 @@ def create_annotations(
     return create_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
 
-@router.post("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
+@router.post(
+    "/{dataset_id}/{table}/{id}",
+    response_model=AnnotationModel,
+    status_code=201,
+    operation_id="create_annotation",
+)
 def create_annotation(
     dataset_id: str,
     table: str,
@@ -130,7 +141,7 @@ def create_annotation(
     return create_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
 
-@router.put("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
+@router.put("/{dataset_id}/{table}/{id}", response_model=AnnotationModel, operation_id="update_annotation")
 def update_annotation(
     dataset_id: str,
     table: str,
@@ -153,7 +164,7 @@ def update_annotation(
     return update_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, annotation, settings)
 
 
-@router.put("/{dataset_id}/{table}", response_model=list[AnnotationModel])
+@router.put("/{dataset_id}/{table}", response_model=list[AnnotationModel], operation_id="update_annotations")
 def update_annotations(
     dataset_id: str,
     table: str,
@@ -174,7 +185,9 @@ def update_annotations(
     return update_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, annotations, settings)
 
 
-@router.delete("/{dataset_id}/{table}/{id}")
+@router.delete(
+    "/{dataset_id}/{table}/{id}", status_code=204, response_class=Response, operation_id="delete_annotation"
+)
 def delete_annotation(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
@@ -186,10 +199,10 @@ def delete_annotation(
         id: ID of the annotation to delete.
         settings: App settings.
     """
-    return delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
+    delete_row_handler(dataset_id, SchemaGroup.ANNOTATION, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}")
+@router.delete("/{dataset_id}/{table}", status_code=204, response_class=Response, operation_id="delete_annotations")
 def delete_annotations(
     dataset_id: str,
     table: str,
@@ -204,4 +217,4 @@ def delete_annotations(
         ids: IDs of the annotations to delete.
         settings: App settings.
     """
-    return delete_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, ids, settings)
+    delete_rows_handler(dataset_id, SchemaGroup.ANNOTATION, table, ids, settings)

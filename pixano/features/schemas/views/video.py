@@ -10,7 +10,6 @@ import shortuuid
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -46,8 +45,9 @@ def is_video(cls: type, strict: bool = False) -> bool:
 def create_video(
     url: Path,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
     num_frames: int | None = None,
     fps: float | None = None,
     width: int | None = None,
@@ -61,8 +61,9 @@ def create_video(
     Args:
         url: The image URL. If not relative, the URL is converted to a relative path using `other_path`.
         id: Point cloud ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
         num_frames: The number of frames in the video. If None, the number of frames is
             extracted from the video file.
         fps: The frames per second of the video. If None, the fps is extracted from the video
@@ -124,8 +125,9 @@ def create_video(
 
     return Video(
         id=id,
-        item_ref=item_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
         url=url.as_posix(),
         num_frames=num_frames,
         fps=fps,

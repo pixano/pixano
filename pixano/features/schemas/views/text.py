@@ -6,7 +6,6 @@
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -30,18 +29,26 @@ def is_text(cls: type, strict: bool = False) -> bool:
 def create_text(
     content: str,
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
 ) -> Text:
     """Create a `Text` instance.
 
     Args:
         content: The text content.
         id: Text ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
 
     Returns:
         The created `Text` instance.
     """
-    return Text(id=id, item_ref=item_ref, parent_ref=parent_ref, content=content)
+    return Text(
+        id=id,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
+        content=content,
+    )

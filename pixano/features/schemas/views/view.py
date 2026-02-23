@@ -8,7 +8,6 @@ from typing_extensions import TYPE_CHECKING
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..base_schema import BaseSchema
 from ..registry import _register_schema_internal
 
@@ -25,22 +24,36 @@ class View(BaseSchema):
     a parent view.
 
     Attributes:
-        item_ref: Reference to the view's item.
-        parent_ref: Reference to the view's parent view.
+        item_id: ID of the view's item.
+        parent_id: ID of the view's parent view.
+        view_name: Logical view name (sensor/modality identifier).
     """
 
-    item_ref: ItemRef = ItemRef.none()
-    parent_ref: ViewRef = ViewRef.none()
+    item_id: str = ""
+    parent_id: str = ""
+    view_name: str = ""
 
     @property
     def item(self) -> "Item":
         """Get the view's item."""
-        return self.resolve_ref(self.item_ref)
+        if self.item_id == "":
+            raise ValueError("item_id is not set.")
+        return self.dataset.get_data("item", ids=[self.item_id])[0]
 
     @property
     def parent(self) -> "View":
         """Get the view's parent view."""
-        return self.resolve_ref(self.parent_ref)
+        if self.parent_id == "":
+            raise ValueError("parent_id is not set.")
+        # Parent can be any view table; search by id across view tables.
+        for group, tables in self.dataset.schema.groups.items():
+            if getattr(group, "value", "") != "views":
+                continue
+            for table_name in tables:
+                parent = self.dataset.get_data(table_name, ids=self.parent_id)
+                if parent is not None:
+                    return parent
+        raise ValueError(f"Parent view '{self.parent_id}' not found.")
 
 
 def is_view(cls: type, strict: bool = False) -> bool:

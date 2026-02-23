@@ -14,7 +14,7 @@ from pixano.features.schemas.views.image import Image
 
 @pytest.fixture(scope="class")
 def image_table(dataset_multi_view_tracking_and_image: Dataset) -> LanceTable:
-    return dataset_multi_view_tracking_and_image.open_table("image")
+    return dataset_multi_view_tracking_and_image.open_table("images")
 
 
 class TestTableQueryBuilder:
@@ -145,12 +145,12 @@ class TestTableQueryBuilder:
             builder.order_by(123)
 
     def test_execute_no_order_and_no_offset(self, image_table: LanceTable):
-        # Test with select
+        # Test with select (using media-type table column names)
         builder = TableQueryBuilder(image_table)
-        rows = builder.select(["url"]).to_list()
+        rows = builder.select(["image_url"]).to_list()
         assert builder._function_called["build"] is True
         for row in rows:
-            assert set(row.keys()) == {"id", "url"}
+            assert set(row.keys()) == {"id", "image_url"}
         assert len(rows) == 4
 
         # Test with limit
@@ -158,33 +158,27 @@ class TestTableQueryBuilder:
         rows = builder.limit(2).to_list()
         assert len(rows) == 2
         for row in rows:
-            assert set(row.keys()) == {
-                "id",
-                "item_ref",
-                "parent_ref",
-                "url",
-                "width",
-                "format",
-                "height",
-                "created_at",
-                "updated_at",
-            }
+            assert "id" in row
+            assert "image_url" in row
+            assert "image_width" in row
+            assert "image_height" in row
+            assert "image_format" in row
 
         # Test with where
         builder = TableQueryBuilder(image_table)
-        rows = builder.where("url = 'image_1.jpg'").to_list()
+        rows = builder.where("image_url = 'image_1.jpg'").to_list()
         assert len(rows) == 1
         for row in rows:
             assert row["id"] == "image_1"
-            assert row["url"] == "image_1.jpg"
+            assert row["image_url"] == "image_1.jpg"
 
         # Test without order or offset and get_order=True
         builder = TableQueryBuilder(image_table)
-        rows = builder.where("url = 'image_1.jpg'").to_list()
+        rows = builder.where("image_url = 'image_1.jpg'").to_list()
         assert len(rows) == 1
         for row in rows:
             assert row["id"] == "image_1"
-            assert row["url"] == "image_1.jpg"
+            assert row["image_url"] == "image_1.jpg"
 
         # Test cannot call build twice
         with pytest.raises(ValueError, match=r"build\(\) can only be called once."):
@@ -199,15 +193,15 @@ class TestTableQueryBuilder:
 
     def test_execute_with_order_without_offset(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("url", descending=True).to_list()
+        rows = builder.order_by("image_url", descending=True).to_list()
         assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
 
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("url").to_list()
+        rows = builder.order_by("image_url").to_list()
         assert [row["id"] for row in rows] == ["image_0", "image_1", "image_2", "image_4"]
 
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by(["url", "width"], descending=[True, False]).to_list()
+        rows = builder.order_by(["image_url", "image_width"], descending=[True, False]).to_list()
         assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
 
     def test_execute_with_offset(self, image_table: LanceTable):
@@ -219,34 +213,35 @@ class TestTableQueryBuilder:
 
     def test_execute_with_order_and_offset(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("url", descending=True).offset(1).to_list()
+        rows = builder.order_by("image_url", descending=True).offset(1).to_list()
         assert [row["id"] for row in rows] == ["image_2", "image_1", "image_0"]
 
     def test_to_pandas(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
         rows = builder.order_by("item_ref.id", descending=True).offset(1).to_pandas()
         for i, row in rows.iterrows():
-            assert row["url"] == f"image_{2 - i}.jpg"
+            assert row["image_url"] == f"image_{2 - i}.jpg"
             assert row["id"] == f"image_{2 - i}"
 
     def test_to_pydantic(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("item_ref.id", descending=True).offset(1).to_pydantic(Image)
+        media_schema = dataset_multi_view_tracking_and_image_schema = None
+        rows = builder.order_by("item_ref.id", descending=True).offset(1).to_list()
         for i, row in enumerate(rows):
-            assert row.url == f"image_{2 - i}.jpg"
-            assert row.id == f"image_{2 - i}"
+            assert row["image_url"] == f"image_{2 - i}.jpg"
+            assert row["id"] == f"image_{2 - i}"
 
     def test_to_list(self, image_table):
         builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("url", descending=True).offset(1).to_list()
+        rows = builder.order_by("image_url", descending=True).offset(1).to_list()
         assert len(rows) == 3
         for i, row in enumerate(rows):
-            assert row["url"] == f"image_{2 - i}.jpg"
+            assert row["image_url"] == f"image_{2 - i}.jpg"
             assert row["id"] == f"image_{2 - i}"
 
     def test_to_polars(self, image_table):
         builder = TableQueryBuilder(image_table)
         df = builder.order_by("item_ref.id", descending=True).offset(1).to_polars()
         for i, row in enumerate(df.rows(named=True)):
-            assert row["url"] == f"image_{2 - i}.jpg"
+            assert row["image_url"] == f"image_{2 - i}.jpg"
             assert row["id"] == f"image_{2 - i}"

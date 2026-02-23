@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -19,10 +20,12 @@ from pixano.features.schemas.schema_group import SchemaGroup
 from .utils import get_dataset as get_dataset_utils
 
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
-@router.get("/info", response_model=list[DatasetInfoModel])
+@router.get("/info", response_model=list[DatasetInfoModel], operation_id="list_datasets_info")
 def get_datasets_info(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetInfoModel]:
@@ -44,15 +47,23 @@ def get_datasets_info(
             detail=f"No datasets found in {settings.library_dir.absolute()}.",
         )
 
-    if len(infos_and_paths) > 0:
-        return [DatasetInfoModel.from_dataset_info(info, path) for info, path in infos_and_paths]
-    raise HTTPException(
-        status_code=404,
-        detail=f"No datasets found in {settings.library_dir.absolute()}.",
-    )
+    result = []
+    for info, path in infos_and_paths:
+        try:
+            result.append(DatasetInfoModel.from_dataset_info(info, path))
+        except Exception:
+            logger.warning(f"Failed to load dataset info for {path}, skipping.")
+            continue
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No datasets found in {settings.library_dir.absolute()}.",
+        )
+    return result
 
 
-@router.get("/info/{id}", response_model=DatasetInfoModel)
+@router.get("/info/{id}", response_model=DatasetInfoModel, operation_id="get_dataset_info")
 def get_dataset_info(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -77,7 +88,7 @@ def get_dataset_info(
     return DatasetInfoModel.from_dataset_info(info, path)
 
 
-@router.get("/{id}/stats", response_model=dict[str, dict[str, int]])
+@router.get("/{id}/stats", response_model=dict[str, dict[str, int]], operation_id="get_dataset_stats")
 def get_dataset_stats(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -103,14 +114,15 @@ def get_dataset_stats(
         for table_name in tables:
             try:
                 group_counts[table_name] = dataset.open_table(table_name).count_rows()
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to count rows for table '%s' in dataset '%s': %s", table_name, id, e)
                 group_counts[table_name] = 0
         if group_counts:
             result[group.value] = group_counts
     return result
 
 
-@router.get("/{id}", response_model=DatasetModel)
+@router.get("/{id}", response_model=DatasetModel, operation_id="get_dataset")
 def get_dataset(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -127,7 +139,7 @@ def get_dataset(
     return DatasetModel.from_dataset(get_dataset_utils(id, settings.library_dir, settings.media_dir))
 
 
-@router.get("/{id}/{table}/count", response_model=int)
+@router.get("/{id}/{table}/count", response_model=int, operation_id="get_table_count")
 def get_table_count(
     id: str,
     table: str,

@@ -7,6 +7,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from starlette.responses import Response
 
 from pixano.app.models.embeddings import EmbeddingModel
 from pixano.app.settings import Settings, get_settings
@@ -27,7 +28,7 @@ from .utils import (
 router = APIRouter(prefix="/embeddings", tags=["Embeddings"])
 
 
-@router.get("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
+@router.get("/{dataset_id}/{table}", response_model=list[EmbeddingModel], operation_id="list_embeddings")
 def get_embeddings(
     dataset_id: str,
     table: str,
@@ -68,7 +69,7 @@ def get_embeddings(
     )
 
 
-@router.get("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
+@router.get("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel, operation_id="get_embedding")
 def get_embedding(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> EmbeddingModel:
@@ -86,7 +87,9 @@ def get_embedding(
     return get_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
-@router.post("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
+@router.post(
+    "/{dataset_id}/{table}", response_model=list[EmbeddingModel], status_code=201, operation_id="create_embeddings"
+)
 def create_embeddings(
     dataset_id: str,
     table: str,
@@ -107,7 +110,9 @@ def create_embeddings(
     return create_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
 
-@router.post("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
+@router.post(
+    "/{dataset_id}/{table}/{id}", response_model=EmbeddingModel, status_code=201, operation_id="create_embedding"
+)
 def create_embedding(
     dataset_id: str,
     table: str,
@@ -115,22 +120,22 @@ def create_embedding(
     embedding: EmbeddingModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EmbeddingModel:
-    """Update an embedding in a table of a dataset.
+    """Add an embedding in a table of a dataset.
 
     Args:
         dataset_id: Dataset ID containing the table.
         table: Table name.
         id: ID of the embedding.
-        embedding: Embedding to update.
+        embedding: Embedding to add.
         settings: App settings.
 
     Returns:
-        The embedding updated.
+        The embedding added.
     """
     return create_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
 
-@router.put("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
+@router.put("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel, operation_id="update_embedding")
 def update_embedding(
     dataset_id: str,
     table: str,
@@ -153,7 +158,7 @@ def update_embedding(
     return update_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
 
-@router.put("/{dataset_id}/{table}", response_model=list[EmbeddingModel])
+@router.put("/{dataset_id}/{table}", response_model=list[EmbeddingModel], operation_id="update_embeddings")
 def update_embeddings(
     dataset_id: str,
     table: str,
@@ -174,7 +179,9 @@ def update_embeddings(
     return update_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
 
-@router.delete("/{dataset_id}/{table}/{id}")
+@router.delete(
+    "/{dataset_id}/{table}/{id}", status_code=204, response_class=Response, operation_id="delete_embedding"
+)
 def delete_embedding(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
@@ -186,10 +193,10 @@ def delete_embedding(
         id: ID of the embedding to delete.
         settings: App settings.
     """
-    return delete_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
+    delete_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
-@router.delete("/{dataset_id}/{table}")
+@router.delete("/{dataset_id}/{table}", status_code=204, response_class=Response, operation_id="delete_embeddings")
 def delete_embeddings(
     dataset_id: str,
     table: str,
@@ -204,4 +211,4 @@ def delete_embeddings(
         ids: IDs of the embeddings to delete.
         settings: App settings.
     """
-    return delete_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, ids, settings)
+    delete_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, ids, settings)

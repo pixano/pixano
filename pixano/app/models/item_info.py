@@ -31,7 +31,7 @@ class ItemInfoModel(ItemModel):
                     "infos": {
                         "annotations": {"bbox": {"count": 0}, "keypoints": {"count": 0}},
                         "embeddings": {"image_embedding": {"count": 1}, "video_embedding": {"count": 2}},
-                        "entities": {"persons": 0, "tracks": {"count": 10}},
+                        "entities": {"persons": {"count": 10}},
                         "views": {"image": {"count": 1}, "video": {"count": 2}},
                     },
                 }

@@ -37,7 +37,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(default_response_class=ORJSONResponse)
+    app = FastAPI(title="Pixano", version="0.1.0", default_response_class=ORJSONResponse)
     app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(
         CORSMiddleware,
@@ -63,25 +63,29 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         )
     else:
         # If local, mount media folder and models folder
-        # Check if folder exists
-        if not settings.media_dir.exists():
-            raise FileNotFoundError(f"Media directory '{settings.media_dir.absolute()}' not found")
         if settings.models_dir is None:
             raise FileNotFoundError("Model directory not provided")
         # Create models folder in case it doesn't exist yet
         if not settings.models_dir.exists():
             settings.models_dir.mkdir(exist_ok=True)
-        # Mount
-        app.mount(
-            "/media",
-            StaticFiles(directory=settings.media_dir),
-            name="media",
-        )
+        # Mount media directory only if it exists (may not exist in embedded-only mode)
+        if settings.media_dir and settings.media_dir.exists():
+            app.mount(
+                "/media",
+                StaticFiles(directory=settings.media_dir),
+                name="media",
+            )
         app.mount(
             "/app_models",
             StaticFiles(directory=settings.models_dir),
             name="models",
         )
+
+    # Health endpoint
+    @app.get("/health", tags=["Health"], operation_id="health_check")
+    def health_check() -> dict[str, str]:
+        """Health check endpoint."""
+        return {"status": "ok"}
 
     # Include routers
     app.include_router(annotations_router)

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from pixano.datasets import Dataset, DatasetItem, DatasetSchema
-from pixano.features import Annotation, Entity, Item, View
+from pixano.features import Annotation, Entity, EntityDynamicState, Item, View
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import SchemaGroup
@@ -19,6 +19,7 @@ from pixano.utils.python import get_super_type_from_dict
 
 from .annotations import AnnotationModel
 from .base_schema import BaseSchemaModel
+from .entity_dynamic_states import EntityDynamicStateModel
 from .entities import EntityModel
 from .items import ItemModel
 from .table_info import TableInfo
@@ -36,6 +37,7 @@ class DatasetItemModel(BaseModel):
         id: The dataset item id.
         item: The item model.
         entities: The entities models mapping.
+        entity_dynamic_states: The entity dynamic state models mapping.
         annotations: The annotations models mapping.
         views: The views models mapping.
     """
@@ -43,6 +45,7 @@ class DatasetItemModel(BaseModel):
     id: str
     item: ItemModel
     entities: dict[str, list[EntityModel] | EntityModel | None] = {}
+    entity_dynamic_states: dict[str, list[EntityDynamicStateModel] | EntityDynamicStateModel | None] = {}
     annotations: dict[str, list[AnnotationModel] | AnnotationModel | None] = {}
     views: dict[str, list[ViewModel] | ViewModel | None] = {}
 
@@ -61,7 +64,7 @@ class DatasetItemModel(BaseModel):
         if exclude_timestamps:
             model_dump["item"].pop("created_at", None)
             model_dump["item"].pop("updated_at", None)
-            for k in ["entities", "annotations", "views"]:
+            for k in ["entities", "entity_dynamic_states", "annotations", "views"]:
                 for model in model_dump[k].values():
                     if model is None:
                         continue
@@ -102,19 +105,28 @@ class DatasetItemModel(BaseModel):
 
         model_dict: dict[str, Any] = {
             "entities": {},
+            "entity_dynamic_states": {},
             "annotations": {},
             "views": {},
         }
         for key, value in dataset_item.to_schemas_data(dataset_schema).items():
             if value is None or value == []:
-                if issubclass(dataset_schema.schemas[key], View):
+                # Resolve schema type: may be a view column name or a table name
+                if key in dataset_schema.view_columns:
                     model_dict["views"][key] = None if value is None else []
-                elif issubclass(dataset_schema.schemas[key], Entity):
-                    model_dict["entities"][key] = None if value is None else []
-                elif issubclass(dataset_schema.schemas[key], Annotation):
-                    model_dict["annotations"][key] = None if value is None else []
+                elif key in dataset_schema.schemas:
+                    if issubclass(dataset_schema.schemas[key], View):
+                        model_dict["views"][key] = None if value is None else []
+                    elif issubclass(dataset_schema.schemas[key], Entity):
+                        model_dict["entities"][key] = None if value is None else []
+                    elif issubclass(dataset_schema.schemas[key], EntityDynamicState):
+                        model_dict["entity_dynamic_states"][key] = None if value is None else []
+                    elif issubclass(dataset_schema.schemas[key], Annotation):
+                        model_dict["annotations"][key] = None if value is None else []
+                    else:
+                        raise ValueError(f"Unsupported schema type {type(value)}")
                 else:
-                    raise ValueError(f"Unsupported schema type {type(value)}")
+                    raise ValueError(f"Unknown schema key: {key}")
             elif isinstance(value, Item) or isinstance(value, list) and isinstance(value[0], Item):
                 model_dict[key] = _row_or_rows_to_model_or_models(value, key, SchemaGroup.ITEM, ItemModel)
             elif isinstance(value, Annotation) or isinstance(value, list) and isinstance(value[0], Annotation):
@@ -124,6 +136,12 @@ class DatasetItemModel(BaseModel):
             elif isinstance(value, Entity) or isinstance(value, list) and isinstance(value[0], Entity):
                 model_dict["entities"][key] = _row_or_rows_to_model_or_models(
                     value, key, SchemaGroup.ENTITY, EntityModel
+                )
+            elif isinstance(value, EntityDynamicState) or (
+                isinstance(value, list) and isinstance(value[0], EntityDynamicState)
+            ):
+                model_dict["entity_dynamic_states"][key] = _row_or_rows_to_model_or_models(
+                    value, key, SchemaGroup.ENTITY_DYNAMIC_STATE, EntityDynamicStateModel
                 )
             elif isinstance(value, View) or isinstance(value, list) and isinstance(value[0], View):
                 model_dict["views"][key] = _row_or_rows_to_model_or_models(value, key, SchemaGroup.VIEW, ViewModel)
@@ -159,7 +177,7 @@ class DatasetItemModel(BaseModel):
         item = self.item
         schema_dict.update(item.to_row(dataset).model_dump())
 
-        for group in [self.annotations, self.entities, self.views]:
+        for group in [self.annotations, self.entities, self.entity_dynamic_states, self.views]:
             for key, value in group.items():
                 if isinstance(value, list):
                     schema_dict[key] = [v.to_row(dataset) for v in value]

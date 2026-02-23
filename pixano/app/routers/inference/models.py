@@ -53,7 +53,7 @@ class ModelInfoWithProvider(BaseModel):
     model_provider: str | None = None
 
 
-@router.get("/list-all", response_model=list[ModelInfoWithProvider])
+@router.get("/list-all", response_model=list[ModelInfoWithProvider], operation_id="list_all_inference_models")
 async def list_all_models(
     settings: Annotated[Settings, Depends(get_settings)],
     task: str | None = None,
@@ -98,7 +98,7 @@ async def list_all_models(
     return results
 
 
-@router.get("/list", response_model=list[ModelInfoResponse])
+@router.get("/list", response_model=list[ModelInfoResponse], operation_id="list_inference_models")
 async def list_models(
     settings: Annotated[Settings, Depends(get_settings)],
     task: str | None = None,
@@ -143,7 +143,7 @@ async def list_models(
     ]
 
 
-@router.get("/server-info", response_model=ServerInfoResponse)
+@router.get("/server-info", response_model=ServerInfoResponse, operation_id="get_inference_server_info")
 async def get_server_info(
     settings: Annotated[Settings, Depends(get_settings)],
     provider_name: str | None = None,

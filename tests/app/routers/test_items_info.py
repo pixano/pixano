@@ -62,23 +62,37 @@ def test_get_items_info(
         dataset_item.to_schemas_data(dataset_multi_view_tracking_and_image.schema) for dataset_item in dataset_items
     ]
     expected_output = []
+    view_columns = dataset_multi_view_tracking_and_image.schema.view_columns
     for schema_data in schemas_data:
         item_data = schema_data.pop("item", None)
         item_model = ItemModel.from_row(
             item_data, TableInfo(name="item", group=SchemaGroup.ITEM.value, base_schema=Item.__name__)
         )
-        info_dict = {
-            group.value: {
-                table: {
-                    "count": (len(schema_data[table]) if isinstance(schema_data[table], list) else 1)
-                    if table in schema_data and schema_data[table] is not None
-                    else 0
-                }
-                for table in tables
-            }
-            for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items()
-            if group not in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]
-        }
+        info_dict = {}
+        for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items():
+            if group in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]:
+                continue
+            group_info = {}
+            for table in tables:
+                if group == SchemaGroup.VIEW:
+                    # Media table: find any view column mapped to this table and use its count
+                    count = 0
+                    for vc_name, vc in view_columns.items():
+                        if vc.media_table == table and vc_name in schema_data:
+                            data = schema_data[vc_name]
+                            if isinstance(data, list):
+                                count = len(data)
+                            elif data is not None:
+                                count = 1
+                            break
+                    group_info[table] = {"count": count}
+                else:
+                    group_info[table] = {
+                        "count": (len(schema_data[table]) if isinstance(schema_data[table], list) else 1)
+                        if table in schema_data and schema_data[table] is not None
+                        else 0
+                    }
+            info_dict[group.value] = group_info
         expected_output.append(ItemInfoModel(info=info_dict, **item_model.model_dump()))
 
     response = client.get(url)
@@ -132,18 +146,31 @@ def test_get_item_info(
     item_model = ItemModel.from_row(
         item_data, TableInfo(name="item", group=SchemaGroup.ITEM.value, base_schema=Item.__name__)
     )
-    info_dict = {
-        group.value: {
-            table: {
-                "count": (len(schemas_data[table]) if isinstance(schemas_data[table], list) else 1)
-                if table in schemas_data and schemas_data[table] is not None
-                else 0
-            }
-            for table in tables
-        }
-        for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items()
-        if group not in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]
-    }
+    view_columns = dataset_multi_view_tracking_and_image.schema.view_columns
+    info_dict = {}
+    for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items():
+        if group in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]:
+            continue
+        group_info = {}
+        for table in tables:
+            if group == SchemaGroup.VIEW:
+                count = 0
+                for vc_name, vc in view_columns.items():
+                    if vc.media_table == table and vc_name in schemas_data:
+                        data = schemas_data[vc_name]
+                        if isinstance(data, list):
+                            count = len(data)
+                        elif data is not None:
+                            count = 1
+                        break
+                group_info[table] = {"count": count}
+            else:
+                group_info[table] = {
+                    "count": (len(schemas_data[table]) if isinstance(schemas_data[table], list) else 1)
+                    if table in schemas_data and schemas_data[table] is not None
+                    else 0
+                }
+        info_dict[group.value] = group_info
     expected_output = ItemInfoModel(info=info_dict, **item_model.model_dump())
 
     response = client.get("/items_info/dataset_multi_view_tracking_and_image/0")

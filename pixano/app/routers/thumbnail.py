@@ -24,7 +24,17 @@ THUMBNAIL_CACHE_DIR = Path(tempfile.gettempdir()) / "pixano_thumbnails"
 THUMBNAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@router.get("/{b64_image_path}", name="get_thumbnail")
+@router.get(
+    "/{b64_image_path}",
+    name="get_thumbnail",
+    operation_id="get_thumbnail",
+    responses={
+        200: {
+            "description": "Thumbnail image.",
+            "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
 def get_thumbnail(
     b64_image_path: str,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -67,6 +77,90 @@ def get_thumbnail(
     image.thumbnail((max_size, max_size))
 
     # Save to disk cache as JPEG
+    image.convert("RGB").save(cache_path, format="JPEG", quality=85)
+
+    return FileResponse(
+        cache_path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400", "ETag": cache_key},
+    )
+
+
+@router.get(
+    "/embedded/{dataset_id}/{view_name}/{row_id}",
+    name="get_embedded_thumbnail",
+    operation_id="get_embedded_thumbnail",
+    responses={
+        200: {
+            "description": "Embedded thumbnail image.",
+            "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
+def get_embedded_thumbnail(
+    dataset_id: str,
+    view_name: str,
+    row_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    max_size: PositiveInt = 128,
+) -> FileResponse:
+    """Generate a thumbnail from an embedded blob.
+
+    Args:
+        dataset_id: Dataset ID.
+        view_name: View name (column prefix in media-type table).
+        row_id: Row ID in the media-type table.
+        settings: App settings.
+        max_size: Maximum thumbnail dimension.
+
+    Returns:
+        FileResponse with the generated thumbnail.
+    """
+    from pixano.datasets.queries import TableQueryBuilder
+
+    # Check disk cache first
+    cache_key = hashlib.md5(f"emb_{dataset_id}_{view_name}_{row_id}_{max_size}".encode()).hexdigest()
+    cache_path = THUMBNAIL_CACHE_DIR / f"{cache_key}.jpg"
+
+    if cache_path.exists():
+        return FileResponse(
+            cache_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400", "ETag": cache_key},
+        )
+
+    # Fetch blob from dataset
+    from pixano.app.routers.utils import get_dataset
+
+    dataset = get_dataset(dataset_id, settings.library_dir, settings.media_dir)
+
+    if view_name not in dataset.schema.view_columns:
+        raise HTTPException(status_code=404, detail=f"View '{view_name}' not found in dataset schema.")
+
+    vc = dataset.schema.view_columns[view_name]
+    table = dataset.open_table(vc.media_table)
+
+    rows = (
+        TableQueryBuilder(table, dataset._db_connection)
+        .select(["id", "blob"])
+        .where(f"id = '{row_id}' AND view_name = '{view_name}'")
+        .to_list()
+    )
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Row '{row_id}' not found.")
+
+    blob = rows[0].get("blob", b"")
+    if not blob:
+        raise HTTPException(status_code=404, detail="No blob data found for this view.")
+
+    # Generate thumbnail
+    import io
+
+    image = Image.open(io.BytesIO(blob))
+    if max_size > max(image.width, image.height):
+        max_size = max(image.width, image.height)
+    image.thumbnail((max_size, max_size))
     image.convert("RGB").save(cache_path, format="JPEG", quality=85)
 
     return FileResponse(

@@ -12,7 +12,6 @@ from fastapi.encoders import jsonable_encoder
 
 from pixano.features import BBox, CompressedRLE, Image, NDArrayFloat, SequenceFrame, Source, ViewEmbedding
 from pixano.features.schemas.entities.entity import Entity
-from pixano.features.types.schema_reference import EntityRef, SourceRef, ViewRef
 
 from .provider import InferenceProvider
 from .types import (
@@ -136,10 +135,11 @@ async def image_mask_generation(
     mask_data: CompressedRLEData = result.data.masks[0][0]
     mask = CompressedRLE(
         id=shortuuid.uuid(),
-        item_ref=image.item_ref,
-        view_ref=ViewRef(name=image.table_name, id=image.id),
-        entity_ref=EntityRef(name=entity.table_name, id=entity.id) if entity else EntityRef(name="", id=""),
-        source_ref=SourceRef(id=source.id),
+        item_id=image.item_id,
+        frame_id=image.id,
+        view_name=image.view_name or image.table_name,
+        entity_id=entity.id if entity else "",
+        source_id=source.id,
         inference_metadata=inference_metadata,
         size=mask_data.size,
         counts=mask_data.counts,
@@ -236,18 +236,17 @@ async def video_mask_generation(
     frame_indexes: list[int] = []
 
     if result.status == "SUCCESS":
-        entity_ref_id = shortuuid.uuid()  # used to check masks are from same generation when no entity in input
+        generated_entity_id = shortuuid.uuid()  # used to group masks from one generation when no entity in input
 
         for mask_data, obj_id, frame_idx in zip(result.data.masks, result.data.objects_ids, result.data.frame_indexes):
             frame_image = video[frame_idx]
             mask = CompressedRLE(
                 id=shortuuid.uuid(),
-                item_ref=frame_image.item_ref,
-                view_ref=ViewRef(name=frame_image.table_name, id=frame_image.id),
-                entity_ref=EntityRef(name=entity.table_name, id=entity.id)
-                if entity
-                else EntityRef(name="", id=entity_ref_id),
-                source_ref=SourceRef(id=source.id),
+                item_id=frame_image.item_id,
+                frame_id=frame_image.id,
+                view_name=frame_image.view_name or frame_image.table_name,
+                entity_id=entity.id if entity else generated_entity_id,
+                source_id=source.id,
                 inference_metadata=inference_metadata,
                 size=mask_data.size,
                 counts=mask_data.counts,

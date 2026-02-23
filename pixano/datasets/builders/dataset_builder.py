@@ -8,17 +8,21 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from pathlib import Path
+from types import GenericAlias
 from typing import Any, Iterator, Literal
 
 import lancedb
+import pyarrow as pa
 import shortuuid
 import tqdm
 from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
+from pixano.datasets.dataset_schema import _view_instance_to_columns
 from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source, SourceKind
+from pixano.features.schemas.views import View
 
 
 logger = logging.getLogger(__name__)
@@ -55,6 +59,7 @@ class DatasetBuilder(ABC):
         self.previews_path: Path = self.target_dir / Dataset._PREVIEWS_PATH
 
         self.info: DatasetInfo = info
+        self._dataset_item_cls: type[DatasetItem] = dataset_item
         self.dataset_schema: DatasetSchema = dataset_item.to_dataset_schema()
         self.schemas: dict[str, type[BaseSchema]] = self.dataset_schema.schemas
 
@@ -69,6 +74,22 @@ class DatasetBuilder(ABC):
     def item_schema_name(self) -> str:
         """The item schema name for the dataset."""
         return SchemaGroup.ITEM.value
+
+    @property
+    def all_schemas(self) -> dict[str, type]:
+        """Returns schemas dict including both table schemas and view field types.
+
+        This is useful for generate_data() implementations that need the original View types
+        (e.g., SequenceFrameCategory) accessible by their field names (e.g., "video").
+        """
+        result = dict(self.schemas)
+        for field_name, field in self._dataset_item_cls.model_fields.items():
+            if field_name in self.dataset_schema.view_columns:
+                if isinstance(field.annotation, GenericAlias):
+                    result[field_name] = field.annotation.__args__[0]
+                else:
+                    result[field_name] = field.annotation
+        return result
 
     def add_source(
         self,
@@ -111,7 +132,7 @@ class DatasetBuilder(ABC):
     def build(
         self,
         mode: Literal["add", "create", "overwrite"] = "create",
-        flush_every_n_samples: int | None = None,
+        flush_every_n_samples: int = 1024,
         compact_every_n_transactions: int | None = None,
         check_integrity: Literal["raise", "warn", "none"] = "raise",
     ) -> Dataset:
@@ -126,7 +147,7 @@ class DatasetBuilder(ABC):
                     - "overwrite": Overwrite the tables in the database.
                     - "add": Append to the tables in the database.
             flush_every_n_samples: The number of samples accumulated from `generate_data` before they are
-                flushed in tables. The counter is per table. If None, data are inserted at each iteration.
+                flushed in tables. The counter is per table. Defaults to 1024.
             compact_every_n_transactions: The number of transactions before compacting each table.
                 If None, the dataset is compacted only at the end.
             check_integrity: The integrity check to perform after building the dataset. It can be "raise",
@@ -142,7 +163,7 @@ class DatasetBuilder(ABC):
             raise ValueError(f"mode should be 'add', 'create' or 'overwrite' but got {mode}")
         if check_integrity not in ["raise", "warn", "none"]:
             raise ValueError(f"check_integrity should be 'raise', 'warn' or 'none' but got {check_integrity}")
-        if flush_every_n_samples is not None and flush_every_n_samples <= 0:
+        if flush_every_n_samples <= 0:
             raise ValueError(f"flush_every_n_samples should be greater than 0 but got {flush_every_n_samples}")
         if compact_every_n_transactions is not None and compact_every_n_transactions <= 0:
             raise ValueError(
@@ -175,8 +196,10 @@ class DatasetBuilder(ABC):
 
         logger.info(f"Building dataset {self.info.name}")
         for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
-            # assert that items have keys that are in tables
-            for table_name, item_value in items.items():
+            # Translate view field names to media table data
+            translated = self._translate_view_fields(items)
+
+            for table_name, item_value in translated.items():
                 if item_value is None or item_value == []:
                     continue
                 if table_name not in tables:
@@ -185,10 +208,7 @@ class DatasetBuilder(ABC):
                 accumulate_data_tables[table_name].extend(item_value if isinstance(item_value, list) else [item_value])
 
                 # make transaction every n iterations per table
-                if len(accumulate_data_tables[table_name]) > 0 and (
-                    flush_every_n_samples is None
-                    or len(accumulate_data_tables[table_name]) % flush_every_n_samples == 0
-                ):
+                if len(accumulate_data_tables[table_name]) >= flush_every_n_samples:
                     table = tables[table_name]
                     table.add(accumulate_data_tables[table_name])
                     transactions_per_table[table_name] += 1
@@ -252,12 +272,19 @@ class DatasetBuilder(ABC):
     ) -> dict[str, Table]:
         """Create tables in the database.
 
+        For media-type tables, blob columns are overridden to pa.large_binary().
+
         Returns:
             The tables in the database.
         """
         tables = {}
         for key, schema in self.schemas.items():
-            self.db.create_table(key, schema=schema, mode=mode)
+            # Override blob columns to large_binary for media-type tables
+            arrow_schema = self._override_blob_columns(key, schema)
+            if arrow_schema is not None:
+                self.db.create_table(key, schema=arrow_schema, mode=mode)
+            else:
+                self.db.create_table(key, schema=schema, mode=mode)
 
             tables[key] = self.db.open_table(key)
         self.db.create_table("source", schema=Source, mode=mode)
@@ -277,3 +304,67 @@ class DatasetBuilder(ABC):
         tables["source"] = self.db.open_table("source")
 
         return tables
+
+    def _override_blob_columns(
+        self, table_name: str, schema: type[BaseSchema]
+    ) -> pa.Schema | None:
+        """Override blob columns to pa.large_binary() in Arrow schema.
+
+        Args:
+            table_name: The table name.
+            schema: The schema class.
+
+        Returns:
+            The modified Arrow schema, or None if no overrides needed.
+        """
+        if "blob" not in schema.model_fields:
+            return None
+        arrow_schema = schema.to_arrow_schema()
+        modified = False
+        for i, field in enumerate(arrow_schema):
+            if field.name == "blob":
+                arrow_schema = arrow_schema.set(i, pa.field(field.name, pa.large_binary()))
+                modified = True
+        return arrow_schema if modified else None
+
+    def _translate_view_fields(self, items: dict[str, Any]) -> dict[str, Any]:
+        """Translate view field names to media table rows.
+
+        When generate_data() yields {"image": image_instance, ...}, this translates
+        it to {"images": [Image(...)], ...} where each media row keeps `view_name`.
+
+        Args:
+            items: The raw items dict from generate_data().
+
+        Returns:
+            Translated items dict with media table names as keys.
+        """
+        if not self.dataset_schema.view_columns:
+            return items
+
+        translated: dict[str, Any] = {}
+
+        for key, value in items.items():
+            if key not in self.dataset_schema.view_columns:
+                translated[key] = value
+                continue
+
+            vc = self.dataset_schema.view_columns[key]
+            media_table = vc.media_table
+            schema = self.schemas[media_table]
+            values = value if isinstance(value, list) else [value]
+
+            rows = translated.setdefault(media_table, [])
+            if not isinstance(rows, list):
+                rows = [rows]
+
+            for view_instance in values:
+                if view_instance is None:
+                    continue
+                row_dict = _view_instance_to_columns(key, view_instance)
+                row = schema.model_validate(row_dict)
+                rows.append(row)
+
+            translated[media_table] = rows
+
+        return translated

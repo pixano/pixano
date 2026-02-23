@@ -10,6 +10,7 @@ from pixano.datasets.workspaces import WorkspaceType
 from pixano.datasets.workspaces.dataset_items import DefaultVideoDatasetItem
 
 from .base import FolderBaseBuilder
+from .image import IMAGE_EXTENSIONS
 
 
 # TODO: Add more video extensions supported by ffmpeg
@@ -27,6 +28,6 @@ VIDEO_EXTENSIONS = [
 class VideoFolderBuilder(FolderBaseBuilder):
     """Builder for video datasets stored in a folder."""
 
-    EXTENSIONS = VIDEO_EXTENSIONS
+    EXTENSIONS = VIDEO_EXTENSIONS + IMAGE_EXTENSIONS
     WORKSPACE_TYPE = WorkspaceType.VIDEO
     DEFAULT_SCHEMA: type[DatasetItem] = DefaultVideoDatasetItem

@@ -17,7 +17,6 @@ from PIL.Image import Image as PILImage
 from pixano.features.utils.image import image_to_base64
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal
 from .view import View
 
@@ -27,16 +26,18 @@ class Image(View):
     """Image view.
 
     Attributes:
-        url: The image URL. Can be relative or absolute or a data URL.
+        url: The image URL. Can be relative or absolute or a data URL. Empty when embedded.
         width: The image width.
         height: The image height.
         format: The image format.
+        blob: Raw image bytes. Empty when using filesystem URL.
     """
 
-    url: str
-    width: int
-    height: int
-    format: str
+    url: str = ""
+    width: int = 0
+    height: int = 0
+    format: str = ""
+    blob: bytes = b""
 
     @overload
     def open(self, media_dir: Path | None, output_type: Literal["base64"] = "base64") -> str: ...
@@ -60,6 +61,11 @@ class Image(View):
         Returns:
             opened image.
         """
+        if self.blob and len(self.blob) > 0:
+            pil_image = PIL.Image.open(io.BytesIO(self.blob))
+            if output_type == "base64":
+                return image_to_base64(pil_image)
+            return pil_image
         return Image.open_url(url=self.url, media_dir=media_dir, output_type=output_type)
 
     @overload
@@ -162,27 +168,32 @@ def is_image(cls: type, strict: bool = False) -> bool:
 
 
 def create_image(
-    url: Path,
+    url: Path | str = "",
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    parent_ref: ViewRef = ViewRef.none(),
+    item_id: str = "",
+    parent_id: str = "",
+    view_name: str = "",
     width: int | None = None,
     height: int | None = None,
     format: str | None = None,
     url_relative_path: Path | None = None,
+    blob: bytes | None = None,
 ) -> Image:
     """Create an `Image` instance.
 
     Args:
         url: The image URL. If not relative, the URL is converted to a relative path using `url_relative_path`.
+            Can be empty when using embedded blob.
         id: Image ID.
-        item_ref: Item reference.
-        parent_ref: Parent view reference.
-        width: The image width. If None, the width is extracted from the image file.
-        height: The image height. If None, the height is extracted from the image file.
-        format: The image format. If None, the format is extracted from the image file.
+        item_id: Item ID.
+        parent_id: Parent view ID.
+        view_name: Logical view name.
+        width: The image width. If None, the width is extracted from the image file or blob.
+        height: The image height. If None, the height is extracted from the image file or blob.
+        format: The image format. If None, the format is extracted from the image file or blob.
         url_relative_path: The path to convert the URL to a relative path,
             eg for images to be searchable in the media_dir.
+        blob: Raw image bytes. When provided and width/height/format are None, they are extracted from the blob.
 
     Returns:
         The created `Image` instance.
@@ -192,7 +203,24 @@ def create_image(
     if not all(none_conditions) and not all(not_none_conditions):
         raise ValueError("width, height and format must be all defined or all None")
 
-    url = Path(url)
+    if blob is not None and len(blob) > 0 and width is None:
+        img = PIL.Image.open(io.BytesIO(blob))
+        width = img.width
+        height = img.height
+        format = img.format
+        return Image(
+            id=id,
+            item_id=item_id,
+            parent_id=parent_id,
+            view_name=view_name,
+            url="",
+            width=width,
+            height=height,
+            format=format,
+            blob=blob,
+        )
+
+    url = Path(url) if url else Path()
 
     if width is None:
         img = PIL.Image.open(url)
@@ -206,10 +234,12 @@ def create_image(
 
     return Image(
         id=id,
-        item_ref=item_ref,
-        parent_ref=parent_ref,
+        item_id=item_id,
+        parent_id=parent_id,
+        view_name=view_name,
         url=str(url.as_posix()),
         width=width,
         height=height,
         format=format,
+        blob=blob or b"",
     )

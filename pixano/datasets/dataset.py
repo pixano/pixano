@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import io
 import shutil
 from collections import defaultdict
 from datetime import datetime
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Literal, Union, cast, overload
 
 import lancedb
+import PIL.Image
 import polars as pl
 import pyarrow as pa
 from lancedb.common import DATA
@@ -22,32 +24,34 @@ from pydantic import ConfigDict
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_integrity_errors
-from pixano.features import Image, SchemaGroup, Source, ViewEmbedding, is_view_embedding
+from pixano.features import Image, SchemaGroup, Source, ViewEmbedding, is_image, is_sequence_frame, is_view_embedding
+from pixano.features.schemas.registry import _SCHEMA_REGISTRY
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
-from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
+from .dataset_schema import (
+    DatasetItem,
+    DatasetSchema,
+    SchemaRelation,
+    _columns_to_view_dict,
+    _view_instance_to_columns,
+    _ROW_LEVEL_FIELDS,
+    _TEMPORAL_FIELDS,
+)
 from .dataset_stat import DatasetStatistic
 
 
 if TYPE_CHECKING:
     from ..features import (
         Annotation,
-        AnnotationRef,
         BaseSchema,
         Embedding,
-        EmbeddingRef,
         Entity,
-        EntityRef,
         Item,
-        ItemRef,
-        SchemaRef,
-        SourceRef,
         View,
-        ViewRef,
     )
 
 
@@ -73,13 +77,25 @@ def _validate_ids_item_ids_and_limit_and_skip(
         raise DatasetPaginationError("ids must be a list of strings")
     elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
         raise DatasetPaginationError("item_ids must be a list of strings")
-    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(skip, int) or skip < 0:
-        raise DatasetPaginationError("limit and skip must be positive integers")
+    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(skip, int) or skip < 0:
+        raise DatasetPaginationError("limit and skip must be non-negative integers")
 
 
 def _validate_raise_or_warn(raise_or_warn: Literal["raise", "warn", "none"]):
     if raise_or_warn not in ["raise", "warn", "none"]:
         raise ValueError("raise_or_warn must be 'raise', 'warn' or 'none'")
+
+
+def _translate_column_name(view_name: str, col_name: str) -> str:
+    """Translate a view-level field name to a media-table field name."""
+    del view_name
+    return col_name
+
+
+def _translate_where_clause(view_name: str, where: str) -> str:
+    """Translate a view-level where clause to media-table where clause."""
+    del view_name
+    return where
 
 
 class Dataset:
@@ -237,29 +253,67 @@ class Dataset:
         Returns:
             The preview base64 string.
         """
-        # 1. Find an image table
-        image_table_name = None
-        for table_name in self.schema.groups[SchemaGroup.VIEW]:
-            schema = self.schema.schemas[table_name]
-            if issubclass(schema, Image):
-                image_table_name = table_name
-                break
+        # 1. Find an image-like view (image or sequence frame)
+        image_view_name = None
 
-        if image_table_name is None:
+        if self.schema.view_columns:
+            # New media-type table layout: resolve view types via registry
+            for view_name, vc in self.schema.view_columns.items():
+                view_type = _SCHEMA_REGISTRY.get(vc.view_type)
+                if view_type is not None and (is_image(view_type) or is_sequence_frame(view_type)):
+                    image_view_name = view_name
+                    break
+        else:
+            # Legacy: each view has its own table
+            for table_name in self.schema.groups[SchemaGroup.VIEW]:
+                schema = self.schema.schemas[table_name]
+                if issubclass(schema, Image):
+                    image_view_name = table_name
+                    break
+
+        if image_view_name is None:
             return ""
 
         # 2. Sample images (up to 4 for a 2x2 grid)
-        images_data = self.get_data(image_table_name, limit=4)
-        if not images_data:
-            return ""
-
         pil_images = []
-        for image_view in cast(list[Image], images_data):
-            try:
-                pil_img = image_view.open(self.media_dir, output_type="image")
-                pil_images.append(pil_img)
-            except Exception:
-                continue
+        if image_view_name in self.schema.view_columns:
+            # Media-type table: support both embedded (blob) and filesystem (url) storage.
+            vc = self.schema.view_columns[image_view_name]
+            table = self.open_table(vc.media_table)
+            rows = (
+                TableQueryBuilder(table, self._db_connection)
+                .select(["id", "url", "blob"])
+                .where(f"view_name == '{image_view_name}'")
+                .limit(4)
+                .to_list()
+            )
+            for row in rows:
+                blob = row.get("blob", b"")
+                if blob:
+                    try:
+                        pil_images.append(PIL.Image.open(io.BytesIO(blob)))
+                    except Exception:
+                        continue
+                else:
+                    url = row.get("url", "")
+                    if not url:
+                        continue
+                    file_path = self.media_dir / url
+                    if not file_path.is_file():
+                        continue
+                    try:
+                        pil_images.append(PIL.Image.open(file_path))
+                    except Exception:
+                        continue
+        else:
+            # Legacy: filesystem-based views
+            images_data = self.get_data(image_view_name, limit=4)
+            if images_data:
+                for image_view in cast(list[Image], images_data):
+                    try:
+                        pil_images.append(image_view.open(self.media_dir, output_type="image"))
+                    except Exception:
+                        continue
 
         if not pil_images:
             return ""
@@ -310,9 +364,12 @@ class Dataset:
         Returns:
             The table created.
         """
+        # Override blob columns to large_binary for media-type tables
+        arrow_schema = self._override_blob_columns_schema(name, schema)
+
         table = self._db_connection.create_table(
             name=name,
-            schema=schema,
+            schema=arrow_schema if arrow_schema is not None else schema,
             data=data,
             mode=mode,
             exist_ok=exist_ok,
@@ -324,6 +381,43 @@ class Dataset:
         self.schema.to_json(self._schema_file)
         self._reload_schema()
         return table
+
+    def _override_blob_columns_schema(
+        self, table_name: str, schema: type[BaseSchema]
+    ) -> pa.Schema | None:
+        """Override blob columns to pa.large_binary() in Arrow schema.
+
+        Args:
+            table_name: The table name.
+            schema: The schema class.
+
+        Returns:
+            The modified Arrow schema, or None if no overrides needed.
+        """
+        blob_cols = self._get_blob_columns(table_name)
+        if not blob_cols:
+            return None
+        arrow_schema = schema.to_arrow_schema()
+        modified = False
+        for i, field in enumerate(arrow_schema):
+            if field.name in blob_cols:
+                arrow_schema = arrow_schema.set(i, pa.field(field.name, pa.large_binary()))
+                modified = True
+        return arrow_schema if modified else None
+
+    def _get_blob_columns(self, table_name: str) -> set[str]:
+        """Get blob column names for a media-type table.
+
+        Args:
+            table_name: The table name.
+
+        Returns:
+            Set of blob column names.
+        """
+        schema = self.schema.schemas.get(table_name)
+        if schema is None:
+            return set()
+        return {"blob"} if "blob" in schema.model_fields else set()
 
     def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
         """Open the dataset tables with LanceDB.
@@ -348,13 +442,18 @@ class Dataset:
         """Open a dataset table with LanceDB.
 
         Args:
-            name: Name of the table to open.
+            name: Name of the table to open. Also accepts view column names.
 
         Returns:
             Dataset table.
         """
-        if name not in self.schema.schemas.keys() and name != SchemaGroup.SOURCE.value:
+        # Resolve view column names to media table names
+        actual_name = name
+        if name in self.schema.view_columns:
+            actual_name = self.schema.view_columns[name].media_table
+        elif name not in self.schema.schemas.keys() and name != SchemaGroup.SOURCE.value:
             raise DatasetAccessError(f"Table {name} not found in dataset")
+        name = actual_name
 
         table = self._db_connection.open_table(name)
         if name == SchemaGroup.SOURCE.value:
@@ -368,37 +467,6 @@ class Dataset:
             except TypeError:  # no embedding function
                 pass
         return table
-
-    @overload
-    def resolve_ref(self, ref: ItemRef) -> Item: ...
-    @overload
-    def resolve_ref(self, ref: ViewRef) -> View: ...
-    @overload
-    def resolve_ref(self, ref: EmbeddingRef) -> Embedding: ...
-    @overload
-    def resolve_ref(self, ref: EntityRef) -> Entity: ...
-    @overload
-    def resolve_ref(self, ref: AnnotationRef) -> Annotation: ...
-    @overload
-    def resolve_ref(self, ref: SourceRef) -> Source: ...
-    @overload
-    def resolve_ref(self, ref: SchemaRef) -> BaseSchema: ...
-    def resolve_ref(
-        self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef | SourceRef
-    ) -> BaseSchema | Item | View | Embedding | Entity | Annotation | Source:
-        """Resolve a [SchemaRef][pixano.features.SchemaRef].
-
-        It fetches the data from the table referenced.
-
-        Args:
-            ref: Reference to resolve.
-
-        Returns:
-            The resolved reference.
-        """
-        if ref.id == "" or ref.name == "":
-            raise DatasetAccessError("Reference should have a name and an id.")
-        return self.get_data(ref.name, ids=[ref.id])[0]
 
     @overload
     def get_data(
@@ -439,9 +507,11 @@ class Dataset:
         """Read data from a table.
 
         Data can be filtered by ids, item ids, where clause, or limit and skip.
+        Supports both actual table names and view column names (which are resolved
+        to their media-type table, with view data extracted from column groups).
 
         Args:
-            table_name: Table name.
+            table_name: Table name or view column name.
             where: Where clause.
             ids: ids to read.
             limit: Amount of items to read. If not set, will default to table size.
@@ -453,7 +523,21 @@ class Dataset:
         Returns:
             List of values.
         """
-        if table_name == SchemaGroup.ITEM.value:
+        # Resolve view column names to media table names
+        view_column_name = None
+        actual_table_name = table_name
+        if table_name in self.schema.view_columns:
+            vc = self.schema.view_columns[table_name]
+            view_column_name = table_name
+            actual_table_name = vc.media_table
+            if where is not None:
+                where = _translate_where_clause(view_column_name, where)
+            if sortcol is not None:
+                sortcol = _translate_column_name(view_column_name, sortcol)
+            view_filter = f"view_name == '{view_column_name}'"
+            where = f"({where}) AND {view_filter}" if where else view_filter
+
+        if actual_table_name == SchemaGroup.ITEM.value:
             if item_ids is not None:
                 if ids is None:
                     ids = item_ids
@@ -468,7 +552,8 @@ class Dataset:
 
         if item_ids is not None:
             sql_item_ids = to_sql_list(item_ids)
-        table = self.open_table(table_name)
+        table = self.open_table(actual_table_name)
+        blob_cols = self._get_blob_columns(actual_table_name)
 
         if ids is None and item_ids is None and limit is None:
             limit = table.count_rows()
@@ -476,16 +561,30 @@ class Dataset:
         if ids is None:
             if item_ids is None:
                 if where is not None:
-                    query = TableQueryBuilder(table, self._db_connection).where(where).limit(limit).offset(skip)
+                    query = (
+                        TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
+                        .where(where)
+                        .limit(limit)
+                        .offset(skip)
+                    )
                 else:
-                    query = TableQueryBuilder(table, self._db_connection).limit(limit).offset(skip)
+                    query = (
+                        TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
+                        .limit(limit)
+                        .offset(skip)
+                    )
             else:
                 sql_item_ids = to_sql_list(item_ids)
                 if where is not None:
-                    where += f" AND item_ref.id IN {sql_item_ids}"
+                    where += f" AND item_id IN {sql_item_ids}"
                 else:
-                    where = f"item_ref.id IN {sql_item_ids}"
-                query = TableQueryBuilder(table, self._db_connection).where(where).limit(limit).offset(skip)
+                    where = f"item_id IN {sql_item_ids}"
+                query = (
+                    TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
+                    .where(where)
+                    .limit(limit)
+                    .offset(skip)
+                )
             if sortcol is not None and order is not None:
                 query = query.order_by(sortcol, order == "desc")
         else:
@@ -494,14 +593,29 @@ class Dataset:
                 where += f" AND id IN {sql_ids}"
             else:
                 where = f"id IN {sql_ids}"
-            query = TableQueryBuilder(table, self._db_connection).where(where)
+            query = TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols).where(where)
 
-        schema = self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+        schema = self.schema.schemas[actual_table_name] if actual_table_name != SchemaGroup.SOURCE.value else Source
 
         query_models: list[BaseSchema] = query.to_pydantic(schema)
+
+        if view_column_name is not None:
+            # Extract view data from media table rows and construct view instances
+            view_schema = self.schema.resolve_schema(view_column_name)
+            result_models: list[BaseSchema] = []
+            for model in query_models:
+                row_data = model.model_dump()
+                view_dict = _columns_to_view_dict(view_column_name, row_data)
+                if view_dict:
+                    view_instance = view_schema.model_validate(view_dict)
+                    view_instance.dataset = self
+                    view_instance.table_name = view_column_name
+                    result_models.append(view_instance)
+            return result_models if return_list else (result_models[0] if result_models else None)
+
         for model in query_models:
             model.dataset = self  # type: ignore[attr-defined]
-            model.table_name = table_name
+            model.table_name = actual_table_name
 
         return query_models if return_list else (query_models[0] if query_models != [] else None)
 
@@ -543,8 +657,13 @@ class Dataset:
         # Load tables
         ds_tables = self.open_tables(exclude_embeddings=True)
 
+        # Identify which tables are media-type tables (have view columns mapped to them)
+        media_table_views: dict[str, list[str]] = defaultdict(list)
+        for view_name, vc in self.schema.view_columns.items():
+            media_table_views[vc.media_table].append(view_name)
+
         # Load items data from the tables
-        data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}
+        data_dict: dict[str, dict[str, Any]] = {item.id: item.model_dump() for item in items}
         for table_name, table in ds_tables.items():
             if table_name == SchemaGroup.ITEM.value:
                 continue
@@ -553,20 +672,44 @@ class Dataset:
 
             rows = (
                 TableQueryBuilder(table, self._db_connection)
-                .where(f"item_ref.id in {sql_ids}")
+                .where(f"item_id in {sql_ids}")
                 .to_pydantic(table_schema)
             )
 
-            for row in rows:
-                row.dataset = self
-                row.table_name = table_name
-                item_id = row.item_ref.id
-                if is_collection:
-                    if table_name not in data_dict[item_id]:
-                        data_dict[item_id][table_name] = []
-                    data_dict[item_id][table_name].append(row)
-                else:
-                    data_dict[item_id][table_name] = row
+            if table_name in media_table_views:
+                view_columns_by_name = {
+                    name: vc for name, vc in self.schema.view_columns.items() if vc.media_table == table_name
+                }
+                for row in rows:
+                    row.dataset = self
+                    row.table_name = table_name
+                    item_id = row.item_id
+                    row_data = row.model_dump()
+                    view_name = row_data.get("view_name", "")
+                    if view_name not in view_columns_by_name:
+                        continue
+                    vc = view_columns_by_name[view_name]
+                    view_dict = _columns_to_view_dict(view_name, row_data)
+                    if view_dict == {}:
+                        continue
+                    if vc.is_collection:
+                        if view_name not in data_dict[item_id]:
+                            data_dict[item_id][view_name] = []
+                        data_dict[item_id][view_name].append(view_dict)
+                    else:
+                        data_dict[item_id][view_name] = view_dict
+            else:
+                # Regular table: store under table name
+                for row in rows:
+                    row.dataset = self
+                    row.table_name = table_name
+                    item_id = row.item_id
+                    if is_collection:
+                        if table_name not in data_dict[item_id]:
+                            data_dict[item_id][table_name] = []
+                        data_dict[item_id][table_name].append(row)
+                    else:
+                        data_dict[item_id][table_name] = row
 
         dataset_items = [self.dataset_item_model(**data_dict[item_id]) for item_id in item_ids]  # type: ignore[arg-type]
 
@@ -651,39 +794,125 @@ class Dataset:
     ) -> list[BaseSchema]:
         """Add data to a table.
 
+        Supports view column names which are resolved to their media-type table.
+
         Args:
-            table_name: Table name.
+            table_name: Table name or view column name.
             data: Data to add.
             ignore_integrity_checks: List of integrity checks to ignore.
             raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
+        # Resolve view column names to media table names
+        view_column_name = None
+        actual_table_name = table_name
+        if table_name in self.schema.view_columns:
+            vc = self.schema.view_columns[table_name]
+            view_column_name = table_name
+            actual_table_name = vc.media_table
+            # Convert view instances to media table rows
+            media_schema = self.schema.schemas[actual_table_name]
+            media_rows = []
+            for view_instance in data:
+                view_data = view_instance.model_dump()
+                columns = _view_instance_to_columns(view_column_name, view_data)
+                # Add row-level fields
+                for field in _ROW_LEVEL_FIELDS:
+                    if field in view_data:
+                        columns[field] = view_data[field]
+                media_rows.append(media_schema.model_validate(columns))
+            data = media_rows
+
         if not all((isinstance(item, type(data[0])) for item in data)) or not set(
             type(data[0]).model_fields.keys()
         ) == set(
-            self.schema.schemas[table_name].model_fields.keys()
-            if table_name != SchemaGroup.SOURCE.value
+            self.schema.schemas[actual_table_name].model_fields.keys()
+            if actual_table_name != SchemaGroup.SOURCE.value
             else Source.model_fields.keys()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
-                f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
+                f"{self.schema.schemas[actual_table_name] if actual_table_name != SchemaGroup.SOURCE.value else Source}."
             )
         _validate_raise_or_warn(raise_or_warn)
 
-        table = self.open_table(table_name)
+        table = self.open_table(actual_table_name)
         if raise_or_warn != "none":
             handle_integrity_errors(
-                check_table_integrity(table_name, self, data, False, ignore_integrity_checks), raise_or_warn
+                check_table_integrity(actual_table_name, self, data, False, ignore_integrity_checks), raise_or_warn
             )
         for d in data:
             d.created_at = datetime.now()
             d.updated_at = d.created_at
         table.add(data)
 
-        if table_name == SchemaGroup.ITEM.value:
+        if actual_table_name == SchemaGroup.ITEM.value:
             self._num_rows_cache = None
 
+        # If view column resolution was used, convert media table rows back to View instances
+        if view_column_name is not None:
+            view_schema = self.schema.resolve_schema(view_column_name)
+            result = []
+            for row in data:
+                row_data = row.model_dump()
+                view_dict = _columns_to_view_dict(view_column_name, row_data)
+                if view_dict:
+                    view_instance = view_schema.model_validate(view_dict)
+                    result.append(view_instance)
+            return result
+
         return data
+
+    def _collect_tables_data(
+        self, schemas_data: list[dict[str, Any]]
+    ) -> dict[str, list]:
+        """Collect schemas data into table-keyed format for writing.
+
+        Converts view-name-keyed data (from to_schemas_data) into media-table-keyed
+        data by grouping view fields into wide-table rows.
+
+        Args:
+            schemas_data: List of schemas data dicts from to_schemas_data.
+
+        Returns:
+            Table-keyed dict with lists of data to write.
+        """
+        tables_data: dict[str, list] = {}
+
+        media_table_names = {vc.media_table for vc in self.schema.view_columns.values()}
+
+        for item in schemas_data:
+            item_row = item.get(SchemaGroup.ITEM.value)
+            item_id = item_row.id if item_row is not None else ""
+
+            # Handle non-view tables directly
+            for table_name in self.schema.schemas.keys():
+                if table_name in media_table_names:
+                    continue  # handled below
+                if table_name not in tables_data:
+                    tables_data[table_name] = []
+                if table_name not in item:
+                    continue
+                if isinstance(item[table_name], list):
+                    tables_data[table_name].extend(item[table_name])
+                elif item[table_name] is not None:
+                    tables_data[table_name].append(item[table_name])
+
+            # Handle media-type tables: one row per view instance.
+            for view_name, vc in self.schema.view_columns.items():
+                view_data = item.get(view_name)
+                if view_data is None:
+                    continue
+                if vc.media_table not in tables_data:
+                    tables_data[vc.media_table] = []
+                view_rows = view_data if isinstance(view_data, list) else [view_data]
+                media_schema = self.schema.schemas[vc.media_table]
+                for view_row in view_rows:
+                    row = _view_instance_to_columns(view_name, view_row)
+                    if row.get("item_id", "") == "":
+                        row["item_id"] = item_id
+                    tables_data[vc.media_table].append(media_schema(**row))
+
+        return tables_data
 
     @overload
     def add_dataset_items(self, dataset_items: DatasetItem) -> DatasetItem: ...
@@ -709,17 +938,7 @@ class Dataset:
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
-        tables_data: dict[str, Any] = {}
-        for table_name in self.schema.schemas.keys():
-            for item in schemas_data:
-                if table_name not in tables_data:
-                    tables_data[table_name] = []
-                if table_name not in item:
-                    continue
-                if isinstance(item[table_name], list):
-                    tables_data[table_name].extend(item[table_name])
-                elif item[table_name] is not None:
-                    tables_data[table_name].append(item[table_name])
+        tables_data = self._collect_tables_data(schemas_data)
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 self.add_data(
@@ -733,8 +952,10 @@ class Dataset:
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.
 
+        Supports view column names which are resolved to their media-type table.
+
         Args:
-            table_name: Table name.
+            table_name: Table name or view column name.
             ids: Ids to delete.
 
         Returns:
@@ -743,9 +964,14 @@ class Dataset:
         if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
             raise DatasetAccessError("ids must be a list of strings")
 
+        # Resolve view column names
+        actual_table_name = table_name
+        if table_name in self.schema.view_columns:
+            actual_table_name = self.schema.view_columns[table_name].media_table
+
         set_ids = set(ids)
 
-        table = self.open_table(table_name)
+        table = self.open_table(actual_table_name)
         sql_ids = to_sql_list(set_ids)
 
         ids_found = {
@@ -784,7 +1010,7 @@ class Dataset:
                 table_ids = (
                     table.search()
                     .select(["id"])
-                    .where(f"item_ref.id in {sql_ids}")
+                    .where(f"item_id in {sql_ids}")
                     .limit(None)
                     .to_arrow()["id"]
                     .to_pylist()
@@ -834,23 +1060,42 @@ class Dataset:
             If `return_separately` is `True`, returns a tuple of updated and added data. Otherwise, returns the updated
             data.
         """
+        # Resolve view column names to media table names
+        view_column_name = None
+        actual_table_name = table_name
+        if table_name in self.schema.view_columns:
+            vc = self.schema.view_columns[table_name]
+            view_column_name = table_name
+            actual_table_name = vc.media_table
+            # Convert view instances to media table rows
+            media_schema = self.schema.schemas[actual_table_name]
+            media_rows = []
+            for view_instance in data:
+                view_data = view_instance.model_dump()
+                columns = _view_instance_to_columns(view_column_name, view_data)
+                for field in _ROW_LEVEL_FIELDS:
+                    if field in view_data:
+                        columns[field] = view_data[field]
+                media_rows.append(media_schema.model_validate(columns))
+            data = media_rows
+
         if not all((isinstance(item, type(data[0])) for item in data)) or not set(
             type(data[0]).model_fields.keys()
         ) == set(
-            self.schema.schemas[table_name].model_fields.keys()
-            if table_name != SchemaGroup.SOURCE.value
+            self.schema.schemas[actual_table_name].model_fields.keys()
+            if actual_table_name != SchemaGroup.SOURCE.value
             else Source.model_fields.keys()
         ):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
-                f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
+                f"{self.schema.schemas[actual_table_name] if actual_table_name != SchemaGroup.SOURCE.value else Source}."
             )
         _validate_raise_or_warn(raise_or_warn)
 
-        table = self.open_table(table_name)
+        table = self.open_table(actual_table_name)
         if raise_or_warn != "none":
             handle_integrity_errors(
-                check_table_integrity(table_name, self, data, True, ignore_integrity_checks), raise_or_warn
+                check_table_integrity(actual_table_name, self, data, True, ignore_integrity_checks), raise_or_warn
             )
         set_ids = {item.id for item in data}
         ids_found: dict[str, datetime] = {}
@@ -868,6 +1113,26 @@ class Dataset:
             if d.id not in ids_found:
                 d.created_at = d.updated_at
         table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
+
+        # If view column resolution was used, convert media table rows back to View instances
+        if view_column_name is not None:
+            view_schema = self.schema.resolve_schema(view_column_name)
+
+            def _to_view(row):
+                row_data = row.model_dump()
+                view_dict = _columns_to_view_dict(view_column_name, row_data)
+                return view_schema.model_validate(view_dict) if view_dict else row
+
+            if not return_separately:
+                return [_to_view(d) for d in data]
+            updated_data, added_data = [], []
+            for d in data:
+                v = _to_view(d)
+                if d.id not in ids_found:
+                    added_data.append(v)
+                else:
+                    updated_data.append(v)
+            return updated_data, added_data
 
         if not return_separately:
             return data
@@ -919,17 +1184,7 @@ class Dataset:
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         updated_ids = set()
-        tables_data: dict[str, Any] = {}
-        for table_name in self.schema.schemas.keys():
-            for item in schemas_data:
-                if table_name not in tables_data:
-                    tables_data[table_name] = []
-                if table_name not in item:
-                    continue
-                if isinstance(item[table_name], list):
-                    tables_data[table_name].extend(item[table_name])
-                elif item[table_name] is not None:
-                    tables_data[table_name].append(item[table_name])
+        tables_data = self._collect_tables_data(schemas_data)
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 updated, _ = self.update_data(
@@ -940,7 +1195,7 @@ class Dataset:
                     raise_or_warn="none",
                 )
                 for row in updated:
-                    updated_ids.add(row.item_ref.id if table_name != SchemaGroup.ITEM.value else row.id)
+                    updated_ids.add(row.item_id if table_name != SchemaGroup.ITEM.value else row.id)
 
         dataset_items = self.get_dataset_items([item.id for item in dataset_items])
 
@@ -1018,16 +1273,16 @@ class Dataset:
 
         table = self.open_table(table_name)
         semantic_results: pl.DataFrame = (
-            table.search(query).select(["item_ref.id"]).limit(table.count_rows()).to_polars()
+            table.search(query).select(["item_id"]).limit(table.count_rows()).to_polars()
         )  # TODO: change high limit if lancedb supports it
-        item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
-        full_item_ids = item_results["item_ref.id"].to_list()
+        item_results = semantic_results.group_by("item_id").agg(pl.min("_distance")).sort("_distance")
+        full_item_ids = item_results["item_id"].to_list()
         item_ids = full_item_ids[skip : skip + limit]
 
         item_rows = self.get_data("item", ids=item_ids)
         item_rows = sorted(item_rows, key=lambda x: item_ids.index(x.id))
         distances = [
-            item_results.row(by_predicate=(pl.col("item_ref.id") == item.id), named=True)["_distance"]
+            item_results.row(by_predicate=(pl.col("item_id") == item.id), named=True)["_distance"]
             for item in item_rows
         ]
         return item_rows, distances, full_item_ids

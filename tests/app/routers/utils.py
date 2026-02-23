@@ -187,7 +187,7 @@ def _test_create_rows_handler(
         json=jsonable_encoder(new_rows_models),
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     for model_json in response.json():
         model = model_type.model_validate(model_json).model_dump(exclude_timestamps=True)
         assert model in new_rows_models
@@ -261,7 +261,7 @@ def _test_create_row_handler(
         json=jsonable_encoder(new_row_model),
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     model = model_type.model_validate(response.json())
     assert model.model_dump(exclude_timestamps=True) == new_row_model.model_dump(exclude_timestamps=True)
 
@@ -503,7 +503,7 @@ def _test_delete_rows_handler(
     delete_url = base_url(group, dataset_id, table) + f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
     response = client.delete(delete_url)
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # Check that the rows were deleted from the dataset
     assert len(dataset.get_data(table, ids=deleted_ids)) == 0
@@ -548,7 +548,7 @@ def _test_delete_row_handler(
 
     response = client.delete(base_url(group, dataset_id, table, id))
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
     # Check that the row was deleted from the dataset
     assert dataset.get_data(table, ids=id) is None

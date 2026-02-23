@@ -30,12 +30,12 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
                     "id": "bbox_orange_cat_n1",
                     "table_info": {"group": "annotations", "name": "bboxes", "base_schema": "BBox"},
                     "data": {
-                        "item_ref": {"name": "item", "id": "1"},
-                        "view_ref": {"name": "image", "id": "orange_cats"},
-                        "entity_ref": {
-                            "name": "cats",
-                            "id": "cat_n1",
-                        },
+                        "item_id": "1",
+                        "entity_id": "cat_n1",
+                        "source_id": "source_0",
+                        "view_name": "image",
+                        "frame_id": "orange_cats",
+                        "frame_index": -1,
                         "coords": [0, 0, 2, 2],
                         "format": "xywh",
                         "is_normalized": False,
@@ -57,7 +57,11 @@ class AnnotationModel(BaseSchemaModel[Annotation]):
 
     def to_row(self, dataset: Dataset) -> Annotation:
         """Create an [Annotation][pixano.features.Annotation] from the model."""
-        if not is_annotation(dataset.schema.schemas[self.table_info.name]):
+        try:
+            schema = dataset.schema.resolve_schema(self.table_info.name)
+        except KeyError:
+            schema = None
+        if schema is None or not is_annotation(schema):
             raise ValueError(f"Schema type must be a subclass of {Annotation.__name__}.")
         row = super().to_row(dataset)
         row.inference_metadata = json.dumps(self.data["inference_metadata"])

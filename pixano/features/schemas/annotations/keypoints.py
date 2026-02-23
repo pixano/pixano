@@ -10,7 +10,6 @@ from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -51,9 +50,6 @@ class KeyPoints(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
             template_id="",
             coords=[0, 0],
             states=["invisible"],
@@ -123,9 +119,6 @@ class KeyPoints3D(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
             template_id="",
             coords=[0, 0, 0],
             states=["visible"],
@@ -155,10 +148,14 @@ def create_keypoints(
     coords: list[float],
     states: list[str],
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
+    tracklet_id: str = "",
+    entity_dynamic_state_id: str = "",
+    frame_id: str = "",
+    frame_index: int = -1,
 ) -> KeyPoints:
     """Create a `KeyPoints` instance.
 
@@ -167,10 +164,14 @@ def create_keypoints(
         coords: List of 2D coordinates of the keypoints.
         states: Status for each keypoint. ("visible", "invisible", "hidden").
         id: Keypoints ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
+        tracklet_id: Tracklet ID.
+        entity_dynamic_state_id: Entity dynamic state ID.
+        frame_id: Frame/view row ID.
+        frame_index: Frame index.
 
     Returns:
         The created `KeyPoints` instance.
@@ -180,22 +181,30 @@ def create_keypoints(
         coords=coords,
         states=states,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
+        tracklet_id=tracklet_id,
+        entity_dynamic_state_id=entity_dynamic_state_id,
+        frame_id=frame_id,
+        frame_index=frame_index,
     )
 
 
 def create_keypoints3d(
     template_id: str,
     coords: list[float],
-    states: list[Literal["visible", "invisble", "hidden"]],
+    states: list[Literal["visible", "invisible", "hidden"]],
     id: str = "",
-    item_ref: ItemRef = ItemRef.none(),
-    view_ref: ViewRef = ViewRef.none(),
-    entity_ref: EntityRef = EntityRef.none(),
-    source_ref: SourceRef = SourceRef.none(),
+    item_id: str = "",
+    view_name: str = "",
+    entity_id: str = "",
+    source_id: str = "",
+    tracklet_id: str = "",
+    entity_dynamic_state_id: str = "",
+    frame_id: str = "",
+    frame_index: int = -1,
 ) -> KeyPoints3D:
     """Create a `KeyPoints3D` instance.
 
@@ -204,10 +213,14 @@ def create_keypoints3d(
         coords: The 3D coordinates of the keypoints.
         states: The visibility status for each keypoint.
         id: Keypoints3D ID.
-        item_ref: Item reference.
-        view_ref: View reference.
-        entity_ref: Entity reference.
-        source_ref: Source reference.
+        item_id: Item ID.
+        view_name: View name.
+        entity_id: Entity ID.
+        source_id: Source ID.
+        tracklet_id: Tracklet ID.
+        entity_dynamic_state_id: Entity dynamic state ID.
+        frame_id: Frame/view row ID.
+        frame_index: Frame index.
 
     Returns:
         The created `KeyPoints3D` instance.
@@ -217,8 +230,12 @@ def create_keypoints3d(
         coords=coords,
         states=states,
         id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-        source_ref=source_ref,
+        item_id=item_id,
+        view_name=view_name,
+        entity_id=entity_id,
+        source_id=source_id,
+        tracklet_id=tracklet_id,
+        entity_dynamic_state_id=entity_dynamic_state_id,
+        frame_id=frame_id,
+        frame_index=frame_index,
     )
