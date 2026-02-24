@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide-icon lucide lucide-share-2 "
+   version="1.1"
+   id="svg12"
+   sodipodi:docname="lucide_keypoints_icon.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs16" />
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="21.448745"
+     inkscape:cx="0.76927577"
+     inkscape:cy="9.5110459"
+     inkscape:window-width="1870"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg12" />
+  <circle
+     cx="12.639063"
+     cy="5.0284657"
+     r="1.771229"
+     id="circle2"
+     style="stroke-width:1.18082"
+     transform="rotate(10)" />
+  <circle
+     cx="12.374905"
+     cy="8.9432783"
+     r="1.771229"
+     id="circle4"
+     style="stroke-width:1.18082"
+     transform="rotate(30)" />
+  <circle
+     cx="20.209372"
+     cy="2.2118857"
+     r="1.771229"
+     id="circle6"
+     style="stroke-width:1.18082"
+     transform="rotate(45)" />
+  <line
+     x1="12.076885"
+     x2="12.464982"
+     y1="9.2415829"
+     y2="13.892617"
+     id="line8"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="-6.8957443"
+     cy="-3.6213508"
+     r="1.771229"
+     id="circle6-7"
+     style="stroke-width:1.18082"
+     transform="rotate(175)" />
+  <path
+     id="line8-5"
+     style="stroke-width:1.00984"
+     d="M 10.316281,5.8339265 8.8073592,4.4587544 8.5948498,4.2649816"
+     sodipodi:nodetypes="ccc" />
+  <line
+     x1="10.136363"
+     x2="7.1562881"
+     y1="8.7988672"
+     y2="12.38416"
+     id="line10"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="15.288505"
+     cy="-16.251366"
+     r="1.771229"
+     id="circle2-3"
+     style="stroke-width:1.18082"
+     transform="rotate(70)" />
+  <line
+     x1="18.350822"
+     x2="13.755819"
+     y1="8.3893013"
+     y2="7.601119"
+     id="line10-6"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="0.66875595"
+     cy="-28.803499"
+     r="1.771229"
+     id="circle2-3-7-3"
+     style="stroke-width:1.18082"
+     transform="rotate(135)" />
+  <line
+     x1="18.410227"
+     x2="14.578864"
+     y1="19.852415"
+     y2="17.196165"
+     id="line10-6-5-5-6"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="-21.176611"
+     cy="-3.9119012"
+     r="1.771229"
+     id="circle2-3-7-3-3"
+     style="stroke-width:1.18082"
+     transform="rotate(-115)" />
+  <line
+     x1="6.9864326"
+     x2="10.792893"
+     y1="19.670427"
+     y2="16.978613"
+     id="line10-6-5-5-6-6"
+     style="stroke-width:1.18082" />
+</svg>
