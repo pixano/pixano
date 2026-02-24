@@ -6,7 +6,7 @@
 
 import warnings
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.features import SchemaGroup
@@ -194,3 +194,80 @@ def handle_integrity_errors(
     if raise_or_warn == "raise":
         raise DatasetIntegrityError(message)
     warnings.warn(message, category=UserWarning)
+
+
+def validate_batch(
+    table_name: str,
+    schemas: list["BaseSchema"],
+    known_ids: dict[str, set[str]],
+    dataset: "Dataset",
+    raise_or_warn: Literal["raise", "warn", "none"] = "raise",
+    pending_ids: dict[str, set[str]] | None = None,
+) -> None:
+    """Validate a batch of schemas before insertion using in-memory ID tracking.
+
+    Instead of per-row DB queries, this checks IDs in-memory and does at most one
+    bulk DB query per FK target table per batch.
+
+    Args:
+        table_name: The table the batch will be inserted into.
+        schemas: The batch of schema instances to validate.
+        known_ids: Mapping of table_name -> set of known IDs (accumulated across flushes).
+        dataset: The dataset (used for bulk FK lookups against already-flushed data).
+        raise_or_warn: How to handle errors: "raise", "warn", or "none".
+        pending_ids: Mapping of table_name -> set of IDs that are buffered for insertion
+            in this flush cycle. Used only for FK checks so sibling tables that haven't
+            been flushed yet can be resolved.
+    """
+    errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
+
+    # DEFINED_ID + UNIQUE_ID checks
+    batch_ids: set[str] = set()
+    for schema in schemas:
+        if schema.id == "":
+            errors.append((IntegrityCheck.DEFINED_ID, table_name, "id", schema.id, schema.id))
+        elif schema.id in batch_ids or schema.id in known_ids.get(table_name, set()):
+            errors.append((IntegrityCheck.UNIQUE_ID, table_name, "id", schema.id, schema.id))
+        else:
+            batch_ids.add(schema.id)
+
+    # FK_ID checks: collect all FK values per target table, then bulk-query
+    # Build mapping: target_table -> set of FK values to check
+    fk_values_by_target: dict[str, set[str]] = {}
+    # Track which (schema_id, field_name, fk_value, target_tables) need checking
+    fk_lookups: list[tuple[str, str, str, list[str]]] = []
+
+    for schema in schemas:
+        for field_name, field_value in _schema_id_fields(schema):
+            if field_value == "":
+                continue
+            target_tables = _resolve_fk_target_tables(dataset, table_name, field_name)
+            if not target_tables:
+                continue
+            # Check in-memory first
+            found_in_memory = any(
+                field_value in known_ids.get(t, set())
+                or field_value in (pending_ids or {}).get(t, set())
+                for t in target_tables
+            )
+            if not found_in_memory:
+                fk_lookups.append((schema.id, field_name, field_value, target_tables))
+                for t in target_tables:
+                    fk_values_by_target.setdefault(t, set()).add(field_value)
+
+    # Bulk DB queries: one per target table
+    db_found: dict[str, set[str]] = {}
+    for target_table, values in fk_values_by_target.items():
+        try:
+            result = dataset.find_ids_in_table(target_table, values)
+            db_found[target_table] = {v for v, found in result.items() if found}
+        except Exception:
+            db_found[target_table] = set()
+
+    # Resolve FK lookups
+    for schema_id, field_name, field_value, target_tables in fk_lookups:
+        found = any(field_value in db_found.get(t, set()) for t in target_tables)
+        if not found:
+            errors.append((IntegrityCheck.FK_ID, table_name, field_name, schema_id, field_value))
+
+    handle_integrity_errors(errors, raise_or_warn=raise_or_warn)

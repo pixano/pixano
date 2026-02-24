@@ -17,8 +17,8 @@ Usage:
     python generate_voc_sample.py ./voc_sample --num-samples 100 --splits train validation test
 
 Then import into Pixano:
-    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample"
-    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample" --embed-media
+    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem
+    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem --embed-media
 """
 
 import argparse
@@ -280,8 +280,8 @@ def main():
 
     print(f"\nDone. {total} images exported.")
     print("\nTo import into Pixano:")
-    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample"')
-    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample" --embed-media')
+    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem')
+    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem --embed-media')
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 import shutil
 from enum import Enum
 from pathlib import Path

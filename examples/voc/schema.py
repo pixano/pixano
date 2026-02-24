@@ -8,7 +8,7 @@
 
 Usage:
     pixano data import ./my_data ./voc_sample \
-        --name "VOC 2007 Sample" --schema ./notebooks/voc_schema.py:VOCDatasetItem
+        --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem
 """
 
 from pixano.datasets.workspaces import DefaultImageDatasetItem

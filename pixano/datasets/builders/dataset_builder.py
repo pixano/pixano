@@ -19,13 +19,23 @@ from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
 from pixano.datasets.dataset_schema import _view_instance_to_columns
-from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
+from pixano.datasets.utils.integrity import validate_batch
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source, SourceKind
 from pixano.features.schemas.views import View
 
 
 logger = logging.getLogger(__name__)
+
+_FLUSH_ORDER = [
+    SchemaGroup.SOURCE,
+    SchemaGroup.ITEM,
+    SchemaGroup.VIEW,
+    SchemaGroup.ENTITY,
+    SchemaGroup.ENTITY_DYNAMIC_STATE,
+    SchemaGroup.ANNOTATION,
+    SchemaGroup.EMBEDDING,
+]
 
 
 class DatasetBuilder(ABC):
@@ -129,6 +139,98 @@ class DatasetBuilder(ABC):
             id=SourceKind.GROUND_TRUTH.value, name="Ground Truth", kind=SourceKind.GROUND_TRUTH, metadata=metadata
         )
 
+    def _table_flush_order(self, table_names: list[str]) -> list[str]:
+        """Return table names sorted by FK dependency (parents first)."""
+        group_index = {g: i for i, g in enumerate(_FLUSH_ORDER)}
+
+        def _sort_key(name: str) -> int:
+            for group, tables in self.dataset_schema.groups.items():
+                if name in tables:
+                    return group_index.get(group, len(_FLUSH_ORDER))
+            # "source" table is not in dataset_schema.groups but is SchemaGroup.SOURCE
+            if name == SchemaGroup.SOURCE.value:
+                return group_index[SchemaGroup.SOURCE]
+            return len(_FLUSH_ORDER)
+
+        return sorted(table_names, key=_sort_key)
+
+    def _sort_temporal_batch(self, table_name: str, batch: list) -> list:
+        """Sort a view-table batch by (timestamp, view_name) for storage colocality.
+
+        If the table's schema has a ``timestamp`` field, sort so that all camera views
+        at the same timestamp are stored adjacently. Otherwise return unchanged.
+        """
+        schema_type = self.dataset_schema.schemas.get(table_name)
+        if schema_type is None or "timestamp" not in schema_type.model_fields:
+            return batch
+        return sorted(batch, key=lambda s: (getattr(s, "timestamp", 0), getattr(s, "view_name", "")))
+
+    def _flush_table(
+        self,
+        table_name: str,
+        batch: list,
+        table: Table,
+        known_ids: dict[str, set[str]],
+        dataset: Dataset,
+        check_integrity: Literal["raise", "warn", "none"],
+        pending_ids: dict[str, set[str]] | None = None,
+    ) -> None:
+        """Validate a batch and insert it into the table.
+
+        1. Sort temporal data for colocality.
+        2. Validate before inserting (if check_integrity != "none").
+        3. Bulk insert.
+        """
+        batch = self._sort_temporal_batch(table_name, batch)
+        if check_integrity != "none":
+            validate_batch(
+                table_name, batch, known_ids, dataset,
+                raise_or_warn=check_integrity, pending_ids=pending_ids,
+            )
+        table.add(batch)
+        # Update known_ids AFTER successful validation and insertion
+        for row in batch:
+            if row.id:
+                known_ids[table_name].add(row.id)
+
+    def _flush_tables(
+        self,
+        accumulate_data_tables: dict[str, list],
+        tables: dict[str, Table],
+        known_ids: dict[str, set[str]],
+        dataset: Dataset,
+        check_integrity: Literal["raise", "warn", "none"],
+        flush_order: list[str],
+    ) -> list[str]:
+        """Flush all non-empty accumulated buffers in dependency order.
+
+        Pre-computes pending IDs so FK validation can see sibling tables
+        that will be inserted in the same cycle.
+
+        Returns:
+            Names of tables that were flushed.
+        """
+        pending_ids: dict[str, set[str]] | None = None
+        if check_integrity != "none":
+            pending_ids = {
+                tname: {row.id for row in rows if row.id}
+                for tname, rows in accumulate_data_tables.items()
+                if rows
+            }
+
+        flushed: list[str] = []
+        for table_name in flush_order:
+            batch = accumulate_data_tables[table_name]
+            if not batch:
+                continue
+            self._flush_table(
+                table_name, batch, tables[table_name],
+                known_ids, dataset, check_integrity, pending_ids,
+            )
+            accumulate_data_tables[table_name] = []
+            flushed.append(table_name)
+        return flushed
+
     def build(
         self,
         mode: Literal["add", "create", "overwrite"] = "create",
@@ -189,10 +291,18 @@ class DatasetBuilder(ABC):
         else:
             tables = self.create_tables(mode)
 
+        # Create Dataset instance early for pre-insertion validation.
+        # This is safe because info.json, schema.json and the DB already exist.
+        dataset = Dataset(self.target_dir)
+
         # accumulate items to insert in tables
         accumulate_data_tables: dict[str, list] = {table_name: [] for table_name in tables.keys()}
+        # track all known IDs across flushes for in-memory validation
+        known_ids: dict[str, set[str]] = {table_name: set() for table_name in tables.keys()}
         # count transactions per table
         transactions_per_table: dict[str, int] = dict.fromkeys(tables.keys(), 0)
+        # pre-compute flush ordering
+        flush_order = self._table_flush_order(list(tables.keys()))
 
         logger.info(f"Building dataset {self.info.name}")
         for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
@@ -205,37 +315,31 @@ class DatasetBuilder(ABC):
                 if table_name not in tables:
                     raise KeyError(f"Table {table_name} not found in tables")
 
-                accumulate_data_tables[table_name].extend(item_value if isinstance(item_value, list) else [item_value])
+                rows = item_value if isinstance(item_value, list) else [item_value]
+                accumulate_data_tables[table_name].extend(rows)
 
-                # make transaction every n iterations per table
-                if len(accumulate_data_tables[table_name]) >= flush_every_n_samples:
-                    table = tables[table_name]
-                    table.add(accumulate_data_tables[table_name])
-                    transactions_per_table[table_name] += 1
-                    accumulate_data_tables[table_name] = []
+            # Flush ALL tables together when any buffer exceeds threshold
+            if any(len(buf) >= flush_every_n_samples for buf in accumulate_data_tables.values()):
+                flushed = self._flush_tables(
+                    accumulate_data_tables, tables, known_ids, dataset, check_integrity, flush_order,
+                )
+                for tname in flushed:
+                    transactions_per_table[tname] += 1
+                if compact_every_n_transactions is not None:
+                    for tname in flushed:
+                        if (
+                            transactions_per_table[tname] % compact_every_n_transactions == 0
+                            and transactions_per_table[tname] > 0
+                        ):
+                            self.compact_table(tname)
 
-                # compact dataset every n transactions per table
-                if (
-                    compact_every_n_transactions is not None
-                    and transactions_per_table[table_name] % compact_every_n_transactions == 0
-                    and transactions_per_table[table_name] > 0
-                ):
-                    self.compact_table(table_name)
-
-        # make transaction for final batch
-        for table_name, table in tables.items():
-            if len(accumulate_data_tables[table_name]) > 0:
-                table.add(accumulate_data_tables[table_name])
+        # Final flush
+        self._flush_tables(
+            accumulate_data_tables, tables, known_ids, dataset, check_integrity, flush_order,
+        )
         self.compact_dataset()
 
         logger.info(f"Dataset {self.info.name} built in {self.target_dir} with id {self.info.id}")
-
-        dataset = Dataset(self.target_dir)
-
-        if check_integrity != "none":
-            logger.info(f"Checking dataset {dataset.info.name} integrity...")
-            handle_integrity_errors(check_dataset_integrity(dataset), raise_or_warn=check_integrity)
-
         logger.info(f"Dataset {dataset.info.name} built successfully.")
         return dataset
 
