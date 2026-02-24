@@ -39,7 +39,7 @@ import {
 export const addAnswer = (detail: NewAnswerEvent) => {
   const { questionId, content } = detail;
 
-  const messages = messagesStore.value as Message[];
+  const messages = messagesStore.value;
   const question = messages.find(
     (message) => message.data.type === MessageTypeEnum.QUESTION && message.id === questionId,
   );
@@ -48,12 +48,12 @@ export const addAnswer = (detail: NewAnswerEvent) => {
     return;
   }
 
-  const fallbackRef = { id: "", name: "" };
   const newAnswer = createNewMessage({
     number: question.data.number ?? 0,
-    item_ref: question.data.item_ref ?? fallbackRef,
-    view_ref: question.data.view_ref ?? fallbackRef,
-    entity_ref: question.data.entity_ref ?? fallbackRef,
+    item_id: question.data.item_id ?? "",
+    view_name: question.data.view_name ?? "",
+    frame_id: question.data.frame_id ?? "",
+    entity_id: question.data.entity_id ?? "",
     type: MessageTypeEnum.ANSWER,
     user: "user",
     inference_metadata: {},
@@ -75,7 +75,7 @@ export const addQuestion = ({
   newQuestionData: StoreQuestionEvent;
   parentEntity: Entity;
 }) => {
-  const messages = messagesStore.value as Message[];
+  const messages = messagesStore.value;
 
   const newQuestionNumber =
     messages.length === 0 ? 0 : Math.max(...messages.map((m) => m.data.number)) + 1;
@@ -85,9 +85,10 @@ export const addQuestion = ({
   const newQuestion = createNewMessage({
     ...questionData,
     number: newQuestionNumber,
-    entity_ref: { id: parentEntity.id, name: parentEntity.table_info.name },
-    view_ref: parentEntity.data.view_ref,
-    item_ref: parentEntity.data.item_ref,
+    entity_id: parentEntity.id,
+    view_name: "",
+    frame_id: "",
+    item_id: parentEntity.data.item_id,
     type: MessageTypeEnum.QUESTION,
     user: "user",
     inference_metadata: {},
@@ -204,9 +205,10 @@ export const generateQuestion = async (
   )[0];
 
   const systemMessage = createNewMessage({
-    item_ref: conversation.data.item_ref,
-    view_ref: conversation.data.view_ref,
-    entity_ref: { name: BaseSchema.Conversation, id: conversation.id },
+    item_id: conversation.data.item_id,
+    view_name: "",
+    frame_id: "",
+    entity_id: conversation.id,
     type: MessageTypeEnum.QUESTION,
     question_type: QuestionTypeEnum.OPEN,
     user: "user",
@@ -245,7 +247,7 @@ export const generateQuestion = async (
 export const updateMessageContent = (detail: UpdatedMessageEvent) => {
   const { answerId, content } = detail;
 
-  const messages = messagesStore.value as Message[];
+  const messages = messagesStore.value;
   const prevAnswer = messages.find(
     (message) => message.data.type === MessageTypeEnum.ANSWER && message.id === answerId,
   );

@@ -22,7 +22,6 @@ import {
   type ItemFeature,
   type MaskData,
   type Reference,
-  type SequenceFrame,
 } from "$lib/types/dataset";
 import { ShapeType, type SaveShape } from "$lib/types/shapeTypes";
 import { datasetSchema, sourcesStore } from "$lib/stores/appStores.svelte";
@@ -36,7 +35,6 @@ export const defineCreatedEntity = (
   features: Record<string, ItemFeature>,
   entitySchema: DS_NamedSchema,
   parentOfSub: Reference | undefined = undefined,
-  alternateViewRef: Reference | undefined = undefined,
 ): Entity => {
   const table = entitySchema.name;
   const now = nowTimestamp();
@@ -46,10 +44,8 @@ export const defineCreatedEntity = (
     updated_at: now,
     table_info: { name: table, group: "entities", base_schema: entitySchema.base_schema },
     data: {
-      item_ref: { name: "item", id: shape.itemId },
-      view_ref:
-        parentOfSub && alternateViewRef ? alternateViewRef : shape.viewRef || { name: "", id: "" },
-      parent_ref: parentOfSub ? parentOfSub : { name: "", id: "" },
+      item_id: shape.itemId,
+      parent_id: parentOfSub ? parentOfSub.id : "",
     },
   };
 
@@ -61,13 +57,13 @@ export const defineCreatedEntity = (
   return new Entity(entity);
 };
 
-export const getFrameIndexFromViewRef = (viewRef: Reference): number => {
+export const getFrameIndex = (view_name: string, frame_id: string): number => {
   const vs = views.value;
-  if (!Array.isArray(vs[viewRef.name])) return 0;
-  const view = (vs[viewRef.name] as SequenceFrame[]).find((sf) => sf.id === viewRef.id);
+  if (!Array.isArray(vs[view_name])) return 0;
+  const view = (vs[view_name] as import("$lib/types/dataset").SequenceFrame[]).find((sf) => sf.id === frame_id);
   if (view) return view.data.frame_index;
   else {
-    console.error("Could not find a matching view:", viewRef);
+    console.error("Could not find a matching view:", view_name, frame_id);
     return 0;
   }
 };
@@ -148,19 +144,14 @@ export const findOrCreateSubAndTopEntities = (
       topEntity.ui.childs = [];
     }
     if (subEntitySchema) {
-      //need to find entity with corresponding parent_ref.id and table_info.name, and view name
+      //need to find entity with corresponding parent_id and table_info.name, and view name
       subEntity = entities.value.find(
         (entity) =>
-          //need to find entity with corresponding parent_ref.id and table_info.name, and view name
           entity.table_info.name === subEntitySchema.name &&
           entity.table_info.base_schema === subEntitySchema.base_schema &&
-          entity.data.parent_ref.id === topEntity!.id &&
-          //badly, *sub*entity.data.view_ref (id, or at least name) is not always set (it should!)
-          (entity.data.view_ref.id !== ""
-            ? entity.data.view_ref.id === shape.viewRef.id
-            : entity.data.view_ref.name !== ""
-              ? entity.data.view_ref.name === shape.viewRef.name
-              : entity.ui.childs?.every((ann) => ann.data.view_ref.name === shape.viewRef.name)),
+          entity.data.parent_id === topEntity.id &&
+          // match by child annotations' view_name
+          entity.ui.childs?.every((ann) => ann.data.view_name === shape.viewRef.name),
       );
       if (!subEntity) {
         subEntity = defineCreatedEntity(
@@ -196,10 +187,14 @@ export const defineCreatedAnnotation = (
   };
   const pixSource = getPixanoSource(sourcesStore);
   const baseData = {
-    item_ref: entity.data.item_ref,
-    view_ref: viewRef,
-    entity_ref: { name: entity.table_info.name, id: entity.id },
-    source_ref: { name: pixSource.table_info.name, id: pixSource.id },
+    item_id: entity.data.item_id,
+    view_name: viewRef.name,
+    frame_id: viewRef.id,
+    entity_id: entity.id,
+    source_id: pixSource.id,
+    frame_index: -1,
+    tracklet_id: "",
+    entity_dynamic_state_id: "",
     inference_metadata: {},
   };
   let newAnnotation: Annotation | undefined = undefined;

@@ -13,7 +13,7 @@ License: CECILL-C
 
   interface Props {
     viewRef: Reference;
-    zoomFactor: Record<string, number>;
+    zoomFactor: number;
     polygonId: string;
     points: PolygonVertex[][];
     onPointClick?: ((pointIndex: number, shapeIndex: number, viewRef: Reference) => void) | null;
@@ -53,12 +53,12 @@ License: CECILL-C
 </script>
 
 {#each points as shape, i}
-  {#each shape as point}
+  {#each shape as point, j}
     {@const scale = getScale(i, point.id)}
     <Circle
       onclick={(e: Konva.KonvaEventObject<MouseEvent>) => {
         e.cancelBubble = true;
-        onPointClick?.(shape.indexOf(point), i, viewRef);
+        onPointClick?.(j, i, viewRef);
       }}
       ondragmove={(e: Konva.KonvaEventObject<DragEvent>) => onPointDragMove?.(point.id, i, e)}
       ondragend={() => onPointDragEnd?.()}
@@ -66,10 +66,11 @@ License: CECILL-C
       onmouseleave={() => handleMouseLeave(i, point.id)}
       x={point.x}
       y={point.y}
-      radius={(shape.indexOf(point) === 0 ? 6 : 4) / zoomFactor[viewRef.name]}
-      fill={shape.indexOf(point) === 0 ? "hsl(330, 65%, 50%)" : "hsl(142, 60%, 40%)"}
+      radius={(j === 0 ? 6 : 4) / zoomFactor}
+      fill={j === 0 ? "hsl(330, 65%, 50%)" : "hsl(142, 60%, 40%)"}
       stroke="white"
-      strokeWidth={1 / zoomFactor[viewRef.name]}
+      strokeWidth={1}
+      strokeScaleEnabled={false}
       id={`dot-${polygonId}-${i}-${point.id}`}
       draggable={true}
       scaleX={scale}

@@ -121,8 +121,8 @@ export type SavePolygonShape = SaveShapeBase & {
 export type SaveTrackShape = SaveShapeBase & {
   type: ShapeType.track;
   attrs: {
-    start_timestep: number;
-    end_timestep: number;
+    start_frame: number;
+    end_frame: number;
     start_timestamp?: number;
     end_timestamp?: number;
   };

@@ -7,21 +7,22 @@ License: CECILL-C
 <script lang="ts">
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
-  import type { ToolEvent } from "$lib/tools";
 
-  import { sceneFunc } from "./konvaMaskOps";
   import { INPUTRECT_STROKEWIDTH } from "./konvaConstants";
-  import { ShapeType, type CreatePolygonShape, type Shape } from "$lib/types/shapeTypes";
-  import type { Reference } from "$lib/types/dataset";
-  import type { PolygonVertex } from "$lib/types/shapeTypes";
-  import type { Point2D } from "$lib/types/geometry";
+  import { sceneFunc } from "./konvaMaskOps";
   import PolygonVertices from "./PolygonVertices.svelte";
+  import type { ToolEvent } from "$lib/tools";
+  import type { Reference } from "$lib/types/dataset";
+  import type { Point2D } from "$lib/types/geometry";
+  import { ShapeType, type CreatePolygonShape, type Shape } from "$lib/types/shapeTypes";
+  import type { PolygonVertex } from "$lib/types/shapeTypes";
 
   interface Props {
     viewRef: Reference;
     newShape: Shape;
     getRelativePointerOnView?: () => Point2D | null;
-    zoomFactor: Record<string, number>;
+    zoomFactor: number;
+    isInteracting?: boolean;
     onToolEvent?: (event: ToolEvent) => void;
   }
 
@@ -30,6 +31,7 @@ License: CECILL-C
     newShape,
     getRelativePointerOnView = () => null,
     zoomFactor,
+    isInteracting = false,
     onToolEvent = () => {
       return;
     },
@@ -38,8 +40,7 @@ License: CECILL-C
   const POLYGON_ID = "creating";
   const EDGE_SNAP_PX = 8;
 
-  const asPolygonCreation = (shape: Shape): CreatePolygonShape =>
-    shape as CreatePolygonShape;
+  const asPolygonCreation = (shape: Shape): CreatePolygonShape => shape as CreatePolygonShape;
   const getSavedSvg = (shape: Shape): string[] =>
     "masksImageSVG" in shape &&
     Array.isArray(shape.masksImageSVG) &&
@@ -76,11 +77,7 @@ License: CECILL-C
       "polygonMode" in newShape,
   );
 
-  function projectOnSegment(
-    p: Point2D,
-    a: Point2D,
-    b: Point2D,
-  ) {
+  function projectOnSegment(p: Point2D, a: Point2D, b: Point2D) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const len2 = dx * dx + dy * dy;
@@ -130,7 +127,11 @@ License: CECILL-C
     });
   }
 
-  function handlePolygonPointsDragMove(id: number, shapeIndex: number, e: Konva.KonvaEventObject<DragEvent>) {
+  function handlePolygonPointsDragMove(
+    id: number,
+    shapeIndex: number,
+    e: Konva.KonvaEventObject<DragEvent>,
+  ) {
     const pos = (e.target as Konva.Circle).position();
     onToolEvent({
       type: "polygonMoveVertex",
@@ -141,6 +142,10 @@ License: CECILL-C
   }
 
   function handleShapeMouseMove() {
+    if (isInteracting) {
+      hoveredEdge = null;
+      return;
+    }
     if (!polygonCreation || polygonCreation.phase !== "editing") {
       hoveredEdge = null;
       return;
@@ -152,7 +157,7 @@ License: CECILL-C
       return;
     }
 
-    const threshold = EDGE_SNAP_PX / zoomFactor[viewRef.name];
+    const threshold = EDGE_SNAP_PX / zoomFactor;
     const { bestDist, bestShape, bestIdx, bestPoint } = findClosestEdge(
       pos,
       polygonCreation.closedPolygons,
@@ -286,7 +291,10 @@ License: CECILL-C
         onmouseleave={handleShapeMouseLeave}
         sceneFunc={drawPolygonScene}
         stroke={draftLineColor}
-        strokeWidth={INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name]}
+        strokeWidth={INPUTRECT_STROKEWIDTH}
+        strokeScaleEnabled={false}
+        perfectDrawEnabled={!isInteracting}
+        shadowForStrokeEnabled={!isInteracting}
         fill={draftFillColor}
         hitFunc={drawPolygonHit}
         listening={polygonCreation.phase === "editing"}
@@ -304,18 +312,23 @@ License: CECILL-C
         <Circle
           x={hoveredEdge.x}
           y={hoveredEdge.y}
-          radius={5 / zoomFactor[viewRef.name]}
+          radius={5 / zoomFactor}
           fill={draftLineColor}
           stroke="white"
-          strokeWidth={1.5 / zoomFactor[viewRef.name]}
+          strokeWidth={1.5}
+          strokeScaleEnabled={false}
           listening={false}
         />
       {/if}
     {:else if shouldRenderSavedPolygon}
       <KonvaShape
-        sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) => sceneFunc(ctx, shape, getSavedSvg(newShape))}
+        sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
+          sceneFunc(ctx, shape, getSavedSvg(newShape))}
         stroke={draftLineColor}
-        strokeWidth={INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name]}
+        strokeWidth={INPUTRECT_STROKEWIDTH}
+        strokeScaleEnabled={false}
+        perfectDrawEnabled={!isInteracting}
+        shadowForStrokeEnabled={!isInteracting}
         closed={true}
         fill={draftFillColor}
         listening={false}

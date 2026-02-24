@@ -14,18 +14,22 @@ import {
   Entity,
   initDisplayControl,
   isSequenceFrameArray,
+  isVideoEntity,
   Mask,
   Track,
-  isVideoEntity,
   WorkspaceType,
+  type AnnotationData,
   type BBoxData,
   type FeaturesValues,
-  type SaveItem,
-  type SequenceFrame,
   type View,
 } from "$lib/types/dataset";
-import { getBoundingBoxFromMaskSvgPaths, rleFrString, isPolygonSvgMetadata, generateSvgFromMaskRle } from "$lib/utils/maskUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
+import {
+  generateSvgFromMaskRle,
+  getBoundingBoxFromMaskSvgPaths,
+  isPolygonSvgMetadata,
+  rleFrString,
+} from "$lib/utils/maskUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
 
 /**
@@ -35,6 +39,7 @@ import { sortByFrameIndex } from "$lib/utils/videoUtils";
 function prepareAnnotation(
   ann: Annotation,
   workspaceType: WorkspaceType,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   views: Record<string, View | View[]>,
 ): Annotation {
   ann.ui = { datasetItemType: workspaceType, displayControl: initDisplayControl };
@@ -43,24 +48,20 @@ function prepareAnnotation(
     const mask: Mask = ann as Mask;
     // Unpack Compressed RLE to uncompressed RLE
     if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-    const metadata = mask.data.inference_metadata as Record<string, unknown>;
+    const metadata = mask.data.inference_metadata;
     if (!mask.ui.svg) {
       if (isPolygonSvgMetadata(metadata)) {
         mask.ui.svg = metadata.polygon_svg;
       } else {
-        mask.ui.svg = generateSvgFromMaskRle(mask.data.counts as number[], mask.data.size);
+        mask.ui.svg = generateSvgFromMaskRle(mask.data.counts, mask.data.size);
       }
     }
   }
 
   if (workspaceType === WorkspaceType.VIDEO) {
     if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
-      const mediaView = views[ann.data.view_ref.name];
-      if (Array.isArray(mediaView)) {
-        const seqframe = (mediaView as SequenceFrame[]).find((sf) => sf.id === ann.data.view_ref.id);
-        if (seqframe?.data.frame_index !== undefined) {
-          ann.ui.frame_index = seqframe.data.frame_index;
-        }
+      if (ann.data.frame_index >= 0) {
+        ann.ui.frame_index = ann.data.frame_index;
       }
     }
   }
@@ -69,15 +70,14 @@ function prepareAnnotation(
 }
 
 /**
- * Auto-generate missing bounding boxes for masks that lack them.
- * Returns the new bboxes and corresponding save items (pure — no store mutation).
+ * Build preview-only bounding boxes from masks that do not have a real bbox annotation.
+ * These boxes are used only for UI display/hit targets and are never auto-saved.
  */
-function generateMissingBBoxes(
+function generatePreviewBBoxesFromMasks(
   annotations: Annotation[],
   annotationTables: string[],
-): { generatedBBoxes: BBox[]; generatedSaveItems: SaveItem[] } {
-  const generatedBBoxes: BBox[] = [];
-  const generatedSaveItems: SaveItem[] = [];
+): BBox[] {
+  const previewBBoxes: BBox[] = [];
 
   const bboxTableNames = annotationTables.filter((name) => name.toLowerCase().includes("bbox"));
   const defaultBBoxTable = bboxTableNames.length > 0 ? bboxTableNames[0] : null;
@@ -88,20 +88,24 @@ function generateMissingBBoxes(
       const hasBBox = annotations.some(
         (other) =>
           other.is_type(BaseSchema.BBox) &&
-          other.data.entity_ref.id === mask.data.entity_ref.id &&
-          other.data.view_ref.id === mask.data.view_ref.id &&
-          other.data.view_ref.name === mask.data.view_ref.name,
+          other.data.entity_id === mask.data.entity_id &&
+          other.data.frame_id === mask.data.frame_id &&
+          other.data.view_name === mask.data.view_name,
       );
 
       if (!hasBBox) {
         const bboxCoords = getBoundingBoxFromMaskSvgPaths(mask.ui.svg);
         if (bboxCoords) {
           const now = nowTimestamp();
-          const bboxData: BBoxData = {
-            item_ref: mask.data.item_ref,
-            view_ref: mask.data.view_ref,
-            entity_ref: mask.data.entity_ref,
-            source_ref: mask.data.source_ref,
+          const bboxData: BBoxData & AnnotationData = {
+            item_id: mask.data.item_id,
+            view_name: mask.data.view_name,
+            frame_id: mask.data.frame_id,
+            entity_id: mask.data.entity_id,
+            source_id: mask.data.source_id,
+            frame_index: mask.data.frame_index,
+            tracklet_id: mask.data.tracklet_id,
+            entity_dynamic_state_id: mask.data.entity_dynamic_state_id,
             inference_metadata: {},
             coords: [bboxCoords.x, bboxCoords.y, bboxCoords.width, bboxCoords.height],
             format: "xywh",
@@ -125,14 +129,13 @@ function generateMissingBBoxes(
             displayControl: { ...initDisplayControl, highlighted: "none" },
             frame_index: mask.ui.frame_index,
           };
-          generatedBBoxes.push(newBBox);
-          generatedSaveItems.push({ change_type: "add", data: newBBox });
+          previewBBoxes.push(newBBox);
         }
       }
     }
   }
 
-  return { generatedBBoxes, generatedSaveItems };
+  return previewBBoxes;
 }
 
 /**
@@ -150,16 +153,16 @@ function buildEntityHierarchy(
     for (const entity of itemEntities) {
       entity.ui = {
         ...entity.ui,
-        childs: processedAnnotations.filter((ann) => ann.data.entity_ref.id === entity.id),
+        childs: processedAnnotations.filter((ann) => ann.data.entity_id === entity.id),
       };
       newEntities.push(entity);
-      if (entity.data.parent_ref.id !== "" && entity.ui.childs) {
-        if (entity.data.parent_ref.id in subEntitiesChilds) {
-          subEntitiesChilds[entity.data.parent_ref.id] = subEntitiesChilds[
-            entity.data.parent_ref.id
+      if (entity.data.parent_id !== "" && entity.ui.childs) {
+        if (entity.data.parent_id in subEntitiesChilds) {
+          subEntitiesChilds[entity.data.parent_id] = subEntitiesChilds[
+            entity.data.parent_id
           ].concat(entity.ui.childs);
         } else {
-          subEntitiesChilds[entity.data.parent_ref.id] = entity.ui.childs;
+          subEntitiesChilds[entity.data.parent_id] = entity.ui.childs;
         }
       }
     }
@@ -168,7 +171,7 @@ function buildEntityHierarchy(
   if (Object.keys(subEntitiesChilds).length > 0) {
     newEntities = newEntities.map((entity) => {
       if (isVideoEntity(entity) && entity.id in subEntitiesChilds) {
-        entity.ui.childs = [...entity.ui.childs!, ...subEntitiesChilds[entity.id]];
+        entity.ui.childs = [...entity.ui.childs, ...subEntitiesChilds[entity.id]];
       }
       return entity;
     });
@@ -194,11 +197,11 @@ export function attachTrackChildren(
           topEntity.ui.childs?.filter(
             (child) =>
               child.ui.frame_index !== undefined &&
-              child.ui.frame_index <= track.data.end_timestep &&
-              child.ui.frame_index >= track.data.start_timestep &&
-              child.data.view_ref.name === track.data.view_ref.name,
+              child.ui.frame_index <= track.data.end_frame &&
+              child.ui.frame_index >= track.data.start_frame &&
+              child.data.view_name === track.data.view_name,
           ) || [];
-        track.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
+        track.ui.childs.sort((a, b) => a.ui.frame_index - b.ui.frame_index);
       }
     }
     return ann;
@@ -208,12 +211,10 @@ export function attachTrackChildren(
 /**
  * Compute video speed from views (time between frames).
  */
-function computeVideoSpeed(
-  views: Record<string, View | View[]>,
-): number | undefined {
+function computeVideoSpeed(views: Record<string, View | View[]>): number | undefined {
   for (const view in views) {
     if (isSequenceFrameArray(views[view])) {
-      const video = views[view] as SequenceFrame[];
+      const video = views[view];
       return Math.round(
         (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
       );
@@ -225,8 +226,7 @@ function computeVideoSpeed(
 interface ProcessedItemData {
   annotations: Annotation[];
   entities: Entity[];
-  generatedBBoxes: BBox[];
-  generatedSaveItems: SaveItem[];
+  previewBBoxes: BBox[];
   videoSpeed: number | undefined;
 }
 
@@ -252,16 +252,9 @@ export function processDatasetItem(
     }
   }
 
-  // Generate missing bboxes
+  // Build preview-only bboxes from masks without a canonical bbox annotation.
   const annotationTables = Object.keys(selectedItem.annotations);
-  const { generatedBBoxes, generatedSaveItems } = generateMissingBBoxes(
-    newAnns,
-    annotationTables,
-  );
-
-  if (generatedBBoxes.length > 0) {
-    newAnns.push(...generatedBBoxes);
-  }
+  const previewBBoxes = generatePreviewBBoxesFromMasks(newAnns, annotationTables);
 
   // Sort by frame_index
   newAnns.sort((a, b) => sortByFrameIndex(a, b));
@@ -272,8 +265,7 @@ export function processDatasetItem(
   return {
     annotations: newAnns,
     entities,
-    generatedBBoxes,
-    generatedSaveItems,
+    previewBBoxes,
     videoSpeed,
   };
 }

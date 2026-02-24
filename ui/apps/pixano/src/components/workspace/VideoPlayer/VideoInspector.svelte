@@ -6,27 +6,20 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { untrack } from "svelte";
-
   import { Slider } from "bits-ui";
   import { ZoomIn, ZoomOut } from "lucide-svelte";
 
-  import { ToolType, panTool } from "$lib/tools";
-  import { BBox, Entity, isVideoEntity, type KeypointAnnotation } from "$lib/ui";
-
-  import { clearHighlighting } from "$lib/utils/highlightOperations";
-  import { updateView } from "$lib/utils/videoOperations";
-  import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
-  import {
-    currentFrameIndex,
-    lastFrameIndex,
-    videoControls,
-  } from "$lib/stores/videoStores.svelte";
-  import { sortEntities } from "$lib/utils/sortEntities";
   import EntityTrack from "./EntityTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoControls from "./VideoControls.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
+  import { currentFrameIndex, lastFrameIndex, videoControls } from "$lib/stores/videoStores.svelte";
+  import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import { panTool, ToolType } from "$lib/tools";
+  import { BBox, Entity, isVideoEntity, type KeypointAnnotation } from "$lib/ui";
+  import { clearHighlighting } from "$lib/utils/highlightOperations";
+  import { sortEntities } from "$lib/utils/sortEntities";
+  import { updateView } from "$lib/utils/videoOperations";
 
   interface Props {
     bboxes: BBox[];
@@ -35,11 +28,9 @@ License: CECILL-C
 
   let { bboxes, keypoints }: Props = $props();
 
-  let tracks: Entity[] = $derived(entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities));
-
-  $effect(() => {
-    untrack(() => videoControls.update((old) => ({ ...old, isLoaded: true })));
-  });
+  let tracks: Entity[] = $derived(
+    entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities),
+  );
 
   const resetHighlight = () => {
     if (![ToolType.Pan, ToolType.Fusion].includes(selectedTool.value.type)) {
@@ -66,8 +57,8 @@ License: CECILL-C
     <div class="sticky top-0 bg-card z-20">
       <VideoPlayerRow class="bg-card ">
         {#snippet timeTrack()}
-                <TimeTrack  {resetTool} {resetHighlight} />
-              {/snippet}
+          <TimeTrack {resetTool} {resetHighlight} />
+        {/snippet}
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
@@ -75,8 +66,7 @@ License: CECILL-C
         {#if !track.ui.displayControl.hidden}
           <VideoPlayerRow>
             {#snippet timeTrack()}
-                        <EntityTrack
-                
+              <EntityTrack
                 {track}
                 views={mediaViews.value}
                 {onTimeTrackClick}
@@ -84,7 +74,7 @@ License: CECILL-C
                 {keypoints}
                 {resetTool}
               />
-                      {/snippet}
+            {/snippet}
           </VideoPlayerRow>
         {/if}
       {/each}

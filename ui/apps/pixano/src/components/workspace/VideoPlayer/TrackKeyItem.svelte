@@ -60,7 +60,7 @@ License: CECILL-C
         (videoTrack.ui.childs ?? []).includes(ann) &&
         ann.ui.frame_index === itemFrameIndex &&
         ann.ui.frame_index === currentFrameIndex.value &&
-        ann.data.entity_ref.id === trackId,
+        ann.data.entity_id === trackId,
     ).length === 1,
   );
 
@@ -165,7 +165,7 @@ License: CECILL-C
     {/if}
     {#if !isItemBeingEdited}
       <ContextMenu.Item
-        onclick={() => onEditKeyItemClick(itemFrameIndex, videoTrack.data.view_ref.name)}
+        onclick={() => onEditKeyItemClick(itemFrameIndex, videoTrack.data.view_name)}
       >
         Edit item
       </ContextMenu.Item>

@@ -76,18 +76,18 @@ License: CECILL-C
 
   const track_margin = 0.3;
   const getLeft = (trk: Track) => {
-    let start = Math.max(0, trk.data.start_timestep - track_margin);
+    let start = Math.max(0, trk.data.start_frame - track_margin);
     return (start / (lastFrameIndex.value + 1)) * 100;
   };
   const getRight = (trk: Track) => {
-    let end = Math.max(trk.data.start_timestep, trk.data.end_timestep) + track_margin;
+    let end = Math.max(trk.data.start_frame, trk.data.end_frame) + track_margin;
     return (end / (lastFrameIndex.value + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
   const getTop = (trk: Track, views: MView) => {
     return (
       10 +
-      (80 * Object.keys(views).indexOf(trk.data.view_ref.name)) / Object.keys(views).length
+      (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length
     );
   };
 
@@ -102,7 +102,7 @@ License: CECILL-C
   const calcOneFrameInPixel = () => {
     oneFrameInPixel =
       trackElement?.getBoundingClientRect().width /
-      (videoTrack.data.end_timestep - videoTrack.data.start_timestep + 1);
+      (videoTrack.data.end_frame - videoTrack.data.start_frame + 1);
   };
   calcOneFrameInPixel();
 
@@ -123,16 +123,16 @@ License: CECILL-C
 
   let color = $derived(colorScale.value[1](trackId));
 
-  let track_annotations_frame_indexes = $derived((videoTrack.ui.childs ?? []).map((ann) => ann.ui.frame_index!));
+  let track_annotations_frame_indexes = $derived((videoTrack.ui.childs ?? []).map((ann) => ann.ui.frame_index));
 
   let canAddKeyFrame =
-    $derived(currentFrameIndex.value > videoTrack.data.start_timestep &&
-    currentFrameIndex.value < videoTrack.data.end_timestep &&
+    $derived(currentFrameIndex.value > videoTrack.data.start_frame &&
+    currentFrameIndex.value < videoTrack.data.end_frame &&
     !(videoTrack.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
 
   let canSplit =
-    $derived(currentFrameIndex.value >= videoTrack.data.start_timestep &&
-    currentFrameIndex.value < videoTrack.data.end_timestep);
+    $derived(currentFrameIndex.value >= videoTrack.data.start_frame &&
+    currentFrameIndex.value < videoTrack.data.end_frame);
 
   const getNeighborTrack = (
     annotations: Annotation[],
@@ -140,17 +140,17 @@ License: CECILL-C
   ): Annotation | null => {
     const isLeft = direction === "left";
 
-    const refCompareTimestep = isLeft ? videoTrack.data.start_timestep : videoTrack.data.end_timestep;
+    const refCompareTimestep = isLeft ? videoTrack.data.start_frame : videoTrack.data.end_frame;
 
     const neighborTracks = annotations.filter((ann) => {
       if (!ann.is_type(BaseSchema.Tracklet)) return false;
       const t = ann as Track;
       return (
-        t.data.view_ref.name === videoTrack.data.view_ref.name &&
-        t.data.entity_ref.id === trackId &&
+        t.data.view_name === videoTrack.data.view_name &&
+        t.data.entity_id === trackId &&
         (isLeft
-          ? t.data.end_timestep < refCompareTimestep
-          : t.data.start_timestep > refCompareTimestep)
+          ? t.data.end_frame < refCompareTimestep
+          : t.data.start_frame > refCompareTimestep)
       );
     });
 
@@ -160,8 +160,8 @@ License: CECILL-C
       const tBest = best as Track;
       const tCurr = curr as Track;
 
-      const bestVal = isLeft ? tBest.data.end_timestep : tBest.data.start_timestep;
-      const currVal = isLeft ? tCurr.data.end_timestep : tCurr.data.start_timestep;
+      const bestVal = isLeft ? tBest.data.end_frame : tBest.data.start_frame;
+      const currVal = isLeft ? tCurr.data.end_frame : tCurr.data.start_frame;
 
       return isLeft
         ? currVal > bestVal
@@ -180,57 +180,57 @@ License: CECILL-C
       (nextFrameIndex !== lastFrameIndex.value && newFrameIndex > nextFrameIndex - 1)
     )
       return false;
-    const isStart = draggedFrameIndex === videoTrack.data.start_timestep;
-    const isEnd = draggedFrameIndex === videoTrack.data.end_timestep;
+    const isStart = draggedFrameIndex === videoTrack.data.start_frame;
+    const isEnd = draggedFrameIndex === videoTrack.data.end_frame;
     if (!(isStart || isEnd)) return false;
     if (isStart) {
-      if (newFrameIndex >= videoTrack.data.end_timestep) return false;
+      if (newFrameIndex >= videoTrack.data.end_frame) return false;
       left = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
-      right = (videoTrack.data.end_timestep / (lastFrameIndex.value + 1)) * 100;
+      right = (videoTrack.data.end_frame / (lastFrameIndex.value + 1)) * 100;
     }
     if (isEnd) {
-      if (newFrameIndex <= videoTrack.data.start_timestep) return false;
+      if (newFrameIndex <= videoTrack.data.start_frame) return false;
       right = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
     }
     return true;
   };
 
   const updateTrackWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
-    const isStart = draggedFrameIndex === videoTrack.data.start_timestep;
-    const isEnd = draggedFrameIndex === videoTrack.data.end_timestep;
-    const viewFrames = views[videoTrack.data.view_ref.name] as SequenceFrame[] | undefined;
+    const isStart = draggedFrameIndex === videoTrack.data.start_frame;
+    const isEnd = draggedFrameIndex === videoTrack.data.end_frame;
+    const viewFrames = views[videoTrack.data.view_name] as SequenceFrame[] | undefined;
     if (!viewFrames?.[newFrameIndex] || !videoTrack.ui.childs?.length) return;
     const newViewId = viewFrames[newFrameIndex].id;
     let movedAnn = videoTrack.ui.childs[0];
-    if (isStart) videoTrack.data.start_timestep = newFrameIndex;
+    if (isStart) videoTrack.data.start_frame = newFrameIndex;
     if (isEnd) {
       movedAnn = videoTrack.ui.childs[videoTrack.ui.childs.length - 1];
-      videoTrack.data.end_timestep = newFrameIndex;
+      videoTrack.data.end_frame = newFrameIndex;
     }
     movedAnn.ui.frame_index = newFrameIndex;
-    movedAnn.data.view_ref.id = newViewId;
+    movedAnn.data.frame_id = newViewId;
 
     annotations.update((objects) =>
       objects.map((ann) => {
         if (ann.is_type(BaseSchema.Tracklet) && ann.id === videoTrack.id) {
           if (isStart) {
-            (ann as Track).data.start_timestep = newFrameIndex;
+            (ann as Track).data.start_frame = newFrameIndex;
           }
           if (isEnd) {
-            (ann as Track).data.end_timestep = newFrameIndex;
+            (ann as Track).data.end_frame = newFrameIndex;
           }
         }
         if (ann.id === movedAnn.id) {
           ann.ui.frame_index = newFrameIndex;
-          ann.data.view_ref.id = newViewId;
+          ann.data.frame_id = newViewId;
         }
         return ann;
       }),
     );
     const pixSource = getPixanoSource(sourcesStore);
-    videoTrack.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+    videoTrack.data.source_id = pixSource.id;
     saveTo("update", videoTrack);
-    movedAnn.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+    movedAnn.data.source_id = pixSource.id;
     saveTo("update", movedAnn);
     currentFrameIndex.value = newFrameIndex;
   };
@@ -258,9 +258,9 @@ License: CECILL-C
 
           // Update range
           if (direction === "left") {
-            currentTrack.data.start_timestep = neighborTrack.data.start_timestep;
+            currentTrack.data.start_frame = neighborTrack.data.start_frame;
           } else {
-            currentTrack.data.end_timestep = neighborTrack.data.end_timestep;
+            currentTrack.data.end_frame = neighborTrack.data.end_frame;
           }
         }
         return ann;
@@ -354,7 +354,7 @@ License: CECILL-C
             bind:mustMerge
             bind:overlapTargetId
             baseSchema={videoTrack.table_info.base_schema}
-            viewRef={videoTrack.data.view_ref}
+            viewRef={{ name: videoTrack.data.view_name, id: videoTrack.data.frame_id }}
             track={videoTrack}
           />
           <Button.Root type="button" class={cn(buttonVariants(), "text-white mt-4")} onclick={handleRelink}>OK</Button.Root>

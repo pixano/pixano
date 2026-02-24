@@ -31,7 +31,7 @@ License: CECILL-C
   interface Props {
     viewRef: Reference;
     currentImage: HTMLImageElement;
-    zoomFactor: Record<string, number>;
+    zoomFactor: number;
     selectedItemId: string;
     selectedTool: BrushSelectionTool;
     brushSettings: {
@@ -70,7 +70,7 @@ License: CECILL-C
   const MASK_COLOR = "rgba(255, 0, 80, 0.5)";
 
   // Effective radius scaled by zoom
-  let effectiveRadius = $derived(brushSettings.brushRadius / (zoomFactor[viewRef.name] || 1));
+  let effectiveRadius = $derived(brushSettings.brushRadius / (zoomFactor || 1));
 
   $effect(() => {
     // Track both currentImage and existingMaskRle so the effect re-runs on undo/redo
@@ -118,7 +118,7 @@ License: CECILL-C
   // React to brush settings / zoom changes
   $effect(() => {
     if (lazyBrush) {
-      const effectiveLazy = brushSettings.lazyRadius / (zoomFactor[viewRef.name] || 1);
+      const effectiveLazy = brushSettings.lazyRadius / (zoomFactor || 1);
       lazyBrush.setRadius(effectiveLazy);
       if (brushSettings.lazyRadius <= 0) {
         lazyBrush.disable();

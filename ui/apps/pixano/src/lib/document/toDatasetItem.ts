@@ -42,20 +42,19 @@ function nodeToBaseData(node: DocumentNode): DatasetItemBaseData {
 
 function annotationToBaseData(node: AnnotationNode): DatasetItemBaseData {
   const base = nodeToBaseData(node);
-  // Restore reference fields into data (backend format)
-  base.data["item_ref"] = { ...node.itemRef };
-  base.data["view_ref"] = { ...node.viewRef };
-  base.data["entity_ref"] = { ...node.entityRef };
-  base.data["source_ref"] = { ...node.sourceRef };
+  // Restore v2 flat fields into data (backend format)
+  base.data["item_id"] = node.itemRef.id;
+  base.data["view_name"] = node.viewRef.name;
+  base.data["frame_id"] = node.viewRef.id;
+  base.data["entity_id"] = node.entityRef.id;
+  base.data["source_id"] = node.sourceRef.id;
   return base;
 }
 
 function entityToBaseData(node: EntityNode): DatasetItemBaseData {
   const base = nodeToBaseData(node);
-  base.data["item_ref"] = { ...node.itemRef };
-  if (node.parentRef) {
-    base.data["parent_ref"] = { ...node.parentRef };
-  }
+  base.data["item_id"] = node.itemRef.id;
+  base.data["parent_id"] = node.parentRef?.id ?? "";
   return base;
 }
 
@@ -94,7 +93,7 @@ export function toDatasetItem(document: Document): DatasetItemShape {
     if (node.nodeType === "view") {
       const tableName = node.tableInfo.name;
       if (!viewsByTable.has(tableName)) viewsByTable.set(tableName, []);
-      viewsByTable.get(tableName)!.push(node);
+      viewsByTable.get(tableName).push(node);
     }
   }
 
@@ -103,26 +102,11 @@ export function toDatasetItem(document: Document): DatasetItemShape {
     if (viewNodes.length === 1 && viewNodes[0].tableInfo.base_schema !== "SequenceFrame") {
       // Single view (e.g., Image)
       const viewData = nodeToBaseData(viewNodes[0]);
-      // Restore view reference fields
-      if (viewNodes[0].data["item_ref"]) {
-        viewData.data["item_ref"] = viewNodes[0].data["item_ref"];
-      }
-      if (viewNodes[0].data["parent_ref"]) {
-        viewData.data["parent_ref"] = viewNodes[0].data["parent_ref"];
-      }
+      // View data already has v2 flat fields (item_id, parent_id) in node.data
       views[tableName] = viewData;
     } else {
       // Multiple views (e.g., SequenceFrame array)
-      views[tableName] = viewNodes.map((vn) => {
-        const viewData = nodeToBaseData(vn);
-        if (vn.data["item_ref"]) {
-          viewData.data["item_ref"] = vn.data["item_ref"];
-        }
-        if (vn.data["parent_ref"]) {
-          viewData.data["parent_ref"] = vn.data["parent_ref"];
-        }
-        return viewData;
-      });
+      views[tableName] = viewNodes.map((vn) => nodeToBaseData(vn));
     }
   }
 

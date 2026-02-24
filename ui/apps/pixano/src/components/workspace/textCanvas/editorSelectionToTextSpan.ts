@@ -4,12 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Reference, TextSpanTypeWithViewRef } from "$lib/ui";
+import type { TextSpanTypeWithViewName } from "$lib/ui";
 
 export const editorSelectionToTextSpan = (
   editableDiv: HTMLElement,
-  viewRef: Reference,
-): TextSpanTypeWithViewRef | null => {
+  viewName: string,
+): TextSpanTypeWithViewName | null => {
   const selection = window.getSelection();
 
   if (!selection?.rangeCount) {
@@ -34,6 +34,6 @@ export const editorSelectionToTextSpan = (
     spans_start: [span_start],
     spans_end: [span_start + selectedText.length],
     mention: selectedText,
-    view_ref: viewRef,
-  } as TextSpanTypeWithViewRef;
+    view_name: viewName,
+  } as TextSpanTypeWithViewName;
 };

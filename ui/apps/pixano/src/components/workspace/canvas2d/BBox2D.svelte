@@ -8,17 +8,18 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Rect, Transformer } from "svelte-konva";
 
-  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
-  import type { BBox } from "$lib/types/dataset";
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
-  import { clampRectToImage, getRectNormalizedCoords } from "./rectangleOps";
   import LabelTag from "./LabelTag.svelte";
+  import { clampRectToImage, getRectNormalizedCoords } from "./rectangleOps";
+  import type { BBox } from "$lib/types/dataset";
+  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
   interface Props {
     bbox: BBox;
     colorScale: (id: string) => string;
     zoomFactor: number;
     listening: boolean;
+    isInteracting?: boolean;
     imageWidth?: number;
     imageHeight?: number;
     merge?: (ann: { id: string }) => void;
@@ -30,6 +31,7 @@ License: CECILL-C
     colorScale,
     zoomFactor,
     listening,
+    isInteracting = false,
     imageWidth = 0,
     imageHeight = 0,
     merge,
@@ -44,7 +46,7 @@ License: CECILL-C
     colorScale(
       (bbox.ui.top_entities ?? []).length > 0
         ? (bbox.ui.top_entities ?? [])[0].id
-        : bbox.data.entity_ref.id,
+        : bbox.data.entity_id,
     ),
   );
 
@@ -66,7 +68,7 @@ License: CECILL-C
         status: "editing",
         shapeId: bbox.id,
         top_entity_id: (bbox.ui.top_entities ?? [])[0]?.id,
-        viewRef: bbox.data.view_ref,
+        viewRef: { name: bbox.data.view_name, id: bbox.data.frame_id },
         highlighted: "self",
         type: ShapeType.none,
       });
@@ -88,7 +90,7 @@ License: CECILL-C
       status: "editing",
       type: ShapeType.bbox,
       shapeId: bbox.id,
-      viewRef: bbox.data.view_ref,
+      viewRef: { name: bbox.data.view_name, id: bbox.data.frame_id },
       coords: [...coords],
     });
   }
@@ -96,7 +98,14 @@ License: CECILL-C
   function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
     const rect = e.target as Konva.Rect;
     if (!imageWidth || !imageHeight) return;
-    const clamped = clampRectToImage(rect.x(), rect.y(), rect.width(), rect.height(), imageWidth, imageHeight);
+    const clamped = clampRectToImage(
+      rect.x(),
+      rect.y(),
+      rect.width(),
+      rect.height(),
+      imageWidth,
+      imageHeight,
+    );
     rect.x(clamped.x);
     rect.y(clamped.y);
   }
@@ -130,7 +139,10 @@ License: CECILL-C
     width={bbox.data.coords[2]}
     height={bbox.data.coords[3]}
     stroke={color}
-    strokeWidth={(bbox.ui.strokeFactor ?? 1) * (BBOX_STROKEWIDTH / zoomFactor)}
+    strokeWidth={(bbox.ui.strokeFactor ?? 1) * BBOX_STROKEWIDTH}
+    strokeScaleEnabled={false}
+    perfectDrawEnabled={!isInteracting}
+    shadowForStrokeEnabled={!isInteracting}
     opacity={bbox.ui.opacity ?? 1}
     visible={!bbox.ui.displayControl.hidden}
     draggable={editing}
@@ -150,6 +162,6 @@ License: CECILL-C
     {zoomFactor}
     opacity={bbox.ui.opacity ?? 1}
     tooltip={bbox.ui.tooltip ?? ""}
-    color={color}
+    {color}
   />
 </Group>

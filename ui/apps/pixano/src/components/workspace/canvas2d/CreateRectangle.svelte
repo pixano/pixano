@@ -9,16 +9,17 @@ License: CECILL-C
   import { Group, Rect, Transformer } from "svelte-konva";
 
   import { INPUTRECT_STROKEWIDTH } from "./konvaConstants";
-  import type { CreateRectangleShape, SaveRectangleShape } from "$lib/types/shapeTypes";
+  import LabelTag from "./LabelTag.svelte";
   import type { Reference } from "$lib/types/dataset";
   import type { BoundingBox, Point2D } from "$lib/types/geometry";
-  import LabelTag from "./LabelTag.svelte";
+  import type { CreateRectangleShape, SaveRectangleShape } from "$lib/types/shapeTypes";
 
   interface Props {
     zoomFactor: number;
     newShape: CreateRectangleShape | SaveRectangleShape;
     viewRef: Reference;
     editable?: boolean;
+    isInteracting?: boolean;
     onTransformEnd?: (geometry: BoundingBox) => void;
     onDragEnd?: (position: Point2D) => void;
   }
@@ -28,6 +29,7 @@ License: CECILL-C
     newShape,
     viewRef,
     editable = false,
+    isInteracting = false,
     onTransformEnd,
     onDragEnd,
   }: Props = $props();
@@ -77,7 +79,10 @@ License: CECILL-C
       {height}
       stroke="hsl(330, 65%, 50%)"
       fill="hsla(330, 60%, 95%, 0.45)"
-      strokeWidth={INPUTRECT_STROKEWIDTH / zoomFactor}
+      strokeWidth={INPUTRECT_STROKEWIDTH}
+      strokeScaleEnabled={false}
+      perfectDrawEnabled={!isInteracting}
+      shadowForStrokeEnabled={!isInteracting}
       listening={editable}
       draggable={editable}
       ondragend={handleDragEnd}

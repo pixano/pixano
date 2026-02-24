@@ -57,7 +57,7 @@ const getTextSpanPositions = (
     const spanHtml = createHtmlTags({
       content,
       metadata: getMetadataOfTextSpan(textSpan),
-      bgColor: colorScale(textSpan.data.entity_ref.id),
+      bgColor: colorScale(textSpan.data.entity_id),
       hidden: textSpan.ui.displayControl.hidden ?? false,
       highlighted: textSpan.ui.displayControl.highlighted === "self",
     });

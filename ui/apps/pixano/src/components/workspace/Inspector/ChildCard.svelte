@@ -158,13 +158,13 @@ License: CECILL-C
       class="flex-auto block truncate text-[12px] font-medium text-foreground/80"
       title={child.id}
     >
-      {isMultiView ? child.data.view_ref.name : child.id}
+      {isMultiView ? child.data.view_name : child.id}
     </span>
   </div>
   <div
     class="flex-shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200"
   >
-    {#if selectedTool.value.type !== ToolType.Fusion}
+    {#if selectedTool.value?.type !== ToolType.Fusion}
       {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
         <IconButton
           tooltipContent="Edit object"
@@ -203,7 +203,7 @@ License: CECILL-C
       bind:mustMerge
       bind:overlapTargetId
       baseSchema={child.table_info.base_schema}
-      viewRef={child.data.view_ref}
+      viewRef={{ name: child.data.view_name, id: child.data.frame_id }}
       track={child}
     />
     <Button.Root type="button" class={cn(buttonVariants(), "text-primary-foreground mt-4")} onclick={handleRelink}>OK</Button.Root>
@@ -240,7 +240,7 @@ License: CECILL-C
           {@html displayName}
         </span>
       </div>
-      {#if selectedTool.value.type !== ToolType.Fusion && !interpolated}
+      {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}
         <div class="flex items-center mr-4">
           {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
             <IconButton

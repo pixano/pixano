@@ -5,23 +5,14 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-
   // Imports
-  import { untrack } from "svelte";
-  import { Loader2Icon } from "lucide-svelte";
 
   // Import stores and API functions
 
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
-  import {
-    DatasetItem,
-    Image,
-    type LoadedImagesPerView,
-  } from "$lib/ui";
+  import { Loader2Icon } from "lucide-svelte";
+  import { untrack } from "svelte";
 
-  import { applyNewShapeEditing } from "$lib/utils/entityMutations";
-  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
   import {
     brushSettings,
     colorScale,
@@ -36,7 +27,10 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-
+  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import { DatasetItem, Image, type LoadedImagesPerView } from "$lib/ui";
+  import { applyNewShapeEditing } from "$lib/utils/entityMutations";
+  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
   interface Props {
     // Attributes
@@ -50,6 +44,12 @@ License: CECILL-C
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
 
+  const handleCanvasShapeChange = (shape: Shape) => {
+    // Draft creation now stays local in Canvas2D and should not trigger store churn.
+    if (shape.status === "creating") return;
+    newShape.value = shape as import("$lib/ui").Shape;
+  };
+
   /**
    * Update the images based on the selected item views.
    */
@@ -58,10 +58,11 @@ License: CECILL-C
       loaded = false;
       embeddings.value = {};
       modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
-      imagesPerView = await loadImagesFromViews(
-        selectedItem.views as Record<string, Image>,
-        { useNativeUrl: true, sortKeys: true, filterImages: true },
-      );
+      imagesPerView = await loadImagesFromViews(selectedItem.views as Record<string, Image>, {
+        useNativeUrl: true,
+        sortKeys: true,
+        filterImages: true,
+      });
       loaded = true;
     }
   };
@@ -92,7 +93,6 @@ License: CECILL-C
       });
     }
   });
-
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
@@ -104,15 +104,15 @@ License: CECILL-C
     bboxes={itemBboxes.value}
     masks={itemMasks.value}
     keypoints={itemKeypoints.value}
-    filters={filters.value as ImageFilters}
+    filters={filters.value as unknown as ImageFilters}
     canvasSize={resize}
     imageSmoothing={imageSmoothing.value}
     selectedTool={selectedTool.value}
     brushSettings={brushSettings.value}
     newShape={newShape.value as Shape}
-    onSelectedToolChange={(tool) => selectedTool.value = tool}
-    onNewShapeChange={(shape) => newShape.value = shape as import("$lib/ui").Shape}
-    onBrushSettingsChange={(settings) => brushSettings.value = settings}
+    onSelectedToolChange={(tool) => (selectedTool.value = tool)}
+    onNewShapeChange={handleCanvasShapeChange}
+    onBrushSettingsChange={(settings) => (brushSettings.value = settings)}
   />
 {:else}
   <div class="w-full h-full flex items-center justify-center">

@@ -8,33 +8,11 @@ License: CECILL-C
   // Imports
   import { ChevronRight, Eye, EyeOff, ListPlus, ListX, Pencil, Trash2 } from "lucide-svelte";
 
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import ChildCard from "./ChildCard.svelte";
   import TextSpansContent from "./TextSpansContent.svelte";
-  import { ToolType, panTool } from "$lib/tools";
-  import {
-    Annotation,
-    BaseSchema,
-    Card,
-    cn,
-    Entity,
-    IconButton,
-    Item,
-    Track,
-    isVideoEntity,
-    WorkspaceType,
-    type DisplayControl,
-    type AnnotationThumbnail,
-  } from "$lib/ui";
-
   import { datasetSchema } from "$lib/stores/appStores.svelte";
-  import { createFeature } from "$lib/utils/featureMapping";
-  import { saveTo } from "$lib/utils/saveItemUtils";
-  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
-  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import { deleteEntity } from "$lib/utils/entityMutations";
-  import { highlightEntity } from "$lib/utils/highlightOperations";
-  import { updateView } from "$lib/utils/videoOperations";
-  import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     colorScale,
@@ -43,10 +21,30 @@ License: CECILL-C
     mediaViews,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { panTool, ToolType } from "$lib/tools";
   import type { Feature } from "$lib/types/workspace";
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import ChildCard from "./ChildCard.svelte";
+  import {
+    Annotation,
+    BaseSchema,
+    Card,
+    cn,
+    Entity,
+    IconButton,
+    isVideoEntity,
+    Item,
+    Track,
+    WorkspaceType,
+    type AnnotationThumbnail,
+    type DisplayControl,
+  } from "$lib/ui";
+  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
+  import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
+  import { deleteEntity } from "$lib/utils/entityMutations";
+  import { createFeature } from "$lib/utils/featureMapping";
+  import { highlightEntity } from "$lib/utils/highlightOperations";
+  import { saveTo } from "$lib/utils/saveItemUtils";
+  import { updateView } from "$lib/utils/videoOperations";
+  import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
   interface Props {
     entity: Entity;
@@ -71,8 +69,8 @@ License: CECILL-C
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
       child.is_type(BaseSchema.Tracklet) &&
-      (child as Track).data.start_timestep <= currentFrameIndex.value &&
-      (child as Track).data.end_timestep >= currentFrameIndex.value
+      (child as Track).data.start_frame <= currentFrameIndex.value &&
+      (child as Track).data.end_frame >= currentFrameIndex.value
     )
       return true;
     return false;
@@ -93,8 +91,8 @@ License: CECILL-C
         //sort by view -- we know there is only one tracklet per view
         const orderMap = new Map(Object.keys(mediaViews.value).map((val, index) => [val, index]));
         res =
-          (orderMap.get(a.data.view_ref.name) ?? Infinity) -
-          (orderMap.get(b.data.view_ref.name) ?? Infinity);
+          (orderMap.get(a.data.view_name) ?? Infinity) -
+          (orderMap.get(b.data.view_name) ?? Infinity);
       } else {
         if ("name" in a.data && "name" in b.data) {
           res = String(a.data["name"]).localeCompare(String(b.data["name"]));
@@ -126,7 +124,9 @@ License: CECILL-C
     }
     return nextHighlightState;
   });
-  const isVisible = $derived(entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false);
+  const isVisible = $derived(
+    entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false,
+  );
   const hiddenTrack = $derived(isVideoEntity(entity) ? entityDisplayControl.hidden : false);
 
   const features = $derived.by(() => {
@@ -148,8 +148,8 @@ License: CECILL-C
       childAnns = entity.ui.childs ?? [];
     }
     for (const ann of childAnns) {
-      if (ann.data.entity_ref.id !== entity.id && !(ann.data.entity_ref.id in feats)) {
-        const subentity = currentEntities.find((ent) => ent.id === ann.data.entity_ref.id);
+      if (ann.data.entity_id !== entity.id && !(ann.data.entity_id in feats)) {
+        const subentity = currentEntities.find((ent) => ent.id === ann.data.entity_id);
         if (subentity) {
           feats[subentity.id] = createFeature(subentity, currentSchema, subentity.table_info.name);
         }
@@ -157,7 +157,7 @@ License: CECILL-C
       feats[ann.id] = createFeature(
         ann,
         currentSchema,
-        `${ann.table_info.name}.${ann.data.view_ref.name}`,
+        `${ann.table_info.name}.${ann.data.view_name}`,
       );
     }
     feats[entity.id] = createFeature(entity, currentSchema, entity.table_info.name);
@@ -174,7 +174,7 @@ License: CECILL-C
       const highlightedBoxesByView = entity.ui.childs?.filter(
         (ann) =>
           (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)) &&
-          ann.data.view_ref.name === view,
+          ann.data.view_name === view,
       );
       if (highlightedBoxesByView) {
         const preferredBox =
@@ -244,14 +244,16 @@ License: CECILL-C
             (child && ann.id === child.id) ||
             track_childs_ids.has(ann.id) ||
             (!child && getTopEntity(ann).id === entity.id);
-          if (
-            shouldUpdate
-          ) {
+          if (shouldUpdate) {
             const updated = toggleAnnotationDisplayControl(ann, displayControlProperty, new_value);
             if (updated !== ann) hasChanged = true;
             return updated;
           } else if (other_anns_value !== null) {
-            const updated = toggleAnnotationDisplayControl(ann, displayControlProperty, other_anns_value);
+            const updated = toggleAnnotationDisplayControl(
+              ann,
+              displayControlProperty,
+              other_anns_value,
+            );
             if (updated !== ann) hasChanged = true;
             return updated;
           }
@@ -306,7 +308,6 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    setEntityDisplayControl({ open: true });
     const newFrameIndex = highlightEntity(entity.id, highlightState === "self");
     if (newFrameIndex != currentFrameIndex.value) {
       currentFrameIndex.value = newFrameIndex;
@@ -333,7 +334,6 @@ License: CECILL-C
   const toggleCardOpen = () => {
     setEntityDisplayControl({ open: !(entityDisplayControl.open ?? false) });
   };
-
 </script>
 
 <Card.Root
@@ -408,7 +408,7 @@ License: CECILL-C
           class={cn("truncate text-[13px] font-semibold leading-tight transition-colors", {
             "text-foreground": highlightState !== "none",
             "text-muted-foreground":
-              highlightState === "none" && selectedTool.value.type === ToolType.Fusion,
+              highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
           })}
           title="{entity.table_info.base_schema} ({entity.id})"
         >
@@ -471,7 +471,7 @@ License: CECILL-C
             Properties
           </h4>
           <div class="flex items-center gap-1">
-            {#if selectedTool.value.type !== ToolType.Fusion}
+            {#if selectedTool.value?.type !== ToolType.Fusion}
               <IconButton
                 tooltipContent="Edit properties"
                 selected={entityDisplayControl.editing}

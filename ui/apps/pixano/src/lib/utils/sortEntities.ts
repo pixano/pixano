@@ -11,7 +11,7 @@ const getFirstFrame = (track: Entity): number => {
     ? Math.min(
         ...track.ui.childs
           .filter((ann) => ann.is_type(BaseSchema.Tracklet))
-          .map((trk) => (trk as Track).data.start_timestep),
+          .map((trk) => (trk as Track).data.start_frame),
       )
     : Infinity;
 };

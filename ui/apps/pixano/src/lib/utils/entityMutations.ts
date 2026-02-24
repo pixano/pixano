@@ -4,22 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { ToolType } from "$lib/tools";
-import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
-import {
-  Annotation,
-  BaseSchema,
-  BBox,
-  Entity,
-  Keypoints,
-  Mask,
-  Track,
-  isVideoEntity,
-  WorkspaceType,
-} from "$lib/types/dataset";
-import { ShapeType, type SaveShape, type Shape } from "$lib/types/shapeTypes";
 import { datasetSchema, sourcesStore } from "$lib/stores/appStores.svelte";
-
 import {
   annotations,
   entities,
@@ -27,20 +12,32 @@ import {
   newShape,
   selectedTool,
 } from "$lib/stores/workspaceStores.svelte";
-import { saveTo } from "$lib/utils/saveItemUtils";
-import { isPolygonSvgMetadata, isPolygonPointsMetadata } from "$lib/utils/maskUtils";
-import { sortByFrameIndex } from "$lib/utils/videoUtils";
+import { ToolType } from "$lib/tools";
 import {
-  getValidationSchemaAndFormInputs,
+  Annotation,
+  BaseSchema,
+  BBox,
+  Entity,
+  isVideoEntity,
+  Keypoints,
+  Mask,
+  Track,
+  WorkspaceType,
+} from "$lib/types/dataset";
+import { ShapeType, type SaveShape, type Shape } from "$lib/types/shapeTypes";
+import type { EntityProperties } from "$lib/types/workspace";
+import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
+import { findOrCreateSubAndTopEntities } from "$lib/utils/entityOperations";
+import {
   getEntityProperties,
+  getValidationSchemaAndFormInputs,
   mapShapeInputsToFeatures,
 } from "$lib/utils/featureMapping";
-import {
-  findOrCreateSubAndTopEntities,
-} from "$lib/utils/entityOperations";
-import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
 import { clearHighlighting, highlightEntity } from "$lib/utils/highlightOperations";
-import type { EntityProperties } from "$lib/types/workspace";
+import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
+import { isPolygonPointsMetadata, isPolygonSvgMetadata } from "$lib/utils/maskUtils";
+import { saveTo } from "$lib/utils/saveItemUtils";
+import { sortByFrameIndex } from "$lib/utils/videoUtils";
 
 function listsAreEqual(list1: string[], list2: string[]): boolean {
   if (list1.length !== list2.length) {
@@ -59,7 +56,7 @@ function listsAreEqual(list1: string[], list2: string[]): boolean {
 const deleteEntityFull = (entity: Entity) => {
   saveTo("delete", entity);
   //delete eventual sub entities
-  const subentities = entities.value.filter((ent) => ent.data.parent_ref.id === entity.id);
+  const subentities = entities.value.filter((ent) => ent.data.parent_id === entity.id);
   for (const subent of subentities) {
     saveTo("delete", subent);
   }
@@ -68,10 +65,10 @@ const deleteEntityFull = (entity: Entity) => {
   }
   const subent_ids = subentities.map((subent) => subent.id);
   annotations.update((oldObjects) =>
-    oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_ref.id)),
+    oldObjects.filter((ann) => ![entity.id, ...subent_ids].includes(ann.data.entity_id)),
   );
   entities.update((oldObjects) =>
-    oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_ref.id !== entity.id),
+    oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_id !== entity.id),
   );
 
   //in case we are in fusion mode, remove from to_fuse / forbids
@@ -89,6 +86,24 @@ const deleteEntityFull = (entity: Entity) => {
  * Shared across Image, EntityLinking, and VQA workspace variants.
  */
 export const applyNewShapeEditing = (shape: Shape): void => {
+  const isSelectionOnlyHighlight =
+    shape.status === "editing" && shape.type === ShapeType.none && shape.highlighted === "self";
+
+  if (isSelectionOnlyHighlight) {
+    let targetEntityId = shape.top_entity_id ?? "";
+    if (!targetEntityId && shape.shapeId) {
+      const selectedAnnotation = annotations.value.find((ann) => ann.id === shape.shapeId);
+      if (selectedAnnotation) {
+        targetEntityId = getTopEntity(selectedAnnotation).id;
+      }
+    }
+    if (targetEntityId) {
+      highlightEntity(targetEntityId, false);
+    }
+    newShape.value = { status: "none" };
+    return;
+  }
+
   annotations.update((objects) => updateExistingAnnotation(objects, shape));
   newShape.value = { status: "none" };
 };
@@ -156,12 +171,12 @@ export const onDeleteTrackItemClick = (
             (fann) => !anns_to_del_ids.includes(fann.id),
           );
           //if ann_to_del first/last of track, need to "resize" (childs should be sorted)
-          if (itemFrameIndex === track.data.start_timestep) {
-            (ann as Track).data.start_timestep = (ann as Track).ui.childs[0].ui.frame_index!;
+          if (itemFrameIndex === track.data.start_frame) {
+            (ann as Track).data.start_frame = (ann as Track).ui.childs[0].ui.frame_index!;
             changedTrack = true;
           }
-          if (itemFrameIndex === track.data.end_timestep) {
-            (ann as Track).data.end_timestep = (ann as Track).ui.childs[
+          if (itemFrameIndex === track.data.end_frame) {
+            (ann as Track).data.end_frame = (ann as Track).ui.childs[
               (ann as Track).ui.childs.length - 1
             ].ui.frame_index!;
             changedTrack = true;
@@ -173,7 +188,7 @@ export const onDeleteTrackItemClick = (
   );
   entities.update((ents) =>
     ents.map((ent) => {
-      if (isVideoEntity(ent) && ent.id === track.data.entity_ref.id) {
+      if (isVideoEntity(ent) && ent.id === track.data.entity_id) {
         ent.ui.childs = ent.ui.childs?.filter((ann) => !anns_to_del_ids.includes(ann.id));
       }
       return ent;
@@ -186,7 +201,7 @@ export const onDeleteTrackItemClick = (
 
   if (changedTrack) {
     const pixSource = getPixanoSource(sourcesStore);
-    track.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+    track.data.source_id = pixSource.id;
     saveTo("update", track);
   }
 };
@@ -230,8 +245,8 @@ export const relink = (
 
   const shapeInfo: SaveShape = {
     status: "saving",
-    viewRef: child.data.view_ref,
-    itemId: child.data.item_ref.id,
+    viewRef: { name: child.data.view_name, id: child.data.frame_id },
+    itemId: child.data.item_id,
     imageHeight: 0,
     imageWidth: 0,
   } as SaveShape;
@@ -280,9 +295,9 @@ export const relink = (
         ent.ui.childs?.push(...to_move_anns);
         //ent.ui.childs?.sort (??)
       }
-      //relink sub ents (change sub entity parent_ref)
+      //relink sub ents (change sub entity parent_id)
       if (to_relink.includes(ent)) {
-        ent.data.parent_ref = { id: topEntity.id, name: topEntity.table_info.name };
+        ent.data.parent_id = topEntity.id;
       }
       return ent;
     });
@@ -297,7 +312,7 @@ export const relink = (
   annotations.update((anns: Annotation[]) => {
     let new_anns = anns.map((ann) => {
       if (to_relink.includes(ann)) {
-        ann.data.entity_ref = { id: topEntity.id, name: topEntity.table_info.name };
+        ann.data.entity_id = topEntity.id;
         ann.ui.top_entities = []; //reset top_entities
       }
       if (deleteTrack && ann.is_type(BaseSchema.Tracklet)) {
@@ -311,27 +326,26 @@ export const relink = (
           ].sort(sortByFrameIndex);
 
           //target track range may change : union of current & targets
-          (ann as Track).data.start_timestep = Math.min(
-            (ann as Track).data.start_timestep,
-            (child as Track).data.start_timestep,
-            ...to_fuse_tracks.map((fann) => (fann as Track).data.start_timestep),
+          (ann as Track).data.start_frame = Math.min(
+            (ann as Track).data.start_frame,
+            (child as Track).data.start_frame,
+            ...to_fuse_tracks.map((fann) => (fann as Track).data.start_frame),
           );
-          (ann as Track).data.end_timestep = Math.max(
-            (ann as Track).data.end_timestep,
-            (child as Track).data.end_timestep,
-            ...to_fuse_tracks.map((fann) => (fann as Track).data.end_timestep),
+          (ann as Track).data.end_frame = Math.max(
+            (ann as Track).data.end_frame,
+            (child as Track).data.end_frame,
+            ...to_fuse_tracks.map((fann) => (fann as Track).data.end_frame),
           );
           //timestamps... TODO!
-          (ann as Track).data.start_timestamp = (ann as Track).data.start_timestep;
-          (ann as Track).data.end_timestamp = (ann as Track).data.end_timestep;
+          (ann as Track).data.start_timestamp = (ann as Track).data.start_frame;
+          (ann as Track).data.end_timestamp = (ann as Track).data.end_frame;
         }
       }
       return ann;
     });
     //remove fused, and origin (=child) if deleteTrack
     new_anns = new_anns.filter(
-      (ann) =>
-        !to_fuse_tracks_ids.includes(ann.id) && (deleteTrack ? ann.id !== child.id : true),
+      (ann) => !to_fuse_tracks_ids.includes(ann.id) && (deleteTrack ? ann.id !== child.id : true),
     );
     return new_anns;
   });
@@ -364,6 +378,25 @@ export const relink = (
 };
 
 export const updateExistingAnnotation = (objects: Annotation[], newShape: Shape): Annotation[] => {
+  const isSelectionOnlyHighlight =
+    newShape.status === "editing" &&
+    newShape.type === ShapeType.none &&
+    newShape.highlighted === "self";
+
+  if (isSelectionOnlyHighlight) {
+    let targetEntityId = newShape.top_entity_id ?? "";
+    if (!targetEntityId && newShape.shapeId) {
+      const selectedAnnotation = objects.find((ann) => ann.id === newShape.shapeId);
+      if (selectedAnnotation) {
+        targetEntityId = getTopEntity(selectedAnnotation).id;
+      }
+    }
+    if (targetEntityId) {
+      highlightEntity(targetEntityId, false);
+    }
+    return objects;
+  }
+
   if (
     newShape.status === "editing" &&
     !objects.find((ann) => ann.id === newShape.shapeId) &&
@@ -409,8 +442,12 @@ export const updateExistingAnnotation = (objects: Annotation[], newShape: Shape)
           ann.data.inference_metadata = {
             ...ann.data.inference_metadata,
             geometry_mode: "polygon",
-            polygon_svg: isPolygonSvgMetadata(candidateMetadata) ? candidateMetadata.polygon_svg : [],
-            polygon_points: isPolygonPointsMetadata(candidateMetadata) ? candidateMetadata.polygon_points : [],
+            polygon_svg: isPolygonSvgMetadata(candidateMetadata)
+              ? candidateMetadata.polygon_svg
+              : [],
+            polygon_points: isPolygonPointsMetadata(candidateMetadata)
+              ? candidateMetadata.polygon_points
+              : [],
           };
         }
         changed = true;
@@ -427,7 +464,7 @@ export const updateExistingAnnotation = (objects: Annotation[], newShape: Shape)
       }
       if (changed) {
         const pixSource = getPixanoSource(sourcesStore);
-        ann.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+        ann.data.source_id = pixSource.id;
         saveTo("update", ann);
       }
     }

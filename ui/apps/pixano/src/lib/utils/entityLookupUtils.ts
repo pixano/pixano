@@ -12,13 +12,12 @@ import {
   WorkspaceType,
   type BBox,
   type DatasetSchema,
-  type Image,
   type Mask,
   type AnnotationThumbnail,
-  type SequenceFrame,
 } from "$lib/types/dataset";
 
 import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
+import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { entities } from "$lib/stores/workspaceStores.svelte";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
@@ -36,9 +35,9 @@ export const getTopEntityFromList = (
   let entity: Entity | undefined;
   if (obj.table_info.group === "entities") {
     entity = obj as Entity;
-    while (entity && entity.data.parent_ref.id !== "") {
+    while (entity && entity.data.parent_id !== "") {
       entity = entitiesList.find(
-        (parent_entity) => entity && parent_entity.id === entity.data.parent_ref.id,
+        (parent_entity) => entity && parent_entity.id === entity.data.parent_id,
       );
     }
     if (!entity) {
@@ -51,11 +50,11 @@ export const getTopEntityFromList = (
       return ann.ui.top_entities[0];
     }
     ann.ui.top_entities = [];
-    entity = entitiesList.find((entity) => entity.id === ann.data.entity_ref.id);
-    while (entity && entity.data.parent_ref.id !== "") {
+    entity = entitiesList.find((entity) => entity.id === ann.data.entity_id);
+    while (entity && entity.data.parent_id !== "") {
       ann.ui.top_entities.unshift(entity);
       entity = entitiesList.find(
-        (parent_entity) => entity && parent_entity.id === entity.data.parent_ref.id,
+        (parent_entity) => entity && parent_entity.id === entity.data.parent_id,
       );
     }
     if (!entity) {
@@ -86,7 +85,7 @@ export const getPixanoSource = (srcStore: { value: Source[]; update(fn: (prev: S
       data: { name: "Pixano", kind: "other", metadata: {} },
     });
     srcStore.update((sources) => {
-      sources.push(pixanoSource!);
+      sources.push(pixanoSource);
       return sources;
     });
     //save it
@@ -95,10 +94,13 @@ export const getPixanoSource = (srcStore: { value: Source[]; update(fn: (prev: S
   return pixanoSource;
 };
 
-export const getAnnotationsToPreAnnotate = (objects: Annotation[]): Annotation[] =>
-  objects.filter(
-    (object) => object.data.source_ref.name === PRE_ANNOTATION && !object.ui.review_state,
-  );
+export const getAnnotationsToPreAnnotate = (objects: Annotation[]): Annotation[] => {
+  const sources = sourcesStore.value;
+  return objects.filter((object) => {
+    const source = sources.find((s) => s.id === object.data.source_id);
+    return source?.data.name === PRE_ANNOTATION && !object.ui.review_state;
+  });
+};
 
 export const getTable = (
   dataset_schema: DatasetSchema,
@@ -164,7 +166,7 @@ export const defineAnnotationThumbnail = (
     frame_index = mask.ui.frame_index;
   }
 
-  const view_name = object.data.view_ref.name;
+  const view_name = object.data.view_name;
   if (!coords || !view_name || !metas) return null;
   if (!(view_name in views)) return null;
   const candidateView = views[view_name];
@@ -174,12 +176,12 @@ export const defineAnnotationThumbnail = (
     metas.type === WorkspaceType.VIDEO
       ? (() => {
           if (frame_index === undefined || !Array.isArray(candidateView)) return null;
-          const frame = (candidateView as SequenceFrame[])[frame_index];
+          const frame = (candidateView)[frame_index];
           return frame?.data ?? null;
         })()
       : (() => {
           if (Array.isArray(candidateView)) return null;
-          return (candidateView as Image).data;
+          return (candidateView).data;
         })();
 
   if (!viewData?.url) return null;

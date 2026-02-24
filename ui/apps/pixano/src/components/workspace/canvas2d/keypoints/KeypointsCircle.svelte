@@ -8,9 +8,9 @@ License: CECILL-C
   import type Konva from "konva";
   import { Circle } from "svelte-konva";
 
+  import LabelTag from "../LabelTag.svelte";
   import type { KeypointVisibility } from "$lib/types/geometry";
   import type { KeypointVertex } from "$lib/types/shapeTypes";
-  import LabelTag from "../LabelTag.svelte";
 
   interface Props {
     zoomFactor: number;
@@ -21,6 +21,7 @@ License: CECILL-C
     color?: string;
     opacity?: number;
     onPointDragMove: (pointId: number, event: Konva.KonvaEventObject<DragEvent>) => void;
+    onPointDragEnd?: (pointId: number, event: Konva.KonvaEventObject<DragEvent>) => void;
     onPointStateChange: (pointId: number, value: KeypointVisibility) => void;
     findPointCoordinate?: (point: number, type: "x" | "y") => number;
   }
@@ -34,6 +35,7 @@ License: CECILL-C
     color = "rgb(0,128,0)",
     opacity = 1,
     onPointDragMove,
+    onPointDragEnd = () => {},
     onPointStateChange,
     findPointCoordinate = (point) => point,
   }: Props = $props();
@@ -126,7 +128,8 @@ License: CECILL-C
   radius={4 / zoomFactor}
   {fill}
   stroke="white"
-  strokeWidth={1 / zoomFactor}
+  strokeWidth={1}
+  strokeScaleEnabled={false}
   shadowForStrokeEnabled={false}
   id={`keypoint-${keypointsId}-${vertexIndex}`}
   {draggable}
@@ -135,6 +138,7 @@ License: CECILL-C
   scaleX={hoverScale}
   scaleY={hoverScale}
   ondragmove={(e: Konva.KonvaEventObject<DragEvent>) => onPointDragMove(vertexIndex, e)}
+  ondragend={(e: Konva.KonvaEventObject<DragEvent>) => onPointDragEnd(vertexIndex, e)}
   onmouseover={onMouseOver}
   onmouseleave={onMouseLeave}
   onclick={onCircleClick}

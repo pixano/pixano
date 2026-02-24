@@ -76,11 +76,12 @@ License: CECILL-C
         )}
         {isPlaybackActive}
       >
+        {@const bounds = findRectBoundaries(keypointStructure.graph.vertices)}
         <Rect
-          x={findRectBoundaries(keypointStructure.graph.vertices).x - 10 / zoomFactor}
-          y={findRectBoundaries(keypointStructure.graph.vertices).y - 10 / zoomFactor}
-          width={findRectBoundaries(keypointStructure.graph.vertices).width + 20 / zoomFactor}
-          height={findRectBoundaries(keypointStructure.graph.vertices).height + 20 / zoomFactor}
+          x={bounds.x - 10 / zoomFactor}
+          y={bounds.y - 10 / zoomFactor}
+          width={bounds.width + 20 / zoomFactor}
+          height={bounds.height + 20 / zoomFactor}
           fill={colorScale(
             (keypointStructure.ui?.top_entities ?? []).length > 0
               ? (keypointStructure.ui?.top_entities ?? [])[0].id

@@ -71,10 +71,10 @@ License: CECILL-C
         nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
       if (baseSchema === BaseSchema.Tracklet)
         nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
-      //keep (start/end_timestep/stamp)
+      //keep (start/end_frame/stamp)
       nonFeatsFields = removeFields(nonFeatsFields, [
-        "start_timestep",
-        "end_timestep",
+        "start_frame",
+        "end_frame",
         "start_timestamp",
         "end_timestamp",
       ]);

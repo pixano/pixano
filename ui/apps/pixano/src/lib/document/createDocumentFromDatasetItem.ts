@@ -21,11 +21,6 @@ import type {
 // We define a minimal structural type here so @pixano/document stays
 // framework-agnostic and doesn't import @pixano/core directly.
 
-interface DatasetItemRef {
-  id: string;
-  name: string;
-}
-
 interface DatasetItemBaseData {
   id: string;
   table_info: { name: string; group: string; base_schema: string };
@@ -51,11 +46,6 @@ function toTableInfo(raw: { name: string; group: string; base_schema: string }):
   return { name: raw.name, group: raw.group, base_schema: raw.base_schema };
 }
 
-function extractRef(data: Record<string, unknown>, refKey: string): DatasetItemRef {
-  const ref = data[refKey] as DatasetItemRef | undefined;
-  return ref ?? { id: "", name: "" };
-}
-
 function makeItemNode(raw: DatasetItemBaseData): DocumentNode {
   return {
     id: toNodeId(raw.id),
@@ -75,15 +65,15 @@ function makeAnnotationNode(raw: DatasetItemBaseData): AnnotationNode {
     data: raw.data,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
-    itemRef: extractRef(raw.data, "item_ref"),
-    viewRef: extractRef(raw.data, "view_ref"),
-    entityRef: extractRef(raw.data, "entity_ref"),
-    sourceRef: extractRef(raw.data, "source_ref"),
+    itemRef: { id: (raw.data.item_id as string) || "", name: "item" },
+    viewRef: { name: (raw.data.view_name as string) || "", id: (raw.data.frame_id as string) || "" },
+    entityRef: { id: (raw.data.entity_id as string) || "", name: "" },
+    sourceRef: { id: (raw.data.source_id as string) || "", name: "" },
   };
 }
 
 function makeEntityNode(raw: DatasetItemBaseData): EntityNode {
-  const parentRef = extractRef(raw.data, "parent_ref");
+  const parentId = (raw.data.parent_id as string) || "";
   return {
     id: toNodeId(raw.id),
     nodeType: "entity",
@@ -91,8 +81,8 @@ function makeEntityNode(raw: DatasetItemBaseData): EntityNode {
     data: raw.data,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
-    itemRef: extractRef(raw.data, "item_ref"),
-    parentRef: parentRef.id ? parentRef : undefined,
+    itemRef: { id: (raw.data.item_id as string) || "", name: "item" },
+    parentRef: parentId ? { id: parentId, name: "" } : undefined,
   };
 }
 
@@ -189,14 +179,14 @@ function buildTimelines(
     if (view.tableInfo.base_schema === "SequenceFrame") {
       const group = view.tableInfo.name;
       if (!sequenceGroups.has(group)) sequenceGroups.set(group, []);
-      sequenceGroups.get(group)!.push(view);
+      sequenceGroups.get(group).push(view);
     }
   }
 
   for (const [viewName, frames] of sequenceGroups) {
     const frameCount = frames.length;
 
-    // Build tracklet ranges from annotations referencing this view
+    // Build track ranges from annotations referencing this view
     const trackletRanges = new Map<NodeId, TimelineRange>();
     const entityFrames = new Map<NodeId, number[]>();
 
@@ -206,7 +196,7 @@ function buildTimelines(
         const frameIndex = ann.data["frame_index"] as number | undefined;
         if (frameIndex !== undefined) {
           if (!entityFrames.has(entityId)) entityFrames.set(entityId, []);
-          entityFrames.get(entityId)!.push(frameIndex);
+          entityFrames.get(entityId).push(frameIndex);
         }
       }
     }
@@ -269,11 +259,11 @@ export function createDocumentFromDatasetItem(
       if (frame) coordinateFrames.set(viewNode.id, frame);
 
       // View → item relation
-      const itemRef = extractRef(raw.data, "item_ref");
-      if (itemRef.id) {
+      const itemId = (raw.data.item_id as string) || "";
+      if (itemId) {
         relations.push({
           sourceId: viewNode.id,
-          targetId: toNodeId(itemRef.id),
+          targetId: toNodeId(itemId),
           type: "item_ref",
         });
       }

@@ -12,7 +12,7 @@ License: CECILL-C
     TextView,
     type Shape,
     type TextSpanAttributes,
-    type TextSpanTypeWithViewRef,
+    type TextSpanTypeWithViewName,
   } from "$lib/ui";
   import { TEMPORARY_TEXT_SPAN_ID } from "./constants";
 
@@ -43,27 +43,31 @@ License: CECILL-C
     onNewShapeChange
   }: Props = $props();
 
-  let textSpanAttributes: TextSpanTypeWithViewRef | null = $state(null);
+  let textSpanAttributes: TextSpanTypeWithViewName | null = $state(null);
 
   let spansByViewId = $derived(groupTextSpansByViewId(textSpans));
 
   const onTagText = () => {
     if (!textSpanAttributes) return;
 
-    const { view_ref, ...textSpanAttrs } = textSpanAttributes;
+    const { view_name, ...textSpanAttrs } = textSpanAttributes;
 
     //temporary TextSpan to keep it highlighted while filling form
     const tempTextSpan = new TextSpan({
       id: TEMPORARY_TEXT_SPAN_ID,
       data: {
-        spans_start: textSpanAttributes?.spans_start as number[],
-        spans_end: textSpanAttributes?.spans_end as number[],
-        mention: textSpanAttributes?.mention as string,
+        spans_start: textSpanAttributes?.spans_start,
+        spans_end: textSpanAttributes?.spans_end,
+        mention: textSpanAttributes?.mention,
         inference_metadata: {},
-        item_ref: { id: selectedItemId, name: "item" },
-        entity_ref: { id: "", name: "" },
-        view_ref: textSpanAttributes?.view_ref,
-        source_ref: { id: "", name: "" },
+        item_id: selectedItemId,
+        entity_id: "",
+        view_name: textSpanAttributes?.view_name ?? "",
+        frame_id: "",
+        source_id: "",
+        frame_index: -1,
+        tracklet_id: "",
+        entity_dynamic_state_id: "",
       },
       table_info: { name: "not_a_table", group: "annotations", base_schema: BaseSchema.TextSpan },
       created_at: "",
@@ -75,7 +79,7 @@ License: CECILL-C
     // Changing newShape opens the window for customizing and saving a new
     // anotation in the object inspector
     onNewShapeChange?.({
-      viewRef: view_ref,
+      viewRef: { name: view_name, id: "" },
       itemId: selectedItemId,
       imageWidth: 0,
       imageHeight: 0,

@@ -40,13 +40,13 @@ License: CECILL-C
             if (
               ann.ui.top_entities &&
               ann.ui.top_entities.length > 0 &&
-              ann.data.entity_ref.id !== ann.ui.top_entities[0].id
+              ann.data.entity_id !== ann.ui.top_entities[0].id
             ) {
               //TODO: if sub entities ! (then we should change top_entities[1] to reference)
               console.error("ERROR: Sub entities currently not managed for fusion.", ann);
               return ann;
             }
-            ann.data.entity_ref = { id: reference.id, name: reference.table_info.name };
+            ann.data.entity_id = reference.id;
             ann.ui.top_entities = [reference];
             saveTo("update", ann);
           }

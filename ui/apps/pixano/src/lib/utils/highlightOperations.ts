@@ -4,16 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
+import { annotations, entities, newShape, selectedTool } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
 import { BaseSchema, Track } from "$lib/types/dataset";
-
-import {
-  annotations,
-  entities,
-  newShape,
-  selectedTool,
-} from "$lib/stores/workspaceStores.svelte";
-import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
 
 export const scrollIntoView = (entity_id: string) => {
@@ -35,38 +29,70 @@ export const scrollIntoView = (entity_id: string) => {
 export const highlightEntity = (entity_id: string, isHighlighted: boolean): number => {
   let trackStart = lastFrameIndex.value + 1;
   let trackEnd = 0;
-  annotations.update((objects) =>
-    objects.map((ann) => {
-      if (selectedTool.value.type === ToolType.Pan || selectedTool.value.type === ToolType.Fusion) {
-        ann.ui.displayControl = {
-          ...ann.ui.displayControl,
-          highlighted: isHighlighted ? "all" : getTopEntity(ann).id === entity_id ? "self" : "none",
-        };
+  const shouldUpdateDisplayControl =
+    selectedTool.value.type === ToolType.Pan || selectedTool.value.type === ToolType.Fusion;
+
+  annotations.update((objects) => {
+    if (!shouldUpdateDisplayControl) {
+      for (const ann of objects) {
+        const topEntityId = getTopEntity(ann).id;
+        if (topEntityId === entity_id && ann.is_type(BaseSchema.Tracklet)) {
+          trackStart = Math.min(trackStart, (ann as Track).data.start_frame);
+          trackEnd = Math.max(trackEnd, (ann as Track).data.end_frame);
+        }
       }
-      if (getTopEntity(ann).id === entity_id && ann.is_type(BaseSchema.Tracklet)) {
-        trackStart = Math.min(trackStart, (ann as Track).data.start_timestep);
-        trackEnd = Math.max(trackEnd, (ann as Track).data.end_timestep);
+      return objects;
+    }
+
+    const nextObjects = [...objects];
+    let hasChanged = false;
+
+    for (let i = 0; i < objects.length; i += 1) {
+      const ann = objects[i];
+      const topEntityId = getTopEntity(ann).id;
+
+      if (topEntityId === entity_id && ann.is_type(BaseSchema.Tracklet)) {
+        trackStart = Math.min(trackStart, (ann as Track).data.start_frame);
+        trackEnd = Math.max(trackEnd, (ann as Track).data.end_frame);
       }
-      return ann;
-    }),
-  );
+
+      const nextHighlight = isHighlighted ? "all" : topEntityId === entity_id ? "self" : "none";
+      if (ann.ui.displayControl.highlighted === nextHighlight) {
+        continue;
+      }
+
+      ann.ui.displayControl = {
+        ...ann.ui.displayControl,
+        highlighted: nextHighlight,
+      };
+      nextObjects[i] = ann;
+      hasChanged = true;
+    }
+
+    return hasChanged ? nextObjects : objects;
+  });
   // Auto-expand the entity card and scroll it into view
   if (!isHighlighted) {
     entities.update((ents) => {
       let hasChanged = false;
-      const nextEntities = ents.map((ent) => {
-        if (ent.id === entity_id) {
-          if (!ent.ui.displayControl.open) {
-            hasChanged = true;
-            ent.ui.displayControl = { ...ent.ui.displayControl, open: true };
-          }
-        } else if (ent.ui.displayControl.open) {
+      for (const ent of ents) {
+        const shouldOpen = ent.id === entity_id;
+        if ((ent.ui.displayControl.open ?? false) !== shouldOpen) {
           hasChanged = true;
-          ent.ui.displayControl = { ...ent.ui.displayControl, open: false };
+          break;
         }
+      }
+
+      if (!hasChanged) return ents;
+
+      return ents.map((ent) => {
+        const shouldOpen = ent.id === entity_id;
+        if ((ent.ui.displayControl.open ?? false) === shouldOpen) {
+          return ent;
+        }
+        ent.ui.displayControl = { ...ent.ui.displayControl, open: shouldOpen };
         return ent;
       });
-      return hasChanged ? nextEntities : ents;
     });
     scrollIntoView(entity_id);
   }

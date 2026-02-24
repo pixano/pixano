@@ -17,9 +17,10 @@ type VideoControls = {
 
 export const imagesPerView = reactiveStore<LoadedImagesPerView>({});
 export const imagesPerViewBuffer = reactiveStore<Record<string, LoadedImage[]>>({});
-export const imagesFilesUrlsByFrame = reactiveStore<Record<string, { id: string; url: string } | undefined>[]>([]);
 export const lastFrameIndex = reactiveStore<number | undefined>(undefined);
 export const currentFrameIndex = reactiveStore<number>(0);
+export const currentItemId = reactiveStore<string>("");
+export const videoViewNames = reactiveStore<string[]>([]);
 export const videoControls = reactiveStore<VideoControls>({
   zoomLevel: [100],
   intervalId: 0,

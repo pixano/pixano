@@ -31,7 +31,7 @@ License: CECILL-C
   import {
     defineCreatedAnnotation,
     findOrCreateSubAndTopEntities,
-    getFrameIndexFromViewRef,
+    getFrameIndex,
   } from "$lib/utils/entityOperations";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
   import {
@@ -139,9 +139,9 @@ License: CECILL-C
         }
         for (const tr_mask of tracking_masks) {
           //fill some missing info in tracking masks
-          tr_mask.data.entity_ref = newAnnotation.data.entity_ref;
+          tr_mask.data.entity_id = newAnnotation.data.entity_id;
           tr_mask.table_info = newAnnotation.table_info;
-          const tr_frame_idx = getFrameIndexFromViewRef(tr_mask.data.view_ref);
+          const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
           tr_mask.ui = { ...newAnnotation.ui, frame_index: tr_frame_idx };
           topEntity.ui.childs?.push(tr_mask);
           if (subEntity) subEntity.ui.childs?.push(tr_mask);
@@ -154,9 +154,9 @@ License: CECILL-C
       const candidate_tracks = topEntity.ui.childs?.filter(
         (ann) =>
           ann.is_type(BaseSchema.Tracklet) &&
-          ann.data.view_ref.name === newShape.value.viewRef.name &&
-          (ann as Track).data.start_timestep <= currentFrameIndex.value &&
-          (ann as Track).data.end_timestep >= lastFrameIndex,
+          ann.data.view_name === newShape.value.viewRef.name &&
+          (ann as Track).data.start_frame <= currentFrameIndex.value &&
+          (ann as Track).data.end_frame >= lastFrameIndex,
       );
       if (candidate_tracks && candidate_tracks.length === 1) {
         const candidate_track = candidate_tracks[0] as Track;
@@ -177,8 +177,8 @@ License: CECILL-C
           imageHeight: 0, //unused from SaveShapeBase
           viewRef: { id: "", name: newShape.value.viewRef.name },
           attrs: {
-            start_timestep: currentFrameIndex.value,
-            end_timestep: lastFrameIndex,
+            start_frame: currentFrameIndex.value,
+            end_frame: lastFrameIndex,
             //TODO timestamp management...
             start_timestamp: currentFrameIndex.value,
             end_timestamp: lastFrameIndex,

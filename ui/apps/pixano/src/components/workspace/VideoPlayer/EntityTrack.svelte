@@ -77,8 +77,8 @@ License: CECILL-C
   let color = $derived(colorScale.value[1](track.id));
 
   let videoTracks: Track[] = $derived(
-    annotations.value.filter(
-      (ann) => ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id,
+    (track.ui.childs ?? []).filter(
+      (ann) => ann.is_type(BaseSchema.Tracklet),
     ) as Track[],
   );
 
@@ -127,11 +127,11 @@ License: CECILL-C
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
-          ann.data.view_ref.name === viewname &&
+          ann.data.view_name === viewname &&
           ((!ann.is_type(BaseSchema.Tracklet) &&
             getTopEntity(ann).id === track.id &&
             ann.ui.frame_index === frameIndex) ||
-            (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_ref.id === track.id));
+            (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_id === track.id));
         ann.ui.displayControl = {
           ...ann.ui.displayControl,
           highlighted: to_highlight ? "self" : "none",
@@ -162,8 +162,8 @@ License: CECILL-C
       newItemBBox.ui = noStartRefUi;
       newItemBBox.ui.top_entities = top_entities;
       //coords are denormalized: normalize them
-      const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
-        newItemBBox.ui.frame_index!
+      const current_sf = (views[newItemBBox.data.view_name] as SequenceFrame[])[
+        newItemBBox.ui.frame_index
       ];
       const [x, y, w, h] = newItemBBox.data.coords;
       newItemBBox.data.coords = [
@@ -172,17 +172,17 @@ License: CECILL-C
         w / current_sf.data.width,
         h / current_sf.data.height,
       ];
-      newItemBBox.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+      newItemBBox.data.source_id = pixSource.id;
       saveTo("add", newItemBBox);
     }
     const interpolatedKpt = keypoints.find(
       (kpt) =>
-        kpt.ui!.frame_index === currentFrameIndex.value &&
-        videoTrack.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
+        kpt.ui.frame_index === currentFrameIndex.value &&
+        videoTrack.ui.childs.some((ann) => ann.id === kpt.ui.startRef?.id),
     );
     if (interpolatedKpt && interpolatedKpt.ui?.startRef) {
       const keypointsRef = annotations.value.find(
-        (ann) => ann.id === interpolatedKpt.ui?.startRef!.id && ann.is_type(BaseSchema.Keypoints),
+        (ann) => ann.id === interpolatedKpt.ui?.startRef.id && ann.is_type(BaseSchema.Keypoints),
       ) as Keypoints;
       if (keypointsRef) {
         const newItemOrig = structuredClone(keypointsRef);
@@ -194,10 +194,11 @@ License: CECILL-C
         newItemKpt.ui.displayControl = interpolatedKpt.ui.displayControl;
         newItemKpt.id = interpolatedKpt.id;
         newItemKpt.ui.frame_index = interpolatedKpt.ui.frame_index;
-        newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
+        newItemKpt.data.view_name = interpolatedKpt.viewRef.name;
+        newItemKpt.data.frame_id = interpolatedKpt.viewRef.id;
         //coords are denormalized: normalize them (??is that so ? to check)
-        const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
-          interpolatedKpt.ui.frame_index!
+        const current_sf = (views[keypointsRef.data.view_name] as SequenceFrame[])[
+          interpolatedKpt.ui.frame_index
         ];
         const coords = [];
         const states = [];
@@ -210,7 +211,7 @@ License: CECILL-C
         }
         newItemKpt.data.coords = coords;
         newItemKpt.data.states = states;
-        newItemKpt.data.source_ref = { id: pixSource.id, name: pixSource.table_info.name };
+        newItemKpt.data.source_id = pixSource.id;
         saveTo("add", newItemKpt);
       }
     }
@@ -235,16 +236,16 @@ License: CECILL-C
       });
       entities.update((objects) =>
         objects.map((entity) => {
-          if (entity.id === videoTrack.data.entity_ref.id) {
-            if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
-            if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
+          if (entity.id === videoTrack.data.entity_id) {
+            if (newItemBBox) entity.ui.childs = [...entity.ui.childs, newItemBBox];
+            if (newItemKpt) entity.ui.childs = [...entity.ui.childs, newItemKpt];
             entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
           }
           return entity;
         }),
       );
     }
-    onEditKeyItemClick(currentFrameIndex.value, videoTrack.data.view_ref.name);
+    onEditKeyItemClick(currentFrameIndex.value, videoTrack.data.view_name);
   };
 
   //like findNeighborItems, but "better" (return existing neighbors)
@@ -257,7 +258,7 @@ License: CECILL-C
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (videoTrack.ui.childs[mid].ui.frame_index! <= currentFrameIndex.value) {
+      if (videoTrack.ui.childs[mid].ui.frame_index <= currentFrameIndex.value) {
         previousItem = videoTrack.ui.childs[mid];
         low = mid + 1;
       } else {
@@ -266,8 +267,8 @@ License: CECILL-C
       }
     }
     return [
-      previousItem ? previousItem.ui.frame_index! : currentFrameIndex.value,
-      nextItem ? nextItem.ui.frame_index! : currentFrameIndex.value + 1,
+      previousItem ? previousItem.ui.frame_index : currentFrameIndex.value,
+      nextItem ? nextItem.ui.frame_index : currentFrameIndex.value + 1,
     ];
   };
 
@@ -278,7 +279,7 @@ License: CECILL-C
     entities.update((objects) =>
       objects.map((entity) => {
         if (isVideoEntity(entity) && entity.id === track.id) {
-          entity.ui.childs = [...entity.ui.childs!, newOnRight];
+          entity.ui.childs = [...entity.ui.childs, newOnRight];
           entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
         }
         return entity;
@@ -291,11 +292,11 @@ License: CECILL-C
     let previous: number = 0;
     let next: number = lastFrameIndex.value;
     for (const subtrack of videoTracks) {
-      if (subtrack.data.view_ref.name === videoTrack.data.view_ref.name) {
+      if (subtrack.data.view_name === videoTrack.data.view_name) {
         for (const child of subtrack.ui.childs) {
-          if (child.ui.frame_index! < frameIndex && child.ui.frame_index! > previous) {
+          if (child.ui.frame_index < frameIndex && child.ui.frame_index > previous) {
             previous = child.ui.frame_index!;
-          } else if (child.ui.frame_index! > frameIndex && child.ui.frame_index! < next) {
+          } else if (child.ui.frame_index > frameIndex && child.ui.frame_index < next) {
             next = child.ui.frame_index!;
           }
         }

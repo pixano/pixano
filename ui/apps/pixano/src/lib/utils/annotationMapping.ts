@@ -4,27 +4,73 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, WorkspaceType, type BBox, type Entity, type Keypoints, type Mask, type Source } from "$lib/types/dataset";
-import type { KeypointAnnotation } from "$lib/types/shapeTypes";
-import { sourcesStore } from "$lib/stores/appStores.svelte";
-import { isPolygonSvgMetadata, isPolygonPointsMetadata, generateSvgFromMaskRle } from "$lib/utils/maskUtils";
-
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
   HIGHLIGHTED_MASK_STROKE_FACTOR,
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
 } from "$lib/constants/workspaceConstants";
-import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
-import { templates } from "$lib/utils/keyPointsTemplates";
-import type { MView, EntityProperties } from "$lib/types/workspace";
-import { getTopEntity } from "$lib/utils/entityLookupUtils";
+import { sourcesStore } from "$lib/stores/appStores.svelte";
+import {
+  BaseSchema,
+  WorkspaceType,
+  type BBox,
+  type Entity,
+  type Keypoints,
+  type Mask,
+} from "$lib/types/dataset";
 import type { Annotation } from "$lib/types/dataset";
+import type { KeypointAnnotation } from "$lib/types/shapeTypes";
+import type { EntityProperties, MView } from "$lib/types/workspace";
+import { getTopEntity } from "$lib/utils/entityLookupUtils";
+import { templates } from "$lib/utils/keyPointsTemplates";
+import {
+  generateSvgFromMaskRle,
+  isPolygonPointsMetadata,
+  isPolygonSvgMetadata,
+} from "$lib/utils/maskUtils";
+import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
+
+type CachedMaskSvg = {
+  countsRef: Mask["data"]["counts"];
+  height: number;
+  width: number;
+  svg: string[];
+};
+
+const maskSvgCacheById = new Map<string, CachedMaskSvg>();
+
+const getMaskSvgForDisplay = (mask: Mask, metadata: unknown): string[] => {
+  if (isPolygonSvgMetadata(metadata)) {
+    return metadata.polygon_svg;
+  }
+
+  const countsRef = mask.data.counts;
+  const [height = 0, width = 0] = mask.data.size;
+  const cached = maskSvgCacheById.get(mask.id);
+  if (
+    cached &&
+    cached.countsRef === countsRef &&
+    cached.height === height &&
+    cached.width === width
+  ) {
+    return cached.svg;
+  }
+
+  const svg = generateSvgFromMaskRle(countsRef as number[], mask.data.size);
+  maskSvgCacheById.set(mask.id, { countsRef, height, width, svg });
+  return svg;
+};
+
+const isPreAnnotation = (source_id: string): boolean => {
+  const source = sourcesStore.value.find((s) => s.id === source_id);
+  return source?.data.name === PRE_ANNOTATION;
+};
 
 const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   if (!(bbox && bbox.is_type(BaseSchema.BBox))) return null;
 
-  const source = (sourcesStore.value as Source[]).find((src) => src.id === bbox.data.source_ref.id);
+  const source = sourcesStore.value.find((src) => src.id === bbox.data.source_id);
 
   const confidence =
     bbox.data.confidence !== 0.0 &&
@@ -46,9 +92,8 @@ export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined =>
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
   if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl.hidden) return;
-  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.displayControl.highlighted !== "self")
-    return;
-  if (!bbox.data.view_ref.name) return;
+  if (isPreAnnotation(bbox.data.source_id) && bbox.ui.displayControl.highlighted !== "self") return;
+  if (!bbox.data.view_name) return;
   let bbox_ui_coords = bbox.data.coords;
   if (bbox.data.format === "xyxy") {
     bbox_ui_coords = [
@@ -59,7 +104,7 @@ export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined =>
     ];
   }
   if (bbox.data.is_normalized) {
-    const view = views[bbox.data.view_ref.name];
+    const view = views[bbox.data.view_name];
     if (!view) return;
     const image = Array.isArray(view) ? view[0] : view;
     const imageHeight = image.data.height || 1;
@@ -98,14 +143,14 @@ export const mapKeypointsForDisplay = (
 ): KeypointAnnotation | undefined => {
   if (
     !keypoints ||
-    !keypoints.data.view_ref.name ||
+    !keypoints.data.view_name ||
     (keypoints.ui.datasetItemType === WorkspaceType.VIDEO && keypoints.ui.displayControl.hidden)
   )
     return;
   const template = templates.find((t) => t.template_id === keypoints.data.template_id);
   if (!template) return;
 
-  const view = views[keypoints.data.view_ref.name];
+  const view = views[keypoints.data.view_name];
   if (!view) return;
   const image = Array.isArray(view) ? view[0] : view;
   const imageHeight = image.data.height || 1;
@@ -124,30 +169,28 @@ export const mapKeypointsForDisplay = (
   const kptTemplate = {
     id: keypoints.id,
     template_id: keypoints.data.template_id,
-    viewRef: keypoints.data.view_ref,
-    entityRef: keypoints.data.entity_ref,
+    viewRef: { name: keypoints.data.view_name, id: keypoints.data.frame_id },
+    entityRef: { name: "", id: keypoints.data.entity_id },
     graph: { vertices, edges: [...template.graph.edges] },
     vertexMetadata,
     ui: keypoints.ui,
     table_info: keypoints.table_info,
   } as KeypointAnnotation;
-  if ("frame_index" in keypoints.ui) kptTemplate.ui!.frame_index = keypoints.ui.frame_index;
-  if ("top_entities" in keypoints.ui) kptTemplate.ui!.top_entities = keypoints.ui.top_entities;
+  if ("frame_index" in keypoints.ui) kptTemplate.ui.frame_index = keypoints.ui.frame_index;
+  if ("top_entities" in keypoints.ui) kptTemplate.ui.top_entities = keypoints.ui.top_entities;
   return kptTemplate;
 };
 
 export const mapMaskForDisplay = (obj: Mask): Mask | undefined => {
   if (
     obj.is_type(BaseSchema.Mask) &&
-    obj.data.view_ref.name &&
+    obj.data.view_name &&
     !obj.ui.review_state &&
-    !(obj.data.source_ref.name === PRE_ANNOTATION && obj.ui.review_state === "accepted")
+    !(isPreAnnotation(obj.data.source_id) && obj.ui.review_state === "accepted")
   ) {
-    const metadata = obj.data.inference_metadata as Record<string, unknown>;
+    const metadata = obj.data.inference_metadata;
 
-    const masksSVG = isPolygonSvgMetadata(metadata)
-      ? metadata.polygon_svg
-      : generateSvgFromMaskRle(obj.data.counts as number[], obj.data.size);
+    const masksSVG = getMaskSvgForDisplay(obj, metadata);
 
     return {
       ...obj,

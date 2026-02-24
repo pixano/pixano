@@ -11,7 +11,6 @@ import {
   Message,
   MessageTypeEnum,
   QuestionTypeEnum,
-  type Reference,
 } from "$lib/types/dataset";
 
 import { sourcesStore } from "$lib/stores/appStores.svelte";
@@ -27,9 +26,10 @@ interface CreateMessageBaseProps {
   number: number;
   content: string;
   choices: string[];
-  item_ref: Reference;
-  view_ref: Reference;
-  entity_ref: Reference;
+  item_id: string;
+  view_name: string;
+  frame_id: string;
+  entity_id: string;
 }
 
 interface CreateQuestionProps extends CreateMessageBaseProps {
@@ -65,7 +65,11 @@ export const createNewMessage = (props: CreateMessageProps) => {
     data: {
       ...props,
       timestamp: now,
-      source_ref: { name: pixanoSource.table_info.name, id: pixanoSource.id },
+      source_id: pixanoSource.id,
+      frame_index: -1,
+      tracklet_id: "",
+      entity_dynamic_state_id: "",
+      inference_metadata: {},
     },
   });
 };

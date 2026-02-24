@@ -69,7 +69,6 @@ export function prepareDatasetItem(
         const video = view as SequenceFrame[];
         video.forEach((sf) => {
           sf.data.type = WorkspaceType.VIDEO;
-          sf.data.url = media_dir + sf.data.url;
         });
         video.sort((a, b) => a.data.frame_index - b.data.frame_index);
       } else {

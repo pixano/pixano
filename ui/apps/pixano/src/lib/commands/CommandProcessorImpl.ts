@@ -262,7 +262,7 @@ export class CommandProcessorImpl implements CommandProcessor {
         patches.push({
           type: "update",
           nodeId: ann.id,
-          changes: { entity_ref: { id: targetEntityId, name: ann.entityRef.name } },
+          changes: { entity_id: targetEntityId },
         });
       }
 
@@ -290,7 +290,7 @@ export class CommandProcessorImpl implements CommandProcessor {
       ...movedAnnotations.map((m) => ({
         type: "update",
         nodeId: m.nodeId,
-        changes: { entity_ref: { id: m.oldEntityRef, name: "" } },
+        changes: { entity_id: m.oldEntityRef },
       })),
     ];
 

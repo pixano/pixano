@@ -31,18 +31,18 @@ export function loadViewEmbeddings(forceLoad: boolean = false) {
         const currentView = mView[view].find((sf) => sf.data.frame_index === currentFIndex);
         if (currentView) {
           viewIdsSet.add(currentView.id);
-          itemId = currentView.data.item_ref.id; //same across all views so OK to overwrite
+          itemId = currentView.data.item_id; //same across all views so OK to overwrite
         }
       } else {
-        itemId = mView[view].data.item_ref.id;
+        itemId = mView[view].data.item_id;
       }
     }
     let where: string = "";
     if (dataset.workspace === WorkspaceType.VIDEO) {
       if (viewIdsSet.size === 1) {
-        where = `view_ref.id = '${viewIdsSet.values().next().value}'`;
+        where = `frame_id = '${viewIdsSet.values().next().value}'`;
       } else if (viewIdsSet.size > 1) {
-        where = `view_ref.id IN ('${Array.from(viewIdsSet).join("', '")}')`;
+        where = `frame_id IN ('${Array.from(viewIdsSet).join("', '")}')`;
       }
     }
 
@@ -87,7 +87,7 @@ async function fetchViewEmbeddings(
           if (shape.length === 3) {
             shape = [1, shape[0], shape[1], shape[2]];
           }
-          embeddings[view_embedding.data["view_ref"].id] = new ort.Tensor(
+          embeddings[view_embedding.data.frame_id] = new ort.Tensor(
             "float32",
             view_embedding.data.vector,
             shape,

@@ -48,13 +48,13 @@ License: CECILL-C
   const allTopEntities = $derived.by(() =>
     currentEntities
       .filter(
-        (ent) => !ent.is_conversation && ent.data.parent_ref.id === "" && visibleEntities.includes(ent),
+        (ent) => !ent.is_conversation && ent.data.parent_id === "" && visibleEntities.includes(ent),
       )
       .sort(sortEntities),
   );
   const countText = $derived.by(() => {
     const unFilteredCount = currentEntities.filter(
-      (ent) => !ent.is_conversation && ent.data.parent_ref.id === "",
+      (ent) => !ent.is_conversation && ent.data.parent_id === "",
     ).length;
     const nextTopCount = allTopEntities.length;
     return unFilteredCount !== nextTopCount

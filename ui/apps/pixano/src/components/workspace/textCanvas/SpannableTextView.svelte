@@ -44,10 +44,7 @@ License: CECILL-C
       currentTarget: EventTarget & HTMLDivElement;
     },
   ) => {
-    textSpanAttributes = editorSelectionToTextSpan(e.currentTarget, {
-      id: textView.id,
-      name: textView.table_info.name,
-    });
+    textSpanAttributes = editorSelectionToTextSpan(e.currentTarget, textView.table_info.name);
   };
 
   const clickHandler = (event: MouseEvent) => {

@@ -7,3 +7,4 @@ License: CECILL-C
 export * from "./datasetApi";
 export * from "./schemaApi";
 export * from "./inferenceApi";
+export * from "./viewsApi";

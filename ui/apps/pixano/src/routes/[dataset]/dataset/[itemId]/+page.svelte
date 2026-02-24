@@ -71,7 +71,7 @@ License: CECILL-C
       const priority = (object: Schema) => {
         if (object.table_info.base_schema === BaseSchema.Track) return 0;
         if (object.table_info.base_schema === BaseSchema.Entity) {
-          if ((object as Entity).data.parent_ref.id === "") return 1;
+          if ((object as Entity).data.parent_id === "") return 1;
           else return 2;
         }
         return 3;

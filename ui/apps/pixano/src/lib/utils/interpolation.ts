@@ -17,7 +17,7 @@ export const boxLinearInterpolation = (
   view_id: string,
 ): BBox | undefined => {
   //Note: this suppose boxes are sorted by frame_index (it should)
-  const endIndex = boxes.findIndex((box) => box.ui.frame_index! >= imageIndex);
+  const endIndex = boxes.findIndex((box) => box.ui.frame_index >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
@@ -26,21 +26,21 @@ export const boxLinearInterpolation = (
     return endBox;
   }
   const startBox = boxes[endIndex - 1] || boxes[0];
-  if (startBox.ui.frame_index! > imageIndex || endBox.ui.frame_index! < imageIndex)
+  if (startBox.ui.frame_index > imageIndex || endBox.ui.frame_index < imageIndex)
     return undefined;
   const [startX, startY, startWidth, startHeight] = startBox.data.coords;
   const [endX, endY, endWidth, endHeight] = endBox.data.coords;
 
-  const xInterpolation = (endX - startX) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
-  const yInterpolation = (endY - startY) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
+  const xInterpolation = (endX - startX) / (endBox.ui.frame_index - startBox.ui.frame_index);
+  const yInterpolation = (endY - startY) / (endBox.ui.frame_index - startBox.ui.frame_index);
   const widthInterpolation =
-    (endWidth - startWidth) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
+    (endWidth - startWidth) / (endBox.ui.frame_index - startBox.ui.frame_index);
   const heightInterpolation =
-    (endHeight - startHeight) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
-  const x = startX + xInterpolation * (imageIndex - startBox.ui.frame_index!);
-  const y = startY + yInterpolation * (imageIndex - startBox.ui.frame_index!);
-  const width = startWidth + widthInterpolation * (imageIndex - startBox.ui.frame_index!);
-  const height = startHeight + heightInterpolation * (imageIndex - startBox.ui.frame_index!);
+    (endHeight - startHeight) / (endBox.ui.frame_index - startBox.ui.frame_index);
+  const x = startX + xInterpolation * (imageIndex - startBox.ui.frame_index);
+  const y = startY + yInterpolation * (imageIndex - startBox.ui.frame_index);
+  const width = startWidth + widthInterpolation * (imageIndex - startBox.ui.frame_index);
+  const height = startHeight + heightInterpolation * (imageIndex - startBox.ui.frame_index);
   // make a new BBox with interpolated coords
   const { ui, ...noUIfieldsBBox } = structuredClone(startBox);
   const interpolatedBox = new BBox(noUIfieldsBBox);
@@ -55,7 +55,7 @@ export const boxLinearInterpolation = (
       ? "none"
       : startBox.ui.displayControl.highlighted,
   };
-  interpolatedBox.data.view_ref.id = view_id;
+  interpolatedBox.data.frame_id = view_id;
   //we also need to adapt opacity & strokeFactor accordingly
   interpolatedBox.ui.opacity =
     interpolatedBox.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0;
@@ -75,48 +75,48 @@ export const keypointsLinearInterpolation = (
   view_id: string,
 ): KeypointAnnotation | undefined => {
   //Note: this suppose keypoints are sorted by frame_index (it should)
-  const endIndex = keypoints.findIndex((kpt) => kpt.ui!.frame_index! >= imageIndex);
+  const endIndex = keypoints.findIndex((kpt) => kpt.ui.frame_index >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
   const endKpt = keypoints[endIndex];
-  if (imageIndex == endKpt.ui!.frame_index) {
+  if (imageIndex == endKpt.ui.frame_index) {
     return endKpt;
   }
   const startKpt = keypoints[endIndex - 1] || keypoints[0];
-  if (startKpt.ui!.frame_index! > imageIndex || endKpt.ui!.frame_index! < imageIndex)
+  if (startKpt.ui.frame_index > imageIndex || endKpt.ui.frame_index < imageIndex)
     return undefined;
-  if (endKpt.ui!.frame_index === startKpt.ui!.frame_index) {
+  if (endKpt.ui.frame_index === startKpt.ui.frame_index) {
     return startKpt;
   } else {
     const startVertices = startKpt.graph.vertices;
     const endVertices = endKpt.graph.vertices;
     const vertices = startVertices.map((vertex, i) => {
       const xInterpolation =
-        (endVertices[i].x - vertex.x) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
+        (endVertices[i].x - vertex.x) / (endKpt.ui.frame_index - startKpt.ui.frame_index);
       const yInterpolation =
-        (endVertices[i].y - vertex.y) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
-      const x = vertex.x + xInterpolation * (imageIndex - startKpt.ui!.frame_index!);
-      const y = vertex.y + yInterpolation * (imageIndex - startKpt.ui!.frame_index!);
+        (endVertices[i].y - vertex.y) / (endKpt.ui.frame_index - startKpt.ui.frame_index);
+      const x = vertex.x + xInterpolation * (imageIndex - startKpt.ui.frame_index);
+      const y = vertex.y + yInterpolation * (imageIndex - startKpt.ui.frame_index);
       return { x, y };
     });
     // make a new KeypointAnnotation with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
-    interpolatedKpt.ui!.frame_index = imageIndex;
-    interpolatedKpt.ui!.displayControl = {
-      hidden: startKpt.ui!.displayControl.hidden,
+    interpolatedKpt.ui.frame_index = imageIndex;
+    interpolatedKpt.ui.displayControl = {
+      hidden: startKpt.ui.displayControl.hidden,
       editing: false,
       //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-      highlighted: startKpt.ui!.displayControl.editing
+      highlighted: startKpt.ui.displayControl.editing
         ? "none"
-        : startKpt.ui!.displayControl.highlighted,
+        : startKpt.ui.displayControl.highlighted,
     };
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
-    interpolatedKpt.ui!.startRef = startKpt;
+    interpolatedKpt.ui.startRef = startKpt;
     // top_entities (if exist) lost class with structuredClone: replace it
-    interpolatedKpt.ui!.top_entities = startKpt.ui!.top_entities;
+    interpolatedKpt.ui.top_entities = startKpt.ui.top_entities;
     interpolatedKpt.graph = { ...startKpt.graph, vertices };
     return interpolatedKpt;
   }

@@ -8,7 +8,12 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
+  import { sceneFunc, smoothSceneFunc } from "./konvaMaskOps";
+  import PolygonVertices from "./PolygonVertices.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
+  import type { Mask, Reference } from "$lib/types/dataset";
+  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
+  import type { PolygonVertex } from "$lib/types/shapeTypes";
   import {
     convertPointToSvg,
     hexToRGBA,
@@ -16,11 +21,6 @@ License: CECILL-C
     parseSvgPath,
     runLengthEncode,
   } from "$lib/utils/maskUtils";
-  import { sceneFunc, smoothSceneFunc } from "./konvaMaskOps";
-  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
-  import type { Mask, Reference } from "$lib/types/dataset";
-  import type { PolygonVertex } from "$lib/types/shapeTypes";
-  import PolygonVertices from "./PolygonVertices.svelte";
 
   interface Props {
     viewRef: Reference;
@@ -28,8 +28,10 @@ License: CECILL-C
     currentImage: HTMLImageElement;
     mask: Mask;
     color: string;
-    zoomFactor: Record<string, number>;
+    zoomFactor: number;
     selectedTool: SelectionTool;
+    interactive?: boolean;
+    disableCache?: boolean;
     ghostOpacity?: number | undefined;
     onNewShapeChange?: (shape: Shape) => void;
   }
@@ -42,6 +44,8 @@ License: CECILL-C
     color,
     zoomFactor,
     selectedTool,
+    interactive = true,
+    disableCache = false,
     ghostOpacity = undefined,
     onNewShapeChange,
   }: Props = $props();
@@ -85,6 +89,8 @@ License: CECILL-C
   let simplifiedPoints: PolygonVertex[][] = $state([]);
   let simplifiedSvg = $derived(simplifiedPoints.map((point) => convertPointToSvg(point)));
   let hasInitializedPolygonShape = false;
+  let displayShapeComponent: { node: Konva.Shape } | undefined = $state();
+  let staticCacheSignature = "";
 
   // Guard: only re-parse SVG when the svg reference actually changes
   let prevSvgRef: string[] | null = null;
@@ -130,7 +136,30 @@ License: CECILL-C
     }
   });
 
-  const handlePointDragMove = (id: number, shapeIndex: number, e: Konva.KonvaEventObject<DragEvent>) => {
+  $effect(() => {
+    const node = displayShapeComponent?.node;
+    if (!node) return;
+    const cacheable = !canEdit && !ghostOpacity && !disableCache;
+    const signature = `${viewRef.id}|${mask.id}|${mask.data.frame_id ?? ""}|${mask.ui.svg?.length ?? 0}|${color}|${mask.ui.strokeFactor ?? 1}`;
+    if (cacheable) {
+      if (staticCacheSignature !== signature || !node.isCached()) {
+        node.clearCache();
+        node.cache();
+        staticCacheSignature = signature;
+      }
+      return;
+    }
+    if (node.isCached()) {
+      node.clearCache();
+    }
+    staticCacheSignature = "";
+  });
+
+  const handlePointDragMove = (
+    id: number,
+    shapeIndex: number,
+    e: Konva.KonvaEventObject<DragEvent>,
+  ) => {
     const pos = (e.target as Konva.Circle).position();
     const newSimplifiedPoints = simplifiedPoints.map((points, pi) =>
       pi === shapeIndex
@@ -146,22 +175,25 @@ License: CECILL-C
     const polygonSvg = simplifiedSvg;
 
     if (mask.ui.displayControl.editing) {
-      const counts = isRawPolygon
-        ? undefined
-        : runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
-      onNewShapeChange?.({
-        status: "editing",
-        type: isRawPolygon ? ShapeType.polygon : ShapeType.mask,
-        viewRef,
-        shapeId: mask.id,
-        ...(counts ? { counts } : {}),
-        ...(isRawPolygon
-          ? {
-              masksImageSVG: polygonSvg,
-              polygonPoints: simplifiedPoints,
-            }
-          : {}),
-      });
+      if (isRawPolygon) {
+        onNewShapeChange?.({
+          status: "editing",
+          type: ShapeType.polygon,
+          viewRef,
+          shapeId: mask.id,
+          masksImageSVG: polygonSvg,
+          polygonPoints: simplifiedPoints,
+        });
+      } else {
+        const counts = runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
+        onNewShapeChange?.({
+          status: "editing",
+          type: ShapeType.mask,
+          viewRef,
+          shapeId: mask.id,
+          counts,
+        });
+      }
     }
   };
 
@@ -179,17 +211,25 @@ License: CECILL-C
     const svg = simplifiedPoints.map((point) => convertPointToSvg(point));
     // Re-emit editing with the moved polygon
     if (mask.ui.displayControl.editing) {
-      const counts = isRawPolygon
-        ? undefined
-        : runLengthEncode(svg, currentImage.width, currentImage.height);
-      onNewShapeChange?.({
-        status: "editing",
-        type: isRawPolygon ? ShapeType.polygon : ShapeType.mask,
-        viewRef,
-        shapeId: mask.id,
-        ...(counts ? { counts } : {}),
-        ...(isRawPolygon ? { masksImageSVG: svg, polygonPoints: simplifiedPoints } : {}),
-      });
+      if (isRawPolygon) {
+        onNewShapeChange?.({
+          status: "editing",
+          type: ShapeType.polygon,
+          viewRef,
+          shapeId: mask.id,
+          masksImageSVG: svg,
+          polygonPoints: simplifiedPoints,
+        });
+      } else {
+        const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
+        onNewShapeChange?.({
+          status: "editing",
+          type: ShapeType.mask,
+          viewRef,
+          shapeId: mask.id,
+          counts,
+        });
+      }
     }
   };
 
@@ -229,17 +269,16 @@ License: CECILL-C
   id={`polygon-${mask.id}`}
   draggable={canEdit}
   visible={!mask.ui.displayControl.hidden}
-  opacity={ghostOpacity ?? (mask.ui.opacity ?? 1)}
-  listening={ghostOpacity ? false : selectedTool.type === ToolType.Pan}
+  opacity={ghostOpacity ?? mask.ui.opacity ?? 1}
+  listening={ghostOpacity ? false : interactive && selectedTool.type === ToolType.Pan}
 >
   {#if canEdit}
     <KonvaShape
       sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
-        isRawPolygon
-          ? drawRawPolygonScene(ctx, shape)
-          : sceneFunc(ctx, shape, simplifiedSvg)}
+        isRawPolygon ? drawRawPolygonScene(ctx, shape) : sceneFunc(ctx, shape, simplifiedSvg)}
       stroke={color}
-      strokeWidth={2 / zoomFactor[viewRef.name]}
+      strokeWidth={2}
+      strokeScaleEnabled={false}
       closed={true}
       fill={hexToRGBA(color, 0.5)}
     />
@@ -254,6 +293,7 @@ License: CECILL-C
     />
   {:else}
     <KonvaShape
+      bind:this={displayShapeComponent}
       onclick={ghostOpacity ? undefined : onClick}
       sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
         isRawPolygon

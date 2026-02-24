@@ -43,7 +43,7 @@ License: CECILL-C
   };
 
   const handleFieldChange = () => {
-    ftype = fieldColumns[filter.table].find((field) => field.name === filter.name)!.type;
+    ftype = fieldColumns[filter.table].find((field) => field.name === filter.name)?.type ?? "str";
     fieldOperators = getOperatorsForType(ftype);
     filter.fieldOperator = fieldOperators[0];
   };

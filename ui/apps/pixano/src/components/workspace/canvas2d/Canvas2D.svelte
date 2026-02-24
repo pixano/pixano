@@ -6,10 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { untrack } from "svelte";
   import Konva from "konva";
-  import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { untrack } from "svelte";
+  import { Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
+  import BBox2D from "./BBox2D.svelte";
+  import BrushCursor from "./BrushCursor.svelte";
+  import BrushMask from "./BrushMask.svelte";
+  import CreatePolygon from "./CreatePolygon.svelte";
+  import CreateRectangle from "./CreateRectangle.svelte";
+  import Crosshair from "./Crosshair.svelte";
+  import { clearParsedCache } from "./konvaMaskOps";
+  import PolygonShape from "./PolygonShape.svelte";
+  import ShowKeypoints from "./ShowKeypoint.svelte";
+  import { FilterManager } from "./workers/filterManager";
+  import type { FilterParams } from "./workers/filterWorker";
   import {
     ToolType,
     type Point2D,
@@ -17,6 +28,10 @@ License: CECILL-C
     type SelectionTool,
     type ToolEvent,
   } from "$lib/tools";
+  import {
+    createInternalToolBridge,
+    createToolFSMForSelection,
+  } from "$lib/tools/canvasBridgeRuntime";
   import {
     brushDrawTool,
     getFallbackCanvasTool,
@@ -27,39 +42,23 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
-  import {
-    createInternalToolBridge,
-    createToolFSMForSelection,
-  } from "$lib/tools/canvasBridgeRuntime";
   import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
-  import type { ToolBridge } from "$lib/types/store";
+  import type { PolygonOutputMode } from "$lib/types/geometry";
   import {
     ShapeType,
     type CreatePolygonShape,
     type CreateRectangleShape,
     type ImageFilters,
     type KeypointAnnotation,
-    type PolygonOutputMode,
     type PolygonVertex,
     type SaveRectangleShape,
     type Shape,
   } from "$lib/types/shapeTypes";
+  import type { ToolBridge } from "$lib/types/store";
   import { effectProbe } from "$lib/utils/effectProbe";
   import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
   import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
 
-  import BBox2D from "./BBox2D.svelte";
-  import BrushCursor from "./BrushCursor.svelte";
-  import BrushMask from "./BrushMask.svelte";
-  import CreatePolygon from "./CreatePolygon.svelte";
-  import CreateRectangle from "./CreateRectangle.svelte";
-  import Crosshair from "./Crosshair.svelte";
-  import PolygonShape from "./PolygonShape.svelte";
-  import ShowKeypoints from "./ShowKeypoint.svelte";
-  import { clearParsedCache } from "./konvaMaskOps";
-  import { FilterManager } from "./workers/filterManager";
-  import type { FilterParams } from "./workers/filterWorker";
-  
   interface BrushSettings {
     brushRadius: number;
     lazyRadius: number;
@@ -155,16 +154,30 @@ License: CECILL-C
   let zoomFactor: Record<string, number> = $state({}); // {view_name: zoomFactor}
 
   let lastInputViewRef: Reference;
+  let localDraftShape = $state<Shape | null>(null);
+
+  // Runtime interaction flag toggled during wheel/drag to disable expensive draw options.
+  let isViewportInteracting = $state(false);
+  let interactionCooldownTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Brush tool state
   let brushMaskRefs: Record<string, BrushMaskRef | undefined> = {};
   let activeBrushViewName: string | null = null;
   // Declarative crosshair & brush cursor state (replaces imperative Konva creation)
   let crosshairPosition = $state<Point2D | null>(null);
-  let brushCursorState = $state<{ x: number; y: number; radius: number; mode: "draw" | "erase" } | null>(null);
+  let brushCursorState = $state<{
+    x: number;
+    y: number;
+    radius: number;
+    mode: "draw" | "erase";
+  } | null>(null);
   let cursor = $state("default");
-  // Direct reference maps to avoid O(n) stage.findOne() lookups
-  let viewLayerRefs: Record<string, { node: Konva.Group } | undefined> = {};
+  let cursorFrameRequested = false;
+  let queuedCursorPosition: Konva.Vector2d | null = null;
+  // Layer-group references by view: split by background/static/active layers.
+  let backgroundViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
+  let staticViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
+  let activeViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
   let imageRefs: Record<string, Konva.Image> = {};
 
   // Web Worker-based filter manager (off-thread filter computation)
@@ -179,14 +192,40 @@ License: CECILL-C
   let internalToolBridge: ToolBridge | undefined = $state();
   let activeToolBridge: ToolBridge | undefined = $state();
 
-
-
-
-
-
   function clearRectangleTransformer() {
     bboxEditable = false;
   }
+
+  function beginViewportInteraction() {
+    if (interactionCooldownTimer) {
+      clearTimeout(interactionCooldownTimer);
+      interactionCooldownTimer = null;
+    }
+    isViewportInteracting = true;
+  }
+
+  function endViewportInteraction() {
+    if (interactionCooldownTimer) {
+      clearTimeout(interactionCooldownTimer);
+    }
+    interactionCooldownTimer = setTimeout(() => {
+      isViewportInteracting = false;
+      interactionCooldownTimer = null;
+    }, 120);
+  }
+
+  let draftOrSavingShape = $derived.by<Shape | null>(() => {
+    if (localDraftShape) return localDraftShape;
+    if (
+      newShape.status === "saving" &&
+      (newShape.type === ShapeType.bbox ||
+        newShape.type === ShapeType.polygon ||
+        newShape.type === ShapeType.mask)
+    ) {
+      return newShape;
+    }
+    return null;
+  });
 
   function toPolygonPoints(points: ReadonlyArray<PolygonVertex | Point2D>): PolygonVertex[] {
     return points.map((point, index) => ({
@@ -221,18 +260,13 @@ License: CECILL-C
     }
     const viewRef = lastInputViewRef;
     if (!viewRef) {
-      if (
-        newShape.status === "creating" &&
-        (newShape.type === ShapeType.bbox || newShape.type === ShapeType.polygon)
-      ) {
-        onNewShapeChange?.({ status: "none" });
-      }
+      localDraftShape = null;
       clearRectangleTransformer();
       return;
     }
 
     if (preview?.type === "polygon") {
-      onNewShapeChange?.({
+      localDraftShape = {
         status: "creating",
         type: ShapeType.polygon,
         viewRef,
@@ -242,7 +276,7 @@ License: CECILL-C
         current: preview.current,
         hoveredEdge: preview.hoveredEdge ?? null,
         outputMode: selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon",
-      } as CreatePolygonShape);
+      } as CreatePolygonShape;
       if (bboxEditable) {
         clearRectangleTransformer();
       }
@@ -250,17 +284,12 @@ License: CECILL-C
     }
 
     if (preview?.type !== "rectangle") {
-      if (
-        newShape.status === "creating" &&
-        (newShape.type === ShapeType.bbox || newShape.type === ShapeType.polygon)
-      ) {
-        onNewShapeChange?.({ status: "none" });
-      }
+      localDraftShape = null;
       clearRectangleTransformer();
       return;
     }
 
-    onNewShapeChange?.({
+    localDraftShape = {
       status: "creating",
       type: ShapeType.bbox,
       x: preview.origin.x,
@@ -268,7 +297,7 @@ License: CECILL-C
       width: preview.current.x - preview.origin.x,
       height: preview.current.y - preview.origin.y,
       viewRef,
-    });
+    };
 
     if (preview.editable) {
       bboxEditable = true;
@@ -282,10 +311,10 @@ License: CECILL-C
   function handleRectangleRequestSave(geometry: unknown) {
     const geo = geometry as { x: number; y: number; width: number; height: number };
 
-    // Prefer the current newShape geometry (updated by Transformer/drag) over FSM's stale geometry
+    // Prefer the current local draft geometry (updated by Transformer/drag) over FSM's stale geometry
     let finalGeo = geo;
-    if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
-      const shape = newShape;
+    if (localDraftShape?.status === "creating" && localDraftShape.type === ShapeType.bbox) {
+      const shape = localDraftShape;
       const w = shape.width < 0 ? -shape.width : shape.width;
       const h = shape.height < 0 ? -shape.height : shape.height;
       const x = shape.width < 0 ? shape.x + shape.width : shape.x;
@@ -293,11 +322,13 @@ License: CECILL-C
       finalGeo = { x, y, width: w, height: h };
     }
 
+    localDraftShape = null;
     clearRectangleTransformer();
 
     const viewRef = lastInputViewRef;
     if (viewRef) {
       const currentImage = getCurrentImage(viewRef.name);
+      if (!currentImage) return;
       rectangleSavePending = true;
       onNewShapeChange?.({
         status: "saving",
@@ -325,6 +356,7 @@ License: CECILL-C
     if (!viewRef) return;
 
     const currentImage = getCurrentImage(viewRef.name);
+    if (!currentImage) return;
     const polygonMode: PolygonOutputMode = payload.outputMode ?? "polygon";
     const polygonPoints = sourcePolygons
       .map((polygon) =>
@@ -338,6 +370,7 @@ License: CECILL-C
     if (polygonPoints.length === 0) return;
 
     const polygonSvg = polygonPoints.map((polygon) => convertPointToSvg(polygon));
+    localDraftShape = null;
     cleanupPolygonPreviewListeners();
 
     if (polygonMode === "mask") {
@@ -390,9 +423,6 @@ License: CECILL-C
   function dispatchPolygonToolEvent(event: ToolEvent) {
     activeToolBridge?.dispatchEvent(event);
   }
-
-
-
 
   // References to HTML Elements
   let stageContainer: HTMLElement = $state();
@@ -477,14 +507,15 @@ License: CECILL-C
       if (pendingFilterTimer) {
         clearTimeout(pendingFilterTimer);
       }
+      if (interactionCooldownTimer) {
+        clearTimeout(interactionCooldownTimer);
+        interactionCooldownTimer = null;
+      }
       clearAnnotationAndInputs();
       filterManager?.destroy();
       filterManager = null;
     };
   });
-
-
-
 
   // React to filter changes (debounced, skip for video)
   let filterDebounceTimer: ReturnType<typeof setTimeout>;
@@ -503,9 +534,56 @@ License: CECILL-C
     }
   }
 
-  /** Get a view layer by name using cached ref (O(1)) with fallback. */
+  type ViewGroupKind = "background" | "static" | "active";
+
+  function getViewGroup(view_name: string, kind: ViewGroupKind): Konva.Group | undefined {
+    if (kind === "background") {
+      return backgroundViewRefs[view_name]?.node ?? stage?.findOne(`#bg-${view_name}`);
+    }
+    if (kind === "static") {
+      return staticViewRefs[view_name]?.node ?? stage?.findOne(`#static-${view_name}`);
+    }
+    return activeViewRefs[view_name]?.node ?? stage?.findOne(`#active-${view_name}`);
+  }
+
+  /** Main interaction group (pointer coordinate system for tools). */
   function getViewLayer(view_name: string): Konva.Group | undefined {
-    return viewLayerRefs[view_name]?.node ?? stage?.findOne(`#${view_name}`);
+    return getViewGroup(view_name, "active");
+  }
+
+  function forEachLinkedViewGroup(view_name: string, callback: (group: Konva.Group) => void) {
+    const groups = [
+      getViewGroup(view_name, "background"),
+      getViewGroup(view_name, "static"),
+      getViewGroup(view_name, "active"),
+    ];
+    for (const group of groups) {
+      if (group) callback(group);
+    }
+  }
+
+  function syncLinkedViewGroupsFromActive(view_name: string) {
+    const active = getViewGroup(view_name, "active");
+    if (!active) return;
+    const x = active.x();
+    const y = active.y();
+    const scaleX = active.scaleX();
+    const scaleY = active.scaleY();
+    forEachLinkedViewGroup(view_name, (group) => {
+      if (group === active) return;
+      group.position({ x, y });
+      group.scale({ x: scaleX, y: scaleY });
+    });
+  }
+
+  function applyViewTransform(
+    view_name: string,
+    transform: { x: number; y: number; scale: number },
+  ) {
+    forEachLinkedViewGroup(view_name, (group) => {
+      group.scale({ x: transform.scale, y: transform.scale });
+      group.position({ x: transform.x, y: transform.y });
+    });
   }
 
   /** Get the image node for a view using cached ref (O(1)) with fallback. */
@@ -557,7 +635,9 @@ License: CECILL-C
         if (Object.values(viewReady).every(Boolean)) {
           isReady = true;
         }
-        console.warn(`[Canvas2D] Missing current image for view '${view_name}' on item '${selectedItemId}'.`);
+        console.warn(
+          `[Canvas2D] Missing current image for view '${view_name}' on item '${selectedItemId}'.`,
+        );
         return;
       }
 
@@ -567,6 +647,14 @@ License: CECILL-C
         if (scaleOnFirstLoad[view_name]) {
           if (scaleView(view_name)) {
             scaleOnFirstLoad[view_name] = false;
+          } else {
+            requestAnimationFrame(() => {
+              if (thisLoadCycle !== loadCycle) return;
+              if (scaleOnFirstLoad[view_name] && scaleView(view_name)) {
+                scaleOnFirstLoad[view_name] = false;
+                stage?.batchDraw();
+              }
+            });
           }
         }
         //scaleElements(view_name);
@@ -602,8 +690,11 @@ License: CECILL-C
   }
 
   function scaleView(view_name: string): boolean {
-    const viewLayer = getViewLayer(view_name);
-    if (!viewLayer) {
+    const hasAnyLayer =
+      !!getViewGroup(view_name, "background") ||
+      !!getViewGroup(view_name, "static") ||
+      !!getViewGroup(view_name, "active");
+    if (!hasAnyLayer) {
       return false;
     }
     // Calculate max dims for every image in the grid
@@ -629,15 +720,13 @@ License: CECILL-C
     const scaleByWidth = maxWidth / currentImage.width;
     const scale = Math.min(scaleByWidth, scaleByHeight);
 
-    // Set zoomFactor for view
+    // Set zoom factor for this view.
     zoomFactor[view_name] = scale;
-    viewLayer.scale({ x: scale, y: scale });
 
     // Center view
     const offsetX = (maxWidth - currentImage.width * scale) / 2 + gridPosition.x * maxWidth;
     const offsetY = (maxHeight - currentImage.height * scale) / 2 + gridPosition.y * maxHeight;
-    viewLayer.x(offsetX);
-    viewLayer.y(offsetY);
+    applyViewTransform(view_name, { x: offsetX, y: offsetY, scale });
     return true;
   }
 
@@ -731,6 +820,7 @@ License: CECILL-C
   // ********** TOOLS ********** //
 
   function handleChangeTool() {
+    endViewportInteraction();
     if (selectedTool?.type === ToolType.Pan) {
       crosshairPosition = null;
       brushCursorState = null;
@@ -796,6 +886,7 @@ License: CECILL-C
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
 
+    beginViewportInteraction();
     activeBrushViewName = viewRef.name;
     const brushRef = brushMaskRefs[viewRef.name];
     if (brushRef) {
@@ -821,6 +912,7 @@ License: CECILL-C
     if (brushCanvas) {
       brushCanvas.endStroke();
     }
+    endViewportInteraction();
   }
 
   function saveBrushMask(view_name: string) {
@@ -859,29 +951,53 @@ License: CECILL-C
     crosshairPosition = { x: mousePos.x, y: mousePos.y };
   }
 
-  function clearAnnotationAndInputs() {
-    if (!stage) return;
-    for (const view_name of Object.keys(imagesPerView)) {
-      // Inline of old clearCurrentAnn: destroy currentMask group and reset postProcessor
-      const viewLayer = getViewLayer(view_name);
-      if (viewLayer) {
-        const currentAnnGroup: Konva.Group | undefined = viewLayer.findOne("#currentAnnotation");
-        const currentMaskGroup: Konva.Group | undefined = currentAnnGroup?.findOne("#currentMask");
-        if (currentMaskGroup) currentMaskGroup.destroy();
-        if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
+  function flushCursorOverlayState() {
+    cursorFrameRequested = false;
+    const position = queuedCursorPosition;
+    if (!position) return;
+
+    if (
+      selectedTool?.type === ToolType.Rectangle ||
+      selectedTool?.type === ToolType.Polygon ||
+      selectedTool?.type === ToolType.Brush
+    ) {
+      updateCrosshairState(position);
+    } else {
+      crosshairPosition = null;
+    }
+
+    if (selectedTool?.type === ToolType.Brush) {
+      updateBrushCursor(position);
+      if (activeBrushViewName) {
+        handleBrushPointerMove(activeBrushViewName);
       }
+    } else {
+      brushCursorState = null;
+    }
+  }
+
+  function clearAnnotationAndInputs() {
+    if (selectedTool?.postProcessor) {
+      selectedTool.postProcessor.reset();
     }
     if (selectedTool) {
       cursor = selectedTool.cursor;
     }
     // Declarative cleanup — just reset state, Svelte will remove the components
+    localDraftShape = null;
+    isViewportInteracting = false;
     crosshairPosition = null;
+    queuedCursorPosition = null;
+    cursorFrameRequested = false;
     cleanupBrushCursor();
     cleanupPolygonPreviewListeners();
     // Only clear brush canvases after the user confirms (shouldReset) or
     // when leaving the brush tool — NOT while the save form is open.
     if (newShape.status !== "saving") {
-      if (selectedTool?.type !== ToolType.Brush || ("shouldReset" in newShape && newShape.shouldReset)) {
+      if (
+        selectedTool?.type !== ToolType.Brush ||
+        ("shouldReset" in newShape && newShape.shouldReset)
+      ) {
         for (const key of Object.keys(brushMaskRefs)) {
           brushMaskRefs[key]?.clearCanvas();
         }
@@ -895,20 +1011,10 @@ License: CECILL-C
     if (!stage) return;
     const position = stage.getRelativePointerPosition();
     if (!position) return;
-
-    if (
-      selectedTool?.type === ToolType.Rectangle ||
-      selectedTool?.type === ToolType.Polygon ||
-      selectedTool?.type === ToolType.Brush
-    ) {
-      updateCrosshairState(position);
-    }
-
-    if (selectedTool?.type === ToolType.Brush) {
-      updateBrushCursor(position);
-      if (activeBrushViewName) {
-        handleBrushPointerMove(activeBrushViewName);
-      }
+    queuedCursorPosition = position;
+    if (!cursorFrameRequested) {
+      cursorFrameRequested = true;
+      requestAnimationFrame(flushCursorOverlayState);
     }
   }
 
@@ -921,42 +1027,63 @@ License: CECILL-C
     // Hide crosshair and brush cursor when mouse leaves stage
     crosshairPosition = null;
     brushCursorState = null;
+    queuedCursorPosition = null;
+    cursorFrameRequested = false;
     // End any ongoing brush stroke when mouse leaves
     if (selectedTool?.type === ToolType.Brush && activeBrushViewName) {
       handleBrushPointerUp(activeBrushViewName);
     }
-  }
-
-  function handleDragEndOnView(view_name: string) {
-    const viewLayer = getViewLayer(view_name);
-    if (!viewLayer) return;
-    viewLayer.draggable(false);
-    viewLayer.off("dragend dragmove");
+    for (const view_name of Object.keys(imagesPerView)) {
+      const viewLayer = getViewLayer(view_name);
+      if (viewLayer) {
+        viewLayer.off("pointermove.rectangle");
+        viewLayer.off("pointerup.rectangle");
+      }
+    }
+    endViewportInteraction();
   }
 
   function handlePointerUpOnImage(viewRef: Reference) {
-    const viewLayer = getViewLayer(viewRef.name);
-    if (!viewLayer) return;
-    viewLayer.draggable(false);
-    viewLayer.off("dragend dragmove");
-
     if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerUp(viewRef.name);
     }
   }
 
   function handleDoubleClickOnImage(view_name: string) {
-    // put double-clicked view on top of views
-    const viewLayer = getViewLayer(view_name);
-    if (viewLayer?.getParent()) viewLayer.moveToTop();
+    // Keep all three per-view groups stacked together when prioritizing a view.
+    const backgroundGroup = getViewGroup(view_name, "background");
+    const staticGroup = getViewGroup(view_name, "static");
+    const activeGroup = getViewGroup(view_name, "active");
+    if (backgroundGroup?.getParent()) backgroundGroup.moveToTop();
+    if (staticGroup?.getParent()) staticGroup.moveToTop();
+    if (activeGroup?.getParent()) activeGroup.moveToTop();
+  }
+
+  function handleSelectBBox(bbox: BBox) {
+    if (bbox.ui.displayControl.highlighted !== "self") {
+      onNewShapeChange?.({
+        status: "editing",
+        shapeId: bbox.id,
+        top_entity_id: (bbox.ui.top_entities ?? [])[0]?.id ?? bbox.data.entity_id,
+        viewRef: { name: bbox.data.view_name, id: bbox.data.frame_id },
+        highlighted: "self",
+        type: ShapeType.none,
+      });
+    }
+    merge?.(bbox);
   }
 
   function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
+    if (selectedTool?.type === ToolType.Pan && event.button !== 1) {
+      return;
+    }
+    const interactionShape = localDraftShape ?? newShape;
 
     if (
-      (newShape.status === "none" || newShape.status === "editing") &&
+      (interactionShape.status === "none" || interactionShape.status === "editing") &&
+      selectedTool?.type !== ToolType.Pan &&
       selectedTool?.type !== ToolType.Brush &&
       selectedTool?.type !== ToolType.Polygon
     ) {
@@ -968,10 +1095,19 @@ License: CECILL-C
         highlighted: "all",
       });
     }
-    if (selectedTool?.type === ToolType.Pan || event.button === 1) {
+    if (event.button === 1 && selectedTool?.type !== ToolType.Pan) {
+      // Middle-button: temporary pan from any tool
+      beginViewportInteraction();
       viewLayer.draggable(true);
-      viewLayer.on("dragmove", handleMouseMoveStage);
-      viewLayer.on("dragend", () => handleDragEndOnView(viewRef.name));
+      viewLayer.startDrag();
+      const onDragEnd = () => {
+        if (selectedTool?.type !== ToolType.Pan) {
+          viewLayer.draggable(false);
+        }
+        viewLayer.off("dragend.temp-pan", onDragEnd);
+      };
+      viewLayer.on("dragend.temp-pan", onDragEnd);
+      return;
     } else if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerDown(viewRef);
     } else if (selectedTool?.type === ToolType.Rectangle && !bboxEditable) {
@@ -982,12 +1118,15 @@ License: CECILL-C
       bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
       const pos = viewLayer.getRelativePointerPosition();
       if (!pos) return;
+      beginViewportInteraction();
       bridge.dispatchEvent({
         type: "pointerDown",
         position: { x: pos.x, y: pos.y },
         button: event.button,
       });
-      viewLayer.on("pointermove", () => {
+      viewLayer.off("pointermove.rectangle");
+      viewLayer.off("pointerup.rectangle");
+      viewLayer.on("pointermove.rectangle", () => {
         const movePos = viewLayer.getRelativePointerPosition();
         if (!movePos) return;
         bridge.dispatchEvent({
@@ -995,15 +1134,16 @@ License: CECILL-C
           position: { x: movePos.x, y: movePos.y },
         });
       });
-      viewLayer.on("pointerup", () => {
+      viewLayer.on("pointerup.rectangle", () => {
         const upPos = viewLayer.getRelativePointerPosition();
         if (!upPos) return;
         bridge.dispatchEvent({
           type: "pointerUp",
           position: { x: upPos.x, y: upPos.y },
         });
-        viewLayer.off("pointermove");
-        viewLayer.off("pointerup");
+        endViewportInteraction();
+        viewLayer.off("pointermove.rectangle");
+        viewLayer.off("pointerup.rectangle");
       });
     } else if (selectedTool?.type === ToolType.Polygon) {
       if (event.button !== 0) return;
@@ -1060,8 +1200,11 @@ License: CECILL-C
     };
 
     // Change scaling and position
-    viewLayer.scale({ x: newScale, y: newScale });
-    viewLayer.position(newPos);
+    applyViewTransform(view_name, {
+      x: newPos.x,
+      y: newPos.y,
+      scale: newScale,
+    });
 
     return newScale;
   }
@@ -1070,6 +1213,7 @@ License: CECILL-C
     // Prevent default scrolling
     event.preventDefault();
     if (!stage) return;
+    beginViewportInteraction();
 
     // Get zoom direction
     let direction = event.deltaY < 0 ? 1 : -1;
@@ -1079,11 +1223,89 @@ License: CECILL-C
 
     // Zoom
     zoomFactor[view_name] = zoom(stage, direction, view_name);
+    stage.batchDraw();
+    endViewportInteraction();
   }
 
   function asRectangleShape(shape: Shape): CreateRectangleShape | SaveRectangleShape {
     return shape as CreateRectangleShape | SaveRectangleShape;
   }
+
+  let bboxesByView = $derived.by(() => {
+    const grouped: Record<string, BBox[]> = {};
+    for (const bbox of bboxes) {
+      const key = bbox.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(bbox);
+    }
+    return grouped;
+  });
+
+  let masksByView = $derived.by(() => {
+    const grouped: Record<string, Mask[]> = {};
+    for (const mask of masks) {
+      const key = mask.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(mask);
+    }
+    return grouped;
+  });
+
+  let keypointsByView = $derived.by(() => {
+    const grouped: Record<string, KeypointAnnotation[]> = {};
+    for (const kpt of keypoints) {
+      const key = kpt.viewRef?.name;
+      if (!key) continue;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(kpt);
+    }
+    return grouped;
+  });
+
+  let draftRectangle = $derived.by<CreateRectangleShape | SaveRectangleShape | null>(() => {
+    const shape = draftOrSavingShape;
+    if (!shape) return null;
+    if (!("type" in shape) || shape.type !== ShapeType.bbox) return null;
+    return asRectangleShape(shape);
+  });
+
+  let draftPolygon = $derived.by<Shape | null>(() => {
+    const shape = draftOrSavingShape;
+    if (!shape) return null;
+    if (!("type" in shape)) return null;
+    if (shape.type === ShapeType.polygon) return shape;
+    if (shape.type === ShapeType.mask && "polygonMode" in shape) return shape;
+    return null;
+  });
+
+  // Video/frame updates can replace many Konva nodes at once (images + overlays).
+  // Force a single batched redraw on the next frame when frame identities change.
+  $effect(() => {
+    const stageNode = stage;
+    if (!stageNode) return;
+    for (const [view_name, images] of Object.entries(imagesPerView)) {
+      void view_name;
+      const latest = images[images.length - 1];
+      void latest?.id;
+    }
+    for (const bbox of bboxes) {
+      void bbox.id;
+      void bbox.data.frame_id;
+      void bbox.data.view_name;
+    }
+    for (const mask of masks) {
+      void mask.id;
+      void mask.data.frame_id;
+      void mask.data.view_name;
+      void mask.ui.svg?.length;
+    }
+    for (const kpt of keypoints) {
+      void kpt.id;
+      void kpt.viewRef?.id;
+      void kpt.viewRef?.name;
+    }
+    requestAnimationFrame(() => stageNode.batchDraw());
+  });
 
   // ********** KEY EVENTS ********** //
 
@@ -1098,12 +1320,13 @@ License: CECILL-C
     }
 
     if (event.key === "Escape") {
+      const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
         selectedTool?.type === ToolType.Polygon &&
-        newShape.status === "creating" &&
-        newShape.type === ShapeType.polygon &&
-        newShape.phase === "drawing" &&
-        newShape.closedPolygons.length > 0;
+        interactionShape.status === "creating" &&
+        interactionShape.type === ShapeType.polygon &&
+        interactionShape.phase === "drawing" &&
+        interactionShape.closedPolygons.length > 0;
 
       if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon) {
         activeToolBridge?.dispatchEvent({ type: "cancel" });
@@ -1118,6 +1341,7 @@ License: CECILL-C
       }
 
       clearRectangleTransformer();
+      localDraftShape = null;
       onNewShapeChange?.({ status: "none", shouldReset: true });
       onSelectedToolChange?.(panTool);
       return;
@@ -1220,7 +1444,7 @@ License: CECILL-C
   });
   $effect(() => {
     effectProbe("Canvas2D.toolBridge");
-    const bridge = useNewArchitecture ? toolBridge ?? internalToolBridge : undefined;
+    const bridge = useNewArchitecture ? (toolBridge ?? internalToolBridge) : undefined;
     const currentBridge = untrack(() => activeToolBridge);
     if (bridge !== currentBridge) {
       activeToolBridge = bridge;
@@ -1232,7 +1456,10 @@ License: CECILL-C
   $effect(() => {
     effectProbe("Canvas2D.previewSync");
     const bridge = activeToolBridge;
-    if (!bridge) return;
+    if (!bridge) {
+      localDraftShape = null;
+      return;
+    }
     const preview = bridge.preview.value;
     untrack(() => syncToolPreview(preview));
   });
@@ -1267,6 +1494,22 @@ License: CECILL-C
       cursor = "default";
     }
   });
+  // Reactively set viewLayer.draggable based on tool selection.
+  // This ensures Konva's internal mousedown.konva listener is registered
+  // BEFORE any click, eliminating the timing race that caused drag unresponsiveness.
+  $effect(() => {
+    const isPan = selectedTool?.type === ToolType.Pan;
+    const viewNames = Object.keys(imagesPerView);
+    untrack(() => {
+      for (const name of viewNames) {
+        const viewLayer = getViewLayer(name);
+        if (viewLayer) {
+          viewLayer.draggable(isPan);
+          viewLayer.dragDistance(0);
+        }
+      }
+    });
+  });
   // Transformer is now declarative inside BBox2D.svelte — no manual attachment needed
   $effect(() => {
     effectProbe("Canvas2D.filter");
@@ -1296,146 +1539,266 @@ License: CECILL-C
     onmouseenter={handleMouseEnterStage}
     onmouseleave={handleMouseLeaveStage}
   >
-    <Layer id="views" imageSmoothingEnabled={imageSmoothing}>
-    {#each Object.entries(imagesPerView) as [view_name, images]}
-      <Group
-        id={view_name}
-        onwheel={(event: Konva.KonvaEventObject<WheelEvent>) => handleWheelOnImage(event.evt, view_name)}
-        bind:this={viewLayerRefs[view_name]}
-      >
-        {#each images as image, i}
-          <!-- images contain the current image and previous one, to prevent flashing -->
-          {@const viewRef = { id: image.id, name: view_name }}
-          <KonvaImage
-            image={image.element}
-            name={image.id}
-            id={`image-${view_name}`}
-            onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => handleClickOnImage(event.evt, viewRef)}
+    <Layer id="background" imageSmoothingEnabled={imageSmoothing} listening={false}>
+      {#each Object.entries(imagesPerView) as [view_name, images]}
+        <Group id={`bg-${view_name}`} bind:this={backgroundViewRefs[view_name]}>
+          {#each images as image, i}
+            <KonvaImage
+              image={image.element}
+              name={image.id}
+              id={i === images.length - 1 ? `image-${view_name}` : `image-prev-${view_name}-${i}`}
+              listening={false}
+            />
+          {/each}
+        </Group>
+      {/each}
+    </Layer>
+
+    <Layer id="static">
+      {#each Object.entries(imagesPerView) as [view_name, images]}
+        {@const currentLoadedImage = images[images.length - 1]}
+        {@const currentImage = currentLoadedImage?.element}
+        {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
+        <Group id={`static-${view_name}`} bind:this={staticViewRefs[view_name]}>
+          {#if !isActivePaintingTool}
+            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
+              {#if !bbox.ui.displayControl.editing}
+                <BBox2D
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view_name] ?? 1}
+                  listening={false}
+                  imageWidth={currentImage?.width ?? 0}
+                  imageHeight={currentImage?.height ?? 0}
+                  isInteracting={isViewportInteracting}
+                  {merge}
+                  {onNewShapeChange}
+                />
+              {/if}
+            {/each}
+          {/if}
+
+          {#each masksByView[view_name] ?? [] as mask (mask.id)}
+            {#if !mask.ui.displayControl.editing}
+              <PolygonShape
+                {viewRef}
+                {newShape}
+                {onNewShapeChange}
+                {currentImage}
+                zoomFactor={zoomFactor[view_name] ?? 1}
+                {mask}
+                color={isActivePaintingTool
+                  ? "#9CA3AF"
+                  : colorScale(
+                      mask.ui.top_entities && mask.ui.top_entities.length > 0
+                        ? mask.ui.top_entities[0].id
+                        : mask.data.entity_id,
+                    )}
+                ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
+                {selectedTool}
+                interactive={false}
+                disableCache={isVideo}
+              />
+            {/if}
+          {/each}
+
+          {#if !isActivePaintingTool}
+            <Group listening={false}>
+              <ShowKeypoints
+                {colorScale}
+                {viewRef}
+                keypoints={keypointsByView[view_name] ?? []}
+                zoomFactor={zoomFactor[view_name] ?? 1}
+                imageSize={{ width: currentImage?.width ?? 1, height: currentImage?.height ?? 1 }}
+                {newShape}
+                {onNewShapeChange}
+                {isPlaybackActive}
+              />
+            </Group>
+          {/if}
+        </Group>
+      {/each}
+    </Layer>
+
+    <Layer id="active">
+      {#each Object.entries(imagesPerView) as [view_name, images]}
+        {@const currentLoadedImage = images[images.length - 1]}
+        {@const currentImage = currentLoadedImage?.element}
+        {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
+        <Group
+          id={`active-${view_name}`}
+          bind:this={activeViewRefs[view_name]}
+          dragDistance={0}
+          ondragstart={beginViewportInteraction}
+          ondragmove={() => {
+            syncLinkedViewGroupsFromActive(view_name);
+            stage?.batchDraw();
+          }}
+          ondragend={() => {
+            syncLinkedViewGroupsFromActive(view_name);
+            endViewportInteraction();
+          }}
+        >
+          <Rect
+            x={0}
+            y={0}
+            width={currentImage?.width ?? 0}
+            height={currentImage?.height ?? 0}
+            fill="rgba(0,0,0,0.001)"
+            strokeEnabled={false}
+            onwheel={(event: Konva.KonvaEventObject<WheelEvent>) =>
+              handleWheelOnImage(event.evt, view_name)}
+            onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) =>
+              handleClickOnImage(event.evt, viewRef)}
             onpointerup={() => handlePointerUpOnImage(viewRef)}
             ondblclick={() => handleDoubleClickOnImage(view_name)}
           />
-          <!-- Note: prevent drawing shapes on the "cached" image -->
-          {#if i === images.length - 1}
-            <Group
-              id={`bboxes-${view_name}`}
-              listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Rectangle}
-            >
-              {#if (newShape.status === "creating" && newShape.type === ShapeType.bbox) || (newShape.status === "saving" && newShape.type === ShapeType.bbox)}
-                <CreateRectangle
-                  zoomFactor={zoomFactor[view_name]}
-                  newShape={asRectangleShape(newShape)}
-                  {viewRef}
-                  editable={bboxEditable}
-                  onTransformEnd={(geo: { x: number; y: number; width: number; height: number }) => {
-                    onNewShapeChange?.({
-                      status: "creating",
-                      type: ShapeType.bbox,
-                      x: geo.x,
-                      y: geo.y,
-                      width: geo.width,
-                      height: geo.height,
-                      viewRef,
-                    });
-                  }}
-                  onDragEnd={(pos: Point2D) => {
-                    if (newShape.status === "creating" && newShape.type === ShapeType.bbox) {
-                      const creatingRectangle = newShape;
-                      onNewShapeChange?.({
-                        status: "creating",
-                        type: ShapeType.bbox,
-                        x: pos.x,
-                        y: pos.y,
-                        width: creatingRectangle.width,
-                        height: creatingRectangle.height,
-                        viewRef,
-                      });
-                    }
-                  }}
-                />
-              {/if}
-              {#each bboxes as bbox}
-                {#if bbox.data.view_ref.name === view_name && !isActivePaintingTool}
-                  <BBox2D
-                    {bbox}
-                    {colorScale}
-                    zoomFactor={zoomFactor[view_name]}
-                    listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Rectangle}
-                    imageWidth={getCurrentImage(view_name)?.width ?? 0}
-                    imageHeight={getCurrentImage(view_name)?.height ?? 0}
-                    {merge}
-                    {onNewShapeChange}
-                  />
-                {/if}
-              {/each}
-            </Group>
-            <Group
-              id={`masks-${view_name}`}
-              listening={selectedTool?.type === ToolType.Pan || selectedTool?.type === ToolType.Polygon}
-            >
-              {#if (newShape.status === "creating" && newShape.type === ShapeType.polygon) || (newShape.status === "saving" && (newShape.type === ShapeType.polygon || (newShape.type === ShapeType.mask && "polygonMode" in newShape)))}
-                <CreatePolygon
-                  {viewRef}
-                  {newShape}
-                  {zoomFactor}
-                  getRelativePointerOnView={() => getViewLayer(view_name)?.getRelativePointerPosition() ?? null}
-                  onToolEvent={dispatchPolygonToolEvent}
-                />
-              {/if}
-              {#if selectedTool?.type === ToolType.Brush}
-                <BrushMask
-                  bind:this={brushMaskRefs[view_name]}
-                  {viewRef}
-                  currentImage={getCurrentImage(view_name)}
-                  {zoomFactor}
-                  {selectedItemId}
-                  {selectedTool}
-                  {brushSettings}
-                />
-              {/if}
-              {#each masks as mask (mask.id)}
-                {#if mask.data.view_ref.name === view_name}
-                  <PolygonShape
-                    {viewRef}
-                    {newShape}
-                    {onNewShapeChange}
-                    currentImage={getCurrentImage(view_name)}
-                    {zoomFactor}
-                    {mask}
-                    color={isActivePaintingTool
-                      ? "#9CA3AF"
-                      : colorScale(
-                          mask.ui.top_entities && mask.ui.top_entities.length > 0
-                            ? mask.ui.top_entities[0].id
-                            : mask.data.entity_ref.id,
-                        )}
-                    ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
-                    {selectedTool}
-                  />
-                {/if}
-              {/each}
-            </Group>
-            <Group
-              id={`keypoints-${view_name}`}
-              listening={false}
-            >
-              {#if !isActivePaintingTool}
-                <ShowKeypoints
-                  {colorScale}
-                  {viewRef}
-                  {keypoints}
-                  zoomFactor={zoomFactor[view_name]}
-                  imageSize={{ width: getCurrentImage(view_name)?.width ?? 1, height: getCurrentImage(view_name)?.height ?? 1 }}
-                  {newShape}
-                  {onNewShapeChange}
-                  {isPlaybackActive}
-                />
-              {/if}
-            </Group>
-            <Group id="currentAnnotation" />
+
+          {#if draftRectangle && draftRectangle.viewRef.name === view_name}
+            <CreateRectangle
+              zoomFactor={zoomFactor[view_name] ?? 1}
+              newShape={draftRectangle}
+              {viewRef}
+              editable={bboxEditable}
+              isInteracting={isViewportInteracting}
+              onTransformEnd={(geo: { x: number; y: number; width: number; height: number }) => {
+                if (
+                  localDraftShape?.status === "creating" &&
+                  localDraftShape.type === ShapeType.bbox
+                ) {
+                  localDraftShape = {
+                    ...localDraftShape,
+                    x: geo.x,
+                    y: geo.y,
+                    width: geo.width,
+                    height: geo.height,
+                  };
+                }
+              }}
+              onDragEnd={(pos: Point2D) => {
+                if (
+                  localDraftShape?.status === "creating" &&
+                  localDraftShape.type === ShapeType.bbox
+                ) {
+                  localDraftShape = {
+                    ...localDraftShape,
+                    x: pos.x,
+                    y: pos.y,
+                  };
+                }
+              }}
+            />
           {/if}
-        {/each}
-      </Group>
-    {/each}
+
+          {#if !isActivePaintingTool}
+            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
+              {#if !bbox.ui.displayControl.editing && selectedTool?.type === ToolType.Rectangle}
+                <Rect
+                  x={bbox.data.coords[0]}
+                  y={bbox.data.coords[1]}
+                  width={bbox.data.coords[2]}
+                  height={bbox.data.coords[3]}
+                  fill="rgba(0,0,0,0.001)"
+                  strokeEnabled={false}
+                  onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
+                    event.cancelBubble = true;
+                    handleSelectBBox(bbox);
+                  }}
+                />
+              {:else if !bbox.ui.displayControl.editing && selectedTool?.type === ToolType.Pan}
+                <Rect
+                  x={bbox.data.coords[0]}
+                  y={bbox.data.coords[1]}
+                  width={bbox.data.coords[2]}
+                  height={bbox.data.coords[3]}
+                  fill="rgba(0,0,0,0.001)"
+                  strokeEnabled={false}
+                  onclick={(event: Konva.KonvaEventObject<MouseEvent>) => {
+                    event.cancelBubble = true;
+                    handleSelectBBox(bbox);
+                  }}
+                />
+              {/if}
+            {/each}
+
+            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
+              {#if bbox.ui.displayControl.editing}
+                <BBox2D
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view_name] ?? 1}
+                  listening={true}
+                  imageWidth={currentImage?.width ?? 0}
+                  imageHeight={currentImage?.height ?? 0}
+                  isInteracting={isViewportInteracting}
+                  {merge}
+                  {onNewShapeChange}
+                />
+              {/if}
+            {/each}
+          {/if}
+
+          {#if draftPolygon && "viewRef" in draftPolygon && draftPolygon.viewRef?.name === view_name}
+            <CreatePolygon
+              {viewRef}
+              newShape={draftPolygon}
+              zoomFactor={zoomFactor[view_name] ?? 1}
+              getRelativePointerOnView={() =>
+                getViewLayer(view_name)?.getRelativePointerPosition() ?? null}
+              onToolEvent={dispatchPolygonToolEvent}
+              isInteracting={isViewportInteracting}
+            />
+          {/if}
+
+          {#if selectedTool?.type === ToolType.Brush}
+            <BrushMask
+              bind:this={brushMaskRefs[view_name]}
+              {viewRef}
+              {currentImage}
+              zoomFactor={zoomFactor[view_name] ?? 1}
+              {selectedItemId}
+              {selectedTool}
+              {brushSettings}
+            />
+          {/if}
+
+          {#each masksByView[view_name] ?? [] as mask (mask.id)}
+            {#if mask.ui.displayControl.editing}
+              <PolygonShape
+                {viewRef}
+                {newShape}
+                {onNewShapeChange}
+                {currentImage}
+                zoomFactor={zoomFactor[view_name] ?? 1}
+                {mask}
+                color={colorScale(
+                  mask.ui.top_entities && mask.ui.top_entities.length > 0
+                    ? mask.ui.top_entities[0].id
+                    : mask.data.entity_id,
+                )}
+                {selectedTool}
+                interactive={true}
+                disableCache={isVideo}
+              />
+            {/if}
+          {/each}
+
+          {#if !isActivePaintingTool}
+            <ShowKeypoints
+              {colorScale}
+              {viewRef}
+              keypoints={(keypointsByView[view_name] ?? []).filter(
+                (kpt) => kpt.ui?.displayControl.editing,
+              )}
+              zoomFactor={zoomFactor[view_name] ?? 1}
+              imageSize={{ width: currentImage?.width ?? 1, height: currentImage?.height ?? 1 }}
+              {newShape}
+              {onNewShapeChange}
+              {isPlaybackActive}
+            />
+          {/if}
+        </Group>
+      {/each}
     </Layer>
 
     <Layer id="tools">

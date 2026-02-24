@@ -41,7 +41,7 @@ License: CECILL-C
     overlapTargetIds: string[];
   } => {
     if (
-      entity.data.parent_ref.id !== "" ||
+      entity.data.parent_id !== "" ||
       entity.is_conversation ||
       (track && getTopEntity(track).id === entity.id)
     )
@@ -70,7 +70,7 @@ License: CECILL-C
         //NOTE we "miss" interpolated shapes. So we can "insert"
         (ann) =>
           ann.ui.frame_index
-            ? ann.data.view_ref.name === viewRef.name &&
+            ? ann.data.view_name === viewRef.name &&
               trackBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
             : false,
       );
@@ -78,9 +78,9 @@ License: CECILL-C
 
       const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Track).data.view_ref.name === viewRef.name &&
-          (ann as Track).data.start_timestep <= (track as Track).data.end_timestep &&
-          (ann as Track).data.end_timestep >= (track as Track).data.start_timestep,
+          (ann as Track).data.view_name === viewRef.name &&
+          (ann as Track).data.start_frame <= (track as Track).data.end_frame &&
+          (ann as Track).data.end_frame >= (track as Track).data.start_frame,
       );
       overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
       if (overlap_tracks && overlap_tracks.length > 0)
@@ -88,7 +88,7 @@ License: CECILL-C
     } else {
       const sameKindInSameView_anns = annsNotTracks?.filter(
         //NOTE we "miss" interpolated shapes. So we can "insert"
-        (ann) => ann.data.view_ref.id === viewRef.id && baseSchema === ann.table_info.base_schema,
+        (ann) => ann.data.frame_id === viewRef.id && baseSchema === ann.table_info.base_schema,
       );
       numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
       //WARNING : if we allow relinking of a tracklet child (not allowed now)
@@ -96,9 +96,9 @@ License: CECILL-C
       //anyway, we should find a more reliable frame index
       const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Track).data.view_ref.name === viewRef.name &&
-          (ann as Track).data.start_timestep <= currentFrameIndex.value &&
-          (ann as Track).data.end_timestep >= currentFrameIndex.value,
+          (ann as Track).data.view_name === viewRef.name &&
+          (ann as Track).data.start_frame <= currentFrameIndex.value &&
+          (ann as Track).data.end_frame >= currentFrameIndex.value,
       );
       overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
       if (overlap_tracks && overlap_tracks.length > 0)

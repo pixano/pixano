@@ -302,10 +302,14 @@ export class Item extends BaseData<Record<string, unknown>> {
 // ─── Annotation ────────────────────────────────────────────────────────────────
 
 export interface AnnotationData {
-  item_ref: Reference;
-  view_ref: Reference;
-  entity_ref: Reference;
-  source_ref: Reference;
+  item_id: string;
+  view_name: string;
+  frame_id: string;
+  entity_id: string;
+  source_id: string;
+  frame_index: number;
+  tracklet_id: string;
+  entity_dynamic_state_id: string;
   inference_metadata: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -332,7 +336,7 @@ export abstract class Annotation extends BaseData<AnnotationData> {
   static nonFeaturesFields(): string[] {
     return super
       .nonFeaturesFields()
-      .concat(["item_ref", "view_ref", "entity_ref", "source_ref", "inference_metadata"]);
+      .concat(["item_id", "entity_id", "source_id", "view_name", "frame_id", "frame_index", "tracklet_id", "entity_dynamic_state_id", "inference_metadata"]);
   }
 
   static deepCreateInstanceArray(
@@ -363,9 +367,8 @@ export abstract class Annotation extends BaseData<AnnotationData> {
 // ─── Entity ────────────────────────────────────────────────────────────────────
 
 export interface EntityData {
-  item_ref: Reference;
-  view_ref: Reference;
-  parent_ref: Reference;
+  item_id: string;
+  parent_id: string;
   [key: string]: unknown;
 }
 
@@ -383,7 +386,7 @@ export class Entity extends BaseData<EntityData> {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "parent_ref"]);
+    return super.nonFeaturesFields().concat(["item_id", "parent_id"]);
   }
 
   static deepCreateInstanceArrayOrPlain(
@@ -552,8 +555,8 @@ export interface TextSpanData {
   [key: string]: unknown;
 }
 
-export type TextSpanTypeWithViewRef = TextSpanData & {
-  view_ref: Reference;
+export type TextSpanTypeWithViewName = TextSpanData & {
+  view_name: string;
 };
 
 export class TextSpan extends Annotation {
@@ -580,8 +583,8 @@ export class TextSpan extends Annotation {
 // ─── Track (annotation — temporal container, was Tracklet) ─────────────────────
 
 export interface TrackData {
-  start_timestep: number;
-  end_timestep: number;
+  start_frame: number;
+  end_frame: number;
   start_timestamp: number;
   end_timestamp: number;
   [key: string]: unknown;
@@ -603,7 +606,7 @@ export class Track extends Annotation {
   static nonFeaturesFields(): string[] {
     return super
       .nonFeaturesFields()
-      .concat(["start_timestep", "end_timestep", "start_timestamp", "end_timestamp"]);
+      .concat(["start_frame", "end_frame", "start_timestamp", "end_timestamp"]);
   }
 }
 
@@ -684,8 +687,9 @@ export const isQuestionData = (messageType: MessageType): messageType is Questio
 // ─── View ──────────────────────────────────────────────────────────────────────
 
 export interface ViewData {
-  item_ref: Reference;
-  parent_ref: Reference;
+  item_id: string;
+  parent_id: string;
+  view_name: string;
   [key: string]: unknown;
 }
 
@@ -695,7 +699,7 @@ export abstract class View extends BaseData<ViewData> {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["item_ref", "parent_ref"]);
+    return super.nonFeaturesFields().concat(["item_id", "parent_id", "view_name"]);
   }
 
   static deepCreateInstanceArrayOrPlain(
@@ -799,8 +803,9 @@ export interface ViewEmbedding {
   created_at: string;
   updated_at: string;
   data: {
-    item_ref: Reference;
-    view_ref: Reference;
+    item_id: string;
+    view_name: string;
+    frame_id: string;
     vector: number[];
     shape: number[];
     [key: string]: unknown;
