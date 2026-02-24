@@ -487,12 +487,13 @@ class FolderBaseBuilder(DatasetBuilder):
                 for frame_index in sorted(seq_frame_groups.keys()):
                     yield seq_frame_groups[frame_index]
 
-                if all_entities_data is None:
-                    continue
-
-                yield all_entities_data
-                yield all_entity_dynamic_states_data
-                yield all_annotations_data
+                combined_data: dict[str, list] = {}
+                if all_entities_data is not None:
+                    combined_data.update(all_entities_data)
+                    combined_data.update(all_entity_dynamic_states_data)
+                    combined_data.update(all_annotations_data)
+                if combined_data:
+                    yield combined_data
 
     def _create_item(self, **item_metadata) -> BaseSchema:
         return self.item_schema(**item_metadata)
