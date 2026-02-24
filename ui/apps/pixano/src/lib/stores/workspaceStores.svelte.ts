@@ -166,6 +166,14 @@ export function resetWorkspaceStores() {
 
 // --- Derived stores (cached via $derived.by) ---
 
+// Shared entity-by-id map: only built when Pan tool + focused entity (used by highlight logic).
+const _entitiesById = $derived.by(() => {
+  const focusedEntityId = highlightedEntity.value;
+  const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
+  if (selectedToolType !== ToolType.Pan || !focusedEntityId) return null;
+  return new Map(entities.value.map((entity) => [entity.id, entity]));
+});
+
 const _mediaViews = $derived.by(() => {
   const mediaViewsResult: MView = {};
   for (const [key, view] of Object.entries(views.value)) {
@@ -193,10 +201,7 @@ const _itemBboxes = $derived.by(() => {
   const mViews = _mediaViews;
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
+  const entitiesById = _entitiesById;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.BBox)) {
@@ -229,10 +234,7 @@ const _itemMasks = $derived.by(() => {
   const masks: Mask[] = [];
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
+  const entitiesById = _entitiesById;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Mask)) {
@@ -257,10 +259,7 @@ const _itemKeypoints = $derived.by(() => {
   const m_keypoints: KeypointAnnotation[] = [];
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
+  const entitiesById = _entitiesById;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Keypoints)) {
@@ -356,6 +355,86 @@ function getEffectiveHighlight(
       : "all";
 }
 
+/**
+ * Generic interpolation helper for frame-based annotations (bboxes, keypoints).
+ * Processes tracklets to find or interpolate annotations at the current frame,
+ * then appends remaining frame annotations not already covered by tracklets.
+ */
+function collectFrameAnnotations<TRaw extends Annotation, TDisplay extends { id: string }>(opts: {
+  frameAnnotations: TRaw[];
+  typeFilter: (ann: Annotation) => ann is TRaw;
+  mapForDisplay: (ann: TRaw, highlight: HighlightState) => TDisplay | undefined;
+  interpolateFn: (mapped: TDisplay[], frameIdx: number, frameId: string) => TDisplay | null;
+  frameIdx: number;
+  doInterpolate: boolean;
+  tracks: Track[];
+  mViews: MView;
+  focusedEntityId: string | null;
+  selectedToolType: ToolType;
+  entitiesById: Map<string, Entity> | null;
+}): { results: TDisplay[]; seenIds: Set<string> } {
+  const results: TDisplay[] = [];
+  const seenIds = new Set<string>();
+
+  if (opts.doInterpolate) {
+    const currentTracklets = opts.tracks.filter(
+      (t) => t.data.start_frame <= opts.frameIdx && t.data.end_frame >= opts.frameIdx,
+    );
+
+    for (const tracklet of currentTracklets) {
+      const childs = (tracklet.ui.childs ?? []).filter(opts.typeFilter);
+
+      const atFrame = childs.find((ann) => ann.ui.frame_index === opts.frameIdx);
+      if (atFrame) {
+        const mapped = opts.mapForDisplay(
+          atFrame,
+          getEffectiveHighlight(atFrame, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+        );
+        if (mapped) {
+          results.push(mapped);
+          seenIds.add(mapped.id);
+        }
+        continue;
+      }
+
+      if (childs.length > 1) {
+        const sample = childs[0];
+        const viewFrames = opts.mViews[sample.data.view_name] as SequenceFrame[] | undefined;
+        const viewFrame = viewFrames?.[opts.frameIdx];
+        if (viewFrame) {
+          const mappedChilds = childs
+            .map((ann) =>
+              opts.mapForDisplay(
+                ann,
+                getEffectiveHighlight(ann, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+              ),
+            )
+            .filter((v): v is TDisplay => v !== undefined);
+          const interpolated = opts.interpolateFn(mappedChilds, opts.frameIdx, viewFrame.id);
+          if (interpolated) {
+            results.push(interpolated);
+            seenIds.add(interpolated.id);
+          }
+        }
+      }
+    }
+  }
+
+  for (const ann of opts.frameAnnotations) {
+    if (seenIds.has(ann.id)) continue;
+    const mapped = opts.mapForDisplay(
+      ann,
+      getEffectiveHighlight(ann, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+    );
+    if (mapped) {
+      results.push(mapped);
+      seenIds.add(mapped.id);
+    }
+  }
+
+  return { results, seenIds };
+}
+
 function pushFrameEntry<T>(
   byFrame: Map<number, T[]>,
   frameIndex: number | undefined,
@@ -401,94 +480,36 @@ const _frameBuckets = $derived.by<FrameBuckets>(() => {
 
 const _current_itemBBoxes = $derived.by(() => {
   const frameIdx = currentFrameIndex.value;
-  const trks = _tracks;
   const mViews = _mediaViews;
-  const doInterpolate = interpolate.value;
-  const frameBboxes = _frameBuckets.bboxes.get(frameIdx) ?? [];
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
+  const entitiesById = _entitiesById;
 
-  const currentBboxesAndInterpolated: BBox[] = [];
-  const selectedBBoxIds = new Set<string>();
-  if (doInterpolate) {
-    const currentTracklets = trks.filter(
-      (tracklet) => tracklet.data.start_frame <= frameIdx && tracklet.data.end_frame >= frameIdx,
-    );
-
-    for (const tracklet of currentTracklets) {
-      const bboxChilds = (tracklet.ui.childs ?? []).filter((ann): ann is BBox =>
-        ann.is_type(BaseSchema.BBox),
-      );
-
-      const boxAtFrame = bboxChilds.find((box) => box.ui.frame_index === frameIdx);
-      if (boxAtFrame) {
-        const mappedBox = mapBBoxForDisplay(
-          boxAtFrame,
-          mViews,
-          getEffectiveHighlight(boxAtFrame, focusedEntityId, selectedToolType, entitiesById),
-        );
-        if (mappedBox) {
-          currentBboxesAndInterpolated.push(mappedBox);
-          selectedBBoxIds.add(mappedBox.id);
-        }
-        continue;
-      }
-
-      if (bboxChilds.length > 1) {
-        const sample_bbox = bboxChilds[0];
-        const viewFrames = mViews[sample_bbox.data.view_name] as SequenceFrame[] | undefined;
-        const viewFrame = viewFrames?.[frameIdx];
-        if (viewFrame) {
-          const mappedBboxChilds = bboxChilds
-            .map((bbox) =>
-              mapBBoxForDisplay(
-                bbox,
-                mViews,
-                getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, entitiesById),
-              ),
-            )
-            .filter((bbox): bbox is BBox => bbox !== undefined);
-          const interpolated_box = boxLinearInterpolation(mappedBboxChilds, frameIdx, viewFrame.id);
-          if (interpolated_box) {
-            currentBboxesAndInterpolated.push(interpolated_box);
-            selectedBBoxIds.add(interpolated_box.id);
-          }
-        }
-      }
-    }
-  }
-
-  for (const bbox of frameBboxes) {
-    if (selectedBBoxIds.has(bbox.id)) continue;
-
-    const mappedBBox = mapBBoxForDisplay(
-      bbox,
-      mViews,
-      getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, entitiesById),
-    );
-    if (mappedBBox) {
-      currentBboxesAndInterpolated.push(mappedBBox);
-      selectedBBoxIds.add(mappedBBox.id);
-    }
-  }
+  const { results, seenIds } = collectFrameAnnotations<BBox, BBox>({
+    frameAnnotations: _frameBuckets.bboxes.get(frameIdx) ?? [],
+    typeFilter: (ann): ann is BBox => ann.is_type(BaseSchema.BBox),
+    mapForDisplay: (bbox, hl) => mapBBoxForDisplay(bbox, mViews, hl),
+    interpolateFn: boxLinearInterpolation,
+    frameIdx,
+    doInterpolate: interpolate.value,
+    tracks: _tracks,
+    mViews,
+    focusedEntityId,
+    selectedToolType,
+    entitiesById,
+  });
 
   for (const previewBBox of generatedPreviewBBoxes.value) {
-    if (previewBBox.ui.frame_index !== frameIdx || selectedBBoxIds.has(previewBBox.id)) continue;
-    const mappedPreviewBBox = mapBBoxForDisplay(
+    if (previewBBox.ui.frame_index !== frameIdx || seenIds.has(previewBBox.id)) continue;
+    const mapped = mapBBoxForDisplay(
       previewBBox,
       mViews,
       getEffectiveHighlight(previewBBox, focusedEntityId, selectedToolType, entitiesById),
     );
-    if (mappedPreviewBBox) {
-      currentBboxesAndInterpolated.push(mappedPreviewBBox);
-    }
+    if (mapped) results.push(mapped);
   }
 
-  return currentBboxesAndInterpolated;
+  return results;
 });
 export const current_itemBBoxes = {
   get value() {
@@ -498,84 +519,23 @@ export const current_itemBBoxes = {
 
 const _current_itemKeypoints = $derived.by(() => {
   const frameIdx = currentFrameIndex.value;
-  const trks = _tracks;
   const mViews = _mediaViews;
-  const doInterpolate = interpolate.value;
-  const frameKeypoints = _frameBuckets.keypoints.get(frameIdx) ?? [];
-  const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
-  const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
 
-  const currentKptsAndInterpolated: KeypointAnnotation[] = [];
-  const selectedKptIds = new Set<string>();
-  if (doInterpolate) {
-    const currentTracklets = trks.filter(
-      (tracklet) => tracklet.data.start_frame <= frameIdx && tracklet.data.end_frame >= frameIdx,
-    );
+  const { results } = collectFrameAnnotations<Keypoints, KeypointAnnotation>({
+    frameAnnotations: _frameBuckets.keypoints.get(frameIdx) ?? [],
+    typeFilter: (ann): ann is Keypoints => ann.is_type(BaseSchema.Keypoints),
+    mapForDisplay: (kpt, hl) => mapKeypointsForDisplay(kpt, mViews, hl),
+    interpolateFn: keypointsLinearInterpolation,
+    frameIdx,
+    doInterpolate: interpolate.value,
+    tracks: _tracks,
+    mViews,
+    focusedEntityId: highlightedEntity.value,
+    selectedToolType: selectedTool.value?.type ?? ToolType.Pan,
+    entitiesById: _entitiesById,
+  });
 
-    for (const tracklet of currentTracklets) {
-      const keypointChilds = (tracklet.ui.childs ?? []).filter((ann): ann is Keypoints =>
-        ann.is_type(BaseSchema.Keypoints),
-      );
-
-      const keypointAtFrame = keypointChilds.find((kpt) => kpt.ui.frame_index === frameIdx);
-      if (keypointAtFrame) {
-        const mappedKeypoint = mapKeypointsForDisplay(
-          keypointAtFrame,
-          mViews,
-          getEffectiveHighlight(keypointAtFrame, focusedEntityId, selectedToolType, entitiesById),
-        );
-        if (mappedKeypoint) {
-          currentKptsAndInterpolated.push(mappedKeypoint);
-          selectedKptIds.add(mappedKeypoint.id);
-        }
-        continue;
-      }
-
-      if (keypointChilds.length > 1) {
-        const sample_kpt = keypointChilds[0];
-        const viewFrames = mViews[sample_kpt.data.view_name] as SequenceFrame[] | undefined;
-        const viewFrame = viewFrames?.[frameIdx];
-        if (viewFrame) {
-          const mappedKeypointChilds = keypointChilds
-            .map((kpt) =>
-              mapKeypointsForDisplay(
-                kpt,
-                mViews,
-                getEffectiveHighlight(kpt, focusedEntityId, selectedToolType, entitiesById),
-              ),
-            )
-            .filter((kpt): kpt is KeypointAnnotation => kpt !== undefined);
-          const interpolated_kpt = keypointsLinearInterpolation(
-            mappedKeypointChilds,
-            frameIdx,
-            viewFrame.id,
-          );
-          if (interpolated_kpt) {
-            currentKptsAndInterpolated.push(interpolated_kpt);
-            selectedKptIds.add(interpolated_kpt.id);
-          }
-        }
-      }
-    }
-  }
-
-  for (const keypoint of frameKeypoints) {
-    if (selectedKptIds.has(keypoint.id)) continue;
-    const mappedKeypoint = mapKeypointsForDisplay(
-      keypoint,
-      mViews,
-      getEffectiveHighlight(keypoint, focusedEntityId, selectedToolType, entitiesById),
-    );
-    if (mappedKeypoint) {
-      currentKptsAndInterpolated.push(mappedKeypoint);
-    }
-  }
-
-  return currentKptsAndInterpolated;
+  return results;
 });
 export const current_itemKeypoints = {
   get value() {
@@ -588,10 +548,7 @@ const _current_itemMasks = $derived.by(() => {
   const frameMasks = _frameBuckets.masks.get(frameIdx) ?? [];
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
-  const entitiesById =
-    selectedToolType === ToolType.Pan && focusedEntityId
-      ? new Map(entities.value.map((entity) => [entity.id, entity]))
-      : null;
+  const entitiesById = _entitiesById;
 
   const currentMasks: Mask[] = [];
   for (const maskAtFrame of frameMasks) {

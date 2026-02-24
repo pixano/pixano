@@ -4,7 +4,71 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-/** Pure, immutable helper functions for canvas view transforms. */
+import type { BoundingBox, Point2D } from "$lib/types/geometry";
+
+/**
+ * Pure geometry helpers for rectangle/bbox calculations and canvas view transforms.
+ * No Konva stage lookups — all data is passed as parameters.
+ */
+
+// --- Rectangle / BBox helpers ---
+
+/**
+ * Normalize a rect after transform: collapse scale into width/height.
+ */
+export function normalizeRectAfterTransform(attrs: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  scaleX: number;
+  scaleY: number;
+}): BoundingBox {
+  return {
+    x: attrs.x,
+    y: attrs.y,
+    width: attrs.width * attrs.scaleX,
+    height: attrs.height * attrs.scaleY,
+  };
+}
+
+/**
+ * Compute normalised [x, y, w, h] coords relative to image dimensions.
+ */
+export function getRectNormalizedCoords(
+  rectX: number,
+  rectY: number,
+  rectWidth: number,
+  rectHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): [number, number, number, number] {
+  return [
+    rectX / imageWidth,
+    rectY / imageHeight,
+    rectWidth / imageWidth,
+    rectHeight / imageHeight,
+  ];
+}
+
+/**
+ * Clamp a dragged rectangle to stay within image boundaries.
+ */
+export function clampRectToImage(
+  rectX: number,
+  rectY: number,
+  rectWidth: number,
+  rectHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): Point2D {
+  return {
+    x: Math.max(0, Math.min(rectX, imageWidth - rectWidth)),
+    y: Math.max(0, Math.min(rectY, imageHeight - rectHeight)),
+  };
+}
+
+// --- View transform helpers ---
 
 export interface ViewTransform {
   readonly x: number;
@@ -15,14 +79,6 @@ export interface ViewTransform {
 
 /**
  * Compute the initial view transform to fit an image in a grid cell.
- *
- * @param containerWidth  Total container width (px)
- * @param containerHeight Total container height (px)
- * @param imageWidth      Source image width
- * @param imageHeight     Source image height
- * @param gridCols        Number of columns in the multi-view grid
- * @param gridRows        Number of rows in the multi-view grid
- * @param gridIndex       0-based position in the grid (left-to-right, top-to-bottom)
  */
 export function computeViewTransform(
   containerWidth: number,
@@ -51,12 +107,6 @@ export function computeViewTransform(
 
 /**
  * Compute a new view transform after a wheel-zoom event.
- *
- * @param current     Current transform
- * @param direction   Positive to zoom in, negative to zoom out
- * @param pointerX    Pointer X relative to the stage
- * @param pointerY    Pointer Y relative to the stage
- * @param zoomSpeed   Multiplicative zoom factor per step (default 1.05)
  */
 export function zoomViewTransform(
   current: ViewTransform,

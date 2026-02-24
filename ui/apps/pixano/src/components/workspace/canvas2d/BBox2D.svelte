@@ -10,7 +10,7 @@ License: CECILL-C
 
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
   import LabelTag from "./LabelTag.svelte";
-  import { clampRectToImage, getRectNormalizedCoords } from "./rectangleOps";
+  import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
@@ -19,7 +19,6 @@ License: CECILL-C
     colorScale: (id: string) => string;
     zoomFactor: number;
     listening: boolean;
-    isInteracting?: boolean;
     imageWidth?: number;
     imageHeight?: number;
     merge?: (ann: { id: string }) => void;
@@ -31,7 +30,6 @@ License: CECILL-C
     colorScale,
     zoomFactor,
     listening,
-    isInteracting = false,
     imageWidth = 0,
     imageHeight = 0,
     merge,
@@ -141,8 +139,8 @@ License: CECILL-C
     stroke={color}
     strokeWidth={(bbox.ui.strokeFactor ?? 1) * BBOX_STROKEWIDTH}
     strokeScaleEnabled={false}
-    perfectDrawEnabled={!isInteracting}
-    shadowForStrokeEnabled={!isInteracting}
+    perfectDrawEnabled={false}
+    shadowForStrokeEnabled={false}
     opacity={bbox.ui.opacity ?? 1}
     visible={!bbox.ui.displayControl.hidden}
     draggable={editing}

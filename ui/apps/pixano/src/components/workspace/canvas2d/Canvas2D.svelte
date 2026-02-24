@@ -16,6 +16,7 @@ License: CECILL-C
   import CreatePolygon from "./CreatePolygon.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
+  import { zoomViewTransform } from "./canvasGeometry";
   import { clearParsedCache } from "./konvaMaskOps";
   import PolygonShape from "./PolygonShape.svelte";
   import ShowKeypoints from "./ShowKeypoint.svelte";
@@ -55,7 +56,6 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
-  import { effectProbe } from "$lib/utils/effectProbe";
   import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
   import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
 
@@ -69,10 +69,6 @@ License: CECILL-C
     polygons?: PolygonVertex[][];
     points?: Point2D[];
     outputMode?: PolygonOutputMode;
-  }
-
-  function noopMerge(ann: unknown): void {
-    void ann;
   }
 
   const DEFAULT_BRUSH_SETTINGS: BrushSettings = {
@@ -117,8 +113,6 @@ License: CECILL-C
     onSelectedToolChange?: (tool: SelectionTool) => void;
     onNewShapeChange?: (shape: Shape) => void;
     onBrushSettingsChange?: (settings: BrushSettings) => void;
-    // New architecture (default behavior for the ongoing migration)
-    useNewArchitecture?: boolean;
     toolBridge?: ToolBridge | undefined;
     // Image settings
     filters?: ImageFilters;
@@ -137,12 +131,11 @@ License: CECILL-C
     isVideo = false,
     imageSmoothing = true,
     isPlaybackActive = false,
-    merge = noopMerge,
+    merge,
     brushSettings = DEFAULT_BRUSH_SETTINGS,
     onSelectedToolChange,
     onNewShapeChange,
     onBrushSettingsChange,
-    useNewArchitecture = true,
     toolBridge = undefined,
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
@@ -480,7 +473,7 @@ License: CECILL-C
   // ********** INIT ********** //
 
   $effect(() => {
-    if (useNewArchitecture && !toolBridge) {
+    if (!toolBridge) {
       internalToolBridge = createInternalToolBridge(selectedItemId);
     }
 
@@ -1018,11 +1011,6 @@ License: CECILL-C
     }
   }
 
-  function handleMouseEnterStage() {
-    // Declarative: crosshair/brushCursor are conditionally rendered,
-    // they become visible via their $state conditions
-  }
-
   function handleMouseLeaveStage() {
     // Hide crosshair and brush cursor when mouse leaves stage
     crosshairPosition = null;
@@ -1174,39 +1162,25 @@ License: CECILL-C
   }
 
   function zoom(stageNode: Konva.Stage, direction: number, view_name: string): number {
-    // Defines zoom speed
-    const zoomScale = 1.05;
-
     const viewLayer = getViewLayer(view_name);
     if (!viewLayer) return 1;
 
-    // Get old scaling
-    const oldScale = viewLayer.scaleX();
-
-    // Get mouse position
     const pointer = stageNode.getRelativePointerPosition();
-    const mousePointTo = {
-      x: (pointer.x - viewLayer.x()) / oldScale,
-      y: (pointer.y - viewLayer.y()) / oldScale,
+    const current = {
+      x: viewLayer.x(),
+      y: viewLayer.y(),
+      scaleX: viewLayer.scaleX(),
+      scaleY: viewLayer.scaleY(),
     };
+    const next = zoomViewTransform(current, direction, pointer.x, pointer.y);
 
-    // Calculate new scaling
-    const newScale = direction > 0 ? oldScale * zoomScale : oldScale / zoomScale;
-
-    // Calculate new position
-    const newPos = {
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    };
-
-    // Change scaling and position
     applyViewTransform(view_name, {
-      x: newPos.x,
-      y: newPos.y,
-      scale: newScale,
+      x: next.x,
+      y: next.y,
+      scale: next.scaleX,
     });
 
-    return newScale;
+    return next.scaleX;
   }
 
   function handleWheelOnImage(event: WheelEvent, view_name: string) {
@@ -1278,33 +1252,21 @@ License: CECILL-C
     return null;
   });
 
-  // Video/frame updates can replace many Konva nodes at once (images + overlays).
-  // Force a single batched redraw on the next frame when frame identities change.
+  // Lightweight fingerprint that changes when frame identities change.
+  // Triggers a single batched redraw instead of tracking every annotation property.
+  let frameFingerprint = $derived.by(() => {
+    let fp = "";
+    for (const [vn, imgs] of Object.entries(imagesPerView)) {
+      fp += `${vn}:${imgs[imgs.length - 1]?.id ?? ""};`;
+    }
+    return `${fp}|b${bboxes.length}|m${masks.length}|k${keypoints.length}`;
+  });
+
   $effect(() => {
-    const stageNode = stage;
-    if (!stageNode) return;
-    for (const [view_name, images] of Object.entries(imagesPerView)) {
-      void view_name;
-      const latest = images[images.length - 1];
-      void latest?.id;
-    }
-    for (const bbox of bboxes) {
-      void bbox.id;
-      void bbox.data.frame_id;
-      void bbox.data.view_name;
-    }
-    for (const mask of masks) {
-      void mask.id;
-      void mask.data.frame_id;
-      void mask.data.view_name;
-      void mask.ui.svg?.length;
-    }
-    for (const kpt of keypoints) {
-      void kpt.id;
-      void kpt.viewRef?.id;
-      void kpt.viewRef?.name;
-    }
-    requestAnimationFrame(() => stageNode.batchDraw());
+    const s = stage;
+    if (!s) return;
+    void frameFingerprint;
+    requestAnimationFrame(() => s.batchDraw());
   });
 
   // ********** KEY EVENTS ********** //
@@ -1391,50 +1353,45 @@ License: CECILL-C
       return;
     }
   }
-  $effect(() => {
-    effectProbe("Canvas2D.toolFallback");
-    const currentTool = selectedTool;
-    const shouldFallback = useNewArchitecture && currentTool && !isSupportedCanvasTool(currentTool);
-    if (shouldFallback) {
-      const fallback = getFallbackCanvasTool();
-      if (currentTool !== fallback) {
-        onSelectedToolChange?.(fallback);
-      }
-    }
-  });
   // True for active painting flows in the reduced Pan/Rectangle/Brush architecture.
   let isActivePaintingTool = $derived(selectedTool?.type === ToolType.Brush);
+
+  // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
-    effectProbe("Canvas2D.shouldReset");
-    const shapeStatus = newShape.status;
-    const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
-    if (shapeStatus === "none" && shouldReset) {
-      untrack(() => {
-        clearAnnotationAndInputs();
-      });
-      onNewShapeChange?.({ status: "none" });
-    }
-  });
-  $effect(() => {
-    effectProbe("Canvas2D.toolCleanup");
     const currentTool = selectedTool;
     const previousTool = prevSelectedTool;
     const shapeStatus = newShape.status;
     const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
 
+    // Fallback unsupported tools
+    if (currentTool && !isSupportedCanvasTool(currentTool)) {
+      const fallback = getFallbackCanvasTool();
+      if (currentTool !== fallback) {
+        onSelectedToolChange?.(fallback);
+      }
+      prevSelectedTool = currentTool;
+      return;
+    }
+
+    // Reset when shape explicitly requests it
+    if (shapeStatus === "none" && shouldReset) {
+      untrack(() => clearAnnotationAndInputs());
+      onNewShapeChange?.({ status: "none" });
+      prevSelectedTool = currentTool;
+      return;
+    }
+
+    // Cleanup on tool switch (except brush-to-brush mode toggle)
     const switchingBrushMode =
       previousTool?.type === ToolType.Brush && currentTool?.type === ToolType.Brush;
-
-    if (!switchingBrushMode || (shapeStatus === "none" && shouldReset)) {
-      untrack(() => {
-        clearAnnotationAndInputs();
-      });
+    if (!switchingBrushMode) {
+      untrack(() => clearAnnotationAndInputs());
     }
+
     prevSelectedTool = currentTool;
   });
   let lastAppliedCanvasSize: number | null = null;
   $effect(() => {
-    effectProbe("Canvas2D.canvasSize");
     if (!isReady || !canvasSize) return;
     if (lastAppliedCanvasSize === canvasSize) return;
     for (const view_name of Object.keys(imagesPerView)) {
@@ -1442,9 +1399,9 @@ License: CECILL-C
     }
     lastAppliedCanvasSize = canvasSize;
   });
+  // Unified tool bridge lifecycle: connect bridge, sync previews, switch FSM.
   $effect(() => {
-    effectProbe("Canvas2D.toolBridge");
-    const bridge = useNewArchitecture ? (toolBridge ?? internalToolBridge) : undefined;
+    const bridge = toolBridge ?? internalToolBridge;
     const currentBridge = untrack(() => activeToolBridge);
     if (bridge !== currentBridge) {
       activeToolBridge = bridge;
@@ -1454,21 +1411,19 @@ License: CECILL-C
     }
   });
   $effect(() => {
-    effectProbe("Canvas2D.previewSync");
     const bridge = activeToolBridge;
     if (!bridge) {
       localDraftShape = null;
       return;
     }
+    // Sync preview from bridge
     const preview = bridge.preview.value;
     untrack(() => syncToolPreview(preview));
-  });
-  $effect(() => {
-    effectProbe("Canvas2D.fsmSwitch");
-    if (useNewArchitecture && activeToolBridge && selectedTool) {
-      const fsm = createToolFSMForSelection(selectedTool);
+    // Switch FSM when tool changes
+    if (selectedTool) {
+      const fsm = untrack(() => createToolFSMForSelection(selectedTool));
       if (fsm) {
-        activeToolBridge.switchTool(fsm);
+        untrack(() => bridge.switchTool(fsm));
       }
     }
   });
@@ -1476,14 +1431,12 @@ License: CECILL-C
 
   // React to item changes
   $effect(() => {
-    effectProbe("Canvas2D.itemChange");
     if (selectedItemId && currentId !== selectedItemId) {
       loadItem();
     }
   });
   // React to tool changes
   $effect(() => {
-    effectProbe("Canvas2D.toolChangeHandler");
     const currentTool = selectedTool;
     const currentStage = untrack(() => stage);
     if (currentStage && currentTool) {
@@ -1512,7 +1465,6 @@ License: CECILL-C
   });
   // Transformer is now declarative inside BBox2D.svelte — no manual attachment needed
   $effect(() => {
-    effectProbe("Canvas2D.filter");
     if (!isVideo && stage && filters) {
       const previousTimer = untrack(() => filterDebounceTimer);
       if (previousTimer) {
@@ -1536,7 +1488,6 @@ License: CECILL-C
     id="stage"
     divWrapperProps={{ style: `cursor: ${cursor}` }}
     onmousemove={handleMouseMoveStage}
-    onmouseenter={handleMouseEnterStage}
     onmouseleave={handleMouseLeaveStage}
   >
     <Layer id="background" imageSmoothingEnabled={imageSmoothing} listening={false}>
@@ -1554,7 +1505,7 @@ License: CECILL-C
       {/each}
     </Layer>
 
-    <Layer id="static">
+    <Layer id="static" listening={false}>
       {#each Object.entries(imagesPerView) as [view_name, images]}
         {@const currentLoadedImage = images[images.length - 1]}
         {@const currentImage = currentLoadedImage?.element}
@@ -1570,7 +1521,6 @@ License: CECILL-C
                   listening={false}
                   imageWidth={currentImage?.width ?? 0}
                   imageHeight={currentImage?.height ?? 0}
-                  isInteracting={isViewportInteracting}
                   {merge}
                   {onNewShapeChange}
                 />
@@ -1660,7 +1610,6 @@ License: CECILL-C
               newShape={draftRectangle}
               {viewRef}
               editable={bboxEditable}
-              isInteracting={isViewportInteracting}
               onTransformEnd={(geo: { x: number; y: number; width: number; height: number }) => {
                 if (
                   localDraftShape?.status === "creating" &&
@@ -1692,7 +1641,7 @@ License: CECILL-C
 
           {#if !isActivePaintingTool}
             {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
-              {#if !bbox.ui.displayControl.editing && selectedTool?.type === ToolType.Rectangle}
+              {#if !bbox.ui.displayControl.editing && (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan)}
                 <Rect
                   x={bbox.data.coords[0]}
                   y={bbox.data.coords[1]}
@@ -1705,24 +1654,7 @@ License: CECILL-C
                     handleSelectBBox(bbox);
                   }}
                 />
-              {:else if !bbox.ui.displayControl.editing && selectedTool?.type === ToolType.Pan}
-                <Rect
-                  x={bbox.data.coords[0]}
-                  y={bbox.data.coords[1]}
-                  width={bbox.data.coords[2]}
-                  height={bbox.data.coords[3]}
-                  fill="rgba(0,0,0,0.001)"
-                  strokeEnabled={false}
-                  onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
-                    event.cancelBubble = true;
-                    handleSelectBBox(bbox);
-                  }}
-                />
-              {/if}
-            {/each}
-
-            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
-              {#if bbox.ui.displayControl.editing}
+              {:else if bbox.ui.displayControl.editing}
                 <BBox2D
                   {bbox}
                   {colorScale}
@@ -1730,7 +1662,6 @@ License: CECILL-C
                   listening={true}
                   imageWidth={currentImage?.width ?? 0}
                   imageHeight={currentImage?.height ?? 0}
-                  isInteracting={isViewportInteracting}
                   {merge}
                   {onNewShapeChange}
                 />
@@ -1801,7 +1732,7 @@ License: CECILL-C
       {/each}
     </Layer>
 
-    <Layer id="tools">
+    <Layer id="tools" listening={false}>
       <Crosshair position={crosshairPosition} {stageWidth} {stageHeight} />
       {#if brushCursorState}
         <BrushCursor

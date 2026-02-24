@@ -19,7 +19,6 @@ License: CECILL-C
     newShape: CreateRectangleShape | SaveRectangleShape;
     viewRef: Reference;
     editable?: boolean;
-    isInteracting?: boolean;
     onTransformEnd?: (geometry: BoundingBox) => void;
     onDragEnd?: (position: Point2D) => void;
   }
@@ -29,7 +28,6 @@ License: CECILL-C
     newShape,
     viewRef,
     editable = false,
-    isInteracting = false,
     onTransformEnd,
     onDragEnd,
   }: Props = $props();
@@ -81,8 +79,8 @@ License: CECILL-C
       fill="hsla(330, 60%, 95%, 0.45)"
       strokeWidth={INPUTRECT_STROKEWIDTH}
       strokeScaleEnabled={false}
-      perfectDrawEnabled={!isInteracting}
-      shadowForStrokeEnabled={!isInteracting}
+      perfectDrawEnabled={false}
+      shadowForStrokeEnabled={false}
       listening={editable}
       draggable={editable}
       ondragend={handleDragEnd}
