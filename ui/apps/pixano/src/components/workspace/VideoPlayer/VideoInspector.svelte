@@ -32,14 +32,16 @@ License: CECILL-C
     entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities),
   );
 
+  const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
+
   const resetHighlight = () => {
-    if (![ToolType.Pan, ToolType.Fusion].includes(selectedTool.value.type)) {
+    if (![ToolType.Pan, ToolType.Fusion].includes(selectedToolType)) {
       clearHighlighting();
     }
   };
 
   const resetTool = () => {
-    if (![ToolType.Pan, ToolType.Fusion].includes(selectedTool.value.type)) {
+    if (![ToolType.Pan, ToolType.Fusion].includes(selectedToolType)) {
       selectedTool.value = panTool;
     }
   };

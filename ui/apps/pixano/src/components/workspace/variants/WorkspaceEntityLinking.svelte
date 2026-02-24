@@ -11,12 +11,12 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "$components/workspace/canvas2d";
+  import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
   import {
     DatasetItem,
     Image,
     isImage,
-    Message,
     TextSpan,
     effectProbe,
     type LoadedImagesPerView,
@@ -24,7 +24,6 @@ License: CECILL-C
   import TextSpanArea from "../textCanvas/TextSpanArea.svelte";
 
   // Import stores and API functions
-  import { saveTo } from "$lib/utils/saveItemUtils";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { applyNewShapeEditing } from "$lib/utils/entityMutations";
@@ -54,45 +53,77 @@ License: CECILL-C
     resize: number;
   }
 
+  interface BrushSettings {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  }
+
   let { selectedItem, resize }: Props = $props();
 
   // Images per view type
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
+  let prevSelectedItemId: string = $state("");
+  let imageLoadRequestId = 0;
+  const hasImages = $derived(Object.keys(imagesPerView).length > 0);
 
   // utility vars for resizing with slide bar
   let entityLinkingAreaWidth = $state(700); //default width
   let expanding = $state(false);
 
+  const handleCanvasShapeChange = (shape: Shape) => {
+    if (shape.status === "creating") return;
+    newShape.value = shape as import("$lib/ui").Shape;
+  };
+
+  const handleTextSpanAreaShapeChange = (shape: import("$lib/ui").Shape) => {
+    newShape.value = shape;
+  };
+
   /**
    * Update the images based on the selected item views.
    */
-  const updateImages = async (): Promise<void> => {
-    if (selectedItem.views) {
-      loaded = false;
-      embeddings.value = {};
-      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
-      const image_views = Object.fromEntries(
-        Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
-      ) as Record<string, Image>;
-      imagesPerView = await loadImagesFromViews(image_views);
-      loaded = true;
+  const updateImages = async (clearExistingViews = false): Promise<void> => {
+    const requestId = ++imageLoadRequestId;
+    loaded = false;
+    if (clearExistingViews) {
+      imagesPerView = {};
     }
+
+    if (!selectedItem.views) {
+      imagesPerView = {};
+      loaded = true;
+      return;
+    }
+
+    embeddings.value = {};
+    modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
+    const image_views = Object.fromEntries(
+      Object.entries(selectedItem.views).filter(([, value]) => isImage(value)),
+    ) as Record<string, Image>;
+    const nextImages = await loadImagesFromViews(image_views);
+
+    if (requestId !== imageLoadRequestId) return;
+    imagesPerView = nextImages;
+    loaded = true;
   };
 
   // Reactive statement to update images when selectedItem changes or the 16 bit filters change
-  let prev16BitRange: number[] = $state([]);
+  let prev16BitRange = $state<number[]>([0, 0]);
   $effect(() => {
-    if (selectedItem || filters.value.u16BitRange) {
-      if (
-        prev16BitRange[0] !== filters.value.u16BitRange[0] ||
-        prev16BitRange[1] !== filters.value.u16BitRange[1]
-      ) {
-        updateImages().catch(() => {
-          console.error("Error loading the images.");
-        });
-        prev16BitRange = [...filters.value.u16BitRange];
-      }
+    const selectedItemId = selectedItem?.item?.id ?? "";
+    const next16BitRange = filters.value.u16BitRange;
+    const itemChanged = selectedItemId !== prevSelectedItemId;
+    const rangeChanged =
+      prev16BitRange[0] !== next16BitRange[0] || prev16BitRange[1] !== next16BitRange[1];
+
+    if (itemChanged || rangeChanged) {
+      prevSelectedItemId = selectedItemId;
+      prev16BitRange = [...next16BitRange];
+      void updateImages(itemChanged).catch(() => {
+        console.error("Error loading the images.");
+      });
     }
   });
 
@@ -111,16 +142,6 @@ License: CECILL-C
     }
   });
 
-  const handleMessageContentChange = (
-    event: CustomEvent<{
-      updatedMessage: Message;
-    }>,
-  ) => {
-    event.preventDefault();
-
-    saveTo("update", event.detail.updatedMessage);
-  };
-
   const handleCreateTemporaryTextSpan = (tempTextSpan: TextSpan) => {
     annotations.update((anns) => [...anns, tempTextSpan]);
   };
@@ -136,38 +157,37 @@ License: CECILL-C
   };
 </script>
 
-<!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
-{#if loaded}
-  <div
-    class="h-full flex"
-    onmouseup={() => {
-      expanding = false;
+<div
+  class="h-full flex"
+  onmouseup={() => {
+    expanding = false;
+  }}
+  onmousemove={expand}
+  role="tab"
+  tabindex="0"
+>
+  <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
+    <TextSpanArea
+      textViews={textViews.value}
+      selectedItemId={selectedItem.item.id}
+      colorScale={colorScale.value[1]}
+      textSpans={textSpans.value}
+      newShape={newShape.value}
+      onNewShapeChange={handleTextSpanAreaShapeChange}
+      onCreateTemporaryTextSpan={handleCreateTemporaryTextSpan}
+      onTextSpanClick={handleTextSpanClick}
+    />
+  </div>
+  <button
+    type="button"
+    aria-label="Resize text and image panels"
+    class="w-1 bg-primary-light cursor-col-resize h-full"
+    onmousedown={() => {
+      expanding = true;
     }}
-    onmousemove={expand}
-    role="tab"
-    tabindex="0"
-  >
-    <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
-      <TextSpanArea
-        textViews={textViews.value}
-        selectedItemId={selectedItem.item.id}
-        colorScale={colorScale.value[1]}
-        textSpans={textSpans.value}
-        newShape={newShape.value}
-        onNewShapeChange={(shape) => newShape.value = shape}
-        onCreateTemporaryTextSpan={handleCreateTemporaryTextSpan}
-        onTextSpanClick={handleTextSpanClick}
-      />
-    </div>
-    <button
-      type="button"
-      aria-label="Resize text and image panels"
-      class="w-1 bg-primary-light cursor-col-resize h-full"
-      onmousedown={() => {
-        expanding = true;
-      }}
 ></button>
-    <div class="overflow-hidden grow">
+  <div class="overflow-hidden grow relative">
+    {#if loaded && hasImages}
       <Canvas2D
         {imagesPerView}
         selectedItemId={selectedItem.item.id}
@@ -180,15 +200,19 @@ License: CECILL-C
         imageSmoothing={imageSmoothing.value}
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
-        newShape={newShape.value as Shape}
-        onSelectedToolChange={(tool) => selectedTool.value = tool}
-        onNewShapeChange={(shape) => newShape.value = shape as import("$lib/ui").Shape}
-        onBrushSettingsChange={(settings) => brushSettings.value = settings}
+        newShape={newShape.value}
+        onSelectedToolChange={(tool: SelectionTool) => selectedTool.value = tool}
+        onNewShapeChange={handleCanvasShapeChange}
+        onBrushSettingsChange={(settings: BrushSettings) => brushSettings.value = settings}
       />
-    </div>
+    {:else}
+      <div class="w-full h-full bg-canvas"></div>
+    {/if}
+
+    {#if !loaded}
+      <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
+        <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
+      </div>
+    {/if}
   </div>
-{:else}
-  <div class="w-full h-full flex items-center justify-center">
-    <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
-  </div>
-{/if}
+</div>

@@ -11,6 +11,7 @@ License: CECILL-C
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "$components/workspace/canvas2d";
+  import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
   import {
     BaseSchema,
@@ -31,7 +32,10 @@ License: CECILL-C
   } from "../vqaCanvas";
   // Import stores and API functions
   import { inferenceServerStore, vqaModels } from "$lib/stores/inferenceStores.svelte";
-  import { completionModelsStore } from "$lib/stores/vqaStores.svelte";
+  import {
+    completionModelsStore,
+    type PixanoInferenceCompletionModel,
+  } from "$lib/stores/vqaStores.svelte";
 
   import { applyNewShapeEditing } from "$lib/utils/entityMutations";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
@@ -60,6 +64,12 @@ License: CECILL-C
     resize: number;
   }
 
+  interface BrushSettings {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  }
+
   let { selectedItem, resize }: Props = $props();
 
   // utility vars for resizing with slide bar
@@ -70,38 +80,60 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
+  let prevSelectedItemId: string = $state("");
+  let imageLoadRequestId = 0;
+  const hasImages = $derived(Object.keys(imagesPerView).length > 0);
 
   let isGenerating: boolean = $state(false);
+
+  const handleCanvasShapeChange = (shape: Shape) => {
+    if (shape.status === "creating") return;
+    newShape.value = shape as import("$lib/ui").Shape;
+  };
 
   /**
    * Update the images based on the selected item views.
    */
-  const updateImages = async (): Promise<void> => {
-    if (selectedItem.views) {
-      loaded = false;
-      embeddings.value = {};
-      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
-      imagesPerView = await loadImagesFromViews(
-        selectedItem.views as Record<string, Image>,
-        { unwrapArrays: true },
-      );
-      loaded = true;
+  const updateImages = async (clearExistingViews = false): Promise<void> => {
+    const requestId = ++imageLoadRequestId;
+    loaded = false;
+    if (clearExistingViews) {
+      imagesPerView = {};
     }
+
+    if (!selectedItem.views) {
+      imagesPerView = {};
+      loaded = true;
+      return;
+    }
+
+    embeddings.value = {};
+    modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
+    const nextImages = await loadImagesFromViews(
+      selectedItem.views as Record<string, Image>,
+      { unwrapArrays: true },
+    );
+
+    if (requestId !== imageLoadRequestId) return;
+    imagesPerView = nextImages;
+    loaded = true;
   };
 
   // Reactive statement to update images when selectedItem changes or the 16 bit filters change
-  let prev16BitRange: number[] = $state([]);
+  let prev16BitRange = $state<number[]>([0, 0]);
   $effect(() => {
-    if (selectedItem || filters.value.u16BitRange) {
-      if (
-        prev16BitRange[0] !== filters.value.u16BitRange[0] ||
-        prev16BitRange[1] !== filters.value.u16BitRange[1]
-      ) {
-        updateImages().catch(() => {
-          console.error("Error loading the images.");
-        });
-        prev16BitRange = [...filters.value.u16BitRange];
-      }
+    const selectedItemId = selectedItem?.item?.id ?? "";
+    const next16BitRange = filters.value.u16BitRange;
+    const itemChanged = selectedItemId !== prevSelectedItemId;
+    const rangeChanged =
+      prev16BitRange[0] !== next16BitRange[0] || prev16BitRange[1] !== next16BitRange[1];
+
+    if (itemChanged || rangeChanged) {
+      prevSelectedItemId = selectedItemId;
+      prev16BitRange = [...next16BitRange];
+      void updateImages(itemChanged).catch(() => {
+        console.error("Error loading the images.");
+      });
     }
   });
 
@@ -164,41 +196,42 @@ License: CECILL-C
   };
 </script>
 
-<!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
-{#if loaded}
-  <div
-    class="h-full flex"
-    onmouseup={() => {
-      expanding = false;
-    }}
-    onmousemove={expand}
-    role="tab"
-    tabindex="0"
-  >
-    <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
-      <VqaArea
-        messages={messages.value}
-        vqaSectionWidth={vqaAreaMaxWidth}
-        inferenceServer={inferenceServerStore.value}
-        vqaModels={vqaModels.value}
-        completionModels={completionModelsStore.value}
-        onCompletionModelsChange={(models) => { completionModelsStore.value = models; }}
-        onAnswerContentChange={handleAnswerContentChange}
-        onStoreQuestion={handleStoreQuestion}
-        onGenerateAnswer={handleGenerateAnswer}
-        onDeleteQuestion={handleDeleteQuestion}
-        onGenerateQuestion={generateQuestion}
-      />
-    </div>
-    <button
-      type="button"
-      aria-label="Resize VQA and image panels"
-      class="w-1 bg-primary-light cursor-col-resize h-full"
-      onmousedown={() => {
-        expanding = true;
+<div
+  class="h-full flex"
+  onmouseup={() => {
+    expanding = false;
+  }}
+  onmousemove={expand}
+  role="tab"
+  tabindex="0"
+>
+  <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
+    <VqaArea
+      messages={messages.value}
+      vqaSectionWidth={vqaAreaMaxWidth}
+      inferenceServer={inferenceServerStore.value}
+      vqaModels={vqaModels.value}
+      completionModels={completionModelsStore.value}
+      onCompletionModelsChange={(models: PixanoInferenceCompletionModel[]) => {
+        completionModelsStore.value = models;
       }}
+      onAnswerContentChange={handleAnswerContentChange}
+      onStoreQuestion={handleStoreQuestion}
+      onGenerateAnswer={handleGenerateAnswer}
+      onDeleteQuestion={handleDeleteQuestion}
+      onGenerateQuestion={generateQuestion}
+    />
+  </div>
+  <button
+    type="button"
+    aria-label="Resize VQA and image panels"
+    class="w-1 bg-primary-light cursor-col-resize h-full"
+    onmousedown={() => {
+      expanding = true;
+    }}
 ></button>
-    <div class="overflow-hidden grow">
+  <div class="overflow-hidden grow relative">
+    {#if loaded && hasImages}
       <Canvas2D
         {imagesPerView}
         selectedItemId={selectedItem.item.id}
@@ -211,18 +244,22 @@ License: CECILL-C
         imageSmoothing={imageSmoothing.value}
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
-        newShape={newShape.value as Shape}
-        onSelectedToolChange={(tool) => selectedTool.value = tool}
-        onNewShapeChange={(shape) => newShape.value = shape as import("$lib/ui").Shape}
-        onBrushSettingsChange={(settings) => brushSettings.value = settings}
+        newShape={newShape.value}
+        onSelectedToolChange={(tool: SelectionTool) => selectedTool.value = tool}
+        onNewShapeChange={handleCanvasShapeChange}
+        onBrushSettingsChange={(settings: BrushSettings) => brushSettings.value = settings}
       />
-    </div>
+    {:else}
+      <div class="w-full h-full bg-canvas"></div>
+    {/if}
+
+    {#if !loaded}
+      <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
+        <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
+      </div>
+    {/if}
   </div>
-{:else}
-  <div class="w-full h-full flex items-center justify-center">
-    <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
-  </div>
-{/if}
+</div>
 {#if isGenerating}
   <LoadingModal />
 {/if}

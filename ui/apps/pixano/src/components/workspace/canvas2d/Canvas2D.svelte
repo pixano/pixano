@@ -1713,7 +1713,7 @@ License: CECILL-C
                   height={bbox.data.coords[3]}
                   fill="rgba(0,0,0,0.001)"
                   strokeEnabled={false}
-                  onclick={(event: Konva.KonvaEventObject<MouseEvent>) => {
+                  onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
                     event.cancelBubble = true;
                     handleSelectBBox(bbox);
                   }}

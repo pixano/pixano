@@ -5,84 +5,166 @@ License: CECILL-C
 -------------------------------------*/
 
 const BOUNDARY = "frame_boundary";
+const HEADER_SEPARATOR = "\r\n\r\n";
+const CR = 0x0d;
+const LF = 0x0a;
+const DASH = 0x2d;
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+type AnyBytes = Uint8Array<ArrayBufferLike>;
+
+export type StreamedFramePart = {
+  frameIndex: number;
+  contentType: string;
+  blob: Blob;
+};
+
+function parseBoundary(contentType: string | null): string {
+  if (!contentType) return BOUNDARY;
+  const match = contentType.match(/boundary=([^;]+)/i);
+  if (!match) return BOUNDARY;
+  return match[1].trim().replace(/^"|"$/g, "") || BOUNDARY;
+}
+
+function concatBytes(left: AnyBytes, right: AnyBytes): AnyBytes {
+  if (left.length === 0) return right;
+  if (right.length === 0) return left;
+  const out = new Uint8Array(left.length + right.length);
+  out.set(left, 0);
+  out.set(right, left.length);
+  return out;
+}
+
+function indexOfBytes(haystack: AnyBytes, needle: AnyBytes, from = 0): number {
+  if (needle.length === 0) return from;
+  outer: for (let i = from; i <= haystack.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+function parseHeaders(headersBlock: string): Map<string, string> {
+  const headers = new Map<string, string>();
+  for (const line of headersBlock.split("\r\n")) {
+    const split = line.indexOf(":");
+    if (split === -1) continue;
+    headers.set(line.slice(0, split).trim().toLowerCase(), line.slice(split + 1).trim());
+  }
+  return headers;
+}
 
 /**
- * Parse a multipart/x-mixed-replace response body into a Map of frame_index → Blob.
+ * Stream multipart frame parts progressively.
+ *
+ * The parser is content-length driven, so we can extract each frame as soon as
+ * its bytes arrive without buffering the whole response in memory.
  */
-function parseMultipartFrames(buffer: ArrayBuffer): Map<number, Blob> {
-  const frames = new Map<number, Blob>();
-  const bytes = new Uint8Array(buffer);
-  const decoder = new TextDecoder();
+export async function* streamViewFrameBatch(
+  datasetId: string,
+  viewName: string,
+  itemId: string,
+  startFrame: number,
+  batchSize: number,
+  signal?: AbortSignal,
+): AsyncGenerator<StreamedFramePart> {
+  const params = new URLSearchParams({
+    item_id: itemId,
+    start_frame: String(startFrame),
+    batch_size: String(batchSize),
+  });
+  const response = await fetch(
+    `/views/${datasetId}/${viewName}/batch?${params.toString()}`,
+    { signal },
+  );
+  if (!response.ok) {
+    console.error(
+      "api.streamViewFrameBatch -",
+      response.status,
+      response.statusText,
+      await response.text(),
+    );
+    return;
+  }
+  if (!response.body) return;
 
-  const boundaryMarker = `--${BOUNDARY}`;
-  const endMarker = `--${BOUNDARY}--`;
-  const headerBodySep = "\r\n\r\n";
+  const boundary = parseBoundary(response.headers.get("content-type"));
+  const boundaryBytes = textEncoder.encode(`--${boundary}`);
+  const headerSeparatorBytes = textEncoder.encode(HEADER_SEPARATOR);
+  const reader = response.body.getReader();
 
-  // Convert to string to find boundary positions, but only for headers.
-  // We'll work byte-level for the binary body extraction.
-  let offset = 0;
+  let buffer: AnyBytes = new Uint8Array(0);
+  let done = false;
 
-  while (offset < bytes.length) {
-    // Find next boundary
-    const remaining = decoder.decode(bytes.subarray(offset, Math.min(offset + 200, bytes.length)));
-    const boundaryPos = remaining.indexOf(boundaryMarker);
-    if (boundaryPos === -1) break;
-
-    // Check for end boundary
-    if (remaining.indexOf(endMarker) === boundaryPos) break;
-
-    // Move past the boundary line
-    const afterBoundary = offset + boundaryPos + boundaryMarker.length;
-    // Skip \r\n after boundary marker
-    const afterBoundaryBytes = bytes.subarray(afterBoundary);
-    let headerStart = afterBoundary;
-    if (afterBoundaryBytes[0] === 0x0d && afterBoundaryBytes[1] === 0x0a) {
-      headerStart = afterBoundary + 2;
+  while (!done) {
+    const read = await reader.read();
+    done = read.done;
+    if (read.value?.length) {
+      buffer = concatBytes(buffer, read.value);
     }
 
-    // Find the header/body separator (\r\n\r\n)
-    let sepPos = -1;
-    for (let i = headerStart; i < bytes.length - 3; i++) {
-      if (
-        bytes[i] === 0x0d &&
-        bytes[i + 1] === 0x0a &&
-        bytes[i + 2] === 0x0d &&
-        bytes[i + 3] === 0x0a
-      ) {
-        sepPos = i;
+    while (true) {
+      const boundaryPos = indexOfBytes(buffer, boundaryBytes);
+      if (boundaryPos === -1) {
+        // Keep only a small tail to preserve partial boundary splits across chunks.
+        const keep = Math.max(boundaryBytes.length * 2, 128);
+        if (buffer.length > keep) {
+          buffer = buffer.slice(buffer.length - keep);
+        }
         break;
       }
-    }
-    if (sepPos === -1) break;
 
-    // Parse headers
-    const headersStr = decoder.decode(bytes.subarray(headerStart, sepPos));
-    const headers = new Map<string, string>();
-    for (const line of headersStr.split("\r\n")) {
-      const colonIdx = line.indexOf(":");
-      if (colonIdx !== -1) {
-        headers.set(line.substring(0, colonIdx).trim().toLowerCase(), line.substring(colonIdx + 1).trim());
+      if (boundaryPos > 0) {
+        buffer = buffer.slice(boundaryPos);
       }
-    }
 
-    const bodyStart = sepPos + headerBodySep.length;
-    const contentLength = parseInt(headers.get("content-length") || "0", 10);
-    const contentType = headers.get("content-type") || "application/octet-stream";
-    const frameIndex = parseInt(headers.get("x-frame-index") || "-1", 10);
+      if (buffer.length < boundaryBytes.length + 2) break;
 
-    if (contentLength > 0 && frameIndex >= 0) {
+      let cursor = boundaryBytes.length;
+
+      // Final boundary marker: `--boundary--`.
+      if (buffer[cursor] === DASH && buffer[cursor + 1] === DASH) {
+        return;
+      }
+
+      // Normal part starts with CRLF after boundary line.
+      if (buffer[cursor] === CR && buffer[cursor + 1] === LF) {
+        cursor += 2;
+      }
+
+      const headersEnd = indexOfBytes(buffer, headerSeparatorBytes, cursor);
+      if (headersEnd === -1) break;
+
+      const headers = parseHeaders(textDecoder.decode(buffer.slice(cursor, headersEnd)));
+      const contentLength = Number.parseInt(headers.get("content-length") || "0", 10);
+      const frameIndex = Number.parseInt(headers.get("x-frame-index") || "-1", 10);
+      const contentType = headers.get("content-type") || "application/octet-stream";
+      const bodyStart = headersEnd + headerSeparatorBytes.length;
       const bodyEnd = bodyStart + contentLength;
-      const bodySlice = bytes.slice(bodyStart, bodyEnd);
-      frames.set(frameIndex, new Blob([bodySlice], { type: contentType }));
-      // Move past body + trailing \r\n
-      offset = bodyEnd + 2;
-    } else {
-      // Skip malformed part
-      offset = bodyStart + Math.max(contentLength, 0) + 2;
+
+      if (!Number.isFinite(contentLength) || contentLength < 0) {
+        // Malformed part; skip the current boundary marker and continue parsing.
+        buffer = buffer.slice(boundaryBytes.length);
+        continue;
+      }
+
+      // Need body bytes + trailing CRLF.
+      if (buffer.length < bodyEnd + 2) break;
+
+      if (contentLength > 0 && frameIndex >= 0) {
+        yield {
+          frameIndex,
+          contentType,
+          blob: new Blob([buffer.slice(bodyStart, bodyEnd)], { type: contentType }),
+        };
+      }
+
+      buffer = buffer.slice(bodyEnd + 2);
     }
   }
-
-  return frames;
 }
 
 // ─── getViewFrameBatch ──────────────────────────────────────────────────────────
@@ -99,28 +181,23 @@ export async function getViewFrameBatch(
   startFrame: number,
   batchSize: number,
 ): Promise<Map<number, Blob>> {
+  const frames = new Map<number, Blob>();
   try {
-    const params = new URLSearchParams({
-      item_id: itemId,
-      start_frame: String(startFrame),
-      batch_size: String(batchSize),
-    });
-    const response = await fetch(
-      `/views/${datasetId}/${viewName}/batch?${params.toString()}`,
-    );
-    if (!response.ok) {
-      console.error(
-        "api.getViewFrameBatch -",
-        response.status,
-        response.statusText,
-        await response.text(),
-      );
-      return new Map();
+    for await (const part of streamViewFrameBatch(
+      datasetId,
+      viewName,
+      itemId,
+      startFrame,
+      batchSize,
+    )) {
+      frames.set(part.frameIndex, part.blob);
     }
-    const buffer = await response.arrayBuffer();
-    return parseMultipartFrames(buffer);
+    return frames;
   } catch (e) {
-    console.error("api.getViewFrameBatch -", e);
-    return new Map();
+    const aborted = e instanceof DOMException && e.name === "AbortError";
+    if (!aborted) {
+      console.error("api.getViewFrameBatch -", e);
+    }
+    return frames;
   }
 }

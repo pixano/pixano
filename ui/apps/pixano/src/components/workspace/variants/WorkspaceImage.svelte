@@ -10,6 +10,7 @@ License: CECILL-C
   // Import stores and API functions
 
   import { Canvas2D } from "$components/workspace/canvas2d";
+  import type { SelectionTool } from "$lib/tools";
   import { Loader2Icon } from "lucide-svelte";
   import { untrack } from "svelte";
 
@@ -38,11 +39,20 @@ License: CECILL-C
     resize: number;
   }
 
+  interface BrushSettings {
+    brushRadius: number;
+    lazyRadius: number;
+    friction: number;
+  }
+
   let { selectedItem, resize }: Props = $props();
 
   // Images per view type
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
+  let prevSelectedItemId: string = $state("");
+  let imageLoadRequestId = 0;
+  const hasImages = $derived(Object.keys(imagesPerView).length > 0);
 
   const handleCanvasShapeChange = (shape: Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
@@ -53,33 +63,47 @@ License: CECILL-C
   /**
    * Update the images based on the selected item views.
    */
-  const updateImages = async (): Promise<void> => {
-    if (selectedItem.views) {
-      loaded = false;
-      embeddings.value = {};
-      modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
-      imagesPerView = await loadImagesFromViews(selectedItem.views as Record<string, Image>, {
-        useNativeUrl: true,
-        sortKeys: true,
-        filterImages: true,
-      });
-      loaded = true;
+  const updateImages = async (clearExistingViews = false): Promise<void> => {
+    const requestId = ++imageLoadRequestId;
+    loaded = false;
+    if (clearExistingViews) {
+      imagesPerView = {};
     }
+
+    if (!selectedItem.views) {
+      imagesPerView = {};
+      loaded = true;
+      return;
+    }
+
+    embeddings.value = {};
+    modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
+    const nextImages = await loadImagesFromViews(selectedItem.views as Record<string, Image>, {
+      useNativeUrl: true,
+      sortKeys: true,
+      filterImages: true,
+    });
+
+    if (requestId !== imageLoadRequestId) return;
+    imagesPerView = nextImages;
+    loaded = true;
   };
 
   // Reactive statement to update images when selectedItem changes or the 16 bit filters change
-  let prev16BitRange: number[] = $state([]);
+  let prev16BitRange = $state<number[]>([0, 0]);
   $effect(() => {
-    if (selectedItem || filters.value.u16BitRange) {
-      if (
-        prev16BitRange[0] !== filters.value.u16BitRange[0] ||
-        prev16BitRange[1] !== filters.value.u16BitRange[1]
-      ) {
-        updateImages().catch(() => {
-          console.error("Error loading the images.");
-        });
-        prev16BitRange = [...filters.value.u16BitRange];
-      }
+    const selectedItemId = selectedItem?.item?.id ?? "";
+    const next16BitRange = filters.value.u16BitRange;
+    const itemChanged = selectedItemId !== prevSelectedItemId;
+    const rangeChanged =
+      prev16BitRange[0] !== next16BitRange[0] || prev16BitRange[1] !== next16BitRange[1];
+
+    if (itemChanged || rangeChanged) {
+      prevSelectedItemId = selectedItemId;
+      prev16BitRange = [...next16BitRange];
+      void updateImages(itemChanged).catch(() => {
+        console.error("Error loading the images.");
+      });
     }
   });
 
@@ -95,27 +119,32 @@ License: CECILL-C
   });
 </script>
 
-<!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
-{#if loaded}
-  <Canvas2D
-    {imagesPerView}
-    selectedItemId={selectedItem.item.id}
-    colorScale={colorScale.value[1]}
-    bboxes={itemBboxes.value}
-    masks={itemMasks.value}
-    keypoints={itemKeypoints.value}
-    filters={filters.value as unknown as ImageFilters}
-    canvasSize={resize}
-    imageSmoothing={imageSmoothing.value}
-    selectedTool={selectedTool.value}
-    brushSettings={brushSettings.value}
-    newShape={newShape.value as Shape}
-    onSelectedToolChange={(tool) => (selectedTool.value = tool)}
-    onNewShapeChange={handleCanvasShapeChange}
-    onBrushSettingsChange={(settings) => (brushSettings.value = settings)}
-  />
-{:else}
-  <div class="w-full h-full flex items-center justify-center">
-    <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
-  </div>
-{/if}
+<div class="w-full h-full relative">
+  {#if loaded && hasImages}
+    <Canvas2D
+      {imagesPerView}
+      selectedItemId={selectedItem.item.id}
+      colorScale={colorScale.value[1]}
+      bboxes={itemBboxes.value}
+      masks={itemMasks.value}
+      keypoints={itemKeypoints.value}
+      filters={filters.value as ImageFilters}
+      canvasSize={resize}
+      imageSmoothing={imageSmoothing.value}
+      selectedTool={selectedTool.value}
+      brushSettings={brushSettings.value}
+      newShape={newShape.value}
+      onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
+      onNewShapeChange={handleCanvasShapeChange}
+      onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
+    />
+  {:else}
+    <div class="w-full h-full bg-canvas"></div>
+  {/if}
+
+  {#if !loaded}
+    <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
+      <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
+    </div>
+  {/if}
+</div>

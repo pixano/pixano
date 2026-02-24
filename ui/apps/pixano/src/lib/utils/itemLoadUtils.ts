@@ -20,6 +20,24 @@ type BackFeatureValue = {
   values: string[];
 };
 type BackFeatureValues = Record<string, Record<string, BackFeatureValue[]>>;
+const ABSOLUTE_URL_RE = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
+const INLINE_URL_RE = /^(?:blob:|data:)/i;
+
+function normalizeImageUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+
+  if (ABSOLUTE_URL_RE.test(trimmed) || INLINE_URL_RE.test(trimmed)) {
+    return trimmed;
+  }
+
+  const normalized = trimmed.replace(/^\/+/, "");
+  if (normalized.startsWith("views/") || normalized.startsWith("media/")) {
+    return normalized;
+  }
+
+  return `media/${normalized}`;
+}
 
 export function isValidDatasetItem(value: unknown): value is DatasetItem {
   if (!value || typeof value !== "object") return false;
@@ -60,8 +78,7 @@ export function prepareDatasetItem(
     }
   }
 
-  // Append media_dir to url + set image/sequence frame type (ui field)
-  const media_dir = "media/";
+  // Normalize media URLs and set image/sequence frame UI type.
   if (dataset.workspace === WorkspaceType.VIDEO) {
     for (const viewname in item.views) {
       const view = item.views[viewname];
@@ -83,7 +100,7 @@ export function prepareDatasetItem(
       } else {
         const image = view as Image;
         image.data.type = WorkspaceType.IMAGE;
-        image.data.url = media_dir + image.data.url;
+        image.data.url = normalizeImageUrl(image.data.url);
       }
     }
   }

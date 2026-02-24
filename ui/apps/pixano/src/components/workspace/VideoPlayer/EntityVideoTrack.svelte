@@ -122,6 +122,7 @@ License: CECILL-C
   });
 
   let color = $derived(colorScale.value[1](trackId));
+  let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let track_annotations_frame_indexes = $derived((videoTrack.ui.childs ?? []).map((ann) => ann.ui.frame_index));
 
@@ -308,7 +309,7 @@ License: CECILL-C
       "opacity-100": videoTrack.ui.displayControl.highlighted === "self",
       "opacity-30":
         (videoTrack.ui.displayControl.highlighted === "none" &&
-          selectedTool.value.type === ToolType.Fusion) ||
+          selectedToolType === ToolType.Fusion) ||
         videoTrack.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
@@ -322,7 +323,7 @@ License: CECILL-C
 ></button>
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if selectedTool.value.type === ToolType.Fusion}
+    {#if selectedToolType === ToolType.Fusion}
       <ContextMenu.Item>Context options disabled while in association mode</ContextMenu.Item>
     {:else}
       {#if canAddKeyFrame}

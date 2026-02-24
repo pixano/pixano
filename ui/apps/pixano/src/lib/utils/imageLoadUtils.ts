@@ -9,6 +9,17 @@ import { Image as ImageJS } from "image-js";
 import { Image, isImage, type LoadedImagesPerView } from "$lib/types/dataset";
 import { filters, itemMetas } from "$lib/stores/workspaceStores.svelte";
 
+const ABSOLUTE_URL_RE = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
+const INLINE_URL_RE = /^(?:blob:|data:)/i;
+
+function toClientUrl(url: string): string {
+  if (ABSOLUTE_URL_RE.test(url) || INLINE_URL_RE.test(url)) {
+    return url;
+  }
+
+  return `/${url.replace(/^\/+/, "")}`;
+}
+
 /**
  * Normalize the pixel values of a 16-bit image to 8-bit range [0, 255].
  * Mutates the image in place.
@@ -72,7 +83,8 @@ export async function loadImagesFromViews(
     if (Array.isArray(imageObject)) return;
     if (filterImages && !isImage(imageObject)) return;
 
-    const img: ImageJS = await ImageJS.load(`/${imageObject.data.url}`);
+    const imageUrl = toClientUrl(imageObject.data.url);
+    const img: ImageJS = await ImageJS.load(imageUrl);
     const bitDepth = img.bitDepth as number;
     const format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
     const color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
@@ -85,7 +97,7 @@ export async function loadImagesFromViews(
       images[key] = [{ id: imageObject.id, element: image }];
     } else if (useNativeUrl) {
       const image: HTMLImageElement = document.createElement("img");
-      image.src = `/${imageObject.data.url}`;
+      image.src = imageUrl;
       images[key] = [{ id: imageObject.id, element: image }];
     } else {
       const image: HTMLImageElement = document.createElement("img");

@@ -9,17 +9,21 @@ License: CECILL-C
 
   import { untrack } from "svelte";
   import { Thumbnail } from "$components/workspace/canvas2d";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import { BaseSchema, BBox, Entity, Source, isVideoEntity, type AnnotationThumbnail } from "$lib/ui";
 
+  import { ToolType } from "$lib/tools";
   import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
   import {
     annotations,
     confidenceThreshold,
     entities,
+    highlightedEntity,
     itemMetas,
     mediaViews,
     preAnnotationIsActive,
+    selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { sortEntities } from "$lib/utils/sortEntities";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
@@ -133,8 +137,46 @@ License: CECILL-C
     return a.every((ent) => ids.has(ent.id));
   }
 
+  const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
+
   const thumbnailsByEntityId = $derived.by<Record<string, AnnotationThumbnail | null>>(() => {
     const nextThumbnails: Record<string, AnnotationThumbnail | null> = {};
+
+    if (selectedToolType === ToolType.Pan) {
+      const focusedEntityId = highlightedEntity.value;
+      if (!focusedEntityId) return nextThumbnails;
+
+      const focusedEntity = currentEntities.find((entity) => entity.id === focusedEntityId);
+      if (!focusedEntity) return nextThumbnails;
+
+      for (const view of Object.keys(mediaViews.value)) {
+        const viewAnnotations =
+          focusedEntity.ui.childs?.filter(
+            (ann) =>
+              (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)) &&
+              ann.data.view_name === view,
+          ) ?? [];
+        if (viewAnnotations.length === 0) continue;
+
+        const annotationOnCurrentFrame = viewAnnotations.find(
+          (ann) => ann.ui.frame_index === currentFrameIndex.value,
+        );
+        const preferredBox =
+          annotationOnCurrentFrame ||
+          viewAnnotations.find((ann) => ann.is_type(BaseSchema.BBox)) ||
+          viewAnnotations[Math.floor(viewAnnotations.length / 2)];
+        if (!preferredBox) continue;
+
+        const selectedThumbnail = defineAnnotationThumbnail(itemMetas.value, mediaViews.value, preferredBox);
+        if (selectedThumbnail) {
+          nextThumbnails[focusedEntityId] = selectedThumbnail;
+          break;
+        }
+      }
+
+      return nextThumbnails;
+    }
+
     const highlightedBoxes = annotations.value.filter(
       (ann) =>
         ann.ui.displayControl.highlighted === "self" &&

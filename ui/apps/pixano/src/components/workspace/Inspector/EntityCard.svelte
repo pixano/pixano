@@ -17,6 +17,7 @@ License: CECILL-C
     annotations,
     colorScale,
     entities,
+    highlightedEntity,
     itemMetas,
     mediaViews,
     selectedTool,
@@ -64,6 +65,7 @@ License: CECILL-C
     void entities.value;
     return entity.ui.displayControl;
   });
+  const isExpanded = $derived(entityDisplayControl.open ?? false);
 
   const isAllowedChild = (child: Annotation): boolean => {
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
@@ -95,7 +97,13 @@ License: CECILL-C
           (orderMap.get(b.data.view_name) ?? Infinity);
       } else {
         if ("name" in a.data && "name" in b.data) {
-          res = String(a.data["name"]).localeCompare(String(b.data["name"]));
+          const getComparableName = (value: unknown): string => {
+            if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+              return String(value);
+            }
+            return "";
+          };
+          res = getComparableName(a.data["name"]).localeCompare(getComparableName(b.data["name"]));
         } else {
           res = a.id.localeCompare(b.id);
         }
@@ -103,14 +111,21 @@ License: CECILL-C
     }
     return res;
   };
-  const allowableChilds = $derived.by(
-    () => entity.ui.childs?.filter((ann) => isAllowableChild(ann)) ?? [],
-  );
+  const allowableChilds = $derived.by(() => {
+    if (!isExpanded) return [];
+    return entity.ui.childs?.filter((ann) => isAllowableChild(ann)) ?? [];
+  });
   const allowedChilds = $derived.by(() => {
+    if (!isExpanded) return [];
     if (currentFrameIndex.value === undefined) return [];
     return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   });
+  const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
   const highlightState = $derived.by<"all" | "self" | "none">(() => {
+    if (selectedToolType === ToolType.Pan) {
+      return highlightedEntity.value === entity.id ? "self" : "all";
+    }
+
     void annotations.value;
     let nextHighlightState: "all" | "self" | "none" = "all";
     for (const ann of entity.ui.childs ?? []) {
@@ -130,6 +145,7 @@ License: CECILL-C
   const hiddenTrack = $derived(isVideoEntity(entity) ? entityDisplayControl.hidden : false);
 
   const features = $derived.by(() => {
+    if (!isExpanded || !featuresPanelOpen) return [];
     const currentSchema = datasetSchema.value;
     const currentEntities = entities.value;
     const frameIndex = currentFrameIndex.value;
@@ -224,6 +240,26 @@ License: CECILL-C
     });
   };
 
+  const ensureCardOpen = () => {
+    if (entityDisplayControl.open ?? false) return;
+
+    entities.update((currentEntities) => {
+      let hasChanged = false;
+      const nextEntities = currentEntities.map((candidate) => {
+        if (candidate.id !== entity.id || candidate.ui.displayControl.open) {
+          return candidate;
+        }
+        hasChanged = true;
+        candidate.ui.displayControl = {
+          ...candidate.ui.displayControl,
+          open: true,
+        };
+        return candidate;
+      });
+      return hasChanged ? nextEntities : currentEntities;
+    });
+  };
+
   const handleSetDisplayControl = (
     displayControlProperty: keyof DisplayControl,
     new_value: boolean,
@@ -308,7 +344,8 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () => {
-    const newFrameIndex = highlightEntity(entity.id, highlightState === "self");
+    ensureCardOpen();
+    const newFrameIndex = highlightEntity(entity.id, highlightState === "self", false);
     if (newFrameIndex != currentFrameIndex.value) {
       currentFrameIndex.value = newFrameIndex;
       updateView(currentFrameIndex.value);

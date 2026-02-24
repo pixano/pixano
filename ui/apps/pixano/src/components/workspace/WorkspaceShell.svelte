@@ -26,7 +26,12 @@ License: CECILL-C
     saveData,
     views,
   } from "$lib/stores/workspaceStores.svelte";
-  import { DatasetItem, effectProbe, type FeaturesValues, type SaveItem } from "$lib/ui";
+  import {
+    DatasetItem,
+    effectProbe,
+    type FeaturesValues,
+    type SaveItem,
+  } from "$lib/ui";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
   import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
   import { attachTrackChildren, processDatasetItem } from "$lib/utils/itemDataProcessing";
@@ -208,13 +213,7 @@ License: CECILL-C
       in:fade={{ duration: 300, delay: 100 }}
     >
       <div class="h-full w-full max-w-full bg-canvas overflow-hidden">
-        {#if isLoading}
-          <div class="h-full w-full flex justify-center items-center">
-            <Loader2Icon class="animate-spin text-white" />
-          </div>
-        {:else}
-          {@render viewer({ resize: objectInspectorAreaMaxWidth + 1 })}
-        {/if}
+        {@render viewer({ resize: objectInspectorAreaMaxWidth + 1 })}
       </div>
     </div>
   </div>

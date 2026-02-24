@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { navigating } from "$app/state";
   import { Canvas2D } from "$components/workspace/canvas2d";
   import { Loader2Icon } from "lucide-svelte";
   import { untrack } from "svelte";
@@ -16,7 +17,6 @@ License: CECILL-C
     currentFrameIndex,
     currentItemId,
     imagesPerView,
-    imagesPerViewBuffer,
     lastFrameIndex,
     videoControls,
     videoViewNames,
@@ -30,7 +30,6 @@ License: CECILL-C
     current_itemMasks,
     entities,
     imageSmoothing,
-    itemMasks,
     merges,
     newShape,
     selectedTool,
@@ -79,6 +78,8 @@ License: CECILL-C
   let expanding = $state(false);
   let isLoaded = $state(false);
   let loadingCycle = 0;
+  let lastLoadedVideoItemId = "";
+  const isRouteLoading = $derived(navigating.from !== null);
 
   const handleCanvasShapeChange = (shape: import("$lib/ui").Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
@@ -87,25 +88,31 @@ License: CECILL-C
   };
 
   $effect(() => {
+    const nextItemId = selectedItem?.item?.id;
+    if (!nextItemId || nextItemId === lastLoadedVideoItemId) return;
+    lastLoadedVideoItemId = nextItemId;
+
+    const nextViews = selectedItem.views;
+
     untrack(() => {
       const cycle = ++loadingCycle;
-      const viewNames = Object.keys(selectedItem.views);
+      const viewNames = Object.keys(nextViews);
       const longestView = Math.max(
-        ...Object.values(selectedItem.views).map((view) => (view as SequenceFrame[]).length),
+        ...Object.values(nextViews).map((view) => (view as SequenceFrame[]).length),
       );
 
       clearInterval(videoControls.value.intervalId);
-      videoControls.update((old) => ({ ...old, intervalId: 0, isLoaded: false }));
+      videoControls.update((old) => ({
+        ...old,
+        intervalId: 0,
+        isLoaded: false,
+        isBuffering: false,
+      }));
       isLoaded = false;
 
       // Store item ID and view names for batch fetcher
-      currentItemId.value = selectedItem.item.id;
+      currentItemId.value = nextItemId;
       videoViewNames.value = viewNames;
-
-      // Initialize the buffer structure with arrays for each view
-      for (const viewKey of viewNames) {
-        imagesPerViewBuffer.value[viewKey] = [];
-      }
 
       lastFrameIndex.value = longestView - 1;
       setBufferSpecs();
@@ -115,13 +122,13 @@ License: CECILL-C
         .then(() => {
           if (cycle !== loadingCycle) return;
           isLoaded = true;
-          videoControls.update((old) => ({ ...old, isLoaded: true }));
+          videoControls.update((old) => ({ ...old, isLoaded: true, isBuffering: false }));
         })
         .catch((error) => {
           if (cycle !== loadingCycle) return;
           console.error("Failed to load initial video frames", error);
           isLoaded = false;
-          videoControls.update((old) => ({ ...old, isLoaded: false }));
+          videoControls.update((old) => ({ ...old, isLoaded: false, isBuffering: false }));
         });
     });
   });
@@ -227,7 +234,7 @@ License: CECILL-C
   };
 
   const merge = (clicked_ann: Annotation) => {
-    if (selectedTool.value.type === ToolType.Fusion) {
+    if (selectedTool.value?.type === ToolType.Fusion) {
       const top_entity = getTopEntity(clicked_ann);
       //check if top_entity is allowed
       if (merges.value.forbids.includes(top_entity)) return;
@@ -394,18 +401,18 @@ License: CECILL-C
 
   $effect(() => {
     const shape = newShape.value;
-    const toolType = selectedTool.value.type;
-    if (shape.status === "editing") {
-      untrack(() => {
-        if (toolType !== ToolType.Fusion) {
-          updateOrCreateShape(shape);
-        } else {
-          if (shape.top_entity_id) {
-            scrollIntoView(shape.top_entity_id);
-          }
+    if (!shape || shape.status !== "editing") return;
+
+    const toolType = selectedTool.value?.type ?? ToolType.Pan;
+    untrack(() => {
+      if (toolType !== ToolType.Fusion) {
+        updateOrCreateShape(shape);
+      } else {
+        if (shape.top_entity_id) {
+          scrollIntoView(shape.top_entity_id);
         }
-      });
-    }
+      }
+    });
   });
 
   const expand = (e: MouseEvent) => {
@@ -425,7 +432,7 @@ License: CECILL-C
   tabindex="0"
 >
   <div class="overflow-hidden grow relative">
-    {#if isLoaded && current_itemBBoxes.value && current_itemKeypoints.value && itemMasks.value}
+    {#if !isRouteLoading && isLoaded && current_itemBBoxes.value && current_itemKeypoints.value}
       <Canvas2D
         selectedItemId={selectedItem.item.id}
         imagesPerView={imagesPerView.value}
@@ -451,6 +458,14 @@ License: CECILL-C
         }}
         {merge}
       />
+      {#if videoControls.value.isBuffering}
+        <div class="absolute inset-0 z-10 bg-black/35 flex items-center justify-center pointer-events-none">
+          <div class="flex flex-col items-center gap-2 text-white">
+            <Loader2Icon class="h-8 w-8 animate-spin" />
+            <p class="text-sm">Buffering next frames...</p>
+          </div>
+        </div>
+      {/if}
     {:else}
       <div class="h-full w-full bg-canvas flex items-center justify-center">
         <div class="flex flex-col items-center gap-3 text-muted-foreground">
@@ -460,7 +475,7 @@ License: CECILL-C
       </div>
     {/if}
   </div>
-  {#if isLoaded && current_itemBBoxes.value && current_itemKeypoints.value && itemMasks.value}
+  {#if !isRouteLoading && isLoaded && current_itemBBoxes.value && current_itemKeypoints.value}
     <button
       type="button"
       aria-label="Resize canvas and inspector panels"

@@ -38,6 +38,7 @@ License: CECILL-C
     annotations,
     colorScale,
     entities,
+    highlightedEntity,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import {
@@ -75,6 +76,7 @@ License: CECILL-C
 
   let totalWidth = $derived((lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100);
   let color = $derived(colorScale.value[1](track.id));
+  let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let videoTracks: Track[] = $derived(
     (track.ui.childs ?? []).filter(
@@ -83,7 +85,11 @@ License: CECILL-C
   );
 
   let highlightState: string = $derived.by(() => {
-    annotations.value; // track changes
+    if (selectedToolType === ToolType.Pan) {
+      return highlightedEntity.value === track.id ? "self" : "all";
+    }
+
+    void annotations.value; // track changes
     let state = "all";
     for (const ann of track.ui.childs ?? []) {
       if (ann.ui.displayControl.highlighted === "self") {
@@ -104,7 +110,8 @@ License: CECILL-C
   };
 
   const onContextMenu = (videoTrack: Track | null = null) => {
-    if (videoTrack && selectedTool.value.type !== ToolType.Fusion) {
+    if (videoTrack && selectedToolType !== ToolType.Fusion) {
+      highlightedEntity.value = null;
       const track_childs_ids = (videoTrack.ui.childs ?? []).map((ann) => ann.id);
       annotations.update((oldObjects) =>
         oldObjects.map((ann) => {
@@ -124,6 +131,7 @@ License: CECILL-C
 
   const onEditKeyItemClick = (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => {
     onTimeTrackClick(frameIndex);
+    highlightedEntity.value = null;
     annotations.update((objects) =>
       objects.map((ann) => {
         const to_highlight =
@@ -200,8 +208,8 @@ License: CECILL-C
         const current_sf = (views[keypointsRef.data.view_name] as SequenceFrame[])[
           interpolatedKpt.ui.frame_index
         ];
-        const coords = [];
-        const states = [];
+        const coords: number[] = [];
+        const states: string[] = [];
         for (let vi = 0; vi < interpolatedKpt.graph.vertices.length; vi++) {
           const vertex = interpolatedKpt.graph.vertices[vi];
           coords.push(vertex.x / current_sf.data.width);
@@ -252,7 +260,7 @@ License: CECILL-C
   const findPreviousAndNext = (videoTrack: Track): [number, number] => {
     let low = 0;
     let high = videoTrack.ui.childs.length - 1;
-    let mid;
+    let mid = 0;
     let previousItem: Annotation | null = null;
     let nextItem: Annotation | null = null;
 
@@ -320,13 +328,13 @@ License: CECILL-C
       class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
         "text-foreground": highlightState !== "none",
         "text-muted-foreground":
-          highlightState === "none" && selectedTool.value.type === ToolType.Fusion,
+          highlightState === "none" && selectedToolType === ToolType.Fusion,
       })}
       style={`
         background: ${
           highlightState === "self"
             ? `${color}8a`
-            : highlightState === "none" && selectedTool.value.type === ToolType.Fusion
+            : highlightState === "none" && selectedToolType === ToolType.Fusion
               ? "white"
               : `${color}3a`
         };
@@ -353,7 +361,7 @@ License: CECILL-C
       background: ${
         highlightState === "self"
           ? `${color}8a`
-          : highlightState === "none" && selectedTool.value.type === ToolType.Fusion
+          : highlightState === "none" && selectedToolType === ToolType.Fusion
             ? `${color}0a`
             : `${color}3a`
       };

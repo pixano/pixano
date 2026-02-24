@@ -6,9 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
+  import { Loader2Icon, PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
   import { getCurrentImageTime } from "$lib/utils/videoUtils";
-  import { updateView } from "$lib/utils/videoOperations";
+  import {
+    ensureFrameAvailable,
+    getReadyAheadFrames,
+    isFrameReady,
+    primePlaybackPrefetch,
+    updateViewAndWait,
+    waitForReadyAheadFrames,
+  } from "$lib/utils/videoOperations";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -22,61 +29,223 @@ License: CECILL-C
   let { resetHighlight }: Props = $props();
 
   let currentTime: string = $derived(getCurrentImageTime(currentFrameIndex.value, videoControls.value.videoSpeed));
+  let playbackTransitionInFlight = false;
+  let bufferingToken = 0;
+  let shouldResumeAfterBuffering = false;
 
-  $effect(() => {
-    return () => clearInterval(videoControls.value.intervalId);
-  });
+  const LOW_BUFFER_SECONDS = 0.8;
+  const HIGH_BUFFER_SECONDS = 2.5;
+  const MIN_LOW_BUFFER_FRAMES = 2;
+  const MIN_HIGH_BUFFER_FRAMES = 8;
+  const MAX_LOW_BUFFER_FRAMES = 120;
+  const MAX_HIGH_BUFFER_FRAMES = 240;
+  const BUFFERING_UI_DELAY_MS = 180;
+  const BUFFERING_MIN_VISIBLE_MS = 180;
 
-  const playVideo = () => {
-    if (!videoControls.value.isLoaded) return;
-    clearInterval(videoControls.value.intervalId);
-    const interval = setInterval(() => {
-      currentFrameIndex.update((index) => (index + 1) % (lastFrameIndex.value + 1));
-      updateView(currentFrameIndex.value);
-      if (currentFrameIndex.value === 0) {
-        clearInterval(videoControls.value.intervalId);
-        videoControls.update((old) => ({ ...old, intervalId: 0 }));
-      }
-    }, videoControls.value.videoSpeed);
-    videoControls.update((old) => ({ ...old, intervalId: Number(interval) }));
+  const getBufferWatermarks = (): { lowFrames: number; highFrames: number } => {
+    const frameDurationMs = Math.max(videoControls.value.videoSpeed, 1);
+    const lowFrames = Math.min(
+      MAX_LOW_BUFFER_FRAMES,
+      Math.max(MIN_LOW_BUFFER_FRAMES, Math.round((LOW_BUFFER_SECONDS * 1000) / frameDurationMs)),
+    );
+    const highFrames = Math.min(
+      MAX_HIGH_BUFFER_FRAMES,
+      Math.max(
+        MIN_HIGH_BUFFER_FRAMES,
+        lowFrames + 1,
+        Math.round((HIGH_BUFFER_SECONDS * 1000) / frameDurationMs),
+      ),
+    );
+    return { lowFrames, highFrames };
   };
 
-  
+  $effect(() => {
+    return () => {
+      clearInterval(videoControls.value.intervalId);
+      bufferingToken += 1;
+      shouldResumeAfterBuffering = false;
+    };
+  });
+
+  const stopPlayback = (clearResumeIntent = false) => {
+    clearInterval(videoControls.value.intervalId);
+    videoControls.update((old) => ({ ...old, intervalId: 0 }));
+    if (clearResumeIntent) {
+      shouldResumeAfterBuffering = false;
+    }
+  };
+
+  const setBuffering = (isBuffering: boolean) => {
+    videoControls.update((old) => ({ ...old, isBuffering }));
+  };
+
+  const wait = (durationMs: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, durationMs);
+    });
+
+  const awaitWithBufferingIndicator = async (
+    token: number,
+    task: () => Promise<boolean>,
+  ): Promise<boolean> => {
+    let shownAt = 0;
+    let isShown = false;
+
+    const timer = setTimeout(() => {
+      if (token !== bufferingToken) return;
+      shownAt = Date.now();
+      isShown = true;
+      setBuffering(true);
+    }, BUFFERING_UI_DELAY_MS);
+
+    try {
+      return await task();
+    } finally {
+      clearTimeout(timer);
+      if (isShown && token === bufferingToken) {
+        const visibleFor = Date.now() - shownAt;
+        if (visibleFor < BUFFERING_MIN_VISIBLE_MS) {
+          await wait(BUFFERING_MIN_VISIBLE_MS - visibleFor);
+        }
+        if (token === bufferingToken) {
+          setBuffering(false);
+        }
+      }
+    }
+  };
+
+  const cancelBuffering = () => {
+    bufferingToken += 1;
+    shouldResumeAfterBuffering = false;
+    setBuffering(false);
+  };
+
+  const normalizeFrameIndex = (target: number): number => {
+    const max = lastFrameIndex.value;
+    if (max === undefined) return 0;
+    return ((target % (max + 1)) + (max + 1)) % (max + 1);
+  };
+
+  const goToFrame = async (target: number): Promise<boolean> => {
+    const max = lastFrameIndex.value;
+    if (max === undefined) return false;
+
+    const normalized = normalizeFrameIndex(target);
+    primePlaybackPrefetch(normalized);
+    const instantlyReady = isFrameReady(normalized);
+
+    if (!instantlyReady) {
+      stopPlayback();
+      const token = ++bufferingToken;
+      const available = await awaitWithBufferingIndicator(
+        token,
+        () => ensureFrameAvailable(normalized),
+      );
+      if (token !== bufferingToken) return false;
+      if (!available) {
+        return false;
+      }
+    }
+
+    currentFrameIndex.value = normalized;
+    const rendered = await updateViewAndWait(normalized);
+    return rendered;
+  };
+
+  const pauseForBufferingIfNeeded = async (): Promise<boolean> => {
+    const max = lastFrameIndex.value;
+    if (max === undefined) return false;
+
+    const current = currentFrameIndex.value;
+    if (current >= max) return true;
+
+    primePlaybackPrefetch(current);
+
+    const remaining = max - current;
+    const { lowFrames, highFrames } = getBufferWatermarks();
+    const effectiveLow = Math.min(lowFrames, remaining);
+    const effectiveHigh = Math.min(highFrames, remaining);
+
+    const readyAhead = getReadyAheadFrames(current, effectiveHigh);
+    if (readyAhead >= effectiveLow) {
+      return true;
+    }
+
+    stopPlayback();
+    const token = ++bufferingToken;
+    const buffered = await awaitWithBufferingIndicator(
+      token,
+      () => waitForReadyAheadFrames(current, effectiveHigh),
+    );
+    if (token !== bufferingToken) return false;
+
+    if (buffered && shouldResumeAfterBuffering) {
+      playVideo();
+    }
+    return false;
+  };
+
+  const playVideo = () => {
+    if (!videoControls.value.isLoaded || videoControls.value.isBuffering) return;
+
+    shouldResumeAfterBuffering = true;
+    stopPlayback();
+    const interval = setInterval(() => {
+      if (playbackTransitionInFlight) return;
+
+      playbackTransitionInFlight = true;
+      void (async () => {
+        const canContinue = await pauseForBufferingIfNeeded();
+        if (!canContinue) return;
+
+        const max = lastFrameIndex.value;
+        if (max === undefined) return;
+
+        const next = (currentFrameIndex.value + 1) % (max + 1);
+        const wrapsToStart = next === 0;
+        const rendered = await goToFrame(next);
+        if (!rendered || wrapsToStart) {
+          stopPlayback(true);
+          return;
+        }
+        if (videoControls.value.intervalId === 0 && shouldResumeAfterBuffering) {
+          playVideo();
+        }
+      })().finally(() => {
+        playbackTransitionInFlight = false;
+      });
+    }, videoControls.value.videoSpeed);
+
+    videoControls.update((old) => ({ ...old, intervalId: Number(interval), isBuffering: false }));
+  };
 
   const onPlayStepClick = () => {
     resetHighlight();
     if (videoControls.value.intervalId) {
-      clearInterval(videoControls.value.intervalId);
-      videoControls.update((old) => ({ ...old, intervalId: 0 }));
+      stopPlayback(true);
     } else {
       if (!videoControls.value.isLoaded) return;
-      clearInterval(videoControls.value.intervalId);
-      currentFrameIndex.update((index) => (index + 1) % (lastFrameIndex.value + 1));
-      updateView(currentFrameIndex.value);
+      cancelBuffering();
+      void goToFrame(currentFrameIndex.value + 1);
     }
   };
 
   const onPlayStepBackClick = () => {
     resetHighlight();
     if (videoControls.value.intervalId) {
-      clearInterval(videoControls.value.intervalId);
-      videoControls.update((old) => ({ ...old, intervalId: 0 }));
+      stopPlayback(true);
     } else {
       if (!videoControls.value.isLoaded) return;
-      clearInterval(videoControls.value.intervalId);
-      currentFrameIndex.update((index) => {
-        if (index === 0) return lastFrameIndex.value;
-        else return (index - 1) % (lastFrameIndex.value + 1);
-      });
-      updateView(currentFrameIndex.value);
+      cancelBuffering();
+      void goToFrame(currentFrameIndex.value - 1);
     }
   };
 
   const onPlayClick = () => {
     resetHighlight();
-    if (videoControls.value.intervalId) {
-      clearInterval(videoControls.value.intervalId);
-      videoControls.update((old) => ({ ...old, intervalId: 0 }));
+    if (videoControls.value.intervalId || videoControls.value.isBuffering) {
+      stopPlayback(true);
+      cancelBuffering();
     } else {
       playVideo();
     }
@@ -114,11 +283,17 @@ License: CECILL-C
 
 <div class="bg-card flex justify-between items-center gap-4 p-4 border-b border-border w-fit">
   <button
-    title={videoControls.value.intervalId ? "Pause (space)" : "Play (space)"}
+    title={videoControls.value.isBuffering
+      ? "Buffering..."
+      : videoControls.value.intervalId
+        ? "Pause (space)"
+        : "Play (space)"}
     onclick={onPlayClick}
     class="text-primary"
   >
-    {#if videoControls.value.intervalId}
+    {#if videoControls.value.isBuffering}
+      <Loader2Icon class="animate-spin" />
+    {:else if videoControls.value.intervalId}
       <PauseIcon />
     {:else}
       <PlayIcon />
@@ -137,6 +312,9 @@ License: CECILL-C
   <p>
     <span>{currentTime}</span>
     <span class="text-muted-foreground">({currentFrameIndex.value})</span>
+    {#if videoControls.value.isBuffering}
+      <span class="text-muted-foreground pl-2">buffering...</span>
+    {/if}
   </p>
 </div>
 <svelte:window onkeydown={shortcutHandler} />

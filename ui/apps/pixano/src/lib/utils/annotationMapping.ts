@@ -37,6 +37,7 @@ type CachedMaskSvg = {
   width: number;
   svg: string[];
 };
+type HighlightState = "all" | "self" | "none";
 
 const maskSvgCacheById = new Map<string, CachedMaskSvg>();
 
@@ -88,11 +89,16 @@ const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
       : "";
 };
 
-export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined => {
+export const mapBBoxForDisplay = (
+  bbox: BBox,
+  views: MView,
+  highlightedOverride?: HighlightState,
+): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_type(BaseSchema.BBox)) return;
+  const effectiveHighlight = highlightedOverride ?? bbox.ui.displayControl.highlighted;
   if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl.hidden) return;
-  if (isPreAnnotation(bbox.data.source_id) && bbox.ui.displayControl.highlighted !== "self") return;
+  if (isPreAnnotation(bbox.data.source_id) && effectiveHighlight !== "self") return;
   if (!bbox.data.view_name) return;
   let bbox_ui_coords = bbox.data.coords;
   if (bbox.data.format === "xyxy") {
@@ -130,9 +136,9 @@ export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined =>
     ui: {
       ...bbox.ui,
       tooltip,
-      opacity: bbox.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-      strokeFactor:
-        bbox.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+      displayControl: { ...bbox.ui.displayControl, highlighted: effectiveHighlight },
+      opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      strokeFactor: effectiveHighlight === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     },
   } as BBox;
 };
@@ -140,6 +146,7 @@ export const mapBBoxForDisplay = (bbox: BBox, views: MView): BBox | undefined =>
 export const mapKeypointsForDisplay = (
   keypoints: Keypoints,
   views: MView,
+  highlightedOverride?: HighlightState,
 ): KeypointAnnotation | undefined => {
   if (
     !keypoints ||
@@ -155,8 +162,10 @@ export const mapKeypointsForDisplay = (
   const image = Array.isArray(view) ? view[0] : view;
   const imageHeight = image.data.height || 1;
   const imageWidth = image.data.width || 1;
-  const vertices = [];
-  const vertexMetadata = [];
+  const effectiveHighlight = highlightedOverride ?? keypoints.ui.displayControl.highlighted;
+  const displayControl = { ...keypoints.ui.displayControl, highlighted: effectiveHighlight };
+  const vertices: Array<{ x: number; y: number }> = [];
+  const vertexMetadata: KeypointAnnotation["vertexMetadata"] = [];
   for (let i = 0; i < keypoints.data.coords.length / 2; i++) {
     const x = keypoints.data.coords[i * 2] * imageWidth;
     const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
@@ -173,7 +182,7 @@ export const mapKeypointsForDisplay = (
     entityRef: { name: "", id: keypoints.data.entity_id },
     graph: { vertices, edges: [...template.graph.edges] },
     vertexMetadata,
-    ui: keypoints.ui,
+    ui: { ...keypoints.ui, displayControl },
     table_info: keypoints.table_info,
   } as KeypointAnnotation;
   if ("frame_index" in keypoints.ui) kptTemplate.ui.frame_index = keypoints.ui.frame_index;
@@ -181,7 +190,10 @@ export const mapKeypointsForDisplay = (
   return kptTemplate;
 };
 
-export const mapMaskForDisplay = (obj: Mask): Mask | undefined => {
+export const mapMaskForDisplay = (
+  obj: Mask,
+  highlightedOverride?: HighlightState,
+): Mask | undefined => {
   if (
     obj.is_type(BaseSchema.Mask) &&
     obj.data.view_name &&
@@ -189,6 +201,7 @@ export const mapMaskForDisplay = (obj: Mask): Mask | undefined => {
     !(isPreAnnotation(obj.data.source_id) && obj.ui.review_state === "accepted")
   ) {
     const metadata = obj.data.inference_metadata;
+    const effectiveHighlight = highlightedOverride ?? obj.ui.displayControl.highlighted;
 
     const masksSVG = getMaskSvgForDisplay(obj, metadata);
 
@@ -197,11 +210,11 @@ export const mapMaskForDisplay = (obj: Mask): Mask | undefined => {
       data: obj.data,
       ui: {
         ...obj.ui,
+        displayControl: { ...obj.ui.displayControl, highlighted: effectiveHighlight },
         svg: masksSVG,
         ...(isPolygonPointsMetadata(metadata) ? { rawPoints: metadata.polygon_points } : {}),
-        opacity: obj.ui.displayControl.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-        strokeFactor:
-          obj.ui.displayControl.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+        opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+        strokeFactor: effectiveHighlight === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       },
     } as Mask;
   }
