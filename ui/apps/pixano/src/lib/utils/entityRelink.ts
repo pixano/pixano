@@ -15,7 +15,11 @@ import {
 import { type SaveShape } from "$lib/types/shapeTypes";
 import type { EntityProperties } from "$lib/types/workspace";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
-import { findOrCreateSubAndTopEntities } from "$lib/utils/entityOperations";
+import {
+  appendAnnotationsSorted,
+  findOrCreateSubAndTopEntities,
+  removeAnnotationsByIds,
+} from "$lib/utils/entityOperations";
 import {
   getEntityProperties,
   getValidationSchemaAndFormInputs,
@@ -47,6 +51,7 @@ export const relink = (
   // overlapping tracks after first one will be fused, so mark them to delete
   const tracksToFuse = annotations.value.filter((ann) => overlapTargetIds.slice(1).includes(ann.id));
   const tracksToFuseIds = tracksToFuse.map((trk) => trk.id);
+  const tracksToFuseIdSet = new Set(tracksToFuseIds);
 
   let objectProperties: EntityProperties = {};
   const { inputs: formInputs } = getValidationSchemaAndFormInputs(
@@ -103,7 +108,7 @@ export const relink = (
     let nextEntities = ents.map((ent) => {
       // remove child from previous entity childs
       if (ent.id === entity.id) {
-        ent.ui.childs = ent.ui.childs?.filter((ann) => !toRemoveAnnotationIds.includes(ann.id));
+        ent.ui.childs = removeAnnotationsByIds(ent.ui.childs, toRemoveAnnotationIds);
         if (!ent.ui.childs || ent.ui.childs.length === 0) {
           deleteEntityFlag = true;
         }
@@ -111,8 +116,8 @@ export const relink = (
 
       // add to new/reaffected entity, and remove fused if any
       if (ent.id === topEntity.id) {
-        ent.ui.childs = ent.ui.childs?.filter((ann) => !tracksToFuseIds.includes(ann.id));
-        ent.ui.childs?.push(...toMoveAnnotations);
+        const withoutFused = removeAnnotationsByIds(ent.ui.childs, tracksToFuseIdSet);
+        ent.ui.childs = appendAnnotationsSorted(withoutFused, toMoveAnnotations);
       }
 
       // relink sub entities (change sub entity parent_id)
@@ -168,7 +173,7 @@ export const relink = (
 
     // remove fused, and origin (=child) if deleteTrack
     nextAnnotations = nextAnnotations.filter(
-      (ann) => !tracksToFuseIds.includes(ann.id) && (deleteTrack ? ann.id !== child.id : true),
+      (ann) => !tracksToFuseIdSet.has(ann.id) && (deleteTrack ? ann.id !== child.id : true),
     );
     return nextAnnotations;
   });

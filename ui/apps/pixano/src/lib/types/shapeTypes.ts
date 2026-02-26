@@ -4,7 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { MaskSvgPaths, MaskData, Reference } from "./dataset";
+import type { MaskData, Reference } from "./dataset";
+import type { MaskBounds } from "$lib/utils/maskUtils";
 import type {
   Mutable,
   IndexedPoint2D,
@@ -104,8 +105,11 @@ export type SaveRectangleShape = SaveShapeBase & {
 
 export type SaveMaskShape = SaveShapeBase & {
   type: ShapeType.mask;
-  masksImageSVG: MaskSvgPaths;
-  rle: MaskData;
+  maskDataUrl: string;
+  maskMimeType?: string;
+  maskBlob?: Blob;
+  maskBounds?: MaskBounds;
+  rle?: MaskData;
   polygonMode?: PolygonOutputMode;
   polygonPoints?: PolygonVertex[][];
 };
@@ -113,8 +117,11 @@ export type SaveMaskShape = SaveShapeBase & {
 export type SavePolygonShape = SaveShapeBase & {
   type: ShapeType.polygon;
   polygonMode: PolygonOutputMode;
-  masksImageSVG: string[];
   polygonPoints: PolygonVertex[][];
+  maskDataUrl: string;
+  maskMimeType?: string;
+  maskBlob?: Blob;
+  maskBounds?: MaskBounds;
   rle?: MaskData;
 };
 
@@ -201,7 +208,6 @@ export type EditMaskShape = {
 export type EditPolygonShape = {
   type: ShapeType.polygon;
   counts?: number[];
-  masksImageSVG?: string[];
   polygonPoints?: PolygonVertex[][];
 };
 

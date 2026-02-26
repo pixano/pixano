@@ -7,7 +7,7 @@ License: CECILL-C
 import Konva from "konva";
 
 import type { ImageFilters } from "$lib/types/shapeTypes";
-import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
+import { equalizeHistogram } from "$lib/utils/imageLoadUtils";
 
 import { FILTER_DEBOUNCE_MS } from "./konvaConstants";
 import { FilterManager } from "./workers/filterManager";

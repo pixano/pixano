@@ -4,8 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BaseSchema, type SaveItem, type Schema } from "$lib/types/dataset";
+import { BaseSchema, Mask, type SaveItem, type Schema } from "$lib/types/dataset";
 import { saveData } from "$lib/stores/workspaceStores.svelte";
+import { rleToString } from "$lib/utils/maskUtils";
 
 export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
   const existing_sames = objects.filter(
@@ -51,4 +52,27 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
  */
 export function saveTo(changeType: SaveItem["change_type"], data: Schema): void {
   saveData.update((sd) => addOrUpdateSaveItem(sd, { change_type: changeType, data }));
+}
+
+/**
+ * Convert save data for backend API.
+ * Packs uncompressed mask RLE arrays back to compressed RLE string format.
+ */
+export function prepareSaveData(items: SaveItem[]): SaveItem[] {
+  const backObjs: SaveItem[] = [];
+  for (const obj of items) {
+    if (
+      (obj.change_type === "add" || obj.change_type === "update") &&
+      obj.data.table_info.group === "annotations" &&
+      obj.data.table_info.base_schema === BaseSchema.Mask &&
+      Array.isArray((obj.data as Mask).data.counts)
+    ) {
+      const original = obj.data as Mask;
+      const convertedData = { ...original.data, counts: rleToString(original.data.counts as number[]) };
+      backObjs.push({ ...obj, data: { ...original, data: convertedData } as Mask });
+    } else {
+      backObjs.push({ ...obj });
+    }
+  }
+  return backObjs;
 }

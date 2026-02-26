@@ -23,12 +23,103 @@ import {
   type MaskData,
   type Reference,
 } from "$lib/types/dataset";
-import { ShapeType, type SaveShape } from "$lib/types/shapeTypes";
+import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes";
 import { datasetSchema, sourcesStore } from "$lib/stores/appStores.svelte";
-import { getPixanoSource, getTable } from "$lib/utils/entityLookupUtils";
+import { getPixanoSourceId, getTable } from "$lib/utils/entityLookupUtils";
+import { buildPolygonInferenceMetadata } from "$lib/utils/maskUtils";
+import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 
 import { entities, views } from "$lib/stores/workspaceStores.svelte";
+
+export const removeAnnotationsByIds = (
+  anns: Annotation[] | undefined,
+  ids: Iterable<string>,
+): Annotation[] => {
+  if (!anns || anns.length === 0) return [];
+  const idsSet = ids instanceof Set ? ids : new Set(ids);
+  return anns.filter((ann) => !idsSet.has(ann.id));
+};
+
+export const appendAnnotationsSorted = (
+  anns: Annotation[] | undefined,
+  additions: Annotation[],
+  sortFn?: (a: Annotation, b: Annotation) => number,
+): Annotation[] => {
+  if ((!anns || anns.length === 0) && additions.length === 0) return [];
+  const next = [...(anns ?? []), ...additions];
+  if (sortFn) next.sort(sortFn);
+  return next;
+};
+
+export const buildMaskDataAndInferenceMetadata = (
+  shape: SaveShape,
+): { mask: MaskData; inferenceMetadata: Record<string, unknown> } => {
+  if (shape.type !== ShapeType.mask && shape.type !== ShapeType.polygon) {
+    throw new Error(`Expected mask or polygon shape, got ${shape.type}`);
+  }
+
+  const emptyMaskCounts = [shape.imageWidth * shape.imageHeight];
+  const mask: MaskData =
+    shape.type === ShapeType.mask
+      ? {
+          counts: shape.rle?.counts ?? emptyMaskCounts,
+          size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
+        }
+      : shape.polygonMode === "mask"
+        ? {
+            counts: shape.rle?.counts ?? emptyMaskCounts,
+            size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
+          }
+        : {
+            // Raw polygon mode keeps vector geometry as primary payload.
+            counts: emptyMaskCounts,
+            size: [shape.imageHeight, shape.imageWidth],
+          };
+
+  const inferenceMetadata =
+    shape.type === ShapeType.polygon && shape.polygonMode === "polygon"
+      ? buildPolygonInferenceMetadata({
+          polygon_points: shape.polygonPoints,
+        })
+      : {};
+
+  return { mask, inferenceMetadata };
+};
+
+export const applyEditedShapeDataToAnnotation = (
+  ann: Annotation,
+  shape: EditShape,
+): boolean => {
+  if ((shape.type === ShapeType.mask || shape.type === ShapeType.polygon) && ann.is_type(BaseSchema.Mask)) {
+    if ("counts" in shape && Array.isArray(shape.counts)) {
+      (ann as Mask).data.counts = shape.counts;
+    }
+    if (shape.type === ShapeType.polygon) {
+      ann.data.inference_metadata = {
+        ...ann.data.inference_metadata,
+        ...buildPolygonInferenceMetadata({
+          polygon_points: shape.polygonPoints,
+        }),
+      };
+    }
+    return true;
+  }
+
+  if (shape.type === ShapeType.bbox && ann.is_type(BaseSchema.BBox)) {
+    (ann as BBox).data.coords = shape.coords;
+    return true;
+  }
+
+  if (shape.type === ShapeType.keypoints && ann.is_type(BaseSchema.Keypoints)) {
+    const { coords, states } = verticesToCoordsAndStates(shape.vertices);
+    (ann as Keypoints).data.coords = coords;
+    (ann as Keypoints).data.states = states;
+    return true;
+  }
+
+  return false;
+};
 
 export const defineCreatedEntity = (
   shape: SaveShape,
@@ -185,13 +276,13 @@ export const defineCreatedAnnotation = (
     created_at: now,
     updated_at: now,
   };
-  const pixSource = getPixanoSource(sourcesStore);
+  const sourceId = getPixanoSourceId(sourcesStore);
   const baseData = {
     item_id: entity.data.item_id,
     view_name: viewRef.name,
     frame_id: viewRef.id,
     entity_id: entity.id,
-    source_id: pixSource.id,
+    source_id: sourceId,
     frame_index: -1,
     tracklet_id: "",
     entity_dynamic_state_id: "",
@@ -222,32 +313,7 @@ export const defineCreatedAnnotation = (
       data: { ...baseData, ...bbox },
     });
   } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon) {
-    const emptyMaskCounts = [shape.imageWidth * shape.imageHeight];
-    const mask: MaskData =
-      shape.type === ShapeType.mask
-        ? {
-            counts: shape.rle.counts,
-            size: shape.rle.size,
-          }
-        : shape.polygonMode === "mask"
-          ? {
-              counts: shape.rle?.counts ?? emptyMaskCounts,
-              size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
-            }
-          : {
-              // Raw polygon mode keeps vector geometry as primary payload.
-              counts: emptyMaskCounts,
-              size: [shape.imageHeight, shape.imageWidth],
-            };
-
-    const inferenceMetadata =
-      shape.type === ShapeType.polygon && shape.polygonMode === "polygon"
-        ? {
-            geometry_mode: "polygon",
-            polygon_svg: shape.masksImageSVG,
-            polygon_points: shape.polygonPoints,
-          }
-        : {};
+    const { mask, inferenceMetadata } = buildMaskDataAndInferenceMetadata(shape);
 
     const table = getTable(dataset_schema, "annotations", BaseSchema.Mask);
     newAnnotation = new Mask({

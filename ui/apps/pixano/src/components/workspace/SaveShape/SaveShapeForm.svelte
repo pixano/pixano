@@ -24,7 +24,7 @@ License: CECILL-C
   import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
 
   import { datasetSchema } from "$lib/stores/appStores.svelte";
-  import { getBoundingBoxFromMaskSvgPaths } from "$lib/utils/maskUtils";
+  import { rleToBitmapCanvas, getAlphaBoundingBox } from "$lib/utils/maskUtils";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { sortByFrameIndex } from "$lib/utils/videoUtils";
@@ -95,6 +95,19 @@ License: CECILL-C
 
     newAnnotation.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
     newAnnotation.ui.top_entities = subEntity ? [topEntity, subEntity] : [topEntity];
+
+    // Populate bitmapCanvas on new Mask so it renders immediately after save
+    if (newAnnotation.is_type(BaseSchema.Mask)) {
+      const maskAnn = newAnnotation as Mask;
+      if (Array.isArray(maskAnn.data.counts)) {
+        maskAnn.ui.bitmapCanvas = rleToBitmapCanvas(
+          maskAnn.data.counts,
+          maskAnn.data.size as [number, number],
+        );
+        maskAnn.ui.bounds = getAlphaBoundingBox(maskAnn.ui.bitmapCanvas) ?? undefined;
+      }
+    }
+
     topEntity.ui.childs?.push(newAnnotation);
 
     if (subEntity) subEntity.ui.childs?.push(newAnnotation);
@@ -103,7 +116,7 @@ License: CECILL-C
     const addedAnnotations: Annotation[] = [newAnnotation];
 
     if (newShape.value.type === ShapeType.mask || newShape.value.type === ShapeType.polygon) {
-      const bboxCoords = getBoundingBoxFromMaskSvgPaths(newShape.value.masksImageSVG);
+      const bboxCoords = newShape.value.maskBounds;
       if (bboxCoords) {
         const bboxShape: SaveRectangleShape = {
           ...(newShape.value as unknown as SaveRectangleShape),

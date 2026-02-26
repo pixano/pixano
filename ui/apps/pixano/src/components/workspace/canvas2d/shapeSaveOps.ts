@@ -7,7 +7,11 @@ License: CECILL-C
 import type { Reference } from "$lib/types/dataset";
 import type { Point2D, PolygonOutputMode } from "$lib/types/geometry";
 import { ShapeType, type PolygonVertex, type Shape } from "$lib/types/shapeTypes";
-import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
+import {
+  dataUrlToBlob,
+  getBoundingBoxFromPolygonPoints,
+  type MaskBounds,
+} from "$lib/utils/maskUtils";
 
 export interface PolygonSavePayload {
   polygons?: PolygonVertex[][];
@@ -43,6 +47,56 @@ export function getSourcePolygons(
   }
 
   return [];
+}
+
+function rasterizePolygonsToMask(
+  polygons: PolygonVertex[][],
+  imageWidth: number,
+  imageHeight: number,
+): {
+  dataUrl: string;
+  blob: Blob | null;
+  mimeType: string;
+  bounds: MaskBounds | null;
+} {
+  const canvas = document.createElement("canvas");
+  canvas.width = imageWidth;
+  canvas.height = imageHeight;
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    return {
+      dataUrl: "",
+      blob: null,
+      mimeType: "image/png",
+      bounds: null,
+    };
+  }
+
+  ctx.clearRect(0, 0, imageWidth, imageHeight);
+  ctx.fillStyle = "white";
+
+  for (const polygon of polygons) {
+    if (polygon.length < 3) continue;
+    ctx.beginPath();
+    ctx.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i += 1) {
+      ctx.lineTo(polygon[i].x, polygon[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  const dataUrl = canvas.toDataURL("image/png");
+  const blob = dataUrlToBlob(dataUrl);
+  const bounds = getBoundingBoxFromPolygonPoints(polygons);
+
+  return {
+    dataUrl,
+    blob,
+    mimeType: "image/png",
+    bounds,
+  };
 }
 
 export function buildRectangleSaveShape(
@@ -104,18 +158,16 @@ export function buildPolygonSaveShape(
     .filter((polygon) => polygon.length >= 3);
   if (polygonPoints.length === 0) return null;
 
-  const polygonSvg = polygonPoints.map((polygon) => convertPointToSvg(polygon));
+  const bitmap = rasterizePolygonsToMask(polygonPoints, currentImage.width, currentImage.height);
 
   if (polygonMode === "mask") {
-    const counts = runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
     return {
       status: "saving",
       type: ShapeType.mask,
-      masksImageSVG: polygonSvg,
-      rle: {
-        counts,
-        size: [currentImage.height, currentImage.width],
-      },
+      maskDataUrl: bitmap.dataUrl,
+      maskMimeType: bitmap.mimeType,
+      maskBlob: bitmap.blob ?? undefined,
+      maskBounds: bitmap.bounds ?? undefined,
       viewRef,
       itemId: selectedItemId,
       imageWidth: currentImage.width,
@@ -128,12 +180,15 @@ export function buildPolygonSaveShape(
   return {
     status: "saving",
     type: ShapeType.polygon,
-    masksImageSVG: polygonSvg,
+    polygonMode,
+    polygonPoints,
+    maskDataUrl: bitmap.dataUrl,
+    maskMimeType: bitmap.mimeType,
+    maskBlob: bitmap.blob ?? undefined,
+    maskBounds: bitmap.bounds ?? undefined,
     viewRef,
     itemId: selectedItemId,
     imageWidth: currentImage.width,
     imageHeight: currentImage.height,
-    polygonMode,
-    polygonPoints,
   };
 }

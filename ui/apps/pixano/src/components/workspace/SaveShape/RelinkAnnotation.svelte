@@ -9,7 +9,7 @@ License: CECILL-C
   import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/ui";
 
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityMutations";
+  import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityRelink";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
   import { colorScale, entities } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";

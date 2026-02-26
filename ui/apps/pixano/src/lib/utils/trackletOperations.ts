@@ -22,7 +22,8 @@ import {
   type View,
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
-import { getPixanoSource } from "$lib/utils/entityLookupUtils";
+import { getPixanoSourceId } from "$lib/utils/entityLookupUtils";
+import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
 import { splitTrackInTwo } from "$lib/utils/videoOperations";
@@ -44,7 +45,7 @@ export function addKeyItemToTracklet(
 ): boolean {
   let newItemBBox: BBox | undefined = undefined;
   let newItemKpt: Keypoints | undefined = undefined;
-  const pixSource = getPixanoSource(sourcesStore);
+  const sourceId = getPixanoSourceId(sourcesStore);
 
   // Find interpolated bbox for the current frame
   const interpolatedBox = bboxes.find(
@@ -54,11 +55,11 @@ export function addKeyItemToTracklet(
   );
   if (interpolatedBox) {
     newItemBBox = BBox.cloneForFrame(interpolatedBox, {
-      source_id: pixSource.id,
+      source_id: sourceId,
     });
     // Coords are denormalized: normalize them
     const currentSf = (views[newItemBBox.data.view_name] as SequenceFrame[])[
-      newItemBBox.ui.frame_index!
+      newItemBBox.ui.frame_index
     ];
     const [x, y, w, h] = newItemBBox.data.coords;
     newItemBBox.data.coords = [
@@ -82,7 +83,7 @@ export function addKeyItemToTracklet(
     ) as Keypoints;
     if (keypointsRef) {
       const currentSf = (views[keypointsRef.data.view_name] as SequenceFrame[])[
-        interpolatedKpt.ui!.frame_index!
+        interpolatedKpt.ui.frame_index
       ];
       const coords: number[] = [];
       const states: string[] = [];
@@ -97,39 +98,39 @@ export function addKeyItemToTracklet(
         id: interpolatedKpt.id,
         coords,
         states,
-        view_name: interpolatedKpt.viewRef!.name,
-        frame_id: interpolatedKpt.viewRef!.id,
-        frame_index: interpolatedKpt.ui!.frame_index,
-        source_id: pixSource.id,
-        displayControl: interpolatedKpt.ui!.displayControl,
+        view_name: interpolatedKpt.viewRef.name,
+        frame_id: interpolatedKpt.viewRef.id,
+        frame_index: interpolatedKpt.ui.frame_index,
+        source_id: sourceId,
+        displayControl: interpolatedKpt.ui.displayControl,
       });
       saveTo("add", newItemKpt);
     }
   }
 
   if (!newItemBBox && !newItemKpt) return false;
+  const newTrackChildren: Annotation[] = [];
+  if (newItemBBox) newTrackChildren.push(newItemBBox);
+  if (newItemKpt) newTrackChildren.push(newItemKpt);
 
   annotations.update((objects) => {
     objects.map((obj) => {
       if (obj.is_type(BaseSchema.Tracklet) && obj.id === tracklet.id) {
         const objTrack = obj as Tracklet;
-        if (newItemBBox) objTrack.ui.childs = [...objTrack.ui.childs, newItemBBox];
-        if (newItemKpt) objTrack.ui.childs = [...objTrack.ui.childs, newItemKpt];
-        objTrack.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+        objTrack.ui.childs = appendAnnotationsSorted(
+          objTrack.ui.childs,
+          newTrackChildren,
+          sortByFrameIndex,
+        );
       }
       return obj;
     });
-    if (newItemBBox) objects.push(newItemBBox);
-    if (newItemKpt) objects.push(newItemKpt);
-    objects.sort((a, b) => sortByFrameIndex(a, b));
-    return objects;
+    return appendAnnotationsSorted(objects, newTrackChildren, sortByFrameIndex);
   });
   entities.update((objects) =>
     objects.map((ent) => {
       if (ent.id === tracklet.data.entity_id) {
-        if (newItemBBox) ent.ui.childs = [...(ent.ui.childs ?? []), newItemBBox];
-        if (newItemKpt) ent.ui.childs = [...(ent.ui.childs ?? []), newItemKpt];
-        ent.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+        ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, newTrackChildren, sortByFrameIndex);
       }
       return ent;
     }),
@@ -150,7 +151,7 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
 
   while (low <= high) {
     mid = Math.floor((low + high) / 2);
-    if (tracklet.ui.childs[mid].ui.frame_index! <= currentFrameIndex.value) {
+    if (tracklet.ui.childs[mid].ui.frame_index <= currentFrameIndex.value) {
       previousItem = tracklet.ui.childs[mid];
       low = mid + 1;
     } else {
@@ -159,8 +160,8 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
     }
   }
   return [
-    previousItem ? previousItem.ui.frame_index! : currentFrameIndex.value,
-    nextItem ? nextItem.ui.frame_index! : currentFrameIndex.value + 1,
+    previousItem ? previousItem.ui.frame_index : currentFrameIndex.value,
+    nextItem ? nextItem.ui.frame_index : currentFrameIndex.value + 1,
   ];
 }
 
@@ -177,8 +178,7 @@ export function splitTracklet(
   entities.update((objects) =>
     objects.map((ent) => {
       if (isVideoEntity(ent) && ent.id === entityId) {
-        ent.ui.childs = [...(ent.ui.childs ?? []), newOnRight];
-        ent.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
+        ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, [newOnRight], sortByFrameIndex);
       }
       return ent;
     }),
@@ -200,9 +200,9 @@ export function findNeighborFrameIndices(
   for (const subtrack of allTracklets) {
     if (subtrack.data.view_name === tracklet.data.view_name) {
       for (const child of subtrack.ui.childs) {
-        if (child.ui.frame_index! < frameIndex && child.ui.frame_index! > previous) {
+        if (child.ui.frame_index < frameIndex && child.ui.frame_index > previous) {
           previous = child.ui.frame_index!;
-        } else if (child.ui.frame_index! > frameIndex && child.ui.frame_index! < next) {
+        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index < next) {
           next = child.ui.frame_index!;
         }
       }

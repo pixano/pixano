@@ -30,7 +30,7 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
   import { DatasetItem, Image, type LoadedImagesPerView } from "$lib/ui";
-  import { applyNewShapeEditing } from "$lib/utils/entityMutations";
+  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
   interface Props {
@@ -79,7 +79,6 @@ License: CECILL-C
     embeddings.value = {};
     modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
     const nextImages = await loadImagesFromViews(selectedItem.views as Record<string, Image>, {
-      useNativeUrl: true,
       sortKeys: true,
       filterImages: true,
     });

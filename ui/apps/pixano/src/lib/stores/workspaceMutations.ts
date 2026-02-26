@@ -25,9 +25,8 @@ import { currentDatasetStore } from "./appStores.svelte";
 import { vqaModels } from "./inferenceStores.svelte";
 import { completionModelsStore } from "./vqaStores.svelte";
 import { saveTo } from "$lib/utils/saveItemUtils";
-import { createNewMessage } from "$lib/utils/createNewMessage";
-import { createUpdatedAnswer } from "$lib/utils/createUpdatedAnswer";
-import { removeFieldFromValue } from "$lib/utils/removeUiFieldFromValue";
+import { removeFieldFromValue } from "$lib/utils/coreUtils";
+import { createMessage, updateAnswerMessage } from "$lib/utils/messageUtils";
 import {
   annotations,
   conversations,
@@ -48,7 +47,7 @@ export const addAnswer = (detail: NewAnswerEvent) => {
     return;
   }
 
-  const newAnswer = createNewMessage({
+  const newAnswer = createMessage({
     number: question.data.number ?? 0,
     item_id: question.data.item_id ?? "",
     view_name: question.data.view_name ?? "",
@@ -82,7 +81,7 @@ export const addQuestion = ({
 
   const { labelFormat, ...questionData } = newQuestionData;
 
-  const newQuestion = createNewMessage({
+  const newQuestion = createMessage({
     ...questionData,
     number: newQuestionNumber,
     entity_id: parentEntity.id,
@@ -204,7 +203,7 @@ export const generateQuestion = async (
     (a, b) => b.data.number - a.data.number,
   )[0];
 
-  const systemMessage = createNewMessage({
+  const systemMessage = createMessage({
     item_id: conversation.data.item_id,
     view_name: "",
     frame_id: "",
@@ -256,7 +255,7 @@ export const updateMessageContent = (detail: UpdatedMessageEvent) => {
     return;
   }
 
-  const updatedMessage = createUpdatedAnswer({ prevAnswer, content });
+  const updatedMessage = updateAnswerMessage({ prevAnswer, content });
 
   annotations.update((prevAnnotations) =>
     prevAnnotations.map((annotation) =>

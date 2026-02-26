@@ -24,22 +24,9 @@ import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { EntityProperties, MView } from "$lib/types/workspace";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
 import { templates } from "$lib/utils/keyPointsTemplates";
-import {
-  generateSvgFromMaskRle,
-  isPolygonPointsMetadata,
-  isPolygonSvgMetadata,
-} from "$lib/utils/maskUtils";
 import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
-type CachedMaskSvg = {
-  countsRef: Mask["data"]["counts"];
-  height: number;
-  width: number;
-  svg: string[];
-};
 type HighlightState = "all" | "self" | "none";
-
-const maskSvgCacheById = new Map<string, CachedMaskSvg>();
 type MappedMaskCacheEntry = {
   mapped: Mask;
   uiRef: Mask["ui"];
@@ -76,32 +63,8 @@ function setBoundedMappedMaskCacheEntry(
 }
 
 export function clearAnnotationMappingCaches(): void {
-  maskSvgCacheById.clear();
   mappedMaskCache.clear();
 }
-
-const getMaskSvgForDisplay = (mask: Mask, metadata: unknown): string[] => {
-  const metaRecord = (metadata !== null && typeof metadata === "object" ? metadata : {}) as Record<string, unknown>;
-  if (isPolygonSvgMetadata(metaRecord)) {
-    return metaRecord.polygon_svg;
-  }
-
-  const countsRef = mask.data.counts;
-  const [height = 0, width = 0] = mask.data.size;
-  const cached = maskSvgCacheById.get(mask.id);
-  if (
-    cached &&
-    cached.countsRef === countsRef &&
-    cached.height === height &&
-    cached.width === width
-  ) {
-    return cached.svg;
-  }
-
-  const svg = generateSvgFromMaskRle(countsRef as number[], mask.data.size);
-  maskSvgCacheById.set(mask.id, { countsRef, height, width, svg });
-  return svg;
-};
 
 const isPreAnnotation = (source_id: string): boolean => {
   const source = sourcesStore.value.find((s) => s.id === source_id);
@@ -269,16 +232,15 @@ export const mapMaskForDisplay = (
       return cached.mapped;
     }
 
-    const masksSVG = getMaskSvgForDisplay(obj, metadata);
-
     const mapped = {
       ...obj,
       data: obj.data,
       ui: {
         ...obj.ui,
         displayControl: { ...obj.ui.displayControl, highlighted: effectiveHighlight },
-        svg: masksSVG,
-        ...(isPolygonPointsMetadata(metadata) ? { rawPoints: metadata.polygon_points } : {}),
+        bitmapUrl: obj.ui.bitmapUrl,
+        bitmapCanvas: obj.ui.bitmapCanvas,
+        bounds: obj.ui.bounds,
         opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
         strokeFactor: effectiveHighlight === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       },

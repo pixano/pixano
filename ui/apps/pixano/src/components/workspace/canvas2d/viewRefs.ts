@@ -9,7 +9,7 @@ import type { Shape } from "$lib/types/shapeTypes";
 
 export type ViewGroupKind = "background" | "static" | "active";
 
-export interface BrushMaskRef {
+export interface MaskRef {
   beginStroke(x: number, y: number): void;
   updateStroke(x: number, y: number): void;
   endStroke(): void;
@@ -25,7 +25,7 @@ export class ViewRefManager {
   imageRefs: Record<string, Konva.Image> = {};
   scaleOnFirstLoad: Record<string, boolean> = {};
   viewReady: Record<string, boolean> = {};
-  brushMaskRefs: Record<string, BrushMaskRef | undefined> = {};
+  maskRefs: Record<string, MaskRef | undefined> = {};
 
   constructor(private getStage: () => Konva.Stage | undefined) {}
 

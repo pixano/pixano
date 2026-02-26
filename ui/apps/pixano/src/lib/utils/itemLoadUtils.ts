@@ -13,6 +13,7 @@ import {
   type Image,
   type SequenceFrame,
 } from "$lib/types/dataset";
+import { normalizeMediaUrl } from "$lib/utils/coreUtils";
 
 type BackFeatureValue = {
   name: string;
@@ -20,24 +21,6 @@ type BackFeatureValue = {
   values: string[];
 };
 type BackFeatureValues = Record<string, Record<string, BackFeatureValue[]>>;
-const ABSOLUTE_URL_RE = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
-const INLINE_URL_RE = /^(?:blob:|data:)/i;
-
-function normalizeImageUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) return trimmed;
-
-  if (ABSOLUTE_URL_RE.test(trimmed) || INLINE_URL_RE.test(trimmed)) {
-    return trimmed;
-  }
-
-  const normalized = trimmed.replace(/^\/+/, "");
-  if (normalized.startsWith("views/") || normalized.startsWith("media/")) {
-    return normalized;
-  }
-
-  return `media/${normalized}`;
-}
 
 export function isValidDatasetItem(value: unknown): value is DatasetItem {
   if (!value || typeof value !== "object") return false;
@@ -100,7 +83,7 @@ export function prepareDatasetItem(
       } else {
         const image = view as Image;
         image.data.type = WorkspaceType.IMAGE;
-        image.data.url = normalizeImageUrl(image.data.url);
+        image.data.url = normalizeMediaUrl(image.data.url);
       }
     }
   }

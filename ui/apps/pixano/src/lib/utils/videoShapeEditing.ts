@@ -7,7 +7,8 @@ License: CECILL-C
 import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { BaseSchema, BBox, Keypoints, type Annotation, type SaveItem } from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
-import { getPixanoSource } from "$lib/utils/entityLookupUtils";
+import { stampWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 
 /**
@@ -31,21 +32,14 @@ export function editKeyItemInTracklet(
   const existingAnn = allAnnotations.find((ann) => ann.id === shape.shapeId);
 
   if (existingAnn) {
-    if (existingAnn.is_type(BaseSchema.BBox) && shape.type === ShapeType.bbox) {
-      (existingAnn as BBox).data.coords = shape.coords;
-    } else if (existingAnn.is_type(BaseSchema.Keypoints) && shape.type === ShapeType.keypoints) {
-      const { coords, states } = verticesToCoordsAndStates(shape.vertices);
-      (existingAnn as Keypoints).data.coords = coords;
-      (existingAnn as Keypoints).data.states = states;
-    } else if (existingAnn.is_type(BaseSchema.Mask)) {
+    if (existingAnn.is_type(BaseSchema.Mask)) {
       // mask not implemented yet in video
-    } else {
+    } else if (!applyEditedShapeDataToAnnotation(existingAnn, shape)) {
       console.error(
         `ERROR: mismatching types ${shape.type} & ${existingAnn.table_info.base_schema}`,
       );
     }
-    const pixSource = getPixanoSource(sourcesStore);
-    existingAnn.data.source_id = pixSource.id;
+    stampWithPixanoSource(existingAnn, sourcesStore);
     updatedAnnotations = allAnnotations.map((ann) =>
       ann.id === existingAnn.id ? existingAnn : ann,
     );
@@ -92,8 +86,7 @@ export function editKeyItemInTracklet(
       throw new Error("Masks are not managed yet in video!");
     }
 
-    const pixSource = getPixanoSource(sourcesStore);
-    newAnn.data.source_id = pixSource.id;
+    stampWithPixanoSource(newAnn, sourcesStore);
     updatedAnnotations = [...allAnnotations, newAnn];
     saveData = { change_type: "add", data: newAnn };
   }

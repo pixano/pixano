@@ -13,10 +13,11 @@ License: CECILL-C
   import DatasetItemHeader from "./DatasetItemHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { findNeighborItemId, getPageFromItemId } from "$lib/utils/navigationUtils";
   import {
     EXPLORER_ROUTE_ID,
     WORKSPACE_ROUTE_ID,
+    findNeighborItemId,
+    getPageFromItemId,
     getExplorerRoute,
     getWorkspaceRoute,
   } from "$lib/utils/routes";

@@ -12,14 +12,13 @@ License: CECILL-C
 
   import BBox2D from "./BBox2D.svelte";
   import BrushCursor from "./BrushCursor.svelte";
-  import BrushMask from "./BrushMask.svelte";
+  import Mask from "./Mask.svelte";
   import CreatePolygon from "./CreatePolygon.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
   import { zoomViewTransform } from "./canvasGeometry";
   import { CanvasFilterPipeline } from "./filterPipeline";
   import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
-  import { clearParsedCache } from "./konvaMaskOps";
   import {
     type PolygonSavePayload,
     toPolygonPoints,
@@ -33,7 +32,6 @@ License: CECILL-C
     computeCursorFlushAction,
   } from "./canvasEventHandlers";
   import { ViewRefManager } from "./viewRefs";
-  import PolygonShape from "./PolygonShape.svelte";
   import ShowKeypoints from "./ShowKeypoint.svelte";
   import {
     ToolType,
@@ -56,7 +54,7 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
-  import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
+  import type { BBox, LoadedImagesPerView, Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import {
     ShapeType,
     type CreatePolygonShape,
@@ -94,7 +92,7 @@ License: CECILL-C
   interface Props {
     // Exports
     selectedItemId: string;
-    masks: Mask[];
+    masks: DatasetMask[];
     bboxes: BBox[];
     keypoints?: KeypointAnnotation[];
     selectedTool: SelectionTool;
@@ -447,8 +445,6 @@ License: CECILL-C
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
-    clearParsedCache();
-
     // Reset flags for the new item
     isReady = false;
     viewRefs.resetViewFlags(keys, enableRenderCache);
@@ -590,7 +586,7 @@ License: CECILL-C
 
     beginViewportInteraction();
     activeBrushViewName = viewRef.name;
-    const brushRef = viewRefs.brushMaskRefs[viewRef.name];
+    const brushRef = viewRefs.maskRefs[viewRef.name];
     if (brushRef) {
       brushRef.beginStroke(pos.x, pos.y);
     }
@@ -602,7 +598,7 @@ License: CECILL-C
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
 
-    const brushRef = viewRefs.brushMaskRefs[view_name];
+    const brushRef = viewRefs.maskRefs[view_name];
     if (brushRef) {
       brushRef.updateStroke(pos.x, pos.y);
     }
@@ -610,7 +606,7 @@ License: CECILL-C
 
   function handleBrushPointerUp(view_name: string) {
     activeBrushViewName = null;
-    const brushCanvas = viewRefs.brushMaskRefs[view_name];
+    const brushCanvas = viewRefs.maskRefs[view_name];
     if (brushCanvas) {
       brushCanvas.endStroke();
     }
@@ -618,7 +614,7 @@ License: CECILL-C
   }
 
   function saveBrushMask(view_name: string) {
-    const brushCanvas = viewRefs.brushMaskRefs[view_name];
+    const brushCanvas = viewRefs.maskRefs[view_name];
     if (brushCanvas) {
       const maskData = brushCanvas.getMaskData();
       if (maskData) {
@@ -628,12 +624,12 @@ License: CECILL-C
   }
 
   function cleanupAllBrushCanvases() {
-    for (const key of Object.keys(viewRefs.brushMaskRefs)) {
-      const brushRef = viewRefs.brushMaskRefs[key];
+    for (const key of Object.keys(viewRefs.maskRefs)) {
+      const brushRef = viewRefs.maskRefs[key];
       if (brushRef) {
         brushRef.destroy();
       }
-      delete viewRefs.brushMaskRefs[key];
+      delete viewRefs.maskRefs[key];
     }
     cleanupBrushCursor();
   }
@@ -697,8 +693,8 @@ License: CECILL-C
         selectedTool?.type !== ToolType.Brush ||
         ("shouldReset" in newShape && newShape.shouldReset)
       ) {
-        for (const key of Object.keys(viewRefs.brushMaskRefs)) {
-          viewRefs.brushMaskRefs[key]?.clearCanvas();
+        for (const key of Object.keys(viewRefs.maskRefs)) {
+          viewRefs.maskRefs[key]?.clearCanvas();
         }
       }
     }
@@ -922,7 +918,7 @@ License: CECILL-C
   });
 
   let masksByView = $derived.by(() => {
-    const grouped: Record<string, Mask[]> = {};
+    const grouped: Record<string, DatasetMask[]> = {};
     for (const mask of masks) {
       const key = mask.data.view_name;
       if (!grouped[key]) grouped[key] = [];
@@ -1248,30 +1244,20 @@ License: CECILL-C
             {/each}
           {/if}
 
-          {#each masksByView[view_name] ?? [] as mask (mask.id)}
-            {#if !mask.ui.displayControl.editing}
-              <PolygonShape
-                {viewRef}
-                {newShape}
-                {onNewShapeChange}
-                {currentImage}
-                zoomFactor={zoomFactor[view_name] ?? 1}
-                {mask}
-                color={isActivePaintingTool
-                  ? "#9CA3AF"
-                  : colorScale(
-                      mask.ui.top_entities && mask.ui.top_entities.length > 0
-                        ? mask.ui.top_entities[0].id
-                        : mask.data.entity_id,
-                    )}
-                ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
-                {selectedTool}
-                interactive={false}
-                disableCache={!enableRenderCache}
-                smoothDisplay={enableRenderCache}
-              />
-            {/if}
-          {/each}
+          {@const viewMasks = masksByView[view_name] ?? []}
+          {#if (viewMasks.length > 0 || selectedTool?.type === ToolType.Brush) && currentImage}
+            <Mask
+              bind:this={viewRefs.maskRefs[view_name]}
+              {viewRef}
+              {currentImage}
+              masks={viewMasks}
+              {colorScale}
+              {selectedTool}
+              zoomFactor={zoomFactor[view_name] ?? 1}
+              selectedItemId={selectedItemId}
+              brushSettings={brushSettings}
+            />
+          {/if}
 
           {#if !isActivePaintingTool}
             <Group listening={false}>
@@ -1401,40 +1387,6 @@ License: CECILL-C
               isInteracting={isViewportInteracting}
             />
           {/if}
-
-          {#if selectedTool?.type === ToolType.Brush}
-            <BrushMask
-              bind:this={viewRefs.brushMaskRefs[view_name]}
-              {viewRef}
-              {currentImage}
-              zoomFactor={zoomFactor[view_name] ?? 1}
-              {selectedItemId}
-              {selectedTool}
-              {brushSettings}
-            />
-          {/if}
-
-          {#each masksByView[view_name] ?? [] as mask (mask.id)}
-            {#if mask.ui.displayControl.editing}
-              <PolygonShape
-                {viewRef}
-                {newShape}
-                {onNewShapeChange}
-                {currentImage}
-                zoomFactor={zoomFactor[view_name] ?? 1}
-                {mask}
-                color={colorScale(
-                  mask.ui.top_entities && mask.ui.top_entities.length > 0
-                    ? mask.ui.top_entities[0].id
-                    : mask.data.entity_id,
-                )}
-                {selectedTool}
-                interactive={true}
-                disableCache={!enableRenderCache}
-                smoothDisplay={enableRenderCache}
-              />
-            {/if}
-          {/each}
 
           {#if !isActivePaintingTool}
             <ShowKeypoints

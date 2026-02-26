@@ -14,10 +14,8 @@ import {
 } from "$lib/types/dataset";
 
 import { sourcesStore } from "$lib/stores/appStores.svelte";
-import { getPixanoSource } from "$lib/utils/entityLookupUtils";
-
-// We have to define once more all the types of message here because there are passthroughs on
-// every zod schema...
+import { nowTimestamp } from "$lib/utils/coreUtils";
+import { getPixanoSourceId } from "$lib/utils/entityLookupUtils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type InferenceMetadata = Record<string, any>;
@@ -53,9 +51,9 @@ interface CreateAnswerProps extends CreateMessageBaseProps {
 
 type CreateMessageProps = CreateSystemMessageProps | CreateQuestionProps | CreateAnswerProps;
 
-export const createNewMessage = (props: CreateMessageProps) => {
-  const now = new Date().toISOString().replace(/Z$/, "+00:00");
-  const pixanoSource = getPixanoSource(sourcesStore);
+export const createMessage = (props: CreateMessageProps): Message => {
+  const now = nowTimestamp();
+  const sourceId = getPixanoSourceId(sourcesStore);
 
   return new Message({
     id: nanoid(22),
@@ -65,11 +63,34 @@ export const createNewMessage = (props: CreateMessageProps) => {
     data: {
       ...props,
       timestamp: now,
-      source_id: pixanoSource.id,
+      source_id: sourceId,
       frame_index: -1,
       tracklet_id: "",
       entity_dynamic_state_id: "",
       inference_metadata: {},
+    },
+  });
+};
+
+export const updateAnswerMessage = ({
+  prevAnswer,
+  content,
+}: {
+  prevAnswer: Message;
+  content: string;
+}): Message => {
+  const { ui, ...rest } = prevAnswer;
+  void ui;
+
+  if ("_constructor-name_" in rest) {
+    delete (rest as Record<string, unknown>)["_constructor-name_"];
+  }
+
+  return new Message({
+    ...rest,
+    data: {
+      ...rest.data,
+      content,
     },
   });
 };

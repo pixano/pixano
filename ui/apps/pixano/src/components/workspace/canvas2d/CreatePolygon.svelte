@@ -9,7 +9,6 @@ License: CECILL-C
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
 
   import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX, INPUTRECT_STROKEWIDTH } from "./konvaConstants";
-  import { sceneFunc } from "./konvaMaskOps";
   import PolygonVertices from "./PolygonVertices.svelte";
   import type { ToolEvent } from "$lib/tools";
   import type { Reference } from "$lib/types/dataset";
@@ -40,12 +39,8 @@ License: CECILL-C
   const POLYGON_ID = "creating";
 
   const asPolygonCreation = (shape: Shape): CreatePolygonShape => shape as CreatePolygonShape;
-  const getSavedSvg = (shape: Shape): string[] =>
-    "masksImageSVG" in shape &&
-    Array.isArray(shape.masksImageSVG) &&
-    shape.masksImageSVG.every((value: unknown) => typeof value === "string")
-      ? shape.masksImageSVG
-      : [];
+  const getSavedPolygonPoints = (shape: Shape): PolygonVertex[][] =>
+    "polygonPoints" in shape && Array.isArray(shape.polygonPoints) ? shape.polygonPoints : [];
 
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null =
     $state(null);
@@ -318,8 +313,26 @@ License: CECILL-C
       {/if}
     {:else if shouldRenderSavedPolygon}
       <KonvaShape
-        sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
-          sceneFunc(ctx, shape, getSavedSvg(newShape))}
+        sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) => {
+          const polygons = getSavedPolygonPoints(newShape);
+          ctx.beginPath();
+          for (const polygon of polygons) {
+            if (polygon.length < 2) continue;
+            ctx.moveTo(polygon[0].x, polygon[0].y);
+            for (let i = 1; i < polygon.length; i++) {
+              ctx.lineTo(polygon[i].x, polygon[i].y);
+            }
+            ctx.closePath();
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+          const fillColor = shape.fill() as string;
+          if (fillColor) {
+            rawCtx.fillStyle = fillColor;
+            rawCtx.fill("evenodd");
+          }
+          ctx.strokeShape(shape);
+        }}
         stroke={DRAFT_LINE_COLOR}
         strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}

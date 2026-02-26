@@ -25,7 +25,7 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import { sortEntities } from "$lib/utils/sortEntities";
+  import { sortEntities } from "$lib/utils/entityLookupUtils";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import EntityCard from "./EntityCard.svelte";
   import EntitiesSection from "./EntitiesSection.svelte";

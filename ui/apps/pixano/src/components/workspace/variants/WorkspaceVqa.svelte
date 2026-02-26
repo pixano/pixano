@@ -37,7 +37,7 @@ License: CECILL-C
     type PixanoInferenceCompletionModel,
   } from "$lib/stores/vqaStores.svelte";
 
-  import { applyNewShapeEditing } from "$lib/utils/entityMutations";
+  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
   import {
     brushSettings,

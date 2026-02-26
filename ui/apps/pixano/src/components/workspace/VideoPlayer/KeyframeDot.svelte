@@ -9,7 +9,7 @@ License: CECILL-C
   // Imports
   import type { TrackTimelineEntry } from "$lib/ui";
   import { ContextMenu, Tracklet, cn } from "$lib/ui";
-  import { onDeleteTrackItemClick } from "$lib/utils/entityMutations";
+  import { onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 

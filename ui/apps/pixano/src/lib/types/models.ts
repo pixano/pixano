@@ -7,8 +7,9 @@ License: CECILL-C
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-import type { MaskSvgPaths, MaskData, Reference } from "$lib/types/dataset";
+import type { MaskData, Reference } from "$lib/types/dataset";
 import type { LabeledClick, BoundingBox } from "$lib/types/geometry";
+import type { MaskBounds } from "$lib/utils/maskUtils";
 
 export type { Tensor };
 
@@ -26,7 +27,8 @@ export interface InteractiveImageSegmenterInput {
 }
 
 export interface SegmentationResult {
-  masksImageSVG: MaskSvgPaths;
+  maskDataUrl: string;
+  maskBounds?: MaskBounds;
   rle: MaskData;
   masks?: Tensor;
 }

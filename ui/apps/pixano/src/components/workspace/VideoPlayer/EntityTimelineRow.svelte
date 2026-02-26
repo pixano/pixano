@@ -21,7 +21,7 @@ License: CECILL-C
   } from "$lib/ui";
 
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import { deleteEntity } from "$lib/utils/entityMutations";
+  import { deleteEntity } from "$lib/utils/entityDeletion";
   import {
     highlightEntity,
     highlightTrackletChildren,

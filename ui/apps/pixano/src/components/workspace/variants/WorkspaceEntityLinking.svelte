@@ -26,7 +26,7 @@ License: CECILL-C
   // Import stores and API functions
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { highlightEntity } from "$lib/utils/highlightOperations";
-  import { applyNewShapeEditing } from "$lib/utils/entityMutations";
+  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
   import {
     annotations,

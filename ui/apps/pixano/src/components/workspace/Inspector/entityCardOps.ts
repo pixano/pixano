@@ -13,7 +13,10 @@ import {
   type DisplayControl,
 } from "$lib/types/dataset";
 import type { ReactiveValue } from "$lib/stores/reactiveStore.svelte";
-import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
+import {
+  toggleAnnotationDisplayControl,
+  updateDisplayControl,
+} from "$lib/utils/displayControl";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
@@ -26,33 +29,23 @@ export function setEntityDisplayControl(
   updates: Partial<DisplayControl>,
   entitiesStore: ReactiveValue<Entity[]>,
 ): void {
-  const changedKeys = Object.entries(updates).filter(([key, value]) => {
+  const hasRequestedChange = Object.entries(updates).some(([key, value]) => {
     const currentValue = currentDisplayControl[key as keyof DisplayControl];
     return currentValue !== value;
   });
-  if (changedKeys.length === 0) return;
+  if (!hasRequestedChange) return;
 
   const shouldCloseOthers = updates.open === true;
 
   entitiesStore.update((currentEntities) => {
-    let hasChanged = false;
-    const nextEntities = currentEntities.map((candidate) => {
+    return currentEntities.map((candidate) => {
       if (candidate.id === entityId) {
-        hasChanged = true;
-        candidate.ui.displayControl = {
-          ...candidate.ui.displayControl,
-          ...updates,
-        } as DisplayControl;
+        updateDisplayControl(candidate, updates);
       } else if (shouldCloseOthers && candidate.ui.displayControl.open) {
-        hasChanged = true;
-        candidate.ui.displayControl = {
-          ...candidate.ui.displayControl,
-          open: false,
-        };
+        updateDisplayControl(candidate, { open: false });
       }
       return candidate;
     });
-    return hasChanged ? nextEntities : currentEntities;
   });
 }
 
@@ -67,19 +60,12 @@ export function ensureEntityCardOpen(
   if (currentDisplayControl.open ?? false) return;
 
   entitiesStore.update((currentEntities) => {
-    let hasChanged = false;
-    const nextEntities = currentEntities.map((candidate) => {
-      if (candidate.id !== entityId || candidate.ui.displayControl.open) {
-        return candidate;
+    return currentEntities.map((candidate) => {
+      if (candidate.id === entityId && !candidate.ui.displayControl.open) {
+        updateDisplayControl(candidate, { open: true });
       }
-      hasChanged = true;
-      candidate.ui.displayControl = {
-        ...candidate.ui.displayControl,
-        open: true,
-      };
       return candidate;
     });
-    return hasChanged ? nextEntities : currentEntities;
   });
 }
 
@@ -107,28 +93,18 @@ export function handleSetDisplayControl(
       track_childs_ids = new Set((child as Tracklet).ui.childs.map((ann) => ann.id));
     }
     annotationsStore.update((anns) => {
-      let hasChanged = false;
-      const nextAnnotations = anns.map((ann) => {
+      return anns.map((ann) => {
         const shouldUpdate =
           (child && ann.id === child.id) ||
           track_childs_ids.has(ann.id) ||
           (!child && getTopEntity(ann).id === entityId);
         if (shouldUpdate) {
-          const updated = toggleAnnotationDisplayControl(ann, displayControlProperty, new_value);
-          if (updated !== ann) hasChanged = true;
-          return updated;
+          toggleAnnotationDisplayControl(ann, displayControlProperty, new_value);
         } else if (other_anns_value !== null) {
-          const updated = toggleAnnotationDisplayControl(
-            ann,
-            displayControlProperty,
-            other_anns_value,
-          );
-          if (updated !== ann) hasChanged = true;
-          return updated;
+          toggleAnnotationDisplayControl(ann, displayControlProperty, other_anns_value);
         }
         return ann;
       });
-      return hasChanged ? nextAnnotations : anns;
     });
   }
 }

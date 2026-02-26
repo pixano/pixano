@@ -9,7 +9,6 @@ import {
   createTypedEntity,
   createTypedView,
 } from "$lib/utils/domainFactories";
-import type { Mutable, IndexedPoint2D } from "$lib/types/geometry";
 // ─── BaseSchema ────────────────────────────────────────────────────────────────
 
 export enum BaseSchema {
@@ -235,8 +234,6 @@ export interface FeaturesValues {
   main: Record<string, FeatureList>;
   objects: Record<string, FeatureList>;
 }
-
-export type MaskSvgPaths = string[];
 
 // ─── DatasetInfo ───────────────────────────────────────────────────────────────
 
@@ -583,9 +580,10 @@ export class Mask extends Annotation {
   ui: AnnotationUIFields & {
     opacity?: number;
     strokeFactor?: number;
-    svg?: string[];
+    bitmapUrl?: string;
+    bitmapCanvas?: OffscreenCanvas;
+    bounds?: import("$lib/utils/maskUtils").MaskBounds;
     tooltip?: string;
-    rawPoints?: Mutable<IndexedPoint2D>[][];
   } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
 
   constructor(obj: RawSchemaData) {

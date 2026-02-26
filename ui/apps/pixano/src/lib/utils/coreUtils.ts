@@ -39,6 +39,9 @@ const defaultPalette = [
   "#2f4f4f",
 ];
 
+const ABSOLUTE_URL_RE = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
+const INLINE_URL_RE = /^(?:blob:|data:)/i;
+
 export function ordinalColorScale(range: Iterable<string>) {
   const ids = [...range];
   const colorById = new Map<string, string>();
@@ -54,6 +57,33 @@ export function isValidURL(urlString: string) {
   } catch {
     return false;
   }
+}
+
+export function isAbsoluteOrInlineUrl(url: string): boolean {
+  return ABSOLUTE_URL_RE.test(url) || INLINE_URL_RE.test(url);
+}
+
+export function toClientAssetUrl(url: string): string {
+  if (isAbsoluteOrInlineUrl(url)) {
+    return url;
+  }
+  return `/${url.replace(/^\/+/, "")}`;
+}
+
+export function normalizeMediaUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+
+  if (isAbsoluteOrInlineUrl(trimmed)) {
+    return trimmed;
+  }
+
+  const normalized = trimmed.replace(/^\/+/, "");
+  if (normalized.startsWith("views/") || normalized.startsWith("media/")) {
+    return normalized;
+  }
+
+  return `media/${normalized}`;
 }
 
 export function splitWithLimit(strings: string[], separator: string, limit: number): string[] {
@@ -84,6 +114,15 @@ export function splitWithLimit(strings: string[], separator: string, limit: numb
 
 export const nowTimestamp = (): string =>
   new Date().toISOString().replace(/Z$/, "+00:00");
+
+export const removeFieldFromValue = <T extends object, K extends keyof T>(
+  value: T,
+  field: K,
+): Omit<T, K> => {
+  const rest = { ...value } as T & Record<PropertyKey, unknown>;
+  delete rest[field as PropertyKey];
+  return rest as Omit<T, K>;
+};
 
 export function isLuminanceHigh(backgroundColor: string): boolean {
   const hex = backgroundColor.replace(/^#/, "");

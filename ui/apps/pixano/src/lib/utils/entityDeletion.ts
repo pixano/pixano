@@ -13,7 +13,8 @@ import {
 } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
 import { Annotation, BaseSchema, Entity, isVideoEntity, Tracklet } from "$lib/types/dataset";
-import { getPixanoSource } from "$lib/utils/entityLookupUtils";
+import { saveUpdatedWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { removeAnnotationsByIds } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
 function listsAreEqual(list1: string[], list2: string[]): boolean {
@@ -75,19 +76,19 @@ export const deleteEntity = (entity: Entity, child: Annotation | null = null): v
   } else {
     // if child is not the only child, delete child (with tracklet childs if child is a tracklet)
     saveTo("delete", child);
-    const toDeleteIds = [child.id];
+    const toDeleteIdSet = new Set<string>([child.id]);
     if (child.is_type(BaseSchema.Tracklet)) {
       (child as Tracklet).ui.childs.forEach((ann) => {
-        toDeleteIds.push(ann.id);
+        toDeleteIdSet.add(ann.id);
         saveTo("delete", ann);
       });
     }
 
-    annotations.update((oldObjects) => oldObjects.filter((ann) => !toDeleteIds.includes(ann.id)));
+    annotations.update((oldObjects) => oldObjects.filter((ann) => !toDeleteIdSet.has(ann.id)));
     entities.update((oldObjects) =>
       oldObjects.map((ent) => {
         if (ent.id === entity.id) {
-          ent.ui.childs = entity.ui.childs?.filter((ann) => !toDeleteIds.includes(ann.id));
+          ent.ui.childs = removeAnnotationsByIds(entity.ui.childs, toDeleteIdSet);
         }
         return ent;
       }),
@@ -115,9 +116,9 @@ export const onDeleteTrackItemClick = (
   const annotationsToDelete = child
     ? [child]
     : track.ui.childs.filter((ann) => ann.ui.frame_index === itemFrameIndex);
-  if (!annotationsToDelete) return;
+  if (annotationsToDelete.length === 0) return;
 
-  const annotationsToDeleteIds = annotationsToDelete.map((ann) => ann.id);
+  const annotationsToDeleteIds = new Set(annotationsToDelete.map((ann) => ann.id));
   let changedTrack = false;
 
   annotations.update((anns) =>
@@ -125,7 +126,7 @@ export const onDeleteTrackItemClick = (
       .map((ann) => {
         if (ann.id === track.id && ann.is_type(BaseSchema.Tracklet)) {
           (ann as Tracklet).ui.childs = (ann as Tracklet).ui.childs.filter(
-            (fann) => !annotationsToDeleteIds.includes(fann.id),
+            (fann) => !annotationsToDeleteIds.has(fann.id),
           );
 
           // if ann_to_del first/last of track, need to "resize" (childs should be sorted)
@@ -142,13 +143,13 @@ export const onDeleteTrackItemClick = (
         }
         return ann;
       })
-      .filter((ann) => !annotationsToDeleteIds.includes(ann.id)),
+      .filter((ann) => !annotationsToDeleteIds.has(ann.id)),
   );
 
   entities.update((ents) =>
     ents.map((ent) => {
       if (isVideoEntity(ent) && ent.id === track.data.entity_id) {
-        ent.ui.childs = ent.ui.childs?.filter((ann) => !annotationsToDeleteIds.includes(ann.id));
+        ent.ui.childs = removeAnnotationsByIds(ent.ui.childs, annotationsToDeleteIds);
       }
       return ent;
     }),
@@ -159,8 +160,6 @@ export const onDeleteTrackItemClick = (
   }
 
   if (changedTrack) {
-    const pixSource = getPixanoSource(sourcesStore);
-    track.data.source_id = pixSource.id;
-    saveTo("update", track);
+    saveUpdatedWithPixanoSource(track, sourcesStore);
   }
 };

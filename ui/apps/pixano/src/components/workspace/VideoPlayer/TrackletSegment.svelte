@@ -25,7 +25,7 @@ License: CECILL-C
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
-  import { relink } from "$lib/utils/entityMutations";
+  import { relink } from "$lib/utils/entityRelink";
   import {
     annotations,
     colorScale,

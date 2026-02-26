@@ -6,19 +6,42 @@ License: CECILL-C
 
 import { initDisplayControl, type Annotation, type DisplayControl } from "$lib/types/dataset";
 
+type DisplayControllable = {
+  ui: {
+    displayControl?: DisplayControl;
+  };
+};
+
+export const updateDisplayControl = <T extends DisplayControllable>(
+  object: T,
+  updates: Partial<DisplayControl>,
+): T => {
+  if (Object.keys(updates).length === 0) return object;
+
+  const currentDisplayControl = {
+    ...initDisplayControl,
+    ...(object.ui.displayControl ?? {}),
+  } as DisplayControl;
+
+  const hasChange = Object.entries(updates).some(
+    ([key, value]) => currentDisplayControl[key as keyof DisplayControl] !== value,
+  );
+  if (!hasChange) return object;
+
+  object.ui.displayControl = {
+    ...currentDisplayControl,
+    ...updates,
+  } as DisplayControl;
+
+  return object;
+};
+
 export const toggleAnnotationDisplayControl = (
   object: Annotation,
   displayControlProperty: keyof DisplayControl,
   value: boolean,
 ): Annotation => {
-  const currentDisplayControl = {
-    ...initDisplayControl,
-    ...(object.ui.displayControl || {}),
-  } as DisplayControl;
-  if (currentDisplayControl[displayControlProperty] === value) return object;
-  object.ui.displayControl = {
-    ...currentDisplayControl,
+  return updateDisplayControl(object, {
     [displayControlProperty]: value,
-  } as DisplayControl;
-  return object;
+  } as Partial<DisplayControl>);
 };

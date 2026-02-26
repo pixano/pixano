@@ -45,7 +45,7 @@ License: CECILL-C
     type DisplayControl,
   } from "$lib/ui";
   import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
-  import { deleteEntity } from "$lib/utils/entityMutations";
+  import { deleteEntity } from "$lib/utils/entityDeletion";
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";

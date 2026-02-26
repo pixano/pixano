@@ -6,20 +6,11 @@ License: CECILL-C
 
 import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { annotations, newShape } from "$lib/stores/workspaceStores.svelte";
-import {
-  Annotation,
-  BaseSchema,
-  BBox,
-  Keypoints,
-  Mask,
-  WorkspaceType,
-} from "$lib/types/dataset";
+import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
-import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
+import { getTopEntity, saveUpdatedWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { highlightEntity } from "$lib/utils/highlightOperations";
-import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
-import { isPolygonPointsMetadata, isPolygonSvgMetadata } from "$lib/utils/maskUtils";
-import { saveTo } from "$lib/utils/saveItemUtils";
 
 type SelectionShape = {
   status: EditShape["status"];
@@ -48,46 +39,6 @@ export const tryHighlightSelectionShape = (
     highlightEntity(targetEntityId, false);
   }
   return true;
-};
-
-const applyShapeDataToAnnotation = (ann: Annotation, shape: EditShape): boolean => {
-  let changed = false;
-
-  if ((shape.type === ShapeType.mask || shape.type === ShapeType.polygon) && ann.is_type(BaseSchema.Mask)) {
-    if ("counts" in shape && Array.isArray(shape.counts)) {
-      (ann as Mask).data.counts = shape.counts;
-    }
-    if (shape.type === ShapeType.polygon) {
-      const candidateMetadata = {
-        geometry_mode: "polygon",
-        polygon_svg: shape.masksImageSVG,
-        polygon_points: shape.polygonPoints,
-      } as Record<string, unknown>;
-      ann.data.inference_metadata = {
-        ...ann.data.inference_metadata,
-        geometry_mode: "polygon",
-        polygon_svg: isPolygonSvgMetadata(candidateMetadata) ? candidateMetadata.polygon_svg : [],
-        polygon_points: isPolygonPointsMetadata(candidateMetadata)
-          ? candidateMetadata.polygon_points
-          : [],
-      };
-    }
-    changed = true;
-  }
-
-  if (shape.type === ShapeType.bbox && ann.is_type(BaseSchema.BBox)) {
-    (ann as BBox).data.coords = shape.coords;
-    changed = true;
-  }
-
-  if (shape.type === ShapeType.keypoints && ann.is_type(BaseSchema.Keypoints)) {
-    const { coords, states } = verticesToCoordsAndStates(shape.vertices);
-    (ann as Keypoints).data.coords = coords;
-    (ann as Keypoints).data.states = states;
-    changed = true;
-  }
-
-  return changed;
 };
 
 /**
@@ -139,13 +90,11 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
       return ann;
     }
 
-    if (!applyShapeDataToAnnotation(ann, shape)) {
+    if (!applyEditedShapeDataToAnnotation(ann, shape)) {
       return ann;
     }
 
-    const pixSource = getPixanoSource(sourcesStore);
-    ann.data.source_id = pixSource.id;
-    saveTo("update", ann);
+    saveUpdatedWithPixanoSource(ann, sourcesStore);
     return ann;
   });
 };

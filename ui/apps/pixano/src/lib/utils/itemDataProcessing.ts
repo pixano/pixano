@@ -25,10 +25,11 @@ import {
 } from "$lib/types/dataset";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import {
-  generateSvgFromMaskRle,
-  getBoundingBoxFromMaskSvgPaths,
-  isPolygonSvgMetadata,
   rleFrString,
+  rleToBitmapCanvas,
+  getAlphaBoundingBox,
+  resolveMaskBitmapSource,
+  resolveMaskBounds,
 } from "$lib/utils/maskUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
 
@@ -48,13 +49,31 @@ function prepareAnnotation(
     const mask: Mask = ann as Mask;
     // Unpack Compressed RLE to uncompressed RLE
     if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-    const metadata = mask.data.inference_metadata;
-    if (!mask.ui.svg) {
-      if (isPolygonSvgMetadata(metadata)) {
-        mask.ui.svg = metadata.polygon_svg;
+
+    // Convert RLE to bitmap canvas (primary path)
+    if (!mask.ui.bitmapCanvas && Array.isArray(mask.data.counts)) {
+      mask.ui.bitmapCanvas = rleToBitmapCanvas(
+        mask.data.counts,
+        mask.data.size as [number, number],
+      );
+    }
+
+    // Compute bounds from bitmap
+    if (!mask.ui.bounds) {
+      if (mask.ui.bitmapCanvas) {
+        mask.ui.bounds = getAlphaBoundingBox(mask.ui.bitmapCanvas) ?? undefined;
       } else {
-        mask.ui.svg = generateSvgFromMaskRle(mask.data.counts, mask.data.size);
+        mask.ui.bounds =
+          resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ??
+          undefined;
       }
+    }
+
+    // Check for backend-provided bitmap URL as optimization
+    if (!mask.ui.bitmapUrl) {
+      mask.ui.bitmapUrl =
+        resolveMaskBitmapSource({ data: mask.data, metadata: mask.data.inference_metadata }) ??
+        undefined;
     }
   }
 
@@ -94,7 +113,7 @@ function generatePreviewBBoxesFromMasks(
       );
 
       if (!hasBBox) {
-        const bboxCoords = getBoundingBoxFromMaskSvgPaths(mask.ui.svg);
+        const bboxCoords = mask.ui.bounds;
         if (bboxCoords) {
           const now = nowTimestamp();
           const bboxData: BBoxData & AnnotationData = {

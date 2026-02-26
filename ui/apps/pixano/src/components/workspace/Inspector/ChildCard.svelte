@@ -38,7 +38,8 @@ License: CECILL-C
   import { buttonVariants } from "$lib/utils/buttonVariants";
   import { keypointsIcon, polygonIcon } from "$lib/assets";
 
-  import { deleteEntity, onDeleteTrackItemClick, relink } from "$lib/utils/entityMutations";
+  import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
+  import { relink } from "$lib/utils/entityRelink";
   import { isRawPolygonMask } from "$lib/utils/maskUtils";
   import {
     annotations,

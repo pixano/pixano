@@ -16,9 +16,9 @@ import type {
 } from "$lib/types/models";
 import type { BoundingBox, LabeledClick } from "$lib/types/geometry";
 import {
-  convertSegmentsToSVG,
-  generatePolygonSegments,
   maskDataToFortranArrayToRle,
+  rleToBitmapCanvas,
+  getAlphaBoundingBox,
 } from "$lib/utils/maskUtils";
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
@@ -135,10 +135,20 @@ export class SAM implements InteractiveImageSegmenter {
     console.log("SAM.segmentImage in", Date.now() - start, "ms");
     this.previousMask = results.low_res_masks;
     const rleMask = maskDataToFortranArrayToRle(results.masks.data as ArrayLike<number>, imageHeight, imageWidth);
-    const maskPolygons = generatePolygonSegments(rleMask, imageHeight);
-    const masksSVG = convertSegmentsToSVG(maskPolygons);
+    const bitmapCanvas = rleToBitmapCanvas(rleMask, [imageHeight, imageWidth]);
+    const maskBounds = getAlphaBoundingBox(bitmapCanvas) ?? undefined;
+
+    // Convert OffscreenCanvas to data URL for the result
+    const blob = await bitmapCanvas.convertToBlob({ type: "image/png" });
+    const maskDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+
     return {
-      masksImageSVG: masksSVG,
+      maskDataUrl,
+      maskBounds,
       rle: { counts: rleMask, size: [imageHeight, imageWidth], id: nanoid(10), ref_name: "mask" },
       masks: results.mask, //note: actually we don't need this one
     };

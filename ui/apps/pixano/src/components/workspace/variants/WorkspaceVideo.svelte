@@ -36,7 +36,7 @@ License: CECILL-C
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
-  } from "$lib/utils/entityMutations";
+  } from "$lib/utils/entityAnnotationEditing";
   import { scrollIntoView } from "$lib/utils/highlightOperations";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { toggleFusionEntity } from "$lib/utils/videoFusion";

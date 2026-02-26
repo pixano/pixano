@@ -14,6 +14,8 @@ import {
   type DatasetSchema,
   type Mask,
   type AnnotationThumbnail,
+  type Schema,
+  type Tracklet,
 } from "$lib/types/dataset";
 
 import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
@@ -21,7 +23,6 @@ import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { entities } from "$lib/stores/workspaceStores.svelte";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
-import { getBoundingBoxFromMaskSvgPaths } from "$lib/utils/maskUtils";
 import type { ItemsMeta, MView } from "$lib/types/workspace";
 
 /**
@@ -94,6 +95,38 @@ export const getPixanoSource = (srcStore: { value: Source[]; update(fn: (prev: S
   return pixanoSource;
 };
 
+type SourceStampedSchema = Schema & { data: { source_id: string } };
+
+export const getPixanoSourceId = (
+  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
+): string => getPixanoSource(srcStore).id;
+
+export const stampWithPixanoSource = <T extends { data: { source_id: string } }>(
+  obj: T,
+  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
+): T => {
+  obj.data.source_id = getPixanoSourceId(srcStore);
+  return obj;
+};
+
+export const saveUpdatedWithPixanoSource = <T extends SourceStampedSchema>(
+  obj: T,
+  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
+): T => {
+  stampWithPixanoSource(obj, srcStore);
+  saveTo("update", obj);
+  return obj;
+};
+
+export const saveAddedWithPixanoSource = <T extends SourceStampedSchema>(
+  obj: T,
+  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
+): T => {
+  stampWithPixanoSource(obj, srcStore);
+  saveTo("add", obj);
+  return obj;
+};
+
 export const getAnnotationsToPreAnnotate = (objects: Annotation[]): Annotation[] => {
   const sources = sourcesStore.value;
   return objects.filter((object) => {
@@ -157,11 +190,9 @@ export const defineAnnotationThumbnail = (
     frame_index = box.ui.frame_index;
   } else if (object.is_type(BaseSchema.Mask)) {
     const mask = object as Mask;
-    if (mask.ui.svg) {
-      const bbox = getBoundingBoxFromMaskSvgPaths(mask.ui.svg);
-      if (bbox) {
-        coords = [bbox.x, bbox.y, bbox.width, bbox.height];
-      }
+    if (mask.ui.bounds) {
+      const b = mask.ui.bounds;
+      coords = [b.x, b.y, b.width, b.height];
     }
     frame_index = mask.ui.frame_index;
   }
@@ -204,4 +235,28 @@ export const defineAnnotationThumbnail = (
     uri: viewData.url,
     view: view_name,
   };
+};
+
+const getFirstTrackFrame = (entity: Entity): number => {
+  return entity.ui.childs && entity.ui.childs.length > 0
+    ? Math.min(
+        ...entity.ui.childs
+          .filter((ann) => ann.is_type(BaseSchema.Tracklet))
+          .map((trk) => (trk as Tracklet).data.start_frame),
+      )
+    : Infinity;
+};
+
+export const sortEntities = (a: Entity, b: Entity): number => {
+  let result = 0;
+  if (a.is_type(BaseSchema.Track) && b.is_type(BaseSchema.Track)) {
+    result = getFirstTrackFrame(a) - getFirstTrackFrame(b);
+  }
+  if (result === 0 && "name" in a.data && "name" in b.data) {
+    result = (a.data["name"] as string).localeCompare(b.data["name"] as string);
+  }
+  if (result === 0) {
+    result = a.id.localeCompare(b.id);
+  }
+  return result;
 };

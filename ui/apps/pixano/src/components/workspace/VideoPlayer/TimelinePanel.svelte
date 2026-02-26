@@ -18,7 +18,7 @@ License: CECILL-C
   import { panTool, ToolType } from "$lib/tools";
   import { Entity, isVideoEntity } from "$lib/ui";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
-  import { sortEntities } from "$lib/utils/sortEntities";
+  import { sortEntities } from "$lib/utils/entityLookupUtils";
   import { updateView } from "$lib/utils/videoOperations";
 
   let videoEntities: Entity[] = $derived(

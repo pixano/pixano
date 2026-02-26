@@ -35,7 +35,7 @@ License: CECILL-C
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
   import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
   import { attachTrackChildren, processDatasetItem } from "$lib/utils/itemDataProcessing";
-  import { prepareSaveData } from "$lib/utils/saveDataProcessing";
+  import { prepareSaveData } from "$lib/utils/saveItemUtils";
 
   interface Props {
     featureValues: FeaturesValues;

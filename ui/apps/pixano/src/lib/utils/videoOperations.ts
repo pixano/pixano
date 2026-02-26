@@ -16,8 +16,10 @@ import {
   videoViewNames,
 } from "$lib/stores/videoStores.svelte";
 import { Tracklet, type Annotation, type LoadedImage } from "$lib/types/dataset";
-import { getPixanoSource } from "$lib/utils/entityLookupUtils";
-import { saveTo } from "$lib/utils/saveItemUtils";
+import {
+  saveAddedWithPixanoSource,
+  saveUpdatedWithPixanoSource,
+} from "$lib/utils/entityLookupUtils";
 
 const NETWORK_BATCH_SIZE = 128;
 const PREFETCH_CHUNKS_AHEAD = 2;
@@ -468,6 +470,31 @@ async function requestFrameRange(
   token = sessionVersion,
 ): Promise<void> {
   const runtime = getOrCreateRuntime(viewName);
+  const availableFrames = await fetchAndMarkFrameRange(
+    viewName,
+    startFrame,
+    batchSize,
+    token,
+    `Failed to fetch frame range ${startFrame}-${startFrame + batchSize - 1} for view ${viewName}:`,
+  );
+
+  if (token === sessionVersion) {
+    const endFrame = startFrame + batchSize;
+    for (let frame = startFrame; frame < endFrame; frame++) {
+      if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
+        resolveFrameWaiters(viewName, frame, false);
+      }
+    }
+  }
+}
+
+async function fetchAndMarkFrameRange(
+  viewName: string,
+  startFrame: number,
+  batchSize: number,
+  token: number,
+  warningMessage: string,
+): Promise<Set<number>> {
   const availableFrames = new Set<number>();
   try {
     const response = await requestWorker({
@@ -476,8 +503,8 @@ async function requestFrameRange(
       startFrame,
       batchSize,
     });
-    if (token !== sessionVersion) return;
-    if (response.type !== "fetchChunk") return;
+    if (token !== sessionVersion) return availableFrames;
+    if (response.type !== "fetchChunk") return availableFrames;
 
     for (const frame of response.frames) {
       availableFrames.add(frame.frameIndex);
@@ -488,21 +515,10 @@ async function requestFrameRange(
     }
   } catch (error) {
     if (token === sessionVersion) {
-      console.warn(
-        `Failed to fetch frame range ${startFrame}-${startFrame + batchSize - 1} for view ${viewName}:`,
-        error,
-      );
-    }
-  } finally {
-    if (token === sessionVersion) {
-      const endFrame = startFrame + batchSize;
-      for (let frame = startFrame; frame < endFrame; frame++) {
-        if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
-          resolveFrameWaiters(viewName, frame, false);
-        }
-      }
+      console.warn(warningMessage, error);
     }
   }
+  return availableFrames;
 }
 
 /**
@@ -525,25 +541,14 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
 
   const { startFrame, batchSize } = range;
   const chunkPromise = (async () => {
-    const availableFrames = new Set<number>();
+    const availableFrames = await fetchAndMarkFrameRange(
+      viewName,
+      startFrame,
+      batchSize,
+      token,
+      `Failed to fetch frame chunk ${chunkIndex} for view ${viewName}:`,
+    );
     try {
-      const response = await requestWorker({
-        type: "fetchChunk",
-        viewName,
-        startFrame,
-        batchSize,
-      });
-      if (token !== sessionVersion) return;
-      if (response.type !== "fetchChunk") return;
-
-      for (const frame of response.frames) {
-        availableFrames.add(frame.frameIndex);
-        markFrameAvailable(viewName, frame.frameIndex, frame.mimeType, frame.persisted);
-        if (shouldWarmDecode(frame.frameIndex)) {
-          void decodeAndCacheFrame(viewName, frame.frameIndex);
-        }
-      }
-
       const endFrame = startFrame + batchSize;
       let isCompleteChunk = true;
       for (let frame = startFrame; frame < endFrame; frame++) {
@@ -553,12 +558,8 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
         }
       }
 
-      if (token === sessionVersion && response.frames.length > 0 && isCompleteChunk) {
+      if (token === sessionVersion && availableFrames.size > 0 && isCompleteChunk) {
         runtime.completedChunks.add(chunkIndex);
-      }
-    } catch (error) {
-      if (token === sessionVersion) {
-        console.warn(`Failed to fetch frame chunk ${chunkIndex} for view ${viewName}:`, error);
       }
     } finally {
       if (token === sessionVersion) {
@@ -747,11 +748,8 @@ export const splitTrackInTwo = (
   track2split.data.end_frame = prev;
   track2split.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index <= prev);
 
-  const pixSource = getPixanoSource(sourcesStore);
-  track2split.data.source_id = pixSource.id;
-  saveTo("update", track2split);
-  rightTrack.data.source_id = pixSource.id;
-  saveTo("add", rightTrack);
+  saveUpdatedWithPixanoSource(track2split, sourcesStore);
+  saveAddedWithPixanoSource(rightTrack, sourcesStore);
   return rightTrack;
 };
 
