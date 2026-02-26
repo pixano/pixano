@@ -19,7 +19,7 @@ License: CECILL-C
   import {
     currentFrameIndex,
     lastFrameIndex,
-    videoControls,
+    playbackState,
   } from "$lib/stores/videoStores.svelte";
 
   interface Props {
@@ -28,7 +28,7 @@ License: CECILL-C
 
   let { resetHighlight }: Props = $props();
 
-  let currentTime: string = $derived(getCurrentImageTime(currentFrameIndex.value, videoControls.value.videoSpeed));
+  let currentTime: string = $derived(getCurrentImageTime(currentFrameIndex.value, playbackState.value.videoSpeed));
   let playbackTransitionInFlight = false;
   let bufferingToken = 0;
   let shouldResumeAfterBuffering = false;
@@ -43,7 +43,7 @@ License: CECILL-C
   const BUFFERING_MIN_VISIBLE_MS = 180;
 
   const getBufferWatermarks = (): { lowFrames: number; highFrames: number } => {
-    const frameDurationMs = Math.max(videoControls.value.videoSpeed, 1);
+    const frameDurationMs = Math.max(playbackState.value.videoSpeed, 1);
     const lowFrames = Math.min(
       MAX_LOW_BUFFER_FRAMES,
       Math.max(MIN_LOW_BUFFER_FRAMES, Math.round((LOW_BUFFER_SECONDS * 1000) / frameDurationMs)),
@@ -61,22 +61,22 @@ License: CECILL-C
 
   $effect(() => {
     return () => {
-      clearInterval(videoControls.value.intervalId);
+      clearInterval(playbackState.value.intervalId);
       bufferingToken += 1;
       shouldResumeAfterBuffering = false;
     };
   });
 
   const stopPlayback = (clearResumeIntent = false) => {
-    clearInterval(videoControls.value.intervalId);
-    videoControls.update((old) => ({ ...old, intervalId: 0 }));
+    clearInterval(playbackState.value.intervalId);
+    playbackState.update((old) => ({ ...old, intervalId: 0 }));
     if (clearResumeIntent) {
       shouldResumeAfterBuffering = false;
     }
   };
 
   const setBuffering = (isBuffering: boolean) => {
-    videoControls.update((old) => ({ ...old, isBuffering }));
+    playbackState.update((old) => ({ ...old, isBuffering }));
   };
 
   const wait = (durationMs: number) =>
@@ -186,7 +186,7 @@ License: CECILL-C
   };
 
   const playVideo = () => {
-    if (!videoControls.value.isLoaded || videoControls.value.isBuffering) return;
+    if (!playbackState.value.isLoaded || playbackState.value.isBuffering) return;
 
     shouldResumeAfterBuffering = true;
     stopPlayback();
@@ -208,23 +208,23 @@ License: CECILL-C
           stopPlayback(true);
           return;
         }
-        if (videoControls.value.intervalId === 0 && shouldResumeAfterBuffering) {
+        if (playbackState.value.intervalId === 0 && shouldResumeAfterBuffering) {
           playVideo();
         }
       })().finally(() => {
         playbackTransitionInFlight = false;
       });
-    }, videoControls.value.videoSpeed);
+    }, playbackState.value.videoSpeed);
 
-    videoControls.update((old) => ({ ...old, intervalId: Number(interval), isBuffering: false }));
+    playbackState.update((old) => ({ ...old, intervalId: Number(interval), isBuffering: false }));
   };
 
   const onPlayStepClick = () => {
     resetHighlight();
-    if (videoControls.value.intervalId) {
+    if (playbackState.value.intervalId) {
       stopPlayback(true);
     } else {
-      if (!videoControls.value.isLoaded) return;
+      if (!playbackState.value.isLoaded) return;
       cancelBuffering();
       void goToFrame(currentFrameIndex.value + 1);
     }
@@ -232,10 +232,10 @@ License: CECILL-C
 
   const onPlayStepBackClick = () => {
     resetHighlight();
-    if (videoControls.value.intervalId) {
+    if (playbackState.value.intervalId) {
       stopPlayback(true);
     } else {
-      if (!videoControls.value.isLoaded) return;
+      if (!playbackState.value.isLoaded) return;
       cancelBuffering();
       void goToFrame(currentFrameIndex.value - 1);
     }
@@ -243,7 +243,7 @@ License: CECILL-C
 
   const onPlayClick = () => {
     resetHighlight();
-    if (videoControls.value.intervalId || videoControls.value.isBuffering) {
+    if (playbackState.value.intervalId || playbackState.value.isBuffering) {
       stopPlayback(true);
       cancelBuffering();
     } else {
@@ -283,17 +283,17 @@ License: CECILL-C
 
 <div class="bg-card flex justify-between items-center gap-4 p-4 border-b border-border w-fit">
   <button
-    title={videoControls.value.isBuffering
+    title={playbackState.value.isBuffering
       ? "Buffering..."
-      : videoControls.value.intervalId
+      : playbackState.value.intervalId
         ? "Pause (space)"
         : "Play (space)"}
     onclick={onPlayClick}
     class="text-primary"
   >
-    {#if videoControls.value.isBuffering}
+    {#if playbackState.value.isBuffering}
       <Loader2Icon class="animate-spin" />
-    {:else if videoControls.value.intervalId}
+    {:else if playbackState.value.intervalId}
       <PauseIcon />
     {:else}
       <PlayIcon />
@@ -312,7 +312,7 @@ License: CECILL-C
   <p>
     <span>{currentTime}</span>
     <span class="text-muted-foreground">({currentFrameIndex.value})</span>
-    {#if videoControls.value.isBuffering}
+    {#if playbackState.value.isBuffering}
       <span class="text-muted-foreground pl-2">buffering...</span>
     {/if}
   </p>

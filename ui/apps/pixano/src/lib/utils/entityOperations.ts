@@ -14,7 +14,7 @@ import {
   Keypoints,
   Mask,
   TextSpan,
-  Track,
+  Tracklet,
   WorkspaceType,
   type BBoxData,
   type DatasetSchema,
@@ -287,7 +287,7 @@ export const defineCreatedAnnotation = (
   } else if (shape.type === ShapeType.track) {
     const table = getTable(dataset_schema, "annotations", BaseSchema.Tracklet);
 
-    newAnnotation = new Track({
+    newAnnotation = new Tracklet({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
       data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps

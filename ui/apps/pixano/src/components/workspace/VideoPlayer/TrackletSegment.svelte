@@ -16,7 +16,7 @@ License: CECILL-C
     cn,
     ContextMenu,
     SequenceFrame,
-    Track,
+    Tracklet,
     View,
     type TrackTimelineEntry,
   } from "$lib/ui";
@@ -34,15 +34,15 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
-  import TrackKeyItem from "./TrackKeyItem.svelte";
+  import KeyframeDot from "./KeyframeDot.svelte";
 
   type MView = Record<string, View | View[]>;
 
   interface Props {
-    trackId: string;
-    track: Track;
+    entityId: string;
+    tracklet: Tracklet;
     views: MView;
-    onContextMenu: (track: Track) => void;
+    onContextMenu: (tracklet: Tracklet) => void;
     onEditKeyItemClick: (
     frameIndex: TrackTimelineEntry["frame_index"],
     viewname: string,
@@ -50,14 +50,14 @@ License: CECILL-C
     onAddKeyItemClick: (event: MouseEvent) => void;
     onSplitTrackClick: () => void;
     onDeleteTrackClick: () => void;
-    findNeighborItems: (track: Track, frameIndex: number) => [number, number];
+    findNeighborItems: (tracklet: Tracklet, frameIndex: number) => [number, number];
     moveCursorToPosition: (clientX: number) => void;
     resetTool: () => void;
   }
 
   let {
-    trackId,
-    track: videoTrack = $bindable(),
+    entityId,
+    tracklet = $bindable(),
     views,
     onContextMenu,
     onEditKeyItemClick,
@@ -75,26 +75,26 @@ License: CECILL-C
   let overlapTargetId: string = $state("");
 
   const track_margin = 0.3;
-  const getLeft = (trk: Track) => {
+  const getLeft = (trk: Tracklet) => {
     let start = Math.max(0, trk.data.start_frame - track_margin);
     return (start / (lastFrameIndex.value + 1)) * 100;
   };
-  const getRight = (trk: Track) => {
+  const getRight = (trk: Tracklet) => {
     let end = Math.max(trk.data.start_frame, trk.data.end_frame) + track_margin;
     return (end / (lastFrameIndex.value + 1)) * 100;
   };
   const getHeight = (views: MView) => 80 / Object.keys(views).length;
-  const getTop = (trk: Track, views: MView) => {
+  const getTop = (trk: Tracklet, views: MView) => {
     return (
       10 +
       (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length
     );
   };
 
-  let left = $derived(getLeft(videoTrack));
-  let right = $derived(getRight(videoTrack));
+  let left = $derived(getLeft(tracklet));
+  let right = $derived(getRight(tracklet));
   let height = $derived(getHeight(views));
-  let top = $derived(getTop(videoTrack, views));
+  let top = $derived(getTop(tracklet, views));
   let trackElement: HTMLElement = $state();
 
   let resizeObs: ResizeObserver = $state();
@@ -102,13 +102,13 @@ License: CECILL-C
   const calcOneFrameInPixel = () => {
     oneFrameInPixel =
       trackElement?.getBoundingClientRect().width /
-      (videoTrack.data.end_frame - videoTrack.data.start_frame + 1);
+      (tracklet.data.end_frame - tracklet.data.start_frame + 1);
   };
   calcOneFrameInPixel();
 
   $effect(() => {
     if (resizeObs) {
-      if (videoTrack.ui.displayControl.highlighted) {
+      if (tracklet.ui.displayControl.highlighted === "self") {
         resizeObs.observe(trackElement);
       } else {
         resizeObs.unobserve(trackElement);
@@ -121,45 +121,45 @@ License: CECILL-C
     return () => obs.disconnect();
   });
 
-  let color = $derived(colorScale.value[1](trackId));
+  let color = $derived(colorScale.value[1](entityId));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
-  let track_annotations_frame_indexes = $derived((videoTrack.ui.childs ?? []).map((ann) => ann.ui.frame_index));
+  let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
 
   let canAddKeyFrame =
-    $derived(currentFrameIndex.value > videoTrack.data.start_frame &&
-    currentFrameIndex.value < videoTrack.data.end_frame &&
-    !(videoTrack.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
+    $derived(currentFrameIndex.value > tracklet.data.start_frame &&
+    currentFrameIndex.value < tracklet.data.end_frame &&
+    !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
 
   let canSplit =
-    $derived(currentFrameIndex.value >= videoTrack.data.start_frame &&
-    currentFrameIndex.value < videoTrack.data.end_frame);
+    $derived(currentFrameIndex.value >= tracklet.data.start_frame &&
+    currentFrameIndex.value < tracklet.data.end_frame);
 
-  const getNeighborTrack = (
-    annotations: Annotation[],
+  const getNeighborTracklet = (
+    allAnnotations: Annotation[],
     direction: "left" | "right",
   ): Annotation | null => {
     const isLeft = direction === "left";
 
-    const refCompareTimestep = isLeft ? videoTrack.data.start_frame : videoTrack.data.end_frame;
+    const refCompareTimestep = isLeft ? tracklet.data.start_frame : tracklet.data.end_frame;
 
-    const neighborTracks = annotations.filter((ann) => {
+    const neighborTracklets = allAnnotations.filter((ann) => {
       if (!ann.is_type(BaseSchema.Tracklet)) return false;
-      const t = ann as Track;
+      const t = ann as Tracklet;
       return (
-        t.data.view_name === videoTrack.data.view_name &&
-        t.data.entity_id === trackId &&
+        t.data.view_name === tracklet.data.view_name &&
+        t.data.entity_id === entityId &&
         (isLeft
           ? t.data.end_frame < refCompareTimestep
           : t.data.start_frame > refCompareTimestep)
       );
     });
 
-    if (neighborTracks.length === 0) return null;
+    if (neighborTracklets.length === 0) return null;
 
-    return neighborTracks.reduce((best, curr) => {
-      const tBest = best as Track;
-      const tCurr = curr as Track;
+    return neighborTracklets.reduce((best, curr) => {
+      const tBest = best as Tracklet;
+      const tCurr = curr as Tracklet;
 
       const bestVal = isLeft ? tBest.data.end_frame : tBest.data.start_frame;
       const currVal = isLeft ? tCurr.data.end_frame : tCurr.data.start_frame;
@@ -167,58 +167,58 @@ License: CECILL-C
       return isLeft
         ? currVal > bestVal
           ? curr
-          : best // max for "left"
+          : best
         : currVal < bestVal
           ? curr
-          : best; // min for "right"
+          : best;
     });
   };
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(videoTrack, draggedFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
     if (
       (prevFrameIndex !== 0 && newFrameIndex < prevFrameIndex + 1) ||
       (nextFrameIndex !== lastFrameIndex.value && newFrameIndex > nextFrameIndex - 1)
     )
       return false;
-    const isStart = draggedFrameIndex === videoTrack.data.start_frame;
-    const isEnd = draggedFrameIndex === videoTrack.data.end_frame;
+    const isStart = draggedFrameIndex === tracklet.data.start_frame;
+    const isEnd = draggedFrameIndex === tracklet.data.end_frame;
     if (!(isStart || isEnd)) return false;
     if (isStart) {
-      if (newFrameIndex >= videoTrack.data.end_frame) return false;
+      if (newFrameIndex >= tracklet.data.end_frame) return false;
       left = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
-      right = (videoTrack.data.end_frame / (lastFrameIndex.value + 1)) * 100;
+      right = (tracklet.data.end_frame / (lastFrameIndex.value + 1)) * 100;
     }
     if (isEnd) {
-      if (newFrameIndex <= videoTrack.data.start_frame) return false;
+      if (newFrameIndex <= tracklet.data.start_frame) return false;
       right = (newFrameIndex / (lastFrameIndex.value + 1)) * 100;
     }
     return true;
   };
 
-  const updateTrackWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
-    const isStart = draggedFrameIndex === videoTrack.data.start_frame;
-    const isEnd = draggedFrameIndex === videoTrack.data.end_frame;
-    const viewFrames = views[videoTrack.data.view_name] as SequenceFrame[] | undefined;
-    if (!viewFrames?.[newFrameIndex] || !videoTrack.ui.childs?.length) return;
+  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
+    const isStart = draggedFrameIndex === tracklet.data.start_frame;
+    const isEnd = draggedFrameIndex === tracklet.data.end_frame;
+    const viewFrames = views[tracklet.data.view_name] as SequenceFrame[] | undefined;
+    if (!viewFrames?.[newFrameIndex] || !tracklet.ui.childs?.length) return;
     const newViewId = viewFrames[newFrameIndex].id;
-    let movedAnn = videoTrack.ui.childs[0];
-    if (isStart) videoTrack.data.start_frame = newFrameIndex;
+    let movedAnn = tracklet.ui.childs[0];
+    if (isStart) tracklet.data.start_frame = newFrameIndex;
     if (isEnd) {
-      movedAnn = videoTrack.ui.childs[videoTrack.ui.childs.length - 1];
-      videoTrack.data.end_frame = newFrameIndex;
+      movedAnn = tracklet.ui.childs[tracklet.ui.childs.length - 1];
+      tracklet.data.end_frame = newFrameIndex;
     }
     movedAnn.ui.frame_index = newFrameIndex;
     movedAnn.data.frame_id = newViewId;
 
     annotations.update((objects) =>
       objects.map((ann) => {
-        if (ann.is_type(BaseSchema.Tracklet) && ann.id === videoTrack.id) {
+        if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
           if (isStart) {
-            (ann as Track).data.start_frame = newFrameIndex;
+            (ann as Tracklet).data.start_frame = newFrameIndex;
           }
           if (isEnd) {
-            (ann as Track).data.end_frame = newFrameIndex;
+            (ann as Tracklet).data.end_frame = newFrameIndex;
           }
         }
         if (ann.id === movedAnn.id) {
@@ -229,39 +229,36 @@ License: CECILL-C
       }),
     );
     const pixSource = getPixanoSource(sourcesStore);
-    videoTrack.data.source_id = pixSource.id;
-    saveTo("update", videoTrack);
+    tracklet.data.source_id = pixSource.id;
+    saveTo("update", tracklet);
     movedAnn.data.source_id = pixSource.id;
     saveTo("update", movedAnn);
     currentFrameIndex.value = newFrameIndex;
   };
 
-  let leftTrack = $derived(getNeighborTrack(annotations.value, "left"));
-  let rightTrack = $derived(getNeighborTrack(annotations.value, "right"));
+  let leftNeighbor = $derived(getNeighborTracklet(annotations.value, "left"));
+  let rightNeighbor = $derived(getNeighborTracklet(annotations.value, "right"));
 
-  const onGlueTrackClick = (direction: "left" | "right") => {
-    const neighbor = direction === "left" ? leftTrack : rightTrack;
+  const onGlueTrackletClick = (direction: "left" | "right") => {
+    const neighbor = direction === "left" ? leftNeighbor : rightNeighbor;
     if (!neighbor) return;
 
     annotations.update((anns) => {
-      // Remove neighbor
-      let new_anns = anns.filter((ann) => ann.id !== neighbor.id);
-      return new_anns.map((ann) => {
-        if (ann.id === videoTrack.id) {
-          const currentTrack = ann as Track;
-          const neighborTrack = neighbor as Track;
+      let filteredAnns = anns.filter((ann) => ann.id !== neighbor.id);
+      return filteredAnns.map((ann) => {
+        if (ann.id === tracklet.id) {
+          const currentTracklet = ann as Tracklet;
+          const neighborTracklet = neighbor as Tracklet;
 
-          // Add neighbor's childs
-          currentTrack.ui.childs = [
-            ...currentTrack.ui.childs,
-            ...neighborTrack.ui.childs,
+          currentTracklet.ui.childs = [
+            ...currentTracklet.ui.childs,
+            ...neighborTracklet.ui.childs,
           ].sort(sortByFrameIndex);
 
-          // Update range
           if (direction === "left") {
-            currentTrack.data.start_frame = neighborTrack.data.start_frame;
+            currentTracklet.data.start_frame = neighborTracklet.data.start_frame;
           } else {
-            currentTrack.data.end_frame = neighborTrack.data.end_frame;
+            currentTracklet.data.end_frame = neighborTracklet.data.end_frame;
           }
         }
         return ann;
@@ -270,7 +267,7 @@ License: CECILL-C
 
     entities.update((ents) =>
       ents.map((ent) => {
-        if (ent.id === trackId) {
+        if (ent.id === entityId) {
           ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
         }
         return ent;
@@ -289,16 +286,16 @@ License: CECILL-C
 
   const handleTrackContextMenu = (event: MouseEvent) => {
     event.preventDefault();
-    onContextMenu(videoTrack);
+    onContextMenu(tracklet);
   };
 
   const onRelinkTrackClick = (event: MouseEvent) => {
-    event.preventDefault(); //avoid context menu close
+    event.preventDefault();
     showRelink = !showRelink;
   };
 
   const handleRelink = () => {
-    relink(videoTrack, getTopEntity(videoTrack), selectedEntityId, mustMerge, overlapTargetId);
+    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
     showRelink = false;
   };
 </script>
@@ -306,11 +303,11 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
-      "opacity-100": videoTrack.ui.displayControl.highlighted === "self",
+      "opacity-100": tracklet.ui.displayControl.highlighted === "self",
       "opacity-30":
-        (videoTrack.ui.displayControl.highlighted === "none" &&
+        (tracklet.ui.displayControl.highlighted === "none" &&
           selectedToolType === ToolType.Fusion) ||
-        videoTrack.ui.displayControl.hidden,
+        tracklet.ui.displayControl.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
@@ -336,13 +333,13 @@ License: CECILL-C
           Split track after frame {currentFrameIndex.value}
         </ContextMenu.Item>
       {/if}
-      {#if leftTrack}
-        <ContextMenu.Item onclick={() => onGlueTrackClick("left")}>
+      {#if leftNeighbor}
+        <ContextMenu.Item onclick={() => onGlueTrackletClick("left")}>
           Glue to left
         </ContextMenu.Item>
       {/if}
-      {#if rightTrack}
-        <ContextMenu.Item onclick={() => onGlueTrackClick("right")}>
+      {#if rightNeighbor}
+        <ContextMenu.Item onclick={() => onGlueTrackletClick("right")}>
           Glue to right
         </ContextMenu.Item>
       {/if}
@@ -354,9 +351,9 @@ License: CECILL-C
             bind:selectedEntityId
             bind:mustMerge
             bind:overlapTargetId
-            baseSchema={videoTrack.table_info.base_schema}
-            viewRef={{ name: videoTrack.data.view_name, id: videoTrack.data.frame_id }}
-            track={videoTrack}
+            baseSchema={tracklet.table_info.base_schema}
+            viewRef={{ name: tracklet.data.view_name, id: tracklet.data.frame_id }}
+            track={tracklet}
           />
           <Button.Root type="button" class={cn(buttonVariants(), "text-white mt-4")} onclick={handleRelink}>OK</Button.Root>
         </div>
@@ -364,21 +361,21 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if videoTrack.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
-  {#key track_annotations_frame_indexes.length}
-    {#each track_annotations_frame_indexes as itemFrameIndex}
-      <TrackKeyItem
+{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
+  {#key keyframeIndexes.length}
+    {#each keyframeIndexes as itemFrameIndex}
+      <KeyframeDot
         {itemFrameIndex}
-        track={videoTrack}
+        tracklet={tracklet}
         {color}
         {height}
         {top}
         {oneFrameInPixel}
         {onEditKeyItemClick}
         {onClick}
-        {trackId}
+        {entityId}
         {canContinueDragging}
-        updateTrackWidth={updateTrackWidth}
+        updateTrackletWidth={updateTrackletWidth}
         {resetTool}
       />
     {/each}

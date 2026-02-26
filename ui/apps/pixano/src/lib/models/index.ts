@@ -12,6 +12,5 @@ export type {
   SegmentationResult,
 } from "$lib/types/models";
 export type { BoundingBox, LabeledClick } from "$lib/types/geometry";
-export * as mask_utils from "./mask_utils";
 export * as npy from "./npy";
 export { SAM } from "./Sam";

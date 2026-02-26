@@ -13,7 +13,7 @@ License: CECILL-C
 
   import Inspector from "./Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./LoadModelModal.svelte";
-  import { videoControls } from "$lib/stores/videoStores.svelte";
+  import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     canSave,
@@ -99,7 +99,7 @@ License: CECILL-C
     const result = processDatasetItem(selectedItem, featureValues);
 
     if (result.videoSpeed !== undefined) {
-      videoControls.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
+      playbackState.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
     }
 
     // Set entities first so colorScale effect processes them before annotations

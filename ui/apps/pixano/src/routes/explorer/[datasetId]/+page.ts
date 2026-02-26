@@ -30,7 +30,7 @@ export const load: PageLoad = async ({ params, url }) => {
     querySearch && queryModel ? { model: queryModel, search: querySearch } : undefined;
 
   const browserData = await getBrowser(
-    params.dataset,
+    params.datasetId,
     currentPage,
     size,
     query,

@@ -16,7 +16,7 @@ import {
   isSequenceFrameArray,
   isVideoEntity,
   Mask,
-  Track,
+  Tracklet,
   WorkspaceType,
   type AnnotationData,
   type BBoxData,
@@ -191,7 +191,7 @@ export function attachTrackChildren(
   return anns.map((ann) => {
     const topEntity = getTopEntity(ann);
     if (ann.is_type(BaseSchema.Tracklet)) {
-      const track = ann as Track;
+      const track = ann as Tracklet;
       if (topEntity) {
         track.ui.childs =
           topEntity.ui.childs?.filter(

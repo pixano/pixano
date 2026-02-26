@@ -12,7 +12,8 @@ License: CECILL-C
   import {
     currentFrameIndex,
     lastFrameIndex,
-    videoControls,
+    playbackState,
+    timelineZoom,
   } from "$lib/stores/videoStores.svelte";
 
   interface Props {
@@ -26,7 +27,7 @@ License: CECILL-C
   let timeTrackElement: HTMLElement = $state();
 
   let imageFilesLength = lastFrameIndex.value + 1;
-  const videoTotalLengthInMs = imageFilesLength * videoControls.value.videoSpeed;
+  const videoTotalLengthInMs = imageFilesLength * playbackState.value.videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
   let timeTrackDensity = $state(1);
 
@@ -35,19 +36,29 @@ License: CECILL-C
 
     node.addEventListener("mousedown", () => {
       moving = true;
-      clearInterval(videoControls.value.intervalId);
-    });
+      clearInterval(playbackState.value.intervalId);
+      const dragController = new AbortController();
 
-    window.addEventListener("mousemove", (event) => {
-      if (moving) {
-        currentFrameIndex.value = getImageIndexFromMouseMove(event, node, imageFilesLength);
-        updateView(currentFrameIndex.value);
-        resetTool();
-      }
-    });
+      window.addEventListener(
+        "mousemove",
+        (event) => {
+          if (moving) {
+            currentFrameIndex.value = getImageIndexFromMouseMove(event, node, imageFilesLength);
+            updateView(currentFrameIndex.value);
+            resetTool();
+          }
+        },
+        { signal: dragController.signal },
+      );
 
-    window.addEventListener("mouseup", () => {
-      moving = false;
+      window.addEventListener(
+        "mouseup",
+        () => {
+          moving = false;
+          dragController.abort();
+        },
+        { signal: dragController.signal },
+      );
     });
   };
 
@@ -66,8 +77,8 @@ License: CECILL-C
       targetElement instanceof HTMLSpanElement
     )
       return;
-    clearInterval(videoControls.value.intervalId);
-    videoControls.value.intervalId = 0;
+    clearInterval(playbackState.value.intervalId);
+    playbackState.value.intervalId = 0;
     currentFrameIndex.value = Math.min(
       Math.round((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
       imageFilesLength - 1,
@@ -88,7 +99,7 @@ License: CECILL-C
   };
 
   $effect(() => {
-    if (videoControls.value.zoomLevel[0]) {
+    if (timelineZoom.value[0]) {
       updateTimeTrack();
     }
   });
@@ -107,7 +118,7 @@ License: CECILL-C
 
 <div
   class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-card border-b border-border focus:outline-none"
-  style={`width: ${videoControls.value.zoomLevel[0]}%`}
+  style={`width: ${timelineZoom.value[0]}%`}
   role="slider"
   tabindex="0"
   onclick={onPlayerClick}
@@ -120,7 +131,7 @@ License: CECILL-C
     use:dragMe
     aria-label="Current frame cursor"
     class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
-    style={`left: ${((currentFrameIndex.value * videoControls.value.videoSpeed) / videoTotalLengthInMs) * 100}%`}
+    style={`left: ${((currentFrameIndex.value * playbackState.value.videoSpeed) / videoTotalLengthInMs) * 100}%`}
     bind:this={cursorElement}
   >
     <span class="block h-[60%] bg-primary w-2 rounded-t"></span>

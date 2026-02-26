@@ -13,7 +13,7 @@ import {
   selectedTool,
 } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
-import { BaseSchema, Entity, Track } from "$lib/types/dataset";
+import { BaseSchema, Entity, Tracklet, type Annotation } from "$lib/types/dataset";
 
 let fusionHighlightedEntityId: string | null = null;
 
@@ -80,8 +80,8 @@ export const highlightEntity = (
   if (targetEntity?.ui.childs) {
     for (const ann of targetEntity.ui.childs) {
       if (!ann.is_type(BaseSchema.Tracklet)) continue;
-      trackStart = Math.min(trackStart, (ann as Track).data.start_frame);
-      trackEnd = Math.max(trackEnd, (ann as Track).data.end_frame);
+      trackStart = Math.min(trackStart, (ann as Tracklet).data.start_frame);
+      trackEnd = Math.max(trackEnd, (ann as Tracklet).data.end_frame);
     }
   }
 
@@ -149,6 +149,56 @@ export const highlightEntity = (
     return currentFrameIndex.value;
   }
 };
+
+/**
+ * Set highlight state for a specific set of annotation IDs.
+ * Annotations not in the set are dimmed to "none" when dimRest is true,
+ * or left unchanged when dimRest is false.
+ */
+export function highlightAnnotationIds(
+  ids: Set<string>,
+  dimRest: boolean = true,
+  state: "self" | "all" | "none" = "self",
+): void {
+  annotations.update((anns) =>
+    anns.map((ann) => {
+      if (ids.has(ann.id)) {
+        ann.ui.displayControl.highlighted = state;
+      } else if (dimRest) {
+        ann.ui.displayControl.highlighted = "none";
+      }
+      return ann;
+    }),
+  );
+}
+
+/**
+ * Set highlight+editing for annotations matching a predicate,
+ * dim+not-editing for the rest.
+ */
+export function highlightWithEditing(predicate: (ann: Annotation) => boolean): void {
+  highlightedEntity.value = null;
+  annotations.update((anns) =>
+    anns.map((ann) => {
+      const shouldHighlight = predicate(ann);
+      ann.ui.displayControl = {
+        ...ann.ui.displayControl,
+        highlighted: shouldHighlight ? "self" : "none",
+        editing: shouldHighlight,
+      };
+      return ann;
+    }),
+  );
+}
+
+/**
+ * Highlight a tracklet and all its children as "self", dim everything else.
+ */
+export function highlightTrackletChildren(tracklet: Tracklet): void {
+  const ids = new Set([tracklet.id, ...(tracklet.ui.childs ?? []).map((ann) => ann.id)]);
+  highlightedEntity.value = null;
+  highlightAnnotationIds(ids, true);
+}
 
 export const clearHighlighting = () => {
   fusionHighlightedEntityId = null;

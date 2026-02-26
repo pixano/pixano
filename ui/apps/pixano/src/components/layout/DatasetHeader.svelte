@@ -14,7 +14,12 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { findNeighborItemId, getPageFromItemId } from "$lib/utils/navigationUtils";
-  import { navItems } from "$lib/constants";
+  import {
+    EXPLORER_ROUTE_ID,
+    WORKSPACE_ROUTE_ID,
+    getExplorerRoute,
+    getWorkspaceRoute,
+  } from "$lib/utils/routes";
   import {
     currentDatasetStore,
     datasetItemIds,
@@ -30,9 +35,8 @@ License: CECILL-C
   let showConfirmModal: string = $state("none");
   let newItemId: string = "none";
 
-  const DATASET_ITEM_ROUTE = `/[dataset]/dataset/[itemId]`;
-
   let currentItemId = $derived(page.params.itemId);
+  const isWorkspaceRoute = $derived(page.route.id === WORKSPACE_ROUTE_ID);
 
   const getDatasetItemDisplayCount = () => {
     const index = datasetItemIds.value.indexOf(currentItemId);
@@ -49,7 +53,7 @@ License: CECILL-C
 
     // If a neighbor item has been found
     if (neighborId) {
-      const route = `/${currentDatasetStore.value.id}/dataset/${neighborId}`;
+      const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId);
 
       // Ask for confirmation if modifications have been made to the item
       if (saveCurrentItemStore.value.canSave) {
@@ -85,7 +89,7 @@ License: CECILL-C
     if (!currentDatasetStore.value) return;
     if (currentItemId) {
       const targetPage = getPageFromItemId(datasetItemIds.value, currentItemId);
-      await navigateTo(`/${currentDatasetStore.value.id}/dataset?page=${targetPage}`);
+      await navigateTo(getExplorerRoute(currentDatasetStore.value.id, `page=${targetPage}`));
     } else await navigateTo("/");
   };
 
@@ -118,7 +122,7 @@ License: CECILL-C
 </script>
 
 <div class="h-full w-full flex items-center" use:preventUnsavedUnload>
-  {#if page.route.id === DATASET_ITEM_ROUTE}
+  {#if isWorkspaceRoute}
     <DatasetItemHeader
       {currentItemId}
       {handleSave}
@@ -139,18 +143,13 @@ License: CECILL-C
           </div>
         {/if}
 
-        <div class="flex items-center gap-2">
-          {#each navItems as { name, Icon }}
-            <PrimaryButton
-              isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-              onclick={() => navigateTo(`/${currentDatasetStore.value.id}/${name.toLocaleLowerCase()}`)}
-              class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
-            >
-              <Icon class="h-3.5 w-3.5" />
-              {name}
-            </PrimaryButton>
-          {/each}
-        </div>
+        <PrimaryButton
+          isSelected={pageId === EXPLORER_ROUTE_ID}
+          onclick={() => navigateTo(getExplorerRoute(currentDatasetStore.value.id))}
+          class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
+        >
+          Dataset
+        </PrimaryButton>
       </div>
 
       <!-- Placeholder for Right zone in browser view to maintain symmetry -->

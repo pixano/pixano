@@ -10,7 +10,7 @@ License: CECILL-C
   import { LazyBrush } from "lazy-brush";
   import { Image as KonvaImage } from "svelte-konva";
 
-  import { mask_utils } from "$lib/models";
+  import { generatePolygonSegments, convertSegmentsToSVG } from "$lib/utils/maskUtils";
   import type { Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
   import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
@@ -22,6 +22,7 @@ License: CECILL-C
     isMaskEmpty,
     rleToBitmap,
   } from "./brushOps";
+  import { BRUSH_MASK_COLOR } from "./konvaConstants";
 
   interface MaskRle {
     counts: number[];
@@ -30,7 +31,7 @@ License: CECILL-C
 
   interface Props {
     viewRef: Reference;
-    currentImage: HTMLImageElement;
+    currentImage: HTMLImageElement | ImageBitmap;
     zoomFactor: number;
     selectedItemId: string;
     selectedTool: BrushSelectionTool;
@@ -67,7 +68,6 @@ License: CECILL-C
   // Reference to the KonvaImage component for triggering repaints via batchDraw()
   let konvaImageRef: { node: Konva.Image } | undefined = $state();
 
-  const MASK_COLOR = "rgba(255, 0, 80, 0.5)";
 
   // Effective radius scaled by zoom
   let effectiveRadius = $derived(brushSettings.brushRadius / (zoomFactor || 1));
@@ -154,7 +154,7 @@ License: CECILL-C
     displayCtx.globalCompositeOperation = "source-over";
     displayCtx.drawImage(offscreenCanvas, 0, 0);
     displayCtx.globalCompositeOperation = "source-in";
-    displayCtx.fillStyle = MASK_COLOR;
+    displayCtx.fillStyle = BRUSH_MASK_COLOR;
     displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
 
     // Trigger svelte-konva repaint without destroying/recreating the node
@@ -200,8 +200,8 @@ License: CECILL-C
     if (isMaskEmpty(offscreenCanvas)) return null;
 
     const counts = bitmapToRle(offscreenCanvas);
-    const maskPolygons = mask_utils.generatePolygonSegments(counts, currentImage.height);
-    const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
+    const maskPolygons = generatePolygonSegments(counts, currentImage.height);
+    const masksSVG = convertSegmentsToSVG(maskPolygons);
 
     return {
       status: "saving",

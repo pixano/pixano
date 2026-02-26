@@ -19,14 +19,8 @@ License: CECILL-C
   // Populate existing stores for backward compatibility
   $effect(() => {
     currentDatasetStore.value = data.dataset;
-  });
-  $effect(() => {
     datasetSchema.value = data.schema;
-  });
-  $effect(() => {
     sourcesStore.value = data.sources;
-  });
-  $effect(() => {
     datasetItemIds.value = data.itemIds;
     datasetTotalItemsCount.value = data.itemIds.length;
   });

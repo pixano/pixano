@@ -8,7 +8,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
 
-  import { INPUTRECT_STROKEWIDTH } from "./konvaConstants";
+  import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX, INPUTRECT_STROKEWIDTH } from "./konvaConstants";
   import { sceneFunc } from "./konvaMaskOps";
   import PolygonVertices from "./PolygonVertices.svelte";
   import type { ToolEvent } from "$lib/tools";
@@ -38,7 +38,6 @@ License: CECILL-C
   }: Props = $props();
 
   const POLYGON_ID = "creating";
-  const EDGE_SNAP_PX = 8;
 
   const asPolygonCreation = (shape: Shape): CreatePolygonShape => shape as CreatePolygonShape;
   const getSavedSvg = (shape: Shape): string[] =>
@@ -47,9 +46,6 @@ License: CECILL-C
     shape.masksImageSVG.every((value: unknown) => typeof value === "string")
       ? shape.masksImageSVG
       : [];
-
-  const draftLineColor = "hsl(330, 65%, 50%)";
-  const draftFillColor = "hsla(330, 60%, 95%, 0.2)";
 
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null =
     $state(null);
@@ -290,12 +286,12 @@ License: CECILL-C
         onmousemove={handleShapeMouseMove}
         onmouseleave={handleShapeMouseLeave}
         sceneFunc={drawPolygonScene}
-        stroke={draftLineColor}
+        stroke={DRAFT_LINE_COLOR}
         strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
-        fill={draftFillColor}
+        fill={DRAFT_FILL_COLOR}
         hitFunc={drawPolygonHit}
         listening={polygonCreation.phase === "editing"}
       />
@@ -313,7 +309,7 @@ License: CECILL-C
           x={hoveredEdge.x}
           y={hoveredEdge.y}
           radius={5 / zoomFactor}
-          fill={draftLineColor}
+          fill={DRAFT_LINE_COLOR}
           stroke="white"
           strokeWidth={1.5}
           strokeScaleEnabled={false}
@@ -324,13 +320,13 @@ License: CECILL-C
       <KonvaShape
         sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
           sceneFunc(ctx, shape, getSavedSvg(newShape))}
-        stroke={draftLineColor}
+        stroke={DRAFT_LINE_COLOR}
         strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
         closed={true}
-        fill={draftFillColor}
+        fill={DRAFT_FILL_COLOR}
         listening={false}
       />
     {/if}

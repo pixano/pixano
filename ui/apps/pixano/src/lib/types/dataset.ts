@@ -215,7 +215,7 @@ export type TrackTimelineEntry = {
 
 export type LoadedImage = {
   id: string;
-  element: HTMLImageElement;
+  element: HTMLImageElement | ImageBitmap;
 };
 export type LoadedImagesPerView = Record<string, LoadedImage[]>;
 
@@ -420,7 +420,7 @@ export class Entity extends BaseData<EntityData> {
   }
 }
 
-/** Detect video entities by checking if they have Track (was Tracklet) annotation children. */
+/** Detect video entities by checking if they have Tracklet annotation children. */
 export function isVideoEntity(entity: Entity): boolean {
   return entity.is_type(BaseSchema.Track) || (entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Tracklet)) ?? false);
 }
@@ -453,6 +453,31 @@ export class BBox extends Annotation {
 
   static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["coords", "format", "is_normalized", "confidence"]);
+  }
+
+  static cloneForFrame(source: BBox, overrides: {
+    id?: string;
+    coords?: number[];
+    view_name?: string;
+    frame_id?: string;
+    frame_index?: number;
+    source_id?: string;
+  }): BBox {
+    const cloned = structuredClone(source);
+    const { ui, ...dataFields } = cloned;
+    const instance = new BBox(dataFields);
+    const { startRef, ...cleanUi } = ui;
+    void startRef;
+    instance.ui = cleanUi;
+    instance.ui.top_entities = source.ui.top_entities; // preserve class refs
+    if (overrides.id !== undefined) instance.id = overrides.id;
+    if (overrides.coords !== undefined) instance.data.coords = overrides.coords;
+    if (overrides.view_name !== undefined) instance.data.view_name = overrides.view_name;
+    if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
+    if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
+    if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
+    instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
+    return instance;
   }
 }
 
@@ -512,6 +537,33 @@ export class Keypoints extends Annotation {
 
   static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["template_id", "coords", "states"]);
+  }
+
+  static cloneForFrame(source: Keypoints, overrides: {
+    id?: string;
+    coords?: number[];
+    states?: string[];
+    view_name?: string;
+    frame_id?: string;
+    frame_index?: number;
+    source_id?: string;
+    displayControl?: DisplayControl;
+  }): Keypoints {
+    const cloned = structuredClone(source);
+    const { ui, ...dataFields } = cloned;
+    const instance = new Keypoints(dataFields);
+    instance.ui = ui;
+    instance.ui.top_entities = source.ui.top_entities; // preserve class refs
+    if (overrides.id !== undefined) instance.id = overrides.id;
+    if (overrides.coords !== undefined) instance.data.coords = overrides.coords;
+    if (overrides.states !== undefined) instance.data.states = overrides.states;
+    if (overrides.view_name !== undefined) instance.data.view_name = overrides.view_name;
+    if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
+    if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
+    if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
+    if (overrides.displayControl !== undefined) instance.ui.displayControl = overrides.displayControl;
+    instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
+    return instance;
   }
 }
 
@@ -580,9 +632,9 @@ export class TextSpan extends Annotation {
   }
 }
 
-// ─── Track (annotation — temporal container, was Tracklet) ─────────────────────
+// ─── Tracklet (annotation — temporal container) ────────────────────────────────
 
-export interface TrackData {
+export interface TrackletData {
   start_frame: number;
   end_frame: number;
   start_timestamp: number;
@@ -590,8 +642,8 @@ export interface TrackData {
   [key: string]: unknown;
 }
 
-export class Track extends Annotation {
-  declare data: TrackData & AnnotationData;
+export class Tracklet extends Annotation {
+  declare data: TrackletData & AnnotationData;
 
   //UI only fields
   ui: AnnotationUIFields & {
@@ -600,7 +652,7 @@ export class Track extends Annotation {
 
   constructor(obj: RawSchemaData) {
     super(obj);
-    this.data = obj.data as TrackData & AnnotationData;
+    this.data = obj.data as TrackletData & AnnotationData;
   }
 
   static nonFeaturesFields(): string[] {

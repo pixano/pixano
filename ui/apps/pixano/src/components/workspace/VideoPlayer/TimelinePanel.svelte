@@ -9,26 +9,19 @@ License: CECILL-C
   import { Slider } from "bits-ui";
   import { ZoomIn, ZoomOut } from "lucide-svelte";
 
-  import EntityTrack from "./EntityTrack.svelte";
+  import EntityTimelineRow from "./EntityTimelineRow.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoControls from "./VideoControls.svelte";
-  import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import { currentFrameIndex, lastFrameIndex, videoControls } from "$lib/stores/videoStores.svelte";
+  import TimelineRowLayout from "./TimelineRowLayout.svelte";
+  import { currentFrameIndex, lastFrameIndex, playbackState, timelineZoom } from "$lib/stores/videoStores.svelte";
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
-  import { BBox, Entity, isVideoEntity, type KeypointAnnotation } from "$lib/ui";
+  import { Entity, isVideoEntity } from "$lib/ui";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { sortEntities } from "$lib/utils/sortEntities";
   import { updateView } from "$lib/utils/videoOperations";
 
-  interface Props {
-    bboxes: BBox[];
-    keypoints: KeypointAnnotation[];
-  }
-
-  let { bboxes, keypoints }: Props = $props();
-
-  let tracks: Entity[] = $derived(
+  let videoEntities: Entity[] = $derived(
     entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities),
   );
 
@@ -46,7 +39,7 @@ License: CECILL-C
     }
   };
 
-  const onTimeTrackClick = (index: number) => {
+  const onFrameClick = (index: number) => {
     if (currentFrameIndex.value !== index) {
       currentFrameIndex.value = index;
       updateView(currentFrameIndex.value);
@@ -54,30 +47,28 @@ License: CECILL-C
   };
 </script>
 
-{#if videoControls.value.isLoaded}
+{#if playbackState.value.isLoaded}
   <div class="h-full bg-card overflow-x-auto relative flex flex-col scroll-smooth">
     <div class="sticky top-0 bg-card z-20">
-      <VideoPlayerRow class="bg-card ">
+      <TimelineRowLayout class="bg-card ">
         {#snippet timeTrack()}
           <TimeTrack {resetTool} {resetHighlight} />
         {/snippet}
-      </VideoPlayerRow>
+      </TimelineRowLayout>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each tracks as track (track.id)}
-        {#if !track.ui.displayControl.hidden}
-          <VideoPlayerRow>
+      {#each videoEntities as entity (entity.id)}
+        {#if !entity.ui.displayControl.hidden}
+          <TimelineRowLayout>
             {#snippet timeTrack()}
-              <EntityTrack
-                {track}
+              <EntityTimelineRow
+                {entity}
                 views={mediaViews.value}
-                {onTimeTrackClick}
-                {bboxes}
-                {keypoints}
+                {onFrameClick}
                 {resetTool}
               />
             {/snippet}
-          </VideoPlayerRow>
+          </TimelineRowLayout>
         {/if}
       {/each}
     </div>
@@ -87,7 +78,7 @@ License: CECILL-C
         <div title="Zoom out" class="text-primary"><ZoomOut /></div>
         <Slider.Root
           type="multiple"
-          bind:value={videoControls.value.zoomLevel}
+          bind:value={timelineZoom.value}
           min={100}
           max={Math.max(lastFrameIndex.value * 3, 200)}
           class="relative flex w-full touch-none select-none items-center"

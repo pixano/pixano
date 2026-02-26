@@ -11,19 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from s3path import S3Path
 from starlette.middleware.gzip import GZipMiddleware
 
-from pixano.app.routers.annotations import router as annotations_router
-from pixano.app.routers.browser import router as browser_router
-from pixano.app.routers.dataset_items import router as dataset_items_router
-from pixano.app.routers.datasets import router as datasets_router
-from pixano.app.routers.embeddings import router as embeddings_router
-from pixano.app.routers.entities import router as entities_router
-from pixano.app.routers.inference import router as inference_router
-from pixano.app.routers.items import router as items_router
-from pixano.app.routers.items_info import router as items_info_router
-from pixano.app.routers.models import router as models_router
-from pixano.app.routers.sources import router as sources_router
-from pixano.app.routers.thumbnail import router as thumbnail_router
-from pixano.app.routers.views import router as views_router
+from pixano.app.routers import include_api_routers
 from pixano.app.settings import Settings
 
 
@@ -49,7 +37,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
 
     # Mount folders
     if isinstance(settings.media_dir, S3Path):
-        # If S3, mount models folder
+        # If S3, mount local models folder
         # Check if folder exists
         if settings.models_dir is None:
             raise FileNotFoundError("Local model directory not provided")
@@ -57,7 +45,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise FileNotFoundError(f"Local model directory '{settings.models_dir.absolute()}' not found")
         # Mount
         app.mount(
-            "/models",
+            "/app_models",
             StaticFiles(directory=settings.models_dir),
             name="models",
         )
@@ -88,18 +76,6 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         return {"status": "ok"}
 
     # Include routers
-    app.include_router(annotations_router)
-    app.include_router(dataset_items_router)
-    app.include_router(datasets_router)
-    app.include_router(thumbnail_router)
-    app.include_router(browser_router)
-    app.include_router(embeddings_router)
-    app.include_router(entities_router)
-    app.include_router(items_router)
-    app.include_router(items_info_router)
-    app.include_router(sources_router)
-    app.include_router(views_router)
-    app.include_router(models_router)
-    app.include_router(inference_router)
+    include_api_routers(app)
 
     return app

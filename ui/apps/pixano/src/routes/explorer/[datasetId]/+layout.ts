@@ -10,14 +10,14 @@ import { error } from "@sveltejs/kit";
 
 export const load: LayoutLoad = async ({ params, parent }) => {
   const { datasets } = await parent();
-  const dataset = datasets.find((d) => d.id === params.dataset);
+  const dataset = datasets.find((d) => d.id === params.datasetId);
   // eslint-disable-next-line @typescript-eslint/only-throw-error
-  if (!dataset) throw error(404, `Dataset "${params.dataset}" not found`);
+  if (!dataset) throw error(404, `Dataset "${params.datasetId}" not found`);
 
   const [ds, sources, itemIds] = await Promise.all([
-    api.getDataset(params.dataset),
-    api.getSources(params.dataset),
-    api.getDatasetItemsIds(params.dataset),
+    api.getDataset(params.datasetId),
+    api.getSources(params.datasetId),
+    api.getDatasetItemsIds(params.datasetId),
   ]);
 
   return {

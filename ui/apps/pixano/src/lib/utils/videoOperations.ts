@@ -15,13 +15,11 @@ import {
   lastFrameIndex,
   videoViewNames,
 } from "$lib/stores/videoStores.svelte";
-import { Track, type Annotation, type LoadedImage } from "$lib/types/dataset";
+import { Tracklet, type Annotation, type LoadedImage } from "$lib/types/dataset";
 import { getPixanoSource } from "$lib/utils/entityLookupUtils";
-import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
-import * as api from "$lib/api";
 
-const NETWORK_BATCH_SIZE = 512;
+const NETWORK_BATCH_SIZE = 128;
 const PREFETCH_CHUNKS_AHEAD = 2;
 const PREFETCH_CHUNKS_BEHIND = 1;
 const WARM_DECODE_AHEAD = 8;
@@ -29,9 +27,9 @@ const WARM_DECODE_BEHIND = 2;
 const PLAYBACK_PREFETCH_TRIGGER = Math.floor(NETWORK_BATCH_SIZE * 0.25);
 const PLAYBACK_EXTRA_PREFETCH_CHUNKS = 3;
 const BASE_MEMORY_CACHE_SIZE = 96;
-const CACHE_ROOT_DIR_NAME = "pixano-video-cache";
 
 type ViewRuntime = {
+  availableFrames: Set<number>;
   persistedFrames: Set<number>;
   frameMimeTypes: Map<number, string>;
   inflightChunks: Map<number, Promise<void>>;
@@ -40,215 +38,148 @@ type ViewRuntime = {
 
 type FrameWaiter = (available: boolean) => void;
 
-class FrameDiskCache {
-  private rootPromise: Promise<unknown> | null = null;
-  private sessionDir = "";
-  private frameWriteLocks = new Map<string, Promise<void>>();
-  private cleanupQueue: Promise<void> = Promise.resolve();
-
-  private sanitizeSegment(value: string): string {
-    return value.replace(/[^a-zA-Z0-9._-]/g, "_");
-  }
-
-  private async getRoot(): Promise<FileSystemDirectoryHandle | null> {
-    const storage = typeof navigator === "undefined" ? undefined : navigator.storage;
-    if (!storage || typeof storage.getDirectory !== "function") {
-      return null;
+type FrameWorkerRequestPayload =
+  | {
+      type: "initSession";
+      datasetId: string;
+      itemId: string;
+      sessionToken: number;
     }
-
-    if (this.rootPromise === null) {
-      this.rootPromise = storage.getDirectory().catch(() => null);
+  | {
+      type: "fetchChunk";
+      viewName: string;
+      startFrame: number;
+      batchSize: number;
     }
-
-    const value = await this.rootPromise;
-    if (
-      value &&
-      typeof value === "object" &&
-      "getDirectoryHandle" in value &&
-      typeof value.getDirectoryHandle === "function"
-    ) {
-      return value as FileSystemDirectoryHandle;
+  | {
+      type: "decodeFrame";
+      viewName: string;
+      frameIndex: number;
+      mimeType?: string;
     }
-    return null;
-  }
+  | { type: "clearSession" };
+type FrameWorkerRequest = FrameWorkerRequestPayload & { requestId: number };
 
-  private async getCacheRoot(create: boolean): Promise<FileSystemDirectoryHandle | null> {
-    const root = await this.getRoot();
-    if (!root) return null;
-    try {
-      return await root.getDirectoryHandle(CACHE_ROOT_DIR_NAME, { create });
-    } catch {
-      return null;
-    }
-  }
+type ChunkFrameResult = {
+  frameIndex: number;
+  mimeType: string;
+  persisted: boolean;
+};
 
-  private async waitForSessionWrites(sessionDir: string): Promise<void> {
-    const pendingWrites = Array.from(this.frameWriteLocks.entries())
-      .filter(([lockKey]) => lockKey.startsWith(`${sessionDir}/`))
-      .map(([, writePromise]) => writePromise.catch(() => undefined));
+type FrameWorkerResponse =
+  | { requestId: number; ok: true; type: "initSession" }
+  | { requestId: number; ok: true; type: "clearSession" }
+  | { requestId: number; ok: true; type: "fetchChunk"; frames: ChunkFrameResult[] }
+  | { requestId: number; ok: true; type: "decodeFrame"; missing: true }
+  | { requestId: number; ok: true; type: "decodeFrame"; missing: false; bitmap: ImageBitmap }
+  | { requestId: number; ok: false; type: FrameWorkerRequestPayload["type"]; error: string };
+type FrameWorkerSuccessResponse = Extract<FrameWorkerResponse, { ok: true }>;
 
-    if (pendingWrites.length > 0) {
-      await Promise.all(pendingWrites);
-    }
-  }
+type WorkerPendingRequest = {
+  resolve: (value: FrameWorkerSuccessResponse) => void;
+  reject: (error: Error) => void;
+};
 
-  private enqueueSessionCleanup(sessionDir: string): void {
-    if (!sessionDir) return;
-    this.cleanupQueue = this.cleanupQueue
-      .then(async () => {
-        await this.waitForSessionWrites(sessionDir);
-        const cacheRoot = await this.getCacheRoot(false);
-        if (!cacheRoot) return;
-        try {
-          await cacheRoot.removeEntry(sessionDir, { recursive: true });
-        } catch {
-          // No-op: directory may already be deleted.
-        }
-      })
-      .catch(() => {
-        // Keep queue alive even when a cleanup task fails.
-      });
-  }
-
-  getSessionDir(): string {
-    return this.sessionDir;
-  }
-
-  async resetSession(datasetId: string, itemId: string, sessionToken: number): Promise<void> {
-    const previousSessionDir = this.sessionDir;
-    this.sessionDir = `${this.sanitizeSegment(datasetId)}__${this.sanitizeSegment(itemId)}__s${sessionToken}`;
-
-    const cacheRoot = await this.getCacheRoot(true);
-    if (!cacheRoot) return;
-
-    await cacheRoot.getDirectoryHandle(this.sessionDir, { create: true });
-
-    // Clear previous video cache asynchronously so item switch is responsive.
-    if (previousSessionDir && previousSessionDir !== this.sessionDir) {
-      this.enqueueSessionCleanup(previousSessionDir);
-    }
-  }
-
-  private async getViewDir(
-    viewName: string,
-    create: boolean,
-    sessionDir = this.sessionDir,
-  ): Promise<FileSystemDirectoryHandle | null> {
-    if (!sessionDir) return null;
-    const cacheRoot = await this.getCacheRoot(create);
-    if (!cacheRoot) return null;
-
-    try {
-      const session = await cacheRoot.getDirectoryHandle(sessionDir, { create });
-      return await session.getDirectoryHandle(this.sanitizeSegment(viewName), { create });
-    } catch {
-      return null;
-    }
-  }
-
-  async writeFrame(
-    viewName: string,
-    frameIndex: number,
-    frame: Blob,
-    sessionDirOverride?: string,
-  ): Promise<boolean> {
-    const sessionDir = sessionDirOverride ?? this.sessionDir;
-    if (!sessionDir) return false;
-
-    const lockKey = `${sessionDir}/${viewName}/${frameIndex}`;
-    const previous = this.frameWriteLocks.get(lockKey);
-
-    const writePromise = (async () => {
-      if (previous !== undefined) {
-        try {
-          await previous;
-        } catch {
-          // Continue; new write attempts can recover transient lock conflicts.
-        }
-      }
-
-      let lastError: unknown;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        try {
-          const viewDir = await this.getViewDir(viewName, true, sessionDir);
-          if (!viewDir) return false;
-
-          const fileHandle = await viewDir.getFileHandle(`${frameIndex}.bin`, { create: true });
-          const writable = await fileHandle.createWritable();
-          await writable.write(frame);
-          await writable.close();
-          return true;
-        } catch (error) {
-          const isWriteLockError =
-            error instanceof DOMException && error.name === "NoModificationAllowedError";
-          const isQuotaError = error instanceof DOMException && error.name === "QuotaExceededError";
-
-          if (isQuotaError) {
-            return false;
-          }
-
-          if (!isWriteLockError || attempt === 3) {
-            throw error;
-          }
-          lastError = error;
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 20 * (attempt + 1));
-          });
-        }
-      }
-
-      if (lastError) {
-        throw lastError;
-      }
-      return false;
-    })();
-
-    this.frameWriteLocks.set(lockKey, writePromise);
-    let wrote = false;
-    try {
-      wrote = await writePromise;
-    } finally {
-      if (this.frameWriteLocks.get(lockKey) === writePromise) {
-        this.frameWriteLocks.delete(lockKey);
-      }
-    }
-
-    return wrote;
-  }
-
-  async readFrame(
-    viewName: string,
-    frameIndex: number,
-    mimeType?: string,
-    sessionDirOverride?: string,
-  ): Promise<Blob | undefined> {
-    const sessionDir = sessionDirOverride ?? this.sessionDir;
-    const viewDir = await this.getViewDir(viewName, false, sessionDir);
-    if (!viewDir) return undefined;
-
-    try {
-      const fileHandle = await viewDir.getFileHandle(`${frameIndex}.bin`);
-      const file = await fileHandle.getFile();
-      if (mimeType && !file.type) {
-        return file.slice(0, file.size, mimeType);
-      }
-      return file;
-    } catch {
-      return undefined;
-    }
-  }
-}
-
-const frameDiskCache = new FrameDiskCache();
 const viewRuntimes = new Map<string, ViewRuntime>();
 const frameWaiters = new Map<string, Set<FrameWaiter>>();
 const decodeInflight = new Map<string, Promise<LoadedImage | undefined>>();
 const backgroundDownloads = new Map<string, Promise<void>>();
 
-let decodedFrameCache = new LRUCache<string, LoadedImage>(BASE_MEMORY_CACHE_SIZE);
-let sessionAbortController = new AbortController();
+let frameWorker: Worker | null = null;
+let workerRequestCounter = 0;
+const workerPendingRequests = new Map<number, WorkerPendingRequest>();
+
+function releaseLoadedImage(image: LoadedImage): void {
+  if (typeof ImageBitmap !== "undefined" && image.element instanceof ImageBitmap) {
+    image.element.close();
+  }
+}
+
+function releaseImagesPerViewState(): void {
+  for (const images of Object.values(imagesPerView.value)) {
+    for (const image of images) {
+      releaseLoadedImage(image);
+    }
+  }
+}
+
+let decodedFrameCache = new LRUCache<string, LoadedImage>(BASE_MEMORY_CACHE_SIZE, (_key, value) => {
+  releaseLoadedImage(value);
+});
 let sessionVersion = 0;
 let activeSessionKey = "";
+
+function rejectPendingWorkerRequests(error: Error): void {
+  for (const pending of workerPendingRequests.values()) {
+    pending.reject(error);
+  }
+  workerPendingRequests.clear();
+}
+
+function closeFrameWorker(): void {
+  if (frameWorker) {
+    frameWorker.terminate();
+    frameWorker = null;
+  }
+}
+
+function ensureFrameWorker(): Worker | null {
+  if (typeof Worker === "undefined") {
+    return null;
+  }
+  if (frameWorker) {
+    return frameWorker;
+  }
+
+  frameWorker = new Worker(new URL("../workers/videoFrameWorker.ts", import.meta.url), {
+    type: "module",
+  });
+
+  frameWorker.onmessage = (event: MessageEvent<FrameWorkerResponse>) => {
+    const response = event.data;
+    if (!response || typeof response.requestId !== "number") return;
+    const pending = workerPendingRequests.get(response.requestId);
+    if (!pending) return;
+
+    workerPendingRequests.delete(response.requestId);
+    if (!response.ok) {
+      pending.reject(new Error("error" in response ? response.error : "Unknown worker error."));
+      return;
+    }
+    pending.resolve(response);
+  };
+
+  frameWorker.onerror = (event: ErrorEvent) => {
+    const message =
+      event.message || "Video frame worker failed while processing frame streaming.";
+    rejectPendingWorkerRequests(new Error(message));
+    closeFrameWorker();
+  };
+
+  return frameWorker;
+}
+
+function requestWorker(
+  payload: FrameWorkerRequestPayload,
+): Promise<FrameWorkerSuccessResponse> {
+  const worker = ensureFrameWorker();
+  if (!worker) {
+    return Promise.reject(new Error("Web Worker is not supported in this browser."));
+  }
+
+  const requestId = ++workerRequestCounter;
+  const message = { ...payload, requestId } as FrameWorkerRequest;
+
+  return new Promise<FrameWorkerSuccessResponse>((resolve, reject) => {
+    workerPendingRequests.set(requestId, { resolve, reject });
+    try {
+      worker.postMessage(message);
+    } catch (error) {
+      workerPendingRequests.delete(requestId);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
+}
 
 function frameKey(viewName: string, frameIndex: number): string {
   return `${viewName}:${frameIndex}`;
@@ -263,6 +194,7 @@ function getOrCreateRuntime(viewName: string): ViewRuntime {
   if (existing) return existing;
 
   const created: ViewRuntime = {
+    availableFrames: new Set<number>(),
     persistedFrames: new Set<number>(),
     frameMimeTypes: new Map<number, string>(),
     inflightChunks: new Map<number, Promise<void>>(),
@@ -290,9 +222,9 @@ function resolveAllWaiters(available: boolean): void {
   frameWaiters.clear();
 }
 
-function waitForFramePersisted(viewName: string, frameIndex: number): Promise<boolean> {
+function waitForFrameAvailable(viewName: string, frameIndex: number): Promise<boolean> {
   const runtime = getOrCreateRuntime(viewName);
-  if (runtime.persistedFrames.has(frameIndex)) {
+  if (runtime.availableFrames.has(frameIndex)) {
     return Promise.resolve(true);
   }
 
@@ -305,14 +237,6 @@ function waitForFramePersisted(viewName: string, frameIndex: number): Promise<bo
     }
     frameWaiters.set(key, new Set<FrameWaiter>([resolve]));
   });
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
-}
-
-function isQuotaExceededError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "QuotaExceededError";
 }
 
 function chunkForFrame(frameIndex: number): number {
@@ -350,14 +274,14 @@ function clampFrameIndex(frameIndex: number): number {
   return Math.max(0, Math.min(frameIndex, max));
 }
 
-function isFramePersistedInAllViews(frameIndex: number): boolean {
+function isFrameAvailableInAllViews(frameIndex: number): boolean {
   const target = clampFrameIndex(frameIndex);
   const viewNames = videoViewNames.value;
   if (viewNames.length === 0) return false;
 
   for (const viewName of viewNames) {
     const runtime = getOrCreateRuntime(viewName);
-    if (!runtime.persistedFrames.has(target)) {
+    if (!runtime.availableFrames.has(target)) {
       return false;
     }
   }
@@ -376,7 +300,7 @@ export function isFrameReady(frameIndex: number): boolean {
     if (decodedFrameCache.has(key)) continue;
 
     const runtime = getOrCreateRuntime(viewName);
-    if (!runtime.persistedFrames.has(target)) {
+    if (!runtime.availableFrames.has(target)) {
       return false;
     }
   }
@@ -393,7 +317,7 @@ export function getReadyAheadFrames(frameIndex: number, maxFrames: number): numb
 
   let ready = 0;
   for (let offset = 1; offset <= limit; offset++) {
-    if (!isFramePersistedInAllViews(anchor + offset)) {
+    if (!isFrameAvailableInAllViews(anchor + offset)) {
       break;
     }
     ready = offset;
@@ -454,8 +378,8 @@ export async function waitForReadyAheadFrames(
         void requestChunk(viewName, chunk);
       }
       const runtime = getOrCreateRuntime(viewName);
-      if (runtime.persistedFrames.has(targetFrame)) return true;
-      return waitForFramePersisted(viewName, targetFrame);
+      if (runtime.availableFrames.has(targetFrame)) return true;
+      return waitForFrameAvailable(viewName, targetFrame);
     }),
   );
 
@@ -463,37 +387,13 @@ export async function waitForReadyAheadFrames(
 }
 
 /**
- * Decode a frame Blob into an HTMLImageElement with safe object URL lifecycle.
- * The URL is revoked immediately after decode so memory can be reclaimed.
- */
-function blobToImage(blob: Blob): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to decode frame blob"));
-    };
-    img.src = url;
-  });
-}
-
-/**
- * Read + decode frame from OPFS into the small in-memory LRU render cache.
+ * Read + decode one frame into the small in-memory LRU render cache.
  *
  * Memory policy:
  * - OPFS is the source of truth for long videos.
  * - LRU holds only recently rendered/adjacent frames to keep UI snappy.
  */
-async function decodeAndCacheFrame(
-  viewName: string,
-  frameIndex: number,
-  directBlob?: Blob,
-): Promise<LoadedImage | undefined> {
+async function decodeAndCacheFrame(viewName: string, frameIndex: number): Promise<LoadedImage | undefined> {
   const key = frameKey(viewName, frameIndex);
   const inMemory = decodedFrameCache.get(key);
   if (inMemory) return inMemory;
@@ -503,19 +403,21 @@ async function decodeAndCacheFrame(
 
   const decodePromise = (async () => {
     const runtime = getOrCreateRuntime(viewName);
-    const sessionDir = frameDiskCache.getSessionDir();
-    const blob =
-      directBlob ??
-      (await frameDiskCache.readFrame(
-        viewName,
-        frameIndex,
-        runtime.frameMimeTypes.get(frameIndex),
-        sessionDir,
-      ));
+    const decodeResponse = await requestWorker({
+      type: "decodeFrame",
+      viewName,
+      frameIndex,
+      mimeType: runtime.frameMimeTypes.get(frameIndex),
+    });
+    if (decodeResponse.type !== "decodeFrame") {
+      return undefined;
+    }
+    if (decodeResponse.missing !== false) {
+      return undefined;
+    }
 
-    if (!blob) return undefined;
+    const image = decodeResponse.bitmap;
 
-    const image = await blobToImage(blob);
     const loaded: LoadedImage = {
       id: `${viewName}_${frameIndex}`,
       element: image,
@@ -544,11 +446,63 @@ function pushImageToCanvasView(viewName: string, loaded: LoadedImage): void {
   });
 }
 
-function markFramePersisted(viewName: string, frameIndex: number, mimeType: string): void {
+function markFrameAvailable(
+  viewName: string,
+  frameIndex: number,
+  mimeType: string,
+  persisted: boolean,
+): void {
   const runtime = getOrCreateRuntime(viewName);
-  runtime.persistedFrames.add(frameIndex);
   runtime.frameMimeTypes.set(frameIndex, mimeType);
+  runtime.availableFrames.add(frameIndex);
+  if (persisted) {
+    runtime.persistedFrames.add(frameIndex);
+  }
   resolveFrameWaiters(viewName, frameIndex, true);
+}
+
+async function requestFrameRange(
+  viewName: string,
+  startFrame: number,
+  batchSize: number,
+  token = sessionVersion,
+): Promise<void> {
+  const runtime = getOrCreateRuntime(viewName);
+  const availableFrames = new Set<number>();
+  try {
+    const response = await requestWorker({
+      type: "fetchChunk",
+      viewName,
+      startFrame,
+      batchSize,
+    });
+    if (token !== sessionVersion) return;
+    if (response.type !== "fetchChunk") return;
+
+    for (const frame of response.frames) {
+      availableFrames.add(frame.frameIndex);
+      markFrameAvailable(viewName, frame.frameIndex, frame.mimeType, frame.persisted);
+      if (shouldWarmDecode(frame.frameIndex)) {
+        void decodeAndCacheFrame(viewName, frame.frameIndex);
+      }
+    }
+  } catch (error) {
+    if (token === sessionVersion) {
+      console.warn(
+        `Failed to fetch frame range ${startFrame}-${startFrame + batchSize - 1} for view ${viewName}:`,
+        error,
+      );
+    }
+  } finally {
+    if (token === sessionVersion) {
+      const endFrame = startFrame + batchSize;
+      for (let frame = startFrame; frame < endFrame; frame++) {
+        if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
+          resolveFrameWaiters(viewName, frame, false);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -560,8 +514,7 @@ function markFramePersisted(viewName: string, frameIndex: number, mimeType: stri
 async function requestChunk(viewName: string, chunkIndex: number, token = sessionVersion): Promise<void> {
   const runtime = getOrCreateRuntime(viewName);
   const range = getChunkRange(chunkIndex);
-  const ids = getSessionIdentifiers();
-  if (!range || !ids) return;
+  if (!range) return;
 
   if (runtime.completedChunks.has(chunkIndex)) return;
   const inflight = runtime.inflightChunks.get(chunkIndex);
@@ -571,88 +524,47 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
   }
 
   const { startFrame, batchSize } = range;
-  const cacheSessionDir = frameDiskCache.getSessionDir();
   const chunkPromise = (async () => {
-    let streamedFrameCount = 0;
+    const availableFrames = new Set<number>();
     try {
-      for await (const part of api.streamViewFrameBatch(
-        ids.datasetId,
+      const response = await requestWorker({
+        type: "fetchChunk",
         viewName,
-        ids.itemId,
         startFrame,
         batchSize,
-        sessionAbortController.signal,
-      )) {
-        if (token !== sessionVersion) return;
+      });
+      if (token !== sessionVersion) return;
+      if (response.type !== "fetchChunk") return;
 
-        streamedFrameCount += 1;
-        const hasFrameWaiter = frameWaiters.has(frameKey(viewName, part.frameIndex));
-        const shouldDecodeNow = hasFrameWaiter || shouldWarmDecode(part.frameIndex);
-
-        let persisted = false;
-        try {
-          persisted = await frameDiskCache.writeFrame(
-            viewName,
-            part.frameIndex,
-            part.blob,
-            cacheSessionDir,
-          );
-        } catch (error) {
-          // Quota can still be reached after cleanup. Keep the UI functional
-          // by serving the current frame from memory instead of failing hard.
-          if (isQuotaExceededError(error)) {
-            if (shouldDecodeNow) {
-              const fallbackLoaded = await decodeAndCacheFrame(
-                viewName,
-                part.frameIndex,
-                part.blob,
-              );
-              if (fallbackLoaded && hasFrameWaiter) {
-                resolveFrameWaiters(viewName, part.frameIndex, true);
-              }
-            }
-            continue;
-          }
-          throw error;
-        }
-
-        if (persisted) {
-          markFramePersisted(viewName, part.frameIndex, part.contentType);
-          if (shouldWarmDecode(part.frameIndex)) {
-            void decodeAndCacheFrame(viewName, part.frameIndex, part.blob);
-          }
-          continue;
-        }
-
-        if (shouldDecodeNow) {
-          const fallbackLoaded = await decodeAndCacheFrame(viewName, part.frameIndex, part.blob);
-          if (fallbackLoaded && hasFrameWaiter) {
-            resolveFrameWaiters(viewName, part.frameIndex, true);
-          }
+      for (const frame of response.frames) {
+        availableFrames.add(frame.frameIndex);
+        markFrameAvailable(viewName, frame.frameIndex, frame.mimeType, frame.persisted);
+        if (shouldWarmDecode(frame.frameIndex)) {
+          void decodeAndCacheFrame(viewName, frame.frameIndex);
         }
       }
 
       const endFrame = startFrame + batchSize;
       let isCompleteChunk = true;
       for (let frame = startFrame; frame < endFrame; frame++) {
-        if (!runtime.persistedFrames.has(frame)) {
+        if (!runtime.availableFrames.has(frame)) {
           isCompleteChunk = false;
           break;
         }
       }
 
-      if (token === sessionVersion && streamedFrameCount > 0 && isCompleteChunk) {
+      if (token === sessionVersion && response.frames.length > 0 && isCompleteChunk) {
         runtime.completedChunks.add(chunkIndex);
       }
     } catch (error) {
-      if (!isAbortError(error)) {
+      if (token === sessionVersion) {
         console.warn(`Failed to fetch frame chunk ${chunkIndex} for view ${viewName}:`, error);
       }
     } finally {
       if (token === sessionVersion) {
         const endFrame = startFrame + batchSize;
         for (let frame = startFrame; frame < endFrame; frame++) {
-          if (!runtime.persistedFrames.has(frame)) {
+          if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
             resolveFrameWaiters(viewName, frame, false);
           }
         }
@@ -679,22 +591,33 @@ async function ensureFrameReady(viewName: string, frameIndex: number): Promise<L
   if (inMemory) return inMemory;
 
   const runtime = getOrCreateRuntime(viewName);
-  if (runtime.persistedFrames.has(frameIndex)) {
-    const persistedFrame = await decodeAndCacheFrame(viewName, frameIndex);
-    if (persistedFrame) {
-      return persistedFrame;
+  if (runtime.availableFrames.has(frameIndex)) {
+    const availableFrame = await decodeAndCacheFrame(viewName, frameIndex);
+    if (availableFrame) {
+      return availableFrame;
     }
+    runtime.availableFrames.delete(frameIndex);
     runtime.persistedFrames.delete(frameIndex);
     runtime.frameMimeTypes.delete(frameIndex);
+    runtime.completedChunks.delete(chunkForFrame(frameIndex));
   }
 
   const chunk = chunkForFrame(frameIndex);
   void requestChunk(viewName, chunk);
 
-  const available = await waitForFramePersisted(viewName, frameIndex);
+  const available = await waitForFrameAvailable(viewName, frameIndex);
   if (!available) return undefined;
 
-  return decodeAndCacheFrame(viewName, frameIndex);
+  const loaded = await decodeAndCacheFrame(viewName, frameIndex);
+  if (loaded) {
+    return loaded;
+  }
+
+  runtime.availableFrames.delete(frameIndex);
+  runtime.persistedFrames.delete(frameIndex);
+  runtime.frameMimeTypes.delete(frameIndex);
+  runtime.completedChunks.delete(chunk);
+  return undefined;
 }
 
 function preloadAround(frameIndex: number): void {
@@ -716,7 +639,7 @@ function preloadAround(frameIndex: number): void {
 
     const runtime = getOrCreateRuntime(viewName);
     for (let idx = startWarm; idx <= endWarm; idx++) {
-      if (runtime.persistedFrames.has(idx)) {
+      if (runtime.availableFrames.has(idx)) {
         void decodeAndCacheFrame(viewName, idx);
       }
     }
@@ -742,6 +665,13 @@ function startBackgroundDownload(viewName: string, token = sessionVersion): void
   backgroundDownloads.set(viewName, run);
 }
 
+function canBackgroundDownload(viewName: string): boolean {
+  const runtime = getOrCreateRuntime(viewName);
+  // Background full-download only makes sense when frames persist on disk.
+  // In memory-only fallback mode, this creates churn and evicts hot frames.
+  return runtime.persistedFrames.size > 0;
+}
+
 async function ensureSessionReady(): Promise<number | undefined> {
   const ids = getSessionIdentifiers();
   if (!ids) return undefined;
@@ -753,7 +683,26 @@ async function ensureSessionReady(): Promise<number | undefined> {
 
   activeSessionKey = sessionKey;
   const token = sessionVersion;
-  await frameDiskCache.resetSession(ids.datasetId, ids.itemId, token);
+  let response: FrameWorkerSuccessResponse;
+  try {
+    response = await requestWorker({
+      type: "initSession",
+      datasetId: ids.datasetId,
+      itemId: ids.itemId,
+      sessionToken: token,
+    });
+  } catch (error) {
+    if (token === sessionVersion) {
+      activeSessionKey = "";
+    }
+    throw error;
+  }
+  if (response.type !== "initSession") {
+    if (token === sessionVersion) {
+      activeSessionKey = "";
+    }
+    return undefined;
+  }
 
   if (token !== sessionVersion) return undefined;
 
@@ -765,8 +714,9 @@ async function ensureSessionReady(): Promise<number | undefined> {
 }
 
 function resetFrameRuntime(): void {
-  sessionAbortController.abort();
-  sessionAbortController = new AbortController();
+  rejectPendingWorkerRequests(new Error("Video frame session was reset."));
+  closeFrameWorker();
+  workerRequestCounter = 0;
   sessionVersion += 1;
   activeSessionKey = "";
 
@@ -774,18 +724,19 @@ function resetFrameRuntime(): void {
   viewRuntimes.clear();
   decodeInflight.clear();
   backgroundDownloads.clear();
+  releaseImagesPerViewState();
   decodedFrameCache.clear();
   imagesPerView.value = {};
 }
 
 export const splitTrackInTwo = (
-  track2split: Track,
+  track2split: Tracklet,
   prev: number,
   next: number,
 ): Annotation => {
   const rightTrackOrig = structuredClone(track2split);
   const { ui, ...noUIfieldsTrack } = rightTrackOrig;
-  const rightTrack = new Track(noUIfieldsTrack);
+  const rightTrack = new Tracklet(noUIfieldsTrack);
   rightTrack.id = nanoid(10);
   rightTrack.data.start_frame = next;
   rightTrack.ui = ui;
@@ -812,7 +763,12 @@ export const setBufferSpecs = () => {
   resetFrameRuntime();
 
   const viewCount = Math.max(videoViewNames.value.length, 1);
-  decodedFrameCache = new LRUCache<string, LoadedImage>(BASE_MEMORY_CACHE_SIZE * viewCount);
+  decodedFrameCache = new LRUCache<string, LoadedImage>(
+    BASE_MEMORY_CACHE_SIZE * viewCount,
+    (_key, value) => {
+      releaseLoadedImage(value);
+    },
+  );
 };
 
 /**
@@ -828,25 +784,31 @@ export async function loadInitialFrames(): Promise<void> {
 
   const firstFrameStatus = await Promise.all(
     viewNames.map(async (viewName) => {
-      void requestChunk(viewName, 0, sessionToken);
+      await requestFrameRange(viewName, 0, 1, sessionToken);
       let first = await ensureFrameReady(viewName, 0);
       if (!first) {
         await requestChunk(viewName, 0, sessionToken);
         first = await ensureFrameReady(viewName, 0);
       }
-      if (sessionToken !== sessionVersion) return;
+      if (sessionToken !== sessionVersion) return { viewName, loaded: false };
       if (first) {
         pushImageToCanvasView(viewName, first);
-        startBackgroundDownload(viewName, sessionToken);
-        return true;
+        return { viewName, loaded: true };
       }
-      return false;
+      return { viewName, loaded: false };
     }),
   );
 
   if (sessionToken !== sessionVersion) return;
-  if (!firstFrameStatus.every(Boolean)) {
+  if (!firstFrameStatus.every((status) => status.loaded)) {
     throw new Error("Failed to load the first frame for one or more video views.");
+  }
+
+  for (const status of firstFrameStatus) {
+    if (!status.loaded) continue;
+    if (canBackgroundDownload(status.viewName)) {
+      startBackgroundDownload(status.viewName, sessionToken);
+    }
   }
 
   preloadAround(0);
@@ -868,7 +830,6 @@ async function updateViewInternal(imageIndex: number): Promise<boolean> {
   }
 
   preloadAround(target);
-  loadViewEmbeddings(true);
   return loadedFrames.every((loaded) => loaded !== undefined);
 }
 

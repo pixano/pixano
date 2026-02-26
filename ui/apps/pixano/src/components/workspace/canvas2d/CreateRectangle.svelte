@@ -8,7 +8,7 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Rect, Transformer } from "svelte-konva";
 
-  import { INPUTRECT_STROKEWIDTH } from "./konvaConstants";
+  import { DRAFT_LINE_COLOR, DRAFT_RECT_FILL_COLOR, INPUTRECT_STROKEWIDTH } from "./konvaConstants";
   import LabelTag from "./LabelTag.svelte";
   import type { Reference } from "$lib/types/dataset";
   import type { BoundingBox, Point2D } from "$lib/types/geometry";
@@ -75,8 +75,8 @@ License: CECILL-C
       {y}
       {width}
       {height}
-      stroke="hsl(330, 65%, 50%)"
-      fill="hsla(330, 60%, 95%, 0.45)"
+      stroke={DRAFT_LINE_COLOR}
+      fill={DRAFT_RECT_FILL_COLOR}
       strokeWidth={INPUTRECT_STROKEWIDTH}
       strokeScaleEnabled={false}
       perfectDrawEnabled={false}

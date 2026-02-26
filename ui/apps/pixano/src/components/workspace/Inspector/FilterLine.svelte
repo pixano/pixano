@@ -7,8 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { untrack } from "svelte";
-
   import { Checkbox } from "bits-ui";
   import { Check } from "lucide-svelte";
 
@@ -30,11 +28,6 @@ License: CECILL-C
   let { filter = $bindable(), tableColumns, fieldColumns }: Props = $props();
 
   let ftype: string = $state("");
-
-  $effect(() => {
-    untrack(handleTableChange);
-  });
-
   let fieldOperators: FieldOperator[] = $state([]);
 
   const handleTableChange = () => {
@@ -51,6 +44,9 @@ License: CECILL-C
   const handleBoolValClick = (b: boolean) => {
     filter.value = b;
   };
+
+  // Synchronize field/operator state from initial table selection
+  handleTableChange();
 </script>
 
 <div class="flex justify-start gap-2 mr-4 h-10 overflow-hidden">

@@ -40,10 +40,50 @@ type CachedMaskSvg = {
 type HighlightState = "all" | "self" | "none";
 
 const maskSvgCacheById = new Map<string, CachedMaskSvg>();
+type MappedMaskCacheEntry = {
+  mapped: Mask;
+  uiRef: Mask["ui"];
+  displayControlRef: Mask["ui"]["displayControl"];
+  metadataRef: unknown;
+  countsRef: Mask["data"]["counts"];
+  sizeH: number;
+  sizeW: number;
+  topEntityId: string;
+  reviewState: string;
+  hidden: boolean;
+  editing: boolean;
+  sourceId: string;
+  viewName: string;
+  frameId: string;
+};
+const mappedMaskCache = new Map<string, MappedMaskCacheEntry>();
+const MAX_MAPPED_MASK_CACHE_SIZE = 10_000;
+
+function setBoundedMappedMaskCacheEntry(
+  key: string,
+  entry: MappedMaskCacheEntry,
+): void {
+  if (mappedMaskCache.has(key)) {
+    mappedMaskCache.delete(key);
+  }
+  mappedMaskCache.set(key, entry);
+  if (mappedMaskCache.size > MAX_MAPPED_MASK_CACHE_SIZE) {
+    const oldestKey = mappedMaskCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      mappedMaskCache.delete(oldestKey);
+    }
+  }
+}
+
+export function clearAnnotationMappingCaches(): void {
+  maskSvgCacheById.clear();
+  mappedMaskCache.clear();
+}
 
 const getMaskSvgForDisplay = (mask: Mask, metadata: unknown): string[] => {
-  if (isPolygonSvgMetadata(metadata)) {
-    return metadata.polygon_svg;
+  const metaRecord = (metadata !== null && typeof metadata === "object" ? metadata : {}) as Record<string, unknown>;
+  if (isPolygonSvgMetadata(metaRecord)) {
+    return metaRecord.polygon_svg;
   }
 
   const countsRef = mask.data.counts;
@@ -202,10 +242,36 @@ export const mapMaskForDisplay = (
   ) {
     const metadata = obj.data.inference_metadata;
     const effectiveHighlight = highlightedOverride ?? obj.ui.displayControl.highlighted;
+    const displayControl = obj.ui.displayControl;
+    const topEntityId = obj.ui.top_entities?.[0]?.id ?? "";
+    const sizeH = obj.data.size?.[0] ?? 0;
+    const sizeW = obj.data.size?.[1] ?? 0;
+    const reviewState = obj.ui.review_state ?? "";
+    const frameId = obj.data.frame_id ?? "";
+    const cacheKey = `${obj.id}|${effectiveHighlight}`;
+    const cached = mappedMaskCache.get(cacheKey);
+    if (
+      cached &&
+      cached.uiRef === obj.ui &&
+      cached.displayControlRef === displayControl &&
+      cached.metadataRef === metadata &&
+      cached.countsRef === obj.data.counts &&
+      cached.sizeH === sizeH &&
+      cached.sizeW === sizeW &&
+      cached.topEntityId === topEntityId &&
+      cached.reviewState === reviewState &&
+      cached.hidden === displayControl.hidden &&
+      cached.editing === displayControl.editing &&
+      cached.sourceId === obj.data.source_id &&
+      cached.viewName === obj.data.view_name &&
+      cached.frameId === frameId
+    ) {
+      return cached.mapped;
+    }
 
     const masksSVG = getMaskSvgForDisplay(obj, metadata);
 
-    return {
+    const mapped = {
       ...obj,
       data: obj.data,
       ui: {
@@ -217,6 +283,23 @@ export const mapMaskForDisplay = (
         strokeFactor: effectiveHighlight === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       },
     } as Mask;
+    setBoundedMappedMaskCacheEntry(cacheKey, {
+      mapped,
+      uiRef: obj.ui,
+      displayControlRef: displayControl,
+      metadataRef: metadata,
+      countsRef: obj.data.counts,
+      sizeH,
+      sizeW,
+      topEntityId,
+      reviewState,
+      hidden: displayControl.hidden,
+      editing: displayControl.editing,
+      sourceId: obj.data.source_id,
+      viewName: obj.data.view_name,
+      frameId,
+    });
+    return mapped;
   }
   return undefined;
 };

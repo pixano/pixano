@@ -144,7 +144,9 @@ export class ComputeServiceImpl implements ComputeService {
     this.jobs.set(descriptor.id, job as ComputeJob);
 
     // Auto-cleanup completed jobs
-    void job.result.catch(() => {}).finally(() => {
+    void job.result.catch((error: unknown) => {
+      console.warn(`[ComputeService] Job ${descriptor.id} failed:`, error);
+    }).finally(() => {
       // Keep job in map for status queries, but could add TTL cleanup
     });
 

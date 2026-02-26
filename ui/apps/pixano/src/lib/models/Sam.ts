@@ -19,7 +19,7 @@ import {
   convertSegmentsToSVG,
   generatePolygonSegments,
   maskDataToFortranArrayToRle,
-} from "./mask_utils";
+} from "$lib/utils/maskUtils";
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
 
@@ -134,7 +134,7 @@ export class SAM implements InteractiveImageSegmenter {
     const results = await this.onnxModel.run(samInputs);
     console.log("SAM.segmentImage in", Date.now() - start, "ms");
     this.previousMask = results.low_res_masks;
-    const rleMask = maskDataToFortranArrayToRle(results.masks.data, imageHeight, imageWidth);
+    const rleMask = maskDataToFortranArrayToRle(results.masks.data as ArrayLike<number>, imageHeight, imageWidth);
     const maskPolygons = generatePolygonSegments(rleMask, imageHeight);
     const masksSVG = convertSegmentsToSVG(maskPolygons);
     return {

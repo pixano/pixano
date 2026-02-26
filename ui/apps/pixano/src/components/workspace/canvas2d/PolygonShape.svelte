@@ -8,7 +8,7 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import { sceneFunc, smoothSceneFunc } from "./konvaMaskOps";
+  import { getSmoothingEpsilonForZoom, sceneFunc, smoothSceneFunc } from "./konvaMaskOps";
   import PolygonVertices from "./PolygonVertices.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
   import type { Mask, Reference } from "$lib/types/dataset";
@@ -25,20 +25,20 @@ License: CECILL-C
   interface Props {
     viewRef: Reference;
     newShape: Shape;
-    currentImage: HTMLImageElement;
+    currentImage: HTMLImageElement | ImageBitmap;
     mask: Mask;
     color: string;
     zoomFactor: number;
     selectedTool: SelectionTool;
     interactive?: boolean;
     disableCache?: boolean;
+    smoothDisplay?: boolean;
     ghostOpacity?: number | undefined;
     onNewShapeChange?: (shape: Shape) => void;
   }
 
   let {
     viewRef,
-    newShape,
     currentImage,
     mask,
     color,
@@ -46,12 +46,14 @@ License: CECILL-C
     selectedTool,
     interactive = true,
     disableCache = false,
+    smoothDisplay = true,
     ghostOpacity = undefined,
     onNewShapeChange,
   }: Props = $props();
 
   let canEdit = $derived(mask.ui.displayControl.editing);
   let isRawPolygon = $derived(isRawPolygonMask(mask));
+  let smoothingEpsilon = $derived(getSmoothingEpsilonForZoom(zoomFactor));
 
   const asPolygonPoint = (value: unknown): PolygonVertex | null => {
     if (
@@ -86,8 +88,9 @@ License: CECILL-C
     return polygons;
   };
 
-  let simplifiedPoints: PolygonVertex[][] = $state([]);
+  let simplifiedPoints: PolygonVertex[][] = $state<PolygonVertex[][]>([]);
   let simplifiedSvg = $derived(simplifiedPoints.map((point) => convertPointToSvg(point)));
+  let shouldMaterializePolygonPoints = $derived(canEdit || isRawPolygon);
   let hasInitializedPolygonShape = false;
   let displayShapeComponent: { node: Konva.Shape } | undefined = $state();
   let staticCacheSignature = "";
@@ -97,6 +100,11 @@ License: CECILL-C
   let prevRawPointsRef: unknown = null;
 
   $effect(() => {
+    if (!shouldMaterializePolygonPoints) {
+      hasInitializedPolygonShape = false;
+      simplifiedPoints = [];
+      return;
+    }
     if (!hasInitializedPolygonShape) {
       const rawPoints = getRawPolygonPoints();
       simplifiedPoints =
@@ -113,6 +121,9 @@ License: CECILL-C
   });
 
   $effect(() => {
+    if (!shouldMaterializePolygonPoints) {
+      return;
+    }
     if (isRawPolygon) {
       if (mask.ui.rawPoints !== prevRawPointsRef) {
         prevRawPointsRef = mask.ui.rawPoints;
@@ -140,7 +151,7 @@ License: CECILL-C
     const node = displayShapeComponent?.node;
     if (!node) return;
     const cacheable = !canEdit && !ghostOpacity && !disableCache;
-    const signature = `${viewRef.id}|${mask.id}|${mask.data.frame_id ?? ""}|${mask.ui.svg?.length ?? 0}|${color}|${mask.ui.strokeFactor ?? 1}`;
+    const signature = `${mask.id}|${mask.data.frame_id ?? ""}|${mask.ui.svg?.length ?? 0}|${color}|${mask.ui.strokeFactor ?? 1}|${smoothingEpsilon}`;
     if (cacheable) {
       if (staticCacheSignature !== signature || !node.isCached()) {
         node.clearCache();
@@ -279,6 +290,8 @@ License: CECILL-C
       stroke={color}
       strokeWidth={2}
       strokeScaleEnabled={false}
+      perfectDrawEnabled={false}
+      shadowForStrokeEnabled={false}
       closed={true}
       fill={hexToRGBA(color, 0.5)}
     />
@@ -298,15 +311,19 @@ License: CECILL-C
       sceneFunc={(ctx: Konva.Context, shape: Konva.Shape) =>
         isRawPolygon
           ? drawRawPolygonScene(ctx, shape)
-          : smoothSceneFunc(ctx, shape, mask.ui.svg ?? [])}
+          : smoothDisplay
+            ? smoothSceneFunc(ctx, shape, mask.ui.svg ?? [], smoothingEpsilon)
+            : sceneFunc(ctx, shape, mask.ui.svg ?? [])}
       stroke={color}
       strokeWidth={mask.ui.strokeFactor ?? 1}
       closed={true}
+      perfectDrawEnabled={false}
+      shadowForStrokeEnabled={false}
       fill={hexToRGBA(color, ghostOpacity ? 1.0 : 0.35)}
       shadowColor={color}
       shadowBlur={2}
       shadowOpacity={0.4}
-      shadowEnabled={!ghostOpacity}
+      shadowEnabled={!ghostOpacity && smoothDisplay}
       id={mask.id}
     />
   {/if}

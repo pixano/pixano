@@ -11,23 +11,45 @@ import type { Point2D } from "$lib/types/geometry";
 import { m_part, l_part } from "$lib/utils/maskUtils";
 
 // --- Parsed polygon cache for sceneFunc / smoothSceneFunc ---
-type ParsedPolygon = { start: Point2D; rest: Point2D[] };
+type ParsedPolygon = { start: Point2D; rest: Point2D[]; all: Point2D[] };
 const parsedPolygonCache = new Map<string, ParsedPolygon>();
+const MAX_PARSED_POLYGON_CACHE_SIZE = 25_000;
+const MAX_SMOOTHED_POLYGON_CACHE_SIZE = 12_000;
+
+function setBoundedCacheEntry<T>(cache: Map<string, T>, key: string, value: T, maxSize: number): T {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, value);
+  if (cache.size > maxSize) {
+    const oldestKey = cache.keys().next();
+    if (!oldestKey.done) {
+      cache.delete(oldestKey.value);
+    }
+  }
+  return value;
+}
 
 function getCachedParsedPolygon(svgPath: string): ParsedPolygon {
   let cached = parsedPolygonCache.get(svgPath);
   if (!cached) {
     const start = m_part(svgPath);
     const rest = l_part(svgPath);
-    cached = { start, rest };
-    parsedPolygonCache.set(svgPath, cached);
+    const all = [start, ...rest];
+    cached = setBoundedCacheEntry(
+      parsedPolygonCache,
+      svgPath,
+      { start, rest, all },
+      MAX_PARSED_POLYGON_CACHE_SIZE,
+    );
   }
   return cached;
 }
 
-/** Clear the parsed polygon cache (call on item switch). */
+/** Clear polygon caches (call on item switch). */
 export function clearParsedCache(): void {
   parsedPolygonCache.clear();
+  smoothedPolygonCache.clear();
 }
 
 // --- Simplified polygon cache for smoothSceneFunc ---
@@ -42,6 +64,19 @@ type SmoothedPolygon = {
   segments: BezierSegment[];
 } | null;
 const smoothedPolygonCache = new Map<string, SmoothedPolygon>();
+
+function quantize(value: number, step: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(step) || step <= 0) {
+    return value;
+  }
+  return Math.round(value / step) * step;
+}
+
+function buildSmoothedCacheKey(svgPath: string, epsilon: number, tension: number): string {
+  const normalizedEpsilon = quantize(epsilon, EPSILON_QUANTIZATION_STEP);
+  const normalizedTension = quantize(tension, TENSION_QUANTIZATION_STEP);
+  return `${svgPath}|${normalizedEpsilon.toFixed(2)}|${normalizedTension.toFixed(2)}`;
+}
 
 export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[]) => {
   ctx.beginPath();
@@ -67,6 +102,13 @@ export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[])
 const SMOOTH_EPSILON = 1.0; // RDP simplification tolerance in pixels (tighter = keep more shape-defining points)
 const SMOOTH_TENSION = 0.7; // Catmull-Rom spline tension (higher = tighter curves, less overshoot)
 const SHARP_CORNER_THRESHOLD = Math.PI * 0.4; // ~72° — angles below this use lineTo instead of bezierCurveTo
+const MIN_SMOOTH_EPSILON = 0.5;
+const MAX_SMOOTH_EPSILON = 3.0;
+const EPSILON_QUANTIZATION_STEP = 0.25;
+const TENSION_QUANTIZATION_STEP = 0.05;
+const ADAPTIVE_SMOOTH_THRESHOLD = 220;
+const ADAPTIVE_SMOOTH_MAX_MULTIPLIER = 4;
+const MAX_BEZIER_INPUT_POINTS = 900;
 
 /**
  * Compute the angle at vertex p1 between edges p0→p1 and p1→p2.
@@ -91,9 +133,103 @@ function angleBetween(
 
 /** Extract all {x, y} points from one SVG path string. */
 function extractPoints(svgPath: string): Point2D[] {
-  const start = m_part(svgPath);
-  const rest = l_part(svgPath);
-  return [start, ...rest];
+  return getCachedParsedPolygon(svgPath).all;
+}
+
+export function getSmoothingEpsilonForZoom(
+  zoomFactor: number,
+  baseEpsilon: number = SMOOTH_EPSILON,
+): number {
+  if (!Number.isFinite(zoomFactor) || zoomFactor <= 0) {
+    return baseEpsilon;
+  }
+  const adaptive = baseEpsilon / Math.sqrt(zoomFactor);
+  const clamped = Math.max(MIN_SMOOTH_EPSILON, Math.min(MAX_SMOOTH_EPSILON, adaptive));
+  return quantize(clamped, EPSILON_QUANTIZATION_STEP);
+}
+
+function computeSmoothedPolygon(
+  svgPath: string,
+  epsilon: number = SMOOTH_EPSILON,
+  tension: number = SMOOTH_TENSION,
+): SmoothedPolygon {
+  const rawPoints = extractPoints(svgPath);
+  if (rawPoints.length === 0) {
+    return { points: [], segments: [] };
+  }
+
+  let points = rawPoints;
+  const pointCount = rawPoints.length;
+  const adaptiveEpsilon =
+    pointCount > ADAPTIVE_SMOOTH_THRESHOLD
+      ? epsilon * Math.min(ADAPTIVE_SMOOTH_MAX_MULTIPLIER, pointCount / ADAPTIVE_SMOOTH_THRESHOLD)
+      : epsilon;
+
+  points = simplify(rawPoints, adaptiveEpsilon, true);
+  if (points.length < 2) {
+    return { points: rawPoints, segments: [] };
+  }
+  if (points.length < 4) {
+    return { points, segments: [] };
+  }
+  if (points.length > MAX_BEZIER_INPUT_POINTS) {
+    // Very large contours are cheaper and visually stable with straight segments.
+    return { points, segments: [] };
+  }
+  return { points, segments: catmullRomToBezier(points, tension) };
+}
+
+function getCachedSmoothedPolygon(
+  svgPath: string,
+  epsilon: number = SMOOTH_EPSILON,
+  tension: number = SMOOTH_TENSION,
+): SmoothedPolygon {
+  const cacheKey = buildSmoothedCacheKey(svgPath, epsilon, tension);
+  const cached = smoothedPolygonCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const computed = computeSmoothedPolygon(svgPath, epsilon, tension);
+  return setBoundedCacheEntry(
+    smoothedPolygonCache,
+    cacheKey,
+    computed,
+    MAX_SMOOTHED_POLYGON_CACHE_SIZE,
+  );
+}
+
+interface WarmContourCacheOptions {
+  smooth?: boolean;
+  epsilon?: number;
+  tension?: number;
+  startIndex?: number;
+  maxItems?: number;
+}
+
+/**
+ * Opportunistically warm polygon caches in small chunks during idle periods.
+ * Returns the next index to process in the provided `svgPaths` array.
+ */
+export function warmContourCache(
+  svgPaths: ReadonlyArray<string>,
+  options: WarmContourCacheOptions = {},
+): number {
+  const smooth = options.smooth ?? true;
+  const epsilon = options.epsilon ?? SMOOTH_EPSILON;
+  const tension = options.tension ?? SMOOTH_TENSION;
+  const startIndex = Math.max(0, options.startIndex ?? 0);
+  const maxItems = Math.max(0, options.maxItems ?? svgPaths.length);
+  const endIndex = Math.min(svgPaths.length, startIndex + maxItems);
+
+  for (let i = startIndex; i < endIndex; i += 1) {
+    const svgPath = svgPaths[i];
+    if (!svgPath) continue;
+    getCachedParsedPolygon(svgPath);
+    if (smooth) {
+      getCachedSmoothedPolygon(svgPath, epsilon, tension);
+    }
+  }
+  return endIndex;
 }
 
 /**
@@ -197,21 +333,14 @@ export const smoothSceneFunc = (
 ) => {
   ctx.beginPath();
   for (let i = 0; i < svg.length; i++) {
+    const svgPath = svg[i];
+    if (!svgPath) continue;
+
     // Use cache to avoid re-simplifying and re-computing bezier every frame
-    const cacheKey = `${svg[i]}|${epsilon}|${tension}`;
-    let cached = smoothedPolygonCache.get(cacheKey);
-    if (!cached) {
-      let points = extractPoints(svg[i]);
-      points = simplify(points, epsilon, true);
-      if (points.length < 4) {
-        cached = { points, segments: [] };
-      } else {
-        cached = { points, segments: catmullRomToBezier(points, tension) };
-      }
-      smoothedPolygonCache.set(cacheKey, cached);
-    }
+    const cached = getCachedSmoothedPolygon(svgPath, epsilon, tension);
 
     const { points, segments } = cached;
+    if (points.length === 0) continue;
     if (segments.length === 0) {
       // Too few points for spline — fall back to straight lines
       ctx.moveTo(points[0].x, points[0].y);

@@ -13,6 +13,7 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { COUNTS_COLUMNS_PREFIX } from "$lib/constants";
+  import { getWorkspaceRoute } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
 
@@ -90,7 +91,7 @@ License: CECILL-C
   }
 
   const handleSelectItem = async (itemId: string) => {
-    await goto(`/${data.dataset.id}/dataset/${itemId}`);
+    await goto(getWorkspaceRoute(data.dataset.id, itemId));
   };
 </script>
 

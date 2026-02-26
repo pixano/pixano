@@ -14,7 +14,7 @@ License: CECILL-C
     BaseSchema,
     Mask,
     ShapeType,
-    Track,
+    Tracklet,
     WorkspaceType,
     type SaveRectangleShape,
     type SaveTrackShape,
@@ -155,11 +155,11 @@ License: CECILL-C
         (ann) =>
           ann.is_type(BaseSchema.Tracklet) &&
           ann.data.view_name === newShape.value.viewRef.name &&
-          (ann as Track).data.start_frame <= currentFrameIndex.value &&
-          (ann as Track).data.end_frame >= lastFrameIndex,
+          (ann as Tracklet).data.start_frame <= currentFrameIndex.value &&
+          (ann as Tracklet).data.end_frame >= lastFrameIndex,
       );
       if (candidate_tracks && candidate_tracks.length === 1) {
-        const candidate_track = candidate_tracks[0] as Track;
+        const candidate_track = candidate_tracks[0] as Tracklet;
         //NOTE: we add the new object "as it is" in the candidate track
         //it means that the track may be wider than the new shape "range" (1 frame at creation)
         //-- this is potentially dangerous... but *should* be fine --
@@ -195,9 +195,9 @@ License: CECILL-C
         );
         if (!newTrack) return;
         newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-        (newTrack as Track).ui.childs = [newAnnotation];
+        (newTrack as Tracklet).ui.childs = [newAnnotation];
         if (isFromTracking) {
-          for (const tr_mask of tracking_masks) (newTrack as Track).ui.childs.push(tr_mask);
+          for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
         }
 
         saveTo("add", newTrack);
@@ -286,6 +286,7 @@ License: CECILL-C
     return text;
   });
 
+  // Cleanup: remove temporary text span when this component unmounts
   $effect(() => {
     return () => removeTemporaryTextSpan();
   });

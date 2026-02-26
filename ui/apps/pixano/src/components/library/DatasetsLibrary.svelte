@@ -19,6 +19,7 @@ License: CECILL-C
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { goto } from "$app/navigation";
+  import { getExplorerRoute } from "$lib/utils/routes";
   import {
     datasetFilter,
     datasetsStore,
@@ -46,7 +47,7 @@ License: CECILL-C
   let { datasets }: Props = $props();
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
-    await goto(`/${dataset.id}/dataset`);
+    await goto(getExplorerRoute(dataset.id));
   };
 
   const handleSearch = (e: Event) => {

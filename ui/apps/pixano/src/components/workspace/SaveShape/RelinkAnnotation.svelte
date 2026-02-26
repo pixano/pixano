@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Annotation, BaseSchema, Entity, Track, type Reference } from "$lib/ui";
+  import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/ui";
 
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityMutations";
@@ -57,7 +57,7 @@ License: CECILL-C
     let overlap: boolean | undefined = undefined;
     let overlapTargetIds: string[] = [];
     if (track && track.is_type(BaseSchema.Tracklet)) {
-      const trackBaseSchemaByFrameIndex = (track as Track).ui.childs.reduce(
+      const trackBaseSchemaByFrameIndex = (track as Tracklet).ui.childs.reduce(
         (acc, ann) => {
           if (ann.ui.frame_index) {
             acc[ann.ui.frame_index] = ann.table_info.base_schema;
@@ -78,9 +78,9 @@ License: CECILL-C
 
       const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Track).data.view_name === viewRef.name &&
-          (ann as Track).data.start_frame <= (track as Track).data.end_frame &&
-          (ann as Track).data.end_frame >= (track as Track).data.start_frame,
+          (ann as Tracklet).data.view_name === viewRef.name &&
+          (ann as Tracklet).data.start_frame <= (track as Tracklet).data.end_frame &&
+          (ann as Tracklet).data.end_frame >= (track as Tracklet).data.start_frame,
       );
       overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
       if (overlap_tracks && overlap_tracks.length > 0)
@@ -96,9 +96,9 @@ License: CECILL-C
       //anyway, we should find a more reliable frame index
       const overlap_tracks = entityTracks?.filter(
         (ann) =>
-          (ann as Track).data.view_name === viewRef.name &&
-          (ann as Track).data.start_frame <= currentFrameIndex.value &&
-          (ann as Track).data.end_frame >= currentFrameIndex.value,
+          (ann as Tracklet).data.view_name === viewRef.name &&
+          (ann as Tracklet).data.start_frame <= currentFrameIndex.value &&
+          (ann as Tracklet).data.end_frame >= currentFrameIndex.value,
       );
       overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
       if (overlap_tracks && overlap_tracks.length > 0)

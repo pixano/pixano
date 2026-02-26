@@ -30,7 +30,7 @@ License: CECILL-C
     Entity,
     IconButton,
     Mask,
-    Track,
+    Tracklet,
     type DisplayControl,
     type KeypointAnnotation,
   } from "$lib/ui";
@@ -87,7 +87,7 @@ License: CECILL-C
   const currentTrackChilds = $derived.by(() => {
     if (!child.is_type(BaseSchema.Tracklet)) return [];
     void interpolate.value;
-    const trackChilds = (child as Track).ui.childs;
+    const trackChilds = (child as Tracklet).ui.childs;
     const current_Anns = [
       ...current_itemBBoxes.value,
       ...current_itemKeypoints.value,

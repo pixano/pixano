@@ -10,6 +10,12 @@ License: CECILL-C
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ChildCard from "./ChildCard.svelte";
+  import {
+    setEntityDisplayControl as setDisplayCtrl,
+    ensureEntityCardOpen,
+    handleSetDisplayControl as handleSetDC,
+    saveInputChange as saveInput,
+  } from "./entityCardOps";
   import TextSpansContent from "./TextSpansContent.svelte";
   import { datasetSchema } from "$lib/stores/appStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
@@ -33,17 +39,15 @@ License: CECILL-C
     IconButton,
     isVideoEntity,
     Item,
-    Track,
+    Tracklet,
     WorkspaceType,
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
-  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
-  import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
+  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { deleteEntity } from "$lib/utils/entityMutations";
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
-  import { saveTo } from "$lib/utils/saveItemUtils";
   import { updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
@@ -71,8 +75,8 @@ License: CECILL-C
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
       child.is_type(BaseSchema.Tracklet) &&
-      (child as Track).data.start_frame <= currentFrameIndex.value &&
-      (child as Track).data.end_frame >= currentFrameIndex.value
+      (child as Tracklet).data.start_frame <= currentFrameIndex.value &&
+      (child as Tracklet).data.end_frame >= currentFrameIndex.value
     )
       return true;
     return false;
@@ -210,54 +214,11 @@ License: CECILL-C
   });
 
   const setEntityDisplayControl = (updates: Partial<DisplayControl>) => {
-    const changedKeys = Object.entries(updates).filter(([key, value]) => {
-      const currentValue = entityDisplayControl[key as keyof DisplayControl];
-      return currentValue !== value;
-    });
-    if (changedKeys.length === 0) return;
-
-    const shouldCloseOthers = updates.open === true;
-
-    entities.update((currentEntities) => {
-      let hasChanged = false;
-      const nextEntities = currentEntities.map((candidate) => {
-        if (candidate.id === entity.id) {
-          hasChanged = true;
-          candidate.ui.displayControl = {
-            ...candidate.ui.displayControl,
-            ...updates,
-          } as DisplayControl;
-        } else if (shouldCloseOthers && candidate.ui.displayControl.open) {
-          hasChanged = true;
-          candidate.ui.displayControl = {
-            ...candidate.ui.displayControl,
-            open: false,
-          };
-        }
-        return candidate;
-      });
-      return hasChanged ? nextEntities : currentEntities;
-    });
+    setDisplayCtrl(entity.id, entityDisplayControl, updates, entities);
   };
 
   const ensureCardOpen = () => {
-    if (entityDisplayControl.open ?? false) return;
-
-    entities.update((currentEntities) => {
-      let hasChanged = false;
-      const nextEntities = currentEntities.map((candidate) => {
-        if (candidate.id !== entity.id || candidate.ui.displayControl.open) {
-          return candidate;
-        }
-        hasChanged = true;
-        candidate.ui.displayControl = {
-          ...candidate.ui.displayControl,
-          open: true,
-        };
-        return candidate;
-      });
-      return hasChanged ? nextEntities : currentEntities;
-    });
+    ensureEntityCardOpen(entity.id, entityDisplayControl, entities);
   };
 
   const handleSetDisplayControl = (
@@ -266,38 +227,7 @@ License: CECILL-C
     child: Annotation | null = null,
     other_anns_value: boolean | null = null,
   ) => {
-    if (!child && displayControlProperty === "editing") {
-      setEntityDisplayControl({ editing: new_value });
-    } else {
-      let track_childs_ids = new Set<string>();
-      if (child && child.is_type(BaseSchema.Tracklet)) {
-        track_childs_ids = new Set((child as Track).ui.childs.map((ann) => ann.id));
-      }
-      annotations.update((anns) => {
-        let hasChanged = false;
-        const nextAnnotations = anns.map((ann) => {
-          const shouldUpdate =
-            (child && ann.id === child.id) ||
-            track_childs_ids.has(ann.id) ||
-            (!child && getTopEntity(ann).id === entity.id);
-          if (shouldUpdate) {
-            const updated = toggleAnnotationDisplayControl(ann, displayControlProperty, new_value);
-            if (updated !== ann) hasChanged = true;
-            return updated;
-          } else if (other_anns_value !== null) {
-            const updated = toggleAnnotationDisplayControl(
-              ann,
-              displayControlProperty,
-              other_anns_value,
-            );
-            if (updated !== ann) hasChanged = true;
-            return updated;
-          }
-          return ann;
-        });
-        return hasChanged ? nextAnnotations : anns;
-      });
-    }
+    handleSetDC(entity.id, entityDisplayControl, displayControlProperty, new_value, child, other_anns_value, entities, annotations);
   };
 
   const saveInputChange = (
@@ -305,42 +235,7 @@ License: CECILL-C
     propertyName: string,
     obj: Item | Entity | Annotation,
   ) => {
-    if (
-      [BaseSchema.Track, BaseSchema.Entity, BaseSchema.MultiModalEntity].includes(
-        obj.table_info.base_schema,
-      )
-    ) {
-      entities.update((oldObjects) =>
-        oldObjects.map((object) => {
-          if (object === obj) {
-            object.data = {
-              ...object.data,
-              [propertyName]: value,
-            };
-            saveTo("update", object);
-          }
-          return object;
-        }),
-      );
-      //for canvas to reflect a name change, we need to refresh annotations store too
-      annotations.update((anns) => anns);
-    } else if (obj.table_info.base_schema === BaseSchema.Item) {
-      console.warn("This should never happen, we don't have 'item' features in Objects Inspector.");
-    } else {
-      //Annotation
-      annotations.update((oldObjects) =>
-        oldObjects.map((object) => {
-          if (object === obj) {
-            object.data = {
-              ...object.data,
-              [propertyName]: value,
-            };
-            saveTo("update", object);
-          }
-          return object;
-        }),
-      );
-    }
+    saveInput(value, propertyName, obj, entities, annotations);
   };
 
   const onColoredDotClick = () => {

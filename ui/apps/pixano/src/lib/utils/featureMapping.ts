@@ -14,7 +14,7 @@ import {
   Mask,
   Message,
   TextSpan,
-  Track,
+  Tracklet,
   type DatasetSchema,
   type FeatureList,
   type FeaturesValues,
@@ -141,7 +141,7 @@ export const getValidationSchemaAndFormInputs = (schema: DatasetSchema, baseSche
         if (baseSchema === BaseSchema.Mask)
           nonFeatsFields = nonFeatsFields.concat(Mask.nonFeaturesFields());
         if (baseSchema === BaseSchema.Tracklet)
-          nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
+          nonFeatsFields = nonFeatsFields.concat(Tracklet.nonFeaturesFields());
         if (baseSchema === BaseSchema.TextSpan)
           nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
         if (baseSchema === BaseSchema.Message)

@@ -17,11 +17,24 @@ License: CECILL-C
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
   import { zoomViewTransform } from "./canvasGeometry";
+  import { CanvasFilterPipeline } from "./filterPipeline";
+  import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
   import { clearParsedCache } from "./konvaMaskOps";
+  import {
+    type PolygonSavePayload,
+    toPolygonPoints,
+    toClosedPolygonPoints,
+    buildRectangleSaveShape,
+    buildPolygonSaveShape,
+  } from "./shapeSaveOps";
+  import {
+    getToolSwitchSignature,
+    computeToolChangeAction,
+    computeCursorFlushAction,
+  } from "./canvasEventHandlers";
+  import { ViewRefManager } from "./viewRefs";
   import PolygonShape from "./PolygonShape.svelte";
   import ShowKeypoints from "./ShowKeypoint.svelte";
-  import { FilterManager } from "./workers/filterManager";
-  import type { FilterParams } from "./workers/filterWorker";
   import {
     ToolType,
     type Point2D,
@@ -44,31 +57,22 @@ License: CECILL-C
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
   import type { BBox, LoadedImagesPerView, Mask, Reference } from "$lib/types/dataset";
-  import type { PolygonOutputMode } from "$lib/types/geometry";
   import {
     ShapeType,
     type CreatePolygonShape,
     type CreateRectangleShape,
     type ImageFilters,
     type KeypointAnnotation,
-    type PolygonVertex,
     type SaveRectangleShape,
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
-  import { equalizeHistogram } from "$lib/utils/equalizeHistogram";
-  import { convertPointToSvg, runLengthEncode } from "$lib/utils/maskUtils";
+
 
   interface BrushSettings {
     brushRadius: number;
     lazyRadius: number;
     friction: number;
-  }
-
-  interface PolygonSavePayload {
-    polygons?: PolygonVertex[][];
-    points?: Point2D[];
-    outputMode?: PolygonOutputMode;
   }
 
   const DEFAULT_BRUSH_SETTINGS: BrushSettings = {
@@ -87,14 +91,6 @@ License: CECILL-C
     u16BitRange: [0, 65535],
   };
 
-  interface BrushMaskRef {
-    beginStroke(x: number, y: number): void;
-    updateStroke(x: number, y: number): void;
-    endStroke(): void;
-    getMaskData(): Shape | null;
-    clearCanvas(): void;
-    destroy(): void;
-  }
   interface Props {
     // Exports
     selectedItemId: string;
@@ -105,7 +101,7 @@ License: CECILL-C
     newShape: Shape;
     imagesPerView: LoadedImagesPerView;
     colorScale: (value: string) => string;
-    isVideo?: boolean;
+    enableRenderCache?: boolean;
     imageSmoothing?: boolean;
     isPlaybackActive?: boolean;
     merge?: (ann: unknown) => void;
@@ -128,7 +124,7 @@ License: CECILL-C
     newShape,
     imagesPerView,
     colorScale,
-    isVideo = false,
+    enableRenderCache = true,
     imageSmoothing = true,
     isPlaybackActive = false,
     merge,
@@ -154,7 +150,6 @@ License: CECILL-C
   let interactionCooldownTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Brush tool state
-  let brushMaskRefs: Record<string, BrushMaskRef | undefined> = {};
   let activeBrushViewName: string | null = null;
   // Declarative crosshair & brush cursor state (replaces imperative Konva creation)
   let crosshairPosition = $state<Point2D | null>(null);
@@ -167,23 +162,22 @@ License: CECILL-C
   let cursor = $state("default");
   let cursorFrameRequested = false;
   let queuedCursorPosition: Konva.Vector2d | null = null;
-  // Layer-group references by view: split by background/static/active layers.
-  let backgroundViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
-  let staticViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
-  let activeViewRefs: Record<string, { node: Konva.Group } | undefined> = {};
-  let imageRefs: Record<string, Konva.Image> = {};
 
-  // Web Worker-based filter manager (off-thread filter computation)
-  let filterManager: FilterManager | null = null;
+  // Centralized view-group and image ref management
+  const viewRefs = new ViewRefManager(() => stage);
 
-  // Reusable temp canvas for filter application (avoids per-call allocation)
-  let filterTempCanvas: HTMLCanvasElement | null = null;
-  let filterTempCtx: CanvasRenderingContext2D | null = null;
+  // Filter pipeline (Web Worker + fallback)
+  const filterPipeline = new CanvasFilterPipeline(
+    (name) => viewRefs.getImageNode(name),
+    getCurrentImage,
+  );
 
   let bboxEditable = $state(false);
   let rectangleSavePending = false;
   let internalToolBridge: ToolBridge | undefined = $state();
   let activeToolBridge: ToolBridge | undefined = $state();
+  let lastBridgeForToolSwitch: ToolBridge | undefined = undefined;
+  let lastToolSwitchSignature: string | null = null;
 
   function clearRectangleTransformer() {
     bboxEditable = false;
@@ -204,7 +198,7 @@ License: CECILL-C
     interactionCooldownTimer = setTimeout(() => {
       isViewportInteracting = false;
       interactionCooldownTimer = null;
-    }, 120);
+    }, INTERACTION_COOLDOWN_MS);
   }
 
   let draftOrSavingShape = $derived.by<Shape | null>(() => {
@@ -219,32 +213,6 @@ License: CECILL-C
     }
     return null;
   });
-
-  function toPolygonPoints(points: ReadonlyArray<PolygonVertex | Point2D>): PolygonVertex[] {
-    return points.map((point, index) => ({
-      x: point.x,
-      y: point.y,
-      id: "id" in point ? point.id : index,
-    }));
-  }
-
-  function toClosedPolygonPoints(
-    polygons: ReadonlyArray<ReadonlyArray<PolygonVertex | Point2D>>,
-  ): PolygonVertex[][] {
-    return polygons.map((polygon) => toPolygonPoints(polygon));
-  }
-
-  function getSourcePolygons(payload: PolygonSavePayload): Array<Array<PolygonVertex | Point2D>> {
-    if (Array.isArray(payload.polygons) && payload.polygons.length > 0) {
-      return payload.polygons;
-    }
-
-    if (Array.isArray(payload.points) && payload.points.length > 0) {
-      return [payload.points.map((point) => ({ x: point.x, y: point.y }))];
-    }
-
-    return [];
-  }
 
   function syncToolPreview(preview: PreviewShape | null) {
     if (rectangleSavePending) {
@@ -303,100 +271,43 @@ License: CECILL-C
 
   function handleRectangleRequestSave(geometry: unknown) {
     const geo = geometry as { x: number; y: number; width: number; height: number };
+    const viewRef = lastInputViewRef;
+    const currentImage = viewRef ? getCurrentImage(viewRef.name) : undefined;
 
-    // Prefer the current local draft geometry (updated by Transformer/drag) over FSM's stale geometry
-    let finalGeo = geo;
-    if (localDraftShape?.status === "creating" && localDraftShape.type === ShapeType.bbox) {
-      const shape = localDraftShape;
-      const w = shape.width < 0 ? -shape.width : shape.width;
-      const h = shape.height < 0 ? -shape.height : shape.height;
-      const x = shape.width < 0 ? shape.x + shape.width : shape.x;
-      const y = shape.height < 0 ? shape.y + shape.height : shape.y;
-      finalGeo = { x, y, width: w, height: h };
-    }
+    const saveShape = viewRef
+      ? buildRectangleSaveShape(geo, localDraftShape, viewRef, selectedItemId, currentImage)
+      : null;
 
     localDraftShape = null;
     clearRectangleTransformer();
 
-    const viewRef = lastInputViewRef;
-    if (viewRef) {
-      const currentImage = getCurrentImage(viewRef.name);
-      if (!currentImage) return;
+    if (saveShape) {
       rectangleSavePending = true;
-      onNewShapeChange?.({
-        status: "saving",
-        attrs: {
-          x: finalGeo.x,
-          y: finalGeo.y,
-          width: finalGeo.width,
-          height: finalGeo.height,
-        },
-        type: ShapeType.bbox,
-        viewRef,
-        itemId: selectedItemId,
-        imageWidth: currentImage.width,
-        imageHeight: currentImage.height,
-      });
+      onNewShapeChange?.(saveShape);
     }
   }
 
   function handlePolygonRequestSave(geometry: unknown): void {
     const payload = geometry as PolygonSavePayload;
-    const sourcePolygons = getSourcePolygons(payload);
-    if (sourcePolygons.length === 0) return;
-
     const viewRef = lastInputViewRef;
     if (!viewRef) return;
 
     const currentImage = getCurrentImage(viewRef.name);
-    if (!currentImage) return;
-    const polygonMode: PolygonOutputMode = payload.outputMode ?? "polygon";
-    const polygonPoints = sourcePolygons
-      .map((polygon) =>
-        polygon.map((point, id) => ({
-          x: polygonMode === "mask" ? Math.round(point.x) : point.x,
-          y: polygonMode === "mask" ? Math.round(point.y) : point.y,
-          id: "id" in point ? point.id : id,
-        })),
-      )
-      .filter((polygon) => polygon.length >= 3);
-    if (polygonPoints.length === 0) return;
+    const outputMode =
+      selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon";
+    const saveShape = buildPolygonSaveShape(
+      payload,
+      viewRef,
+      selectedItemId,
+      currentImage,
+      outputMode,
+    );
 
-    const polygonSvg = polygonPoints.map((polygon) => convertPointToSvg(polygon));
+    if (!saveShape) return;
+
     localDraftShape = null;
     cleanupPolygonPreviewListeners();
-
-    if (polygonMode === "mask") {
-      const counts = runLengthEncode(polygonSvg, currentImage.width, currentImage.height);
-      onNewShapeChange?.({
-        status: "saving",
-        type: ShapeType.mask,
-        masksImageSVG: polygonSvg,
-        rle: {
-          counts,
-          size: [currentImage.height, currentImage.width],
-        },
-        viewRef,
-        itemId: selectedItemId,
-        imageWidth: currentImage.width,
-        imageHeight: currentImage.height,
-        polygonMode,
-        polygonPoints,
-      });
-      return;
-    }
-
-    onNewShapeChange?.({
-      status: "saving",
-      type: ShapeType.polygon,
-      masksImageSVG: polygonSvg,
-      viewRef,
-      itemId: selectedItemId,
-      imageWidth: currentImage.width,
-      imageHeight: currentImage.height,
-      polygonMode,
-      polygonPoints,
-    });
+    onNewShapeChange?.(saveShape);
   }
 
   function handleToolRequestSave(
@@ -482,116 +393,37 @@ License: CECILL-C
     });
 
     // Initialize off-thread filter manager
-    filterManager = new FilterManager((viewName, filteredCanvas) => {
-      const image = getImageNode(viewName);
-      if (image) {
-        image.image(filteredCanvas);
-        image.clearCache();
-        image.getLayer()?.batchDraw();
-      }
-    });
+    filterPipeline.init();
 
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
 
     return () => {
       resizeObserver.disconnect();
-      const pendingFilterTimer = untrack(() => filterDebounceTimer);
-      if (pendingFilterTimer) {
-        clearTimeout(pendingFilterTimer);
-      }
+      filterPipeline.destroy();
       if (interactionCooldownTimer) {
         clearTimeout(interactionCooldownTimer);
         interactionCooldownTimer = null;
       }
       clearAnnotationAndInputs();
-      filterManager?.destroy();
-      filterManager = null;
     };
   });
 
-  // React to filter changes (debounced, skip for video)
-  let filterDebounceTimer: ReturnType<typeof setTimeout>;
-
-  let scaleOnFirstLoad: Record<string, boolean> = {};
-  let viewReady: Record<string, boolean> = {};
   let loadCycle = 0;
 
-  function resetViewFlags(viewNames: string[]): void {
-    scaleOnFirstLoad = {};
-    viewReady = {};
-    for (const view_name of viewNames) {
-      //we need a first scaleView for image only. If video, the scale is done elsewhere
-      scaleOnFirstLoad[view_name] = !isVideo;
-      viewReady[view_name] = false;
-    }
+  // Delegate to ViewRefManager
+  function getViewLayer(view_name: string) {
+    return viewRefs.getViewLayer(view_name);
+  }
+  function getImageNode(view_name: string) {
+    return viewRefs.getImageNode(view_name);
   }
 
-  type ViewGroupKind = "background" | "static" | "active";
-
-  function getViewGroup(view_name: string, kind: ViewGroupKind): Konva.Group | undefined {
-    if (kind === "background") {
-      return backgroundViewRefs[view_name]?.node ?? stage?.findOne(`#bg-${view_name}`);
-    }
-    if (kind === "static") {
-      return staticViewRefs[view_name]?.node ?? stage?.findOne(`#static-${view_name}`);
-    }
-    return activeViewRefs[view_name]?.node ?? stage?.findOne(`#active-${view_name}`);
+  function isHtmlImageElement(image: HTMLImageElement | ImageBitmap): image is HTMLImageElement {
+    return typeof HTMLImageElement !== "undefined" && image instanceof HTMLImageElement;
   }
 
-  /** Main interaction group (pointer coordinate system for tools). */
-  function getViewLayer(view_name: string): Konva.Group | undefined {
-    return getViewGroup(view_name, "active");
-  }
-
-  function forEachLinkedViewGroup(view_name: string, callback: (group: Konva.Group) => void) {
-    const groups = [
-      getViewGroup(view_name, "background"),
-      getViewGroup(view_name, "static"),
-      getViewGroup(view_name, "active"),
-    ];
-    for (const group of groups) {
-      if (group) callback(group);
-    }
-  }
-
-  function syncLinkedViewGroupsFromActive(view_name: string) {
-    const active = getViewGroup(view_name, "active");
-    if (!active) return;
-    const x = active.x();
-    const y = active.y();
-    const scaleX = active.scaleX();
-    const scaleY = active.scaleY();
-    forEachLinkedViewGroup(view_name, (group) => {
-      if (group === active) return;
-      group.position({ x, y });
-      group.scale({ x: scaleX, y: scaleY });
-    });
-  }
-
-  function applyViewTransform(
-    view_name: string,
-    transform: { x: number; y: number; scale: number },
-  ) {
-    forEachLinkedViewGroup(view_name, (group) => {
-      group.scale({ x: transform.scale, y: transform.scale });
-      group.position({ x: transform.x, y: transform.y });
-    });
-  }
-
-  /** Get the image node for a view using cached ref (O(1)) with fallback. */
-  function getImageNode(view_name: string): Konva.Image | undefined {
-    return imageRefs[view_name] ?? stage?.findOne(`#image-${view_name}`);
-  }
-
-  /** Register an image ref when image loads. */
-  function registerImageRef(view_name: string): void {
-    // Called after image onload; find the image node in the now-populated layer
-    const img: Konva.Image | undefined = stage?.findOne(`#image-${view_name}`);
-    if (img) imageRefs[view_name] = img;
-  }
-
-  function getCurrentImage(view_name: string): HTMLImageElement | undefined {
+  function getCurrentImage(view_name: string): HTMLImageElement | ImageBitmap | undefined {
     const viewImages = imagesPerView[view_name];
     if (!Array.isArray(viewImages) || viewImages.length === 0) return undefined;
     const latestViewImage = viewImages[viewImages.length - 1];
@@ -619,13 +451,13 @@ License: CECILL-C
 
     // Reset flags for the new item
     isReady = false;
-    resetViewFlags(keys);
+    viewRefs.resetViewFlags(keys, enableRenderCache);
 
     keys.forEach((view_name) => {
       const currentImage = getCurrentImage(view_name);
       if (!currentImage) {
-        viewReady[view_name] = true;
-        if (Object.values(viewReady).every(Boolean)) {
+        viewRefs.viewReady[view_name] = true;
+        if (Object.values(viewRefs.viewReady).every(Boolean)) {
           isReady = true;
         }
         console.warn(
@@ -636,45 +468,54 @@ License: CECILL-C
 
       const onImageReady = () => {
         if (thisLoadCycle !== loadCycle) return;
-        registerImageRef(view_name);
-        if (scaleOnFirstLoad[view_name]) {
+        viewRefs.registerImageRef(view_name);
+        if (viewRefs.scaleOnFirstLoad[view_name]) {
           if (scaleView(view_name)) {
-            scaleOnFirstLoad[view_name] = false;
+            viewRefs.scaleOnFirstLoad[view_name] = false;
           } else {
             requestAnimationFrame(() => {
               if (thisLoadCycle !== loadCycle) return;
-              if (scaleOnFirstLoad[view_name] && scaleView(view_name)) {
-                scaleOnFirstLoad[view_name] = false;
+              if (viewRefs.scaleOnFirstLoad[view_name] && scaleView(view_name)) {
+                viewRefs.scaleOnFirstLoad[view_name] = false;
                 stage?.batchDraw();
               }
             });
           }
         }
         //scaleElements(view_name);
-        viewReady[view_name] = true;
-        if (Object.values(viewReady).every(Boolean)) {
+        viewRefs.viewReady[view_name] = true;
+        if (Object.values(viewRefs.viewReady).every(Boolean)) {
           isReady = true;
         }
-        if (!isVideo) cacheImage();
+        if (enableRenderCache) cacheImage();
       };
       const onImageError = () => {
         if (thisLoadCycle !== loadCycle) return;
-        const failedUrl = currentImage.currentSrc || currentImage.src || "<unknown>";
+        const failedUrl = isHtmlImageElement(currentImage)
+          ? currentImage.currentSrc || currentImage.src || "<unknown>"
+          : "<bitmap>";
         console.warn(
           `[Canvas2D] Failed to load image for view '${view_name}' on item '${selectedItemId}': ${failedUrl}`,
         );
-        viewReady[view_name] = true;
-        if (Object.values(viewReady).every(Boolean)) {
+        viewRefs.viewReady[view_name] = true;
+        if (Object.values(viewRefs.viewReady).every(Boolean)) {
           isReady = true;
         }
       };
 
-      currentImage.onload = onImageReady;
-      currentImage.onerror = onImageError;
-      // Handle already-loaded images (e.g., from browser cache)
-      if (currentImage.complete && currentImage.naturalWidth > 0) {
+      if (isHtmlImageElement(currentImage)) {
+        currentImage.onload = onImageReady;
+        currentImage.onerror = onImageError;
+        // Handle already-loaded images (e.g., from browser cache)
+        if (currentImage.complete && currentImage.naturalWidth > 0) {
+          onImageReady();
+        } else if (currentImage.complete && currentImage.naturalWidth === 0) {
+          onImageError();
+        }
+      } else if (currentImage.width > 0 && currentImage.height > 0) {
+        // ImageBitmap is already decoded and renderable.
         onImageReady();
-      } else if (currentImage.complete && currentImage.naturalWidth === 0) {
+      } else {
         onImageError();
       }
     });
@@ -683,43 +524,15 @@ License: CECILL-C
   }
 
   function scaleView(view_name: string): boolean {
-    const hasAnyLayer =
-      !!getViewGroup(view_name, "background") ||
-      !!getViewGroup(view_name, "static") ||
-      !!getViewGroup(view_name, "active");
-    if (!hasAnyLayer) {
-      return false;
-    }
-    // Calculate max dims for every image in the grid
-    const maxWidth = stageContainer.getBoundingClientRect().width / gridSize.cols;
-    const maxHeight = stageContainer.getBoundingClientRect().height / gridSize.rows;
-
-    // Get view index
-    const keys = Object.keys(imagesPerView);
-    const i = keys.findIndex((view) => view === view_name);
-
-    // Calculate view position in grid
-    const gridPosition = {
-      x: i % gridSize.cols,
-      y: Math.floor(i / gridSize.cols),
-    };
-
-    // Fit stage
-    const currentImage = getCurrentImage(view_name);
-    if (!currentImage) {
-      return false;
-    }
-    const scaleByHeight = maxHeight / currentImage.height;
-    const scaleByWidth = maxWidth / currentImage.width;
-    const scale = Math.min(scaleByWidth, scaleByHeight);
-
-    // Set zoom factor for this view.
+    const scale = viewRefs.scaleView(
+      view_name,
+      stageContainer,
+      gridSize,
+      imagesPerView,
+      getCurrentImage,
+    );
+    if (scale === null) return false;
     zoomFactor[view_name] = scale;
-
-    // Center view
-    const offsetX = (maxWidth - currentImage.width * scale) / 2 + gridPosition.x * maxWidth;
-    const offsetY = (maxHeight - currentImage.height * scale) / 2 + gridPosition.y * maxHeight;
-    applyViewTransform(view_name, { x: offsetX, y: offsetY, scale });
     return true;
   }
 
@@ -733,119 +546,15 @@ License: CECILL-C
     }
   }
 
-  function adjustChannels(imageData: ImageData): void {
-    const { data } = imageData;
-
-    const redMin = filters.redRange[0];
-    const redMax = filters.redRange[1];
-    const greenMin = filters.greenRange[0];
-    const greenMax = filters.greenRange[1];
-    const blueMin = filters.blueRange[0];
-    const blueMax = filters.blueRange[1];
-
-    for (let i = 0; i < data.length; i += 4) {
-      const red = data[i];
-      const green = data[i + 1];
-      const blue = data[i + 2];
-
-      if (
-        red < redMin ||
-        red > redMax ||
-        green < greenMin ||
-        green > greenMax ||
-        blue < blueMin ||
-        blue > blueMax
-      ) {
-        data[i] = 0; // Red channel
-        data[i + 1] = 0; // Green channel
-        data[i + 2] = 0; // Blue channel
-      }
-    }
-  }
-
-  function applyFilters(): void {
-    if (!stage) return;
-
-    const workerFilters: FilterParams = {
-      brightness: filters.brightness,
-      contrast: filters.contrast,
-      redRange: [...filters.redRange] as [number, number],
-      greenRange: [...filters.greenRange] as [number, number],
-      blueRange: [...filters.blueRange] as [number, number],
-      equalizeHistogram: filters.equalizeHistogram,
-    };
-
-    for (const view_name of Object.keys(imagesPerView)) {
-      const image = getImageNode(view_name);
-      if (!image) continue;
-
-      // Try off-thread path via Web Worker
-      if (filterManager) {
-        // We need the original (uncached) image to get source pixel data.
-        // Use the source canvas/image element from imagesPerView.
-        const sourceElement = getCurrentImage(view_name);
-        if (sourceElement) {
-          // Reuse a single temp canvas for filter source data
-          if (!filterTempCanvas) {
-            filterTempCanvas = document.createElement("canvas");
-            filterTempCtx = filterTempCanvas.getContext("2d");
-          }
-          filterTempCanvas.width = sourceElement.width;
-          filterTempCanvas.height = sourceElement.height;
-          if (filterTempCtx) {
-            filterTempCtx.drawImage(sourceElement, 0, 0);
-            filterManager.applyFilters(view_name, filterTempCanvas, workerFilters);
-            continue;
-          }
-        }
-      }
-
-      // Fallback: synchronous Konva filter pipeline
-      const filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, adjustChannels];
-      if (filters.equalizeHistogram) filtersList.push(equalizeHistogram);
-
-      image.filters(filtersList);
-      image.brightness(filters.brightness);
-      image.contrast(filters.contrast);
-    }
-  }
-
   // ********** TOOLS ********** //
 
   function handleChangeTool() {
     endViewportInteraction();
-    if (selectedTool?.type === ToolType.Pan) {
-      crosshairPosition = null;
-      brushCursorState = null;
-      cleanupPolygonPreviewListeners();
-      cursor = panTool.cursor;
-      return;
-    }
-
-    if (selectedTool?.type === ToolType.Rectangle) {
-      cleanupPolygonPreviewListeners();
-      brushCursorState = null;
-      cursor = rectangleTool.cursor;
-      return;
-    }
-
-    if (selectedTool?.type === ToolType.Polygon) {
-      brushCursorState = null;
-      cursor = polygonTool.cursor;
-      return;
-    }
-
-    if (selectedTool?.type === ToolType.Brush) {
-      cleanupPolygonPreviewListeners();
-      crosshairPosition = null;
-      cursor = "none";
-      return;
-    }
-
-    cleanupPolygonPreviewListeners();
-    crosshairPosition = null;
-    brushCursorState = null;
-    cursor = "default";
+    const action = computeToolChangeAction(selectedTool);
+    cursor = action.cursor;
+    if (action.clearCrosshair) crosshairPosition = null;
+    if (action.clearBrushCursor) brushCursorState = null;
+    if (action.cleanupPolygonPreview) cleanupPolygonPreviewListeners();
   }
 
   function updateBrushCursor(mousePos: Konva.Vector2d) {
@@ -881,7 +590,7 @@ License: CECILL-C
 
     beginViewportInteraction();
     activeBrushViewName = viewRef.name;
-    const brushRef = brushMaskRefs[viewRef.name];
+    const brushRef = viewRefs.brushMaskRefs[viewRef.name];
     if (brushRef) {
       brushRef.beginStroke(pos.x, pos.y);
     }
@@ -893,7 +602,7 @@ License: CECILL-C
     const pos = viewLayer.getRelativePointerPosition();
     if (!pos) return;
 
-    const brushRef = brushMaskRefs[view_name];
+    const brushRef = viewRefs.brushMaskRefs[view_name];
     if (brushRef) {
       brushRef.updateStroke(pos.x, pos.y);
     }
@@ -901,7 +610,7 @@ License: CECILL-C
 
   function handleBrushPointerUp(view_name: string) {
     activeBrushViewName = null;
-    const brushCanvas = brushMaskRefs[view_name];
+    const brushCanvas = viewRefs.brushMaskRefs[view_name];
     if (brushCanvas) {
       brushCanvas.endStroke();
     }
@@ -909,7 +618,7 @@ License: CECILL-C
   }
 
   function saveBrushMask(view_name: string) {
-    const brushCanvas = brushMaskRefs[view_name];
+    const brushCanvas = viewRefs.brushMaskRefs[view_name];
     if (brushCanvas) {
       const maskData = brushCanvas.getMaskData();
       if (maskData) {
@@ -919,12 +628,12 @@ License: CECILL-C
   }
 
   function cleanupAllBrushCanvases() {
-    for (const key of Object.keys(brushMaskRefs)) {
-      const brushRef = brushMaskRefs[key];
+    for (const key of Object.keys(viewRefs.brushMaskRefs)) {
+      const brushRef = viewRefs.brushMaskRefs[key];
       if (brushRef) {
         brushRef.destroy();
       }
-      delete brushMaskRefs[key];
+      delete viewRefs.brushMaskRefs[key];
     }
     cleanupBrushCursor();
   }
@@ -949,17 +658,14 @@ License: CECILL-C
     const position = queuedCursorPosition;
     if (!position) return;
 
-    if (
-      selectedTool?.type === ToolType.Rectangle ||
-      selectedTool?.type === ToolType.Polygon ||
-      selectedTool?.type === ToolType.Brush
-    ) {
+    const flush = computeCursorFlushAction(selectedTool);
+    if (flush.showCrosshair) {
       updateCrosshairState(position);
     } else {
       crosshairPosition = null;
     }
 
-    if (selectedTool?.type === ToolType.Brush) {
+    if (flush.showBrushCursor) {
       updateBrushCursor(position);
       if (activeBrushViewName) {
         handleBrushPointerMove(activeBrushViewName);
@@ -991,8 +697,8 @@ License: CECILL-C
         selectedTool?.type !== ToolType.Brush ||
         ("shouldReset" in newShape && newShape.shouldReset)
       ) {
-        for (const key of Object.keys(brushMaskRefs)) {
-          brushMaskRefs[key]?.clearCanvas();
+        for (const key of Object.keys(viewRefs.brushMaskRefs)) {
+          viewRefs.brushMaskRefs[key]?.clearCanvas();
         }
       }
     }
@@ -1039,9 +745,9 @@ License: CECILL-C
 
   function handleDoubleClickOnImage(view_name: string) {
     // Keep all three per-view groups stacked together when prioritizing a view.
-    const backgroundGroup = getViewGroup(view_name, "background");
-    const staticGroup = getViewGroup(view_name, "static");
-    const activeGroup = getViewGroup(view_name, "active");
+    const backgroundGroup = viewRefs.getViewGroup(view_name, "background");
+    const staticGroup = viewRefs.getViewGroup(view_name, "static");
+    const activeGroup = viewRefs.getViewGroup(view_name, "active");
     if (backgroundGroup?.getParent()) backgroundGroup.moveToTop();
     if (staticGroup?.getParent()) staticGroup.moveToTop();
     if (activeGroup?.getParent()) activeGroup.moveToTop();
@@ -1174,7 +880,7 @@ License: CECILL-C
     };
     const next = zoomViewTransform(current, direction, pointer.x, pointer.y);
 
-    applyViewTransform(view_name, {
+    viewRefs.applyViewTransform(view_name, {
       x: next.x,
       y: next.y,
       scale: next.scaleX,
@@ -1253,18 +959,22 @@ License: CECILL-C
   });
 
   // Lightweight fingerprint that changes when frame identities change.
-  // Triggers a single batched redraw instead of tracking every annotation property.
-  let frameFingerprint = $derived.by(() => {
+  let viewFrameIdentity = $derived.by(() => {
     let fp = "";
     for (const [vn, imgs] of Object.entries(imagesPerView)) {
       fp += `${vn}:${imgs[imgs.length - 1]?.id ?? ""};`;
     }
-    return `${fp}|b${bboxes.length}|m${masks.length}|k${keypoints.length}`;
+    return fp;
+  });
+
+  // Triggers a single batched redraw instead of tracking every annotation property.
+  let frameFingerprint = $derived.by(() => {
+    return `${viewFrameIdentity}|b${bboxes.length}|m${masks.length}|k${keypoints.length}`;
   });
 
   $effect(() => {
     const s = stage;
-    if (!s) return;
+    if (!s || !enableRenderCache) return;
     void frameFingerprint;
     requestAnimationFrame(() => s.batchDraw());
   });
@@ -1419,12 +1129,26 @@ License: CECILL-C
     // Sync preview from bridge
     const preview = bridge.preview.value;
     untrack(() => syncToolPreview(preview));
-    // Switch FSM when tool changes
-    if (selectedTool) {
-      const fsm = untrack(() => createToolFSMForSelection(selectedTool));
-      if (fsm) {
-        untrack(() => bridge.switchTool(fsm));
-      }
+  });
+  $effect(() => {
+    const bridge = activeToolBridge;
+    const tool = selectedTool;
+    if (!bridge || !tool) {
+      lastBridgeForToolSwitch = bridge;
+      lastToolSwitchSignature = null;
+      return;
+    }
+    const signature = getToolSwitchSignature(tool);
+    if (bridge === lastBridgeForToolSwitch && signature === lastToolSwitchSignature) {
+      return;
+    }
+
+    // Keep FSM resets scoped to actual tool changes, not preview updates.
+    const fsm = untrack(() => createToolFSMForSelection(tool));
+    if (fsm) {
+      untrack(() => bridge.switchTool(fsm));
+      lastBridgeForToolSwitch = bridge;
+      lastToolSwitchSignature = signature;
     }
   });
   // --- Targeted reactive statements (replaces monolithic afterUpdate) ---
@@ -1465,12 +1189,8 @@ License: CECILL-C
   });
   // Transformer is now declarative inside BBox2D.svelte — no manual attachment needed
   $effect(() => {
-    if (!isVideo && stage && filters) {
-      const previousTimer = untrack(() => filterDebounceTimer);
-      if (previousTimer) {
-        clearTimeout(previousTimer);
-      }
-      filterDebounceTimer = setTimeout(() => applyFilters(), 50);
+    if (enableRenderCache && stage && filters) {
+      filterPipeline.scheduleFilters(filters, Object.keys(imagesPerView));
     }
   });
   // Brush cursor is now declarative — BrushCursor.svelte renders from brushCursorState
@@ -1492,7 +1212,7 @@ License: CECILL-C
   >
     <Layer id="background" imageSmoothingEnabled={imageSmoothing} listening={false}>
       {#each Object.entries(imagesPerView) as [view_name, images]}
-        <Group id={`bg-${view_name}`} bind:this={backgroundViewRefs[view_name]}>
+        <Group id={`bg-${view_name}`} bind:this={viewRefs.backgroundViewRefs[view_name]}>
           {#each images as image, i}
             <KonvaImage
               image={image.element}
@@ -1510,7 +1230,7 @@ License: CECILL-C
         {@const currentLoadedImage = images[images.length - 1]}
         {@const currentImage = currentLoadedImage?.element}
         {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
-        <Group id={`static-${view_name}`} bind:this={staticViewRefs[view_name]}>
+        <Group id={`static-${view_name}`} bind:this={viewRefs.staticViewRefs[view_name]}>
           {#if !isActivePaintingTool}
             {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
               {#if !bbox.ui.displayControl.editing}
@@ -1547,7 +1267,8 @@ License: CECILL-C
                 ghostOpacity={isActivePaintingTool ? 0.5 : undefined}
                 {selectedTool}
                 interactive={false}
-                disableCache={isVideo}
+                disableCache={!enableRenderCache}
+                smoothDisplay={enableRenderCache}
               />
             {/if}
           {/each}
@@ -1577,15 +1298,15 @@ License: CECILL-C
         {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
         <Group
           id={`active-${view_name}`}
-          bind:this={activeViewRefs[view_name]}
+          bind:this={viewRefs.activeViewRefs[view_name]}
           dragDistance={0}
           ondragstart={beginViewportInteraction}
           ondragmove={() => {
-            syncLinkedViewGroupsFromActive(view_name);
+            viewRefs.syncLinkedViewGroupsFromActive(view_name);
             stage?.batchDraw();
           }}
           ondragend={() => {
-            syncLinkedViewGroupsFromActive(view_name);
+            viewRefs.syncLinkedViewGroupsFromActive(view_name);
             endViewportInteraction();
           }}
         >
@@ -1683,7 +1404,7 @@ License: CECILL-C
 
           {#if selectedTool?.type === ToolType.Brush}
             <BrushMask
-              bind:this={brushMaskRefs[view_name]}
+              bind:this={viewRefs.brushMaskRefs[view_name]}
               {viewRef}
               {currentImage}
               zoomFactor={zoomFactor[view_name] ?? 1}
@@ -1709,7 +1430,8 @@ License: CECILL-C
                 )}
                 {selectedTool}
                 interactive={true}
-                disableCache={isVideo}
+                disableCache={!enableRenderCache}
+                smoothDisplay={enableRenderCache}
               />
             {/if}
           {/each}

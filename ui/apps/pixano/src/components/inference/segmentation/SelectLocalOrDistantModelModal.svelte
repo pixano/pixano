@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Server, Wand2Icon } from "lucide-svelte";
+  import { Check, Server, Wand2Icon } from "lucide-svelte";
 
   import {
     Checkbox,
@@ -157,10 +157,19 @@ License: CECILL-C
         </div>
 
         <div class="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
-          <Checkbox
-            handleClick={handleValTrackingClick}
+          <Checkbox.Root
             checked={pixanoInferenceTracking.value.mustValidate}
-          />
+            onCheckedChange={handleValTrackingClick}
+            class="peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+          >
+            {#snippet children({ checked })}
+              <span class="flex items-center justify-center text-current h-full w-full">
+                {#if checked}
+                  <Check class="h-3.5 w-3.5" strokeWidth={3} />
+                {/if}
+              </span>
+            {/snippet}
+          </Checkbox.Root>
           <span class="text-xs font-medium text-foreground/80">Validate before tracking</span>
         </div>
       </div>

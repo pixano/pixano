@@ -161,6 +161,12 @@ export class ToolBridgeImpl implements ToolBridge {
 
   /** Reset tool state when the active tool changes. */
   switchTool(tool: ToolFSM): void {
+    // Switching tools cancels any in-progress transactional drawing flow (e.g. polygon).
+    try {
+      this.commandBridge.abortTransaction();
+    } catch {
+      // No open transaction to abort.
+    }
     this._activeTool = tool;
     this._toolState = tool.getInitialState();
     this._preview = null;

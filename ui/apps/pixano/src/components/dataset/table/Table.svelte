@@ -75,8 +75,9 @@ License: CECILL-C
   };
 
   // Table state
+  const initialColumnOrder = buildInitialColumnOrder();
   let sorting = $state<SortingState>([{ id: "created_at", desc: false }]);
-  let columnOrder = $state<ColumnOrderState>(buildInitialColumnOrder());
+  let columnOrder = $state<ColumnOrderState>(initialColumnOrder);
   let columnVisibility = $state<VisibilityState>({});
 
   const columns = buildColumns();
@@ -132,7 +133,7 @@ License: CECILL-C
 
   // Column visibility tracking by id
   let shownColumnsById = $state(
-    Object.fromEntries(columnOrder.map((id) => [id, true])),
+    Object.fromEntries(initialColumnOrder.map((id) => [id, true])),
   );
   $effect(() => {
     const hidden: VisibilityState = {};

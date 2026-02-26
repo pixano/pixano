@@ -37,6 +37,7 @@ License: CECILL-C
     completionPrompt = completionModels.find((m) => m.selected)?.prompts[mtype][qtype] ?? "";
   };
 
+  // svelte-ignore state_referenced_locally
   let temperature = $state(completionModels.find((m) => m.selected)?.temperature ?? 1.0);
 
   function handleSavePrompt() {

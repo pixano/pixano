@@ -11,12 +11,14 @@ from functools import lru_cache
 import fastapi
 import pkg_resources  # type: ignore[import-untyped]
 import uvicorn
-from fastapi.responses import HTMLResponse
+from fastapi import HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
+from pixano.app.routers import API_PREFIXES
 from pixano.app.settings import Settings, get_settings
 
 
@@ -35,6 +37,16 @@ LOGO = """
 """
 ASSETS_PATH = pkg_resources.resource_filename("pixano", "app/dist/_app")
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "app/dist")
+NON_SPA_PREFIXES = (
+    *API_PREFIXES,
+    "/_app",
+    "/media",
+    "/app_models",
+    "/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+)
 
 task_functions = {
     "colab": asyncio.get_event_loop().create_task,
@@ -137,17 +149,8 @@ class App:
         def main_page(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        @self.app.get("/{ds_id}/dataset", response_class=HTMLResponse)
-        async def dataset_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
-
-        @self.app.get("/{ds_id}/dashboard", response_class=HTMLResponse)
-        async def dashboard_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
-
-        @self.app.get("/{ds_id}/dataset/{item_id}", response_class=HTMLResponse)
-        async def item_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
+        def _is_non_spa_path(path: str) -> bool:
+            return any(path == prefix or path.startswith(f"{prefix}/") for prefix in NON_SPA_PREFIXES)
 
         try:
             self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
@@ -157,6 +160,18 @@ class App:
                 "Pixano app assets not found. If it is a production environment, this is not expected, "
                 "check if you have built the assets for the UI."
             )
+
+        @self.app.get("/{full_path:path}", include_in_schema=False)
+        async def hash_spa_redirect(request: fastapi.Request, full_path: str):
+            request_path = request.url.path
+            if _is_non_spa_path(request_path):
+                raise HTTPException(status_code=404, detail="Not Found")
+
+            hash_url = f"/#/{full_path}" if full_path else "/"
+            if request.url.query:
+                hash_url = f"{hash_url}?{request.url.query}"
+            return RedirectResponse(url=hash_url, status_code=307)
+
         self.config = uvicorn.Config(self.app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 

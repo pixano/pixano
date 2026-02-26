@@ -8,16 +8,16 @@ License: CECILL-C
 
   // Imports
   import type { TrackTimelineEntry } from "$lib/ui";
-  import { ContextMenu, Track, cn, isLuminanceHigh } from "$lib/ui";
+  import { ContextMenu, Tracklet, cn } from "$lib/ui";
   import { onDeleteTrackItemClick } from "$lib/utils/entityMutations";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 
 
   interface Props {
-    trackId: string;
+    entityId: string;
     itemFrameIndex: number;
-    track: Track;
+    tracklet: Tracklet;
     color: string;
     height: number;
     top: number;
@@ -27,7 +27,7 @@ License: CECILL-C
     viewname: string,
   ) => void;
     onClick: (button: number, clientX: number) => void;
-    updateTrackWidth: (
+    updateTrackletWidth: (
     newIndex: TrackTimelineEntry["frame_index"],
     draggedIndex: TrackTimelineEntry["frame_index"],
   ) => void;
@@ -39,16 +39,16 @@ License: CECILL-C
   }
 
   let {
-    trackId,
+    entityId,
     itemFrameIndex,
-    track: videoTrack,
+    tracklet,
     color,
     height,
     top,
     oneFrameInPixel,
     onEditKeyItemClick,
     onClick,
-    updateTrackWidth,
+    updateTrackletWidth,
     canContinueDragging,
     resetTool
   }: Props = $props();
@@ -57,14 +57,14 @@ License: CECILL-C
     annotations.value.filter(
       (ann) =>
         ann.ui.displayControl.editing &&
-        (videoTrack.ui.childs ?? []).includes(ann) &&
+        (tracklet.ui.childs ?? []).includes(ann) &&
         ann.ui.frame_index === itemFrameIndex &&
         ann.ui.frame_index === currentFrameIndex.value &&
-        ann.data.entity_id === trackId,
+        ann.data.entity_id === entityId,
     ).length === 1,
   );
 
-  export const getKeyItemLeftPosition = (frameIndex: number) => {
+  const getKeyItemLeftPosition = (frameIndex: number) => {
     const itemFrame = frameIndex > lastFrameIndex.value ? lastFrameIndex.value : frameIndex;
     const leftPosition = (itemFrame / (lastFrameIndex.value + 1)) * 100;
     return leftPosition;
@@ -78,9 +78,9 @@ License: CECILL-C
 
   const dragMe = (node: HTMLButtonElement) => {
     if (
-      !videoTrack.ui.childs?.length ||
-      (videoTrack.ui.childs[0].ui.frame_index !== itemFrameIndex &&
-      videoTrack.ui.childs[videoTrack.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
+      !tracklet.ui.childs?.length ||
+      (tracklet.ui.childs[0].ui.frame_index !== itemFrameIndex &&
+      tracklet.ui.childs[tracklet.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
     )
       return;
 
@@ -122,7 +122,7 @@ License: CECILL-C
           if (newFrameIndex !== undefined) {
             if (newFrameIndex < 0) newFrameIndex = 0;
             if (newFrameIndex > lastFrameIndex.value) newFrameIndex = lastFrameIndex.value;
-            updateTrackWidth(newFrameIndex, itemFrameIndex);
+            updateTrackletWidth(newFrameIndex, itemFrameIndex);
           }
           newFrameIndex = undefined;
           dragController.abort();
@@ -132,9 +132,7 @@ License: CECILL-C
     });
   };
 
-  function getDotColor(): string {
-    return isLuminanceHigh(color) ? "border-border" : "border-border";
-  }
+  const dotBorderClass = "border-border";
 </script>
 
 <ContextMenu.Root>
@@ -142,7 +140,7 @@ License: CECILL-C
     class={cn(
       "w-2 z-50 block border-2 rounded-full absolute left-[-0.5rem] translate-x-[-50%]",
       "hover:scale-150 ",
-      isItemBeingEdited ? "bg-primary !border-primary" : getDotColor(),
+      isItemBeingEdited ? "bg-primary !border-primary" : dotBorderClass,
     )}
     style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color};`}
   >
@@ -155,9 +153,9 @@ License: CECILL-C
 ></button>
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if videoTrack.ui.childs?.length > 2}
+    {#if tracklet.ui.childs?.length > 2}
       <ContextMenu.Item
-        onclick={() => onDeleteTrackItemClick(videoTrack, itemFrameIndex)}
+        onclick={() => onDeleteTrackItemClick(tracklet, itemFrameIndex)}
         title="Remove all shapes under this key. For selective delete, use Objects panel."
       >
         Remove item
@@ -165,7 +163,7 @@ License: CECILL-C
     {/if}
     {#if !isItemBeingEdited}
       <ContextMenu.Item
-        onclick={() => onEditKeyItemClick(itemFrameIndex, videoTrack.data.view_name)}
+        onclick={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_name)}
       >
         Edit item
       </ContextMenu.Item>

@@ -14,8 +14,6 @@ License: CECILL-C
     Square,
     Waypoints,
   } from "lucide-svelte";
-  import { untrack } from "svelte";
-
   import {
     type PolygonOutputMode,
     ToolType,
@@ -65,9 +63,8 @@ License: CECILL-C
     }
   };
 
-  $effect(() => {
-    untrack(() => { selectedTool.value = panTool; });
-  });
+  // Initialize tool to Pan when Toolbar mounts
+  selectedTool.value = panTool;
 
   let showBrushTools = $derived(selectedTool.value?.type === ToolType.Brush);
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);

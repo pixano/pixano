@@ -8,6 +8,7 @@ License: CECILL-C
   import type Konva from "konva";
   import { Circle } from "svelte-konva";
 
+  import { FIRST_VERTEX_COLOR, OTHER_VERTEX_COLOR } from "./konvaConstants";
   import type { PolygonVertex } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
 
@@ -67,7 +68,7 @@ License: CECILL-C
       x={point.x}
       y={point.y}
       radius={(j === 0 ? 6 : 4) / zoomFactor}
-      fill={j === 0 ? "hsl(330, 65%, 50%)" : "hsl(142, 60%, 40%)"}
+      fill={j === 0 ? FIRST_VERTEX_COLOR : OTHER_VERTEX_COLOR}
       stroke="white"
       strokeWidth={1}
       strokeScaleEnabled={false}

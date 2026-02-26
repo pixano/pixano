@@ -10,10 +10,12 @@ License: CECILL-C
  */
 export class LRUCache<K, V> {
   private readonly maxSize: number;
+  private readonly onEvict?: (key: K, value: V) => void;
   private readonly cache = new Map<K, V>();
 
-  constructor(maxSize: number) {
+  constructor(maxSize: number, onEvict?: (key: K, value: V) => void) {
     this.maxSize = maxSize;
+    this.onEvict = onEvict;
   }
 
   get(key: K): V | undefined {
@@ -34,7 +36,11 @@ export class LRUCache<K, V> {
     while (this.cache.size >= this.maxSize) {
       const oldest = this.cache.keys().next().value;
       if (oldest !== undefined) {
+        const oldestValue = this.cache.get(oldest);
         this.cache.delete(oldest);
+        if (oldestValue !== undefined) {
+          this.onEvict?.(oldest, oldestValue);
+        }
       }
     }
 
@@ -46,10 +52,20 @@ export class LRUCache<K, V> {
   }
 
   delete(key: K): boolean {
-    return this.cache.delete(key);
+    const value = this.cache.get(key);
+    const deleted = this.cache.delete(key);
+    if (deleted && value !== undefined) {
+      this.onEvict?.(key, value);
+    }
+    return deleted;
   }
 
   clear(): void {
+    if (this.onEvict) {
+      for (const [key, value] of this.cache) {
+        this.onEvict(key, value);
+      }
+    }
     this.cache.clear();
   }
 
