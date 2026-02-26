@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { PolygonVertex } from "$lib/types/shapeTypes";
-
 /**
  * Decode a compressed RLE string into a numeric counts array.
  * This is the inverse of `rleToString` — the primary deserialization path
@@ -162,6 +160,12 @@ function parseNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function hasImageDataAccess(
+  ctx: RenderingContext | OffscreenCanvasRenderingContext2D | null,
+): ctx is CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D {
+  return ctx !== null && "getImageData" in ctx;
+}
+
 function toMaskBounds(input: unknown): MaskBounds | null {
   if (Array.isArray(input) && input.length >= 4) {
     const x = parseNumber(input[0]);
@@ -183,84 +187,6 @@ function toMaskBounds(input: unknown): MaskBounds | null {
     return { x, y, width, height };
   }
   return null;
-}
-
-/**
- * Check if a mask annotation was stored with raw polygon geometry
- * (as opposed to pure RLE). Used for UI display (icon selection).
- */
-export function isRawPolygonMask(annotation: { data?: { inference_metadata?: unknown } }): boolean {
-  const metadata = annotation.data?.inference_metadata;
-  if (!metadata || typeof metadata !== "object") return false;
-  return isPolygonPointsMetadata(metadata as Record<string, unknown>);
-}
-
-export function isPolygonPointsMetadata(
-  metadata: Record<string, unknown>,
-): metadata is Record<string, unknown> & { polygon_points: PolygonVertex[][] } {
-  const points = metadata.polygon_points;
-  if (!Array.isArray(points)) return false;
-
-  return points.every(
-    (polygon) =>
-      Array.isArray(polygon) &&
-      polygon.every((point) => {
-        if (point === null || typeof point !== "object") return false;
-        const p = point as Record<string, unknown>;
-        return (
-          typeof p.x === "number" &&
-          typeof p.y === "number" &&
-          typeof p.id === "number"
-        );
-      }),
-  );
-}
-
-export function buildPolygonInferenceMetadata(input: {
-  polygon_points?: unknown;
-}): {
-  geometry_mode: "polygon";
-  polygon_points: PolygonVertex[][];
-} {
-  const candidate = {
-    geometry_mode: "polygon",
-    polygon_points: input.polygon_points,
-  } as Record<string, unknown>;
-
-  return {
-    geometry_mode: "polygon",
-    polygon_points: isPolygonPointsMetadata(candidate) ? candidate.polygon_points : [],
-  };
-}
-
-export function getBoundingBoxFromPolygonPoints(
-  polygons: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>,
-): MaskBounds | null {
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-
-  for (const polygon of polygons) {
-    for (const point of polygon) {
-      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
-      minX = Math.min(minX, point.x);
-      minY = Math.min(minY, point.y);
-      maxX = Math.max(maxX, point.x);
-      maxY = Math.max(maxY, point.y);
-    }
-  }
-
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
-    return null;
-  }
-
-  return {
-    x: minX,
-    y: minY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-  };
 }
 
 export function resolveMaskBitmapSource(input: {
@@ -298,10 +224,6 @@ export function resolveMaskBounds(input: {
     toMaskBounds(metadata.bbox);
   if (directBounds) return directBounds;
 
-  if (isPolygonPointsMetadata(metadata) && metadata.polygon_points.length > 0) {
-    return getBoundingBoxFromPolygonPoints(metadata.polygon_points);
-  }
-
   return null;
 }
 
@@ -326,11 +248,8 @@ export function dataUrlToBlob(dataUrl: string): Blob | null {
 }
 
 export function getAlphaBoundingBox(canvas: HTMLCanvasElement | OffscreenCanvas): MaskBounds | null {
-  const ctx = canvas.getContext("2d") as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D
-    | null;
-  if (!ctx) return null;
+  const ctx = canvas.getContext("2d");
+  if (!hasImageDataAccess(ctx)) return null;
 
   const { width, height } = canvas;
   if (width === 0 || height === 0) return null;

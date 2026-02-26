@@ -9,7 +9,7 @@ import type { Point2D, PolygonOutputMode } from "$lib/types/geometry";
 import { ShapeType, type PolygonVertex, type Shape } from "$lib/types/shapeTypes";
 import {
   dataUrlToBlob,
-  getBoundingBoxFromPolygonPoints,
+  getAlphaBoundingBox,
   type MaskBounds,
 } from "$lib/utils/maskUtils";
 
@@ -89,7 +89,7 @@ function rasterizePolygonsToMask(
 
   const dataUrl = canvas.toDataURL("image/png");
   const blob = dataUrlToBlob(dataUrl);
-  const bounds = getBoundingBoxFromPolygonPoints(polygons);
+  const bounds = getAlphaBoundingBox(canvas);
 
   return {
     dataUrl,

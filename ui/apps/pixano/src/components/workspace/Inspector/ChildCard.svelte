@@ -36,11 +36,10 @@ License: CECILL-C
   } from "$lib/ui";
   import { cn } from "$lib/utils/styleUtils";
   import { buttonVariants } from "$lib/utils/buttonVariants";
-  import { keypointsIcon, polygonIcon } from "$lib/assets";
+  import { keypointsIcon } from "$lib/assets";
 
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
-  import { isRawPolygonMask } from "$lib/utils/maskUtils";
   import {
     annotations,
     current_itemBBoxes,
@@ -142,11 +141,7 @@ License: CECILL-C
       {#if child.is_type(BaseSchema.BBox)}
         <Square class="h-3.5 w-3.5 mx-1" />
       {:else if child.is_type(BaseSchema.Mask)}
-        {#if isRawPolygonMask(child)}
-          <img src={polygonIcon} alt="raw polygon icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
-        {:else}
-          <VenetianMask class="h-3.5 w-3.5 mx-1 opacity-60" />
-        {/if}
+        <VenetianMask class="h-3.5 w-3.5 mx-1 opacity-60" />
       {:else if child.is_type(BaseSchema.Keypoints)}
         <img src={keypointsIcon} alt="keypoints icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
       {:else if child.is_type(BaseSchema.Tracklet)}
@@ -223,11 +218,7 @@ License: CECILL-C
             <Square class="h-4" />
           {/if}
           {#if trackChild.table_info.base_schema === BaseSchema.Mask}
-            {#if isRawPolygonMask(trackChild)}
-              <img src={polygonIcon} alt="raw polygon icon" class="h-4" />
-            {:else}
-              <VenetianMask class="h-4" />
-            {/if}
+            <VenetianMask class="h-4" />
           {/if}
           {#if trackChild.table_info.base_schema === BaseSchema.Keypoints}
             <img src={keypointsIcon} alt="keypoints icon" class="h-4" />

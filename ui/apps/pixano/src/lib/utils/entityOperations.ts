@@ -26,7 +26,6 @@ import {
 import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes";
 import { datasetSchema, sourcesStore } from "$lib/stores/appStores.svelte";
 import { getPixanoSourceId, getTable } from "$lib/utils/entityLookupUtils";
-import { buildPolygonInferenceMetadata } from "$lib/utils/maskUtils";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 
@@ -60,29 +59,11 @@ export const buildMaskDataAndInferenceMetadata = (
   }
 
   const emptyMaskCounts = [shape.imageWidth * shape.imageHeight];
-  const mask: MaskData =
-    shape.type === ShapeType.mask
-      ? {
-          counts: shape.rle?.counts ?? emptyMaskCounts,
-          size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
-        }
-      : shape.polygonMode === "mask"
-        ? {
-            counts: shape.rle?.counts ?? emptyMaskCounts,
-            size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
-          }
-        : {
-            // Raw polygon mode keeps vector geometry as primary payload.
-            counts: emptyMaskCounts,
-            size: [shape.imageHeight, shape.imageWidth],
-          };
-
-  const inferenceMetadata =
-    shape.type === ShapeType.polygon && shape.polygonMode === "polygon"
-      ? buildPolygonInferenceMetadata({
-          polygon_points: shape.polygonPoints,
-        })
-      : {};
+  const mask: MaskData = {
+    counts: shape.rle?.counts ?? emptyMaskCounts,
+    size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
+  };
+  const inferenceMetadata = {};
 
   return { mask, inferenceMetadata };
 };
@@ -94,14 +75,6 @@ export const applyEditedShapeDataToAnnotation = (
   if ((shape.type === ShapeType.mask || shape.type === ShapeType.polygon) && ann.is_type(BaseSchema.Mask)) {
     if ("counts" in shape && Array.isArray(shape.counts)) {
       (ann as Mask).data.counts = shape.counts;
-    }
-    if (shape.type === ShapeType.polygon) {
-      ann.data.inference_metadata = {
-        ...ann.data.inference_metadata,
-        ...buildPolygonInferenceMetadata({
-          polygon_points: shape.polygonPoints,
-        }),
-      };
     }
     return true;
   }
