@@ -22,7 +22,7 @@ License: CECILL-C
     <Line
       points={[position.x, 0, position.x, stageHeight]}
       stroke="white"
-      strokeWidth={1}
+      
       opacity={0.75}
       dash={[5, 1]}
       listening={false}
@@ -30,7 +30,7 @@ License: CECILL-C
     <Line
       points={[0, position.y, stageWidth, position.y]}
       stroke="white"
-      strokeWidth={1}
+      
       opacity={0.75}
       dash={[5, 1]}
       listening={false}

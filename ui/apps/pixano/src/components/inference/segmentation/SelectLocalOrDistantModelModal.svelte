@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Check, Server, Wand2Icon } from "lucide-svelte";
+  import { Check, HardDrives, MagicWand } from "phosphor-svelte";
 
   import {
     Checkbox,
@@ -78,7 +78,7 @@ License: CECILL-C
 >
   <div class="bg-primary/5 p-5 border-b border-border flex items-center gap-3">
     <div class="p-2 rounded-lg bg-primary/10">
-      <Wand2Icon size={18} class="text-primary" />
+      <MagicWand weight="regular" size={22} class="text-primary" />
     </div>
     <p class="font-bold text-sm tracking-tight">Smart Segmentation Model</p>
   </div>
@@ -87,7 +87,7 @@ License: CECILL-C
     {#if !inferenceServerStore.value.connected}
       <div class="flex flex-col items-center gap-4 py-4 text-center">
         <div class="p-3 rounded-full bg-muted/50">
-          <Server size={24} class="text-muted-foreground/50" />
+          <HardDrives weight="regular" size={28} class="text-muted-foreground/50" />
         </div>
         <p class="text-xs text-muted-foreground leading-relaxed px-4">
           Connect to an inference server from the toolbar to use AI models.
@@ -165,7 +165,7 @@ License: CECILL-C
             {#snippet children({ checked })}
               <span class="flex items-center justify-center text-current h-full w-full">
                 {#if checked}
-                  <Check class="h-3.5 w-3.5" strokeWidth={3} />
+                  <Check class="h-3.5 w-3.5"  />
                 {/if}
               </span>
             {/snippet}

@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Slider } from "bits-ui";
-  import { ZoomIn, ZoomOut } from "lucide-svelte";
+  import { MagnifyingGlassPlus, MagnifyingGlassMinus } from "phosphor-svelte";
 
   import EntityTimelineRow from "./EntityTimelineRow.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -75,7 +75,7 @@ License: CECILL-C
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-card shadow flex justify-between">
       <VideoControls {resetHighlight} />
       <div class="relative flex justify-between items-center gap-4 p-4 w-full max-w-[250px]">
-        <div title="Zoom out" class="text-primary"><ZoomOut /></div>
+        <div title="Zoom out" class="text-primary"><MagnifyingGlassMinus weight="regular" /></div>
         <Slider.Root
           type="multiple"
           bind:value={timelineZoom.value}
@@ -91,7 +91,7 @@ License: CECILL-C
             class="block h-4 w-4 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           />
         </Slider.Root>
-        <div title="Zoom in" class="text-primary"><ZoomIn /></div>
+        <div title="Zoom in" class="text-primary"><MagnifyingGlassPlus weight="regular" /></div>
       </div>
     </div>
   </div>

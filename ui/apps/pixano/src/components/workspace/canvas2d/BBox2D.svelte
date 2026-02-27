@@ -10,6 +10,7 @@ License: CECILL-C
 
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
   import LabelTag from "./LabelTag.svelte";
+  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
@@ -40,13 +41,14 @@ License: CECILL-C
   let trComponent: { node: Konva.Transformer } | undefined = $state();
 
   let editing = $derived(bbox.ui.displayControl.editing);
-  let color = $derived(
-    colorScale(
+  let color = $derived.by(() => {
+    if (bbox.ui.displayControl.highlighted === "none") return NEUTRAL_ENTITY_COLOR;
+    return colorScale(
       (bbox.ui.top_entities ?? []).length > 0
         ? (bbox.ui.top_entities ?? [])[0].id
         : bbox.data.entity_id,
-    ),
-  );
+    );
+  });
 
   // Attach transformer to rect when editing
   $effect(() => {
@@ -137,7 +139,7 @@ License: CECILL-C
     width={bbox.data.coords[2]}
     height={bbox.data.coords[3]}
     stroke={color}
-    strokeWidth={(bbox.ui.strokeFactor ?? 1) * BBOX_STROKEWIDTH}
+    
     strokeScaleEnabled={false}
     perfectDrawEnabled={false}
     shadowForStrokeEnabled={false}

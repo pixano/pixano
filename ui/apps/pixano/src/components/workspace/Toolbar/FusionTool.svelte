@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Check, ReplaceAll, X } from "lucide-svelte";
+  import { Check, ArrowsLeftRight, X } from "phosphor-svelte";
 
   import { ToolType, fusionTool, panTool, type SelectionTool } from "$lib/tools";
   import { Annotation, IconButton, cn } from "$lib/ui";
@@ -121,7 +121,7 @@ License: CECILL-C
       selectedTool.value?.type === ToolType.Fusion ? "text-primary" : "text-foreground",
     )}
   >
-    <ReplaceAll class="h-4.5 w-4.5" />
+    <ArrowsLeftRight weight="regular" class="h-4.5 w-4.5" />
   </IconButton>
   {#if selectedTool.value?.type === ToolType.Fusion}
     <div

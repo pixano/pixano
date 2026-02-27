@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   
   // Imports
-  import { BoxSelectIcon, Check, Filter } from "lucide-svelte";
+  import { BoundingBox, Check, Funnel } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import { Switch, Tooltip } from "bits-ui";
@@ -133,7 +133,7 @@ License: CECILL-C
   {#if preAnnotationIsActive.value}
     <div class="my-2 flex items-center">
       <IconButton tooltipContent="confidence slider">
-        <Filter />
+        <Funnel weight="regular" />
       </IconButton>
       <div class="px-8 w-full">
         <div class="flex gap-4 w-full">
@@ -161,7 +161,7 @@ License: CECILL-C
     {#if annotationToReview}
       <div class="bg-card rounded-sm p-4 pb-0 mt-4 relative max-h-[60vh] overflow-y-auto">
         <p class="flex gap-2">
-          <BoxSelectIcon {color} />
+          <BoundingBox weight="regular" {color} />
           <span>{annotationToReview.id}</span>
         </p>
         <div class="flex flex-col gap-4 py-4">

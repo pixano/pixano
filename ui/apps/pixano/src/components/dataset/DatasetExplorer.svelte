@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Loader2Icon } from "lucide-svelte";
+  import { CircleNotch } from "phosphor-svelte";
 
   import type { DatasetBrowser } from "$lib/ui";
   import { LoadingModal, PrimaryButton, WarningModal } from "$lib/ui";
@@ -112,7 +112,7 @@ License: CECILL-C
       >
         {#if isLoadingTableItems}
           <div class="flex-grow flex justify-center items-center">
-            <Loader2Icon class="animate-spin text-primary opacity-50" />
+            <CircleNotch weight="regular" class="animate-spin text-primary opacity-50" />
           </div>
           <!-- Display table -->
         {:else if !selectedDataset.isErrored}

@@ -49,7 +49,7 @@ export class AssetManagerImpl implements AssetManager {
 
   async loadVideoFrame(viewName: string, frameIndex: number): Promise<HTMLImageElement> {
     const uris = this.frameUrisByView.get(viewName);
-    if (!uris || frameIndex < 0 || frameIndex >= uris.length) {
+    if (!uris || frameIndex <0 || frameIndex >= uris.length) {
       throw new Error(`Frame ${frameIndex} not available for view "${viewName}"`);
     }
     return this.loadImage(uris[frameIndex]);
@@ -60,7 +60,7 @@ export class AssetManagerImpl implements AssetManager {
     if (!uris) return;
 
     const end = Math.min(startFrame + count, uris.length);
-    for (let i = startFrame; i < end; i++) {
+    for (let i = startFrame; i <end; i++) {
       const uri = uris[i];
       if (!this.imageCache.has(uri) && !this.loadingPromises.has(uri)) {
         // Fire and forget — preloading is best-effort

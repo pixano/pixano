@@ -8,7 +8,7 @@ License: CECILL-C
   // External library imports
 
   // Internal library imports
-  import { Pencil } from "lucide-svelte";
+  import { Pencil } from "phosphor-svelte";
   import { Slider as SliderPrimitive } from "bits-ui";
 
   import { Switch } from "bits-ui";

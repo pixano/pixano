@@ -249,7 +249,7 @@ function getChunkRange(chunkIndex: number): { startFrame: number; batchSize: num
   const totalFrames = getTotalFrames();
   if (totalFrames <= 0) return undefined;
   const startFrame = chunkIndex * NETWORK_BATCH_SIZE;
-  if (startFrame >= totalFrames || chunkIndex < 0) return undefined;
+  if (startFrame >= totalFrames || chunkIndex <0) return undefined;
   return {
     startFrame,
     batchSize: Math.min(NETWORK_BATCH_SIZE, totalFrames - startFrame),
@@ -346,13 +346,13 @@ export function primePlaybackPrefetch(frameIndex: number): void {
   const anchor = clampFrameIndex(frameIndex);
   preloadAround(anchor);
 
-  if (anchor % NETWORK_BATCH_SIZE < PLAYBACK_PREFETCH_TRIGGER) {
+  if (anchor % NETWORK_BATCH_SIZE <PLAYBACK_PREFETCH_TRIGGER) {
     return;
   }
 
   const nextChunk = chunkForFrame(anchor) + 1;
   for (const viewName of videoViewNames.value) {
-    for (let step = 0; step < PLAYBACK_EXTRA_PREFETCH_CHUNKS; step++) {
+    for (let step = 0; step <PLAYBACK_EXTRA_PREFETCH_CHUNKS; step++) {
       void requestChunk(viewName, nextChunk + step);
     }
   }
@@ -480,7 +480,7 @@ async function requestFrameRange(
 
   if (token === sessionVersion) {
     const endFrame = startFrame + batchSize;
-    for (let frame = startFrame; frame < endFrame; frame++) {
+    for (let frame = startFrame; frame <endFrame; frame++) {
       if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
         resolveFrameWaiters(viewName, frame, false);
       }
@@ -551,7 +551,7 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
     try {
       const endFrame = startFrame + batchSize;
       let isCompleteChunk = true;
-      for (let frame = startFrame; frame < endFrame; frame++) {
+      for (let frame = startFrame; frame <endFrame; frame++) {
         if (!runtime.availableFrames.has(frame)) {
           isCompleteChunk = false;
           break;
@@ -564,7 +564,7 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
     } finally {
       if (token === sessionVersion) {
         const endFrame = startFrame + batchSize;
-        for (let frame = startFrame; frame < endFrame; frame++) {
+        for (let frame = startFrame; frame <endFrame; frame++) {
           if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
             resolveFrameWaiters(viewName, frame, false);
           }
@@ -820,7 +820,7 @@ async function updateViewInternal(imageIndex: number): Promise<boolean> {
     videoViewNames.value.map((viewName) => ensureFrameReady(viewName, target)),
   );
 
-  for (let i = 0; i < videoViewNames.value.length; i++) {
+  for (let i = 0; i <videoViewNames.value.length; i++) {
     const loaded = loadedFrames[i];
     if (loaded) {
       pushImageToCanvasView(videoViewNames.value[i], loaded);

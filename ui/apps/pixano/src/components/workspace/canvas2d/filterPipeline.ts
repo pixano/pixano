@@ -108,17 +108,17 @@ export class CanvasFilterPipeline {
       const blueMin = filters.blueRange[0];
       const blueMax = filters.blueRange[1];
 
-      for (let i = 0; i < data.length; i += 4) {
+      for (let i = 0; i <data.length; i += 4) {
         const red = data[i];
         const green = data[i + 1];
         const blue = data[i + 2];
 
         if (
-          red < redMin ||
+          red <redMin ||
           red > redMax ||
-          green < greenMin ||
+          green <greenMin ||
           green > greenMax ||
-          blue < blueMin ||
+          blue <blueMin ||
           blue > blueMax
         ) {
           data[i] = 0;

@@ -8,17 +8,7 @@ License: CECILL-C
   
   /* eslint-disable svelte/no-at-html-tags */
   // Imports
-  import {
-    Eye,
-    EyeOff,
-    GitCommitHorizontal,
-    Link,
-    Pencil,
-    Square,
-    Trash2,
-    Type,
-    VenetianMask,
-  } from "lucide-svelte";
+  import { Eye, EyeClosed, GitCommit, Link, Pencil, Square, Trash, TextT, Ghost } from "phosphor-svelte";
 
   import { ToolType } from "$lib/tools";
   import { Button } from "bits-ui";
@@ -133,20 +123,20 @@ License: CECILL-C
       {#if childVisible}
         <Eye class="h-3.5 w-3.5" />
       {:else}
-        <EyeOff class="h-3.5 w-3.5" />
+        <EyeClosed weight="regular" class="h-3.5 w-3.5" />
       {/if}
     </IconButton>
     <div class="flex items-center text-muted-foreground/60">
       {#if child.is_type(BaseSchema.BBox)}
         <Square class="h-3.5 w-3.5 mx-1" />
       {:else if child.is_type(BaseSchema.Mask)}
-        <VenetianMask class="h-3.5 w-3.5 mx-1 opacity-60" />
+        <Ghost weight="regular" class="h-3.5 w-3.5 mx-1 opacity-60" />
       {:else if child.is_type(BaseSchema.Keypoints)}
         <img src={keypointsIcon} alt="keypoints icon" class="h-3.5 w-3.5 mx-1 opacity-60" />
       {:else if child.is_type(BaseSchema.Tracklet)}
-        <GitCommitHorizontal class="h-3.5 w-3.5 mx-1" />
+        <GitCommit weight="regular" class="h-3.5 w-3.5 mx-1" />
       {:else if child.is_type(BaseSchema.TextSpan)}
-        <Type class="h-3.5 w-3.5 mx-1" />
+        <TextT weight="regular" class="h-3.5 w-3.5 mx-1" />
       {/if}
     </div>
     <span
@@ -186,7 +176,7 @@ License: CECILL-C
         onclick={() => deleteEntity(entity, child)}
         class="h-7 w-7 text-muted-foreground hover:text-destructive"
       >
-        <Trash2 class="h-3.5 w-3.5" />
+        <Trash weight="regular" class="h-3.5 w-3.5" />
       </IconButton>
     {/if}
   </div>
@@ -225,13 +215,13 @@ License: CECILL-C
             <Square class="h-4" />
           {/if}
           {#if trackChild.table_info.base_schema === BaseSchema.Mask}
-            <VenetianMask class="h-4" />
+            <Ghost weight="regular" class="h-4" />
           {/if}
           {#if trackChild.table_info.base_schema === BaseSchema.Keypoints}
             <img src={keypointsIcon} alt="keypoints icon" class="h-4" />
           {/if}
           {#if trackChild.table_info.base_schema === BaseSchema.TextSpan}
-            <Type class="h-4" />
+            <TextT weight="regular" class="h-4" />
           {/if}
         </IconButton>
 
@@ -255,7 +245,7 @@ License: CECILL-C
             redconfirm
             onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
           >
-            <Trash2 class="h-4" />
+            <Trash weight="regular" class="h-4" />
           </IconButton>
         </div>
       {/if}

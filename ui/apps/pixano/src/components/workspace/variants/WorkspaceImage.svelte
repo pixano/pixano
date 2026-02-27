@@ -11,7 +11,7 @@ License: CECILL-C
 
   import { Canvas2D } from "$components/workspace/canvas2d";
   import type { SelectionTool } from "$lib/tools";
-  import { Loader2Icon } from "lucide-svelte";
+  import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import {
@@ -127,7 +127,7 @@ License: CECILL-C
       bboxes={itemBboxes.value}
       masks={itemMasks.value}
       keypoints={itemKeypoints.value}
-      filters={filters.value as ImageFilters}
+      filters={filters.value as unknown as ImageFilters}
       canvasSize={resize}
       imageSmoothing={imageSmoothing.value}
       selectedTool={selectedTool.value}
@@ -143,7 +143,7 @@ License: CECILL-C
 
   {#if !loaded}
     <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
-      <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
+      <CircleNotch weight="regular" class="h-10 w-10 animate-spin stroke-white" />
     </div>
   {/if}
 </div>

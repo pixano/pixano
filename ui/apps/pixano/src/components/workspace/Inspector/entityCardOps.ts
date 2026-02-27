@@ -29,18 +29,19 @@ export function setEntityDisplayControl(
   updates: Partial<DisplayControl>,
   entitiesStore: ReactiveValue<Entity[]>,
 ): void {
+  const shouldCloseOthers = updates.open === true;
   const hasRequestedChange = Object.entries(updates).some(([key, value]) => {
     const currentValue = currentDisplayControl[key as keyof DisplayControl];
     return currentValue !== value;
   });
-  if (!hasRequestedChange) return;
-
-  const shouldCloseOthers = updates.open === true;
+  if (!hasRequestedChange && !shouldCloseOthers) return;
 
   entitiesStore.update((currentEntities) => {
     return currentEntities.map((candidate) => {
       if (candidate.id === entityId) {
-        updateDisplayControl(candidate, updates);
+        if (hasRequestedChange) {
+          updateDisplayControl(candidate, updates);
+        }
       } else if (shouldCloseOthers && candidate.ui.displayControl.open) {
         updateDisplayControl(candidate, { open: false });
       }

@@ -10,6 +10,7 @@ License: CECILL-C
   import { Image as KonvaImage } from "svelte-konva";
   import type Konva from "konva";
 
+  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import { ToolType, type SelectionTool } from "$lib/tools";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
@@ -124,7 +125,7 @@ License: CECILL-C
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < spacing) return [p2];
+    if (dist <spacing) return [p2];
     const points: Point2D[] = [];
     const steps = Math.ceil(dist / spacing);
     for (let i = 1; i <= steps; i += 1) {
@@ -169,7 +170,7 @@ License: CECILL-C
           ? mask.ui.top_entities[0].id
           : mask.data.entity_id;
       const hasCanvas = mask.ui.bitmapCanvas ? "C" : "";
-      fp += `${mask.id}:${hasCanvas}${source}:${bounds?.x ?? 0},${bounds?.y ?? 0},${bounds?.width ?? 0},${bounds?.height ?? 0}:${colorId}:${mask.ui.displayControl.hidden};`;
+      fp += `${mask.id}:${hasCanvas}${source}:${bounds?.x ?? 0},${bounds?.y ?? 0},${bounds?.width ?? 0},${bounds?.height ?? 0}:${colorId}:${mask.ui.displayControl.hidden}:${mask.ui.displayControl.highlighted};`;
     }
     return fp;
   });
@@ -236,7 +237,9 @@ License: CECILL-C
         mask.ui.top_entities && mask.ui.top_entities.length > 0
           ? mask.ui.top_entities[0].id
           : mask.data.entity_id;
-      const color = colorScaleFn(colorId);
+      const isNeutralMask = mask.ui.displayControl.highlighted === "none";
+      const color = isNeutralMask ? NEUTRAL_ENTITY_COLOR : colorScaleFn(colorId);
+      const overlayAlpha = isNeutralMask ? 0.2 : 0.5;
 
       // Prioritize OffscreenCanvas (from RLE decode) -- avoids async Image loading
       let imageSource: CanvasImageSource | null = mask.ui.bitmapCanvas ?? null;
@@ -267,14 +270,14 @@ License: CECILL-C
         scratchCtx.drawImage(imageSource, 0, 0);
         scratchCtx.globalCompositeOperation = "source-in";
         scratchCtx.fillStyle = color;
-        scratchCtx.globalAlpha = 0.5;
+        scratchCtx.globalAlpha = overlayAlpha;
         scratchCtx.fillRect(0, 0, image.width, image.height);
         scratchCtx.globalAlpha = 1.0;
       } else {
         scratchCtx.drawImage(imageSource, bounds.x, bounds.y, bounds.width, bounds.height);
         scratchCtx.globalCompositeOperation = "source-in";
         scratchCtx.fillStyle = color;
-        scratchCtx.globalAlpha = 0.5;
+        scratchCtx.globalAlpha = overlayAlpha;
         scratchCtx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
         scratchCtx.globalAlpha = 1.0;
       }

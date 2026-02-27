@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowRight, ChevronLeft, Loader2Icon, Save } from "lucide-svelte";
+  import { ArrowLeft, ArrowRight, CaretLeft, CircleNotch, FloppyDisk } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import { cn, IconButton } from "$lib/ui";
@@ -69,7 +69,7 @@ License: CECILL-C
   >
     {#if navigating.from !== null}
       <div class="flex items-center gap-3 px-4">
-        <Loader2Icon class="animate-spin text-primary h-4 w-4" />
+        <CircleNotch weight="regular" class="animate-spin text-primary h-4 w-4" />
         <span
           class="text-[11px] text-muted-foreground animate-pulse font-bold uppercase tracking-wider"
         >
@@ -84,7 +84,7 @@ License: CECILL-C
           class="group flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-all duration-200 border border-transparent hover:border-primary/10"
           title="Back to dataset"
         >
-          <ChevronLeft
+          <CaretLeft weight="regular"
             class="h-4 w-4 text-primary opacity-0 -ml-1 group-hover:opacity-100 transition-all duration-300"
           />
           <span
@@ -154,7 +154,7 @@ License: CECILL-C
               : "bg-background border-border text-muted-foreground opacity-40",
           )}
         >
-          <Save
+          <FloppyDisk weight="regular"
             class={cn(
               "h-5 w-5 transition-transform duration-300",
               saveData.value.length > 0 && "scale-110",

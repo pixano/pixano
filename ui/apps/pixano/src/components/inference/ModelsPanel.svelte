@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { RefreshCw, Server, Sparkles, X } from "lucide-svelte";
+  import { ArrowsClockwise, HardDrives, Sparkle, X } from "phosphor-svelte";
 
   import ConnectToServerModal from "./ConnectToServerModal.svelte";
   import { disconnectFromProvider, refreshInferenceModels } from "$lib/services/inferenceService";
@@ -47,7 +47,7 @@ License: CECILL-C
   <div class="flex items-center justify-between border-b border-border/50 pb-4">
     <div class="flex items-center gap-2.5">
       <div class="p-2 rounded-lg bg-primary/5">
-        <Sparkles size={18} class="text-primary" />
+        <Sparkle weight="regular" size={22} class="text-primary" />
       </div>
       <h2 class="text-xs font-bold text-foreground uppercase tracking-[0.1em]">Inference</h2>
     </div>
@@ -58,7 +58,7 @@ License: CECILL-C
           onclick={() => void refreshInferenceModels()}
           class="h-8 w-8"
         >
-          <RefreshCw size={14} />
+          <ArrowsClockwise weight="regular" size={18} />
         </IconButton>
       {/if}
     </div>
@@ -112,7 +112,7 @@ License: CECILL-C
       <div
         class="w-12 h-12 rounded-full bg-background flex items-center justify-center shadow-sm border border-border/50"
       >
-        <Server size={24} class="text-muted-foreground/40" />
+        <HardDrives weight="regular" size={28} class="text-muted-foreground/40" />
       </div>
       <div class="space-y-1.5">
         <p class="text-sm font-bold text-foreground">Connect to server</p>

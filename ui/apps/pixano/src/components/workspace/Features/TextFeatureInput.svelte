@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { CheckCheckIcon } from "lucide-svelte";
+  import { Checks } from "phosphor-svelte";
 
   import { Annotation, Entity, Item } from "$lib/ui";
   import { Input, type FeaturesValues } from "$lib/ui";
@@ -78,7 +78,7 @@ License: CECILL-C
     {/if}
     {#if isSaved}
       <span class="text-green-700">
-        <CheckCheckIcon />
+        <Checks weight="regular" />
       </span>
     {/if}
   {:else if feature.value || feature.value === 0}

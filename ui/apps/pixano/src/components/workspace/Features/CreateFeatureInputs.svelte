@@ -10,7 +10,7 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import { Checkbox, Select } from "bits-ui";
-  import { Check, ChevronsUpDown } from "lucide-svelte";
+  import { Check, CaretUpDown } from "phosphor-svelte";
 
   import { BaseSchema, Input, type ItemFeature } from "$lib/ui";
 
@@ -109,7 +109,7 @@ License: CECILL-C
           {#snippet children({ checked })}
             <span class="flex items-center justify-center text-current h-full w-full">
               {#if checked}
-                <Check class="h-3.5 w-3.5" strokeWidth={3} />
+                <Check class="h-3.5 w-3.5"  />
               {/if}
             </span>
           {/snippet}
@@ -131,9 +131,9 @@ License: CECILL-C
         <Select.Trigger
           class="justify-between h-10 px-4 py-2 border border-input rounded-md bg-background text-sm inline-flex items-center w-[200px]"
         >
-          {#snippet children({ selectedLabel })}
-            {selectedLabel || `Select a ${feature.label}`}
-            <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {#snippet children()}
+            {feature.label}
+            <CaretUpDown weight="regular" class="ml-2 h-4 w-4 shrink-0 opacity-50" />
           {/snippet}
         </Select.Trigger>
         <Select.Portal>

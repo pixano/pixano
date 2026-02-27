@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   
-  import { CircleSlash2 } from "lucide-svelte";
+  import { Prohibit } from "phosphor-svelte";
   import { IconButton } from "$lib/ui";
 
   import { COUNTS_COLUMNS_PREFIX } from "$lib/constants";
@@ -93,6 +93,6 @@ License: CECILL-C
     onchange={handleFilterText}
   />
   <IconButton onclick={handleClearFilter} tooltipContent={"Clear filter"}>
-    <CircleSlash2 />
+    <Prohibit weight="regular" />
   </IconButton>
 </div>

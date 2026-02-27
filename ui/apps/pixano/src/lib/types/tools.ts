@@ -205,8 +205,7 @@ type BaseTool<T extends ToolType> = {
   postProcessor?: ToolPostProcessor;
 };
 
-export type AllTool = BaseTool<
-  | ToolType.Rectangle
+export type AllTool = BaseTool<| ToolType.Rectangle
   | ToolType.Pan
   | ToolType.Delete
   | ToolType.Classification

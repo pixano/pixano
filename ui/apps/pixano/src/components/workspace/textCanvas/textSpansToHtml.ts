@@ -40,7 +40,7 @@ const getTextSpanPositions = (
   colorScale: (value: string) => string,
 ): SpanPosition[] => {
   const positions: SpanPosition[] = [];
-  for (let i = 0; i < textSpan.data.spans_start.length; i++) {
+  for (let i = 0; i <textSpan.data.spans_start.length; i++) {
     const start = textSpan.data.spans_start[i];
     let end = textSpan.data.spans_end[i];
     //glue next span if it's the next word
@@ -82,7 +82,7 @@ const getHtmlFromTree = (tree: SpanTree): string => {
   let currentPosition = 0;
 
   for (const child of sortedChildren) {
-    if (currentPosition < child.start - tree.start) {
+    if (currentPosition <child.start - tree.start) {
       html += treeContent.slice(currentPosition, child.start - tree.start);
     }
     html += getHtmlFromTree(child);
@@ -91,7 +91,7 @@ const getHtmlFromTree = (tree: SpanTree): string => {
   }
 
   const remainingContent =
-    currentPosition < tree.end - tree.start ? treeContent.slice(currentPosition) : "";
+    currentPosition <tree.end - tree.start ? treeContent.slice(currentPosition) : "";
 
   return html + remainingContent + (tree.textSpan ? CLOSING_TAG : "");
 };

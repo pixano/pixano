@@ -168,7 +168,7 @@ License: CECILL-C
       const candidate_tracks = topEntity.ui.childs?.filter(
         (ann) =>
           ann.is_type(BaseSchema.Tracklet) &&
-          ann.data.view_name === newShape.value.viewRef.name &&
+          ann.data.view_name === ("viewRef" in newShape.value ? newShape.value.viewRef?.name : "") &&
           (ann as Tracklet).data.start_frame <= currentFrameIndex.value &&
           (ann as Tracklet).data.end_frame >= lastFrameIndex,
       );

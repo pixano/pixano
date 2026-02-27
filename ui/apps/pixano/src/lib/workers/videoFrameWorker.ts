@@ -224,7 +224,7 @@ class FrameDiskCache {
         }
       }
 
-      for (let attempt = 0; attempt < 4; attempt++) {
+      for (let attempt = 0; attempt <4; attempt++) {
         try {
           const viewDir = await this.getViewDir(viewName, true);
           if (!viewDir) return false;

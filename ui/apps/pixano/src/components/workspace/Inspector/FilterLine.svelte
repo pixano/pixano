@@ -7,11 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { Checkbox } from "bits-ui";
-  import { Check } from "lucide-svelte";
-
-  import { IconButton } from "$lib/ui";
-
   import {
     getOperatorsForType,
     type FieldCol,
@@ -27,87 +22,122 @@ License: CECILL-C
 
   let { filter = $bindable(), tableColumns, fieldColumns }: Props = $props();
 
-  let ftype: string = $state("");
+  let ftype: string = $state("str");
   let fieldOperators: FieldOperator[] = $state([]);
 
+  const syncFieldConfig = () => {
+    const tableFields = fieldColumns[filter.table] ?? [];
+    if (tableFields.length === 0) return;
+
+    if (!tableFields.find((field) => field.name === filter.name)) {
+      filter.name = tableFields[0].name;
+    }
+
+    ftype = tableFields.find((field) => field.name === filter.name)?.type ?? "str";
+    fieldOperators = getOperatorsForType(ftype);
+
+    if (!fieldOperators.includes(filter.fieldOperator)) {
+      filter.fieldOperator = fieldOperators[0];
+    }
+  };
+
   const handleTableChange = () => {
-    filter.name = fieldColumns[filter.table][0].name;
-    handleFieldChange();
+    syncFieldConfig();
   };
 
   const handleFieldChange = () => {
-    ftype = fieldColumns[filter.table].find((field) => field.name === filter.name)?.type ?? "str";
-    fieldOperators = getOperatorsForType(ftype);
-    filter.fieldOperator = fieldOperators[0];
+    syncFieldConfig();
   };
 
   const handleBoolValClick = (b: boolean) => {
     filter.value = b;
   };
 
+  const boolValue = $derived.by(() => filter.value === true || filter.value === "true");
+
   // Synchronize field/operator state from initial table selection
-  handleTableChange();
+  syncFieldConfig();
 </script>
 
-<div class="flex justify-start gap-2 mr-4 h-10 overflow-hidden">
-  {#if filter.logicOperator !== "FIRST"}
-    <IconButton disabled>{filter.logicOperator}</IconButton>
-  {/if}
-  <select
-    title={`Select table (${filter.table})`}
-    class="rounded-lg font-normal"
-    bind:value={filter.table}
-    onchange={handleTableChange}
-  >
-    {#each tableColumns as table}
-      <option value={table}>
-        {table}
-      </option>
-    {/each}
-  </select>
-  <select
-    title={`Select field (${filter.name})`}
-    class="rounded-lg font-normal"
-    bind:value={filter.name}
-    onchange={handleFieldChange}
-  >
-    {#each fieldColumns[filter.table] as { name }}
-      <option value={name}>
-        {name}
-      </option>
-    {/each}
-  </select>
-  <select
-    title={`Select field operator`}
-    class="rounded-lg font-normal"
-    bind:value={filter.fieldOperator}
-  >
-    {#each fieldOperators as fieldOperator}
-      <option value={fieldOperator}>
-        {fieldOperator}
-      </option>
-    {/each}
-  </select>
-</div>
-{#if ftype === "bool"}
-  <Checkbox.Root
-    checked={filter.value ? true : false}
-    onCheckedChange={handleBoolValClick}
-    class="peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
-  >
-    {#snippet children({ checked })}
-      <span class="flex items-center justify-center text-current h-full w-full">
-        {#if checked}
-          <Check class="h-3.5 w-3.5" strokeWidth={3} />
-        {/if}
+<div class="rounded-lg border border-border/40 bg-background/70 p-2 space-y-2">
+  <div class="flex flex-wrap items-center gap-2">
+    {#if filter.logicOperator !== "FIRST"}
+      <span class="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        {filter.logicOperator}
       </span>
-    {/snippet}
-  </Checkbox.Root>
-{:else}
-  <input
-    type="text"
-    bind:value={filter.value}
-    placeholder="filter value"
-    class="h-10 pl-10 pr-4 rounded-lg border font-normal text-foreground placeholder-muted-foreground bg-background border-border shadow-sm"
-  />
-{/if}
+    {/if}
+
+    <select
+      title={`Select table (${filter.table})`}
+      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
+      bind:value={filter.table}
+      onchange={handleTableChange}
+    >
+      {#each tableColumns as table}
+        <option value={table}>
+          {table}
+        </option>
+      {/each}
+    </select>
+
+    <select
+      title={`Select field (${filter.name})`}
+      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
+      bind:value={filter.name}
+      onchange={handleFieldChange}
+    >
+      {#each fieldColumns[filter.table] as { name }}
+        <option value={name}>
+          {name}
+        </option>
+      {/each}
+    </select>
+
+    <select
+      title="Select field operator"
+      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
+      bind:value={filter.fieldOperator}
+    >
+      {#each fieldOperators as fieldOperator}
+        <option value={fieldOperator}>
+          {fieldOperator}
+        </option>
+      {/each}
+    </select>
+  </div>
+
+  {#if ftype === "bool"}
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] uppercase tracking-wide text-muted-foreground">Value</span>
+      <button
+        type="button"
+        onclick={() => handleBoolValClick(true)}
+        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors ${
+          boolValue
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border/60 bg-background text-foreground hover:bg-accent"
+        }`}
+      >
+        true
+      </button>
+      <button
+        type="button"
+        onclick={() => handleBoolValClick(false)}
+        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors ${
+          !boolValue
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border/60 bg-background text-foreground hover:bg-accent"
+        }`}
+      >
+        false
+      </button>
+    </div>
+  {:else}
+    <input
+      type={ftype === "int" || ftype === "float" ? "number" : "text"}
+      bind:value={filter.value}
+      placeholder="Filter value"
+      class="h-8 w-full rounded-md border border-border/60 bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+    />
+  {/if}
+</div>

@@ -5,13 +5,13 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Loader2Icon } from "lucide-svelte";
+  import { CircleNotch } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { cubicOut } from "svelte/easing";
   import { fade, fly } from "svelte/transition";
 
-  import Inspector from "./Inspector/InspectorInspector.svelte";
+  import WorkspaceInspectorPanel from "./Inspector/WorkspaceInspectorPanel.svelte";
   import LoadModelModal from "./LoadModelModal.svelte";
   import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
@@ -200,7 +200,7 @@ License: CECILL-C
     <div
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-black/10 z-50"
     >
-      <Loader2Icon class="animate-spin" />
+      <CircleNotch weight="regular" class="animate-spin" />
     </div>
   {/if}
   <div
@@ -231,7 +231,7 @@ License: CECILL-C
     style={`width: ${objectInspectorAreaMaxWidth}px`}
     in:fly={{ x: 20, duration: 400, delay: 200, easing: cubicOut }}
   >
-    <Inspector {isLoading} />
+    <WorkspaceInspectorPanel {isLoading} />
   </div>
   <LoadModelModal />
 </div>

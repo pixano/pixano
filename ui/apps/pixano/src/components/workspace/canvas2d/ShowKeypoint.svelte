@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { Rect } from "svelte-konva";
 
+  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import { findRectBoundaries } from "$lib/utils/keypointsUtils";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
@@ -65,15 +66,17 @@ License: CECILL-C
 {#if keypoints}
   {#each keypoints as keypointStructure}
     {#if !keypointStructure.ui?.displayControl.hidden && keypointStructure.viewRef?.name === viewRef.name}
+      {@const colorId = (keypointStructure.ui?.top_entities ?? []).length > 0
+        ? (keypointStructure.ui?.top_entities ?? [])[0].id
+        : keypointStructure.entityRef?.id ?? ""}
+      {@const keypointColor = keypointStructure.ui?.displayControl.highlighted === "none"
+        ? NEUTRAL_ENTITY_COLOR
+        : colorScale(colorId)}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {keypointStructure}
         {zoomFactor}
-        color={colorScale(
-          (keypointStructure.ui?.top_entities ?? []).length > 0
-            ? (keypointStructure.ui?.top_entities ?? [])[0].id
-            : keypointStructure.entityRef?.id ?? "",
-        )}
+        color={keypointColor}
         {isPlaybackActive}
       >
         {@const bounds = findRectBoundaries(keypointStructure.graph.vertices)}
@@ -82,12 +85,8 @@ License: CECILL-C
           y={bounds.y - 10 / zoomFactor}
           width={bounds.width + 20 / zoomFactor}
           height={bounds.height + 20 / zoomFactor}
-          fill={colorScale(
-            (keypointStructure.ui?.top_entities ?? []).length > 0
-              ? (keypointStructure.ui?.top_entities ?? [])[0].id
-              : keypointStructure.entityRef?.id ?? "",
-          )}
-          stroke="rgba(135, 47, 100, 0.8)"
+          fill={keypointColor}
+          stroke={keypointStructure.ui?.displayControl.highlighted === "none" ? NEUTRAL_ENTITY_COLOR : "rgba(135, 47, 100, 0.8)"}
           id="move-keyPoints-group"
           opacity={keypointStructure.ui?.displayControl.editing ? 0.3 : 0}
           onclick={() => onClick(keypointStructure)}

@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Trash2 } from "lucide-svelte";
+  import { Trash } from "phosphor-svelte";
 
   interface Props {
     index: number;
@@ -25,7 +25,7 @@ License: CECILL-C
     class="rounded-full p-[6px] hover:bg-primary-light transition duration-300"
     onclick={handleDeleteChoice}
   >
-    <Trash2 size={15} />
+    <Trash weight="regular" size={19} />
   </button>
 </div>
 

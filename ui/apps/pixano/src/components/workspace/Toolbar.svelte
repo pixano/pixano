@@ -5,15 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import {
-    Eraser,
-    MousePointer2,
-    PaintBucket,
-    Paintbrush,
-    PencilLine,
-    Square,
-    Waypoints,
-  } from "lucide-svelte";
+  import { Eraser, Cursor, PaintBucket, PaintBrush, PencilSimple, Square, Graph } from "phosphor-svelte";
   import {
     type PolygonOutputMode,
     ToolType,
@@ -79,7 +71,7 @@ License: CECILL-C
     selected={selectedTool.value?.type === ToolType.Pan}
     class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
   >
-    <MousePointer2 class="h-4.5 w-4.5" />
+    <Cursor weight="regular" class="h-4.5 w-4.5" />
   </IconButton>
 
   <IconButton
@@ -118,7 +110,7 @@ License: CECILL-C
           onclick={() => setPolygonOutputMode("polygon")}
           class="h-8 w-8"
         >
-          <Waypoints class="h-4.5 w-4.5" />
+          <Graph weight="regular" class="h-4.5 w-4.5" />
         </IconButton>
         <IconButton
           tooltipContent="Convert Polygon To Mask"
@@ -146,7 +138,7 @@ License: CECILL-C
       selected={selectedTool.value?.type === ToolType.Brush}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <Paintbrush class="h-4.5 w-4.5" />
+      <PaintBrush weight="regular" class="h-4.5 w-4.5" />
     </IconButton>
 
     {#if showBrushTools}
@@ -159,7 +151,7 @@ License: CECILL-C
           selected={selectedTool.value?.type === ToolType.Brush && selectedTool.value.mode === "draw"}
           class="h-8 w-8"
         >
-          <PencilLine class="h-4.5 w-4.5" />
+          <PencilSimple weight="regular" class="h-4.5 w-4.5" />
         </IconButton>
         <IconButton
           tooltipContent="Eraser (X to toggle)"

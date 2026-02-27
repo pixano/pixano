@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Moon, Sun } from "lucide-svelte";
+  import { Moon, Sun } from "phosphor-svelte";
 
   interface Props {
     mode: "light" | "dark";
@@ -21,8 +21,8 @@ License: CECILL-C
   title={mode === "dark" ? "Dark mode" : "Light mode"}
 >
   {#if mode === "dark"}
-    <Sun size={18} />
+    <Sun size={22} />
   {:else}
-    <Moon size={18} />
+    <Moon size={22} />
   {/if}
 </button>

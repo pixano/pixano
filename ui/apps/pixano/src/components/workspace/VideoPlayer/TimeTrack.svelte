@@ -90,7 +90,7 @@ License: CECILL-C
   const shouldDisplayTime = (ms: number, density: number) => {
     let densityThresholds = [2000, 1000, 500, 400, 250, 100, 50, 25];
     let displayedTimes = [1200, 600, 300, 200, 150, 100, 50, 20];
-    for (let i = 0; i < densityThresholds.length; ++i) {
+    for (let i = 0; i <densityThresholds.length; ++i) {
       if (density > densityThresholds[i]) {
         return ms % displayedTimes[i] === 0;
       }
@@ -107,7 +107,7 @@ License: CECILL-C
   const shouldDisplayMarker = (ms: number, density: number) => {
     let densityThresholds = [2000, 1000, 500, 400, 250, 20, 10];
     let displayedMarkers = [600, 300, 150, 100, 50, 10, 5];
-    for (let i = 0; i < densityThresholds.length; ++i) {
+    for (let i = 0; i <densityThresholds.length; ++i) {
       if (density > densityThresholds[i]) {
         return ms % displayedMarkers[i] === 0;
       }

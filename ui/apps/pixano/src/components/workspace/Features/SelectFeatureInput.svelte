@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Select } from "bits-ui";
-  import { Check, ChevronsUpDown } from "lucide-svelte";
+  import { Check, CaretUpDown } from "phosphor-svelte";
 
   import type { ListFeature } from "$lib/types/workspace";
 
@@ -37,9 +37,9 @@ License: CECILL-C
     <Select.Trigger
       class="justify-between h-10 px-4 py-2 border border-input rounded-md bg-background text-sm inline-flex items-center w-[200px]"
     >
-      {#snippet children({ selectedLabel })}
-        {selectedLabel || `Select a ${listFeature.name}`}
-        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      {#snippet children()}
+        {listFeature.name}
+        <CaretUpDown weight="regular" class="ml-2 h-4 w-4 shrink-0 opacity-50" />
       {/snippet}
     </Select.Trigger>
     <Select.Portal>

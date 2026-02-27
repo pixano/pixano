@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Plus } from "lucide-svelte";
+  import { Plus } from "phosphor-svelte";
 
   import { PrimaryButton } from "$lib/ui";
 

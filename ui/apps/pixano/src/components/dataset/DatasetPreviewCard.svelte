@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowRight, Database, Eye, Layers, Shapes } from "lucide-svelte";
+  import { ArrowRight, Database, Eye, Stack, Shapes } from "phosphor-svelte";
   import * as api from "$lib/api";
   import { WorkspaceType, type DatasetInfo } from "$lib/ui";
   import { pixanoLogo } from "$lib/assets";
@@ -96,7 +96,7 @@ License: CECILL-C
             class="grid grid-cols-2 gap-3 transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500 delay-75"
           >
             <div class="flex items-center gap-2 text-white/90">
-              <Eye size={14} class="text-primary-light" />
+              <Eye size={18} class="text-primary-light" />
               <div class="flex flex-col">
                 <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
                   Views
@@ -105,7 +105,7 @@ License: CECILL-C
               </div>
             </div>
             <div class="flex items-center gap-2 text-white/90">
-              <Shapes size={14} class="text-primary-light" />
+              <Shapes size={18} class="text-primary-light" />
               <div class="flex flex-col">
                 <span class="text-[10px] uppercase tracking-tighter opacity-70 font-bold">
                   Entities
@@ -115,7 +115,7 @@ License: CECILL-C
             </div>
             {#each Object.entries(stats.annotations).slice(0, 2) as [key, val]}
               <div class="flex items-center gap-2 text-white/90">
-                <Layers size={14} class="text-primary-light" />
+                <Stack weight="regular" size={18} class="text-primary-light" />
                 <div class="flex flex-col">
                   <span
                     class="text-[10px] uppercase tracking-tighter opacity-70 font-bold line-clamp-1"
@@ -151,7 +151,7 @@ License: CECILL-C
       <div
         class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover/card:opacity-100 transform translate-x-4 group-hover/card:translate-x-0 transition-all duration-300 shadow-xl"
       >
-        <ArrowRight size={16} />
+        <ArrowRight size={20} />
       </div>
     </div>
 
@@ -174,7 +174,7 @@ License: CECILL-C
       <!-- Footer Meta -->
       <div class="flex items-center gap-4 pt-4 border-t border-border/40">
         <div class="flex items-center gap-1.5">
-          <Database size={13} class="text-primary" />
+          <Database size={17} class="text-primary" />
           <span class="text-xs font-bold text-foreground tabular-nums">{dataset.num_items}</span>
           <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
             Items
