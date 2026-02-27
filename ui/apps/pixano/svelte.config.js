@@ -16,6 +16,9 @@ const config = {
       fallback: "index.html",
       pages: "../../../pixano/app/dist",
     }),
+    router: {
+      type: "hash",
+    },
     alias: pixanoAliases,
   },
 };
