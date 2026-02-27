@@ -111,6 +111,7 @@ License: CECILL-C
     // Image settings
     filters?: ImageFilters;
     canvasSize?: number;
+    confirmKeys?: string[];
   }
 
   let {
@@ -133,6 +134,7 @@ License: CECILL-C
     toolBridge = undefined,
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
+    confirmKeys = [],
   }: Props = $props();
 
   let isReady = $state(false);
@@ -1042,13 +1044,14 @@ License: CECILL-C
       return;
     }
 
+    const isConfirmKey = event.key === "Enter" || confirmKeys.includes(event.key);
     if (
-      (event.key === "Enter" || event.key === "Backspace") &&
+      (isConfirmKey || event.key === "Backspace") &&
       (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon)
     ) {
       activeToolBridge?.dispatchEvent({
         type: "keyDown",
-        key: event.key,
+        key: isConfirmKey ? "Enter" : event.key,
         modifiers: {
           shift: event.shiftKey,
           ctrl: event.ctrlKey,

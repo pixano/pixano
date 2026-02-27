@@ -10,11 +10,13 @@ License: CECILL-C
   import { ZoomIn, ZoomOut } from "lucide-svelte";
 
   import EntityTimelineRow from "./EntityTimelineRow.svelte";
+  import TrackingTimelineRow from "./TrackingTimelineRow.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoControls from "./VideoControls.svelte";
   import TimelineRowLayout from "./TimelineRowLayout.svelte";
   import { currentFrameIndex, lastFrameIndex, playbackState, timelineZoom } from "$lib/stores/videoStores.svelte";
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import { panTool, ToolType } from "$lib/tools";
   import { Entity, isVideoEntity } from "$lib/ui";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
@@ -57,6 +59,13 @@ License: CECILL-C
       </TimelineRowLayout>
     </div>
     <div class="flex flex-col grow z-10">
+      {#if isTracking.value}
+        <TimelineRowLayout>
+          {#snippet timeTrack()}
+            <TrackingTimelineRow />
+          {/snippet}
+        </TimelineRowLayout>
+      {/if}
       {#each videoEntities as entity (entity.id)}
         {#if !entity.ui.displayControl.hidden}
           <TimelineRowLayout>

@@ -8,6 +8,7 @@ import * as ort from "onnxruntime-web";
 import { untrack } from "svelte";
 
 import { reactiveStore, reactiveRawStore } from "./reactiveStore.svelte";
+import { cancelTrackingSession } from "./trackingStore.svelte";
 import type { InteractiveImageSegmenter } from "$lib/models";
 import { panTool, type SelectionTool } from "$lib/tools";
 import {
@@ -72,7 +73,7 @@ export const canSave = {
   },
 };
 
-export const interpolate = reactiveStore<boolean>(false);
+export const interpolate = reactiveStore<boolean>(true);
 export const confidenceThreshold = reactiveStore<number[]>([0.0]);
 export const entityFilters = reactiveStore<EntityFilter[]>([]);
 
@@ -142,9 +143,10 @@ export function resetWorkspaceStores() {
   brushSettings.value = { brushRadius: 20, lazyRadius: 10, friction: 0.15 };
   selectedKeypointsTemplate.value = null;
   saveData.value = [];
-  interpolate.value = false;
+  interpolate.value = true;
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];
+  cancelTrackingSession();
   resetColorScale();
   clearAnnotationMappingCaches();
 }

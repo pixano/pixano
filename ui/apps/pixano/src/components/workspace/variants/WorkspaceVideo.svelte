@@ -31,8 +31,21 @@ License: CECILL-C
     newShape,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
+  import {
+    isTracking,
+    trackingPreviewBBoxes,
+    startTrackingSession,
+    addTrackingKeyframe,
+    setPendingKeyframe,
+    confirmPendingKeyframe,
+    discardPendingKeyframe,
+    hasPendingKeyframe,
+    pendingKeyframeIndex,
+    cancelTrackingSession,
+    finalizeTrackingSession,
+  } from "$lib/stores/trackingStore.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
-  import { DatasetItem, ShapeType, SequenceFrame, type EditShape } from "$lib/ui";
+  import { DatasetItem, ShapeType, SequenceFrame, type EditShape, type SaveRectangleShape } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -72,6 +85,31 @@ License: CECILL-C
   const handleCanvasShapeChange = (shape: import("$lib/ui").Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
     if (shape.status === "creating") return;
+
+    // Intercept bbox saves to start/extend a tracking session
+    if (shape.status === "saving" && shape.type === ShapeType.bbox) {
+      const saveShape = shape as SaveRectangleShape;
+      const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
+
+      if (!isTracking.value) {
+        startTrackingSession(viewRef.name, viewRef, itemId, imageWidth, imageHeight);
+      }
+
+      if (hasPendingKeyframe.value) discardPendingKeyframe();
+
+      const normalizedCoords: [number, number, number, number] = [
+        attrs.x / imageWidth,
+        attrs.y / imageHeight,
+        attrs.width / imageWidth,
+        attrs.height / imageHeight,
+      ];
+      addTrackingKeyframe(currentFrameIndex.value, normalizedCoords);
+
+      // Prevent SaveShapeForm from appearing
+      newShape.value = { status: "none", shouldReset: true };
+      return;
+    }
+
     newShape.value = shape;
   };
 
@@ -151,6 +189,16 @@ License: CECILL-C
 
     const toolType = selectedTool.value?.type ?? ToolType.Pan;
     untrack(() => {
+      // Edit-during-tracking: stage as pending keyframe (user confirms with T)
+      // editCoords from BBox2D are already normalized [0,1]
+      if (isTracking.value && shape.type === ShapeType.bbox) {
+        const editCoords = (shape as EditShape & { coords: number[] }).coords;
+        setPendingKeyframe(currentFrameIndex.value,
+          [editCoords[0], editCoords[1], editCoords[2], editCoords[3]]);
+        newShape.value = { status: "none" };
+        return;
+      }
+
       if (toolType !== ToolType.Fusion) {
         updateOrCreateShape(shape);
       } else {
@@ -176,7 +224,65 @@ License: CECILL-C
       toggleFusionEntity(clickedAnn);
     }
   };
+
+  // ─── Tracking: merged bboxes (existing + preview) ─────────────────────────
+
+  const mergedBBoxes = $derived([
+    ...(current_itemBBoxes.value ?? []),
+    ...(newShape.value?.status === "saving" ? [] : trackingPreviewBBoxes.value),
+  ]);
+
+  // ─── Tracking: keyboard handler ───────────────────────────────────────────
+
+  const handleTrackingKeydown = (event: KeyboardEvent) => {
+    if (!isTracking.value) return;
+    const tag = (event.target as HTMLElement)?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+    if (event.key === "t" || event.key === "T") {
+      if (hasPendingKeyframe.value) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        confirmPendingKeyframe();
+        return;
+      }
+      return; // no pending → let Canvas2D handle T for rectangle draft
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (hasPendingKeyframe.value) confirmPendingKeyframe();
+      const saveShape = finalizeTrackingSession();
+      if (saveShape) newShape.value = saveShape;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelTrackingSession();
+    }
+  };
+
+  // ─── Tracking: discard pending edit on frame change ─────────────────────
+
+  $effect(() => {
+    const currentFrame = currentFrameIndex.value;
+    const pendingFrame = pendingKeyframeIndex.value;
+    if (pendingFrame !== null && pendingFrame !== currentFrame) {
+      untrack(() => discardPendingKeyframe());
+    }
+  });
+
+  // ─── Tracking: cancel on tool switch away from Rectangle ──────────────────
+
+  $effect(() => {
+    const toolType = selectedTool.value?.type;
+    if (isTracking.value && toolType !== ToolType.Rectangle) {
+      untrack(() => cancelTrackingSession());
+    }
+  });
+
 </script>
+
+<svelte:window onkeydown={handleTrackingKeydown} />
 
 <section
   class="h-full w-full flex flex-col"
@@ -190,10 +296,11 @@ License: CECILL-C
   <div class="overflow-hidden grow relative">
     {#if !isRouteLoading && isLoaded && current_itemBBoxes.value && current_itemKeypoints.value}
       <Canvas2D
+        confirmKeys={["t", "T"]}
         selectedItemId={selectedItem.item.id}
         imagesPerView={imagesPerView.value}
         colorScale={colorScale.value[1]}
-        bboxes={current_itemBBoxes.value}
+        bboxes={mergedBBoxes}
         masks={current_itemMasks.value}
         keypoints={current_itemKeypoints.value}
         canvasSize={inspectorMaxHeight + resize}
@@ -220,6 +327,15 @@ License: CECILL-C
             <Loader2Icon class="h-8 w-8 animate-spin" />
             <p class="text-sm">Buffering next frames...</p>
           </div>
+        </div>
+      {/if}
+      {#if isTracking.value}
+        <div class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none">
+          {#if hasPendingKeyframe.value}
+            Drag to adjust &middot; Press T to confirm as keyframe &middot; Navigate away to discard
+          {:else}
+            Draw or edit on a frame and press T &middot; Enter to save &middot; Escape to cancel
+          {/if}
         </div>
       {/if}
     {:else}

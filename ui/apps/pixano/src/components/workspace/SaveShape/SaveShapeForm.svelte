@@ -12,7 +12,9 @@ License: CECILL-C
   import {
     Annotation,
     BaseSchema,
+    BBox,
     Mask,
+    SequenceFrame,
     ShapeType,
     Tracklet,
     WorkspaceType,
@@ -38,8 +40,10 @@ License: CECILL-C
     entities,
     itemMetas,
     newShape,
+    views,
   } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { trackingSession, cancelTrackingSession } from "$lib/stores/trackingStore.svelte";
   import type {
     CreateEntityInputs,
     EntityProperties,
@@ -145,6 +149,9 @@ License: CECILL-C
     }
 
     if (isVideo) {
+      const tracker = trackingSession.value.tracker;
+      const isMultiKeyframe = tracker !== null && tracker.keyframeCount > 1;
+
       let lastFrameIndex = currentFrameIndex.value;
       if (isFromTracking) {
         for (const tr_mask of pixanoInferenceToValidateTrackingMasks.value.slice(1)) {
@@ -163,13 +170,59 @@ License: CECILL-C
           lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
         }
       }
+
+      // Multi-keyframe tracking: create BBox annotations for remaining keyframes
+      const trackingKeyframeBBoxes: BBox[] = [];
+      if (isMultiKeyframe && newAnnotation.is_type(BaseSchema.BBox)) {
+        const sortedKfs = tracker.sortedKeyframes;
+        const viewName = tracker.viewName;
+        const viewFrames = views.value[viewName];
+
+        // First keyframe was already created as newAnnotation; process the rest
+        for (let i = 1; i < sortedKfs.length; i++) {
+          const kf = sortedKfs[i];
+          const frame = Array.isArray(viewFrames)
+            ? (viewFrames[kf.frameIndex] as SequenceFrame | undefined)
+            : undefined;
+          if (!frame) continue;
+
+          const kfBBox = BBox.cloneForFrame(newAnnotation as BBox, {
+            coords: [...kf.coords],
+            view_name: viewName,
+            frame_id: frame.id,
+            frame_index: kf.frameIndex,
+          });
+          kfBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
+
+          topEntity.ui.childs?.push(kfBBox);
+          if (subEntity) subEntity.ui.childs?.push(kfBBox);
+          trackingKeyframeBBoxes.push(kfBBox);
+          addedAnnotations.push(kfBBox);
+        }
+
+        // Update first annotation's frame info to match the first keyframe
+        const firstKf = sortedKfs[0];
+        const firstFrame = Array.isArray(viewFrames)
+          ? (viewFrames[firstKf.frameIndex] as SequenceFrame | undefined)
+          : undefined;
+        if (firstFrame) {
+          newAnnotation.ui.frame_index = firstKf.frameIndex;
+          newAnnotation.data.frame_id = firstFrame.id;
+          (newAnnotation as BBox).data.coords = [...firstKf.coords];
+        }
+
+        // Update lastFrameIndex to cover all keyframes
+        lastFrameIndex = Math.max(lastFrameIndex, tracker.endFrame ?? lastFrameIndex);
+      }
+
       // for video, there is 1 anns, 1 track (may have 1 sub entity), 1 track annotation
       // -> add track annotation
+      const trackStartFrame = isMultiKeyframe ? (tracker.startFrame ?? currentFrameIndex.value) : currentFrameIndex.value;
       const candidate_tracks = topEntity.ui.childs?.filter(
         (ann) =>
           ann.is_type(BaseSchema.Tracklet) &&
           ann.data.view_name === newShape.value.viewRef.name &&
-          (ann as Tracklet).data.start_frame <= currentFrameIndex.value &&
+          (ann as Tracklet).data.start_frame <= trackStartFrame &&
           (ann as Tracklet).data.end_frame >= lastFrameIndex,
       );
       if (candidate_tracks && candidate_tracks.length === 1) {
@@ -178,6 +231,7 @@ License: CECILL-C
         //it means that the track may be wider than the new shape "range" (1 frame at creation)
         //-- this is potentially dangerous... but *should* be fine --
         candidate_track.ui.childs.push(newAnnotation);
+        for (const kfBBox of trackingKeyframeBBoxes) candidate_track.ui.childs.push(kfBBox);
         if (isFromTracking) {
           for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
         }
@@ -191,10 +245,10 @@ License: CECILL-C
           imageHeight: 0, //unused from SaveShapeBase
           viewRef: { id: "", name: newShape.value.viewRef.name },
           attrs: {
-            start_frame: currentFrameIndex.value,
+            start_frame: trackStartFrame,
             end_frame: lastFrameIndex,
             //TODO timestamp management...
-            start_timestamp: currentFrameIndex.value,
+            start_timestamp: trackStartFrame,
             end_timestamp: lastFrameIndex,
           },
         };
@@ -209,14 +263,25 @@ License: CECILL-C
         );
         if (!newTrack) return;
         newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-        (newTrack as Tracklet).ui.childs = [newAnnotation];
+        (newTrack as Tracklet).ui.childs = [newAnnotation, ...trackingKeyframeBBoxes];
         if (isFromTracking) {
           for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
         }
+        (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
 
         saveTo("add", newTrack);
         //TODO Note: we may have to manage "spatial object" entity too...
         topEntity.ui.childs?.push(newTrack);
+      }
+
+      // Save each tracking keyframe BBox
+      for (const kfBBox of trackingKeyframeBBoxes) {
+        saveTo("add", kfBBox);
+      }
+
+      // Clean up tracking session
+      if (tracker !== null) {
+        cancelTrackingSession();
       }
     }
 
