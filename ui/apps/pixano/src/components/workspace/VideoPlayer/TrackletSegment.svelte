@@ -12,7 +12,6 @@ License: CECILL-C
   import {
     Annotation,
     BaseSchema,
-    buttonVariants,
     cn,
     ContextMenu,
     SequenceFrame,
@@ -73,6 +72,8 @@ License: CECILL-C
   let selectedEntityId = $state("new");
   let mustMerge: boolean = $state(false);
   let overlapTargetId: string = $state("");
+  const defaultButtonClass =
+    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
 
   const track_margin = 0.3;
   const getLeft = (trk: Tracklet) => {
@@ -355,7 +356,9 @@ License: CECILL-C
             viewRef={{ name: tracklet.data.view_name, id: tracklet.data.frame_id }}
             track={tracklet}
           />
-          <Button.Root type="button" class={cn(buttonVariants(), "text-white mt-4")} onclick={handleRelink}>OK</Button.Root>
+          <Button.Root type="button" class={cn(defaultButtonClass, "text-white mt-4")} onclick={handleRelink}>
+            OK
+          </Button.Root>
         </div>
       {/if}
     {/if}

@@ -11,7 +11,6 @@ License: CECILL-C
   import { Button } from "bits-ui";
 
   import { cn } from "$lib/utils/styleUtils";
-  import { buttonVariants } from "$lib/utils/buttonVariants";
 
   interface Props {
     isSelected?: boolean;
@@ -30,13 +29,15 @@ License: CECILL-C
     children,
     onclick,
   }: Props = $props();
+  const defaultButtonClass =
+    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
 </script>
 
 <Button.Root
   {disabled}
   type="button"
   class={cn(
-    buttonVariants(),
+    defaultButtonClass,
     "font-bold text-xs uppercase tracking-widest h-9 px-5 border rounded-xl transition-all duration-200 flex gap-2 items-center justify-center shadow-sm active:scale-95",
     {
       "bg-primary hover:bg-primary/90 border-primary text-primary-foreground hover:shadow-md":

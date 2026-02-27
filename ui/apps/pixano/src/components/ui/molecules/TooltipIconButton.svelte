@@ -10,7 +10,6 @@ License: CECILL-C
   import { Button, Tooltip } from "bits-ui";
 
   import { cn } from "$lib/utils/styleUtils";
-  import { buttonVariants } from "$lib/utils/buttonVariants";
 
   interface Props {
     tooltipContent?: string;
@@ -35,6 +34,8 @@ License: CECILL-C
   }: Props = $props();
 
   let redConfirmState = $state(false);
+  const buttonBaseClass =
+    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90";
 
   function handleClick(event: MouseEvent) {
     if (redconfirm && !redConfirmState) {
@@ -61,7 +62,8 @@ License: CECILL-C
       {disabled}
       type="button"
       class={cn(
-        buttonVariants({ size: big ? "lg" : "icon" }),
+        buttonBaseClass,
+        big ? "h-11 px-8" : "h-10 w-10",
         "bg-accent/10 text-foreground hover:bg-accent transition-all duration-200 relative active:scale-95 rounded-xl",
         {
           "bg-destructive text-destructive-foreground hover:bg-destructive/90": redConfirmState,

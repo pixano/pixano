@@ -17,7 +17,6 @@ export {
 } from "$lib/utils/effectProbe";
 export * as icons from "./icons";
 export { cn } from "$lib/utils/styleUtils";
-export { buttonVariants, type ButtonVariant, type ButtonSize } from "$lib/utils/buttonVariants";
 
 // bits-ui re-exports (direct, no wrappers)
 export { Checkbox, ContextMenu, RadioGroup, Select, Slider, Tabs, Tooltip } from "bits-ui";

@@ -20,7 +20,6 @@ License: CECILL-C
     type SaveTrackShape,
   } from "$lib/ui";
   import { cn } from "$lib/utils/styleUtils";
-  import { buttonVariants } from "$lib/utils/buttonVariants";
   import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
 
   import { datasetSchema } from "$lib/stores/appStores.svelte";
@@ -55,6 +54,8 @@ License: CECILL-C
   let { currentTab = $bindable() }: Props = $props();
   let isFormValid: boolean = $state(false);
   let formInputs: CreateEntityInputs = $state([]);
+  const defaultButtonClass =
+    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
 
   let objectProperties: EntityProperties = $state({});
   let selectedEntityId: string = $state("");
@@ -323,8 +324,8 @@ License: CECILL-C
       />
     </div>
     <div class="flex gap-4">
-      <Button.Root type="button" class={cn(buttonVariants(), "text-primary-foreground")} onclick={handleCancel}>Cancel</Button.Root>
-      <Button.Root type="submit" class={cn(buttonVariants(), "text-primary-foreground")} disabled={!isFormValid}>Confirm</Button.Root>
+      <Button.Root type="button" class={cn(defaultButtonClass)} onclick={handleCancel}>Cancel</Button.Root>
+      <Button.Root type="submit" class={cn(defaultButtonClass)} disabled={!isFormValid}>Confirm</Button.Root>
     </div>
   </form>
 {/if}

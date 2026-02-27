@@ -35,7 +35,6 @@ License: CECILL-C
     type KeypointAnnotation,
   } from "$lib/ui";
   import { cn } from "$lib/utils/styleUtils";
-  import { buttonVariants } from "$lib/utils/buttonVariants";
   import { keypointsIcon } from "$lib/assets";
 
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
@@ -202,7 +201,15 @@ License: CECILL-C
       viewRef={{ name: child.data.view_name, id: child.data.frame_id }}
       track={child}
     />
-    <Button.Root type="button" class={cn(buttonVariants(), "text-primary-foreground mt-4")} onclick={handleRelink}>OK</Button.Root>
+    <Button.Root
+      type="button"
+      class={cn(
+        "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 mt-4",
+      )}
+      onclick={handleRelink}
+    >
+      OK
+    </Button.Root>
   </div>
 {/if}
 {#if child.is_type(BaseSchema.Tracklet)}
