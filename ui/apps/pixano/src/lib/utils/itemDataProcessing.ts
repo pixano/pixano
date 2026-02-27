@@ -26,8 +26,7 @@ import {
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import {
   rleFrString,
-  rleToBitmapCanvas,
-  getAlphaBoundingBox,
+  rleCountsToBounds,
   resolveMaskBitmapSource,
   resolveMaskBounds,
 } from "$lib/utils/maskUtils";
@@ -47,33 +46,31 @@ function prepareAnnotation(
 
   if (ann.table_info.base_schema === BaseSchema.Mask) {
     const mask: Mask = ann as Mask;
-    // Unpack Compressed RLE to uncompressed RLE
-    if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
-
-    // Convert RLE to bitmap canvas (primary path)
-    if (!mask.ui.bitmapCanvas && Array.isArray(mask.data.counts)) {
-      mask.ui.bitmapCanvas = rleToBitmapCanvas(
-        mask.data.counts,
-        mask.data.size as [number, number],
-      );
-    }
-
-    // Compute bounds from bitmap
-    if (!mask.ui.bounds) {
-      if (mask.ui.bitmapCanvas) {
-        mask.ui.bounds = getAlphaBoundingBox(mask.ui.bitmapCanvas) ?? undefined;
-      } else {
-        mask.ui.bounds =
-          resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ??
-          undefined;
-      }
-    }
-
-    // Check for backend-provided bitmap URL as optimization
+    // Prefer backend-provided URL/bounds and avoid eager bitmap materialization at item load.
     if (!mask.ui.bitmapUrl) {
       mask.ui.bitmapUrl =
         resolveMaskBitmapSource({ data: mask.data, metadata: mask.data.inference_metadata }) ??
         undefined;
+    }
+    if (!mask.ui.bounds) {
+      mask.ui.bounds =
+        resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ??
+        undefined;
+    }
+
+    // Fallback: infer bounds from RLE counts only when metadata bounds are absent.
+    // This is much cheaper than decoding + scanning a full RGBA bitmap.
+    if (!mask.ui.bounds) {
+      if (typeof mask.data.counts === "string") {
+        mask.data.counts = rleFrString(mask.data.counts);
+      }
+      if (Array.isArray(mask.data.counts) && mask.data.size.length >= 2) {
+        const h = mask.data.size[0];
+        const w = mask.data.size[1];
+        if (Number.isFinite(h) && Number.isFinite(w) && h > 0 && w > 0) {
+          mask.ui.bounds = rleCountsToBounds(mask.data.counts, [h, w]) ?? undefined;
+        }
+      }
     }
   }
 

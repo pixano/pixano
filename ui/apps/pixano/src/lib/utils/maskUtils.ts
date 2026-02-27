@@ -98,6 +98,63 @@ export function rleToBitmapCanvas(
 }
 
 /**
+ * Compute a tight alpha bounding box directly from uncompressed RLE counts.
+ * This avoids full bitmap materialization + getImageData scan on the main thread.
+ */
+export function rleCountsToBounds(
+  counts: number[],
+  size: [number, number],
+): MaskBounds | null {
+  const [h, w] = size;
+  if (h <= 0 || w <= 0 || counts.length === 0) return null;
+
+  let minX = w;
+  let minY = h;
+  let maxX = -1;
+  let maxY = -1;
+
+  let idx = 0;
+  let pixel = 0; // 0 background, 1 foreground
+
+  for (const run of counts) {
+    if (run <= 0) continue;
+
+    if (pixel === 1) {
+      const endIdx = idx + run - 1;
+      let cursor = idx;
+      while (cursor <= endIdx) {
+        const col = Math.floor(cursor / h);
+        if (col < 0 || col >= w) break;
+
+        const rowStart = cursor % h;
+        const remainingInCol = h - rowStart;
+        const segLen = Math.min(remainingInCol, endIdx - cursor + 1);
+        const rowEnd = rowStart + segLen - 1;
+
+        if (col < minX) minX = col;
+        if (col > maxX) maxX = col;
+        if (rowStart < minY) minY = rowStart;
+        if (rowEnd > maxY) maxY = rowEnd;
+
+        cursor += segLen;
+      }
+    }
+
+    idx += run;
+    pixel = 1 - pixel;
+  }
+
+  if (maxX < minX || maxY < minY) return null;
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  };
+}
+
+/**
  * Convert raw mask float data to column-major (Fortran) RLE.
  * Threshold at 0.0 — values > 0 are foreground.
  */

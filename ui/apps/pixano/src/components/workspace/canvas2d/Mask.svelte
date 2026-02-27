@@ -18,6 +18,8 @@ License: CECILL-C
     canvasAlphaToRle,
     dataUrlToBlob,
     getAlphaBoundingBox,
+    rleFrString,
+    rleToBitmapCanvas,
     resolveMaskBitmapSource,
     resolveMaskBounds,
   } from "$lib/utils/maskUtils";
@@ -52,10 +54,36 @@ License: CECILL-C
 
   const BRUSH_MASK_COLOR = "rgba(255, 0, 80, 0.5)";
 
-  const canvasInfra = $derived.by(() => {
-    const width = currentImage.width;
-    const height = currentImage.height;
+  function clampDimension(value: number): number {
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 1;
+  }
 
+  type CanvasInfra = {
+    baseCanvas: HTMLCanvasElement;
+    baseCtx: CanvasRenderingContext2D;
+    sharedCanvas: HTMLCanvasElement;
+    sharedCtx: CanvasRenderingContext2D;
+    draftCanvas: HTMLCanvasElement;
+    draftCtx: CanvasRenderingContext2D;
+    scratchCanvas: HTMLCanvasElement;
+    scratchCtx: CanvasRenderingContext2D;
+    tintCanvas: HTMLCanvasElement;
+    tintCtx: CanvasRenderingContext2D;
+    lazyBrush: LazyBrush;
+  };
+
+  function getRequiredContext2D(
+    canvas: HTMLCanvasElement,
+    options?: CanvasRenderingContext2DSettings,
+  ): CanvasRenderingContext2D {
+    const ctx = canvas.getContext("2d", options);
+    if (!ctx) {
+      throw new Error("Failed to get 2d context from canvas.");
+    }
+    return ctx;
+  }
+
+  function createCanvasInfra(width: number, height: number): CanvasInfra {
     const base = document.createElement("canvas");
     const shared = document.createElement("canvas");
     const draft = document.createElement("canvas");
@@ -75,22 +103,30 @@ License: CECILL-C
 
     return {
       baseCanvas: base,
-      baseCtx: base.getContext("2d")!,
+      baseCtx: getRequiredContext2D(base),
       sharedCanvas: shared,
-      sharedCtx: shared.getContext("2d")!,
+      sharedCtx: getRequiredContext2D(shared),
       draftCanvas: draft,
-      draftCtx: draft.getContext("2d", { willReadFrequently: true })!,
+      draftCtx: getRequiredContext2D(draft, { willReadFrequently: true }),
       scratchCanvas: scratch,
-      scratchCtx: scratch.getContext("2d")!,
+      scratchCtx: getRequiredContext2D(scratch),
       tintCanvas: tint,
-      tintCtx: tint.getContext("2d")!,
+      tintCtx: getRequiredContext2D(tint),
       lazyBrush: new LazyBrush({
         radius: 0,
         enabled: false,
         initialPoint: { x: 0, y: 0 },
       }),
     };
-  });
+  }
+
+  function resizeCanvas(canvas: HTMLCanvasElement, width: number, height: number): void {
+    if (canvas.width === width && canvas.height === height) return;
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  const canvasInfra = createCanvasInfra(1, 1);
 
   let konvaImageRef: { node: Konva.Image } | undefined = $state();
 
@@ -194,7 +230,7 @@ License: CECILL-C
 
   function getOrLoadImage(src: string): Promise<HTMLImageElement> {
     const cached = imageCache.get(src);
-    if (cached) return cached;
+    if (cached !== undefined) return cached;
 
     const next = new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
@@ -207,18 +243,54 @@ License: CECILL-C
     return next;
   }
 
+  function ensureMaskBitmapCanvas(
+    mask: DatasetMask,
+    fallbackImage: HTMLImageElement | ImageBitmap,
+  ): OffscreenCanvas | null {
+    if (mask.ui.bitmapCanvas) return mask.ui.bitmapCanvas;
+
+    let counts = mask.data.counts;
+    if (typeof counts === "string") {
+      try {
+        counts = rleFrString(counts);
+      } catch {
+        return null;
+      }
+      mask.data.counts = counts;
+    }
+
+    if (!Array.isArray(counts)) return null;
+
+    const sizeH = Number(mask.data.size?.[0]);
+    const sizeW = Number(mask.data.size?.[1]);
+    const h = Number.isFinite(sizeH) && sizeH > 0 ? Math.floor(sizeH) : fallbackImage.height;
+    const w = Number.isFinite(sizeW) && sizeW > 0 ? Math.floor(sizeW) : fallbackImage.width;
+
+    try {
+      const canvas = rleToBitmapCanvas(counts, [h, w]);
+      mask.ui.bitmapCanvas = canvas;
+      return canvas;
+    } catch {
+      return null;
+    }
+  }
+
   async function redrawBaseLayerWith(
-    infra: typeof canvasInfra,
+    infra: CanvasInfra,
     masksToRender: DatasetMask[],
     image: HTMLImageElement | ImageBitmap,
     colorScaleFn: (id: string) => string,
+    cycle: number,
   ): Promise<void> {
-    const { baseCtx, scratchCanvas, scratchCtx, sharedCtx, baseCanvas } = infra;
+    const { baseCtx, scratchCanvas, scratchCtx } = infra;
     if (!baseCtx || !scratchCtx) return;
 
-    const cycle = ++renderCycle;
     baseCtx.globalCompositeOperation = "source-over";
     baseCtx.clearRect(0, 0, image.width, image.height);
+    if (scratchCanvas.width !== image.width || scratchCanvas.height !== image.height) {
+      scratchCanvas.width = image.width;
+      scratchCanvas.height = image.height;
+    }
 
     for (const mask of masksToRender) {
       if (mask.ui.displayControl.hidden) continue;
@@ -240,35 +312,43 @@ License: CECILL-C
 
       // Prioritize OffscreenCanvas (from RLE decode) -- avoids async Image loading
       let imageSource: CanvasImageSource | null = mask.ui.bitmapCanvas ?? null;
+      let useFullCanvasSource = Boolean(mask.ui.bitmapCanvas);
 
       if (!imageSource) {
         const source =
           mask.ui.bitmapUrl ??
           resolveMaskBitmapSource({ data: mask.data, metadata: mask.data.inference_metadata });
-        if (!source) continue;
 
-        try {
-          imageSource = await getOrLoadImage(source);
-        } catch {
-          continue;
+        if (source) {
+          try {
+            imageSource = await getOrLoadImage(source);
+          } catch {
+            imageSource = null;
+          }
+        }
+
+        if (!imageSource) {
+          const lazyDecodedCanvas = ensureMaskBitmapCanvas(mask, image);
+          if (lazyDecodedCanvas) {
+            imageSource = lazyDecodedCanvas;
+            useFullCanvasSource = true;
+          }
         }
       }
 
       if (cycle !== renderCycle) return;
       if (!imageSource) continue;
 
-      scratchCanvas.width = image.width;
-      scratchCanvas.height = image.height;
       scratchCtx.clearRect(0, 0, image.width, image.height);
 
       // bitmapCanvas is full-size (from RLE decode) -- draw at origin
       // bitmapUrl images may be cropped -- draw at bounds
-      if (mask.ui.bitmapCanvas) {
+      if (useFullCanvasSource) {
         scratchCtx.drawImage(imageSource, 0, 0);
         scratchCtx.globalCompositeOperation = "source-in";
         scratchCtx.fillStyle = color;
         scratchCtx.globalAlpha = 0.5;
-        scratchCtx.fillRect(0, 0, image.width, image.height);
+        scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
         scratchCtx.globalAlpha = 1.0;
       } else {
         scratchCtx.drawImage(imageSource, bounds.x, bounds.y, bounds.width, bounds.height);
@@ -291,9 +371,29 @@ License: CECILL-C
     copyBaseToShared();
   }
 
-  // Cleanup when image dimensions change (canvasInfra recreated)
+  // Keep mask canvases stable across frame changes; only resize when dimensions change.
   $effect(() => {
-    void canvasInfra;
+    const width = clampDimension(currentImage.width);
+    const height = clampDimension(currentImage.height);
+    const resized =
+      canvasInfra.baseCanvas.width !== width || canvasInfra.baseCanvas.height !== height;
+
+    if (!resized) return;
+
+    resizeCanvas(canvasInfra.baseCanvas, width, height);
+    resizeCanvas(canvasInfra.sharedCanvas, width, height);
+    resizeCanvas(canvasInfra.draftCanvas, width, height);
+    resizeCanvas(canvasInfra.scratchCanvas, width, height);
+    resizeCanvas(canvasInfra.tintCanvas, width, height);
+
+    renderCycle += 1;
+    isPainting = false;
+    lastBrushPos = null;
+    hasDraftContent = false;
+  });
+
+  // Cleanup on component destroy
+  $effect(() => {
     return () => {
       renderCycle += 1;
       isPainting = false;
@@ -311,10 +411,18 @@ License: CECILL-C
     const currentMasks = masks;
     const img = currentImage;
     const scale = colorScale;
+    const cycle = ++renderCycle;
 
-    untrack(() => {
-      void redrawBaseLayerWith(infra, currentMasks, img, scale);
+    const rafId = requestAnimationFrame(() => {
+      if (cycle !== renderCycle) return;
+      untrack(() => {
+        void redrawBaseLayerWith(infra, currentMasks, img, scale, cycle);
+      });
     });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
   });
 
   // Sync lazy brush settings
@@ -397,8 +505,8 @@ License: CECILL-C
   }
 
   export function clearCanvas(): void {
-    const { draftCtx, sharedCtx } = canvasInfra;
-    if (!draftCtx || !sharedCtx) return;
+    const { draftCtx } = canvasInfra;
+    if (!draftCtx) return;
     draftCtx.clearRect(0, 0, canvasInfra.draftCanvas.width, canvasInfra.draftCanvas.height);
     hasDraftContent = false;
     copyBaseToShared();
