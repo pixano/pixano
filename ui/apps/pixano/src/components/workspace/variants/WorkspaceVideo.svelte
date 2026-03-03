@@ -36,6 +36,8 @@ License: CECILL-C
     trackingPreviewBBoxes,
     startTrackingSession,
     addTrackingKeyframe,
+    startNewTrackingSegment,
+    isAwaitingNewSegmentKeyframe,
     setPendingKeyframe,
     confirmPendingKeyframe,
     discardPendingKeyframe,
@@ -239,6 +241,13 @@ License: CECILL-C
     const tag = (event.target as HTMLElement)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
+    if (event.key === "n" || event.key === "N") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (hasPendingKeyframe.value) confirmPendingKeyframe();
+      startNewTrackingSegment();
+      return;
+    }
     if (event.key === "t" || event.key === "T") {
       if (hasPendingKeyframe.value) {
         event.preventDefault();
@@ -333,8 +342,10 @@ License: CECILL-C
         <div class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none">
           {#if hasPendingKeyframe.value}
             Drag to adjust &middot; Press T to confirm as keyframe &middot; Navigate away to discard
+          {:else if isAwaitingNewSegmentKeyframe.value}
+            New segment started &middot; Navigate to a frame and draw a bbox to begin
           {:else}
-            Draw or edit on a frame and press T &middot; Enter to save &middot; Escape to cancel
+            Draw or edit on a frame and press T &middot; N for new segment &middot; Enter to save &middot; Escape to cancel
           {/if}
         </div>
       {/if}

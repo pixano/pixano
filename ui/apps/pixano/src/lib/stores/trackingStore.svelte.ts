@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { LinearBBTracker, type BBoxKeyframe } from "$lib/trackers";
+import { MultiSegmentTracker, type BBoxKeyframe } from "$lib/trackers";
 import { BBox, BaseSchema, WorkspaceType, type Reference, type SequenceFrame } from "$lib/types/dataset";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
 import { reactiveStore, reactiveDerived } from "./reactiveStore.svelte";
@@ -14,7 +14,7 @@ import { views } from "./workspaceStores.svelte";
 // ─── Session state ──────────────────────────────────────────────────────────
 
 export interface TrackingSessionState {
-  tracker: LinearBBTracker | null;
+  tracker: MultiSegmentTracker | null;
   version: number;
   viewRef: Reference | null;
   itemId: string;
@@ -44,7 +44,7 @@ export function startTrackingSession(
   imageWidth: number,
   imageHeight: number,
 ): void {
-  const tracker = new LinearBBTracker(viewName);
+  const tracker = new MultiSegmentTracker(viewName);
   trackingSession.value = {
     tracker,
     version: tracker.version,
@@ -113,6 +113,16 @@ export function confirmPendingKeyframe(): boolean {
 
 export function discardPendingKeyframe(): void {
   trackingSession.update((s) => ({ ...s, pendingKeyframe: null }));
+}
+
+export function startNewTrackingSegment(): boolean {
+  const { tracker } = trackingSession.value;
+  if (!tracker) return false;
+  const started = tracker.startNewSegment();
+  if (started) {
+    trackingSession.update((s) => ({ ...s, version: tracker.version, pendingKeyframe: null }));
+  }
+  return started;
 }
 
 export function cancelTrackingSession(): void {
@@ -202,6 +212,18 @@ export const trackingFrameRange = reactiveDerived<[number, number] | null>(() =>
   const end = tracker.endFrame;
   if (start === undefined || end === undefined) return null;
   return [start, end];
+});
+
+export const trackingSegmentRanges = reactiveDerived<Array<[number, number]>>(() => {
+  const { tracker, version } = trackingSession.value;
+  if (!tracker || version < 0) return [];
+  return tracker.segmentRanges;
+});
+
+export const isAwaitingNewSegmentKeyframe = reactiveDerived<boolean>(() => {
+  const { tracker, version } = trackingSession.value;
+  if (!tracker || version < 0) return false;
+  return tracker.segmentCount > 1 && tracker.activeSegment.keyframeCount === 0;
 });
 
 export const hasPendingKeyframe = reactiveDerived(() => trackingSession.value.pendingKeyframe !== null);
