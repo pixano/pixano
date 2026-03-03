@@ -120,35 +120,27 @@ License: CECILL-C
     setBuffering(false);
   };
 
-  const normalizeFrameIndex = (target: number): number => {
-    const max = lastFrameIndex.value;
-    if (max === undefined) return 0;
-    return ((target % (max + 1)) + (max + 1)) % (max + 1);
-  };
-
   const goToFrame = async (target: number): Promise<boolean> => {
     const max = lastFrameIndex.value;
     if (max === undefined) return false;
+    if (target < 0 || target > max) return false;
 
-    const normalized = normalizeFrameIndex(target);
-    primePlaybackPrefetch(normalized);
-    const instantlyReady = isFrameReady(normalized);
+    primePlaybackPrefetch(target);
+    const instantlyReady = isFrameReady(target);
 
     if (!instantlyReady) {
       stopPlayback();
       const token = ++bufferingToken;
       const available = await awaitWithBufferingIndicator(
         token,
-        () => ensureFrameAvailable(normalized),
+        () => ensureFrameAvailable(target),
       );
       if (token !== bufferingToken) return false;
-      if (!available) {
-        return false;
-      }
+      if (!available) return false;
     }
 
-    currentFrameIndex.value = normalized;
-    const rendered = await updateViewAndWait(normalized);
+    currentFrameIndex.value = target;
+    const rendered = await updateViewAndWait(target);
     return rendered;
   };
 
@@ -201,10 +193,12 @@ License: CECILL-C
         const max = lastFrameIndex.value;
         if (max === undefined) return;
 
-        const next = (currentFrameIndex.value + 1) % (max + 1);
-        const wrapsToStart = next === 0;
-        const rendered = await goToFrame(next);
-        if (!rendered || wrapsToStart) {
+        if (currentFrameIndex.value >= max) {
+          stopPlayback(true);
+          return;
+        }
+        const rendered = await goToFrame(currentFrameIndex.value + 1);
+        if (!rendered) {
           stopPlayback(true);
           return;
         }
@@ -247,6 +241,8 @@ License: CECILL-C
       stopPlayback(true);
       cancelBuffering();
     } else {
+      const max = lastFrameIndex.value;
+      if (max !== undefined && currentFrameIndex.value >= max) return;
       playVideo();
     }
   };
