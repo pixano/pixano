@@ -20,24 +20,28 @@ def is_point_cloud_frame(cls: type, strict: bool = False) -> bool:
 
 
 def create_point_cloud_frame(
-    url: str = "",
+    uri: str = "",
     timestamp: float = 0.0,
     frame_index: int = 0,
     id: str = "",
     record_id: str = "",
     logical_name: str = "",
-    blob: bytes | None = None,
+    raw_bytes: bytes | None = None,
+    preview: bytes = b"",
+    preview_format: str = "",
 ) -> PointCloudFrame:
     """Create a PointCloudFrame instance.
 
     Args:
-        url: The point cloud URL. Can be empty when using embedded blob.
+        uri: The point cloud URI. Can be empty when using embedded raw_bytes.
         timestamp: The timestamp of the frame.
         frame_index: The index of the frame in the sequence.
         id: PointCloudFrame ID.
         record_id: Record ID.
         logical_name: Logical view name.
-        blob: Raw point cloud bytes.
+        raw_bytes: Raw point cloud bytes.
+        preview: Thumbnail/preview bytes.
+        preview_format: Preview format (e.g. "jpeg", "png").
 
     Returns:
         The created `PointCloudFrame` instance.
@@ -46,8 +50,10 @@ def create_point_cloud_frame(
         id=id,
         record_id=record_id,
         logical_name=logical_name,
-        url=url,
-        blob=blob or b"",
+        uri=uri,
+        raw_bytes=raw_bytes or b"",
         timestamp=timestamp,
         frame_index=frame_index,
+        preview=preview,
+        preview_format=preview_format,
     )

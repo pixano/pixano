@@ -58,7 +58,6 @@ from .views import (
     Video,
     View,
     create_cam_calibration,
-    create_image,
     create_pdf,
     create_point_cloud,
     create_point_cloud_frame,
@@ -75,6 +74,12 @@ from .views import (
     is_video,
     is_view,
 )
+
+
+Source = AnnotationSource
+SourceKind = AnnotationSourceKind
+create_source = create_annotation_source
+is_source = is_annotation_source
 
 
 __all__ = [
@@ -109,6 +114,8 @@ __all__ = [
     "SequenceFrame",
     "AnnotationSource",
     "AnnotationSourceKind",
+    "Source",
+    "SourceKind",
     "Text",
     "Tracklet",
     "Video",
@@ -120,7 +127,6 @@ __all__ = [
     "create_classification",
     "create_compressed_rle",
     "create_conversation",
-    "create_image",
     "create_pdf",
     "create_keypoints",
     "create_keypoints3d",
@@ -130,6 +136,7 @@ __all__ = [
     "create_point_cloud_frame",
     "create_relation",
     "create_annotation_source",
+    "create_source",
     "create_text",
     "create_video",
     "create_view_embedding_function",
@@ -160,6 +167,7 @@ __all__ = [
     "is_relation",
     "is_sequence_frame",
     "is_annotation_source",
+    "is_source",
     "is_text",
     "is_tracklet",
     "is_view",

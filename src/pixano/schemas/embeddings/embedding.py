@@ -164,7 +164,7 @@ def create_view_embedding_function(
 
         def _open_views(self, views: list[Any]) -> list[Any]:
             """Open the views in the dataset."""
-            return [view.open(dataset.media_dir, "image") for view in views]
+            return [view.open() for view in views]
 
         def compute_source_embeddings(
             self, frame_ids: pa.Table | pa.Array | pa.ChunkedArray | list[str], *args, **kwargs
@@ -192,7 +192,7 @@ def create_view_embedding_function(
             views = []
             for frame_id in normalized_frame_ids:
                 view = None
-                for group, tables in dataset.schema.groups.items():
+                for group, tables in dataset.info.groups.items():
                     if getattr(group, "value", "") != "views":
                         continue
                     for table_name in tables:

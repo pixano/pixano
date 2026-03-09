@@ -8,14 +8,7 @@ from .view import View
 
 
 class PointCloud(View):
-    """Point Cloud view.
-    Attributes:
-        url: The point cloud URL. Empty when embedded.
-        blob: Raw point cloud bytes. Empty when using filesystem URL.
-    """
-
-    url: str = ""
-    blob: bytes = b""
+    """Point Cloud view."""
 
 
 def is_point_cloud(cls: type, strict: bool = False) -> bool:
@@ -24,26 +17,34 @@ def is_point_cloud(cls: type, strict: bool = False) -> bool:
 
 
 def create_point_cloud(
-    url: str = "",
+    uri: str = "",
     id: str = "",
     record_id: str = "",
     logical_name: str = "",
-    blob: bytes | None = None,
+    raw_bytes: bytes | None = None,
+    preview: bytes = b"",
+    preview_format: str = "",
 ) -> PointCloud:
     """Create a `PointCloud` instance.
+
     Args:
-        url: The point cloud URL. Can be empty when using embedded blob.
+        uri: The point cloud URI. Can be empty when using embedded raw_bytes.
         id: Point cloud ID.
         record_id: Record ID.
         logical_name: Logical view name.
-        blob: Raw point cloud bytes.
+        raw_bytes: Raw point cloud bytes.
+        preview: Thumbnail/preview bytes.
+        preview_format: Preview format (e.g. "jpeg", "png").
+
     Returns:
         The created `PointCloud` instance.
     """
     return PointCloud(
-        url=url,
+        uri=uri,
         id=id,
         record_id=record_id,
         logical_name=logical_name,
-        blob=blob or b"",
+        raw_bytes=raw_bytes or b"",
+        preview=preview,
+        preview_format=preview_format,
     )

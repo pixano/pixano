@@ -11,8 +11,8 @@ from .view import View
 
 class Video(View):
     """Video view.
+
     Attributes:
-        url: The video URL.
         num_frames: The number of frames in the video.
         fps: The frames per second of the video.
         width: The video width.
@@ -21,7 +21,6 @@ class Video(View):
         duration: The video duration.
     """
 
-    url: str
     num_frames: int
     fps: float
     width: int
@@ -36,7 +35,7 @@ def is_video(cls: type, strict: bool = False) -> bool:
 
 
 def create_video(
-    url: Path,
+    uri: Path,
     id: str = "",
     record_id: str = "",
     logical_name: str = "",
@@ -46,11 +45,13 @@ def create_video(
     height: int | None = None,
     format: str | None = None,
     duration: float | None = None,
-    url_relative_path: Path | None = None,
+    preview: bytes = b"",
+    preview_format: str = "",
 ) -> Video:
     """Create a `Video` instance.
+
     Args:
-        url: The video URL. If not relative, the URL is converted to a relative path using `url_relative_path`.
+        uri: The video URI (absolute path or remote URI).
         id: Video ID.
         record_id: Record ID.
         logical_name: Logical view name (e.g. "front_camera").
@@ -62,7 +63,9 @@ def create_video(
         height: The video height. If None, the height is extracted from the video file.
         format: The video format. If None, the format is extracted from the video file.
         duration: The video duration. If None, the duration is extracted from the video file.
-        url_relative_path: The path to convert the URL to a relative path.
+        preview: Thumbnail/preview bytes.
+        preview_format: Preview format (e.g. "jpeg", "png").
+
     Returns:
         The created `Video` instance.
     """
@@ -86,7 +89,7 @@ def create_video(
         raise ValueError(
             "All or none of the following arguments must be provided: width, height, format, num_frames, fps, duration"
         )
-    url = Path(url)
+    uri = Path(uri)
     if id is None:
         id = shortuuid.uuid()
     if width is None:
@@ -95,7 +98,7 @@ def create_video(
         except ImportError:
             raise ImportError("To load video files metadata, install ffmpeg")
         try:
-            metadata = ffmpeg.probe(str(url.resolve()), cmd="ffprobe")["streams"][0]
+            metadata = ffmpeg.probe(str(uri.resolve()), cmd="ffprobe")["streams"][0]
         except FileNotFoundError:
             raise FileNotFoundError("File not found or ffprobe is not installed.")
         r_frame_rate = metadata["r_frame_rate"].split("/")
@@ -103,20 +106,19 @@ def create_video(
         num_frames = int(metadata["nb_frames"])
         width = int(metadata["width"])
         height = int(metadata["height"])
-        format = url.suffix[1:]
+        format = uri.suffix[1:]
         duration = float(metadata["duration"])
-    if url_relative_path is not None:
-        url_relative_path = Path(url_relative_path)
-        url = url.relative_to(url_relative_path)
     return Video(
         id=id,
         record_id=record_id,
         logical_name=logical_name,
-        url=url.as_posix(),
+        uri=uri.as_posix(),
         num_frames=num_frames,
         fps=fps,
         width=width,
         height=height,
         format=format,
         duration=duration,
+        preview=preview,
+        preview_format=preview_format,
     )

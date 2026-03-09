@@ -3,11 +3,16 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
+from __future__ import annotations
+
 import io
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 import PIL.Image
+import shortuuid
 from PIL.Image import Image as PILImage
 
 from pixano.features.utils.image import image_to_base64
@@ -16,22 +21,34 @@ from pixano.utils import issubclass_strict
 from .view import View
 
 
+def _generate_preview(pil_image: PILImage) -> bytes:
+    """Generate a 64x64 PNG thumbnail from a PIL image.
+
+    Args:
+        pil_image: Source PIL image (not modified in-place).
+
+    Returns:
+        PNG-encoded thumbnail bytes.
+    """
+    thumb = pil_image.copy()
+    thumb.thumbnail((64, 64))
+    buf = io.BytesIO()
+    thumb.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 class Image(View):
     """Image record modality.
 
     Attributes:
-        uri: The image URI. Can be relative or absolute or a data URI. Empty when embedded.
         width: The image width.
         height: The image height.
         format: The image format.
-        raw_bytes: Raw image bytes. Empty when using URI.
     """
 
-    uri: str = ""
     width: int = 0
     height: int = 0
     format: str = ""
-    raw_bytes: bytes = b""
 
     def open(
         self,
@@ -60,69 +77,96 @@ class Image(View):
             return image_to_base64(pil_image)
         return pil_image
 
+    @classmethod
+    def from_uri(
+        cls,
+        record_id: str,
+        logical_name: str,
+        uri: str,
+        *,
+        id: str | None = None,
+    ) -> Image:
+        """Create an ``Image`` from a URI (local path or remote URL).
 
-def is_image(cls: type, strict: bool = False) -> bool:
-    """Check if the given class is `Image` or a subclass of `Image`."""
-    return issubclass_strict(cls, Image, strict)
+        Args:
+            record_id: Record ID that owns this view.
+            logical_name: Logical view name (e.g. ``"front_camera"``).
+            uri: Absolute file path or remote ``http(s)`` URL.
+            id: Optional explicit ID.  Auto-generated when `None`.
 
+        Returns:
+            A fully-populated ``Image`` instance.
+        """
+        if id is None:
+            id = shortuuid.uuid()
 
-def create_image(
-    id: str,
-    record_id: str,
-    logical_name: str,
-    width: int | None = None,
-    height: int | None = None,
-    format: str | None = None,
-    uri: str | None = None,
-    raw_bytes: bytes | None = None,
-) -> Image:
-    """Create an `Image` instance.
+        parsed = urlparse(uri)
+        if parsed.scheme in ("http", "https"):
+            data = urlopen(uri).read()  # noqa: S310
+            pil_image = PIL.Image.open(io.BytesIO(data))
+        else:
+            pil_image = PIL.Image.open(Path(uri))
 
-    Args:
-        id: Image ID.
-        record_id: Record ID.
-        logical_name: Logical view name (e.g. "front_camera").
-        width: The image width. If None, the width is extracted from the image file or bytes.
-        height: The image height. If None, the height is extracted from the image file or bytes.
-        format: The image format. If None, the format is extracted from the image file or bytes.
-        uri: The image URI.
-        raw_bytes: Raw image bytes. When provided and width/height/format are None, they are extracted from the bytes.
+        width = pil_image.width
+        height = pil_image.height
+        fmt = pil_image.format or ""
+        preview = _generate_preview(pil_image)
 
-    Returns:
-        The created `Image` instance.
-    """
-    none_conditions = [width is None, height is None, format is None]
-    not_none_conditions = [width is not None, height is not None, format is not None]
-    if not all(none_conditions) and not all(not_none_conditions):
-        raise ValueError("width, height and format must be all defined or all None")
-    if raw_bytes is not None and len(raw_bytes) > 0 and width is None:
-        img = PIL.Image.open(io.BytesIO(raw_bytes))
-        width = img.width
-        height = img.height
-        format = img.format
-        return Image(
+        return cls(
             id=id,
             record_id=record_id,
             logical_name=logical_name,
-            uri="",
+            uri=uri,
             width=width,
             height=height,
-            format=format,
-            raw_bytes=raw_bytes,
+            format=fmt,
+            preview=preview,
+            preview_format="png",
         )
-    if width is None:
-        img = PIL.Image.open(io.BytesIO(raw_bytes))
-        width = img.width
-        height = img.height
-        format = img.format
 
-    return Image(
-        id=id,
-        record_id=record_id,
-        logical_name=logical_name,
-        uri=uri,
-        width=width,
-        height=height,
-        format=format,
-        raw_bytes=raw_bytes or b"",
-    )
+    @classmethod
+    def from_bytes(
+        cls,
+        record_id: str,
+        logical_name: str,
+        raw_bytes: bytes,
+        *,
+        id: str | None = None,
+    ) -> Image:
+        """Create an ``Image`` from raw bytes.
+
+        Args:
+            record_id: Record ID that owns this view.
+            logical_name: Logical view name (e.g. ``"front_camera"``).
+            raw_bytes: Image file content as raw bytes.
+            id: Optional explicit ID.  Auto-generated when `None`.
+
+        Returns:
+            A fully-populated ``Image`` instance.
+        """
+        if id is None:
+            id = shortuuid.uuid()
+
+        pil_image = PIL.Image.open(io.BytesIO(raw_bytes))
+
+        width = pil_image.width
+        height = pil_image.height
+        fmt = pil_image.format or ""
+        preview = _generate_preview(pil_image)
+
+        return cls(
+            id=id,
+            record_id=record_id,
+            logical_name=logical_name,
+            raw_bytes=raw_bytes,
+            width=width,
+            height=height,
+            format=fmt,
+            preview=preview,
+            preview_format="png",
+        )
+
+
+def is_image(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is ``Image`` or a subclass of ``Image``."""
+    return issubclass_strict(cls, Image, strict)
