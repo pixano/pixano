@@ -17,8 +17,7 @@ Usage:
     python generate_voc_sample.py ./voc_sample --num-samples 100 --splits train validation test
 
 Then import into Pixano:
-    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem
-    pixano data import ./my_data ./voc_sample --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem --embed-media
+    pixano data import ./my_data ./voc_sample --info examples/voc/info.py:dataset_info
 """
 
 import argparse
@@ -218,7 +217,7 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, voc_
         # Build metadata line
         entry: dict = {"image": filename}
         if bboxes_xywh:
-            entry["objects"] = {
+            entry["entities"] = {
                 "bboxes": bboxes_xywh,
                 "category": categories,
                 "is_difficult": difficult_flags,
@@ -280,8 +279,7 @@ def main():
 
     print(f"\nDone. {total} images exported.")
     print("\nTo import into Pixano:")
-    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem')
-    print(f'  pixano data import ./my_data {output_dir} --name "VOC 2007 Sample" --schema examples/voc/schema.py:VOCDatasetItem --embed-media')
+    print(f"  pixano data import ./my_data {output_dir} --info examples/voc/info.py:dataset_info")
 
 
 if __name__ == "__main__":

@@ -261,7 +261,9 @@ def create_bbox(
     record_id: str = "",
     view_id: str = "",
     entity_id: str = "",
-    source_id: str = "",
+    source_type: str = "",
+    source_name: str = "",
+    source_metadata: str = "{}",
     tracklet_id: str = "",
     entity_dynamic_state_id: str = "",
     frame_id: str = "",
@@ -277,7 +279,9 @@ def create_bbox(
         record_id: Record ID.
         view_id: View ID.
         entity_id: Entity ID.
-        source_id: Source ID.
+        source_type: Source type.
+        source_name: Source name.
+        source_metadata: Source metadata (JSON string).
         tracklet_id: Tracklet ID.
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
@@ -290,7 +294,9 @@ def create_bbox(
         record_id=record_id,
         view_id=view_id,
         entity_id=entity_id,
-        source_id=source_id,
+        source_type=source_type,
+        source_name=source_name,
+        source_metadata=source_metadata,
         tracklet_id=tracklet_id,
         entity_dynamic_state_id=entity_dynamic_state_id,
         frame_id=frame_id,
@@ -312,7 +318,9 @@ def create_bbox3d(
     record_id: str = "",
     view_id: str = "",
     entity_id: str = "",
-    source_id: str = "",
+    source_type: str = "",
+    source_name: str = "",
+    source_metadata: str = "{}",
     tracklet_id: str = "",
     entity_dynamic_state_id: str = "",
     frame_id: str = "",
@@ -329,7 +337,9 @@ def create_bbox3d(
         record_id: Record ID.
         view_id: View ID.
         entity_id: Entity ID.
-        source_id: Source ID.
+        source_type: Source type.
+        source_name: Source name.
+        source_metadata: Source metadata (JSON string).
         tracklet_id: Tracklet ID.
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
@@ -342,7 +352,9 @@ def create_bbox3d(
         record_id=record_id,
         view_id=view_id,
         entity_id=entity_id,
-        source_id=source_id,
+        source_type=source_type,
+        source_name=source_name,
+        source_metadata=source_metadata,
         tracklet_id=tracklet_id,
         entity_dynamic_state_id=entity_dynamic_state_id,
         frame_id=frame_id,

@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Generate a sample folder from DAVIS 2017 video object segmentation dataset.
+r"""Generate a sample folder from DAVIS 2017 video object segmentation dataset.
 
 Produces a Pixano-compatible folder structure with metadata.jsonl files
 ready to import with `pixano data import`.
@@ -14,8 +14,8 @@ Usage:
     python examples/davis/generate_sample.py ./davis_sample /path/to/DAVIS --splits train val
 
 Then import into Pixano:
-    pixano data import ./my_data ./davis_sample \\
-        --name "DAVIS 2017 Sample" --schema examples/davis/schema.py:DAVISDatasetItem
+    pixano data import ./my_data ./davis_sample \
+        --info examples/davis/info.py:dataset_info
 """
 
 import argparse
@@ -144,10 +144,8 @@ def main():
 
     print(f"\nDone. {total} videos exported.")
     print("\nTo import into Pixano:")
-    print(f"  pixano data import ./my_data {output_dir} \\")
-    print(f'      --name "DAVIS 2017 Sample" --schema examples/davis/schema.py:DAVISDatasetItem')
-    print(f"  pixano data import ./my_data {output_dir} \\")
-    print(f'      --name "DAVIS 2017 Sample" --schema examples/davis/schema.py:DAVISDatasetItem --embed-media')
+    print(f"  pixano dataset import ./my_data {output_dir} \\")
+    print(f'      --name "DAVIS 2017 Sample" --type video --info examples/davis/schema.py:dataset_info')
 
 
 if __name__ == "__main__":

@@ -12,7 +12,6 @@ from .camcalibration import (
     is_cam_calibration,
 )
 from .image import Image, is_image
-from .media_type import MEDIA_TYPE_TABLES, get_media_type_table
 from .pdf import PDF, create_pdf, is_pdf
 from .point_cloud import PointCloud, create_point_cloud, is_point_cloud
 from .point_cloud_frame import PointCloudFrame, create_point_cloud_frame, is_point_cloud_frame
@@ -28,7 +27,6 @@ __all__ = [
     "Extrinsics",
     "Image",
     "Intrinsics",
-    "MEDIA_TYPE_TABLES",
     "PDF",
     "PointCloud",
     "PointCloudFrame",
@@ -42,7 +40,6 @@ __all__ = [
     "create_point_cloud_frame",
     "create_text",
     "create_video",
-    "get_media_type_table",
     "is_cam_calibration",
     "is_image",
     "is_pdf",

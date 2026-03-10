@@ -28,22 +28,22 @@ class Tracklet(EntityAnnotation):
     @model_validator(mode="after")
     def _validate_fields(self) -> Self:
         if (
-            self.start_frame < -1
-            or self.end_frame < -1
+            self.start_timestep < -1
+            or self.end_timestep < -1
             or self.start_timestamp < -1.0
             or self.end_timestamp < -1.0
         ):
             raise ValueError(
                 "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1."
             )
-        has_frames = self.start_frame != -1 or self.end_frame != -1
+        has_frames = self.start_timestep != -1 or self.end_timestep != -1
         has_timestamps = self.start_timestamp != -1.0 or self.end_timestamp != -1.0
         if has_frames:
-            if self.start_frame == -1:
+            if self.start_timestep == -1:
                 raise ValueError("start_frame must be set if end_frame is set.")
-            if self.end_frame == -1:
+            if self.end_timestep == -1:
                 raise ValueError("end_frame must be set if start_frame is set.")
-            if self.start_frame > self.end_frame:
+            if self.start_timestep > self.end_timestep:
                 raise ValueError("start_frame must be less than or equal to end_frame.")
         if has_timestamps:
             if self.start_timestamp == -1.0:

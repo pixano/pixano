@@ -1,5 +1,5 @@
-from .annotation_source import AnnotationSource, AnnotationSourceKind, create_annotation_source, is_annotation_source
 from .annotations import (
+    AnnotationSourceKind,
     BBox,
     BBox3D,
     Classification,
@@ -43,8 +43,14 @@ from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function
 from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
+from .table_names import (
+    canonical_table_name_for_schema,
+    canonical_table_name_for_slot,
+    canonical_table_name_for_view_schema,
+    is_supported_view_schema,
+    supported_dataset_info_slots,
+)
 from .views import (
-    MEDIA_TYPE_TABLES,
     PDF,
     BaseIntrinsics,
     CamCalibration,
@@ -63,7 +69,6 @@ from .views import (
     create_point_cloud_frame,
     create_text,
     create_video,
-    get_media_type_table,
     is_cam_calibration,
     is_image,
     is_pdf,
@@ -76,13 +81,8 @@ from .views import (
 )
 
 
-Source = AnnotationSource
-SourceKind = AnnotationSourceKind
-create_source = create_annotation_source
-is_source = is_annotation_source
-
-
 __all__ = [
+    "AnnotationSourceKind",
     "EntityAnnotation",
     "EntityGroupAnnotation",
     "PerFrameAnnotation",
@@ -99,7 +99,6 @@ __all__ = [
     "Extrinsics",
     "Image",
     "Intrinsics",
-    "MEDIA_TYPE_TABLES",
     "Record",
     "RecordComponent",
     "KeyPoints",
@@ -112,10 +111,6 @@ __all__ = [
     "Relation",
     "SchemaGroup",
     "SequenceFrame",
-    "AnnotationSource",
-    "AnnotationSourceKind",
-    "Source",
-    "SourceKind",
     "Text",
     "Tracklet",
     "Video",
@@ -135,12 +130,12 @@ __all__ = [
     "create_point_cloud",
     "create_point_cloud_frame",
     "create_relation",
-    "create_annotation_source",
-    "create_source",
     "create_text",
     "create_video",
     "create_view_embedding_function",
-    "get_media_type_table",
+    "canonical_table_name_for_schema",
+    "canonical_table_name_for_slot",
+    "canonical_table_name_for_view_schema",
     "group_to_str",
     "is_entity_annotation",
     "is_entity_group_annotation",
@@ -157,6 +152,7 @@ __all__ = [
     "is_image",
     "is_record",
     "is_record_component",
+    "is_supported_view_schema",
     "is_keypoints",
     "is_keypoints3d",
     "is_text_span",
@@ -166,8 +162,6 @@ __all__ = [
     "is_point_cloud_frame",
     "is_relation",
     "is_sequence_frame",
-    "is_annotation_source",
-    "is_source",
     "is_text",
     "is_tracklet",
     "is_view",
@@ -175,4 +169,5 @@ __all__ = [
     "is_view_embedding",
     "CANONICAL_SCHEMA_MAP",
     "schema_to_group",
+    "supported_dataset_info_slots",
 ]

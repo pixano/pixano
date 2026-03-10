@@ -36,9 +36,7 @@ Usage:
 
 Then import into Pixano:
     pixano data import ./my_data ./flir_sample \\
-        --name "FLIR ADAS Sample" --schema examples/flir/schema.py:FLIRDatasetItem
-    pixano data import ./my_data ./flir_sample \\
-        --name "FLIR ADAS Sample" --schema examples/flir/schema.py:FLIRDatasetItem --embed-media
+        --info examples/flir/schema.py:dataset_info
 """
 
 import argparse
@@ -148,12 +146,12 @@ def export_video_test(
                 categories.append(category_map.get(ann.get("category_id", 0), "unknown"))
 
         entry: dict = {
-            "rgb_image": f"rgb/{out_name}",
-            "thermal_image": f"thermal/{out_name}",
+            "rgb": f"rgb/{out_name}",
+            "thermal": f"thermal/{out_name}",
         }
         if bboxes:
-            entry["objects"] = {
-                "view_name": "thermal_image",
+            entry["entities"] = {
+                "view_name": "thermal",
                 "bboxes": bboxes,
                 "category": categories,
             }
@@ -258,18 +256,20 @@ def export_video_test_video_mode(
                     objects = []
                     for ann in anns:
                         x, y, w, h = ann["bbox"]
-                        objects.append({
-                            "track_id": ann.get("track_id", ann["id"]),
-                            "bbox": [
-                                round(x / th_w, 6),
-                                round(y / th_h, 6),
-                                round(w / th_w, 6),
-                                round(h / th_h, 6),
-                            ],
-                            "category": category_map.get(ann.get("category_id", 0), "unknown"),
-                        })
+                        objects.append(
+                            {
+                                "track_id": ann.get("track_id", ann["id"]),
+                                "bbox": [
+                                    round(x / th_w, 6),
+                                    round(y / th_h, 6),
+                                    round(w / th_w, 6),
+                                    round(h / th_h, 6),
+                                ],
+                                "category": category_map.get(ann.get("category_id", 0), "unknown"),
+                            }
+                        )
                     bbox_json = {
-                        "view_name": "thermal_image",
+                        "view_name": "thermal",
                         "objects": objects,
                     }
                     json_name = f"{idx:06d}.json"
@@ -278,8 +278,8 @@ def export_video_test_video_mode(
                     )
 
         entry = {
-            "rgb_image": f"rgb/{video_name}/*.jpg",
-            "thermal_image": f"thermal/{video_name}/*.jpg",
+            "rgb": f"rgb/{video_name}/*.jpg",
+            "thermal": f"thermal/{video_name}/*.jpg",
             "bboxes": f"bboxes/{video_name}/*.json",
             "fps": 30,
         }
@@ -349,23 +349,18 @@ def main():
 
     if args.mode == "video":
         total = export_video_test_video_mode(output_dir, flir_root, args.num_samples, args.seed)
-        schema_class = "FLIRVideoDatasetItem"
+        dataset_type = "video"
+        schema_object = "video_dataset_info"
         unit = "videos"
     else:
         total = export_video_test(output_dir, flir_root, args.num_samples, args.seed)
-        schema_class = "FLIRDatasetItem"
+        dataset_type = "image"
+        schema_object = "dataset_info"
         unit = "frame pairs"
 
     print(f"\nDone. {total} {unit} exported.")
     print("\nTo import into Pixano:")
-    print(
-        f'  pixano data import ./my_data {output_dir} --name "FLIR ADAS Sample" '
-        f"--schema examples/flir/schema.py:{schema_class}"
-    )
-    print(
-        f'  pixano data import ./my_data {output_dir} --name "FLIR ADAS Sample" '
-        f"--schema examples/flir/schema.py:{schema_class} --embed-media"
-    )
+    print(f"  pixano data import ./my_data {output_dir} --info examples/flir/schema.py:{schema_object}")
 
 
 if __name__ == "__main__":

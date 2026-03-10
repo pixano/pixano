@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.schemas import PDF, Entity, Image, PointCloud, Record, SchemaGroup, SequenceFrame, View
+from pixano.schemas import PDF, Entity, Image, Record, SequenceFrame, Text
 
 
 class CustomEntity(Entity):
@@ -10,7 +10,7 @@ class CustomEntity(Entity):
     is_group: bool = False
 
 
-class CustomView(View):
+class CustomImage(Image):
     category: str = ""
     is_group: bool = False
 
@@ -18,21 +18,19 @@ class CustomView(View):
 def build_dataset_info(
     *,
     entity_schema: type[Entity] = Entity,
-    view_schema: type[View] = View,
-    extra_tables: dict[str, type[View]] | None = None,
+    view_schema: type[Image] = Image,
+    extra_views: dict[str, type[Image | SequenceFrame | Text | PDF]] | None = None,
 ) -> DatasetInfo:
-    tables = {
-        SchemaGroup.RECORD.value: Record,
-        "views": view_schema,
-        "entities": entity_schema,
-    }
-    if extra_tables is not None:
-        tables.update(extra_tables)
+    views = {"image": view_schema}
+    if extra_views is not None:
+        views.update(extra_views)
 
     return DatasetInfo(
         name="unit-test-dataset",
         description="Dataset used by Dataset unit tests.",
-        tables=tables,
+        record=Record,
+        entity=entity_schema,
+        views=views,
     )
 
 
@@ -40,10 +38,10 @@ def create_dataset(
     dataset_path: Path,
     *,
     entity_schema: type[Entity] = Entity,
-    view_schema: type[View] = View,
-    extra_tables: dict[str, type[View]] | None = None,
+    view_schema: type[Image] = Image,
+    extra_views: dict[str, type[Image | SequenceFrame | Text | PDF]] | None = None,
 ) -> Dataset:
-    info = build_dataset_info(entity_schema=entity_schema, view_schema=view_schema, extra_tables=extra_tables)
+    info = build_dataset_info(entity_schema=entity_schema, view_schema=view_schema, extra_views=extra_views)
     return Dataset.create(dataset_path, info)
 
 
@@ -57,10 +55,9 @@ def test_create_initializes_base_tables_and_files(tmp_path: Path):
     assert (dataset_path / Dataset._INFO_FILE).is_file()
     assert (dataset_path / Dataset._FEATURES_VALUES_FILE).is_file()
     assert (dataset_path / Dataset._DB_PATH).is_dir()
-    assert set(dataset.open_tables().keys()) == {"record", "views", "entities"}
-    assert dataset.open_table("source").count_rows() == 0
-    assert dataset.open_table("record").count_rows() == 0
-    assert dataset.open_table("views").count_rows() == 0
+    assert set(dataset.open_tables().keys()) == {"records", "images", "entities"}
+    assert dataset.open_table("records").count_rows() == 0
+    assert dataset.open_table("images").count_rows() == 0
     assert dataset.open_table("entities").count_rows() == 0
     assert dataset.num_rows == 0
 
@@ -72,18 +69,26 @@ def test_add_records_inserts_base_rows_in_dependency_order(tmp_path: Path):
     record = Record(id="record-1", split="train")
     parent_entity = Entity(id="entity-parent", record_id=record.id)
     child_entity = Entity(id="entity-child", record_id=record.id, parent_id=parent_entity.id)
-    view = View(id="view-1", record_id=record.id, logical_name="front_camera")
+    view = Image(
+        id="view-1",
+        record_id=record.id,
+        logical_name="front_camera",
+        uri="front-camera.jpg",
+        width=640,
+        height=480,
+        format="jpg",
+    )
 
     dataset.add_records(
         {
             "entities": [child_entity, parent_entity],
-            "views": view,
-            "record": record,
+            "images": view,
+            "records": record,
         }
     )
 
-    stored_record = dataset.get_data("record", ids=record.id)
-    stored_view = dataset.get_data("views", ids=view.id)
+    stored_record = dataset.get_data("records", ids=record.id)
+    stored_view = dataset.get_data("images", ids=view.id)
     stored_parent = dataset.get_data("entities", ids=parent_entity.id)
     stored_child = dataset.get_data("entities", ids=child_entity.id)
 
@@ -99,7 +104,7 @@ def test_add_records_inserts_base_rows_in_dependency_order(tmp_path: Path):
     assert stored_child.record_id == record.id
     assert stored_child.parent_id == parent_entity.id
     assert dataset.open_table("entities").count_rows() == 2
-    assert dataset.open_table("views").count_rows() == 1
+    assert dataset.open_table("images").count_rows() == 1
     assert dataset.num_rows == 1
 
 
@@ -107,25 +112,25 @@ def test_create_preserves_custom_component_schema_fields(tmp_path: Path):
     dataset = create_dataset(
         tmp_path / "custom-create",
         entity_schema=CustomEntity,
-        view_schema=CustomView,
+        view_schema=CustomImage,
     )
 
     entity_schema = dataset.info.tables["entities"]
-    view_schema = dataset.info.tables["views"]
+    view_schema = dataset.info.tables["custom_images"]
 
     assert issubclass(entity_schema, Entity)
-    assert issubclass(view_schema, View)
+    assert issubclass(view_schema, Image)
     assert {"id", "record_id", "parent_id", "category", "is_group"} <= set(entity_schema.model_fields)
     assert {"id", "record_id", "logical_name", "category", "is_group"} <= set(view_schema.model_fields)
     assert {"category", "is_group"} <= set(dataset.open_table("entities").schema.names)
-    assert {"category", "is_group"} <= set(dataset.open_table("views").schema.names)
+    assert {"category", "is_group"} <= set(dataset.open_table("custom_images").schema.names)
 
 
 def test_add_records_persists_custom_component_fields(tmp_path: Path):
     dataset = create_dataset(
         tmp_path / "custom-add-records",
         entity_schema=CustomEntity,
-        view_schema=CustomView,
+        view_schema=CustomImage,
     )
 
     record = Record(id="record-1", split="validation")
@@ -135,7 +140,7 @@ def test_add_records_persists_custom_component_fields(tmp_path: Path):
         category="group",
         is_group=True,
     )
-    view = CustomView(
+    view = CustomImage(
         id="view-1",
         record_id=record.id,
         logical_name="front_camera",
@@ -145,14 +150,14 @@ def test_add_records_persists_custom_component_fields(tmp_path: Path):
 
     dataset.add_records(
         {
-            "views": view,
+            "custom_images": view,
             "entities": entity,
-            "record": record,
+            "records": record,
         }
     )
 
     stored_entity = dataset.get_data("entities", ids=entity.id)
-    stored_view = dataset.get_data("views", ids=view.id)
+    stored_view = dataset.get_data("custom_images", ids=view.id)
 
     assert stored_entity is not None
     assert stored_entity.record_id == record.id
@@ -168,11 +173,11 @@ def test_add_records_persists_custom_component_fields(tmp_path: Path):
 def test_add_records_batch_persists_multiple_view_types(tmp_path: Path):
     dataset = create_dataset(
         tmp_path / "batch-multi-view-records",
-        extra_tables={
-            "image": Image,
-            "text": PDF,
-            "frames": SequenceFrame,
-            "point_cloud": PointCloud,
+        extra_views={
+            "document_image": Image,
+            "document_pdf": PDF,
+            "ocr": Text,
+            "video": SequenceFrame,
         },
     )
 
@@ -193,6 +198,12 @@ def test_add_records_batch_persists_multiple_view_types(tmp_path: Path):
         logical_name="document-pdf",
         raw_bytes=b"%PDF-1.7 document",
         num_pages=3,
+    )
+    text = Text(
+        id="text-1",
+        record_id=document_record.id,
+        logical_name="ocr",
+        content="hello",
     )
     first_frame = SequenceFrame(
         id="frame-2",
@@ -216,28 +227,23 @@ def test_add_records_batch_persists_multiple_view_types(tmp_path: Path):
         timestamp=0.0,
         frame_index=0,
     )
-    point_cloud = PointCloud(
-        id="point-cloud-1",
-        record_id=scene_record.id,
-        logical_name="lidar",
-        uri="point-cloud-1.pcd",
-    )
-
     dataset.add_records(
         {
-            "record": [scene_record, document_record],
-            "point_cloud": point_cloud,
-            "frames": [first_frame, second_frame],
-            "text": pdf,
-            "image": image,
+            "records": [scene_record, document_record],
+            "sequence_frames": [first_frame, second_frame],
+            "pdfs": pdf,
+            "texts": text,
+            "images": image,
         }
     )
 
-    stored_records = dataset.get_data("record", limit=10, sortcol="id", order="asc")
-    stored_image = dataset.get_data("image", ids=image.id)
-    stored_pdf = dataset.get_data("text", ids=pdf.id)
-    stored_frames = dataset.get_data("frames", record_ids=[scene_record.id], sortcol="frame_index", order="asc")
-    stored_point_cloud = dataset.get_data("point_cloud", ids=point_cloud.id)
+    stored_records = dataset.get_data("records", limit=10, sortcol="id", order="asc")
+    stored_image = dataset.get_data("images", ids=image.id)
+    stored_pdf = dataset.get_data("pdfs", ids=pdf.id)
+    stored_text = dataset.get_data("texts", ids=text.id)
+    stored_frames = dataset.get_data(
+        "sequence_frames", record_ids=[scene_record.id], sortcol="frame_index", order="asc"
+    )
 
     assert [record.id for record in stored_records] == [document_record.id, scene_record.id]
     assert stored_image is not None
@@ -247,13 +253,13 @@ def test_add_records_batch_persists_multiple_view_types(tmp_path: Path):
     assert stored_pdf.record_id == document_record.id
     assert stored_pdf.logical_name == "document-pdf"
     assert stored_pdf.num_pages == 3
+    assert stored_text is not None
+    assert stored_text.record_id == document_record.id
+    assert stored_text.logical_name == "ocr"
     assert [frame.id for frame in stored_frames] == ["frame-0", "frame-2"]
     assert [frame.timestamp for frame in stored_frames] == [0.0, 0.2]
-    assert stored_point_cloud is not None
-    assert stored_point_cloud.record_id == scene_record.id
-    assert stored_point_cloud.logical_name == "lidar"
-    assert dataset.open_table("image").count_rows() == 1
-    assert dataset.open_table("text").count_rows() == 1
-    assert dataset.open_table("frames").count_rows() == 2
-    assert dataset.open_table("point_cloud").count_rows() == 1
+    assert dataset.open_table("images").count_rows() == 1
+    assert dataset.open_table("pdfs").count_rows() == 1
+    assert dataset.open_table("texts").count_rows() == 1
+    assert dataset.open_table("sequence_frames").count_rows() == 2
     assert dataset.num_rows == 2

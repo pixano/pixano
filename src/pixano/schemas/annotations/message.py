@@ -65,7 +65,9 @@ def create_message(
     id: str = "",
     record_id: str = "",
     view_id: str = "",
-    source_id: str = "",
+    source_type: str = "",
+    source_name: str = "",
+    source_metadata: str = "{}",
 ) -> Message:
     """Create a Message instance.
 
@@ -80,7 +82,9 @@ def create_message(
         id: Message ID.
         record_id: Record ID.
         view_id: View ID.
-        source_id: Source ID.
+        source_type: Source type.
+        source_name: Source name.
+        source_metadata: Source metadata (JSON string).
 
     Returns:
         The created `Message` instance.
@@ -96,5 +100,7 @@ def create_message(
         id=id,
         record_id=record_id,
         view_id=view_id,
-        source_id=source_id,
+        source_type=source_type,
+        source_name=source_name,
+        source_metadata=source_metadata,
     )

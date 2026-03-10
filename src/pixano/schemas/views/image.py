@@ -70,8 +70,17 @@ class Image(View):
         if self.raw_bytes and len(self.raw_bytes) > 0:
             pil_image = PIL.Image.open(io.BytesIO(self.raw_bytes))
 
-        elif self.uri and urlparse(self.uri).scheme != "":
-            pil_image = Image.open_url(url=self.uri)
+        elif self.uri:
+            parsed = urlparse(self.uri)
+            if parsed.scheme in ("http", "https"):
+                data = urlopen(self.uri).read()  # noqa: S310
+                pil_image = PIL.Image.open(io.BytesIO(data))
+            elif parsed.scheme == "file":
+                pil_image = PIL.Image.open(Path(parsed.path))
+            else:
+                pil_image = PIL.Image.open(Path(self.uri))
+        else:
+            raise ValueError("Image has no raw_bytes and no uri set.")
 
         if as_base64:
             return image_to_base64(pil_image)

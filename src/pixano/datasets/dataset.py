@@ -31,7 +31,6 @@ from pixano.datasets.utils.integrity import (
 )
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
-    AnnotationSource,
     Conversation,
     Message,
     Record,
@@ -84,6 +83,12 @@ def _validate_ids_record_ids_and_limit_and_skip(
 
     if limit is not None and (not isinstance(limit, int) or limit < 1):
         raise DatasetPaginationError("limit and skip must be non-negative integers")
+
+
+def _validate_raise_or_warn(raise_or_warn: str) -> None:
+    """Validate the raise_or_warn argument."""
+    if raise_or_warn not in ("raise", "warn", "none"):
+        raise ValueError(f"raise_or_warn must be 'raise', 'warn' or 'none', got '{raise_or_warn}'")
 
 
 class Dataset:
@@ -153,8 +158,8 @@ class Dataset:
 
         This initialises the directory structure, writes ``info.json`` and
         ``features_values.json``, creates the LanceDB database with empty
-        tables for every entry in ``info.tables`` (plus an ``AnnotationSource``
-        table), and returns the opened :class:`Dataset`.
+        tables for every entry in ``info.tables`` and returns the opened
+        :class:`Dataset`.
 
         Args:
             path: Directory where the dataset will be stored.  The directory
@@ -208,9 +213,6 @@ class Dataset:
                 db.create_table(table_name, schema=arrow_schema)
             else:
                 db.create_table(table_name, schema=schema)
-
-        # Create the source table
-        db.create_table(SchemaGroup.SOURCE.value, schema=AnnotationSource)
 
         return cls(path)
 
@@ -414,12 +416,10 @@ class Dataset:
         Returns:
             Dataset table.
         """
-        if name not in self.info.tables and name != SchemaGroup.SOURCE.value:
+        if name not in self.info.tables:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
-        if name == SchemaGroup.SOURCE.value:
-            return table
 
         schema_table = self.info.tables[name]
         if is_view_embedding(schema_table):
@@ -540,7 +540,7 @@ class Dataset:
                 where = f"id IN {sql_ids}"
             query = TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols).where(where)
 
-        schema = self.info.tables[table_name] if table_name != SchemaGroup.SOURCE.value else AnnotationSource
+        schema = self.info.tables[table_name]
 
         query_models: list[LanceModel] = query.to_pydantic(schema)
 
@@ -682,7 +682,7 @@ class Dataset:
         record_id: str | None = None,
         entity_id: str | None = None,
         view_id: str | None = None,
-        source_id: str | None = None,
+        source_type: str | None = None,
         where: str | None = None,
         limit: int | None = 100,
         skip: int = 0,
@@ -694,7 +694,7 @@ class Dataset:
             record_id: Filter by record ID.
             entity_id: Filter by entity ID.
             view_id: Filter by view ID.
-            source_id: Filter by source ID.
+            source_type: Filter by source type.
             where: Additional WHERE clause.
             limit: Maximum conversations to return.
             skip: Number of conversations to skip.
@@ -708,7 +708,7 @@ class Dataset:
             f"record_id = '{record_id}'" if record_id else None,
             f"entity_id = '{entity_id}'" if entity_id else None,
             f"view_id = '{view_id}'" if view_id else None,
-            f"source_id = '{source_id}'" if source_id else None,
+            f"source_type = '{source_type}'" if source_type else None,
             f"({where})" if where else None,
         )
 
@@ -845,14 +845,10 @@ class Dataset:
 
         if not all((isinstance(item, type(data[0])) for item in data)) or not set(
             type(data[0]).model_fields.keys()
-        ) == set(
-            self.info.tables[actual_table_name].model_fields.keys()
-            if actual_table_name != SchemaGroup.SOURCE.value
-            else AnnotationSource.model_fields.keys()
-        ):
+        ) == set(self.info.tables[actual_table_name].model_fields.keys()):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
-                f"{self.info.tables[actual_table_name] if actual_table_name != SchemaGroup.SOURCE.value else AnnotationSource}."
+                f"{self.info.tables[actual_table_name]}."
             )
         _validate_raise_or_warn(raise_or_warn)
 
@@ -862,8 +858,10 @@ class Dataset:
                 check_table_integrity(actual_table_name, self, data, False, ignore_integrity_checks), raise_or_warn
             )
         for d in data:
-            d.created_at = datetime.now()
-            d.updated_at = d.created_at
+            if hasattr(d, "created_at"):
+                d.created_at = datetime.now()
+            if hasattr(d, "updated_at"):
+                d.updated_at = d.created_at if hasattr(d, "created_at") else datetime.now()
         table.add(data)
 
         if actual_table_name == SchemaGroup.RECORD.value:
@@ -876,7 +874,6 @@ class Dataset:
     # ------------------------------------------------------------------
 
     _INSERT_ORDER: list[SchemaGroup] = [
-        SchemaGroup.SOURCE,
         SchemaGroup.RECORD,
         SchemaGroup.VIEW,
         SchemaGroup.ENTITY,
@@ -893,8 +890,6 @@ class Dataset:
             for group, tables in self.info.groups.items():
                 if name in tables:
                     return group_index.get(group, len(self._INSERT_ORDER))
-            if name == SchemaGroup.SOURCE.value:
-                return group_index[SchemaGroup.SOURCE]
             return len(self._INSERT_ORDER)
 
         return sorted(table_names, key=_sort_key)
@@ -1091,14 +1086,10 @@ class Dataset:
 
         if not all((isinstance(item, type(data[0])) for item in data)) or not set(
             type(data[0]).model_fields.keys()
-        ) == set(
-            self.info.tables[actual_table_name].model_fields.keys()
-            if actual_table_name != SchemaGroup.SOURCE.value
-            else AnnotationSource.model_fields.keys()
-        ):
+        ) == set(self.info.tables[actual_table_name].model_fields.keys()):
             raise DatasetAccessError(
                 "All data must be instances of the table type "
-                f"{self.info.tables[actual_table_name] if actual_table_name != SchemaGroup.SOURCE.value else AnnotationSource}."
+                f"{self.info.tables[actual_table_name]}."
             )
         _validate_raise_or_warn(raise_or_warn)
 
@@ -1108,20 +1099,30 @@ class Dataset:
                 check_table_integrity(actual_table_name, self, data, True, ignore_integrity_checks), raise_or_warn
             )
         set_ids = {item.id for item in data}
-        ids_found: dict[str, datetime] = {}
+        has_timestamps = hasattr(data[0], "created_at") if data else False
 
-        ids_found = {
-            row["id"]: row["created_at"]
-            for row in TableQueryBuilder(table, self._db_connection)
-            .select(["id", "created_at"])
-            .where(f"id in {to_sql_list(set_ids)}")
-            .to_list()
-        }
+        if has_timestamps:
+            ids_found: dict[str, datetime] = {
+                row["id"]: row["created_at"]
+                for row in TableQueryBuilder(table, self._db_connection)
+                .select(["id", "created_at"])
+                .where(f"id in {to_sql_list(set_ids)}")
+                .to_list()
+            }
+        else:
+            ids_found = {
+                row["id"]: None
+                for row in TableQueryBuilder(table, self._db_connection)
+                .select(["id"])
+                .where(f"id in {to_sql_list(set_ids)}")
+                .to_list()
+            }
 
         for d in data:
-            d.updated_at = datetime.now()
-            if d.id not in ids_found:
-                d.created_at = d.updated_at
+            if hasattr(d, "updated_at"):
+                d.updated_at = datetime.now()
+            if d.id not in ids_found and hasattr(d, "created_at"):
+                d.created_at = d.updated_at if hasattr(d, "updated_at") else datetime.now()
         table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
 
         if not return_separately:

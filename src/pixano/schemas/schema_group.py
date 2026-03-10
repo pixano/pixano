@@ -8,7 +8,6 @@ from enum import Enum
 
 from lancedb.pydantic import LanceModel
 
-from .annotation_source import AnnotationSource
 from .annotations import (
     BBox,
     BBox3D,
@@ -34,11 +33,10 @@ class SchemaGroup(Enum):
 
     ANNOTATION = "annotations"
     EMBEDDING = "embeddings"
-    RECORD = "record"
+    RECORD = "records"
     ENTITY = "entities"
     ENTITY_DYNAMIC_STATE = "entity_dynamic_states"
     VIEW = "views"
-    SOURCE = "source"
 
     @classmethod
     def _missing_(cls, name: object):
@@ -56,11 +54,9 @@ _SCHEMA_GROUP_TO_SCHEMA_DICT = {
     SchemaGroup.ENTITY_DYNAMIC_STATE: EntityDynamicState,
     SchemaGroup.ANNOTATION: EntityAnnotation,
     SchemaGroup.VIEW: View,
-    SchemaGroup.SOURCE: AnnotationSource,
 }
 
 CANONICAL_SCHEMA_TYPES = (
-    AnnotationSource,
     Record,
     View,
     CamCalibration,
@@ -118,15 +114,11 @@ def schema_to_group(schema_type: LanceModel | type) -> SchemaGroup:
         return SchemaGroup.ANNOTATION
     if isinstance(schema_type, View) or is_class and issubclass(schema_type, View):
         return SchemaGroup.VIEW
-    if isinstance(schema_type, AnnotationSource) or is_class and issubclass(schema_type, AnnotationSource):
-        return SchemaGroup.SOURCE
     raise ValueError(f"Unknown schema type: {schema_type}")
 
 
 def group_to_str(group: SchemaGroup, plural: bool = False) -> str:
     """Convert a schema group to its API/storage string."""
-    if group == SchemaGroup.SOURCE:
-        return "annotation_sources" if plural else "annotation_source"
     if group == SchemaGroup.RECORD:
         return "records" if plural else "record"
     if group == SchemaGroup.ENTITY:

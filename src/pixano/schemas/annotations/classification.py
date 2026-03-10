@@ -57,7 +57,9 @@ def create_classification(
     record_id: str = "",
     view_id: str = "",
     entity_id: str = "",
-    source_id: str = "",
+    source_type: str = "",
+    source_name: str = "",
+    source_metadata: str = "{}",
 ) -> Classification:
     """Create a `Classification` instance.
     Args:
@@ -67,7 +69,9 @@ def create_classification(
         record_id: Record ID.
         view_id: View ID.
         entity_id: Entity ID.
-        source_id: Source ID.
+        source_type: Source type.
+        source_name: Source name.
+        source_metadata: Source metadata (JSON string).
     Returns:
         The created `Classification` instance.
     """
@@ -78,5 +82,7 @@ def create_classification(
         record_id=record_id,
         view_id=view_id,
         entity_id=entity_id,
-        source_id=source_id,
+        source_type=source_type,
+        source_name=source_name,
+        source_metadata=source_metadata,
     )
