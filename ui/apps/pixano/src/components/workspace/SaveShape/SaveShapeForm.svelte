@@ -24,14 +24,13 @@ License: CECILL-C
   import { cn } from "$lib/utils/styleUtils";
   import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
 
-  import { datasetSchema } from "$lib/stores/appStores.svelte";
   import { rleToBitmapCanvas, getAlphaBoundingBox } from "$lib/utils/maskUtils";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import {
     defineCreatedAnnotation,
-    findOrCreateSubAndTopEntities,
+    findOrCreateEntity,
     getFrameIndex,
   } from "$lib/utils/entityOperations";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
@@ -48,6 +47,7 @@ License: CECILL-C
     CreateEntityInputs,
     EntityProperties,
   } from "$lib/types/workspace";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
 
@@ -63,6 +63,7 @@ License: CECILL-C
 
   let objectProperties: EntityProperties = $state({});
   let selectedEntityId: string = $state("");
+  const { manifest } = getWorkspaceContext();
 
   const handleFormSubmit = () => {
     removeTemporaryTextSpan();
@@ -81,18 +82,19 @@ License: CECILL-C
 
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
-    const { topEntity, subEntity } = findOrCreateSubAndTopEntities(
+    const entity = findOrCreateEntity(
       selectedEntityId,
       newShape.value,
       features,
+      manifest,
     );
 
     newAnnotation = defineCreatedAnnotation(
-      subEntity ?? topEntity,
+      entity,
       features,
       newShape.value,
       newShape.value.viewRef,
-      datasetSchema.value,
+      manifest,
       isVideo,
       currentFrameIndex.value,
     );
@@ -100,7 +102,7 @@ License: CECILL-C
     if (!newAnnotation) return;
 
     newAnnotation.ui.displayControl = { hidden: false, editing: false, highlighted: "self" };
-    newAnnotation.ui.top_entities = subEntity ? [topEntity, subEntity] : [topEntity];
+    newAnnotation.ui.top_entities = [entity];
 
     // Populate bitmapCanvas on new Mask so it renders immediately after save
     if (newAnnotation.is_type(BaseSchema.Mask)) {
@@ -114,9 +116,7 @@ License: CECILL-C
       }
     }
 
-    topEntity.ui.childs?.push(newAnnotation);
-
-    if (subEntity) subEntity.ui.childs?.push(newAnnotation);
+    entity.ui.childs?.push(newAnnotation);
 
     let tracking_masks: Mask[] = [];
     const addedAnnotations: Annotation[] = [newAnnotation];
@@ -130,19 +130,18 @@ License: CECILL-C
           attrs: bboxCoords,
         };
         const newBBox = defineCreatedAnnotation(
-          subEntity ?? topEntity,
+          entity,
           features,
           bboxShape,
           newShape.value.viewRef,
-          datasetSchema.value,
+          manifest,
           isVideo,
           currentFrameIndex.value,
         );
         if (newBBox) {
           newBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
-          newBBox.ui.top_entities = subEntity ? [topEntity, subEntity] : [topEntity];
-          topEntity.ui.childs?.push(newBBox);
-          if (subEntity) subEntity.ui.childs?.push(newBBox);
+          newBBox.ui.top_entities = [entity];
+          entity.ui.childs?.push(newBBox);
           saveTo("add", newBBox);
           addedAnnotations.push(newBBox);
         }
@@ -165,8 +164,7 @@ License: CECILL-C
           tr_mask.table_info = newAnnotation.table_info;
           const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
           tr_mask.ui = { ...newAnnotation.ui, frame_index: tr_frame_idx };
-          topEntity.ui.childs?.push(tr_mask);
-          if (subEntity) subEntity.ui.childs?.push(tr_mask);
+          entity.ui.childs?.push(tr_mask);
           //get lastFrameIndex from tracking masks
           lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
         }
@@ -204,8 +202,7 @@ License: CECILL-C
                 frame_index: kf.frameIndex,
               });
               kfBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
-              topEntity.ui.childs?.push(kfBBox);
-              if (subEntity) subEntity.ui.childs?.push(kfBBox);
+              entity.ui.childs?.push(kfBBox);
               trackingKeyframeBBoxes.push(kfBBox);
               addedAnnotations.push(kfBBox);
               segBBoxes.push(kfBBox);
@@ -218,7 +215,7 @@ License: CECILL-C
             const segEnd = segKfs[segKfs.length - 1].frameIndex;
             lastFrameIndex = Math.max(lastFrameIndex, segEnd);
 
-            const candidate_tracks = topEntity.ui.childs?.filter(
+            const candidate_tracks = entity.ui.childs?.filter(
               (ann) =>
                 ann.is_type(BaseSchema.Tracklet) &&
                 ann.data.view_name === newShape.value.viewRef.name &&
@@ -244,12 +241,12 @@ License: CECILL-C
                   end_timestamp: segEnd,
                 },
               };
-              const segTrack = defineCreatedAnnotation(
-                topEntity,
+                const segTrack = defineCreatedAnnotation(
+                entity,
                 features,
                 trackShape,
                 trackShape.viewRef,
-                datasetSchema.value,
+                manifest,
                 isVideo,
                 currentFrameIndex.value,
               );
@@ -258,7 +255,7 @@ License: CECILL-C
               (segTrack as Tracklet).ui.childs = [...segBBoxes];
               (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
               saveTo("add", segTrack);
-              topEntity.ui.childs?.push(segTrack);
+              entity.ui.childs?.push(segTrack);
               newTracks.push(segTrack);
             }
           }
@@ -266,7 +263,7 @@ License: CECILL-C
       } else {
         // Single keyframe or no tracker: create a single tracklet
         const trackStartFrame = currentFrameIndex.value;
-        const candidate_tracks = topEntity.ui.childs?.filter(
+        const candidate_tracks = entity.ui.childs?.filter(
           (ann) =>
             ann.is_type(BaseSchema.Tracklet) &&
             ann.data.view_name === newShape.value.viewRef.name &&
@@ -296,11 +293,11 @@ License: CECILL-C
             },
           };
           newTrack = defineCreatedAnnotation(
-            topEntity,
+            entity,
             features,
             trackShape,
             trackShape.viewRef,
-            datasetSchema.value,
+            manifest,
             isVideo,
             currentFrameIndex.value,
           );
@@ -312,7 +309,7 @@ License: CECILL-C
           }
           (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
           saveTo("add", newTrack);
-          topEntity.ui.childs?.push(newTrack);
+          entity.ui.childs?.push(newTrack);
         }
       }
 
@@ -327,12 +324,8 @@ License: CECILL-C
       }
     }
 
-    if (!entities.value.includes(topEntity)) {
-      saveTo("add", topEntity);
-    }
-
-    if (subEntity && !entities.value.includes(subEntity)) {
-      saveTo("add", subEntity);
+    if (!entities.value.includes(entity)) {
+      saveTo("add", entity);
     }
 
     saveTo("add", newAnnotation);
@@ -343,10 +336,9 @@ License: CECILL-C
       }
     }
 
-    // push new entity & sub(s)
+    // push new entity
     entities.update((ents) => {
-      if (topEntity && !ents.includes(topEntity)) ents.push(topEntity);
-      if (subEntity && !ents.includes(subEntity)) ents.push(subEntity);
+      if (!ents.includes(entity)) ents.push(entity);
       return ents;
     });
 

@@ -4,11 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { annotations, newShape } from "$lib/stores/workspaceStores.svelte";
 import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
-import { getTopEntity, saveUpdatedWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
+import { saveTo } from "$lib/utils/saveItemUtils";
 import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { highlightEntity } from "$lib/utils/highlightOperations";
 
@@ -94,7 +94,8 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
       return ann;
     }
 
-    saveUpdatedWithPixanoSource(ann, sourcesStore);
+    applyPixanoSourceFields(ann);
+    saveTo("update", ann);
     return ann;
   });
 };

@@ -4,14 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Message } from "$lib/types/dataset";
 import type {
   CondititionalGenerationTextImageInput,
   ConnectedProvider,
   ModelConfig,
   Task,
+  TextImageConditionalGenerationResult,
 } from "$lib/types/inference";
-import { createTypedAnnotation } from "$lib/utils/domainFactories";
 
 import { apiFetch, apiMutate, JSON_HEADERS } from "./apiClient";
 
@@ -50,7 +49,7 @@ export async function disconnectProvider(providerName: string): Promise<boolean>
 
 export async function conditional_generation_text_image(
   input: CondititionalGenerationTextImageInput,
-): Promise<Message | null> {
+): Promise<TextImageConditionalGenerationResult | null> {
   try {
     const response = await fetch("/inference/tasks/conditional_generation/text-image", {
       headers: JSON_HEADERS,
@@ -61,7 +60,7 @@ export async function conditional_generation_text_image(
     if (!response.ok) {
       return null;
     }
-    return createTypedAnnotation(await response.json()) as Message;
+    return (await response.json()) as TextImageConditionalGenerationResult;
   } catch (e) {
     console.error("api.conditional_generation_text_image -", e);
     return null;

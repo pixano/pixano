@@ -10,6 +10,7 @@ from .annotations import (
     KeyPoints,
     KeyPoints3D,
     Message,
+    QuestionType,
     PerFrameAnnotation,
     Relation,
     TextSpan,
@@ -44,11 +45,17 @@ from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_s
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
 from .table_names import (
+    canonical_base_schema_for_schema,
+    canonical_family_spec_for_resource,
+    canonical_family_spec_for_schema,
+    canonical_resource_name_for_schema,
     canonical_table_name_for_schema,
     canonical_table_name_for_slot,
     canonical_table_name_for_view_schema,
     is_supported_view_schema,
+    public_resource_families,
     supported_dataset_info_slots,
+    validate_canonical_table_map,
 )
 from .views import (
     PDF,
@@ -104,6 +111,7 @@ __all__ = [
     "KeyPoints",
     "KeyPoints3D",
     "Message",
+    "QuestionType",
     "TextSpan",
     "PDF",
     "PointCloud",
@@ -136,6 +144,12 @@ __all__ = [
     "canonical_table_name_for_schema",
     "canonical_table_name_for_slot",
     "canonical_table_name_for_view_schema",
+    "canonical_base_schema_for_schema",
+    "canonical_family_spec_for_resource",
+    "canonical_family_spec_for_schema",
+    "canonical_resource_name_for_schema",
+    "public_resource_families",
+    "validate_canonical_table_map",
     "group_to_str",
     "is_entity_annotation",
     "is_entity_group_annotation",

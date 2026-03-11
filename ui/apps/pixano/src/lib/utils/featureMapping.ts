@@ -15,11 +15,11 @@ import {
   Message,
   TextSpan,
   Tracklet,
-  type DatasetSchema,
   type FeatureList,
   type FeaturesValues,
   type ItemFeature,
 } from "$lib/types/dataset";
+import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 import type { InputFeatures } from "$lib/utils/featureValidationSchemas";
 import type {
@@ -35,13 +35,13 @@ import type {
 
 export function createFeature(
   obj: Item | Entity | Annotation,
-  dataset_schema: DatasetSchema,
+  workspaceManifest: WorkspaceManifest,
   additional_info: string = "",
 ): Feature[] {
   const extraFields = obj.getDynamicFields();
   const extraFieldsType = extraFields.reduce(
     (acc, key) => {
-      acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key]?.type || "str";
+      acc[key] = workspaceManifest.tablesByName[obj.table_info.name]?.fields[key]?.type || "str";
       return acc;
     },
     {} as Record<string, string>,
@@ -120,18 +120,18 @@ export const mapFeatureList = (featureList: FeatureList = { restricted: false, v
     }));
 };
 
-export const getValidationSchemaAndFormInputs = (schema: DatasetSchema, baseSchema: BaseSchema) => {
+export const getValidationSchemaAndFormInputs = (
+  workspaceManifest: WorkspaceManifest,
+  baseSchema: BaseSchema,
+) => {
   //TODO: need to take schema relation into account (when schema relation available)
   //required when there is several differents tracks / entities / subentities for different purpose
   const featuresArray: InputFeatures = [];
-  Object.entries(schema?.schemas ?? {}).forEach(([tname, sch]) => {
+  Object.entries(workspaceManifest.tablesByName).forEach(([tname, table]) => {
+    const sch = { base_schema: table.baseSchema, fields: table.fields };
     let nonFeatsFields: string[] = [];
     let group = "entities";
-    if (
-      [BaseSchema.Entity, BaseSchema.Track, BaseSchema.MultiModalEntity, baseSchema].includes(
-        sch.base_schema,
-      )
-    ) {
+      if ([BaseSchema.Entity, baseSchema].includes(sch.base_schema)) {
       if (baseSchema === sch.base_schema) {
         group = "annotations";
         if (baseSchema === BaseSchema.BBox)

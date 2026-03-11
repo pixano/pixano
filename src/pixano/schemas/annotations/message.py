@@ -1,8 +1,20 @@
 from pydantic import model_validator
+from typing import Literal, get_args
 
 from pixano.utils import issubclass_strict
 
 from .entity_group_annotation import EntityGroupAnnotation
+
+
+QuestionType = Literal[
+    "OPEN",
+    "SINGLE_CHOICE",
+    "SINGLE_CHOICE_EXPLANATION",
+    "MULTI_CHOICE",
+    "MULTI_CHOICE_EXPLANATION",
+]
+
+QUESTION_TYPES = set(get_args(QuestionType))
 
 
 class Message(EntityGroupAnnotation):
@@ -14,6 +26,7 @@ class Message(EntityGroupAnnotation):
     type: str
     content: str
     choices: list[str] = []
+    question_type: str = ""
 
     @model_validator(mode="before")
     def _normalize(cls, data):
@@ -22,6 +35,8 @@ class Message(EntityGroupAnnotation):
         data["type"] = str(data.get("type")).upper()
         data["choices"] = list(data.get("choices", []))
         data["entity_ids"] = list(data.get("entity_ids", []))
+        if "question_type" in data and data.get("question_type") not in (None, ""):
+            data["question_type"] = str(data.get("question_type")).upper()
         return data
 
     @model_validator(mode="after")
@@ -32,6 +47,12 @@ class Message(EntityGroupAnnotation):
             raise ValueError("type must be one of SYSTEM, QUESTION, ANSWER")
         if self.type != "QUESTION" and self.choices:
             raise ValueError("choices are only valid for QUESTION messages")
+        if self.type == "QUESTION" and self.question_type == "":
+            raise ValueError("question_type is required for QUESTION messages")
+        if self.type != "QUESTION" and self.question_type != "":
+            raise ValueError("question_type is only valid for QUESTION messages")
+        if self.question_type != "" and self.question_type not in QUESTION_TYPES:
+            raise ValueError(f"question_type must be one of {', '.join(sorted(QUESTION_TYPES))}")
         return self
 
     @classmethod
@@ -44,6 +65,7 @@ class Message(EntityGroupAnnotation):
             type="QUESTION",
             content="",
             choices=[],
+            question_type="OPEN",
             entity_ids=[],
         )
 
@@ -61,6 +83,7 @@ def create_message(
     type: str,
     content: str,
     choices: list[str] = [],
+    question_type: QuestionType | str = "",
     entity_ids: list[str] = [],
     id: str = "",
     record_id: str = "",
@@ -78,6 +101,7 @@ def create_message(
         type: Message type (SYSTEM, QUESTION, ANSWER).
         content: Message content.
         choices: Choices for QUESTION messages.
+        question_type: Question type for QUESTION messages.
         entity_ids: IDs of referenced entities.
         id: Message ID.
         record_id: Record ID.
@@ -96,6 +120,7 @@ def create_message(
         type=type,
         content=content,
         choices=choices,
+        question_type=question_type,
         entity_ids=entity_ids,
         id=id,
         record_id=record_id,

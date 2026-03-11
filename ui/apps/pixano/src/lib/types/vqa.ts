@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { QuestionTypeEnum } from "$lib/types/dataset";
+import type { Message, QuestionTypeEnum } from "$lib/types/dataset";
 
 // --- TextCanvas types ---
 
@@ -34,7 +34,7 @@ export type ContentChangeEvent = UpdatedMessageEvent | NewAnswerEvent;
 
 export interface UpdatedMessageEvent {
   type: ContentChangeEventType.UPDATE;
-  answerId: string;
+  messageId: string;
   content: string;
 }
 
@@ -55,4 +55,19 @@ export type DeleteQuestionEvent = { questionId: string };
 export interface GenerateAnswerEvent {
   questionId: string;
   completionModel: string;
+}
+
+export interface VqaMessageContext {
+  recordId: string;
+  viewId: string;
+  conversationId: string;
+  entityIds: string[];
+  imageUrl: string;
+}
+
+export interface QuestionThread {
+  conversationId: string;
+  question: Message;
+  messages: Message[];
+  answers: Message[];
 }

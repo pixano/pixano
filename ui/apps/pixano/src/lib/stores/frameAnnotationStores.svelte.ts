@@ -28,7 +28,7 @@ import {
   highlightedEntity,
   interpolate,
   selectedTool,
-} from "./workspaceStores.svelte";
+} from "./workspaceBaseStores.svelte";
 import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 

@@ -1,114 +1,182 @@
 from __future__ import annotations
 
-import re
+from dataclasses import dataclass
 
 from lancedb.pydantic import LanceModel
 
-from .annotations import (
-    BBox,
-    CompressedRLE,
-    KeyPoints,
-    Message,
-    TextSpan,
-    Tracklet,
-    is_bbox,
-    is_compressed_rle,
-    is_keypoints,
-    is_message,
-    is_text_span,
-    is_tracklet,
-)
-from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
-from .records import Record, is_record
-from .views import Image, PDF, SequenceFrame, Text, View, is_pdf, is_sequence_frame, is_text, is_view
+from .annotations import BBox, CompressedRLE, KeyPoints, Message, TextSpan, Tracklet
+from .embeddings import Embedding
+from .entities import Entity, EntityDynamicState
+from .records import Record
+from .schema_group import SchemaGroup
+from .views import Image, PDF, PointCloud, SequenceFrame, Text, Video, View
 
-_SLOT_TO_TABLE: dict[str, str] = {
-    "record": "records",
-    "entity": "entities",
-    "entity_dynamic_state": "entity_dynamic_states",
-    "bbox": "bboxes",
-    "mask": "masks",
-    "keypoint": "keypoints",
-    "tracklet": "tracklets",
-    "message": "messages",
-    "text_span": "text_spans",
-}
+
+@dataclass(frozen=True, slots=True)
+class CanonicalResourceFamily:
+    slot_name: str
+    resource_name: str
+    table_name: str
+    schema_group: SchemaGroup
+    base_schema: type[LanceModel]
+    public_api: bool = True
+    unique_per_dataset: bool = True
+
+
+_CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
+    CanonicalResourceFamily("record", "records", "records", SchemaGroup.RECORD, Record),
+    CanonicalResourceFamily("entity", "entities", "entities", SchemaGroup.ENTITY, Entity),
+    CanonicalResourceFamily(
+        "entity_dynamic_state",
+        "entity-dynamic-states",
+        "entity_dynamic_states",
+        SchemaGroup.ENTITY_DYNAMIC_STATE,
+        EntityDynamicState,
+    ),
+    CanonicalResourceFamily("bbox", "bboxes", "bboxes", SchemaGroup.ANNOTATION, BBox),
+    CanonicalResourceFamily("mask", "masks", "masks", SchemaGroup.ANNOTATION, CompressedRLE),
+    CanonicalResourceFamily("keypoint", "keypoints", "keypoints", SchemaGroup.ANNOTATION, KeyPoints),
+    CanonicalResourceFamily("tracklet", "tracklets", "tracklets", SchemaGroup.ANNOTATION, Tracklet),
+    CanonicalResourceFamily("message", "messages", "messages", SchemaGroup.ANNOTATION, Message),
+    CanonicalResourceFamily("text_span", "text-spans", "text_spans", SchemaGroup.ANNOTATION, TextSpan),
+    CanonicalResourceFamily("image", "images", "images", SchemaGroup.VIEW, Image),
+    CanonicalResourceFamily(
+        "sequence_frame",
+        "sframes",
+        "sequence_frames",
+        SchemaGroup.VIEW,
+        SequenceFrame,
+    ),
+    CanonicalResourceFamily("text", "texts", "texts", SchemaGroup.VIEW, Text),
+    CanonicalResourceFamily("video", "videos", "videos", SchemaGroup.VIEW, Video),
+    CanonicalResourceFamily("point_cloud", "point-clouds", "point_clouds", SchemaGroup.VIEW, PointCloud),
+    CanonicalResourceFamily("pdf", "pdfs", "pdfs", SchemaGroup.VIEW, PDF, public_api=False),
+    CanonicalResourceFamily("embedding", "embeddings", "embeddings", SchemaGroup.EMBEDDING, Embedding),
+)
+
+_SLOT_TO_FAMILY = {family.slot_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
+_RESOURCE_TO_FAMILY = {family.resource_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
+
+
+def public_resource_families() -> tuple[CanonicalResourceFamily, ...]:
+    return tuple(family for family in _CANONICAL_RESOURCE_FAMILIES if family.public_api)
 
 
 def supported_dataset_info_slots() -> tuple[str, ...]:
-    return tuple(_SLOT_TO_TABLE)
-
-
-def canonical_table_name_for_slot(slot_name: str) -> str:
-    try:
-        return _SLOT_TO_TABLE[slot_name]
-    except KeyError as exc:
-        raise ValueError(f"Unsupported DatasetInfo slot '{slot_name}'.") from exc
-
-
-def _camel_to_snake(name: str) -> str:
-    name = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
-    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
-    return name.lower()
-
-
-def _pluralize(snake_name: str) -> str:
-    if snake_name.endswith("y") and len(snake_name) > 1 and snake_name[-2] not in "aeiou":
-        return f"{snake_name[:-1]}ies"
-    if snake_name.endswith(("s", "x", "z", "ch", "sh")):
-        return f"{snake_name}es"
-    return f"{snake_name}s"
-
-
-def canonical_table_name_for_view_schema(schema_cls: type[View]) -> str:
-    if not (isinstance(schema_cls, type) and issubclass(schema_cls, View)):
-        raise ValueError(f"Expected a View subclass, got {schema_cls}.")
-    return _pluralize(_camel_to_snake(schema_cls.__name__))
-
-
-def canonical_table_name_for_schema(schema_cls: type[LanceModel]) -> str:
-    if is_record(schema_cls):
-        return canonical_table_name_for_slot("record")
-    if is_entity(schema_cls):
-        return canonical_table_name_for_slot("entity")
-    if is_entity_dynamic_state(schema_cls):
-        return canonical_table_name_for_slot("entity_dynamic_state")
-    if is_bbox(schema_cls):
-        return canonical_table_name_for_slot("bbox")
-    if is_compressed_rle(schema_cls):
-        return canonical_table_name_for_slot("mask")
-    if is_keypoints(schema_cls):
-        return canonical_table_name_for_slot("keypoint")
-    if is_tracklet(schema_cls):
-        return canonical_table_name_for_slot("tracklet")
-    if is_message(schema_cls):
-        return canonical_table_name_for_slot("message")
-    if is_text_span(schema_cls):
-        return canonical_table_name_for_slot("text_span")
-    if is_view(schema_cls):
-        return canonical_table_name_for_view_schema(schema_cls)
-    raise ValueError(f"Unsupported schema type for canonical table resolution: {schema_cls}.")
-
-
-def is_supported_view_schema(schema_cls: type[LanceModel]) -> bool:
-    return any(
-        isinstance(schema_cls, type) and issubclass(schema_cls, base) for base in (Image, SequenceFrame, Text, PDF)
+    return tuple(
+        family.slot_name
+        for family in _CANONICAL_RESOURCE_FAMILIES
+        if family.slot_name
+        in {
+            "record",
+            "entity",
+            "entity_dynamic_state",
+            "bbox",
+            "mask",
+            "keypoint",
+            "tracklet",
+            "message",
+            "text_span",
+        }
     )
 
 
-def supported_slot_schema(slot_name: str) -> type[LanceModel]:
-    mapping: dict[str, type[LanceModel]] = {
-        "record": Record,
-        "entity": Entity,
-        "entity_dynamic_state": EntityDynamicState,
-        "bbox": BBox,
-        "mask": CompressedRLE,
-        "keypoint": KeyPoints,
-        "tracklet": Tracklet,
-        "message": Message,
-        "text_span": TextSpan,
-    }
+def canonical_family_spec_for_slot(slot_name: str) -> CanonicalResourceFamily:
     try:
-        return mapping[slot_name]
+        return _SLOT_TO_FAMILY[slot_name]
     except KeyError as exc:
         raise ValueError(f"Unsupported DatasetInfo slot '{slot_name}'.") from exc
+
+
+def canonical_family_spec_for_resource(resource_name: str) -> CanonicalResourceFamily:
+    try:
+        return _RESOURCE_TO_FAMILY[resource_name]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported resource family '{resource_name}'.") from exc
+
+
+def canonical_base_schema_for_schema(schema_cls: type[LanceModel]) -> type[LanceModel]:
+    if not isinstance(schema_cls, type) or not issubclass(schema_cls, LanceModel):
+        raise ValueError(f"Unsupported schema type for canonical family resolution: {schema_cls}.")
+
+    for family in _CANONICAL_RESOURCE_FAMILIES:
+        if issubclass(schema_cls, family.base_schema):
+            return family.base_schema
+
+    if issubclass(schema_cls, View):
+        raise ValueError(f"Unsupported view schema for canonical family resolution: {schema_cls}.")
+    raise ValueError(f"Unsupported schema type for canonical family resolution: {schema_cls}.")
+
+
+def canonical_family_spec_for_schema(schema_cls: type[LanceModel]) -> CanonicalResourceFamily:
+    base_schema = canonical_base_schema_for_schema(schema_cls)
+    for family in _CANONICAL_RESOURCE_FAMILIES:
+        if family.base_schema is base_schema:
+            return family
+    raise ValueError(f"Unsupported schema type for canonical family resolution: {schema_cls}.")
+
+
+def canonical_table_name_for_slot(slot_name: str) -> str:
+    return canonical_family_spec_for_slot(slot_name).table_name
+
+
+def canonical_table_name_for_schema(schema_cls: type[LanceModel]) -> str:
+    return canonical_family_spec_for_schema(schema_cls).table_name
+
+
+def canonical_table_name_for_view_schema(schema_cls: type[View]) -> str:
+    return canonical_table_name_for_schema(schema_cls)
+
+
+def canonical_resource_name_for_schema(schema_cls: type[LanceModel]) -> str:
+    return canonical_family_spec_for_schema(schema_cls).resource_name
+
+
+def is_supported_view_schema(schema_cls: type[LanceModel]) -> bool:
+    try:
+        family = canonical_family_spec_for_schema(schema_cls)
+    except ValueError:
+        return False
+    return family.schema_group == SchemaGroup.VIEW
+
+
+def supported_slot_schema(slot_name: str) -> type[LanceModel]:
+    return canonical_family_spec_for_slot(slot_name).base_schema
+
+
+def validate_canonical_table_map(tables: dict[str, type[LanceModel]]) -> None:
+    families_seen: dict[type[LanceModel], str] = {}
+
+    for table_name, schema_cls in tables.items():
+        family = canonical_family_spec_for_schema(schema_cls)
+        expected_table = family.table_name
+        if table_name != expected_table:
+            raise ValueError(
+                f"Invalid dataset schema: table '{table_name}' for {schema_cls.__name__} must use canonical name "
+                f"'{expected_table}'."
+            )
+        previous_table = families_seen.get(family.base_schema)
+        if previous_table is not None and previous_table != table_name:
+            raise ValueError(
+                f"Invalid dataset schema: multiple tables found for {family.base_schema.__name__}: "
+                f"['{previous_table}', '{table_name}']."
+            )
+        families_seen[family.base_schema] = table_name
+
+
+__all__ = [
+    "CanonicalResourceFamily",
+    "canonical_base_schema_for_schema",
+    "canonical_family_spec_for_resource",
+    "canonical_family_spec_for_schema",
+    "canonical_family_spec_for_slot",
+    "canonical_resource_name_for_schema",
+    "canonical_table_name_for_schema",
+    "canonical_table_name_for_slot",
+    "canonical_table_name_for_view_schema",
+    "is_supported_view_schema",
+    "public_resource_families",
+    "supported_dataset_info_slots",
+    "supported_slot_schema",
+    "validate_canonical_table_map",
+]

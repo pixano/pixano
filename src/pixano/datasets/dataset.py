@@ -36,6 +36,7 @@ from pixano.schemas import (
     Record,
     SchemaGroup,
     ViewEmbedding,
+    validate_canonical_table_map,
     is_image,
     is_sequence_frame,
     is_view_embedding,
@@ -136,6 +137,7 @@ class Dataset:
         self._db_path = self.path / self._DB_PATH
 
         self.info = DatasetInfo.from_json(self._info_file)
+        validate_canonical_table_map(self.info.tables)
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
         self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.thumbnail = self._thumb_file
@@ -181,6 +183,7 @@ class Dataset:
 
         if not info.tables:
             raise ValueError("info.tables must not be empty.")
+        validate_canonical_table_map(info.tables)
 
         # Auto-generate ID if not provided
         if not info.id:
@@ -581,6 +584,7 @@ class Dataset:
         self,
         table_name: str,
         record_id: str,
+        view_name: str | None = None,
         start_frame: int = 0,
         batch_size: int = 100,
     ) -> list[tuple[int, bytes, str]]:
@@ -610,6 +614,7 @@ class Dataset:
 
         where = _combine_where_clauses(
             f"record_id IN {to_sql_list(record_id)}",
+            f"logical_name IN {to_sql_list(view_name)}" if view_name is not None else None,
             f"frame_index >= {start_frame}",
             f"frame_index < {end_frame}",
         )
@@ -847,8 +852,7 @@ class Dataset:
             type(data[0]).model_fields.keys()
         ) == set(self.info.tables[actual_table_name].model_fields.keys()):
             raise DatasetAccessError(
-                "All data must be instances of the table type "
-                f"{self.info.tables[actual_table_name]}."
+                f"All data must be instances of the table type {self.info.tables[actual_table_name]}."
             )
         _validate_raise_or_warn(raise_or_warn)
 
@@ -1088,8 +1092,7 @@ class Dataset:
             type(data[0]).model_fields.keys()
         ) == set(self.info.tables[actual_table_name].model_fields.keys()):
             raise DatasetAccessError(
-                "All data must be instances of the table type "
-                f"{self.info.tables[actual_table_name]}."
+                f"All data must be instances of the table type {self.info.tables[actual_table_name]}."
             )
         _validate_raise_or_warn(raise_or_warn)
 

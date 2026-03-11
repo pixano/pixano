@@ -4,7 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Entity, Message, QuestionTypeEnum } from "./dataset";
+import { QuestionTypeEnum } from "./dataset";
+
+export interface ConversationPromptContext {
+  conversation_id: string;
+  record_id: string;
+  view_id: string;
+  entity_ids: string[];
+}
 
 export enum MultimodalImageNLPTask {
   //Multimodal tasks
@@ -74,14 +81,28 @@ export interface ModelConfig {
 }
 
 export interface CondititionalGenerationTextImageInput {
-  dataset_id: string;
-  conversation: Omit<Entity, "ui">;
-  messages: Omit<Message, "ui">[];
   model: string;
+  prompt: string | Array<{ role: string; content: string }>;
+  images?: string[] | null;
   max_new_tokens?: number;
   temperature?: number;
-  role_system?: string;
-  role_user?: string;
-  role_assistant?: string;
-  provider_name?: string;
+}
+
+export interface TextImageConditionalGenerationOutput {
+  generated_text: string;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  generation_config: Record<string, unknown>;
+}
+
+export interface TextImageConditionalGenerationResult {
+  data: TextImageConditionalGenerationOutput;
+  timestamp: string;
+  processing_time: number;
+  metadata: Record<string, unknown>;
+  id: string;
+  status: string;
 }

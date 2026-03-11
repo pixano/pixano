@@ -9,7 +9,7 @@ License: CECILL-C
 
   import { Eye, EyeOff, SlidersHorizontal } from "lucide-svelte";
 
-  import { IconButton, Source, type Entity } from "$lib/ui";
+  import { IconButton, type Entity } from "$lib/ui";
 
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
   import { GROUND_TRUTH, OTHER } from "$lib/constants/workspaceConstants";
@@ -17,7 +17,7 @@ License: CECILL-C
   import OptionsAndFilters from "./OptionsAndFilters.svelte";
 
   interface Props {
-    source?: Source;
+    sourceLabel?: { name: string; kind: string };
     countText: string;
     onFilter?: (entities: Entity[]) => void;
     onConfidenceThresholdChange?: () => void;
@@ -26,7 +26,7 @@ License: CECILL-C
   }
 
   let {
-    source = undefined,
+    sourceLabel = undefined,
     countText,
     onFilter,
     onConfidenceThresholdChange,
@@ -34,12 +34,12 @@ License: CECILL-C
     modelSelection,
   }: Props = $props();
 
-  const modelName = $derived(source?.data.name ?? OTHER);
+  const modelName = $derived(sourceLabel?.name ?? OTHER);
   const sectionTitle = $derived.by(() => {
-    if (source) {
-      return source.data.kind === "ground_truth"
+    if (sourceLabel) {
+      return sourceLabel.kind === "ground_truth"
         ? GROUND_TRUTH
-        : source.data.kind + " - " + source.data.name;
+        : sourceLabel.kind + " - " + sourceLabel.name;
     }
     return `${OTHER} - unknown`;
   });

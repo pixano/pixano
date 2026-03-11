@@ -64,13 +64,13 @@ License: CECILL-C
     if (index === -1) return;
     const label = String.fromCharCode(index + 65);
     const content = serializeMessageContent({ choices: [label], explanations });
-    const answerId = answer?.id ?? null;
+    const messageId = answer?.id ?? null;
 
-    const eventDetail: ContentChangeEvent = answerId
+    const eventDetail: ContentChangeEvent = messageId
       ? {
           content,
           type: ContentChangeEventType.UPDATE,
-          answerId,
+          messageId,
         }
       : {
           content,
@@ -83,8 +83,8 @@ License: CECILL-C
   $effect(() => {
     const currentValue = selectedValue;
     untrack(() => {
-      effectProbe("SingleChoiceAnswer.commitSelection", {
-        answerId: answer?.id ?? null,
+        effectProbe("SingleChoiceAnswer.commitSelection", {
+          answerId: answer?.id ?? null,
         selectedValue: currentValue,
         lastCommittedValue,
       });

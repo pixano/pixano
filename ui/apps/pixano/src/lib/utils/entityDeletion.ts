@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import {
   annotations,
   entities,
@@ -12,8 +11,8 @@ import {
   selectedTool,
 } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
-import { Annotation, BaseSchema, Entity, isVideoEntity, Tracklet } from "$lib/types/dataset";
-import { saveUpdatedWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { Annotation, BaseSchema, Entity, entityHasTracklets, Tracklet } from "$lib/types/dataset";
+import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { removeAnnotationsByIds } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
@@ -148,7 +147,7 @@ export const onDeleteTrackItemClick = (
 
   entities.update((ents) =>
     ents.map((ent) => {
-      if (isVideoEntity(ent) && ent.id === track.data.entity_id) {
+      if (entityHasTracklets(ent) && ent.id === track.data.entity_id) {
         ent.ui.childs = removeAnnotationsByIds(ent.ui.childs, annotationsToDeleteIds);
       }
       return ent;
@@ -160,6 +159,7 @@ export const onDeleteTrackItemClick = (
   }
 
   if (changedTrack) {
-    saveUpdatedWithPixanoSource(track, sourcesStore);
+    applyPixanoSourceFields(track);
+    saveTo("update", track);
   }
 };

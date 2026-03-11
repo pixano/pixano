@@ -26,9 +26,9 @@ License: CECILL-C
   });
 
   const validateChange = () => {
-    const answerId = answer?.id ?? null;
-    const eventDetail: ContentChangeEvent = answerId
-      ? { content: answerContent, type: ContentChangeEventType.UPDATE, answerId }
+    const messageId = answer?.id ?? null;
+    const eventDetail: ContentChangeEvent = messageId
+      ? { content: answerContent, type: ContentChangeEventType.UPDATE, messageId }
       : { content: answerContent, type: ContentChangeEventType.NEW_ANSWER, questionId };
 
     onAnswerContentChange?.(eventDetail);

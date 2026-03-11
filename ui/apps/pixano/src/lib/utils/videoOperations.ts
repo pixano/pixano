@@ -7,7 +7,7 @@ License: CECILL-C
 import { nanoid } from "nanoid";
 
 import { LRUCache } from "$lib/services/LRUCache";
-import { currentDatasetStore, sourcesStore } from "$lib/stores/appStores.svelte";
+import { currentDatasetStore } from "$lib/stores/appStores.svelte";
 import {
   currentFrameIndex,
   currentItemId,
@@ -17,9 +17,9 @@ import {
 } from "$lib/stores/videoStores.svelte";
 import { Tracklet, type Annotation, type LoadedImage } from "$lib/types/dataset";
 import {
-  saveAddedWithPixanoSource,
-  saveUpdatedWithPixanoSource,
+  applyPixanoSourceFields,
 } from "$lib/utils/entityLookupUtils";
+import { saveTo } from "$lib/utils/saveItemUtils";
 
 const NETWORK_BATCH_SIZE = 128;
 const PREFETCH_CHUNKS_AHEAD = 2;
@@ -748,8 +748,10 @@ export const splitTrackInTwo = (
   track2split.data.end_frame = prev;
   track2split.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index <= prev);
 
-  saveUpdatedWithPixanoSource(track2split, sourcesStore);
-  saveAddedWithPixanoSource(rightTrack, sourcesStore);
+  applyPixanoSourceFields(track2split);
+  saveTo("update", track2split);
+  applyPixanoSourceFields(rightTrack);
+  saveTo("add", rightTrack);
   return rightTrack;
 };
 

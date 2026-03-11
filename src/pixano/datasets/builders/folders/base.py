@@ -895,6 +895,7 @@ class FolderBaseBuilder(DatasetBuilder):
             for entry in conv:
                 if "question" not in entry:
                     target_view_name, target_view = resolve_view_target(entry.get("view_name"), default_target)
+                    message_type = entry.get("type", "QUESTION")
                     annotations[canonical_table_name_for_slot("message")].append(
                         Message(
                             id=entry.get("id", shortuuid.uuid()),
@@ -906,9 +907,10 @@ class FolderBaseBuilder(DatasetBuilder):
                             conversation_id=entry.get("conversation_id", conversation_id),
                             number=entry.get("number", message_number),
                             user=entry.get("user", default_user),
-                            type=entry.get("type", "QUESTION"),
+                            type=message_type,
                             content=entry.get("content", ""),
                             choices=entry.get("choices", []),
+                            question_type=entry.get("question_type", "OPEN") if message_type == "QUESTION" else None,
                         )
                     )
                     message_number = max(message_number + 1, entry.get("number", message_number) + 1)
@@ -936,6 +938,7 @@ class FolderBaseBuilder(DatasetBuilder):
                         user=question["user"],
                         content=content,
                         choices=question.get("choices", []),
+                        question_type=question.get("question_type", "OPEN"),
                         entity_ids=message_entity_ids(question),
                     )
                 )

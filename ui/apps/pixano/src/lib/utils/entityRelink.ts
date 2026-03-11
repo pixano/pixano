@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { datasetSchema } from "$lib/stores/appStores.svelte";
 import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
@@ -17,7 +16,7 @@ import type { EntityProperties } from "$lib/types/workspace";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
 import {
   appendAnnotationsSorted,
-  findOrCreateSubAndTopEntities,
+  findOrCreateEntity,
   removeAnnotationsByIds,
 } from "$lib/utils/entityOperations";
 import {
@@ -28,6 +27,7 @@ import {
 import { clearHighlighting } from "$lib/utils/highlightOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
+import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 // We need to pass a list of string as a 'dataset' attribute (dataset-overlap) of option choice of HTMLSelectElement.
 // List is concatenated, so we choose an unlikely separator.
@@ -39,6 +39,7 @@ export const relink = (
   selectedEntityId: string,
   mustMerge: boolean,
   overlapTargetIdsString: string,
+  workspaceManifest: WorkspaceManifest,
 ): void => {
   let toRelink: (Annotation | Entity)[] = [];
   let toMoveAnnotations: Annotation[] = [];
@@ -55,7 +56,7 @@ export const relink = (
 
   let objectProperties: EntityProperties = {};
   const { inputs: formInputs } = getValidationSchemaAndFormInputs(
-    datasetSchema.value,
+    workspaceManifest,
     child.table_info.base_schema,
   );
 
@@ -79,7 +80,7 @@ export const relink = (
     // For each child we relink either the child itself or its top sub-entity (if any).
     const childsToLinkMap = trackChilds.reduce(
       (acc, ann) => {
-        acc[ann.id] = ann.ui.top_entities?.[1] ?? ann;
+        acc[ann.id] = ann;
         return acc;
       },
       {} as Record<string, Entity | Annotation>,
@@ -91,18 +92,23 @@ export const relink = (
     toRelink = mustMerge ? [...relinkSet] : [child, ...relinkSet];
     deleteTrack = mustMerge;
   } else {
-    toRelink = [child.ui.top_entities?.[1] ?? child];
+    toRelink = [child];
     toMoveAnnotations = [child];
     toRemoveAnnotationIds = [child.id];
   }
 
-  const { topEntity } = findOrCreateSubAndTopEntities(selectedEntityId, shapeInfo, features);
+  const targetEntity = findOrCreateEntity(
+    selectedEntityId,
+    shapeInfo,
+    features,
+    workspaceManifest,
+  );
   const shouldAddTopEntity =
-    isEntityNewSelection || !entities.value.some((existingEntity) => existingEntity.id === topEntity.id);
+    isEntityNewSelection || !entities.value.some((existingEntity) => existingEntity.id === targetEntity.id);
 
   entities.update((ents) => {
-    if (shouldAddTopEntity && !ents.some((existingEntity) => existingEntity.id === topEntity.id)) {
-      ents.push(topEntity);
+    if (shouldAddTopEntity && !ents.some((existingEntity) => existingEntity.id === targetEntity.id)) {
+      ents.push(targetEntity);
     }
 
     let nextEntities = ents.map((ent) => {
@@ -115,14 +121,13 @@ export const relink = (
       }
 
       // add to new/reaffected entity, and remove fused if any
-      if (ent.id === topEntity.id) {
+      if (ent.id === targetEntity.id) {
         const withoutFused = removeAnnotationsByIds(ent.ui.childs, tracksToFuseIdSet);
         ent.ui.childs = appendAnnotationsSorted(withoutFused, toMoveAnnotations);
       }
 
-      // relink sub entities (change sub entity parent_id)
       if (toRelink.includes(ent)) {
-        ent.data.parent_id = topEntity.id;
+        ent.data.parent_id = "";
       }
       return ent;
     });
@@ -137,8 +142,8 @@ export const relink = (
   // change child entity_ref
   annotations.update((anns: Annotation[]) => {
     let nextAnnotations = anns.map((ann) => {
-      if (toRelink.includes(ann)) {
-        ann.data.entity_id = topEntity.id;
+        if (toRelink.includes(ann)) {
+        ann.data.entity_id = targetEntity.id;
         ann.ui.top_entities = []; // reset top_entities
       }
       if (deleteTrack && ann.is_type(BaseSchema.Tracklet)) {
@@ -181,8 +186,8 @@ export const relink = (
   // reset moved child(s) new top_entities + check
   toMoveAnnotations.forEach((ann) => {
     ann.ui.top_entities = [];
-    if (getTopEntity(ann) !== topEntity) {
-      console.error("ERROR with Relink, something gone wrong", ann, getTopEntity(ann), topEntity);
+    if (getTopEntity(ann) !== targetEntity) {
+      console.error("ERROR with Relink, something gone wrong", ann, getTopEntity(ann), targetEntity);
     }
   });
 
@@ -191,7 +196,7 @@ export const relink = (
     saveTo("update", obj);
   });
   if (shouldAddTopEntity) {
-    saveTo("add", topEntity);
+    saveTo("add", targetEntity);
   }
   tracksToFuse.forEach((trk) => {
     saveTo("delete", trk);

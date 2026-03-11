@@ -4,15 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { DatasetInfo, DatasetSchema, Source } from "$lib/types/dataset";
+import type { DatasetInfo } from "$lib/types/dataset";
 
 import { reactiveStore } from "./reactiveStore.svelte";
 
 // ─── Dataset Stores ─────────────────────────────────────────────────────────────
 
 export const currentDatasetStore = reactiveStore<DatasetInfo | undefined>(undefined);
-export const datasetSchema = reactiveStore<DatasetSchema | undefined>(undefined);
-export const sourcesStore = reactiveStore<Source[]>([]);
 export const datasetsStore = reactiveStore<DatasetInfo[]>([]);
 export const datasetFilter = reactiveStore<string>("");
 export const datasetItemIds = reactiveStore<Array<string>>([]);

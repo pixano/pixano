@@ -22,9 +22,9 @@ License: CECILL-C
     Mask,
     TextSpan,
     Tracklet,
+    WorkspaceType,
   } from "$lib/ui";
 
-  import { datasetSchema } from "$lib/stores/appStores.svelte";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
     annotations,
@@ -39,6 +39,7 @@ License: CECILL-C
     LogicOperator,
     EntityFilter,
   } from "$lib/types/workspace";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import FilterLine from "./FilterLine.svelte";
 
   interface Props {
@@ -47,6 +48,7 @@ License: CECILL-C
   }
 
   let { onFilter, onConfidenceThresholdChange }: Props = $props();
+  const { manifest } = getWorkspaceContext();
 
   const allowedTypes = ["str", "int", "float", "bool"];
 
@@ -90,11 +92,11 @@ License: CECILL-C
   };
 
   const filterSetup = $derived.by(() => {
-    const schema = datasetSchema.value;
+    const tablesByGroup = manifest.tablesByGroup;
+    const tablesByName = manifest.tablesByName;
     const nextTableColumns: string[] = [];
-    let nextIsVideo = false;
-    for (const table of schema.groups["entities"]) {
-      if (schema.schemas[table].base_schema === BaseSchema.Track) nextIsVideo = true;
+    let nextIsVideo = manifest.workspaceType === WorkspaceType.VIDEO;
+    for (const table of tablesByGroup.entities) {
       if (
         entities.value.find(
           (ent) =>
@@ -104,7 +106,7 @@ License: CECILL-C
         nextTableColumns.push(table);
       }
     }
-    for (const table of schema.groups["annotations"]) {
+    for (const table of tablesByGroup.annotations) {
       if (
         annotations.value.find(
           (ann) =>
@@ -124,7 +126,7 @@ License: CECILL-C
       };
     }
 
-    const tableToGroup = Object.entries(schema.groups).reduce(
+    const tableToGroup = Object.entries(tablesByGroup).reduce(
       (acc, [group, tables]) => {
         for (const table of tables) {
           acc[table] = group;
@@ -137,11 +139,10 @@ License: CECILL-C
     const nextFieldColumns: Record<string, FieldCol[]> = {};
     for (const table of nextTableColumns) {
       nextFieldColumns[table] = [];
-      const nonFeatsFields = getNonFeaturesFields(
-        schema.schemas[table].base_schema,
-        tableToGroup[table],
-      );
-      for (const [k, v] of Object.entries(schema.schemas[table].fields)) {
+      const tableManifest = tablesByName[table];
+      if (!tableManifest) continue;
+      const nonFeatsFields = getNonFeaturesFields(tableManifest.baseSchema, tableToGroup[table]);
+      for (const [k, v] of Object.entries(tableManifest.fields)) {
         if (!v.collection && allowedTypes.includes(v.type) && !nonFeatsFields.includes(k))
           nextFieldColumns[table].push({
             name: k,
@@ -149,10 +150,20 @@ License: CECILL-C
           });
       }
     }
+    const firstField = nextFieldColumns[firstTable]?.[0];
+    if (!firstField) {
+      return {
+        tableColumns: nextTableColumns,
+        fieldColumns: nextFieldColumns,
+        isVideo: nextIsVideo,
+        disableFilter: true,
+        defaultFilter: undefined as EntityFilter | undefined,
+      };
+    }
     const nextDefaultFilter = {
       logicOperator: "FIRST",
       table: firstTable,
-      name: nextFieldColumns[firstTable][0].name,
+      name: firstField.name,
       fieldOperator: "=",
       value: "",
     } as EntityFilter;
@@ -249,13 +260,13 @@ License: CECILL-C
     for (const groupOR of groups) {
       let andRes: Entity[] = [...entities.value];
       for (const cond of groupOR) {
-        let condRes: Entity[];
-        if (datasetSchema.value.groups["annotations"].includes(cond.table)) {
+        let condRes: Entity[] = [];
+        if (manifest.tablesByGroup.annotations.includes(cond.table)) {
           condRes = annotations.value
             .filter((ann) => filterAnnOrEnt(ann, cond))
             .map((ann) => getTopEntity(ann));
         }
-        if (datasetSchema.value.groups["entities"].includes(cond.table)) {
+        if (manifest.tablesByGroup.entities.includes(cond.table)) {
           condRes = entities.value.filter((ent) => filterAnnOrEnt(ent, cond));
           //in case entities are not TopEntities, get the top
           condRes = condRes.map((ent) => getTopEntity(ent));

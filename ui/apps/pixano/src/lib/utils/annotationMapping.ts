@@ -10,7 +10,6 @@ import {
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
 } from "$lib/constants/workspaceConstants";
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import {
   BaseSchema,
   WorkspaceType,
@@ -39,7 +38,8 @@ type MappedMaskCacheEntry = {
   reviewState: string;
   hidden: boolean;
   editing: boolean;
-  sourceId: string;
+  sourceType: string;
+  sourceName: string;
   viewName: string;
   frameId: string;
 };
@@ -66,19 +66,16 @@ export function clearAnnotationMappingCaches(): void {
   mappedMaskCache.clear();
 }
 
-const isPreAnnotation = (source_id: string): boolean => {
-  const source = sourcesStore.value.find((s) => s.id === source_id);
-  return source?.data.name === PRE_ANNOTATION;
+const isPreAnnotation = (sourceName: string): boolean => {
+  return sourceName === PRE_ANNOTATION;
 };
 
 const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   if (!(bbox && bbox.is_type(BaseSchema.BBox))) return null;
 
-  const source = sourcesStore.value.find((src) => src.id === bbox.data.source_id);
-
   const confidence =
     bbox.data.confidence !== 0.0 &&
-    (!source || (source.data.kind !== "ground_truth" && source.data.name !== "Pixano"))
+    !(bbox.data.source_type === "ground_truth" || bbox.data.source_name === "Pixano")
       ? bbox.data.confidence.toFixed(2)
       : null;
 
@@ -101,7 +98,7 @@ export const mapBBoxForDisplay = (
   if (!bbox.is_type(BaseSchema.BBox)) return;
   const effectiveHighlight = highlightedOverride ?? bbox.ui.displayControl.highlighted;
   if (bbox.ui.datasetItemType === WorkspaceType.VIDEO && bbox.ui.displayControl.hidden) return;
-  if (isPreAnnotation(bbox.data.source_id) && effectiveHighlight !== "self") return;
+  if (isPreAnnotation(bbox.data.source_name ?? "") && effectiveHighlight !== "self") return;
   if (!bbox.data.view_name) return;
   let bbox_ui_coords = bbox.data.coords;
   if (bbox.data.format === "xyxy") {
@@ -201,7 +198,7 @@ export const mapMaskForDisplay = (
     obj.is_type(BaseSchema.Mask) &&
     obj.data.view_name &&
     !obj.ui.review_state &&
-    !(isPreAnnotation(obj.data.source_id) && obj.ui.review_state === "accepted")
+    !(isPreAnnotation(obj.data.source_name ?? "") && obj.ui.review_state === "accepted")
   ) {
     const metadata = obj.data.inference_metadata;
     const effectiveHighlight = highlightedOverride ?? obj.ui.displayControl.highlighted;
@@ -225,7 +222,8 @@ export const mapMaskForDisplay = (
       cached.reviewState === reviewState &&
       cached.hidden === displayControl.hidden &&
       cached.editing === displayControl.editing &&
-      cached.sourceId === obj.data.source_id &&
+      cached.sourceType === (obj.data.source_type ?? "") &&
+      cached.sourceName === (obj.data.source_name ?? "") &&
       cached.viewName === obj.data.view_name &&
       cached.frameId === frameId
     ) {
@@ -257,7 +255,8 @@ export const mapMaskForDisplay = (
       reviewState,
       hidden: displayControl.hidden,
       editing: displayControl.editing,
-      sourceId: obj.data.source_id,
+      sourceType: obj.data.source_type ?? "",
+      sourceName: obj.data.source_name ?? "",
       viewName: obj.data.view_name,
       frameId,
     });

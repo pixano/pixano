@@ -6,24 +6,21 @@ License: CECILL-C
 
 import type { PageLoad } from "./$types";
 import * as api from "$lib/api";
-import { error } from "@sveltejs/kit";
-import {
-  isValidDatasetItem,
-  prepareDatasetItem,
-  mapFeatureValues,
-} from "$lib/utils/itemLoadUtils";
+import { mapFeatureValues } from "$lib/utils/itemLoadUtils";
+import { buildWorkspaceManifest, getWorkspaceResourcePaths } from "$lib/workspace/manifest";
 
 export const load: PageLoad = async ({ params, parent }) => {
   const { dataset, schema, featureValues: rawFeatureValues } = await parent();
+  const workspaceManifest = buildWorkspaceManifest(schema, dataset.workspace);
+  const workspaceResources = getWorkspaceResourcePaths(workspaceManifest, "annotations");
 
-  const rawItem = await api.getDatasetItem(dataset.id, encodeURIComponent(params.itemId));
-  if (!isValidDatasetItem(rawItem)) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
-    throw error(404, `Item "${params.itemId}" not found`);
-  }
-
-  const item = prepareDatasetItem(rawItem, dataset);
+  const { workspaceData } = await api.loadWorkspaceRecord(
+    dataset.id,
+    encodeURIComponent(params.itemId),
+    dataset.workspace,
+    workspaceResources,
+  );
   const featureValues = mapFeatureValues(rawFeatureValues, schema);
 
-  return { item, featureValues };
+  return { workspaceData, featureValues, workspaceManifest };
 };

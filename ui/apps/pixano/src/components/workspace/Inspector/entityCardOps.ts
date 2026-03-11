@@ -119,11 +119,7 @@ export function saveInputChange(
   entitiesStore: ReactiveValue<Entity[]>,
   annotationsStore: ReactiveValue<Annotation[]>,
 ): void {
-  if (
-    [BaseSchema.Track, BaseSchema.Entity, BaseSchema.MultiModalEntity].includes(
-      obj.table_info.base_schema,
-    )
-  ) {
+  if (obj.table_info.base_schema === BaseSchema.Entity) {
     entitiesStore.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object === obj) {

@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Message, MessageTypeEnum } from "$lib/types/dataset";
+  import { Message } from "$lib/types/dataset";
   import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
   import type { StoreQuestionEvent } from "$lib/types/vqa";
   import type {
@@ -19,7 +19,7 @@ License: CECILL-C
   import VqaHeader from "./annotateItem/VqaHeader.svelte";
   import VqaInputArea from "./annotateItem/VqaInputArea.svelte";
   import { isQuestionCompleted } from "./annotateItem/utils";
-  import { groupMessagesByNumber } from "./utils";
+  import { buildQuestionThreads } from "$lib/utils/vqaThreads";
 
 
   interface Props {
@@ -35,7 +35,7 @@ License: CECILL-C
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
     onGenerateQuestion?: (
       completionModel: string,
-    ) => Promise<{ content: string; choices: string[] } | null>;
+    ) => Promise<{ content: string; choices: string[]; question_type: import("$lib/types/dataset").QuestionTypeEnum } | null>;
   }
 
   let {
@@ -52,24 +52,17 @@ License: CECILL-C
     onGenerateQuestion,
   }: Props = $props();
 
-  let messagesByNumber = $derived(groupMessagesByNumber(messages));
-
-  // Find the last question group and check if it has an answer
-
-  let lastGroup = $derived(messagesByNumber.length > 0 ? messagesByNumber[messagesByNumber.length - 1] : null);
-
-  let pendingQuestion =
-    $derived(lastGroup && !isQuestionCompleted(lastGroup)
-      ? lastGroup.find((m) => m.data.type === MessageTypeEnum.QUESTION)
-      : null);
+  let questionThreads = $derived(buildQuestionThreads(messages));
+  let lastThread = $derived(questionThreads.length > 0 ? questionThreads[questionThreads.length - 1] : null);
+  let pendingQuestion = $derived(lastThread && !isQuestionCompleted(lastThread.messages) ? lastThread.question : null);
 </script>
 
 <div class="flex flex-col h-full bg-card overflow-hidden">
   <VqaHeader {vqaSectionWidth} {inferenceServer} {vqaModels} {completionModels} {onCompletionModelsChange} />
 
   <div class="flex-1 overflow-hidden">
-    <VqaChatThread
-      {messagesByNumber}
+      <VqaChatThread
+      {questionThreads}
       {completionModels}
       {onAnswerContentChange}
       {onGenerateAnswer}

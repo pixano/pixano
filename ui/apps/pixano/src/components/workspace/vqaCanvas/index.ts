@@ -11,7 +11,7 @@ export type {
   PixanoInferenceCompletionModel,
   PromptByQuestionType,
 } from "$lib/stores/vqaStores.svelte";
-export type { LabelFormat, StoreQuestionEvent } from "$lib/types/vqa";
+export type { LabelFormat, StoreQuestionEvent, VqaMessageContext } from "$lib/types/vqa";
 export {
   ContentChangeEventType,
   isNewAnswerEvent,

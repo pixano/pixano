@@ -36,7 +36,7 @@ License: CECILL-C
     onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
     onGenerateQuestion?: (
       completionModel: string,
-    ) => Promise<{ content: string; choices: string[] } | null>;
+    ) => Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null>;
   }
 
   let {
@@ -235,13 +235,13 @@ License: CECILL-C
       const generated = await onGenerateQuestion(completionModel);
       isGenerating = false;
 
-      if (generated) {
-        onStoreQuestion?.({
-          content: generated.content,
-          question_type: QuestionTypeEnum.OPEN,
-          choices: generated.choices || [],
-        });
-      }
+        if (generated) {
+          onStoreQuestion?.({
+            content: generated.content,
+            question_type: generated.question_type,
+            choices: generated.choices || [],
+          });
+        }
     }
   };
 

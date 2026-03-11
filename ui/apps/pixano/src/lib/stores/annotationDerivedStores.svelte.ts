@@ -34,7 +34,7 @@ import {
   highlightedEntity,
   selectedTool,
   views,
-} from "./workspaceStores.svelte";
+} from "./workspaceBaseStores.svelte";
 
 // --- Shared entity-by-id map ---
 // Only built when Pan tool + focused entity (used by highlight logic).
@@ -146,8 +146,4 @@ export const textSpans = reactiveDerived(
 export const messages = reactiveDerived(
   () =>
     annotations.value.filter((annotation) => annotation.is_type(BaseSchema.Message)) as Message[],
-);
-
-export const conversations = reactiveDerived(() =>
-  entities.value.filter((entity) => entity.is_type(BaseSchema.Conversation)),
 );

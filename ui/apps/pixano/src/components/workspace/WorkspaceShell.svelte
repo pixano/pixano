@@ -27,20 +27,22 @@ License: CECILL-C
     views,
   } from "$lib/stores/workspaceStores.svelte";
   import {
-    DatasetItem,
     effectProbe,
     type FeaturesValues,
-    type SaveItem,
   } from "$lib/ui";
+  import type { ResourceMutation } from "$lib/api/resourcePayloads";
+  import type { WorkspaceData } from "$lib/types/workspace";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
   import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
-  import { attachTrackChildren, processDatasetItem } from "$lib/utils/itemDataProcessing";
-  import { prepareSaveData } from "$lib/utils/saveItemUtils";
+  import { attachTrackChildren, buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
+  import { setWorkspaceContext } from "$lib/workspace/context";
+  import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
   interface Props {
     featureValues: FeaturesValues;
-    selectedItem: DatasetItem;
-    handleSaveItem: (data: SaveItem[]) => Promise<void>;
+    workspaceManifest: WorkspaceManifest;
+    workspaceData: WorkspaceData;
+    handleSaveItem: (data: ResourceMutation[]) => Promise<void>;
     isLoading: boolean;
     shouldSaveCurrentItem: boolean;
     viewer: Snippet<[{ resize: number }]>;
@@ -48,12 +50,22 @@ License: CECILL-C
 
   let {
     featureValues,
-    selectedItem,
+    workspaceManifest,
+    workspaceData,
     handleSaveItem,
     isLoading,
     shouldSaveCurrentItem,
     viewer,
   }: Props = $props();
+
+  setWorkspaceContext({
+    get manifest() {
+      return workspaceManifest;
+    },
+    get featureValues() {
+      return featureValues;
+    },
+  });
 
   // Reset stores synchronously on mount to clear stale data from previous session
   resetWorkspaceStores();
@@ -94,9 +106,9 @@ License: CECILL-C
   const loadData = () => {
     saveData.value = [];
     generatedPreviewBBoxes.value = [];
-    views.value = selectedItem.views;
+    views.value = workspaceData.views;
 
-    const result = processDatasetItem(selectedItem, featureValues);
+    const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
 
     if (result.videoSpeed !== undefined) {
       playbackState.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
@@ -112,20 +124,20 @@ License: CECILL-C
     const withTracks = attachTrackChildren(result.annotations, (ann) =>
       getTopEntityFromList(ann, result.entities),
     );
-    annotations.value = withTracks;
+      annotations.value = withTracks;
 
-    itemMetas.value = {
-      featuresList: featureValues || { main: {}, objects: {} },
-      item: selectedItem.item,
-      type: selectedItem.ui.type,
-    };
+      itemMetas.value = {
+        featuresList: featureValues || { main: {}, objects: {} },
+        item: workspaceData.item,
+        type: workspaceData.ui.type,
+      };
   };
 
   // --- Item change detection ---
 
   let lastLoadedItemId: string | null = null;
   $effect(() => {
-    const currentItemId = selectedItem?.item?.id;
+    const currentItemId = workspaceData?.item?.id;
     if (!currentItemId || currentItemId === lastLoadedItemId) return;
     lastLoadedItemId = currentItemId;
     untrack(() => {
@@ -141,14 +153,14 @@ License: CECILL-C
 
   $effect(() => {
     void modelsUiStore.value; // track changes
-    if (selectedItem) loadViewEmbeddings();
+    if (workspaceData) loadViewEmbeddings();
   });
 
   // --- Save ---
 
   const onSave = async () => {
     isSaving = true;
-    await handleSaveItem(prepareSaveData(saveData.value));
+    await handleSaveItem(saveData.value);
     saveData.value = [];
     isSaving = false;
   };

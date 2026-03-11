@@ -17,7 +17,6 @@ License: CECILL-C
     saveInputChange as saveInput,
   } from "./entityCardOps";
   import TextSpansContent from "./TextSpansContent.svelte";
-  import { datasetSchema } from "$lib/stores/appStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -35,9 +34,9 @@ License: CECILL-C
     BaseSchema,
     Card,
     cn,
+    entityHasTracklets,
     Entity,
     IconButton,
-    isVideoEntity,
     Item,
     Tracklet,
     WorkspaceType,
@@ -50,12 +49,14 @@ License: CECILL-C
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
+  import { getWorkspaceContext } from "$lib/workspace/context";
 
   interface Props {
     entity: Entity;
   }
 
   let { entity }: Props = $props();
+  const { manifest } = getWorkspaceContext();
   let showIcons = $state(false);
   let childsPanelOpen = $state(true);
   let featuresPanelOpen = $state(true);
@@ -146,17 +147,16 @@ License: CECILL-C
   const isVisible = $derived(
     entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false,
   );
-  const hiddenTrack = $derived(isVideoEntity(entity) ? entityDisplayControl.hidden : false);
+  const hiddenTrack = $derived(entityHasTracklets(entity) ? entityDisplayControl.hidden : false);
 
   const features = $derived.by(() => {
     if (!isExpanded || !featuresPanelOpen) return [];
-    const currentSchema = datasetSchema.value;
     const currentEntities = entities.value;
     const frameIndex = currentFrameIndex.value;
     void annotations.value;
     const feats: Record<string, Feature[]> = {};
     let childAnns: Annotation[] = [];
-    if (isVideoEntity(entity)) {
+    if (entityHasTracklets(entity)) {
       if (frameIndex !== null) {
         childAnns = (entity.ui.childs ?? []).filter(
           (ann) => !ann.is_type(BaseSchema.Tracklet) && ann.ui.frame_index === frameIndex,
@@ -171,16 +171,12 @@ License: CECILL-C
       if (ann.data.entity_id !== entity.id && !(ann.data.entity_id in feats)) {
         const subentity = currentEntities.find((ent) => ent.id === ann.data.entity_id);
         if (subentity) {
-          feats[subentity.id] = createFeature(subentity, currentSchema, subentity.table_info.name);
+          feats[subentity.id] = createFeature(subentity, manifest, subentity.table_info.name);
         }
       }
-      feats[ann.id] = createFeature(
-        ann,
-        currentSchema,
-        `${ann.table_info.name}.${ann.data.view_name}`,
-      );
+      feats[ann.id] = createFeature(ann, manifest, `${ann.table_info.name}.${ann.data.view_name}`);
     }
-    feats[entity.id] = createFeature(entity, currentSchema, entity.table_info.name);
+    feats[entity.id] = createFeature(entity, manifest, entity.table_info.name);
     return Object.values(feats).flat();
   });
 
@@ -248,7 +244,7 @@ License: CECILL-C
   };
 
   const onTrackVisClick = () => {
-    if (!isVideoEntity(entity)) return;
+    if (!entityHasTracklets(entity)) return;
     setEntityDisplayControl({ hidden: !hiddenTrack });
   };
 
@@ -370,7 +366,7 @@ License: CECILL-C
             <Trash2 class="h-4 w-4" />
           </IconButton>
         {/if}
-        {#if isVideoEntity(entity) && (showIcons || entityDisplayControl.editing || hiddenTrack)}
+        {#if entityHasTracklets(entity) && (showIcons || entityDisplayControl.editing || hiddenTrack)}
           <IconButton
             tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
             onclick={onTrackVisClick}

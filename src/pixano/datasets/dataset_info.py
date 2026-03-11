@@ -43,6 +43,7 @@ from pixano.schemas import (
     canonical_table_name_for_slot,
     is_supported_view_schema,
     supported_dataset_info_slots,
+    validate_canonical_table_map,
 )
 from pixano.schemas.schema_group import SchemaGroup, schema_to_group
 
@@ -165,7 +166,7 @@ class DatasetInfo(BaseModel):
                 isinstance(schema_cls, type) and issubclass(schema_cls, View) and is_supported_view_schema(schema_cls)
             ):
                 raise ValueError(
-                    "DatasetInfo.views values must be subclasses of Image, SequenceFrame, Text, or PDF. "
+                    "DatasetInfo.views values must be supported canonical View subclasses. "
                     f"Got {schema_cls} for logical view '{logical_name}'."
                 )
             table_name = canonical_table_name_for_schema(schema_cls)
@@ -187,6 +188,8 @@ class DatasetInfo(BaseModel):
                     raise ValueError(
                         f"Table '{table_name}' schema must be a RecordComponent subclass, got {schema_cls}."
                     )
+
+        validate_canonical_table_map(derived_tables)
 
         self.tables = derived_tables
         return self

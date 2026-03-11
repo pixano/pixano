@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import {
   annotations,
@@ -14,15 +13,15 @@ import {
   Annotation,
   BaseSchema,
   BBox,
+  entityHasTracklets,
   Entity,
-  isVideoEntity,
   Keypoints,
   Tracklet,
   type SequenceFrame,
   type View,
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
-import { getPixanoSourceId } from "$lib/utils/entityLookupUtils";
+import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
@@ -45,7 +44,6 @@ export function addKeyItemToTracklet(
 ): boolean {
   let newItemBBox: BBox | undefined = undefined;
   let newItemKpt: Keypoints | undefined = undefined;
-  const sourceId = getPixanoSourceId(sourcesStore);
 
   // Find interpolated bbox for the current frame
   const interpolatedBox = bboxes.find(
@@ -54,9 +52,8 @@ export function addKeyItemToTracklet(
       tracklet.ui.childs.some((ann) => ann.id === box.ui?.startRef?.id),
   );
   if (interpolatedBox) {
-    newItemBBox = BBox.cloneForFrame(interpolatedBox, {
-      source_id: sourceId,
-    });
+    newItemBBox = BBox.cloneForFrame(interpolatedBox, {});
+    applyPixanoSourceFields(newItemBBox);
     // Coords are denormalized: normalize them
     const currentSf = (views[newItemBBox.data.view_name] as SequenceFrame[])[
       newItemBBox.ui.frame_index
@@ -101,9 +98,9 @@ export function addKeyItemToTracklet(
         view_name: interpolatedKpt.viewRef.name,
         frame_id: interpolatedKpt.viewRef.id,
         frame_index: interpolatedKpt.ui.frame_index,
-        source_id: sourceId,
         displayControl: interpolatedKpt.ui.displayControl,
       });
+      applyPixanoSourceFields(newItemKpt);
       saveTo("add", newItemKpt);
     }
   }
@@ -177,7 +174,7 @@ export function splitTracklet(
   const newOnRight = splitTrackInTwo(tracklet, prev, next);
   entities.update((objects) =>
     objects.map((ent) => {
-      if (isVideoEntity(ent) && ent.id === entityId) {
+      if (entityHasTracklets(ent) && ent.id === entityId) {
         ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, [newOnRight], sortByFrameIndex);
       }
       return ent;

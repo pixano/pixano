@@ -18,20 +18,57 @@ import type {
   NewAnswerEvent,
   StoreQuestionEvent,
   UpdatedMessageEvent,
+  VqaMessageContext,
 } from "$lib/types/vqa";
-import { Entity } from "$lib/types/dataset";
 
-import { currentDatasetStore } from "./appStores.svelte";
-import { vqaModels } from "./inferenceStores.svelte";
 import { completionModelsStore } from "./vqaStores.svelte";
 import { saveTo } from "$lib/utils/saveItemUtils";
-import { removeFieldFromValue } from "$lib/utils/coreUtils";
-import { createMessage, updateAnswerMessage } from "$lib/utils/messageUtils";
+import { createMessage, updateMessage } from "$lib/utils/messageUtils";
+import { buildQuestionThreads } from "$lib/utils/vqaThreads";
 import {
   annotations,
-  conversations,
-  messages as messagesStore,
-} from "./workspaceStores.svelte";
+} from "./workspaceBaseStores.svelte";
+import { messages as messagesStore } from "./workspaceStores.svelte";
+
+function getMessageEntityIds(message: Message): string[] {
+  if (Array.isArray(message.data.entity_ids)) {
+    return message.data.entity_ids as string[];
+  }
+  if (typeof message.data.entity_id === "string" && message.data.entity_id !== "") {
+    return [message.data.entity_id];
+  }
+  return [];
+}
+
+function buildPrompt(
+  instruction: string,
+  userContent: string,
+  asSystem: boolean,
+): CondititionalGenerationTextImageInput["prompt"] {
+  if (instruction.trim() === "") {
+    return userContent;
+  }
+
+  if (asSystem) {
+    return [
+      { role: "system", content: instruction },
+      { role: "user", content: userContent },
+    ];
+  }
+
+  return [
+    { role: "user", content: `${instruction}\n\n${userContent}`.trim() },
+  ];
+}
+
+function getNextMessageNumber(conversationId: string): number {
+  const conversationMessages = messagesStore.value.filter(
+    (message) => (message.data.conversation_id as string) === conversationId,
+  );
+  return conversationMessages.length === 0
+    ? 0
+    : Math.max(...conversationMessages.map((message) => message.data.number ?? 0)) + 1;
+}
 
 // ─── addAnswer ──────────────────────────────────────────────────────────────────
 
@@ -48,11 +85,17 @@ export const addAnswer = (detail: NewAnswerEvent) => {
   }
 
   const newAnswer = createMessage({
-    number: question.data.number ?? 0,
+    number: getNextMessageNumber((question.data.conversation_id as string) ?? ""),
+    record_id: (question.data.record_id as string) ?? question.data.item_id ?? "",
+    view_id: (question.data.view_id as string) ?? "",
+    conversation_id: (question.data.conversation_id as string) ?? "",
+    entity_ids: getMessageEntityIds(question),
     item_id: question.data.item_id ?? "",
     view_name: question.data.view_name ?? "",
-    frame_id: question.data.frame_id ?? "",
     entity_id: question.data.entity_id ?? "",
+    source_type: (question.data.source_type as string) ?? undefined,
+    source_name: (question.data.source_name as string) ?? undefined,
+    source_metadata: (question.data.source_metadata as string) ?? undefined,
     type: MessageTypeEnum.ANSWER,
     user: "user",
     inference_metadata: {},
@@ -69,25 +112,23 @@ export const addAnswer = (detail: NewAnswerEvent) => {
 
 export const addQuestion = ({
   newQuestionData,
-  parentEntity,
+  context,
 }: {
   newQuestionData: StoreQuestionEvent;
-  parentEntity: Entity;
+  context: VqaMessageContext;
 }) => {
-  const messages = messagesStore.value;
-
-  const newQuestionNumber =
-    messages.length === 0 ? 0 : Math.max(...messages.map((m) => m.data.number)) + 1;
-
   const { labelFormat, ...questionData } = newQuestionData;
 
   const newQuestion = createMessage({
     ...questionData,
-    number: newQuestionNumber,
-    entity_id: parentEntity.id,
+    number: 0,
+    record_id: context.recordId,
+    view_id: context.viewId,
+    conversation_id: context.conversationId,
+    entity_ids: context.entityIds,
+    item_id: context.recordId,
     view_name: "",
-    frame_id: "",
-    item_id: parentEntity.data.item_id,
+    entity_id: context.entityIds[0] ?? "",
     type: MessageTypeEnum.QUESTION,
     user: "user",
     inference_metadata: {},
@@ -107,20 +148,16 @@ export const addQuestion = ({
 export const deleteQuestion = ({ questionId }: DeleteQuestionEvent) => {
   const allAnnotations = annotations.value;
 
-  const question = allAnnotations.find(
-    (a) => a.id === questionId && a instanceof Message && a.data.type === MessageTypeEnum.QUESTION,
-  ) as Message | undefined;
+  const messages = allAnnotations.filter((a): a is Message => a instanceof Message);
+  const questionThread = buildQuestionThreads(messages).find((thread) => thread.question.id === questionId);
+  const question = questionThread?.question;
 
   if (!question) {
     console.error("ERROR: Question not found for deletion", questionId);
     return;
   }
 
-  const questionNumber = question.data.number;
-
-  const messagesToDelete = allAnnotations.filter(
-    (a) => a instanceof Message && a.data.number === questionNumber,
-  );
+  const messagesToDelete = questionThread?.messages ?? [question];
 
   const idsToDelete = new Set(messagesToDelete.map((m) => m.id));
 
@@ -131,11 +168,28 @@ export const deleteQuestion = ({ questionId }: DeleteQuestionEvent) => {
   }
 };
 
+function getQuestionContext(question: Message, imageUrl: string): VqaMessageContext {
+  return {
+    recordId: ((question.data.record_id as string) ?? question.data.item_id ?? "") as string,
+    viewId: ((question.data.view_id as string) ?? "") as string,
+    conversationId: ((question.data.conversation_id as string) ?? "") as string,
+    entityIds: getMessageEntityIds(question),
+    imageUrl,
+  };
+}
+
 // ─── generateAnswer ─────────────────────────────────────────────────────────────
 
-export const generateAnswer = async (completionModel: string, question: Message) => {
+export const generateAnswer = async (
+  completionModel: string,
+  question: Message,
+  imageUrl: string,
+) => {
   const questionData = question.data;
-  const temperature = completionModelsStore.value.find((m) => m.selected)?.temperature ?? 1.0;
+  const selectedCompletionModel =
+    completionModelsStore.value.find((m) => m.name === completionModel) ??
+    completionModelsStore.value.find((m) => m.selected);
+  const temperature = selectedCompletionModel?.temperature ?? 1.0;
 
   if (!isQuestionData(questionData)) {
     console.error("ERROR: Message is not a question");
@@ -147,37 +201,48 @@ export const generateAnswer = async (completionModel: string, question: Message)
     return;
   }
 
-  const [conversation] = conversations.value;
-
-  if (conversation === undefined) {
-    return null;
-  }
-
-  const selectedVqa = vqaModels.value.find((m) => m.name === completionModel);
+  const context = getQuestionContext(question, imageUrl);
+  const questionType = question.data.question_type ?? QuestionTypeEnum.OPEN;
+  const promptInstruction =
+    selectedCompletionModel?.prompts[MessageTypeEnum.ANSWER][questionType] ?? "";
   const input: CondititionalGenerationTextImageInput = {
-    dataset_id: currentDatasetStore.value.id,
-    conversation: removeFieldFromValue(conversation, "ui"),
-    messages: [removeFieldFromValue(question, "ui")],
     model: completionModel,
+    prompt: buildPrompt(promptInstruction, question.data.content, selectedCompletionModel?.prompts.as_system ?? false),
+    images: imageUrl ? [imageUrl] : null,
     temperature,
-    provider_name: selectedVqa?.provider_name,
   };
 
   try {
     const generatedAnswer = await api.conditional_generation_text_image(input);
 
-    if (!generatedAnswer || !("data" in generatedAnswer)) {
+    if (!generatedAnswer) {
       console.error(
         "Model generation error: Unexpected error, please look at Pixano-Inference logs for more information.",
       );
       return null;
     }
 
-    annotations.update((prevAnnotations) => [...prevAnnotations, generatedAnswer]);
+    const newAnswer = createMessage({
+      number: getNextMessageNumber(context.conversationId),
+      record_id: context.recordId,
+      view_id: context.viewId,
+      conversation_id: context.conversationId,
+      entity_ids: context.entityIds,
+      type: MessageTypeEnum.ANSWER,
+      user: "user",
+      inference_metadata: generatedAnswer.metadata ?? {},
+      content: generatedAnswer.data.generated_text,
+      choices: [],
+      source_type: (question.data.source_type as string) ?? undefined,
+      source_name: (question.data.source_name as string) ?? undefined,
+      source_metadata: (question.data.source_metadata as string) ?? undefined,
+    });
 
-    saveTo("add", generatedAnswer);
+    annotations.update((prevAnnotations) => [...prevAnnotations, newAnswer]);
 
-    return generatedAnswer;
+    saveTo("add", newAnswer);
+
+    return newAnswer;
   } catch {
     return null;
   }
@@ -187,44 +252,28 @@ export const generateAnswer = async (completionModel: string, question: Message)
 
 export const generateQuestion = async (
   completionModel: string,
-): Promise<{ content: string; choices: string[] } | null> => {
-  const [conversation] = conversations.value;
-  const prompt =
-    completionModelsStore.value.find((m) => m.selected)?.prompts[MessageTypeEnum.QUESTION][
-      QuestionTypeEnum.OPEN
-    ] ?? "";
-  const temperature = completionModelsStore.value.find((m) => m.selected)?.temperature ?? 1.0;
+  context: VqaMessageContext,
+): Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null> => {
+  const selectedCompletionModel =
+    completionModelsStore.value.find((m) => m.name === completionModel) ??
+    completionModelsStore.value.find((m) => m.selected);
+  const temperature = selectedCompletionModel?.temperature ?? 1.0;
+  const questionType =
+    (Object.entries(selectedCompletionModel?.prompts[MessageTypeEnum.QUESTION] ?? {}).find(
+      ([, value]) => value.trim() !== "",
+    )?.[0] as QuestionTypeEnum | undefined) ?? QuestionTypeEnum.OPEN;
+  const promptInstruction =
+    selectedCompletionModel?.prompts[MessageTypeEnum.QUESTION][questionType] ?? "";
 
-  if (conversation === undefined) {
-    return null;
-  }
-
-  const lastMessageOfConversation = messagesStore.value.sort(
-    (a, b) => b.data.number - a.data.number,
-  )[0];
-
-  const systemMessage = createMessage({
-    item_id: conversation.data.item_id,
-    view_name: "",
-    frame_id: "",
-    entity_id: conversation.id,
-    type: MessageTypeEnum.QUESTION,
-    question_type: QuestionTypeEnum.OPEN,
-    user: "user",
-    inference_metadata: {},
-    choices: [],
-    number: lastMessageOfConversation ? lastMessageOfConversation.data.number + 1 : 0,
-    content: prompt,
-  });
-
-  const selectedVqa = vqaModels.value.find((m) => m.name === completionModel);
   const input: CondititionalGenerationTextImageInput = {
-    dataset_id: currentDatasetStore.value.id,
-    conversation: removeFieldFromValue(conversation, "ui"),
-    messages: [removeFieldFromValue(systemMessage, "ui")],
     model: completionModel,
+    prompt: buildPrompt(
+      promptInstruction,
+      "Generate one question for this image.",
+      selectedCompletionModel?.prompts.as_system ?? false,
+    ),
+    images: context.imageUrl ? [context.imageUrl] : null,
     temperature,
-    provider_name: selectedVqa?.provider_name,
   };
 
   try {
@@ -234,7 +283,11 @@ export const generateQuestion = async (
       return null;
     }
 
-    return { content: generatedQuestion.data.content, choices: [] };
+    return {
+      content: generatedQuestion.data.generated_text,
+      choices: [],
+      question_type: questionType,
+    };
   } catch (err) {
     console.error("Model generation error:", err);
     return null;
@@ -244,22 +297,20 @@ export const generateQuestion = async (
 // ─── updateMessageContent ───────────────────────────────────────────────────────
 
 export const updateMessageContent = (detail: UpdatedMessageEvent) => {
-  const { answerId, content } = detail;
+  const { messageId, content } = detail;
 
   const messages = messagesStore.value;
-  const prevAnswer = messages.find(
-    (message) => message.data.type === MessageTypeEnum.ANSWER && message.id === answerId,
-  );
+  const previousMessage = messages.find((message) => message.id === messageId);
 
-  if (!prevAnswer) {
+  if (!previousMessage) {
     return;
   }
 
-  const updatedMessage = updateAnswerMessage({ prevAnswer, content });
+  const updatedMessage = updateMessage({ prevMessage: previousMessage, content });
 
   annotations.update((prevAnnotations) =>
     prevAnnotations.map((annotation) =>
-      annotation.is_type(BaseSchema.Message) && annotation.id === answerId
+      annotation.is_type(BaseSchema.Message) && annotation.id === messageId
         ? updatedMessage
         : annotation,
     ),

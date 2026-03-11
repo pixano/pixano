@@ -17,17 +17,15 @@ import {
   Tracklet,
   WorkspaceType,
   type BBoxData,
-  type DatasetSchema,
   type DS_NamedSchema,
   type ItemFeature,
   type MaskData,
-  type Reference,
 } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes";
-import { datasetSchema, sourcesStore } from "$lib/stores/appStores.svelte";
-import { getPixanoSourceId, getTable } from "$lib/utils/entityLookupUtils";
+import { PIXANO_SOURCE, getTable } from "$lib/utils/entityLookupUtils";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
+import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 import { entities, views } from "$lib/stores/workspaceStores.svelte";
 
@@ -98,7 +96,6 @@ export const defineCreatedEntity = (
   shape: SaveShape,
   features: Record<string, ItemFeature>,
   entitySchema: DS_NamedSchema,
-  parentOfSub: Reference | undefined = undefined,
 ): Entity => {
   const table = entitySchema.name;
   const now = nowTimestamp();
@@ -109,7 +106,7 @@ export const defineCreatedEntity = (
     table_info: { name: table, group: "entities", base_schema: entitySchema.base_schema },
     data: {
       item_id: shape.itemId,
-      parent_id: parentOfSub ? parentOfSub.id : "",
+      parent_id: "",
     },
   };
 
@@ -132,106 +129,64 @@ export const getFrameIndex = (view_name: string, frame_id: string): number => {
   }
 };
 
+function getSingleEntitySchema(workspaceManifest: WorkspaceManifest): DS_NamedSchema {
+  const entityTables = workspaceManifest.tablesByGroup.entities;
+  if (entityTables.length !== 1) {
+    console.error("ERROR: Expected exactly one entity table", workspaceManifest.tablesByName);
+    throw new Error("ERROR: Expected exactly one entity table");
+  }
+
+  const tableName = entityTables[0];
+  const table = workspaceManifest.tablesByName[tableName];
+  if (!table || table.baseSchema !== BaseSchema.Entity) {
+    console.error("ERROR: Invalid entity schema", tableName, table, workspaceManifest.tablesByName);
+    throw new Error("ERROR: Invalid entity schema");
+  }
+
+  return {
+    name: tableName,
+    base_schema: table.baseSchema,
+    fields: table.fields,
+    schema: table.baseSchema,
+  } satisfies DS_NamedSchema;
+}
+
+export const findOrCreateEntity = (
+  selectedEntityId: string,
+  shape: SaveShape,
+  features: Record<string, Record<string, ItemFeature>>,
+  workspaceManifest: WorkspaceManifest,
+): Entity => {
+  const entitySchema = getSingleEntitySchema(workspaceManifest);
+  if (selectedEntityId === "new") {
+    const entity = defineCreatedEntity(shape, features[entitySchema.name], entitySchema);
+    entity.ui.childs = [];
+    return entity;
+  }
+
+  const entity = entities.value.find((candidate) => candidate.id === selectedEntityId);
+  if (entity) {
+    return entity;
+  }
+
+  const createdEntity = defineCreatedEntity(shape, features[entitySchema.name], entitySchema);
+  createdEntity.ui.childs = [];
+  return createdEntity;
+};
+
 export const findOrCreateSubAndTopEntities = (
   selectedEntityId: string,
   shape: SaveShape,
   features: Record<string, Record<string, ItemFeature>>,
+  workspaceManifest: WorkspaceManifest,
 ): {
   topEntity: Entity;
   subEntity: Entity | undefined;
 } => {
-  //Manage sub-entity: check if there is some subentity table(s)
-  //if so, choose the correct one, and separate topEntity from subEntity ...
-  //TMP: we should rely on "table relations" from datasetSchema.value, but it's not available yet
-  //TMP: so, we will make the assumption that the only case with subentity is : 1 Track + 1 Entity (sub)
-  //TMP: -> we take trackSchemas[0] and entitySchemas[0]
-  let topEntity: Entity | undefined = undefined;
-  let subEntity: Entity | undefined = undefined;
-  let topEntitySchema: DS_NamedSchema | undefined = undefined;
-  let subEntitySchema: DS_NamedSchema | undefined = undefined;
-  const entitySchemas: DS_NamedSchema[] = [];
-  const trackSchemas: DS_NamedSchema[] = [];
-  const multiModalSchemas: DS_NamedSchema[] = [];
-  for (const [name, sch] of Object.entries(datasetSchema.value?.schemas ?? {})) {
-    if (sch.base_schema === BaseSchema.Track) {
-      trackSchemas.push({ ...sch, name });
-    } else if (sch.base_schema === BaseSchema.MultiModalEntity) {
-      multiModalSchemas.push({ ...sch, name });
-    } else if (sch.base_schema === BaseSchema.Entity) {
-      entitySchemas.push({ ...sch, name });
-    }
-  }
-  if (trackSchemas.length > 0) {
-    topEntitySchema = trackSchemas[0];
-    if (entitySchemas.length > 0) {
-      subEntitySchema = entitySchemas[0];
-    }
-  } else if (multiModalSchemas.length > 0) {
-    topEntitySchema = multiModalSchemas[0];
-    if (entitySchemas.length > 0) {
-      subEntitySchema = entitySchemas[0];
-    }
-  } else if (entitySchemas.length > 0) {
-    topEntitySchema = entitySchemas[0];
-  } else {
-    console.error("ERROR: No available schema Entity", datasetSchema.value?.schemas ?? {});
-    throw new Error("ERROR: No available schema Entity");
-  }
-
-  if (selectedEntityId === "new") {
-    topEntity = defineCreatedEntity(
-      shape,
-      features[topEntitySchema.name],
-      topEntitySchema,
-    );
-    topEntity.ui.childs = [];
-    if (subEntitySchema) {
-      subEntity = defineCreatedEntity(
-        shape,
-        features[subEntitySchema.name],
-        subEntitySchema,
-        {
-          id: topEntity.id,
-          name: topEntity.table_info.name,
-        },
-      );
-      subEntity.ui.childs = [];
-    }
-  } else {
-    topEntity = entities.value.find((entity) => entity.id === selectedEntityId);
-    if (!topEntity) {
-      topEntity = defineCreatedEntity(
-        shape,
-        features[topEntitySchema.name],
-        topEntitySchema,
-      );
-      topEntity.ui.childs = [];
-    }
-    if (subEntitySchema) {
-      //need to find entity with corresponding parent_id and table_info.name, and view name
-      subEntity = entities.value.find(
-        (entity) =>
-          entity.table_info.name === subEntitySchema.name &&
-          entity.table_info.base_schema === subEntitySchema.base_schema &&
-          entity.data.parent_id === topEntity.id &&
-          // match by child annotations' view_name
-          entity.ui.childs?.every((ann) => ann.data.view_name === shape.viewRef.name),
-      );
-      if (!subEntity) {
-        subEntity = defineCreatedEntity(
-          shape,
-          features[subEntitySchema.name],
-          subEntitySchema,
-          {
-            id: topEntity.id,
-            name: topEntity.table_info.name,
-          },
-        );
-        subEntity.ui.childs = [];
-      }
-    }
-  }
-  return { topEntity, subEntity };
+  return {
+    topEntity: findOrCreateEntity(selectedEntityId, shape, features, workspaceManifest),
+    subEntity: undefined,
+  };
 };
 
 export const defineCreatedAnnotation = (
@@ -239,7 +194,7 @@ export const defineCreatedAnnotation = (
   features: Record<string, Record<string, ItemFeature>>,
   shape: SaveShape,
   viewRef: Reference,
-  dataset_schema: DatasetSchema,
+  workspaceManifest: WorkspaceManifest,
   isVideo: boolean,
   currentFrameIndex: number,
 ): Annotation | undefined => {
@@ -249,17 +204,21 @@ export const defineCreatedAnnotation = (
     created_at: now,
     updated_at: now,
   };
-  const sourceId = getPixanoSourceId(sourcesStore);
   const baseData = {
     item_id: entity.data.item_id,
     view_name: viewRef.name,
-    frame_id: viewRef.id,
     entity_id: entity.id,
-    source_id: sourceId,
+    source_type: PIXANO_SOURCE.type,
+    source_name: PIXANO_SOURCE.name,
+    source_metadata: PIXANO_SOURCE.metadata,
+    inference_metadata: {},
+  };
+  const perFrameData = {
+    ...baseData,
+    frame_id: viewRef.id,
     frame_index: -1,
     tracklet_id: "",
     entity_dynamic_state_id: "",
-    inference_metadata: {},
   };
   let newAnnotation: Annotation | undefined = undefined;
 
@@ -279,20 +238,20 @@ export const defineCreatedAnnotation = (
       confidence: 1,
     };
 
-    const table = getTable(dataset_schema, "annotations", BaseSchema.BBox);
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.BBox);
     newAnnotation = new BBox({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.BBox },
-      data: { ...baseData, ...bbox },
+      data: { ...perFrameData, ...bbox },
     });
   } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon) {
     const { mask, inferenceMetadata } = buildMaskDataAndInferenceMetadata(shape);
 
-    const table = getTable(dataset_schema, "annotations", BaseSchema.Mask);
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.Mask);
     newAnnotation = new Mask({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Mask },
-      data: { ...baseData, inference_metadata: inferenceMetadata, ...mask },
+      data: { ...perFrameData, inference_metadata: inferenceMetadata, ...mask },
     });
   } else if (shape.type === ShapeType.keypoints) {
     const coords = [];
@@ -312,7 +271,7 @@ export const defineCreatedAnnotation = (
       states,
     };
 
-    const table = getTable(dataset_schema, "annotations", BaseSchema.Keypoints);
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.Keypoints);
 
     newAnnotation = new Keypoints({
       ...baseAnn,
@@ -321,18 +280,18 @@ export const defineCreatedAnnotation = (
         group: "annotations",
         base_schema: BaseSchema.Keypoints,
       },
-      data: { ...baseData, ...keypoints },
+      data: { ...perFrameData, ...keypoints },
     });
   } else if (shape.type === ShapeType.track) {
-    const table = getTable(dataset_schema, "annotations", BaseSchema.Tracklet);
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.Tracklet);
 
     newAnnotation = new Tracklet({
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Tracklet },
-      data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
+      data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 },
     });
   } else if (shape.type === ShapeType.textSpan) {
-    const table = getTable(dataset_schema, "annotations", BaseSchema.TextSpan);
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.TextSpan);
 
     newAnnotation = new TextSpan({
       ...baseAnn,

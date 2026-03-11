@@ -10,11 +10,10 @@ import {
   Annotation,
   BaseSchema,
   BBox,
-  DatasetItem,
   Entity,
+  entityHasTracklets,
   initDisplayControl,
   isSequenceFrameArray,
-  isVideoEntity,
   Mask,
   Tracklet,
   WorkspaceType,
@@ -23,6 +22,7 @@ import {
   type FeaturesValues,
   type View,
 } from "$lib/types/dataset";
+import type { WorkspaceData } from "$lib/types/workspace";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import {
   rleFrString,
@@ -89,7 +89,7 @@ function prepareAnnotation(
  * Build preview-only bounding boxes from masks that do not have a real bbox annotation.
  * These boxes are used only for UI display/hit targets and are never auto-saved.
  */
-function generatePreviewBBoxesFromMasks(
+export function buildPreviewBBoxesFromMasks(
   annotations: Annotation[],
   annotationTables: string[],
 ): BBox[] {
@@ -118,7 +118,9 @@ function generatePreviewBBoxesFromMasks(
             view_name: mask.data.view_name,
             frame_id: mask.data.frame_id,
             entity_id: mask.data.entity_id,
-            source_id: mask.data.source_id,
+            source_type: mask.data.source_type,
+            source_name: mask.data.source_name,
+            source_metadata: mask.data.source_metadata,
             frame_index: mask.data.frame_index,
             tracklet_id: mask.data.tracklet_id,
             entity_dynamic_state_id: mask.data.entity_dynamic_state_id,
@@ -158,14 +160,14 @@ function generatePreviewBBoxesFromMasks(
  * Build entity hierarchy: attach child annotations to entities, and gather
  * sub-entity children for parent tracks.
  */
-function buildEntityHierarchy(
-  selectedItem: DatasetItem,
+export function buildWorkspaceEntities(
+  entitiesByTable: WorkspaceData["entities"],
   processedAnnotations: Annotation[],
 ): Entity[] {
   let newEntities: Entity[] = [];
   const subEntitiesChilds: Record<string, Annotation[]> = {};
 
-  for (const itemEntities of Object.values(selectedItem.entities)) {
+  for (const itemEntities of Object.values(entitiesByTable)) {
     for (const entity of itemEntities) {
       entity.ui = {
         ...entity.ui,
@@ -186,7 +188,7 @@ function buildEntityHierarchy(
 
   if (Object.keys(subEntitiesChilds).length > 0) {
     newEntities = newEntities.map((entity) => {
-      if (isVideoEntity(entity) && entity.id in subEntitiesChilds) {
+      if (entityHasTracklets(entity) && entity.id in subEntitiesChilds) {
         entity.ui.childs = [...entity.ui.childs, ...subEntitiesChilds[entity.id]];
       }
       return entity;
@@ -205,8 +207,8 @@ export function attachTrackChildren(
   getTopEntity: (ann: Annotation) => Entity,
 ): Annotation[] {
   return anns.map((ann) => {
-    const topEntity = getTopEntity(ann);
     if (ann.is_type(BaseSchema.Tracklet)) {
+      const topEntity = getTopEntity(ann);
       const track = ann as Tracklet;
       if (topEntity) {
         track.ui.childs =
@@ -227,7 +229,7 @@ export function attachTrackChildren(
 /**
  * Compute video speed from views (time between frames).
  */
-function computeVideoSpeed(views: Record<string, View | View[]>): number | undefined {
+export function computeWorkspaceVideoSpeed(views: Record<string, View | View[]>): number | undefined {
   for (const view in views) {
     if (isSequenceFrameArray(views[view])) {
       const video = views[view];
@@ -239,7 +241,7 @@ function computeVideoSpeed(views: Record<string, View | View[]>): number | undef
   return undefined;
 }
 
-interface ProcessedItemData {
+export interface WorkspaceRuntimeData {
   annotations: Annotation[];
   entities: Entity[];
   previewBBoxes: BBox[];
@@ -247,36 +249,36 @@ interface ProcessedItemData {
 }
 
 /**
- * Top-level orchestrator: processes a DatasetItem into front-end-ready data.
+ * Top-level orchestrator: processes workspace data into front-end-ready runtime data.
  * Pure function — no store mutations.
  */
-export function processDatasetItem(
-  selectedItem: DatasetItem,
+export function buildWorkspaceRuntimeData(
+  workspaceData: WorkspaceData,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   featureValues: FeaturesValues,
-): ProcessedItemData {
-  const workspaceType = selectedItem.ui.type;
+): WorkspaceRuntimeData {
+  const workspaceType = workspaceData.ui.type;
 
   // Compute video speed
-  const videoSpeed = computeVideoSpeed(selectedItem.views);
+  const videoSpeed = computeWorkspaceVideoSpeed(workspaceData.views);
 
   // Prepare all annotations
   const newAnns: Annotation[] = [];
-  for (const anns of Object.values(selectedItem.annotations)) {
+  for (const anns of Object.values(workspaceData.annotations)) {
     for (const ann of anns) {
-      newAnns.push(prepareAnnotation(ann, workspaceType, selectedItem.views));
+      newAnns.push(prepareAnnotation(ann, workspaceType, workspaceData.views));
     }
   }
 
   // Build preview-only bboxes from masks without a canonical bbox annotation.
-  const annotationTables = Object.keys(selectedItem.annotations);
-  const previewBBoxes = generatePreviewBBoxesFromMasks(newAnns, annotationTables);
+  const annotationTables = Object.keys(workspaceData.annotations);
+  const previewBBoxes = buildPreviewBBoxesFromMasks(newAnns, annotationTables);
 
   // Sort by frame_index
   newAnns.sort((a, b) => sortByFrameIndex(a, b));
 
   // Build entity hierarchy
-  const entities = buildEntityHierarchy(selectedItem, newAnns);
+  const entities = buildWorkspaceEntities(workspaceData.entities, newAnns);
 
   return {
     annotations: newAnns,
@@ -285,3 +287,5 @@ export function processDatasetItem(
     videoSpeed,
   };
 }
+
+export const processWorkspaceRecord = buildWorkspaceRuntimeData;

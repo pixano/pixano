@@ -18,7 +18,6 @@ export enum BaseSchema {
   Tracklet = "Tracklet",
   TextSpan = "TextSpan",
   Item = "Item",
-  Track = "Track",
   Source = "Source",
   Entity = "Entity",
   Image = "Image",
@@ -28,7 +27,6 @@ export enum BaseSchema {
   Classification = "Classification",
   Conversation = "Conversation",
   Message = "Message",
-  MultiModalEntity = "MultiModalEntity",
 }
 
 // ─── WorkspaceType ─────────────────────────────────────────────────────────────
@@ -300,15 +298,21 @@ export class Item extends BaseData<Record<string, unknown>> {
 
 export interface AnnotationData {
   item_id: string;
-  view_name: string;
-  frame_id: string;
   entity_id: string;
-  source_id: string;
-  frame_index: number;
-  tracklet_id: string;
-  entity_dynamic_state_id: string;
+  source_id?: string;
+  source_type?: string;
+  source_name?: string;
+  source_metadata?: string;
+  view_name: string;
   inference_metadata: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+export interface PerFrameAnnotationData extends AnnotationData {
+  tracklet_id: string;
+  entity_dynamic_state_id: string;
+  frame_id: string;
+  frame_index: number;
 }
 
 export type AnnotationUIFields = {
@@ -333,7 +337,20 @@ export abstract class Annotation extends BaseData<AnnotationData> {
   static nonFeaturesFields(): string[] {
     return super
       .nonFeaturesFields()
-      .concat(["item_id", "entity_id", "source_id", "view_name", "frame_id", "frame_index", "tracklet_id", "entity_dynamic_state_id", "inference_metadata"]);
+      .concat([
+        "item_id",
+        "entity_id",
+        "source_id",
+        "source_type",
+        "source_name",
+        "source_metadata",
+        "view_name",
+        "inference_metadata",
+      ]);
+  }
+
+  static perFrameNonFeaturesFields(): string[] {
+    return Annotation.nonFeaturesFields().concat(["frame_id", "frame_index", "tracklet_id", "entity_dynamic_state_id"]);
   }
 
   static deepCreateInstanceArray(
@@ -417,9 +434,8 @@ export class Entity extends BaseData<EntityData> {
   }
 }
 
-/** Detect video entities by checking if they have Tracklet annotation children. */
-export function isVideoEntity(entity: Entity): boolean {
-  return entity.is_type(BaseSchema.Track) || (entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Tracklet)) ?? false);
+export function entityHasTracklets(entity: Entity): boolean {
+  return entity.ui.childs?.some((ann) => ann.is_type(BaseSchema.Tracklet)) ?? false;
 }
 
 // ─── BBox ──────────────────────────────────────────────────────────────────────
@@ -433,7 +449,7 @@ export interface BBoxData {
 }
 
 export class BBox extends Annotation {
-  declare data: BBoxData & AnnotationData;
+  declare data: BBoxData & PerFrameAnnotationData;
 
   //UI only fields
   ui: AnnotationUIFields & {
@@ -445,11 +461,11 @@ export class BBox extends Annotation {
 
   constructor(obj: RawSchemaData) {
     super(obj);
-    this.data = obj.data as BBoxData & AnnotationData;
+    this.data = obj.data as BBoxData & PerFrameAnnotationData;
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["coords", "format", "is_normalized", "confidence"]);
+    return super.perFrameNonFeaturesFields().concat(["coords", "format", "is_normalized", "confidence"]);
   }
 
   static cloneForFrame(source: BBox, overrides: {
@@ -459,6 +475,9 @@ export class BBox extends Annotation {
     frame_id?: string;
     frame_index?: number;
     source_id?: string;
+    source_type?: string;
+    source_name?: string;
+    source_metadata?: string;
   }): BBox {
     const cloned = structuredClone(source);
     const { ui, ...dataFields } = cloned;
@@ -473,6 +492,9 @@ export class BBox extends Annotation {
     if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
     if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
+    if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
+    if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;
+    if (overrides.source_metadata !== undefined) instance.data.source_metadata = overrides.source_metadata;
     instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
     return instance;
   }
@@ -515,7 +537,7 @@ export interface KeypointsData {
 }
 
 export class Keypoints extends Annotation {
-  declare data: KeypointsData & AnnotationData;
+  declare data: KeypointsData & PerFrameAnnotationData;
 
   //UI only fields
   ui: AnnotationUIFields & {
@@ -529,11 +551,11 @@ export class Keypoints extends Annotation {
 
   constructor(obj: RawSchemaData) {
     super(obj);
-    this.data = obj.data as KeypointsData & AnnotationData;
+    this.data = obj.data as KeypointsData & PerFrameAnnotationData;
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["template_id", "coords", "states"]);
+    return super.perFrameNonFeaturesFields().concat(["template_id", "coords", "states"]);
   }
 
   static cloneForFrame(source: Keypoints, overrides: {
@@ -544,6 +566,9 @@ export class Keypoints extends Annotation {
     frame_id?: string;
     frame_index?: number;
     source_id?: string;
+    source_type?: string;
+    source_name?: string;
+    source_metadata?: string;
     displayControl?: DisplayControl;
   }): Keypoints {
     const cloned = structuredClone(source);
@@ -558,6 +583,9 @@ export class Keypoints extends Annotation {
     if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
     if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
+    if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
+    if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;
+    if (overrides.source_metadata !== undefined) instance.data.source_metadata = overrides.source_metadata;
     if (overrides.displayControl !== undefined) instance.ui.displayControl = overrides.displayControl;
     instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
     return instance;
@@ -574,7 +602,7 @@ export interface MaskData {
 
 
 export class Mask extends Annotation {
-  declare data: MaskData & AnnotationData;
+  declare data: MaskData & PerFrameAnnotationData;
 
   //UI only fields
   ui: AnnotationUIFields & {
@@ -588,11 +616,11 @@ export class Mask extends Annotation {
 
   constructor(obj: RawSchemaData) {
     super(obj);
-    this.data = obj.data as MaskData & AnnotationData;
+    this.data = obj.data as MaskData & PerFrameAnnotationData;
   }
 
   static nonFeaturesFields(): string[] {
-    return super.nonFeaturesFields().concat(["size", "counts"]);
+    return super.perFrameNonFeaturesFields().concat(["size", "counts"]);
   }
 }
 
@@ -862,35 +890,6 @@ export interface ViewEmbedding {
   };
 }
 
-// ─── DatasetItem ───────────────────────────────────────────────────────────────
-
-export interface DatasetItemType {
-  item: RawSchemaData;
-  entities: Record<string, RawSchemaData | RawSchemaData[]>;
-  annotations: Record<string, RawSchemaData[]>;
-  views: Record<string, RawSchemaData | RawSchemaData[]>;
-}
-
-export class DatasetItem implements DatasetItemType {
-  item: Item;
-  entities: Record<string, Entity[]>;
-  annotations: Record<string, Annotation[]>;
-  views: Record<string, View | View[]>;
-
-  //UI only fields
-  ui: {
-    datasetId: string;
-    type: WorkspaceType;
-  } = { datasetId: "", type: WorkspaceType.UNDEFINED };
-
-  constructor(obj: DatasetItemType) {
-    this.item = new Item(obj.item);
-    this.entities = Entity.deepCreateInstanceArrayOrPlain(obj.entities);
-    this.annotations = Annotation.deepCreateInstanceArray(obj.annotations);
-    this.views = View.deepCreateInstanceArrayOrPlain(obj.views);
-  }
-}
-
 // ─── DatasetMoreInfo ───────────────────────────────────────────────────────────
 
 export interface DatasetMoreInfo {
@@ -908,7 +907,7 @@ export interface DatasetMoreInfo {
   table_info: TableInfo;
 }
 
-// ─── Schema, SaveItem, DatasetItems, Dataset ───────────────────────────────────
+// ─── Schema, SaveItem, Dataset ───────────────────────────────────
 
 export type Schema = Annotation | Entity | Item | Source;
 
@@ -918,18 +917,13 @@ export type SaveItem = {
   data: Schema;
 };
 
-export interface DatasetItems {
-  items: Array<DatasetItem>;
-  total: number;
-}
-
 export interface Dataset {
   id: string;
   path: string;
   previews_path: string;
   media_dir: string;
   thumbnail: string;
-  dataset_schema: DatasetSchema;
-  feature_values: object; //not used right now, maybe we will make a real type if needed
+  schema: DatasetSchema;
+  featureValues: object; //not used right now, maybe we will make a real type if needed
   info: DatasetInfo;
 }

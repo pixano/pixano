@@ -53,10 +53,10 @@ License: CECILL-C
     if (disabled) return;
     const selectedChoices = checkboxsStateToAnswerChoices(checked);
     const content = serializeMessageContent({ choices: selectedChoices, explanations });
-    const answerId = answer?.id ?? null;
+    const messageId = answer?.id ?? null;
 
-    const eventDetail: ContentChangeEvent = answerId
-      ? { content, type: ContentChangeEventType.UPDATE, answerId }
+    const eventDetail: ContentChangeEvent = messageId
+      ? { content, type: ContentChangeEventType.UPDATE, messageId }
       : {
           content,
           type: ContentChangeEventType.NEW_ANSWER,

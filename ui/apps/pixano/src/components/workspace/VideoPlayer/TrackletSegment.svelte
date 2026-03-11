@@ -20,11 +20,11 @@ License: CECILL-C
     type TrackTimelineEntry,
   } from "$lib/ui";
 
-  import { sourcesStore } from "$lib/stores/appStores.svelte";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { sortByFrameIndex } from "$lib/utils/videoUtils";
-  import { getPixanoSource, getTopEntity } from "$lib/utils/entityLookupUtils";
+  import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { relink } from "$lib/utils/entityRelink";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import {
     annotations,
     colorScale,
@@ -67,6 +67,7 @@ License: CECILL-C
     moveCursorToPosition,
     resetTool
   }: Props = $props();
+  const { manifest } = getWorkspaceContext();
 
   let showRelink = $state(false);
   let selectedEntityId = $state("new");
@@ -229,10 +230,9 @@ License: CECILL-C
         return ann;
       }),
     );
-    const pixSource = getPixanoSource(sourcesStore);
-    tracklet.data.source_id = pixSource.id;
+    applyPixanoSourceFields(tracklet);
     saveTo("update", tracklet);
-    movedAnn.data.source_id = pixSource.id;
+    applyPixanoSourceFields(movedAnn);
     saveTo("update", movedAnn);
     currentFrameIndex.value = newFrameIndex;
   };
@@ -296,7 +296,7 @@ License: CECILL-C
   };
 
   const handleRelink = () => {
-    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId);
+    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId, manifest);
     showRelink = false;
   };
 </script>

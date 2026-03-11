@@ -16,10 +16,10 @@ License: CECILL-C
     X,
   } from "lucide-svelte";
 
-  import { MessageTypeEnum, QuestionTypeEnum, type Message } from "$lib/types/dataset";
+  import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
 
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import type { LabelFormat } from "$lib/types/vqa";
+  import type { LabelFormat, QuestionThread } from "$lib/types/vqa";
   import {
     ContentChangeEventType,
     type ContentChangeEvent,
@@ -29,7 +29,7 @@ License: CECILL-C
   import { deserializeMessageContent, isQuestionCompleted } from "./utils";
 
   interface Props {
-    messages: Message[];
+    thread: QuestionThread;
     completionModels: PixanoInferenceCompletionModel[];
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
     onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
@@ -37,18 +37,14 @@ License: CECILL-C
   }
 
   let {
-    messages = $bindable(),
+    thread,
     completionModels,
     onAnswerContentChange,
     onGenerateAnswer,
     onDeleteQuestion,
   }: Props = $props();
-
-  const question = messages.find((m) => m.data.type === MessageTypeEnum.QUESTION);
-
-  if (question === undefined) {
-    throw new Error("Question not found");
-  }
+  const question = $derived(thread.question);
+  const messages = $derived(thread.messages);
 
 
 
@@ -67,7 +63,7 @@ License: CECILL-C
   const saveEdit = (m: Message) => {
     onAnswerContentChange?.({
       type: ContentChangeEventType.UPDATE,
-      answerId: m.id,
+      messageId: m.id,
       content: editContent,
     });
     editingId = null;
@@ -127,7 +123,7 @@ License: CECILL-C
   let questionType = $derived(question.data.question_type as QuestionTypeEnum);
   let questionNumber = $derived(question.data.number + 1);
   let choices = $derived(question.data.choices as string[]);
-  let answers = $derived(messages.filter((m) => m.data.type === MessageTypeEnum.ANSWER));
+  let answers = $derived(thread.answers);
   let questionCompleted = $derived(isQuestionCompleted(messages));
   let isSingleChoice =
     $derived(questionType === QuestionTypeEnum.SINGLE_CHOICE ||

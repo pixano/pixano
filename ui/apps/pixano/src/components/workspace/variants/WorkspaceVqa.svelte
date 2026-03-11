@@ -7,15 +7,15 @@ License: CECILL-C
 <script lang="ts">
 
   // Imports
+  import { nanoid } from "nanoid";
   import { untrack } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
 
   import { Canvas2D } from "$components/workspace/canvas2d";
   import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import {
-    BaseSchema,
-    DatasetItem,
     Image,
     LoadingModal,
     effectProbe,
@@ -29,6 +29,7 @@ License: CECILL-C
     type DeleteQuestionEvent,
     type GenerateAnswerEvent,
     type StoreQuestionEvent,
+    type VqaMessageContext,
   } from "../vqaCanvas";
   // Import stores and API functions
   import { inferenceServerStore, vqaModels } from "$lib/stores/inferenceStores.svelte";
@@ -43,7 +44,6 @@ License: CECILL-C
     brushSettings,
     colorScale,
     embeddings,
-    entities,
     filters,
     imageSmoothing,
     itemBboxes,
@@ -60,7 +60,7 @@ License: CECILL-C
 
   interface Props {
     // Attributes
-    selectedItem: DatasetItem;
+    selectedItem: WorkspaceViewerItem;
     resize: number;
   }
 
@@ -111,7 +111,7 @@ License: CECILL-C
     modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
     const nextImages = await loadImagesFromViews(
       selectedItem.views as Record<string, Image>,
-      { unwrapArrays: true },
+      { unwrapArrays: true, filterImages: true, sortKeys: true },
     );
 
     if (requestId !== imageLoadRequestId) return;
@@ -160,15 +160,38 @@ License: CECILL-C
     }
   };
 
-  const handleStoreQuestion = (event: StoreQuestionEvent) => {
-    const conversationEntities = entities.value.filter((e) => e.is_type(BaseSchema.Conversation));
+  const getImageViewContext = (): Pick<VqaMessageContext, "recordId" | "viewId" | "entityIds" | "imageUrl"> | null => {
+    const recordId = selectedItem.item.id;
+    for (const view of Object.values(selectedItem.views)) {
+      if (!Array.isArray(view) && typeof view.data.url === "string" && view.data.url !== "") {
+        return {
+          recordId,
+          viewId: view.id,
+          entityIds: [],
+          imageUrl: view.data.url,
+        };
+      }
+    }
+    return null;
+  };
 
-    if (conversationEntities.length === 0) {
-      console.error("ERROR: No conversation entity found");
+  const createNewConversationContext = (): VqaMessageContext | null => {
+    const baseContext = getImageViewContext();
+    if (!baseContext) return null;
+    return {
+      ...baseContext,
+      conversationId: nanoid(22),
+    };
+  };
+
+  const handleStoreQuestion = (event: StoreQuestionEvent) => {
+    const context = createNewConversationContext();
+    if (!context) {
+      console.error("ERROR: No image view context found for VQA message creation");
       return;
     }
 
-    addQuestion({ newQuestionData: event, parentEntity: conversationEntities[0] });
+    addQuestion({ newQuestionData: event, context });
   };
 
   const handleDeleteQuestion = (event: DeleteQuestionEvent) => {
@@ -185,8 +208,18 @@ License: CECILL-C
       return;
     }
     isGenerating = true;
-    await generateAnswer(completionModel, question);
+    const imageContext = getImageViewContext();
+    await generateAnswer(completionModel, question, imageContext?.imageUrl ?? "");
     isGenerating = false;
+  };
+
+  const handleGenerateQuestion = async (completionModel: string) => {
+    const context = createNewConversationContext();
+    if (!context) {
+      console.error("ERROR: No image view context found for VQA question generation");
+      return null;
+    }
+    return generateQuestion(completionModel, context);
   };
 
   const expand = (e: MouseEvent) => {
@@ -219,7 +252,7 @@ License: CECILL-C
       onStoreQuestion={handleStoreQuestion}
       onGenerateAnswer={handleGenerateAnswer}
       onDeleteQuestion={handleDeleteQuestion}
-      onGenerateQuestion={generateQuestion}
+      onGenerateQuestion={handleGenerateQuestion}
     />
   </div>
   <button

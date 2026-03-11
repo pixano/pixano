@@ -8,10 +8,9 @@ import {
   Annotation,
   BaseSchema,
   Entity,
-  Source,
   WorkspaceType,
+  entityHasTracklets,
   type BBox,
-  type DatasetSchema,
   type Mask,
   type AnnotationThumbnail,
   type Schema,
@@ -19,11 +18,10 @@ import {
 } from "$lib/types/dataset";
 
 import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { entities } from "$lib/stores/workspaceStores.svelte";
-import { saveTo } from "$lib/utils/saveItemUtils";
-import { nowTimestamp } from "$lib/utils/coreUtils";
 import type { ItemsMeta, MView } from "$lib/types/workspace";
+import type { WorkspaceManifest, WorkspaceTableGroup } from "$lib/workspace/manifest";
+import { resolveWorkspaceTable } from "$lib/workspace/manifest";
 
 /**
  * Pure variant of getTopEntity that accepts an entities list directly,
@@ -71,81 +69,43 @@ export const getTopEntity = (obj: Annotation | Entity): Entity => {
   return getTopEntityFromList(obj, entities.value);
 };
 
-export const getPixanoSource = (srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void }): Source => {
-  //manage source: add if we need it
-  //TMP (TODO) - currently, all add/update from Pixano App are under a same unique source
-  const sources = srcStore.value;
-  let pixanoSource = sources.find((src) => src.data.name === "Pixano" && src.data.kind === "other");
-  if (!pixanoSource) {
-    const now = nowTimestamp();
-    pixanoSource = new Source({
-      id: "pixano_source",
-      created_at: now,
-      updated_at: now,
-      table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-      data: { name: "Pixano", kind: "other", metadata: {} },
-    });
-    srcStore.update((sources) => {
-      sources.push(pixanoSource);
-      return sources;
-    });
-    //save it
-    saveTo("add", pixanoSource);
-  }
-  return pixanoSource;
+type SourceFieldStampedSchema = Schema & {
+  data: {
+    source_type?: string;
+    source_name?: string;
+    source_metadata?: string;
+  };
 };
 
-type SourceStampedSchema = Schema & { data: { source_id: string } };
+export const PIXANO_SOURCE = {
+  type: "other",
+  name: "Pixano",
+  metadata: "{}",
+} as const;
 
-export const getPixanoSourceId = (
-  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
-): string => getPixanoSource(srcStore).id;
-
-export const stampWithPixanoSource = <T extends { data: { source_id: string } }>(
-  obj: T,
-  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
-): T => {
-  obj.data.source_id = getPixanoSourceId(srcStore);
-  return obj;
-};
-
-export const saveUpdatedWithPixanoSource = <T extends SourceStampedSchema>(
-  obj: T,
-  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
-): T => {
-  stampWithPixanoSource(obj, srcStore);
-  saveTo("update", obj);
-  return obj;
-};
-
-export const saveAddedWithPixanoSource = <T extends SourceStampedSchema>(
-  obj: T,
-  srcStore: { value: Source[]; update(fn: (prev: Source[]) => Source[]): void } = sourcesStore,
-): T => {
-  stampWithPixanoSource(obj, srcStore);
-  saveTo("add", obj);
+export const applyPixanoSourceFields = <T extends SourceFieldStampedSchema>(obj: T): T => {
+  obj.data.source_type = PIXANO_SOURCE.type;
+  obj.data.source_name = PIXANO_SOURCE.name;
+  obj.data.source_metadata = PIXANO_SOURCE.metadata;
   return obj;
 };
 
 export const getAnnotationsToPreAnnotate = (objects: Annotation[]): Annotation[] => {
-  const sources = sourcesStore.value;
-  return objects.filter((object) => {
-    const source = sources.find((s) => s.id === object.data.source_id);
-    return source?.data.name === PRE_ANNOTATION && !object.ui.review_state;
-  });
+  return objects.filter(
+    (object) => object.data.source_name === PRE_ANNOTATION && !object.ui.review_state,
+  );
 };
 
 export const getTable = (
-  dataset_schema: DatasetSchema,
-  group: keyof DatasetSchema["groups"],
-  base_schema: BaseSchema,
+  workspaceManifest: WorkspaceManifest,
+  group: WorkspaceTableGroup,
+  baseSchema: BaseSchema,
 ): string => {
-  for (const group_table of dataset_schema.groups[group]) {
-    if (dataset_schema.schemas[group_table].base_schema === base_schema) {
-      return group_table;
-    }
+  const table = resolveWorkspaceTable(workspaceManifest, group, baseSchema);
+  if (table) {
+    return table;
   }
-  return dataset_schema.groups[group][0];
+  throw new Error(`No table found for group '${group}' and base schema '${baseSchema}'.`);
 };
 
 export const sortAndFilterAnnotations = (
@@ -249,7 +209,7 @@ const getFirstTrackFrame = (entity: Entity): number => {
 
 export const sortEntities = (a: Entity, b: Entity): number => {
   let result = 0;
-  if (a.is_type(BaseSchema.Track) && b.is_type(BaseSchema.Track)) {
+  if (entityHasTracklets(a) && entityHasTracklets(b)) {
     result = getFirstTrackFrame(a) - getFirstTrackFrame(b);
   }
   if (result === 0 && "name" in a.data && "name" in b.data) {

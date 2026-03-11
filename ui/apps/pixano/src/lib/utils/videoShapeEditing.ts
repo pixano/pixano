@@ -4,10 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { sourcesStore } from "$lib/stores/appStores.svelte";
 import { BaseSchema, BBox, Keypoints, type Annotation, type SaveItem } from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
-import { stampWithPixanoSource } from "$lib/utils/entityLookupUtils";
+import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 
@@ -39,7 +38,7 @@ export function editKeyItemInTracklet(
         `ERROR: mismatching types ${shape.type} & ${existingAnn.table_info.base_schema}`,
       );
     }
-    stampWithPixanoSource(existingAnn, sourcesStore);
+    applyPixanoSourceFields(existingAnn);
     updatedAnnotations = allAnnotations.map((ann) =>
       ann.id === existingAnn.id ? existingAnn : ann,
     );
@@ -86,7 +85,7 @@ export function editKeyItemInTracklet(
       throw new Error("Masks are not managed yet in video!");
     }
 
-    stampWithPixanoSource(newAnn, sourcesStore);
+    applyPixanoSourceFields(newAnn);
     updatedAnnotations = [...allAnnotations, newAnn];
     saveData = { change_type: "add", data: newAnn };
   }

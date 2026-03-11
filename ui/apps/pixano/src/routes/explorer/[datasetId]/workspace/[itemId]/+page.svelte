@@ -5,23 +5,23 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { persistSaveItems } from "$lib/api";
-  import { PrimaryButton, effectProbe, type SaveItem } from "$lib/ui";
-  import { canSave } from "$lib/stores/workspaceStores.svelte";
-  import WorkspaceShell from "../../../../../components/workspace/WorkspaceShell.svelte";
   import { resolveWorkspaceVariant } from "../../../../../components/workspace/workspaceRegistry";
-
-  import { saveCurrentItemStore } from "$lib/stores/appStores.svelte";
+  import WorkspaceShell from "../../../../../components/workspace/WorkspaceShell.svelte";
+  import type { PageProps } from "./$types";
   import { goto } from "$app/navigation";
   import { navigating } from "$app/state";
+  import { persistSaveItems } from "$lib/api";
+  import type { ResourceMutation } from "$lib/api/resourcePayloads";
+  import { saveCurrentItemStore } from "$lib/stores/appStores.svelte";
+  import { canSave } from "$lib/stores/workspaceStores.svelte";
+  import { effectProbe, PrimaryButton } from "$lib/ui";
   import { getExplorerRoute } from "$lib/utils/routes";
-  import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
 
   const isLoading = $derived(navigating.from !== null);
   const shouldSaveCurrentItem = $derived(saveCurrentItemStore.value.shouldSave);
-  const Variant = $derived(resolveWorkspaceVariant(data.item?.ui?.type));
+  const Variant = $derived(resolveWorkspaceVariant(data.workspaceData?.ui?.type));
 
   $effect(() => {
     const value = canSave.value;
@@ -30,7 +30,7 @@ License: CECILL-C
     saveCurrentItemStore.value = { ...current, canSave: value };
   });
 
-  async function handleSaveItem(saveData: SaveItem[]) {
+  async function handleSaveItem(saveData: ResourceMutation[]) {
     await persistSaveItems(saveData, data.dataset.id);
 
     const current = saveCurrentItemStore.value;
@@ -43,20 +43,21 @@ License: CECILL-C
   }
 </script>
 
-{#if data.item && data.dataset}
+{#if data.workspaceData && data.dataset}
   <WorkspaceShell
-    selectedItem={data.item}
+    workspaceData={data.workspaceData}
     featureValues={data.featureValues}
+    workspaceManifest={data.workspaceManifest}
     {handleSaveItem}
     {isLoading}
     {shouldSaveCurrentItem}
   >
     {#snippet viewer({ resize })}
-      <Variant selectedItem={data.item} {resize} />
+      <Variant selectedItem={data.workspaceData} {resize} />
     {/snippet}
   </WorkspaceShell>
 {/if}
-{#if !data.item}
+{#if !data.workspaceData}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
     <PrimaryButton onclick={() => goto(getExplorerRoute(data.dataset.id))}>

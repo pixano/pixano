@@ -11,7 +11,7 @@ from .entity_annotation import AnnotationSourceKind, EntityAnnotation, is_entity
 from .entity_group_annotation import EntityGroupAnnotation, is_entity_group_annotation
 from .info_extraction import Relation, TextSpan, create_relation, create_text_span, is_relation, is_text_span
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
-from .message import Message, create_message, is_message
+from .message import Message, QuestionType, create_message, is_message
 from .per_frame_annotation import PerFrameAnnotation, is_per_frame_annotation
 from .tracklet import Tracklet, is_tracklet
 
@@ -29,6 +29,7 @@ __all__ = [
     "KeyPoints",
     "KeyPoints3D",
     "Message",
+    "QuestionType",
     "TextSpan",
     "Tracklet",
     "Relation",

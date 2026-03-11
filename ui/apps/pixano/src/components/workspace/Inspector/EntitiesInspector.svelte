@@ -10,7 +10,7 @@ License: CECILL-C
   import { untrack } from "svelte";
   import { Thumbnail } from "$components/workspace/canvas2d";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { BaseSchema, BBox, Entity, Source, isVideoEntity, type AnnotationThumbnail } from "$lib/ui";
+  import { BaseSchema, BBox, Entity, entityHasTracklets, type AnnotationThumbnail } from "$lib/ui";
 
   import { ToolType } from "$lib/tools";
   import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -33,17 +33,7 @@ License: CECILL-C
   let filteredEntities = $state<Entity[]>([]);
   let hasAppliedFilter = $state(false);
 
-  //Note: Previously Entities where grouped by source
-  //Now they're all displayed regardless of source
-  //so we fake a global source for EntitiesSection (may be rewritten later)
-  const now = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
-  const globalSource = new Source({
-    id: "pixano_source",
-    created_at: now,
-    updated_at: now,
-    table_info: { name: "source", group: "source", base_schema: BaseSchema.Source },
-    data: { name: "All", kind: "Global", metadata: {} },
-  });
+  const globalSourceLabel = { name: "All", kind: "global" };
 
   const currentEntities = $derived.by(() => (Array.isArray(entities.value) ? entities.value : []));
   const visibleEntities = $derived.by(() =>
@@ -75,12 +65,12 @@ License: CECILL-C
 
       // for video: show/hide track in Video inspector depending on filter
       const hasTrackChange = currentEntities.some(
-        (ent) => isVideoEntity(ent) && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
+        (ent) => entityHasTracklets(ent) && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
       );
       if (hasTrackChange) {
         entities.update((current) =>
           current.map((ent) => {
-            if (!isVideoEntity(ent)) return ent;
+            if (!entityHasTracklets(ent)) return ent;
             const shouldHide = !visibleEntityIds.has(ent.id);
             if (ent.ui.displayControl.hidden !== shouldHide) {
               ent.ui.displayControl.hidden = shouldHide;
@@ -295,7 +285,7 @@ License: CECILL-C
     <div class="p-3 pt-2">
       {#if !preAnnotationIsActive.value}
         <EntitiesSection
-          source={globalSource}
+          sourceLabel={globalSourceLabel}
           {countText}
           onFilter={handleFilter}
           onConfidenceThresholdChange={handleConfidenceThresholdChange}

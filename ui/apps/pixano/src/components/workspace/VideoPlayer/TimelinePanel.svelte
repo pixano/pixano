@@ -18,13 +18,13 @@ License: CECILL-C
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import { isTracking } from "$lib/stores/trackingStore.svelte";
   import { panTool, ToolType } from "$lib/tools";
-  import { Entity, isVideoEntity } from "$lib/ui";
+  import { Entity, entityHasTracklets } from "$lib/ui";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { sortEntities } from "$lib/utils/entityLookupUtils";
   import { updateView } from "$lib/utils/videoOperations";
 
   let videoEntities: Entity[] = $derived(
-    entities.value.filter((entity) => isVideoEntity(entity)).sort(sortEntities),
+    entities.value.filter((entity) => entityHasTracklets(entity)).sort(sortEntities),
   );
 
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);

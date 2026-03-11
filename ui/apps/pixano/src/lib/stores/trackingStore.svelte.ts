@@ -9,7 +9,7 @@ import { BBox, BaseSchema, WorkspaceType, type Reference, type SequenceFrame } f
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
 import { reactiveStore, reactiveDerived } from "./reactiveStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
-import { views } from "./workspaceStores.svelte";
+import { views } from "./workspaceBaseStores.svelte";
 
 // ─── Session state ──────────────────────────────────────────────────────────
 
@@ -265,13 +265,15 @@ function buildTrackingPreviewBBox(
       format: "xywh",
       is_normalized: false,
       confidence: 1.0,
-      item_id: "",
-      view_name: viewName,
-      frame_id: frame.id,
-      entity_id: "",
-      source_id: "",
-    },
-  });
+       item_id: "",
+       view_name: viewName,
+       frame_id: frame.id,
+       entity_id: "",
+       source_type: "",
+       source_name: "",
+       source_metadata: "{}",
+     },
+   });
 
   bbox.ui = {
     datasetItemType: WorkspaceType.VIDEO,
