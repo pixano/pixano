@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { BoundingBox, PencilSimple } from "phosphor-svelte";
   import { Skeleton, Tabs } from "$lib/ui";
 
   import { newShape } from "$lib/stores/workspaceStores.svelte";
@@ -30,28 +31,33 @@ License: CECILL-C
     <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
-      <Tabs.List class="flex h-12 bg-muted/20 border-b border-border/50 px-1.5 gap-1">
-        <Tabs.Trigger
-          value="objects"
-          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
-        >
-          Objects
-        </Tabs.Trigger>
-        <Tabs.Trigger
-          value="scene"
-          class="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all duration-200"
-        >
-          Scene
-        </Tabs.Trigger>
-      </Tabs.List>
+      <div class="shrink-0 border-b border-border/50 bg-card px-2.5 py-2">
+        <Tabs.List class="grid grid-cols-2 rounded-xl border border-border/60 bg-muted/20 p-1 gap-1">
+          <Tabs.Trigger
+            value="objects"
+            class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"
+          >
+            <BoundingBox class="h-4 w-4" />
+            Entities
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="scene"
+            class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"
+          >
+            <PencilSimple class="h-4 w-4" />
+            Scene
+          </Tabs.Trigger>
+        </Tabs.List>
+      </div>
+
       <Tabs.Content
         value="objects"
-        class="flex-1 overflow-y-auto scroll-smooth"
+        class="flex-1 min-h-0 overflow-y-auto scroll-smooth"
         id="card-object-container"
       >
         {#if isLoading}
-          <div class="p-3 space-y-3">
-            <div class="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-3">
+          <div class="p-3 space-y-3 animate-in fade-in duration-300">
+            <div class="rounded-xl border border-border/50 bg-card/80 p-3 space-y-3 shadow-sm">
               <div class="flex items-center justify-between gap-3">
                 <Skeleton class="h-4 w-24" />
                 <Skeleton class="h-4 w-12" />
@@ -62,7 +68,7 @@ License: CECILL-C
             <div class="space-y-2">
               {#each loadingObjectRows as rowIndex}
                 <div
-                  class="rounded-lg border border-border/50 bg-card p-3 animate-in fade-in slide-in-from-bottom-1 duration-500"
+                  class="rounded-xl border border-border/50 bg-card/90 p-3 shadow-sm animate-in fade-in slide-in-from-bottom-1 duration-500"
                   style={`animation-delay: ${rowIndex * 80}ms`}
                 >
                   <div class="flex items-center gap-3">
@@ -87,10 +93,10 @@ License: CECILL-C
           <EntitiesInspector />
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="scene" class="flex-1 overflow-y-auto scroll-smooth">
+      <Tabs.Content value="scene" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
         {#if currentTab === "scene"}
           {#if isLoading}
-            <div class="p-4 flex flex-col gap-4">
+            <div class="p-4 flex flex-col gap-4 animate-in fade-in duration-300">
               <Skeleton class="h-8 w-full" />
               <Skeleton class="h-8 w-full" />
               <Skeleton class="h-8 w-full" />
