@@ -4,9 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { error } from "@sveltejs/kit";
+
 import type { LayoutLoad } from "./$types";
 import * as api from "$lib/api";
-import { error } from "@sveltejs/kit";
 
 export const load: LayoutLoad = async ({ params, parent }) => {
   const { datasets } = await parent();
@@ -14,17 +15,15 @@ export const load: LayoutLoad = async ({ params, parent }) => {
   // eslint-disable-next-line @typescript-eslint/only-throw-error
   if (!dataset) throw error(404, `Dataset "${params.datasetId}" not found`);
 
-  const [ds, sources, itemIds] = await Promise.all([
+  const [ds, itemIds] = await Promise.all([
     api.getDataset(params.datasetId),
-    api.getSources(params.datasetId),
-    api.getDatasetItemsIds(params.datasetId),
+    api.listAllRecordIds(params.datasetId),
   ]);
 
   return {
     dataset,
-    schema: ds.dataset_schema,
-    featureValues: ds.feature_values,
-    sources,
+    schema: ds.schema,
+    featureValues: ds.featureValues,
     itemIds,
   };
 };

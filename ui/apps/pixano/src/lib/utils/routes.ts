@@ -11,13 +11,13 @@ export const EXPLORER_ROUTE_ID = "/explorer/[datasetId]";
 export const WORKSPACE_ROUTE_ID = "/explorer/[datasetId]/workspace/[itemId]";
 
 export const getExplorerRoute = (datasetId: string, query?: string): string => {
-  const baseRoute = `/#/explorer/${datasetId}`;
+  const baseRoute = `/explorer/${datasetId}`;
   if (!query) return baseRoute;
   return query.startsWith("?") ? `${baseRoute}${query}` : `${baseRoute}?${query}`;
 };
 
 export const getWorkspaceRoute = (datasetId: string, itemId: string): string =>
-  `/#/explorer/${datasetId}/workspace/${itemId}`;
+  `/explorer/${datasetId}/workspace/${itemId}`;
 
 export const findNeighborItemId = (
   itemsIds: string[],
@@ -36,4 +36,18 @@ export const findNeighborItemId = (
 export const getPageFromItemId = (itemsIds: string[], currentItemId: string): number => {
   const currentIndex: number = itemsIds.findIndex((item) => item === currentItemId);
   return Math.floor(currentIndex / DEFAULT_DATASET_TABLE_SIZE) + 1;
+};
+
+export const getRouteSearchParams = (url: URL): URLSearchParams => {
+  if (url.search) {
+    return new URLSearchParams(url.search);
+  }
+
+  const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex === -1) {
+    return new URLSearchParams();
+  }
+
+  return new URLSearchParams(hash.slice(queryIndex + 1));
 };

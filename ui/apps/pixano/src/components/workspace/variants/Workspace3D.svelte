@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { DatasetItem } from "$lib/ui";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import Canvas3D from "../canvas3d/Canvas3D.svelte";
 
   interface Props {
-    selectedItem: DatasetItem;
+    selectedItem: WorkspaceViewerItem;
     resize: number;
   }
 

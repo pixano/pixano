@@ -8,12 +8,13 @@ License: CECILL-C
   // Imports
   import { Loader2Icon } from "lucide-svelte";
 
-  import type { DatasetBrowser } from "$lib/ui";
-  import { LoadingModal, PrimaryButton, WarningModal } from "$lib/ui";
-  import { Table } from "./table";
-
   import DatasetBrowserForm from "./DatasetBrowserForm.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
+  import { Table } from "./table";
+  import { navigating } from "$app/state";
+  import type { DatasetBrowser } from "$lib/ui";
+  import { LoadingModal, PrimaryButton, WarningModal } from "$lib/ui";
+  import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
 
   interface Props {
     selectedDataset: DatasetBrowser;
@@ -29,14 +30,7 @@ License: CECILL-C
   }
 
   let { selectedDataset, onSelectItem, onNavigate, pagination }: Props = $props();
-  let isLoadingTableItems = $state(false);
-
-  // Reactive statement to set isLoadingTableItems to false when table data is available or on error
-  $effect(() => {
-    if (selectedDataset.table_data || selectedDataset.isErrored) {
-      isLoadingTableItems = false;
-    }
-  });
+  const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
 
   // Modals
   let loadingResultsModal = false;
@@ -59,13 +53,11 @@ License: CECILL-C
   // Function to clear the search input and trigger a new empty search
   function handleClearSearch() {
     searchInput = "";
-    isLoadingTableItems = true;
     onNavigate({ page: "1", q: undefined, model: undefined });
   }
 
   // Function to handle search input changes
   function handleSearch() {
-    isLoadingTableItems = true;
     onNavigate({ page: "1", q: searchInput, model: selectedSearchModel });
   }
 
@@ -86,7 +78,6 @@ License: CECILL-C
   }
 
   function handlePageChange(newPage: number) {
-    isLoadingTableItems = true;
     onNavigate({ page: String(newPage) });
   }
 </script>

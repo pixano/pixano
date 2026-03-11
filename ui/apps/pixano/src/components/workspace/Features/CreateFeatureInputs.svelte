@@ -14,7 +14,6 @@ License: CECILL-C
 
   import { BaseSchema, Input, type ItemFeature } from "$lib/ui";
 
-  import { datasetSchema } from "$lib/stores/appStores.svelte";
   import {
     getEntityProperties,
     getValidationSchemaAndFormInputs,
@@ -26,6 +25,7 @@ License: CECILL-C
     CreateEntityInputs,
     EntityProperties,
   } from "$lib/types/workspace";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
   interface Props {
@@ -47,9 +47,9 @@ License: CECILL-C
     selectedEntityId = "new",
     baseSchema
   }: Props = $props();
+  const { manifest } = getWorkspaceContext();
   $effect(() => {
-    const schema = datasetSchema.value;
-    ({ inputs: formInputs } = getValidationSchemaAndFormInputs(schema, baseSchema));
+    ({ inputs: formInputs } = getValidationSchemaAndFormInputs(manifest, baseSchema));
   });
 
   const handleInputChange = (

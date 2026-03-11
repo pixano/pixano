@@ -5,15 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
-  WorkspaceType,
-  type DatasetInfo,
-  type DatasetItem,
   type DatasetSchema,
   type FeaturesValues,
-  type Image,
-  type SequenceFrame,
 } from "$lib/types/dataset";
-import { normalizeMediaUrl } from "$lib/utils/coreUtils";
 
 type BackFeatureValue = {
   name: string;
@@ -21,76 +15,6 @@ type BackFeatureValue = {
   values: string[];
 };
 type BackFeatureValues = Record<string, Record<string, BackFeatureValue[]>>;
-
-export function isValidDatasetItem(value: unknown): value is DatasetItem {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<DatasetItem>;
-  return (
-    typeof candidate.item?.id === "string" &&
-    candidate.item.id.length > 0 &&
-    typeof candidate.views === "object" &&
-    candidate.views !== null &&
-    typeof candidate.entities === "object" &&
-    candidate.entities !== null &&
-    typeof candidate.annotations === "object" &&
-    candidate.annotations !== null
-  );
-}
-
-export function prepareDatasetItem(
-  rawItem: DatasetItem,
-  dataset: DatasetInfo,
-): DatasetItem {
-  const item = rawItem;
-
-  // Infer workspace type if not defined
-  if (dataset.workspace === WorkspaceType.UNDEFINED) {
-    for (const viewname in item.views) {
-      if (Array.isArray(item.views[viewname])) {
-        dataset.workspace = WorkspaceType.VIDEO;
-        break;
-      } else {
-        const is_vqa = "conversations" in item.entities;
-        if (is_vqa) {
-          dataset.workspace = WorkspaceType.IMAGE_VQA;
-          break;
-        } else {
-          dataset.workspace = WorkspaceType.IMAGE;
-        }
-      }
-    }
-  }
-
-  // Normalize media URLs and set image/sequence frame UI type.
-  if (dataset.workspace === WorkspaceType.VIDEO) {
-    for (const viewname in item.views) {
-      const view = item.views[viewname];
-      if (Array.isArray(view)) {
-        const video = view as SequenceFrame[];
-        video.forEach((sf) => {
-          sf.data.type = WorkspaceType.VIDEO;
-        });
-        video.sort((a, b) => a.data.frame_index - b.data.frame_index);
-      } else {
-        throw Error("Video workspace without SequenceFrames.");
-      }
-    }
-  } else {
-    for (const viewname in item.views) {
-      const view = item.views[viewname];
-      if (Array.isArray(view)) {
-        throw Error("Not video workspace with SequenceFrames.");
-      } else {
-        const image = view as Image;
-        image.data.type = WorkspaceType.IMAGE;
-        image.data.url = normalizeMediaUrl(image.data.url);
-      }
-    }
-  }
-
-  item.ui = { type: dataset.workspace, datasetId: dataset.id };
-  return item;
-}
 
 export function mapFeatureValues(
   rawFeatureValues: object,

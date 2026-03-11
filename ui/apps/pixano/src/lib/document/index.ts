@@ -27,7 +27,3 @@ export type {
 
 // Implementation
 export { DocumentImpl } from "./DocumentImpl";
-
-// Factory & Conversion
-export { createDocumentFromDatasetItem } from "./createDocumentFromDatasetItem";
-export { toDatasetItem } from "./toDatasetItem";

@@ -21,7 +21,7 @@ License: CECILL-C
     goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
     handleReturnToPreviousPage: () => void;
     handleSave: () => void;
-    getDatasetItemDisplayCount: () => string;
+    getWorkspaceRecordDisplayCount: () => string;
   }
 
   let {
@@ -29,7 +29,7 @@ License: CECILL-C
     goToNeighborItem,
     handleReturnToPreviousPage,
     handleSave,
-    getDatasetItemDisplayCount
+    getWorkspaceRecordDisplayCount
   }: Props = $props();
 
   const onKeyUp = async (event: KeyboardEvent) => {
@@ -114,7 +114,7 @@ License: CECILL-C
             <span
               class="text-[9px] text-muted-foreground font-bold opacity-40 uppercase tracking-tighter"
             >
-              {getDatasetItemDisplayCount()}
+              {getWorkspaceRecordDisplayCount()}
             </span>
           </div>
 

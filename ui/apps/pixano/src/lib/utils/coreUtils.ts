@@ -79,7 +79,11 @@ export function normalizeMediaUrl(url: string): string {
   }
 
   const normalized = trimmed.replace(/^\/+/, "");
-  if (normalized.startsWith("views/") || normalized.startsWith("media/")) {
+  if (
+    normalized.startsWith("datasets/") ||
+    normalized.startsWith("views/") ||
+    normalized.startsWith("media/")
+  ) {
     return normalized;
   }
 

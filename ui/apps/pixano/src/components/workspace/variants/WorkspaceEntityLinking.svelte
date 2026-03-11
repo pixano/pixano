@@ -13,8 +13,8 @@ License: CECILL-C
   import { Canvas2D } from "$components/workspace/canvas2d";
   import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import {
-    DatasetItem,
     Image,
     isImage,
     TextSpan,
@@ -49,7 +49,7 @@ License: CECILL-C
 
   interface Props {
     // Attributes
-    selectedItem: DatasetItem;
+    selectedItem: WorkspaceViewerItem;
     resize: number;
   }
 

@@ -15,7 +15,6 @@ License: CECILL-C
 
   import { IconButton, Image, SequenceFrame, View } from "$lib/ui";
 
-  import { datasetSchema } from "$lib/stores/appStores.svelte";
   import { createFeature } from "$lib/utils/featureMapping";
   import { saveTo } from "$lib/utils/saveItemUtils";
   // Local imports
@@ -27,6 +26,7 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import type { ItemsMeta } from "$lib/types/workspace";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   type ViewMeta = {
@@ -41,6 +41,7 @@ License: CECILL-C
   // Component state variables
   let isEditing: boolean = $state(false);
   let combineChannels: boolean = $state(false);
+  const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
     const views = Object.values(mediaViews.value || {});
@@ -77,8 +78,8 @@ License: CECILL-C
   const features = $derived.by(() => {
     const metas = itemMetas.value;
     if (!metas?.item) return [];
-    if (!datasetSchema.value?.schemas?.[metas.item.table_info.name]) return [];
-    return createFeature(metas.item, datasetSchema.value);
+    if (!manifest.tablesByName[metas.item.table_info.name]) return [];
+    return createFeature(metas.item, manifest);
   });
 
   const safeItemColor = $derived(itemMetas.value?.color ?? "rgb");

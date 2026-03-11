@@ -9,9 +9,6 @@ import * as api from "$lib/api";
 import { checkInferenceStatus } from "$lib/services/inferenceService";
 
 export const load: LayoutLoad = async () => {
-  const [datasets] = await Promise.all([
-    api.getDatasetsInfo(),
-    checkInferenceStatus(),
-  ]);
+  const [datasets] = await Promise.all([api.listDatasets(), checkInferenceStatus()]);
   return { datasets };
 };

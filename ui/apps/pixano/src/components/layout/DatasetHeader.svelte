@@ -10,7 +10,7 @@ License: CECILL-C
 
   import { ConfirmModal, PrimaryButton } from "$lib/ui";
 
-  import DatasetItemHeader from "./DatasetItemHeader.svelte";
+  import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import {
@@ -39,7 +39,7 @@ License: CECILL-C
   let currentItemId = $derived(page.params.itemId);
   const isWorkspaceRoute = $derived(page.route.id === WORKSPACE_ROUTE_ID);
 
-  const getDatasetItemDisplayCount = () => {
+  const getWorkspaceRecordDisplayCount = () => {
     const index = datasetItemIds.value.indexOf(currentItemId);
     if (index === -1) return "0 of 0";
     return `${index + 1} of ${datasetItemIds.value.length}`;
@@ -124,12 +124,12 @@ License: CECILL-C
 
 <div class="h-full w-full flex items-center" use:preventUnsavedUnload>
   {#if isWorkspaceRoute}
-    <DatasetItemHeader
+    <WorkspaceRecordHeader
       {currentItemId}
       {handleSave}
       {goToNeighborItem}
       {handleReturnToPreviousPage}
-      {getDatasetItemDisplayCount}
+      {getWorkspaceRecordDisplayCount}
     />
   {:else}
     <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">

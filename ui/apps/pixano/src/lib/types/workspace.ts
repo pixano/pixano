@@ -10,6 +10,7 @@ import {
   Annotation,
   Entity,
   Item,
+  View,
   WorkspaceType,
   type FeaturesValues,
   type Image,
@@ -18,6 +19,18 @@ import {
 import type { FeatureValues } from "$lib/types/shapeTypes";
 
 export type MView = Record<string, Image | SequenceFrame[]>;
+export type WorkspaceViewerItem = {
+  item: Item;
+  views: Record<string, View | View[]>;
+  ui: {
+    datasetId: string;
+    type: WorkspaceType;
+  };
+};
+export type WorkspaceData = WorkspaceViewerItem & {
+  entities: Record<string, Entity[]>;
+  annotations: Record<string, Annotation[]>;
+};
 
 import type {
   ListInput as ListInputDef,
@@ -82,7 +95,6 @@ export type ModelSelection = {
 };
 
 export type ItemsMeta = {
-  //mainFeatures: DatasetItem["features"]; // feature;
   //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
   item: Item;

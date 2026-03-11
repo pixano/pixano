@@ -125,6 +125,8 @@ export async function loadImagesFromViews(
     const imageObject = unwrapArrays && Array.isArray(value) ? value[0] : value;
     if (Array.isArray(imageObject)) return;
     if (filterImages && !isImage(imageObject)) return;
+    if (!isImage(imageObject)) return;
+    if (!imageObject.data.url) return;
 
     const imageUrl = toClientAssetUrl(imageObject.data.url);
     const img: ImageJS = await ImageJS.load(imageUrl);

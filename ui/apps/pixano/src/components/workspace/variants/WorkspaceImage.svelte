@@ -29,13 +29,14 @@ License: CECILL-C
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
-  import { DatasetItem, Image, type LoadedImagesPerView } from "$lib/ui";
+  import { Image, type LoadedImagesPerView } from "$lib/ui";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
   interface Props {
     // Attributes
-    selectedItem: DatasetItem;
+    selectedItem: WorkspaceViewerItem;
     resize: number;
   }
 

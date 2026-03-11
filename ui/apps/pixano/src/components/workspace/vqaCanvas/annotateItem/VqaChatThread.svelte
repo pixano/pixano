@@ -5,21 +5,20 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { Message } from "$lib/types/dataset";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import type { ContentChangeEvent, DeleteQuestionEvent, GenerateAnswerEvent } from "$lib/types/vqa";
+  import type { ContentChangeEvent, DeleteQuestionEvent, GenerateAnswerEvent, QuestionThread } from "$lib/types/vqa";
 
   import QuestionForm from "./QuestionForm.svelte";
 
   interface Props {
-    messagesByNumber: Message[][];
+    questionThreads: QuestionThread[];
     completionModels: PixanoInferenceCompletionModel[];
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
     onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
   }
 
-  let { messagesByNumber, completionModels, onAnswerContentChange, onGenerateAnswer, onDeleteQuestion }: Props =
+  let { questionThreads, completionModels, onAnswerContentChange, onGenerateAnswer, onDeleteQuestion }: Props =
     $props();
   let scrollContainer: HTMLDivElement | undefined = $state();
 
@@ -37,7 +36,7 @@ License: CECILL-C
   class="p-4 space-y-8 flex flex-col h-full overflow-y-auto custom-scrollbar"
   bind:this={scrollContainer}
 >
-  {#if messagesByNumber.length === 0}
+  {#if questionThreads.length === 0}
     <div class="flex flex-col items-center justify-center py-20 text-center space-y-4 m-auto">
       <div
         class="w-16 h-16 bg-muted rounded-full flex items-center justify-center text-muted-foreground"
@@ -67,10 +66,10 @@ License: CECILL-C
       </div>
     </div>
   {:else}
-    {#each messagesByNumber as messages}
+    {#each questionThreads as thread}
       <div class="relative">
         <QuestionForm
-          {messages}
+          {thread}
           {completionModels}
           {onAnswerContentChange}
           {onGenerateAnswer}

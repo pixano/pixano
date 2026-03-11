@@ -39,6 +39,7 @@ License: CECILL-C
 
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
+  import { getWorkspaceContext } from "$lib/workspace/context";
   import {
     annotations,
     current_itemBBoxes,
@@ -72,6 +73,7 @@ License: CECILL-C
   let selectedEntityId: string = $state("new");
   let mustMerge: boolean = $state(false);
   let overlapTargetId: string = $state("");
+  const { manifest } = getWorkspaceContext();
 
   const childEditing = $derived.by(() => {
     void annotations.value;
@@ -116,7 +118,7 @@ License: CECILL-C
   const isMultiView = Object.keys(mediaViews.value).length > 1;
 
   const handleRelink = () => {
-    relink(child, entity, selectedEntityId, mustMerge, overlapTargetId);
+    relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
     showRelink = false;
   };
 </script>

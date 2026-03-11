@@ -66,19 +66,21 @@ function parseHeaders(headersBlock: string): Map<string, string> {
 export async function* streamViewFrameBatch(
   datasetId: string,
   viewName: string,
-  itemId: string,
+  recordId: string,
   startFrame: number,
   batchSize: number,
   signal?: AbortSignal,
 ): AsyncGenerator<StreamedFramePart> {
   const params = new URLSearchParams({
-    item_id: itemId,
+    view_name: viewName,
     start_frame: String(startFrame),
     batch_size: String(batchSize),
   });
   const response = await fetch(
-    `/views/${datasetId}/${viewName}/batch?${params.toString()}`,
-    { signal },
+    `/datasets/${datasetId}/records/${recordId}/sframes/batch?${params.toString()}`,
+    {
+      signal,
+    },
   );
   if (!response.ok) {
     console.error(
@@ -177,7 +179,7 @@ export async function* streamViewFrameBatch(
 export async function getViewFrameBatch(
   datasetId: string,
   viewName: string,
-  itemId: string,
+  recordId: string,
   startFrame: number,
   batchSize: number,
 ): Promise<Map<number, Blob>> {
@@ -186,7 +188,7 @@ export async function getViewFrameBatch(
     for await (const part of streamViewFrameBatch(
       datasetId,
       viewName,
-      itemId,
+      recordId,
       startFrame,
       batchSize,
     )) {

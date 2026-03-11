@@ -5,41 +5,31 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { PageLoad } from "./$types";
-import { getBrowser } from "$lib/api";
-import {
-  DEFAULT_DATASET_TABLE_PAGE,
-  DEFAULT_DATASET_TABLE_SIZE,
-} from "$lib/constants";
+import { listRecords } from "$lib/api";
+import { DEFAULT_DATASET_TABLE_PAGE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
+import { getRouteSearchParams } from "$lib/utils/routes";
 
-export const load: PageLoad = async ({ params, url }) => {
-  const currentPage = parseInt(
-    url.searchParams.get("page") ?? String(DEFAULT_DATASET_TABLE_PAGE),
-  );
-  const size = parseInt(
-    url.searchParams.get("size") ?? String(DEFAULT_DATASET_TABLE_SIZE),
-  );
-  const sortCol = url.searchParams.get("sort") ?? "";
-  const sortOrder = url.searchParams.get("order") ?? "asc";
-  const querySearch = url.searchParams.get("q") ?? "";
-  const queryModel = url.searchParams.get("model") ?? "";
-  const where = url.searchParams.get("filter") ?? "";
+export const load: PageLoad = async ({ params, url, parent }) => {
+  const { dataset } = await parent();
+  const searchParams = getRouteSearchParams(url);
+  const currentPage = parseInt(searchParams.get("page") ?? String(DEFAULT_DATASET_TABLE_PAGE));
+  const size = parseInt(searchParams.get("size") ?? String(DEFAULT_DATASET_TABLE_SIZE));
+  const sortCol = searchParams.get("sort") ?? "";
+  const sortOrder = searchParams.get("order") ?? "asc";
+  const where = searchParams.get("filter") ?? "";
 
-  const sort =
-    sortCol ? { col: sortCol, order: sortOrder } : { col: "created_at", order: "asc" };
-  const query =
-    querySearch && queryModel ? { model: queryModel, search: querySearch } : undefined;
+  const sort = sortCol ? { col: sortCol, order: sortOrder } : { col: "created_at", order: "asc" };
 
-  const browserData = await getBrowser(
-    params.datasetId,
-    currentPage,
-    size,
-    query,
-    where || undefined,
+  const browserData = await listRecords(params.datasetId, {
+    offset: (currentPage - 1) * size,
+    limit: size,
+    where: where || undefined,
     sort,
-  );
+    workspaceType: dataset.workspace,
+  });
 
   return {
     browserData,
-    pagination: { currentPage, size, sort, query, where },
+    pagination: { currentPage, size, sort, where },
   };
 };
