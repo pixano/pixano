@@ -4,6 +4,7 @@ import type {
   EntityResponse,
   ImageResponse,
   PaginatedResponse,
+  PreviewDescriptor,
   RecordComponentResponse,
   RecordResponse,
   SFrameResponse,
@@ -158,21 +159,10 @@ function inferColumnType(value: unknown): string {
   return "str";
 }
 
-function inferViewColumnType(logicalName: string): string {
-  return logicalName.toLowerCase().includes("video") ? "video" : "image";
-}
-
-function getFrameIndex(view: ExplorerViewResponse): number | undefined {
-  return "frame_index" in view && typeof view.frame_index === "number" ? view.frame_index : undefined;
-}
-
-type ExplorerViewResponse = ImageResponse | SFrameResponse;
-
 export function toDatasetBrowser(
   datasetId: string,
   records: PaginatedResponse<RecordResponse>,
   sort?: { col: string; order: string },
-  viewRowsByRecordId?: Record<string, ExplorerViewResponse[]>,
 ): DatasetBrowser {
   const items = [...records.items];
   if (sort?.col) {
@@ -196,21 +186,10 @@ export function toDatasetBrowser(
       }
     }
 
-    const recordViews = viewRowsByRecordId?.[record.id] ?? [];
-    const representativeViews = new Map<string, ExplorerViewResponse>();
-    for (const view of recordViews) {
-      const logicalName = view.logical_name || "default";
-      const current = representativeViews.get(logicalName);
-      const currentFrame = current ? (getFrameIndex(current) ?? Infinity) : Infinity;
-      const nextFrame = getFrameIndex(view) ?? -1;
-      if (!current || nextFrame < currentFrame) {
-        representativeViews.set(logicalName, view);
-      }
-    }
-
-    for (const [logicalName, view] of representativeViews.entries()) {
-      row[logicalName] = view.src;
-      viewColumns.set(logicalName, "image");
+    const viewPreviews = record.view_previews as Record<string, PreviewDescriptor> | undefined;
+    for (const [logicalName, preview] of Object.entries(viewPreviews ?? {})) {
+      row[logicalName] = preview.preview_url;
+      viewColumns.set(logicalName, preview.kind);
     }
 
     return row;

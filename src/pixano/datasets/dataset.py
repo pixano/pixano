@@ -607,7 +607,7 @@ class Dataset:
             raise DatasetAccessError(f"Table '{table_name}' is not a temporal view table.")
 
         end_frame = start_frame + batch_size
-        columns = ["id", "frame_index"]
+        columns = ["frame_index"]
         for column_name in ("raw_bytes", "format"):
             if column_name in table.schema.names:
                 columns.append(column_name)
@@ -620,14 +620,9 @@ class Dataset:
         )
         assert where is not None
 
-        rows = (
-            TableQueryBuilder(table, self._db_connection)
-            .select(columns)
-            .where(where)
-            .limit(batch_size)
-            .order_by("frame_index")
-            .to_list()
-        )
+        query = table.search(None).select(columns).where(where).limit(batch_size)
+        rows = query.to_list()
+        rows.sort(key=lambda row: int(row.get("frame_index", -1)))
 
         result = []
         for row in rows:

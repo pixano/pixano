@@ -35,3 +35,17 @@ export const lastFrameIndex = reactiveStore<number | undefined>(undefined);
 export const currentFrameIndex = reactiveStore<number>(0);
 export const currentItemId = reactiveStore<string>("");
 export const videoViewNames = reactiveStore<string[]>([]);
+
+export function resetVideoStores() {
+  playbackState.value = {
+    intervalId: 0,
+    isLoaded: false,
+    isBuffering: false,
+    videoSpeed: 100,
+  };
+  imagesPerView.value = {};
+  lastFrameIndex.value = undefined;
+  currentFrameIndex.value = 0;
+  currentItemId.value = "";
+  videoViewNames.value = [];
+}

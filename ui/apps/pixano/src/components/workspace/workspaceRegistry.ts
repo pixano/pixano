@@ -6,7 +6,8 @@ License: CECILL-C
 
 import type { Component } from "svelte";
 
-import { WorkspaceType, type DatasetItem } from "$lib/ui";
+import { WorkspaceType } from "$lib/ui";
+import type { WorkspaceViewerItem } from "$lib/types/workspace";
 
 import WorkspaceImage from "./variants/WorkspaceImage.svelte";
 import WorkspaceVideo from "./variants/WorkspaceVideo.svelte";
@@ -14,7 +15,7 @@ import WorkspaceVqa from "./variants/WorkspaceVqa.svelte";
 import WorkspaceEntityLinking from "./variants/WorkspaceEntityLinking.svelte";
 import Workspace3D from "./variants/Workspace3D.svelte";
 
-type VariantProps = { selectedItem: DatasetItem; resize: number };
+type VariantProps = { selectedItem: WorkspaceViewerItem; resize: number };
 
 const registry: Record<string, Component<VariantProps>> = {
   [WorkspaceType.IMAGE]: WorkspaceImage,

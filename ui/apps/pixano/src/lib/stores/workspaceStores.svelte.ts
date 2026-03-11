@@ -7,6 +7,7 @@ License: CECILL-C
 import { untrack } from "svelte";
 
 import { cancelTrackingSession } from "./trackingStore.svelte";
+import { resetVideoStores } from "./videoStores.svelte";
 import { panTool } from "$lib/tools";
 import { clearAnnotationMappingCaches } from "$lib/utils/annotationMapping";
 import * as utils from "$lib/utils/coreUtils";
@@ -95,6 +96,7 @@ export function resetColorScale() {
 }
 
 export function resetWorkspaceStores() {
+  resetVideoStores();
   newShape.value = { status: "none" };
   selectedTool.value = panTool;
   highlightedEntity.value = null;

@@ -18,6 +18,7 @@ License: CECILL-C
     imagesPerView,
     lastFrameIndex,
     playbackState,
+    resetVideoStores,
     videoViewNames,
   } from "$lib/stores/videoStores.svelte";
   import {
@@ -47,7 +48,8 @@ License: CECILL-C
     finalizeTrackingSession,
   } from "$lib/stores/trackingStore.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
-  import { DatasetItem, ShapeType, SequenceFrame, type EditShape, type SaveRectangleShape } from "$lib/ui";
+  import { ShapeType, SequenceFrame, type EditShape, type SaveRectangleShape } from "$lib/ui";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -59,7 +61,7 @@ License: CECILL-C
   import { editKeyItemInTracklet } from "$lib/utils/videoShapeEditing";
 
   interface Props {
-    selectedItem: DatasetItem;
+    selectedItem: WorkspaceViewerItem;
     resize: number;
   }
 
@@ -81,8 +83,18 @@ License: CECILL-C
   let expanding = $state(false);
   let isLoaded = $state(false);
   let loadingCycle = 0;
-  let lastLoadedVideoItemId = "";
+  let lastLoadedVideoKey = "";
   const isRouteLoading = $derived(navigating.from !== null);
+
+  function getSequenceFrameViews(item: WorkspaceViewerItem): Record<string, SequenceFrame[]> {
+    const entries = Object.entries(item.views).flatMap(([viewName, view]) => {
+      if (!Array.isArray(view) || view.length === 0) {
+        return [];
+      }
+      return [[viewName, view as SequenceFrame[]] as const];
+    });
+    return Object.fromEntries(entries);
+  }
 
   const handleCanvasShapeChange = (shape: import("$lib/ui").Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
@@ -119,17 +131,26 @@ License: CECILL-C
 
   $effect(() => {
     const nextItemId = selectedItem?.item?.id;
-    if (!nextItemId || nextItemId === lastLoadedVideoItemId) return;
-    lastLoadedVideoItemId = nextItemId;
+    if (!nextItemId) return;
 
-    const nextViews = selectedItem.views;
+    const datasetId = selectedItem.ui.datasetId;
+    const nextViews = getSequenceFrameViews(selectedItem);
+    const viewNames = Object.keys(nextViews);
+    const longestView = viewNames.length
+      ? Math.max(...Object.values(nextViews).map((view) => view.length))
+      : 0;
+    const nextLoadKey = `${nextItemId}:${viewNames.map((viewName) => `${viewName}:${nextViews[viewName].length}`).join("|")}`;
+    if (!viewNames.length || longestView <= 0) {
+      lastLoadedVideoKey = "";
+      isLoaded = false;
+      resetVideoStores();
+      return;
+    }
+    if (nextLoadKey === lastLoadedVideoKey) return;
+    lastLoadedVideoKey = nextLoadKey;
 
     untrack(() => {
       const cycle = ++loadingCycle;
-      const viewNames = Object.keys(nextViews);
-      const longestView = Math.max(
-        ...Object.values(nextViews).map((view) => (view as SequenceFrame[]).length),
-      );
 
       clearInterval(playbackState.value.intervalId);
       playbackState.update((old) => ({
@@ -146,7 +167,7 @@ License: CECILL-C
       lastFrameIndex.value = longestView - 1;
       setBufferSpecs();
 
-      void loadInitialFrames()
+      void loadInitialFrames(datasetId)
         .then(() => {
           if (cycle !== loadingCycle) return;
           isLoaded = true;

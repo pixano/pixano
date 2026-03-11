@@ -171,6 +171,9 @@ export async function loadWorkspaceRecord(
         const rightFrame = typeof right.data.frame_index === "number" ? right.data.frame_index : -1;
         return leftFrame - rightFrame;
       });
+      if (workspaceType === WorkspaceType.VIDEO) {
+        return [logicalName, orderedViews];
+      }
       return [logicalName, orderedViews.length === 1 ? orderedViews[0] : orderedViews];
     }),
   );

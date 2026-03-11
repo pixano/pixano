@@ -256,11 +256,11 @@ function getChunkRange(chunkIndex: number): { startFrame: number; batchSize: num
   };
 }
 
-function getSessionIdentifiers(): { datasetId: string; itemId: string } | undefined {
-  const datasetId = currentDatasetStore.value?.id;
+function getSessionIdentifiers(datasetId?: string): { datasetId: string; itemId: string } | undefined {
+  const resolvedDatasetId = datasetId ?? currentDatasetStore.value?.id;
   const itemId = currentItemId.value;
-  if (!datasetId || !itemId) return undefined;
-  return { datasetId, itemId };
+  if (!resolvedDatasetId || !itemId) return undefined;
+  return { datasetId: resolvedDatasetId, itemId };
 }
 
 function shouldWarmDecode(frameIndex: number): boolean {
@@ -443,8 +443,10 @@ function pushImageToCanvasView(viewName: string, loaded: LoadedImage): void {
     }
 
     // Keep only current + previous for transition rendering.
-    state[viewName] = [...previous, loaded].slice(-2);
-    return state;
+    return {
+      ...state,
+      [viewName]: [...previous, loaded].slice(-2),
+    };
   });
 }
 
@@ -528,6 +530,9 @@ async function fetchAndMarkFrameRange(
  * network chunk -> OPFS write -> waiter resolve -> optional warm decode.
  */
 async function requestChunk(viewName: string, chunkIndex: number, token = sessionVersion): Promise<void> {
+  const sessionToken = await ensureSessionReady();
+  if (sessionToken === undefined || sessionToken !== sessionVersion) return;
+
   const runtime = getOrCreateRuntime(viewName);
   const range = getChunkRange(chunkIndex);
   if (!range) return;
@@ -545,7 +550,7 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
       viewName,
       startFrame,
       batchSize,
-      token,
+      sessionToken,
       `Failed to fetch frame chunk ${chunkIndex} for view ${viewName}:`,
     );
     try {
@@ -558,11 +563,11 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
         }
       }
 
-      if (token === sessionVersion && availableFrames.size > 0 && isCompleteChunk) {
+      if (sessionToken === sessionVersion && availableFrames.size > 0 && isCompleteChunk) {
         runtime.completedChunks.add(chunkIndex);
       }
     } finally {
-      if (token === sessionVersion) {
+      if (sessionToken === sessionVersion) {
         const endFrame = startFrame + batchSize;
         for (let frame = startFrame; frame < endFrame; frame++) {
           if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
@@ -673,8 +678,8 @@ function canBackgroundDownload(viewName: string): boolean {
   return runtime.persistedFrames.size > 0;
 }
 
-async function ensureSessionReady(): Promise<number | undefined> {
-  const ids = getSessionIdentifiers();
+async function ensureSessionReady(datasetId?: string): Promise<number | undefined> {
+  const ids = getSessionIdentifiers(datasetId);
   if (!ids) return undefined;
 
   const sessionKey = `${ids.datasetId}:${ids.itemId}`;
@@ -774,13 +779,17 @@ export const setBufferSpecs = () => {
 /**
  * Load first renderable frame for every view, then continue full download in background.
  */
-export async function loadInitialFrames(): Promise<void> {
+export async function loadInitialFrames(datasetId: string): Promise<void> {
   const totalFrames = getTotalFrames();
   const viewNames = videoViewNames.value;
-  if (totalFrames <= 0 || viewNames.length === 0) return;
+  if (totalFrames <= 0 || viewNames.length === 0) {
+    throw new Error("No video frames available.");
+  }
 
-  const sessionToken = await ensureSessionReady();
-  if (sessionToken === undefined) return;
+  const sessionToken = await ensureSessionReady(datasetId);
+  if (sessionToken === undefined) {
+    throw new Error("Video session could not be initialized.");
+  }
 
   const firstFrameStatus = await Promise.all(
     viewNames.map(async (viewName) => {

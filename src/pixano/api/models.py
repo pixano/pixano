@@ -120,6 +120,18 @@ RecordUpdate = _create_transport_model(
 )
 RecordResponse = _create_transport_model("RecordResponse", Record)
 
+
+class PreviewDescriptor(ResponseModel):
+    resource: str
+    id: str
+    kind: str
+    preview_url: str
+
+
+class RecordListResponse(RecordResponse):
+    view_previews: dict[str, PreviewDescriptor] | None = None
+
+
 EntityCreate = _create_transport_model(
     "EntityCreate",
     Entity,

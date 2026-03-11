@@ -1,5 +1,6 @@
 """Subtype-specific view routers."""
 
+import hashlib
 import io
 from typing import Annotated, Any, TypeVar
 
@@ -91,6 +92,25 @@ def _stream_blob(dataset: Dataset, table_name: str, row_id: str) -> StreamingRes
         io.BytesIO(blob_data),
         media_type=media_type_from_format(fmt),
         headers={"Content-Length": str(len(blob_data))},
+    )
+
+
+def _stream_preview(dataset: Dataset, table_name: str, row_id: str) -> StreamingResponse:
+    row = _get_row(dataset, table_name, row_id)
+    preview = getattr(row, "preview", b"") or b""
+    preview_format = getattr(row, "preview_format", "") or ""
+    if not preview or not preview_format:
+        raise HTTPException(status_code=404, detail=f"Resource '{row_id}' has no preview.")
+
+    etag = hashlib.sha1(preview).hexdigest()  # noqa: S324
+    return StreamingResponse(
+        io.BytesIO(preview),
+        media_type=media_type_from_format(preview_format),
+        headers={
+            "Content-Length": str(len(preview)),
+            "Cache-Control": "public, max-age=3600",
+            "ETag": f'"{etag}"',
+        },
     )
 
 
@@ -246,6 +266,11 @@ def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Stre
     return _stream_blob(dataset, IMAGE_TABLE, id)
 
 
+@router.get("/images/{id}/preview", operation_id="get_image_preview")
+def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    return _stream_preview(dataset, IMAGE_TABLE, id)
+
+
 @router.get("/texts", response_model=PaginatedResponse[TextResponse], operation_id="list_texts")
 def list_texts(
     dataset: Dataset = Depends(get_dataset_dep),
@@ -295,6 +320,11 @@ def get_sframe(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_
 @router.get("/sframes/{id}/blob", operation_id="get_sframe_blob")
 def get_sframe_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
     return _stream_blob(dataset, SFRAME_TABLE, id)
+
+
+@router.get("/sframes/{id}/preview", operation_id="get_sframe_preview")
+def get_sframe_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    return _stream_preview(dataset, SFRAME_TABLE, id)
 
 
 @router.get(

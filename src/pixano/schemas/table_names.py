@@ -9,7 +9,7 @@ from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
 from .schema_group import SchemaGroup
-from .views import Image, PDF, PointCloud, SequenceFrame, Text, Video, View
+from .views import PDF, Image, PointCloud, SequenceFrame, Text, Video, View
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,9 +99,10 @@ def canonical_base_schema_for_schema(schema_cls: type[LanceModel]) -> type[Lance
     if not isinstance(schema_cls, type) or not issubclass(schema_cls, LanceModel):
         raise ValueError(f"Unsupported schema type for canonical family resolution: {schema_cls}.")
 
-    for family in _CANONICAL_RESOURCE_FAMILIES:
-        if issubclass(schema_cls, family.base_schema):
-            return family.base_schema
+    families_by_base = {family.base_schema: family for family in _CANONICAL_RESOURCE_FAMILIES}
+    for base_schema in schema_cls.__mro__:
+        if base_schema in families_by_base:
+            return base_schema
 
     if issubclass(schema_cls, View):
         raise ValueError(f"Unsupported view schema for canonical family resolution: {schema_cls}.")

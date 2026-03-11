@@ -52,7 +52,15 @@ export interface RecordResponse {
   split?: string;
   created_at?: string;
   updated_at?: string;
+  view_previews?: Record<string, PreviewDescriptor>;
   [key: string]: unknown;
+}
+
+export interface PreviewDescriptor {
+  resource: string;
+  id: string;
+  kind: string;
+  preview_url: string;
 }
 
 export interface RecordComponentResponse {
