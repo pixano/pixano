@@ -6,11 +6,11 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from pixano.datasets import Dataset
+from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.builders.folders import (
     FolderBaseBuilder,
     ImageFolderBuilder,
@@ -18,12 +18,10 @@ from pixano.datasets.builders.folders import (
     VQAFolderBuilder,
 )
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.workspaces.dataset_items import DefaultImageDatasetItem
-from pixano.features import Conversation, Entity, Image, Item, Message, SequenceFrame, Video
-from pixano.features.schemas.annotations.bbox import BBox
-from pixano.features.schemas.annotations.keypoints import KeyPoints
-from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.features import BBox, Entity, Image, Message, Record, SequenceFrame, Video
+from pixano.schemas.annotations.bbox import BBox
+from pixano.schemas.annotations.keypoints import KeyPoints
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
 
@@ -38,14 +36,39 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_generate_data_maps_objects_to_entities_alias(self, entity_category):
-        class Schema(DatasetItem):
-            image: Image
-            entities: list[entity_category]
-
+    def test_preflight_metadata_reports_aliases_in_default_mode(self, entity_category):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            media_root = Path(tmp_dir)
-            split_dir = media_root / "test_dataset" / "train"
+            source_dir = Path(tmp_dir) / "test_dataset"
+            split_dir = source_dir / "train"
+            split_dir.mkdir(parents=True, exist_ok=True)
+            (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
+            (split_dir / "metadata.jsonl").write_text(
+                '{"image":"item_0.jpg","objects":{"category":["person"]},"bbox":{"coords":[[0,0,10,10]],"format":["xywh"],"is_normalized":[false],"entity_index":[0]}}\n',
+                encoding="utf-8",
+            )
+
+            builder = ImageFolderBuilder(
+                source_dir=source_dir,
+                library_dir=Path(tmp_dir) / "library",
+                info=DatasetInfo(
+                    name="alias_entities",
+                    description="",
+                    record=Record,
+                    entity=entity_category,
+                    bbox=BBox,
+                    views={"image": Image},
+                ),
+            )
+            report = builder.preflight_metadata()
+
+            assert report.error_count == 0
+            assert "objects -> entities" in report.aliases
+            assert "bbox -> bboxes" in report.aliases
+
+    def test_preflight_metadata_rejects_aliases_in_strict_mode(self, entity_category):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_dir = Path(tmp_dir) / "test_dataset"
+            split_dir = source_dir / "train"
             split_dir.mkdir(parents=True, exist_ok=True)
             (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
             (split_dir / "metadata.jsonl").write_text(
@@ -54,50 +77,153 @@ class TestFolderBaseBuilder:
             )
 
             builder = ImageFolderBuilder(
-                media_dir=media_root,
-                library_dir=media_root / "library",
-                info=DatasetInfo(name="alias_entities", description=""),
-                dataset_item=Schema,
-                dataset_path="test_dataset",
+                source_dir=source_dir,
+                library_dir=Path(tmp_dir) / "library",
+                info=DatasetInfo(
+                    name="alias_entities",
+                    description="",
+                    record=Record,
+                    entity=entity_category,
+                    views={"image": Image},
+                ),
+                metadata_validation_mode="strict",
+            )
+            report = builder.preflight_metadata()
+
+            assert report.error_count > 0
+            assert "aliased_metadata_key" in report.errors
+
+    def test_preflight_metadata_reports_missing_view_media(self, entity_category):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_dir = Path(tmp_dir) / "test_dataset"
+            split_dir = source_dir / "train"
+            split_dir.mkdir(parents=True, exist_ok=True)
+            (split_dir / "metadata.jsonl").write_text('{"image":"missing.jpg","entities":{}}\n', encoding="utf-8")
+
+            builder = ImageFolderBuilder(
+                source_dir=source_dir,
+                library_dir=Path(tmp_dir) / "library",
+                info=DatasetInfo(
+                    name="missing_media",
+                    description="",
+                    record=Record,
+                    entity=entity_category,
+                    views={"image": Image},
+                ),
+            )
+            report = builder.preflight_metadata()
+
+            assert "missing_view_media" in report.errors
+
+    def test_generate_data_maps_objects_to_entities_alias(self, entity_category):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            source_dir = Path(tmp_dir) / "test_dataset"
+            split_dir = source_dir / "train"
+            split_dir.mkdir(parents=True, exist_ok=True)
+            (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
+            (split_dir / "metadata.jsonl").write_text(
+                '{"image":"item_0.jpg","objects":{"category":["person"]}}\n',
+                encoding="utf-8",
+            )
+
+            builder = ImageFolderBuilder(
+                source_dir=source_dir,
+                library_dir=Path(tmp_dir) / "library",
+                info=DatasetInfo(
+                    name="alias_entities",
+                    description="",
+                    record=Record,
+                    entity=entity_category,
+                    views={"image": Image},
+                ),
             )
             dataset = builder.build(mode="create", check_integrity="none")
 
             assert dataset.open_table("entities").count_rows() == 1
 
     def test_generate_data_maps_image_to_sequence_frame_alias(self, entity_category):
-        class Schema(DatasetItem):
-            frames: list[SequenceFrame]
-            entities: list[entity_category]
-
         with tempfile.TemporaryDirectory() as tmp_dir:
-            media_root = Path(tmp_dir)
-            split_dir = media_root / "test_dataset" / "train"
+            source_dir = Path(tmp_dir) / "test_dataset"
+            split_dir = source_dir / "train"
             split_dir.mkdir(parents=True, exist_ok=True)
             (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
             (split_dir / "metadata.jsonl").write_text('{"image":"item_0.jpg"}\n', encoding="utf-8")
 
             builder = VideoFolderBuilder(
-                media_dir=media_root,
-                library_dir=media_root / "library",
-                info=DatasetInfo(name="alias_views", description=""),
-                dataset_item=Schema,
-                dataset_path="test_dataset",
+                source_dir=source_dir,
+                library_dir=Path(tmp_dir) / "library",
+                info=DatasetInfo(
+                    name="alias_views",
+                    description="",
+                    record=Record,
+                    entity=entity_category,
+                    views={"image": SequenceFrame},
+                ),
             )
             dataset = builder.build(mode="create", check_integrity="none")
 
-            assert dataset.open_table("frames").count_rows() == 1
-            dataset_with_media = Dataset(dataset.path, media_dir=media_root)
-            assert dataset_with_media.generate_preview() != ""
+            assert dataset.open_table("sequence_frames").count_rows() == 1
+
+    def test_builder_rejects_mixed_image_and_sframe_same_logical_name(self):
+        class MixedViewBuilder(DatasetBuilder):
+            def __init__(self, target_dir: Path):
+                super().__init__(
+                    target_dir=target_dir,
+                    info=DatasetInfo(
+                        id="mixed_views",
+                        name="mixed_views",
+                        description="",
+                        workspace=WorkspaceType.VIDEO,
+                        record=Record,
+                        views={"camera_image": Image, "camera_frame": SequenceFrame},
+                    ),
+                )
+
+            def generate_data(self):
+                record = Record(id="record_0", split="train")
+                yield {"records": record}
+                yield {
+                    "images": [
+                        Image(
+                            id="image_0",
+                            record_id=record.id,
+                            logical_name="camera",
+                            uri="image_0.jpg",
+                            width=64,
+                            height=64,
+                            format="jpg",
+                        )
+                    ]
+                }
+                yield {
+                    "sequence_frames": [
+                        SequenceFrame(
+                            id="sframe_0",
+                            record_id=record.id,
+                            logical_name="camera",
+                            uri="frame_0.jpg",
+                            width=64,
+                            height=64,
+                            format="jpg",
+                            timestamp=0.0,
+                            frame_index=0,
+                        )
+                    ]
+                }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            builder = MixedViewBuilder(Path(tmp_dir) / "mixed_views")
+
+            with pytest.raises(ValueError, match="logical view family collision"):
+                builder.build(mode="create", check_integrity="none", flush_every_n_samples=1)
 
     def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
-        assert image_folder_builder.target_dir.is_dir()
         assert video_folder_builder.source_dir.is_dir()
-        assert video_folder_builder.target_dir.is_dir()
         assert image_folder_builder.views_schema == {"view": Image}
-        assert video_folder_builder.views_schema == {"view": Video}
+        assert video_folder_builder.views_schema == {"view": SequenceFrame}
         assert image_folder_builder.entities_schema == {"entities": entity_category}
         assert video_folder_builder.entities_schema == {"entities": entity_category}
 
@@ -105,149 +231,136 @@ class TestFolderBaseBuilder:
         assert isinstance(vqa_folder_builder, VQAFolderBuilder)
         assert isinstance(vqa_folder_builder_no_jsonl, VQAFolderBuilder)
         assert vqa_folder_builder.source_dir.is_dir()
-        assert vqa_folder_builder.target_dir.is_dir()
         assert vqa_folder_builder_no_jsonl.source_dir.is_dir()
-        assert vqa_folder_builder_no_jsonl.target_dir.is_dir()
         assert vqa_folder_builder.views_schema == {"image": Image}
         assert vqa_folder_builder_no_jsonl.views_schema == {"image": Image}
-        assert vqa_folder_builder.entities_schema == {"objects": Entity, "conversations": Conversation}
-        assert vqa_folder_builder_no_jsonl.entities_schema == {"objects": Entity, "conversations": Conversation}
+        assert vqa_folder_builder.entities_schema == {"entities": Entity}
+        assert vqa_folder_builder_no_jsonl.entities_schema == {"entities": Entity}
 
-    def test_url_prefix_init(self, dataset_item_bboxes_metadata):
+    def test_url_prefix_init(self):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
-        urls_relative_path = source_dir.name
+
+        class RecordBBoxesMetadata(Record):
+            categories: tuple[str, ...] = ()
+            other_categories: list[int] = []
+            name: str = ""
+            index: int = 0
 
         ImageFolderBuilder(
-            media_dir=source_dir.parent,
+            source_dir=source_dir,
             library_dir=target_dir,
-            info=DatasetInfo(name="test", description="test"),
-            dataset_item=dataset_item_bboxes_metadata,
-            dataset_path=urls_relative_path,
+            info=DatasetInfo(
+                name="test",
+                description="test",
+                record=RecordBBoxesMetadata,
+                entity=Entity,
+                bbox=BBox,
+                views={"image": Image},
+            ),
         )
 
     def test_no_jsonl(self):
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
         ImageFolderBuilder(
-            media_dir=source_dir.parent,
+            source_dir=source_dir,
             library_dir=target_dir,
             info=DatasetInfo(name="test", description="test"),
-            dataset_path=source_dir.name,
         )
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
 
-        # test 1: no schema with FolderBaseBuilder
-        with pytest.raises(ValueError, match="A schema is required."):
+        # test 1: no schemas with FolderBaseBuilder
+        with pytest.raises(ValueError, match="DatasetInfo must define at least one record schema and one view"):
             FolderBaseBuilder(
-                media_dir=source_dir.parent,
+                source_dir=source_dir,
                 library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
-                dataset_path=source_dir.name,
             )
 
-        # test 2: schema without view
-        class Schema(DatasetItem):
-            metadata: str
-            entities: list[entity_category]
-            bbox: list[BBox]
-
-        with pytest.raises(
-            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
-        ):
-            ImageFolderBuilder(
-                media_dir=source_dir.parent,
-                library_dir=target_dir,
-                info=DatasetInfo(name="test", description="test"),
-                dataset_path=source_dir.name,
-                dataset_item=Schema,
-            )
-
-        # test 3: schema without entities
-        class Schema(DatasetItem):
-            view: Image
-            metadata: str
-            bbox: list[BBox]
-
-        with pytest.raises(
-            ValueError, match="At least one View and one Entity schema must be defined in the schemas argument."
-        ):
-            ImageFolderBuilder(
-                media_dir=source_dir.parent,
-                library_dir=target_dir,
-                info=DatasetInfo(name="test", description="test"),
-                dataset_path=source_dir.name,
-                dataset_item=Schema,
-            )
-
-        # test 4: schema with two views should work (multi-view support)
-        class Schema(DatasetItem):
-            view: Image
-            view2: Image
-            metadata: str
-            entities: list[entity_category]
-            bbox: list[BBox]
-
+        # test 2 / 3: ImageFolderBuilder defaults now provide views/entities
         builder = ImageFolderBuilder(
-            media_dir=source_dir.parent,
+            source_dir=source_dir,
             library_dir=target_dir,
-            info=DatasetInfo(name="test", description="test"),
-            dataset_path=source_dir.name,
-            dataset_item=Schema,
+            info=DatasetInfo(name="test", description="test", record=Record, bbox=BBox),
+        )
+        assert builder.views_schema == {"image": Image}
+        assert builder.entities_schema == {"entities": Entity}
+
+        with pytest.raises(ValueError, match="incompatible with ImageFolderBuilder"):
+            ImageFolderBuilder(
+                source_dir=source_dir,
+                library_dir=target_dir,
+                info=DatasetInfo(name="test", description="test", workspace=WorkspaceType.VIDEO, record=Record),
+            )
+
+        # test 4: DatasetInfo with two views should work (multi-view support)
+        builder = ImageFolderBuilder(
+            source_dir=source_dir,
+            library_dir=target_dir,
+            info=DatasetInfo(
+                name="test",
+                description="test",
+                record=Record,
+                entity=entity_category,
+                bbox=BBox,
+                views={"view": Image, "view2": Image},
+            ),
         )
         assert builder.views_schema == {"view": Image, "view2": Image}
 
-        # test 5: invalid dataset_path
-        with pytest.raises(ValueError, match=r"A source path \(media_dir / dataset_path\) is required."):
+        # test 5: invalid source_dir
+        with pytest.raises(ValueError, match="Source directory does not exist"):
             ImageFolderBuilder(
-                media_dir=source_dir.parent,
+                source_dir=source_dir / "nonexistent",
                 library_dir=target_dir,
                 info=DatasetInfo(name="test", description="test"),
-                dataset_path="wrong_dataset_path",
             )
 
-    def test_create_item(self, image_folder_builder: ImageFolderBuilder):
-        item = image_folder_builder._create_item(
+    def test_create_record(self, image_folder_builder: ImageFolderBuilder):
+        record = image_folder_builder._create_record(
             id="id0",
             split="train",
             metadata="metadata",
         )
-        assert isinstance(item, Item)
-        assert item.split == "train"
-        assert item.metadata == "metadata"
+        assert isinstance(record, Record)
+        assert record.split == "train"
+        assert record.metadata == "metadata"
 
     def test_create_image_view(self, image_folder_builder: ImageFolderBuilder):
-        item = image_folder_builder._create_item(
+        record = image_folder_builder._create_record(
             id="id0",
             split="train",
             metadata="metadata",
         )
-        view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
+        view = image_folder_builder._create_view(
+            record, image_folder_builder.source_dir / "train" / "item_0.jpg", "view", Image
+        )
 
         assert isinstance(view, Image)
-        assert view.item_ref == ItemRef(id=item.id)
+        assert view.record_id == record.id
         assert isinstance(view.id, str) and len(view.id) == 22
-        assert view.url == "test_dataset/train/item_0.jpg"
         assert view.width == 586
         assert view.height == 640
         assert view.format == "JPEG"
 
     @pytest.mark.skipif(not VIDEO_INSTALLED, reason="To load video files metadata, install ffmpeg")
     def test_create_video_view(self, video_folder_builder: VideoFolderBuilder):
-        item = video_folder_builder._create_item(
+        record = video_folder_builder._create_record(
             id="id0",
             split="train",
             metadata="metadata",
         )
-        view = video_folder_builder._create_view(item, video_folder_builder.source_dir / "train" / "item_0.mp4", Video)
+        view = video_folder_builder._create_view(
+            record, video_folder_builder.source_dir / "train" / "item_0.mp4", "view", Video
+        )
 
         assert isinstance(view, Video)
         assert isinstance(view.id, str) and len(view.id) == 22
-        assert view.item_ref == ItemRef(id=item.id)
-        assert view.url == "test_dataset/train/item_0.mp4"
+        assert view.record_id == record.id
         assert view.num_frames == 209
         assert round(view.fps, 2) == 29.97
         assert view.width == 320
@@ -256,76 +369,81 @@ class TestFolderBaseBuilder:
         assert round(view.duration, 2) == 6.97
 
     def test_create_entities(self, image_folder_builder: ImageFolderBuilder, entity_category):
-        item = image_folder_builder._create_item(
+        record = image_folder_builder._create_record(
             id="id0",
             split="train",
             metadata="metadata",
         )
-        view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
+        view = image_folder_builder._create_view(
+            record, image_folder_builder.source_dir / "train" / "item_0.jpg", "view", Image
+        )
         entity_name = "entities"
 
-        # add test source id
-        image_folder_builder.source_id = "source_id"
+        # set test source type/name
+        image_folder_builder._default_source_type = "model"
+        image_folder_builder._default_source_name = "source_id"
 
         # test 1: one bbox infered
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data
+            record, [("view", view)], entity_name, entity_category, entities_data
         )
 
         assert len(entities) == 1
         assert isinstance(entities[entity_name][0], entity_category)
         assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
             id=entities[entity_name][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
+            record_id=record.id,
             category="none",
-        ).model_dump(exclude_timestamps=True)
+        ).model_dump(exclude={"created_at", "updated_at"})
 
-        assert set(annotations.keys()) == {"bbox"}
-        assert len(annotations["bbox"]) == 1
-        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
-            id=annotations["bbox"][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        assert set(annotations.keys()) == {"bboxes"}
+        assert len(annotations["bboxes"]) == 1
+        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
+            id=annotations["bboxes"][0].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][0].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        ).model_dump(exclude_timestamps=True)
+        ).model_dump(exclude={"created_at", "updated_at"})
 
         # test 2: one bbox not infered
         entities_data = {
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data
+            record, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities) == 1
         assert isinstance(entities[entity_name][0], entity_category)
         assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
             id=entities[entity_name][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
+            record_id=record.id,
             category="none",
-        ).model_dump(exclude_timestamps=True)
-        assert set(annotations.keys()) == {"bbox"}
-        assert len(annotations["bbox"]) == 1
-        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
-            id=annotations["bbox"][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert set(annotations.keys()) == {"bboxes"}
+        assert len(annotations["bboxes"]) == 1
+        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
+            id=annotations["bboxes"][0].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][0].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             coords=[0, 0, 100, 100],
             format="xyxy",
             is_normalized=False,
             confidence=0.9,
-        ).model_dump(exclude_timestamps=True)
+        ).model_dump(exclude={"created_at", "updated_at"})
 
         # test 3: two bboxes, one infered, one not infered
         entities_data = {
@@ -335,49 +453,51 @@ class TestFolderBaseBuilder:
             ]
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data
+            record, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities[entity_name]) == 2
         assert isinstance(entities[entity_name][0], entity_category)
         assert isinstance(entities[entity_name][1], entity_category)
         assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
         assert isinstance(entities[entity_name][1].id, str) and len(entities[entity_name][1].id) == 22
-        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
             id=entities[entity_name][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
+            record_id=record.id,
             category="none",
-        ).model_dump(exclude_timestamps=True)
-        assert entities[entity_name][1].model_dump(exclude_timestamps=True) == entity_category(
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert entities[entity_name][1].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
             id=entities[entity_name][1].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
+            record_id=record.id,
             category="none",
-        ).model_dump(exclude_timestamps=True)
-        assert set(annotations.keys()) == {"bbox"}
-        assert len(annotations["bbox"]) == 2
-        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
-            id=annotations["bbox"][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert set(annotations.keys()) == {"bboxes"}
+        assert len(annotations["bboxes"]) == 2
+        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
+            id=annotations["bboxes"][0].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][0].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             coords=[0, 0, 100, 100],
             format="xyxy",
             is_normalized=False,
             confidence=0.5,
-        ).model_dump(exclude_timestamps=True)
-        assert annotations["bbox"][1].model_dump(exclude_timestamps=True) == BBox(
-            id=annotations["bbox"][1].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][1].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert annotations["bboxes"][1].model_dump(exclude={"created_at", "updated_at"}) == BBox(
+            id=annotations["bboxes"][1].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][1].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             coords=[0.1, 0.1, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        ).model_dump(exclude_timestamps=True)
+        ).model_dump(exclude={"created_at", "updated_at"})
 
         # test 4: one bbox and one keypoint not infered and a category
         entities_data = {
@@ -392,69 +512,72 @@ class TestFolderBaseBuilder:
             "category": "person",
         }
         entities, annotations = image_folder_builder._create_objects_entities(
-            item, [("view", view)], entity_name, entity_category, entities_data
+            record, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities) == 1
         assert isinstance(entities[entity_name][0], entity_category)
         assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude_timestamps=True) == entity_category(
+        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
             id=entities[entity_name][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
+            record_id=record.id,
             category="person",
-        ).model_dump(exclude_timestamps=True)
-        assert set(annotations.keys()) == {"bbox", "keypoint"}
-        assert len(annotations["bbox"]) == 1
-        assert len(annotations["keypoint"]) == 1
-        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
-            id=annotations["bbox"][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert set(annotations.keys()) == {"bboxes", "keypoints"}
+        assert len(annotations["bboxes"]) == 1
+        assert len(annotations["keypoints"]) == 1
+        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
+            id=annotations["bboxes"][0].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][0].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        ).model_dump(exclude_timestamps=True)
-        assert annotations["keypoint"][0].model_dump(exclude_timestamps=True) == KeyPoints(
-            id=annotations["keypoint"][0].id,
-            item_ref=ItemRef(id=item.id),
-            view_ref=ViewRef(id=view.id, name="view"),
-            entity_ref=EntityRef(id=entities[entity_name][0].id, name=entity_name),
-            source_ref=SourceRef(id="source_id"),
+        ).model_dump(exclude={"created_at", "updated_at"})
+        assert annotations["keypoints"][0].model_dump(exclude={"created_at", "updated_at"}) == KeyPoints(
+            id=annotations["keypoints"][0].id,
+            record_id=record.id,
+            view_id=view.id,
+            entity_id=entities[entity_name][0].id,
+            source_type="model",
+            source_name="source_id",
+            frame_id=view.id,
             template_id="template_0",
             coords=[10, 10, 20, 20, 30, 30],
             states=["visible", "visible", "visible"],
-        ).model_dump(exclude_timestamps=True)
+        ).model_dump(exclude={"created_at", "updated_at"})
 
         # test 5: error infer keypoints
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
         with pytest.raises(ValueError, match="not supported for infered entity creation."):
             entities = image_folder_builder._create_objects_entities(
-                item, [("view", view)], entity_name, entity_category, entities_data
+                record, [("view", view)], entity_name, entity_category, entities_data
             )
 
         # test 6: error attribute not found in entity schema
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
-        with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
+        with pytest.raises(ValueError, match="Attribute unknown not found in entity schema"):
             entities = image_folder_builder._create_objects_entities(
-                item, [("view", view)], "entities", entity_category, entities_data
+                record, [("view", view)], "entities", entity_category, entities_data
             )
 
     def reconstruct_dict_list(self, generator):
         """VQA generate data by chunks, not complete dict,
-        so we rebuild a list of complete dicts, knowing that "item" key
+        so we rebuild a list of complete dicts, knowing that "records" key
         is always first."""
         final_list = []
         temp_dict = {}
         no_finalize_for_first_one = True
         for i, piece in enumerate(generator):
-            if "item" in piece:
+            if "records" in piece:
                 if no_finalize_for_first_one:
                     no_finalize_for_first_one = False
                 else:
-                    # "item" appears AGAIN - finalize current dict
+                    # "records" appears AGAIN - finalize current dict
                     final_list.append(temp_dict.copy())
                     temp_dict.clear()
             temp_dict.update(piece)
@@ -468,174 +591,122 @@ class TestFolderBaseBuilder:
         vqa_folder_builder_no_jsonl: ImageFolderBuilder,
         folder_no_jsonl,
     ):
-        class CustomSchema(DefaultImageDatasetItem):
-            metadata_str: str
-            metadata_bool: bool
-            metadata_int: int
-            metadata_float: float
-            meatadata_list: list
+        class CustomRecord(Record):
+            metadata_str: str = ""
+            metadata_bool: bool = False
+            metadata_int: int = 0
+            metadata_float: float = 0.0
+            meatadata_list: list = []
 
         image_folder_builder_no_jsonl_custom_schema = ImageFolderBuilder(
-            media_dir=folder_no_jsonl.parent,
+            source_dir=folder_no_jsonl,
             library_dir=tempfile.mkdtemp(),
-            info=DatasetInfo(name="test", description="test"),
-            dataset_item=CustomSchema,
-            dataset_path=folder_no_jsonl.name,
+            info=DatasetInfo(
+                name="test",
+                description="test",
+                record=CustomRecord,
+                entity=Entity,
+                bbox=BBox,
+                keypoint=KeyPoints,
+                views={"image": Image},
+            ),
         )
 
-        with patch(
-            "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
-        ):
-            ec_items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
-            nj_items = self.reconstruct_dict_list(vqa_folder_builder_no_jsonl.generate_data())
-            nj_cs_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl_custom_schema.generate_data())
+        ec_items = self.reconstruct_dict_list(edge_case_folder_builder.generate_data())
+        nj_items = self.reconstruct_dict_list(vqa_folder_builder_no_jsonl.generate_data())
+        nj_cs_items = self.reconstruct_dict_list(image_folder_builder_no_jsonl_custom_schema.generate_data())
 
         # test edges cases
         for i, item in enumerate(ec_items):
-            actual_item: Item = item["item"]
+            actual_record: Record = item["records"]
             if i % 2 == 0:
-                view: Image = item["image"]
-                assert view.item_ref == ItemRef(id=actual_item.id)
-                assert view.url == f"test_dataset/{actual_item.split}/item_mosaic.jpg"
+                view: Image = item["images"]
+                assert view.record_id == actual_record.id
             else:
-                assert "image" not in item
+                assert "images" not in item
 
         # test no jsonl
         split_counts = {}
         for item in nj_items:
-            actual_item: Item = item["item"]
-            if actual_item.split not in split_counts:
-                split_counts[actual_item.split] = 0
-            sc = split_counts[actual_item.split]
-            view: Image = item["image"]
-            assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"test_dataset/{actual_item.split}/item_{sc}.{'png' if sc % 2 else 'jpg'}"
-            split_counts[actual_item.split] += 1
+            actual_record: Record = item["records"]
+            if actual_record.split not in split_counts:
+                split_counts[actual_record.split] = 0
+            sc = split_counts[actual_record.split]
+            view: Image = item["images"]
+            assert view.record_id == actual_record.id
+            split_counts[actual_record.split] += 1
 
-        # test no json with custom item fields
+        # test no json with custom record fields
         for item in nj_cs_items:
-            actual_item = item["item"]
-            fields = list(set(actual_item.field_names()) - set(Item.field_names()))
-            for field in fields:
-                assert field in CustomSchema.__annotations__
-                assert getattr(actual_item, field) == CustomSchema.__annotations__[field]()
+            actual_record = item["records"]
+            custom_fields = set(type(actual_record).model_fields.keys()) - set(Record.model_fields.keys())
+            for field in custom_fields:
+                assert field in CustomRecord.__annotations__
+                assert getattr(actual_record, field) == CustomRecord.__annotations__[field]()
 
     def test_generate_data(self, image_folder_builder: ImageFolderBuilder, entity_category):
-        with patch(
-            "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
-        ):
-            items = self.reconstruct_dict_list(image_folder_builder.generate_data())
+        items = self.reconstruct_dict_list(image_folder_builder.generate_data())
         assert len(items) == 15
-        assert len([item for item in items if item["item"].split == "train"]) == 10
-        assert len([item for item in items if item["item"].split == "val"]) == 5
+        assert len([item for item in items if item["records"].split == "train"]) == 10
+        assert len([item for item in items if item["records"].split == "val"]) == 5
         for item in items:
-            actual_item: Item = item["item"]
-            view: Image = item["view"]
-            i = int(actual_item.metadata.split("_")[-1])
+            actual_record: Record = item["records"]
+            view: Image = item["images"]
+            i = int(actual_record.metadata.split("_")[-1])
 
-            assert actual_item.metadata == f"metadata_{i}"
+            assert actual_record.metadata == f"metadata_{i}"
 
-            assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"test_dataset/{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
+            assert view.record_id == actual_record.id
 
             if i % 2:  # has entities
                 entities: list[entity_category] = item["entities"]
-                bboxes: list[BBox] = item["bbox"]
+                bboxes: list[BBox] = item["bboxes"]
                 assert len(entities) == i
                 for entity, bbox in zip(entities, bboxes, strict=True):
-                    item_per_split = 10 if actual_item.split == "train" else 5
-                    assert entity.model_dump(exclude_timestamps=True) == entity_category(
+                    assert entity.model_dump(exclude={"created_at", "updated_at"}) == entity_category(
                         id=entity.id,
-                        item_ref=ItemRef(id=actual_item.id),
-                        view_ref=ViewRef(id=view.id, name="view"),
+                        record_id=actual_record.id,
                         category="person" if i % 4 == 0 else "cat",
-                    ).model_dump(exclude_timestamps=True)
-                    bbox.model_dump(exclude_timestamps=True) == BBox(
-                        id=bbox.id,
-                        item_ref=ItemRef(id=actual_item.id),
-                        view_ref=ViewRef(id=view.id, name="view"),
-                        entity_ref=EntityRef(id=entity.id, name="entities"),
-                        source_ref=SourceRef(id="source_id"),
-                        coords=[
-                            0 + i / item_per_split,
-                            0 + i / item_per_split,
-                            (100 + i) / (100 + item_per_split),
-                            (100 + i) / (100 + item_per_split),
-                        ],
-                        format="xywh",
-                        is_normalized=True,
-                        confidence=1.0,
-                    ).model_dump(exclude_timestamps=True)
+                    ).model_dump(exclude={"created_at", "updated_at"})
             else:  # no entities
                 assert "entities" not in item
-                assert "bbox" not in item
+                assert "bboxes" not in item
 
     def test_generate_vqa_items(self, vqa_folder_builder: VQAFolderBuilder):
-        with patch(
-            "pixano.datasets.builders.folders.VQAFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
-        ):
-            items = self.reconstruct_dict_list(vqa_folder_builder.generate_data())
+        items = self.reconstruct_dict_list(vqa_folder_builder.generate_data())
         assert len(items) == 4
-        assert len([item for item in items if item["item"].split == "train"]) == 2
-        assert len([item for item in items if item["item"].split == "val"]) == 2
+        assert len([item for item in items if item["records"].split == "train"]) == 2
+        assert len([item for item in items if item["records"].split == "val"]) == 2
         for i, item in enumerate(items):
-            actual_item: Item = item["item"]
-            view: Image = item["image"]
+            actual_record: Record = item["records"]
+            view: Image = item["images"]
 
-            assert view.item_ref == ItemRef(id=actual_item.id)
-            assert view.url == f"test_dataset/{actual_item.split}/item_{i % 2}.{'png' if i % 2 else 'jpg'}"
+            assert view.record_id == actual_record.id
 
-            conversations: list[Conversation] = item["conversations"]
             messages: list[Message] = item["messages"]
 
             if i % 2 == 0:  # 1 message (question)
-                assert len(conversations) == 1
                 assert len(messages) == 1
-                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
-                    id=conversations[0].id,
-                    item_ref=ItemRef(id=actual_item.id),
-                    view_ref=ViewRef(id=view.id, name="image"),
-                    kind="vqa",
-                ).model_dump(exclude_timestamps=True)
-                messages[0].model_dump(exclude_timestamps=True) == Message(
-                    id=messages[0].id,
-                    item_ref=ItemRef(id=actual_item.id),
-                    view_ref=ViewRef(id=view.id, name="image"),
-                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
-                    source_ref=SourceRef(id="source_id"),
-                    type="QUESTION",
-                    content="",
-                    number=0,
-                    user="import",
-                ).model_dump(exclude_timestamps=True)
+                assert messages[0].record_id == actual_record.id
+                assert messages[0].view_id == view.id
+                assert messages[0].source_type == "other"
+                assert messages[0].source_name == "Builder"
+                assert messages[0].type == "QUESTION"
+                assert messages[0].content == "What is the greatest number ? <image 1>"
+                assert messages[0].number == 0
+                assert messages[0].user == "import"
+                assert messages[0].choices == ["0", "15", "3.14", "58"]
             else:  # 2 messages: question & answer
-                assert len(conversations) == 1
                 assert len(messages) == 2
-                assert conversations[0].model_dump(exclude_timestamps=True) == Conversation(
-                    id=conversations[0].id,
-                    item_ref=ItemRef(id=actual_item.id),
-                    view_ref=ViewRef(id=view.id, name="image"),
-                    kind="vqa",
-                ).model_dump(exclude_timestamps=True)
-                messages[0].model_dump(exclude_timestamps=True) == Message(
-                    id=messages[0].id,
-                    item_ref=ItemRef(id=actual_item.id),
-                    view_ref=ViewRef(id=view.id, name="image"),
-                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
-                    source_ref=SourceRef(id="source_id"),
-                    type="QUESTION",
-                    content="",
-                    number=0,
-                    user="import",
-                ).model_dump(exclude_timestamps=True)
-                messages[1].model_dump(exclude_timestamps=True) == Message(
-                    id=messages[0].id,
-                    item_ref=ItemRef(id=actual_item.id),
-                    view_ref=ViewRef(id=view.id, name="image"),
-                    entity_ref=EntityRef(id=conversations[0].id, name="conversations"),
-                    source_ref=SourceRef(id="source_id"),
-                    type="ANSWER",
-                    content="",
-                    number=0,
-                    user="import",
-                ).model_dump(exclude_timestamps=True)
+                assert messages[0].conversation_id == messages[1].conversation_id
+                assert messages[0].record_id == actual_record.id
+                assert messages[0].type == "QUESTION"
+                assert messages[0].content == "What is the greatest number ? <image 1>"
+                assert messages[0].number == 0
+                assert messages[0].user == "import"
+                assert messages[0].choices == ["0", "15", "3.14", "58"]
+                assert messages[1].record_id == actual_record.id
+                assert messages[1].type == "ANSWER"
+                assert messages[1].content == "58"
+                assert messages[1].number == 1
+                assert messages[1].user == "import"

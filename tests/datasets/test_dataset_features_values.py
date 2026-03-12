@@ -27,7 +27,7 @@ class TestDatasetFeaturesValues:
             },
             annotations={"annotation1": []},
         )
-        assert set(fv.model_fields.keys()) == {"item", "views", "entities", "annotations"}
+        assert set(type(fv).model_fields.keys()) == {"item", "views", "entities", "annotations"}
 
     def test_to_json(self):
         fv = DatasetFeaturesValues(

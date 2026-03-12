@@ -12,7 +12,6 @@ from pixano.features import (
     is_keypoints,
     is_keypoints3d,
 )
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -48,16 +47,16 @@ def test_create_keypoints():
     assert keypoints.coords == [1, 1]
     assert keypoints.states == ["visible"]
     assert keypoints.id == ""
-    assert keypoints.item_ref == ItemRef.none()
-    assert keypoints.view_ref == ViewRef.none()
-    assert keypoints.entity_ref == EntityRef.none()
+    assert keypoints.record_id == ""
+    assert keypoints.view_id == ""
+    assert keypoints.entity_id == ""
 
     # Test 2: custom references
     keypoints = create_keypoints(
         id="id",
-        item_ref=ItemRef(id="item_id"),
-        view_ref=ViewRef(id="view_id", name="view"),
-        entity_ref=EntityRef(id="entity_id", name="entity"),
+        record_id="record_id",
+        view_id="view",
+        entity_id="entity_id",
         template_id="template_id",
         coords=[1, 1],
         states=["visible"],
@@ -68,9 +67,9 @@ def test_create_keypoints():
     assert keypoints.coords == [1, 1]
     assert keypoints.states == ["visible"]
     assert keypoints.id == "id"
-    assert keypoints.item_ref == ItemRef(id="item_id")
-    assert keypoints.view_ref == ViewRef(id="view_id", name="view")
-    assert keypoints.entity_ref == EntityRef(id="entity_id", name="entity")
+    assert keypoints.record_id == "record_id"
+    assert keypoints.view_id == "view"
+    assert keypoints.entity_id == "entity_id"
 
 
 def test_create_keypoints3d():
@@ -81,16 +80,16 @@ def test_create_keypoints3d():
     assert keypoints.coords == [1, 1, 1]
     assert keypoints.states == ["visible"]
     assert keypoints.id == ""
-    assert keypoints.item_ref == ItemRef.none()
-    assert keypoints.view_ref == ViewRef.none()
-    assert keypoints.entity_ref == EntityRef.none()
+    assert keypoints.record_id == ""
+    assert keypoints.view_id == ""
+    assert keypoints.entity_id == ""
 
     # Test 2: custom references
     keypoints = create_keypoints3d(
         id="id",
-        item_ref=ItemRef(id="item_id"),
-        view_ref=ViewRef(id="view_id", name="view"),
-        entity_ref=EntityRef(id="entity_id", name="entity"),
+        record_id="record_id",
+        view_id="view",
+        entity_id="entity_id",
         template_id="template_id",
         coords=[1, 1, 1],
         states=["visible"],
@@ -101,9 +100,9 @@ def test_create_keypoints3d():
     assert keypoints.coords == [1, 1, 1]
     assert keypoints.states == ["visible"]
     assert keypoints.id == "id"
-    assert keypoints.item_ref == ItemRef(id="item_id")
-    assert keypoints.view_ref == ViewRef(id="view_id", name="view")
-    assert keypoints.entity_ref == EntityRef(id="entity_id", name="entity")
+    assert keypoints.record_id == "record_id"
+    assert keypoints.view_id == "view"
+    assert keypoints.entity_id == "entity_id"
 
 
 def test_map_back2front_vertices():

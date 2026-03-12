@@ -15,16 +15,25 @@ from fastapi.encoders import jsonable_encoder
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.exporters.dataset_exporter import DatasetExporter
-from pixano.datasets.queries.table import TableQueryBuilder
-from pixano.features.schemas.schema_group import SchemaGroup
 
 
 class DumbDatasetExporter(DatasetExporter):
-    def initialize_export_data(self, info, sources):
-        return {"info": info, "sources": sources}
+    def initialize_export_data(self, info):
+        return {"info": info.model_dump(exclude={"tables"})}
 
-    def export_dataset_item(self, export_data, dataset_item):
-        export_data[dataset_item.id] = dataset_item
+    def export_record(self, export_data, record_data):
+        # Use the record's id as the key; serialize record_data for JSON compatibility
+        record = record_data.get("record")
+        if record is not None:
+            serialized = {}
+            for table_name, rows in record_data.items():
+                if rows is None:
+                    serialized[table_name] = None
+                elif isinstance(rows, list):
+                    serialized[table_name] = [r.model_dump() for r in rows]
+                else:
+                    serialized[table_name] = rows.model_dump()
+            export_data[record.id] = serialized
         return export_data
 
     def save_data(self, export_data, split, file_name, file_num):
@@ -44,30 +53,42 @@ class TestDatasetExporter:
         exporter.export(file_name, items_per_file=items_per_file, batch_size=batch_size)
 
         items_per_split = [("train", 2), ("test", 3)]
-        sources = dataset_image_bboxes_keypoint.get_data(SchemaGroup.SOURCE.value, limit=int(1e9))
-        dataset_items = dataset_image_bboxes_keypoint.get_dataset_items(limit=int(1e9))
-        dataset_items_per_split = {split: [] for split, num_items in items_per_split}
-        for item in dataset_items:
-            dataset_items_per_split[item.split].append(item)
+        records = dataset_image_bboxes_keypoint.get_records(limit=int(1e9))
+        records_per_split = {split: [] for split, _ in items_per_split}
+        for record in records:
+            records_per_split[record.split].append(record)
 
         for split, num_items in items_per_split:
             split_folder = export_dir / split
             expected_file_name = file_name
-            expected_dataset_items = dataset_items_per_split[split]
+            expected_records = records_per_split[split]
 
             assert split_folder.exists()
+
+            def _serialize_record_data(rd):
+                """Serialize record data the same way DumbDatasetExporter does."""
+                serialized = {}
+                for table_name, rows in rd.items():
+                    if rows is None:
+                        serialized[table_name] = None
+                    elif isinstance(rows, list):
+                        serialized[table_name] = [r.model_dump() for r in rows]
+                    else:
+                        serialized[table_name] = rows.model_dump()
+                return serialized
+
             if items_per_file is None:
                 assert len(list(split_folder.iterdir())) == 1
                 with open(split_folder / f"{expected_file_name}_0.txt") as file:
                     json_content = json.load(file)
                 expected_data = jsonable_encoder(
                     {
-                        "sources": sources,
-                        "info": dataset_image_bboxes_keypoint.info,
+                        "info": dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}),
                     }
                 )
-                for dataset_item in expected_dataset_items:
-                    expected_data[dataset_item.id] = dataset_item
+                for record in expected_records:
+                    record_data = exporter._get_record_data(record.id)
+                    expected_data[record.id] = _serialize_record_data(record_data)
                 expected_json = jsonable_encoder(expected_data)
                 assert json_content == expected_json
             else:
@@ -78,12 +99,12 @@ class TestDatasetExporter:
                         json_content = json.load(file)
                     expected_data = jsonable_encoder(
                         {
-                            "sources": sources,
-                            "info": dataset_image_bboxes_keypoint.info,
+                            "info": dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}),
                         }
                     )
-                    for dataset_item in expected_dataset_items[i * items_per_file : (i + 1) * items_per_file]:
-                        expected_data[dataset_item.id] = dataset_item.model_dump()
+                    for record in expected_records[i * items_per_file : (i + 1) * items_per_file]:
+                        record_data = exporter._get_record_data(record.id)
+                        expected_data[record.id] = _serialize_record_data(record_data)
                     expected_json = jsonable_encoder(expected_data)
                     assert json_content == expected_json
 

@@ -9,21 +9,15 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from fastapi.encoders import jsonable_encoder
 from lancedb.pydantic import Vector
 
 from pixano.features import (
     BBox,
     CompressedRLE,
     Entity,
-    EntityRef,
     Image,
-    ItemRef,
     NDArrayFloat,
-    Source,
-    SourceRef,
     ViewEmbedding,
-    ViewRef,
 )
 from pixano.inference.mask_generation import image_mask_generation, video_mask_generation
 from pixano.inference.provider import InferenceProvider
@@ -45,13 +39,13 @@ ASSETS_PATH = FILE_PATH.parent / "assets"
 def image_url() -> Image:
     image = Image(
         id="image",
-        item_ref=ItemRef(id="test_item"),
-        url="http://www.fake_url.com/coco_dataset/image/val/000000000139.png",
+        record_id="test_item",
+        logical_name="image",
+        uri="http://www.fake_url.com/coco_dataset/image/val/000000000139.png",
         width=640,
         height=426,
         format="png",
     )
-    image.table_name = "image"
     return image
 
 
@@ -80,17 +74,12 @@ class ViewEmbedding8(ViewEmbedding):
                 CompressedRLE(
                     size=[10, 2],
                     counts=bytes([3, 4]),
-                    entity_ref=EntityRef(id="test_entity", name="entity"),
-                    view_ref=ViewRef(id="image", name="image"),
-                    item_ref=ItemRef(id="test_item"),
-                    source_ref=SourceRef(id="test_source"),
-                    inference_metadata=jsonable_encoder(
-                        {
-                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
-                            "processing_time": 1.0,
-                            "metadata": "value",
-                        }
-                    ),
+                    entity_id="test_entity",
+                    view_id="image",
+                    record_id="test_item",
+                    frame_id="image",
+                    source_type="model",
+                    source_name="test_source",
                 ),
                 0.9,
                 NDArrayFloat(values=[1], shape=[1]),
@@ -118,17 +107,12 @@ class ViewEmbedding8(ViewEmbedding):
                 CompressedRLE(
                     size=[10, 2],
                     counts=bytes([3, 4]),
-                    entity_ref=EntityRef(id="test_entity", name="entity"),
-                    view_ref=ViewRef(id="image", name="image"),
-                    item_ref=ItemRef(id="test_item"),
-                    source_ref=SourceRef(id="test_source"),
-                    inference_metadata=jsonable_encoder(
-                        {
-                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
-                            "processing_time": 1.0,
-                            "metadata": "value",
-                        }
-                    ),
+                    entity_id="test_entity",
+                    view_id="image",
+                    record_id="test_item",
+                    frame_id="image",
+                    source_type="model",
+                    source_name="test_source",
                 ),
                 0.9,
                 None,
@@ -156,14 +140,13 @@ async def test_image_mask_generation(
     simple_inference_provider.image_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
-    entity.table_name = "entity"
 
     mask, score, out_image_embedding, out_high_resolution_features = await image_mask_generation(
         provider=simple_inference_provider,
-        media_dir=Path("."),
+
         image=image_url,
         entity=entity,
-        source=Source(id="test_source", name="test_source", kind="model"),
+        source_name="test_source",
         image_embedding=image_embedding,
         high_resolution_features=high_resolution_features,
         bbox=bbox,
@@ -200,17 +183,12 @@ async def test_image_mask_generation(
                 CompressedRLE(
                     size=[10, 2],
                     counts=bytes([3, 4]),
-                    entity_ref=EntityRef(id="test_entity", name="entity"),
-                    view_ref=ViewRef(id="image", name="image"),
-                    item_ref=ItemRef(id="test_item"),
-                    source_ref=SourceRef(id="test_source"),
-                    inference_metadata=jsonable_encoder(
-                        {
-                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
-                            "processing_time": 1.0,
-                            "metadata": "value",
-                        }
-                    ),
+                    entity_id="test_entity",
+                    view_id="image",
+                    record_id="test_item",
+                    frame_id="image",
+                    source_type="model",
+                    source_name="test_source",
                 ),
                 [0],
                 [0],
@@ -235,17 +213,12 @@ async def test_image_mask_generation(
                 CompressedRLE(
                     size=[10, 2],
                     counts=bytes([3, 4]),
-                    entity_ref=EntityRef(id="test_entity", name="entity"),
-                    view_ref=ViewRef(id="image", name="image"),
-                    item_ref=ItemRef(id="test_item"),
-                    source_ref=SourceRef(id="test_source"),
-                    inference_metadata=jsonable_encoder(
-                        {
-                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
-                            "processing_time": 1.0,
-                            "metadata": "value",
-                        }
-                    ),
+                    entity_id="test_entity",
+                    view_id="image",
+                    record_id="test_item",
+                    frame_id="image",
+                    source_type="model",
+                    source_name="test_source",
                 ),
                 [0],
                 [0],
@@ -270,17 +243,12 @@ async def test_image_mask_generation(
                 CompressedRLE(
                     size=[10, 2],
                     counts=bytes([3, 4]),
-                    entity_ref=EntityRef(id="test_entity", name="entity"),
-                    view_ref=ViewRef(id="image", name="image"),
-                    item_ref=ItemRef(id="test_item"),
-                    source_ref=SourceRef(id="test_source"),
-                    inference_metadata=jsonable_encoder(
-                        {
-                            "timestamp": datetime(year=2025, month=2, day=19).isoformat(),
-                            "processing_time": 1.0,
-                            "metadata": "value",
-                        }
-                    ),
+                    entity_id="test_entity",
+                    view_id="image",
+                    record_id="test_item",
+                    frame_id="image",
+                    source_type="model",
+                    source_name="test_source",
                 ),
                 [0],
                 [0],
@@ -303,14 +271,13 @@ async def test_video_mask_generation(
     simple_inference_provider.video_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
-    entity.table_name = "entity"
 
     masks, objects_ids, frame_indexes = await video_mask_generation(
         provider=simple_inference_provider,
-        media_dir=Path("."),
+
         video=[image_url],
         entity=entity,
-        source=Source(id="test_source", name="test_source", kind="model"),
+        source_name="test_source",
         bbox=bbox,
         points=points,
         labels=labels,
@@ -331,9 +298,9 @@ async def test_error_video_mask_generation(
     with pytest.raises(ValueError, match="Video format not currently supported, please use sequence frames."):
         await video_mask_generation(
             provider=simple_inference_provider,
-            media_dir=Path("."),
+    
             video="not a list",
-            source=Source(id="test_source", name="test_source", kind="model"),
+            source_name="test_source",
             bbox=None,
             points=None,
             labels=None,

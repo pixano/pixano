@@ -9,7 +9,7 @@ from datetime import datetime
 import polars as pl
 import pytest
 
-from pixano.app.models.datasets import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
+from pixano.api.models.datasets import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 
 
 @pytest.fixture(scope="session")

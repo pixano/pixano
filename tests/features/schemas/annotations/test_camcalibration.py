@@ -14,14 +14,13 @@ from pixano.features import (
     create_cam_calibration,
     is_cam_calibration,
 )
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
 class TestCamCalibration:
-    def none():
+    def test_none(self):
         none_cam_calibration = CamCalibration.none()
-        assert none_cam_calibration.type == "entity"
+        assert none_cam_calibration.type == ""
         assert none_cam_calibration.intrinsics.c1 == 0.0
         assert none_cam_calibration.intrinsics.c2 == 0.0
         assert none_cam_calibration.intrinsics.c3 == 0.0
@@ -38,9 +37,8 @@ class TestCamCalibration:
         assert none_cam_calibration.base_intrinsics.img_height_px == 0
         assert none_cam_calibration.base_intrinsics.img_width_px == 0
         assert none_cam_calibration.id == ""
-        assert none_cam_calibration.item_ref == ItemRef.none()
-        assert none_cam_calibration.view_ref == ViewRef.none()
-        assert none_cam_calibration.entity_ref == EntityRef.none()
+        assert none_cam_calibration.record_id == ""
+        assert none_cam_calibration.logical_name == ""
 
 
 def test_is_cam_calibration():
@@ -86,9 +84,8 @@ def test_create_cam_calibration():
     assert cam_calibraton.base_intrinsics.img_height_px == 14
     assert cam_calibraton.base_intrinsics.img_width_px == 15
     assert cam_calibraton.id == ""
-    assert cam_calibraton.item_ref == ItemRef.none()
-    assert cam_calibraton.view_ref == ViewRef.none()
-    assert cam_calibraton.entity_ref == EntityRef.none()
+    assert cam_calibraton.record_id == ""
+    assert cam_calibraton.logical_name == ""
 
     # Test 2: BaseIntrinsics, Extrinsics and Intrinsics are given and custom references
     cam_calibraton = create_cam_calibration(
@@ -115,9 +112,8 @@ def test_create_cam_calibration():
             pixel_aspect_ratio=0.0,
         ),
         id="id",
-        item_ref=ItemRef(id="item_id"),
-        view_ref=ViewRef(id="view_id", name="view"),
-        entity_ref=EntityRef(id="entity_id", name="entity"),
+        record_id="record_id",
+        logical_name="view",
     )
     assert isinstance(cam_calibraton, CamCalibration)
     assert cam_calibraton.type == "type"
@@ -137,9 +133,8 @@ def test_create_cam_calibration():
     assert cam_calibraton.base_intrinsics.img_height_px == 0
     assert cam_calibraton.base_intrinsics.img_width_px == 0
     assert cam_calibraton.id == "id"
-    assert cam_calibraton.item_ref == ItemRef(id="item_id")
-    assert cam_calibraton.view_ref == ViewRef(id="view_id", name="view")
-    assert cam_calibraton.entity_ref == EntityRef(id="entity_id", name="entity")
+    assert cam_calibraton.record_id == "record_id"
+    assert cam_calibraton.logical_name == "view"
 
     # Test 3: invalid creation
 

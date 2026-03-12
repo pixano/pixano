@@ -7,7 +7,7 @@
 import pytest
 
 from pixano.datasets.dataset import Dataset
-from pixano.features.schemas.annotations.bbox import BBox
+from pixano.schemas.annotations.bbox import BBox
 from tests.utils.schema import register_schema
 
 

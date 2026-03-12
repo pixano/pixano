@@ -9,7 +9,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from pixano.app.cli import app
+from pixano.cli import app
 
 
 runner = CliRunner()

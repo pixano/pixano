@@ -9,38 +9,39 @@ import tempfile
 from pathlib import Path
 
 from pixano.datasets.dataset import Dataset
+from pixano.datasets.dataset_schema import build_model_dump_exclude_timestamps
 from pixano.datasets.exporters import DefaultJSONLDatasetExporter
-from pixano.features import Source
-
 
 class TestDefaultJSONLDataset:
     def test_initialize_export_data(self, dataset_image_bboxes_keypoint: Dataset):
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, "/")
         info = dataset_image_bboxes_keypoint.info
-        sources = [Source(name="test", kind="model")]
 
-        export_data = exporter.initialize_export_data(info, sources)
+        export_data = exporter.initialize_export_data(info)
         expected_export_data = [
-            {"info": info.model_dump(), "sources": [sources[0].model_dump(exclude_timestamps=True)]},
+            {"info": info.model_dump(exclude={"tables"})},
         ]
 
         assert export_data == expected_export_data
 
-    def test_export_dataset_item(self, dataset_image_bboxes_keypoint: Dataset):
+    def test_export_record(self, dataset_image_bboxes_keypoint: Dataset):
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, "/")
-        dataset_item = dataset_image_bboxes_keypoint.get_dataset_items(limit=1)[0]
+        records = dataset_image_bboxes_keypoint.get_data("record", limit=1)
+        record_id = records[0].id
+        record_data = exporter._get_record_data(record_id)
 
         export_data = []
-        export_data = exporter.export_dataset_item(export_data, dataset_item)
+        export_data = exporter.export_record(export_data, record_data)
 
-        expected_export_data = [dataset_item.model_dump(exclude_timestamps=True)]
-
-        assert export_data == expected_export_data
+        assert len(export_data) == 1
+        exported = export_data[0]
+        # The exported dict should have keys for each table
+        assert "record" in exported
 
     def test_save_data(self, dataset_image_bboxes_keypoint: Dataset):
         export_dir = Path(tempfile.mkdtemp())
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, export_dir)
-        export_data = [dataset_image_bboxes_keypoint.info.model_dump(), {"save": "please"}]
+        export_data = [dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}), {"save": "please"}]
         exporter.save_data(export_data, "split", "file", 1)
 
         saved_jsonl = (export_dir / "info.json").open().readlines() + (

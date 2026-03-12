@@ -6,7 +6,7 @@
 
 import pytest
 
-from pixano.app.models import DatasetInfoModel
+from pixano.api.models import DatasetInfoModel
 from pixano.datasets.workspaces import WorkspaceType
 
 

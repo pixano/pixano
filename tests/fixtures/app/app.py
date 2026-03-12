@@ -12,8 +12,8 @@ import pytest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
-from pixano.app.main import create_app
-from pixano.app.settings import Settings, get_settings
+from pixano.api.main import create_app
+from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset
 from pixano.inference.provider import InferenceProvider
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY

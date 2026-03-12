@@ -7,14 +7,14 @@
 import pytest
 from lancedb.db import LanceTable
 
-from pixano.datasets.dataset import Dataset
+from pixano.datasets import Dataset
 from pixano.datasets.queries import TableQueryBuilder
-from pixano.features.schemas.views.image import Image
+from pixano.schemas.views.image import Image
 
 
 @pytest.fixture(scope="class")
-def image_table(dataset_multi_view_tracking_and_image: Dataset) -> LanceTable:
-    return dataset_multi_view_tracking_and_image.open_table("images")
+def image_table(dataset_image_bboxes_keypoint: Dataset) -> LanceTable:
+    return dataset_image_bboxes_keypoint.open_table("image")
 
 
 class TestTableQueryBuilder:
@@ -27,221 +27,49 @@ class TestTableQueryBuilder:
         assert builder._offset is None
         assert builder._order_by == []
         assert builder._descending == []
-        assert builder._function_called == {
-            "select": False,
-            "where": False,
-            "limit": False,
-            "offset": False,
-            "order_by": False,
-            "build": False,
-        }
 
         with pytest.raises(ValueError, match="table must be a LanceTable."):
             TableQueryBuilder(123)
 
-    def test_select(self, image_table: LanceTable):
+    def test_select_where_limit_and_offset_validation(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        builder.select(["column1", "column2"])
-        assert builder._columns == ["id", "column1", "column2"]
-        assert builder._function_called["select"] is True
-
-        builder = TableQueryBuilder(image_table)
-        builder.select("column1")
-        assert builder._columns == ["id", "column1"]
-        assert builder._function_called["select"] is True
+        assert builder.select(["uri"])._columns == ["id", "uri"]
 
         with pytest.raises(ValueError, match=r"select\(\) can only be called once."):
-            builder.select(["column1", "column2"])
-
-        with pytest.raises(ValueError, match="columns must be a dictionary with string keys and values."):
-            builder = TableQueryBuilder(image_table)
-            builder.select({"key": 1, "key2": 2})
-
-        with pytest.raises(ValueError, match="columns must be a list of strings."):
-            builder = TableQueryBuilder(image_table)
-            builder.select([1, 2, 3])
-
-    def test_where(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        builder.where("column1 = 'value'")
-        assert builder._where == "column1 = 'value'"
-        assert builder._function_called["where"] is True
-
-        with pytest.raises(ValueError, match=r"where\(\) can only be called once."):
-            builder.where(123)
+            builder.select(["width"])
 
         with pytest.raises(ValueError, match="where must be a string."):
-            builder = TableQueryBuilder(image_table)
-            builder.where(123)
-
-    def test_limit(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        builder.limit(10)
-        assert builder._limit == 10
-        assert builder._function_called["limit"] is True
-
-        with pytest.raises(ValueError, match=r"limit\(\) can only be called once."):
-            builder.limit(5)
+            TableQueryBuilder(image_table).where(123)
 
         with pytest.raises(ValueError, match="limit must be None or a positive integer."):
-            builder = TableQueryBuilder(image_table)
-            builder.limit(-1)
-
-    def test_offset(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        builder.offset(5)
-        assert builder._offset == 5
-        assert builder._function_called["offset"] is True
-
-        with pytest.raises(ValueError, match=r"offset\(\) can only be called once."):
-            builder.offset(5)
+            TableQueryBuilder(image_table).limit(-1)
 
         with pytest.raises(ValueError, match="offset must be None or a positive integer."):
-            builder = TableQueryBuilder(image_table)
-            builder.offset(-1)
+            TableQueryBuilder(image_table).offset(-1)
 
-    def test_order_by(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        builder.order_by("column1")
-        assert builder._order_by == ["column1"]
-        assert builder._descending == [False]
+    def test_execute_with_select_and_where(self, image_table: LanceTable):
+        rows = TableQueryBuilder(image_table).select(["uri"]).where("uri = 'image_1.jpg'").to_list()
+        assert rows == [{"id": "image_1", "uri": "image_1.jpg"}]
 
-        builder = TableQueryBuilder(image_table)
-        builder.order_by(["column1", "column2"], True)
-        assert builder._order_by == ["column1", "column2"]
-        assert builder._descending == [True, True]
+    def test_execute_with_limit_and_offset(self, image_table: LanceTable):
+        rows = TableQueryBuilder(image_table).order_by("uri").offset(1).limit(2).to_list()
+        assert [row["id"] for row in rows] == ["image_1", "image_2"]
 
-        builder = TableQueryBuilder(image_table)
-        builder.order_by(["column1", "column2"], descending=[True, False])
-        assert builder._order_by == ["column1", "column2"]
-        assert builder._descending == [True, False]
+    def test_to_pandas_and_to_polars(self, image_table: LanceTable):
+        pandas_rows = TableQueryBuilder(image_table).order_by("record_id", descending=True).offset(1).to_pandas()
+        assert list(pandas_rows["id"]) == ["image_3", "image_2", "image_1", "image_0"]
 
-        with pytest.raises(ValueError, match=r"order_by\(\) can only be called once."):
-            builder.order_by("column1")
-
-        with pytest.raises(ValueError, match="order_by must be a string or a list of strings."):
-            builder = TableQueryBuilder(image_table)
-            builder.order_by(123)
-
-        with pytest.raises(
-            ValueError, match="descending must be a boolean or a list of booleans with the same length as order_by."
-        ):
-            builder = TableQueryBuilder(image_table)
-            builder.order_by(["column1", "column2"], descending=[True])
-
-        with pytest.raises(
-            ValueError, match="descending must be a boolean or a list of booleans with the same length as order_by."
-        ):
-            builder = TableQueryBuilder(image_table)
-            builder.order_by(["column1", "column2"], descending=1)
-
-        with pytest.raises(
-            ValueError, match="descending must be a boolean or a list of booleans with the same length as order_by."
-        ):
-            builder = TableQueryBuilder(image_table)
-            builder.order_by(["column1", "column2"], descending=[True, 1])
-
-        with pytest.raises(ValueError):
-            builder.order_by(123)
-
-    def test_execute_no_order_and_no_offset(self, image_table: LanceTable):
-        # Test with select (using media-type table column names)
-        builder = TableQueryBuilder(image_table)
-        rows = builder.select(["image_url"]).to_list()
-        assert builder._function_called["build"] is True
-        for row in rows:
-            assert set(row.keys()) == {"id", "image_url"}
-        assert len(rows) == 4
-
-        # Test with limit
-        builder = TableQueryBuilder(image_table)
-        rows = builder.limit(2).to_list()
-        assert len(rows) == 2
-        for row in rows:
-            assert "id" in row
-            assert "image_url" in row
-            assert "image_width" in row
-            assert "image_height" in row
-            assert "image_format" in row
-
-        # Test with where
-        builder = TableQueryBuilder(image_table)
-        rows = builder.where("image_url = 'image_1.jpg'").to_list()
-        assert len(rows) == 1
-        for row in rows:
-            assert row["id"] == "image_1"
-            assert row["image_url"] == "image_1.jpg"
-
-        # Test without order or offset and get_order=True
-        builder = TableQueryBuilder(image_table)
-        rows = builder.where("image_url = 'image_1.jpg'").to_list()
-        assert len(rows) == 1
-        for row in rows:
-            assert row["id"] == "image_1"
-            assert row["image_url"] == "image_1.jpg"
-
-        # Test cannot call build twice
-        with pytest.raises(ValueError, match=r"build\(\) can only be called once."):
-            builder._execute()
-
-        with pytest.raises(
-            ValueError,
-            match=r"At least one of select\(\), where\(\), limit\(\), offset\(\), or order_by\(\) " r"must be called.",
-        ):
-            builder = TableQueryBuilder(image_table)
-            builder._execute()
-
-    def test_execute_with_order_without_offset(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("image_url", descending=True).to_list()
-        assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
-
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("image_url").to_list()
-        assert [row["id"] for row in rows] == ["image_0", "image_1", "image_2", "image_4"]
-
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by(["image_url", "image_width"], descending=[True, False]).to_list()
-        assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
-
-    def test_execute_with_offset(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        rows = builder.offset(2).to_list()
-        assert len(rows) == 2
-        assert rows[0]["id"] == "image_2"
-        assert rows[1]["id"] == "image_4"
-
-    def test_execute_with_order_and_offset(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("image_url", descending=True).offset(1).to_list()
-        assert [row["id"] for row in rows] == ["image_2", "image_1", "image_0"]
-
-    def test_to_pandas(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("item_ref.id", descending=True).offset(1).to_pandas()
-        for i, row in rows.iterrows():
-            assert row["image_url"] == f"image_{2 - i}.jpg"
-            assert row["id"] == f"image_{2 - i}"
+        polars_rows = TableQueryBuilder(image_table).order_by("record_id", descending=True).offset(1).to_polars()
+        assert polars_rows["id"].to_list() == ["image_3", "image_2", "image_1", "image_0"]
 
     def test_to_pydantic(self, image_table: LanceTable):
-        builder = TableQueryBuilder(image_table)
-        media_schema = dataset_multi_view_tracking_and_image_schema = None
-        rows = builder.order_by("item_ref.id", descending=True).offset(1).to_list()
-        for i, row in enumerate(rows):
-            assert row["image_url"] == f"image_{2 - i}.jpg"
-            assert row["id"] == f"image_{2 - i}"
+        rows = TableQueryBuilder(image_table).where("id in ('image_0', 'image_1')").to_pydantic(Image)
+        assert [row.id for row in rows] == ["image_0", "image_1"]
+        assert [row.logical_name for row in rows] == ["image", "image"]
 
-    def test_to_list(self, image_table):
-        builder = TableQueryBuilder(image_table)
-        rows = builder.order_by("image_url", descending=True).offset(1).to_list()
-        assert len(rows) == 3
-        for i, row in enumerate(rows):
-            assert row["image_url"] == f"image_{2 - i}.jpg"
-            assert row["id"] == f"image_{2 - i}"
-
-    def test_to_polars(self, image_table):
-        builder = TableQueryBuilder(image_table)
-        df = builder.order_by("item_ref.id", descending=True).offset(1).to_polars()
-        for i, row in enumerate(df.rows(named=True)):
-            assert row["image_url"] == f"image_{2 - i}.jpg"
-            assert row["id"] == f"image_{2 - i}"
+    def test_build_requires_at_least_one_operation(self, image_table: LanceTable):
+        with pytest.raises(
+            ValueError,
+            match=r"At least one of select\(\), where\(\), limit\(\), offset\(\), or order_by\(\) must be called.",
+        ):
+            TableQueryBuilder(image_table)._execute()

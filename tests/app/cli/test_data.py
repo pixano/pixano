@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from pixano.app.cli import app
+from pixano.cli import app
 
 
 runner = CliRunner()

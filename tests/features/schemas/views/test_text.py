@@ -5,7 +5,6 @@
 # =====================================
 
 from pixano.features import Text, create_text, is_text
-from pixano.features.types.schema_reference import ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -22,18 +21,17 @@ def test_create_text():
     assert isinstance(text, Text)
     assert text.content == "My taylor is rich!"
     assert text.id == ""
-    assert text.item_ref == ItemRef.none()
-    assert text.parent_ref == ViewRef.none()
+    assert text.record_id == ""
 
     # Test 2: dummy content and custom references
     text = create_text(
         content="My taylor is rich!",
         id="txt_1",
-        item_ref=ItemRef(id="item_id"),
-        parent_ref=ViewRef(id="view_id", name="view"),
+        record_id="record_id",
+        logical_name="text",
     )
     assert isinstance(text, Text)
     assert text.content == "My taylor is rich!"
     assert text.id == "txt_1"
-    assert text.item_ref == ItemRef(id="item_id")
-    assert text.parent_ref == ViewRef(id="view_id", name="view")
+    assert text.record_id == "record_id"
+    assert text.logical_name == "text"

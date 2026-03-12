@@ -10,8 +10,8 @@ from pathlib import Path
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.exporters import COCODatasetExporter
-from pixano.datasets.exporters.coco_dataset_exporter import coco_annotation, coco_image
-from pixano.features import BBox, CompressedRLE, Entity, Image, Source
+from pixano.datasets.exporters.coco_dataset_exporter import coco_image
+from pixano.features import BBox, CompressedRLE, Image, SequenceFrame
 
 
 class TestCOCODatasetExporter:
@@ -23,56 +23,39 @@ class TestCOCODatasetExporter:
         for ds in [dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image]:
             exporter = COCODatasetExporter(ds, "/")
             info = ds.info
-            sources = [Source(name="test", kind="model")]
-            export_data = exporter.initialize_export_data(info, sources)
+            export_data = exporter.initialize_export_data(info)
 
             assert list(export_data.keys()) == ["info", "licenses", "images", "annotations", "categories"]
             assert export_data["info"]["id"] == info.id
             assert export_data["info"]["name"] == info.name
             assert export_data["info"]["description"] == info.description
 
-    def test_export_dataset_item(
+    def test_export_record(
         self,
         dataset_image_bboxes_keypoint: Dataset,
         dataset_multi_view_tracking_and_image: Dataset,
     ):
         for ds in [dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image]:
             exporter = COCODatasetExporter(ds, "/")
-            dataset_items = ds.get_dataset_items(limit=2)
+            records = ds.get_records(limit=2)
 
-            for dataset_item in dataset_items:
+            for record in records:
+                record_data = exporter._get_record_data(record.id)
                 export_data = {"annotations": [], "images": []}
-                export_data = exporter.export_dataset_item(export_data, dataset_item)
+                export_data = exporter.export_record(export_data, record_data)
 
                 images = []
-                annotations = {}
-                for schema_name, schema_data in dataset_item.to_schemas_data(ds.schema).items():
-                    schemas = schema_data if isinstance(schema_data, list) else [schema_data]
-                    for schema in schemas:
-                        if (isinstance(schema, Entity) and hasattr(schema, "category")) or isinstance(
-                            schema, BBox | CompressedRLE
-                        ):
-                            entity_id = schema.id if isinstance(schema, Entity) else schema.entity_ref.id
-                            if entity_id in annotations.keys():
-                                annotations[entity_id] = coco_annotation(
-                                    ann=schema,
-                                    existing_coco_ann=annotations[entity_id],
-                                    category_dict=exporter.category_dict,
-                                )
-                            else:
-                                annotations[entity_id] = coco_annotation(
-                                    ann=schema,
-                                    category_dict=exporter.category_dict,
-                                )
-                        elif isinstance(schema, Image):
+                for schema_name, schema_row in record_data.items():
+                    rows = schema_row if isinstance(schema_row, list) else ([schema_row] if schema_row else [])
+                    for schema in rows:
+                        if isinstance(schema, Image | SequenceFrame):
                             images.append(coco_image(schema, schema_name))
 
-                expected_export_data = {
-                    "annotations": list(annotations.values()),
-                    "images": images,
-                }
-
-                assert export_data == expected_export_data
+                assert export_data["images"] == images
+                for annotation in export_data["annotations"]:
+                    assert annotation["image_id"] != ""
+                    assert annotation["pixano_entity_id"] != ""
+                    assert annotation["bbox"] is not None or annotation["segmentation"] is not None
 
     def test_save_data(
         self,

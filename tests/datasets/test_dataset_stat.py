@@ -13,7 +13,7 @@ from pixano.datasets.dataset_stat import DatasetStatistic
 class TestDatasetStat:
     def test_init(self):
         stat = DatasetStatistic(name="stat", type="numerical", histogram=[{"key": 2, "value": 3}], range=[1, 2])
-        assert set(stat.model_fields.keys()) == {"name", "type", "histogram", "range"}
+        assert set(type(stat).model_fields.keys()) == {"name", "type", "histogram", "range"}
 
     def test_to_json(self):
         stat = DatasetStatistic(name="stat", type="numerical", histogram=[{"key": 2, "value": 3}], range=[1, 2])

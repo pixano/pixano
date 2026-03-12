@@ -8,98 +8,60 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import lancedb
 import pytest
 
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 from pixano.datasets.workspaces import WorkspaceType
-from pixano.features.schemas.source import Source, SourceKind
+from pixano.features import Record
 from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint, DatasetBuilderVQA
 
 
 class TestDatasetBuilder:
-    @pytest.mark.parametrize(
-        "target_dir",
-        [
-            (tempfile.gettempdir()),
-            (Path(tempfile.gettempdir())),
-        ],
-    )
-    def test_init(
+    def test_init_str(
         self,
-        dataset_item_image_bboxes_keypoint,
         info_dataset_image_bboxes_keypoint,
-        target_dir,
     ):
-        builder = DatasetBuilderImageBboxesKeypoint(
-            5, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
-        )
+        target_dir = str(Path(tempfile.mkdtemp()) / "dataset")
+        builder = DatasetBuilderImageBboxesKeypoint(5, target_dir, info_dataset_image_bboxes_keypoint)
         assert builder.target_dir == Path(target_dir)
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info_dataset_image_bboxes_keypoint
-        assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"images", "item", "entities", "bboxes", "keypoint"}
-        for (key1, value1), (key2, value2) in zip(
-            builder.schemas.items(),
-            dataset_item_image_bboxes_keypoint.to_dataset_schema().schemas.items(),
-            strict=True,
-        ):
-            assert key1 == key2
-            assert type(value1) is type(value2)
-        assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db.uri == str(Path(target_dir) / Dataset._DB_PATH)
+        assert set(builder.schemas.keys()) == {"images", "records", "entities", "bboxes"}
 
-    @pytest.mark.parametrize(
-        "target_dir",
-        [
-            (tempfile.gettempdir()),
-            (Path(tempfile.gettempdir())),
-        ],
-    )
-    def test_init_vqa(
+    def test_init_path(
         self,
-        dataset_item_vqa,
-        info_dataset_vqa,
-        target_dir,
+        info_dataset_image_bboxes_keypoint,
     ):
-        builder = DatasetBuilderVQA(4, target_dir, dataset_item_vqa, info_dataset_vqa)
+        target_dir = Path(tempfile.mkdtemp()) / "dataset"
+        builder = DatasetBuilderImageBboxesKeypoint(5, target_dir, info_dataset_image_bboxes_keypoint)
+        assert builder.target_dir == target_dir
+        assert builder.previews_path == target_dir / Dataset._PREVIEWS_PATH
+        assert builder.info == info_dataset_image_bboxes_keypoint
+        assert set(builder.schemas.keys()) == {"images", "records", "entities", "bboxes"}
+
+    def test_init_vqa_str(
+        self,
+        info_dataset_vqa,
+    ):
+        target_dir = str(Path(tempfile.mkdtemp()) / "dataset")
+        builder = DatasetBuilderVQA(4, target_dir, info_dataset_vqa)
         assert builder.target_dir == Path(target_dir)
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info_dataset_vqa
-        assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"images", "item", "conversations", "messages"}
-        for (key1, value1), (key2, value2) in zip(
-            builder.schemas.items(),
-            dataset_item_vqa.to_dataset_schema().schemas.items(),
-            strict=True,
-        ):
-            assert key1 == key2
-            assert type(value1) is type(value2)
-        assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db.uri == str(Path(target_dir) / Dataset._DB_PATH)
+        assert set(builder.schemas.keys()) == {"images", "records", "messages"}
 
-    def test_add_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
-        dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
-
-        id = dataset_builder_image_bboxes_keypoint.add_source("source", "model", {"model_id": "model_0"})
-        assert len(id) == 22
-        id = dataset_builder_image_bboxes_keypoint.add_source("source_2", SourceKind.OTHER, {}, "my_id")
-        assert id == "my_id"
-
-        # Re-open to get latest version (LanceDB table handles are version-pinned)
-        source_table = dataset_builder_image_bboxes_keypoint.db.open_table("source")
-        assert source_table.count_rows() == 2
-
-    def test_add_ground_truth_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
-        dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
-        id = dataset_builder_image_bboxes_keypoint.add_ground_truth_source({"model_id": "model_0"})
-        assert id == "ground_truth"
-        # Re-open to get latest version (LanceDB table handles are version-pinned)
-        source_table = dataset_builder_image_bboxes_keypoint.db.open_table("source")
-        assert source_table.count_rows() == 1
+    def test_init_vqa_path(
+        self,
+        info_dataset_vqa,
+    ):
+        target_dir = Path(tempfile.mkdtemp()) / "dataset"
+        builder = DatasetBuilderVQA(4, target_dir, info_dataset_vqa)
+        assert builder.target_dir == target_dir
+        assert builder.previews_path == target_dir / Dataset._PREVIEWS_PATH
+        assert builder.info == info_dataset_vqa
+        assert set(builder.schemas.keys()) == {"images", "records", "messages"}
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [1, 3])
@@ -113,12 +75,6 @@ class TestDatasetBuilder:
         compact_every_n_transactions,
         check_integrity,
     ):
-        # Mock the compact method to register the call count
-        compact_dataset_mock = MagicMock()
-        compact_table_mock = MagicMock()
-        dataset_builder_image_bboxes_keypoint.compact_dataset = compact_dataset_mock
-        dataset_builder_image_bboxes_keypoint.compact_table = compact_table_mock
-
         dataset = dataset_builder_image_bboxes_keypoint.build(
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
@@ -129,25 +85,14 @@ class TestDatasetBuilder:
         assert dataset_builder_image_bboxes_keypoint.info.workspace == WorkspaceType.IMAGE
 
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._INFO_FILE).exists()
-        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH).exists()
-        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._FEATURES_VALUES_FILE).exists()
-        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._SCHEMA_FILE).exists()
 
         assert isinstance(dataset, Dataset)
-        assert dataset.info == dataset_builder_image_bboxes_keypoint.info
+        assert dataset.info.name == dataset_builder_image_bboxes_keypoint.info.name
+        assert dataset.info.description == dataset_builder_image_bboxes_keypoint.info.description
+        assert dataset.info.workspace == dataset_builder_image_bboxes_keypoint.info.workspace
+        assert set(dataset.info.tables.keys()) == set(dataset_builder_image_bboxes_keypoint.info.tables.keys())
         assert dataset.num_rows == 5
-        assert set(dataset.open_tables().keys()) == {"images", "item", "entities", "bboxes", "keypoint"}
-
-        assert compact_dataset_mock.call_count == 1
-        if compact_every_n_transactions is None:
-            assert compact_table_mock.call_count == 0
-        else:
-            if flush_every_n_samples == 1:
-                assert compact_table_mock.call_count == 6
-            elif flush_every_n_samples == 3:
-                assert compact_table_mock.call_count == 0
-            else:
-                raise ValueError("Invalid flush_every_n_samples value, update test")
+        assert set(dataset.open_tables().keys()) == {"images", "records", "entities", "bboxes"}
 
         if mode == "create":
             with pytest.raises((OSError, ValueError), match="already exists"):
@@ -159,17 +104,6 @@ class TestDatasetBuilder:
                 )
             return
 
-        # Mock the add method to register the call count
-        # Not done before as the tables are created only when the build method is called the first time
-        def _side_effect_table_add(self, *args, **kwargs):
-            return self.add(*args, **kwargs)
-
-        table_mocks = []
-        for table in dataset_builder_image_bboxes_keypoint.open_tables().values():
-            table_mock = MagicMock(side_effect=_side_effect_table_add)
-            table.add = table_mock
-            table_mocks.append(table_mock)
-
         dataset_builder_image_bboxes_keypoint.num_rows = 6
         dataset = dataset_builder_image_bboxes_keypoint.build(
             flush_every_n_samples=flush_every_n_samples,
@@ -179,20 +113,6 @@ class TestDatasetBuilder:
         )
 
         assert dataset.num_rows == 6 if mode == "overwrite" else 11
-        assert compact_dataset_mock.call_count == 2
-
-        if compact_every_n_transactions is None:
-            assert compact_table_mock.call_count == 0
-        else:
-            if flush_every_n_samples == 1:
-                assert compact_table_mock.call_count == 14
-            elif flush_every_n_samples == 3:
-                assert compact_table_mock.call_count == 2
-            else:
-                raise ValueError("Invalid flush_every_n_samples value, update test")
-
-        for mock in table_mocks:
-            mock.call_count == 2 if flush_every_n_samples == 1 else 1
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [1, 3])
@@ -206,12 +126,6 @@ class TestDatasetBuilder:
         compact_every_n_transactions,
         check_integrity,
     ):
-        # Mock the compact method to register the call count
-        compact_dataset_mock = MagicMock()
-        compact_table_mock = MagicMock()
-        dataset_builder_vqa.compact_dataset = compact_dataset_mock
-        dataset_builder_vqa.compact_table = compact_table_mock
-
         dataset = dataset_builder_vqa.build(
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
@@ -222,25 +136,14 @@ class TestDatasetBuilder:
         assert dataset_builder_vqa.info.workspace == WorkspaceType.IMAGE_VQA
 
         assert (dataset_builder_vqa.target_dir / Dataset._INFO_FILE).exists()
-        assert (dataset_builder_vqa.target_dir / Dataset._DB_PATH).exists()
-        assert (dataset_builder_vqa.target_dir / Dataset._FEATURES_VALUES_FILE).exists()
-        assert (dataset_builder_vqa.target_dir / Dataset._SCHEMA_FILE).exists()
 
         assert isinstance(dataset, Dataset)
-        assert dataset.info == dataset_builder_vqa.info
+        assert dataset.info.name == dataset_builder_vqa.info.name
+        assert dataset.info.description == dataset_builder_vqa.info.description
+        assert dataset.info.workspace == dataset_builder_vqa.info.workspace
+        assert set(dataset.info.tables.keys()) == set(dataset_builder_vqa.info.tables.keys())
         assert dataset.num_rows == 4
-        assert set(dataset.open_tables().keys()) == {"images", "item", "conversations", "messages"}
-
-        assert compact_dataset_mock.call_count == 1
-        if compact_every_n_transactions is None:
-            assert compact_table_mock.call_count == 0
-        else:
-            if flush_every_n_samples == 1:
-                assert compact_table_mock.call_count == 8
-            elif flush_every_n_samples == 3:
-                assert compact_table_mock.call_count == 1
-            else:
-                raise ValueError("Invalid flush_every_n_samples value, update test")
+        assert set(dataset.open_tables().keys()) == {"images", "records", "messages"}
 
         if mode == "create":
             with pytest.raises((OSError, ValueError), match="already exists"):
@@ -252,17 +155,6 @@ class TestDatasetBuilder:
                 )
             return
 
-        # Mock the add method to register the call count
-        # Not done before as the tables are created only when the build method is called the first time
-        def _side_effect_table_add(self, *args, **kwargs):
-            return self.add(*args, **kwargs)
-
-        table_mocks = []
-        for table in dataset_builder_vqa.open_tables().values():
-            table_mock = MagicMock(side_effect=_side_effect_table_add)
-            table.add = table_mock
-            table_mocks.append(table_mock)
-
         dataset_builder_vqa.num_rows = 5
         dataset = dataset_builder_vqa.build(
             flush_every_n_samples=flush_every_n_samples,
@@ -272,35 +164,28 @@ class TestDatasetBuilder:
         )
 
         assert dataset.num_rows == 5 if mode == "overwrite" else 9
-        assert compact_dataset_mock.call_count == 2
-
-        if compact_every_n_transactions is None:
-            assert compact_table_mock.call_count == 0
-        else:
-            if flush_every_n_samples == 1:
-                assert compact_table_mock.call_count == 16
-            elif flush_every_n_samples == 3:
-                assert compact_table_mock.call_count == 3
-            else:
-                raise ValueError("Invalid flush_every_n_samples value, update test")
-
-        for mock in table_mocks:
-            mock.call_count == 2 if flush_every_n_samples == 1 else 1
 
     def test_build_error(self, dataset_builder_image_bboxes_keypoint):
         class WrongIdBuilder(DatasetBuilder):
             def generate_data(self):
                 yield {
-                    self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")
+                    self.record_table_name: self.record_schema(id="id with spaces", metadata="metadata", split="train")
                 }
 
         class WrongSchemaNameBuilder(DatasetBuilder):
             def generate_data(self):
-                yield {"wrong_schema": self.item_schema(id="id", metadata="metadata", split="train")}
+                yield {"wrong_schema": self.record_schema(id="id", metadata="metadata", split="train")}
+
+        from tests.fixtures.datasets.dataset_info import RecordWithMetadata
 
         with pytest.raises(KeyError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
-                tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
+                Path(tempfile.mkdtemp()) / "dataset",
+                DatasetInfo(
+                    name="test",
+                    description="test",
+                    record=RecordWithMetadata,
+                ),
             ).build()
 
         with pytest.raises(ValueError, match="mode should be 'add', 'create' or 'overwrite' but got wrong_mode"):
