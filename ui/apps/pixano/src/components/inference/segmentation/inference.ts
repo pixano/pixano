@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AnnotationData, BaseSchema, MaskData } from "$lib/types/dataset";
+import type { BaseSchema, MaskData, PerFrameAnnotationData } from "$lib/types/dataset";
 
 export type PixanoInferenceSegmentationModel = {
   selected: boolean;
@@ -20,7 +20,7 @@ export type MaskSegmentationOutput = {
     group: string;
     base_schema: BaseSchema;
   };
-  data: MaskData & AnnotationData;
+  data: MaskData & PerFrameAnnotationData;
 };
 
 export type PixanoInferenceSegmentationOutput = {
