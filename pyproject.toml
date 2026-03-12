@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "pixano"
 dynamic = ["version"]
@@ -76,20 +72,25 @@ Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 
 [project.scripts]
-pixano = "pixano.app.cli:main"
+pixano = "pixano.cli:main"
 
 [tool.uv]
+default-groups = ["test"]
 prerelease = "allow"
 
-[tool.hatch.build]
-include = ["/pixano"]
-exclude = ["__pycache__"]
-artifacts = ["/pixano/app/dist"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# [tool.hatch.build]
+# include = ["/pixano"]
+# exclude = ["__pycache__"]
+# artifacts = ["/pixano/api/dist"]
 
 [tool.hatch.build.hooks.custom]
 
 [tool.hatch.version]
-path = "pixano/__version__.py"
+path = "src/pixano/__version__.py"
 
 [tool.pytest.ini_options]
 markers = [
