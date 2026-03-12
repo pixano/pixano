@@ -8,7 +8,7 @@
 
 In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the `./assets/health_images/` folder with a unique subfolder `all/` which will later be considered as a split.
 
-It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images.
+It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images using Pixano's canonical entity-centric format.
 
 ## Build your dataset
 
@@ -117,14 +117,14 @@ dataset = builder.build(mode="create")
 
 !!! tip "CLI alternative"
 
-    You can also import a dataset from the command line. The CLI copies your source directory into the data directory automatically:
+    You can also import a dataset from the command line. The CLI reads your source directory directly and uses the `DatasetInfo` file as the import contract:
 
     ```bash
     pixano data import ./my_data ./health_images \
-        --name "Health Images" --schema ./schema.py:HealthDatasetItem
+        --info ./info.py:dataset_info
     ```
 
-    See the [quickstart guide](../getting_started/quickstart.md) for more details.
+    See the [quickstart guide](../getting_started/quickstart.md) for the canonical `metadata.jsonl` format details.
 
 ### Write your own DatasetBuilder
 
