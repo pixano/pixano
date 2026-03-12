@@ -9,6 +9,7 @@ License: CECILL-C
   // Imports
   import { Button } from "bits-ui";
 
+  import { nanoid } from "nanoid";
   import {
     Annotation,
     BaseSchema,
@@ -190,12 +191,14 @@ License: CECILL-C
             if (isFirstKfGlobal) {
               // Reuse newAnnotation for the very first keyframe of the first segment
               newAnnotation.ui.frame_index = kf.frameIndex;
+              newAnnotation.data.frame_index = kf.frameIndex;
               newAnnotation.data.frame_id = frame.id;
               (newAnnotation as BBox).data.coords = [...kf.coords];
               segBBoxes.push(newAnnotation as BBox);
               isFirstKfGlobal = false;
             } else {
               const kfBBox = BBox.cloneForFrame(newAnnotation as BBox, {
+                id: nanoid(10),
                 coords: [...kf.coords],
                 view_name: viewName,
                 frame_id: frame.id,

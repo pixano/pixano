@@ -338,9 +338,11 @@ export function toRawAnnotation(
     ...data
   } = component;
   const normalizedTableName = normalizeTableName(tableName);
+  // Use frame_id (if present) to resolve the view_name for display, but preserve
+  // the original view_id so that tracklets and per-frame annotations share the same value.
   const inferredViewId = typeof frame_id === "string" && frame_id !== "" ? frame_id : view_id;
 
-  return {
+  const result = {
     id,
     created_at,
     updated_at,
@@ -348,7 +350,8 @@ export function toRawAnnotation(
     data: {
       record_id,
       item_id: record_id,
-      view_id: inferredViewId ?? "",
+      view_id: typeof view_id === "string" ? view_id : "",
+      frame_id: typeof frame_id === "string" ? frame_id : "",
       source_type,
       source_name,
       view_name:
@@ -360,4 +363,13 @@ export function toRawAnnotation(
       ...data,
     },
   };
+
+  // Reverse-map backend field names for tracklets
+  if (normalizedTableName === "tracklets") {
+    const d = result.data as Record<string, unknown>;
+    if ("start_timestep" in d) { d.start_frame = d.start_timestep; delete d.start_timestep; }
+    if ("end_timestep" in d) { d.end_frame = d.end_timestep; delete d.end_timestep; }
+  }
+
+  return result;
 }

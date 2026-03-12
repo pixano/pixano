@@ -63,8 +63,11 @@ function resolveViewId(schema: Schema): string {
   }
 
   const currentView = views.value[viewName] as View | View[] | undefined;
-  if (!currentView || Array.isArray(currentView)) {
+  if (!currentView) {
     return "";
+  }
+  if (Array.isArray(currentView)) {
+    return currentView.length > 0 ? currentView[0].id : "";
   }
 
   return currentView.id;

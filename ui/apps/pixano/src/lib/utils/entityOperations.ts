@@ -307,8 +307,10 @@ export const defineCreatedAnnotation = (
       ? WorkspaceType.IMAGE_TEXT_ENTITY_LINKING
       : WorkspaceType.IMAGE;
 
-  if (isVideo && shape.type !== ShapeType.track)
+  if (isVideo && shape.type !== ShapeType.track) {
     newAnnotation.ui.frame_index = currentFrameIndex;
+    newAnnotation.data.frame_index = currentFrameIndex;
+  }
 
   //add extra features if any
   if (newAnnotation.table_info.name in features) {

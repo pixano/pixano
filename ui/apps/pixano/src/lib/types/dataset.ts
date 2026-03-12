@@ -490,7 +490,10 @@ export class BBox extends Annotation {
     if (overrides.coords !== undefined) instance.data.coords = overrides.coords;
     if (overrides.view_name !== undefined) instance.data.view_name = overrides.view_name;
     if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
-    if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
+    if (overrides.frame_index !== undefined) {
+      instance.ui.frame_index = overrides.frame_index;
+      instance.data.frame_index = overrides.frame_index;
+    }
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
     if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
     if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;
@@ -581,7 +584,10 @@ export class Keypoints extends Annotation {
     if (overrides.states !== undefined) instance.data.states = overrides.states;
     if (overrides.view_name !== undefined) instance.data.view_name = overrides.view_name;
     if (overrides.frame_id !== undefined) instance.data.frame_id = overrides.frame_id;
-    if (overrides.frame_index !== undefined) instance.ui.frame_index = overrides.frame_index;
+    if (overrides.frame_index !== undefined) {
+      instance.ui.frame_index = overrides.frame_index;
+      instance.data.frame_index = overrides.frame_index;
+    }
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
     if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
     if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;

@@ -217,7 +217,7 @@ export function attachTrackChildren(
               child.ui.frame_index !== undefined &&
               child.ui.frame_index <= track.data.end_frame &&
               child.ui.frame_index >= track.data.start_frame &&
-              child.data.view_name === track.data.view_name,
+              child.data.view_id === track.data.view_id,
           ) || [];
         track.ui.childs.sort((a, b) => a.ui.frame_index - b.ui.frame_index);
       }
