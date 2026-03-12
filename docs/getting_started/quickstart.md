@@ -138,7 +138,7 @@ Format rules:
 ```bash
 pixano data import ./my_data ./street_objects \
     --name "Street Objects" \
-    --schema ./schema.py:StreetObjectsDatasetItem
+    --info ./schema.py:StreetObjectsDatasetItem
 ```
 
 Common options:
@@ -148,7 +148,7 @@ Common options:
 | `--name`   | Dataset name. Defaults to the source directory name.                              |
 | `--type`   | Dataset type: `image` (default), `video`, or `vqa`.                               |
 | `--mode`   | `create` (default, fails if exists), `overwrite`, or `add` (append).              |
-| `--schema` | Custom schema as `path/to/file.py:ClassName`. Uses the default schema if omitted. |
+| `--info` | Custom dataset info as `path/to/file.py:attribute`. Uses the default info if omitted. |
 
 ??? note "Alternative: build the dataset with Python"
 
@@ -235,7 +235,7 @@ Same pattern as the street-objects example — a custom `Entity` subclass with d
 pixano init ./my_data
 pixano data import ./my_data ./voc_sample \
     --name "VOC 2007 Sample" \
-    --schema examples/voc/schema.py:VOCDatasetItem
+    --info examples/voc/schema.py:VOCDatasetItem
 pixano server run ./my_data
 ```
 
@@ -395,7 +395,7 @@ pixano init ./my_data
 pixano data import ./my_data ./vqav2_sample \
     --name "VQAv2 Sample" \
     --type vqa \
-    --schema examples/vqav2/schema.py:VQAv2DatasetItem
+    --info examples/vqav2/schema.py:VQAv2DatasetItem
 pixano server run ./my_data
 ```
 
