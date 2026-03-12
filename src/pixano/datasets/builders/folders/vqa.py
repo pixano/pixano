@@ -14,7 +14,6 @@ from .image import ImageFolderBuilder
 class VQAFolderBuilder(ImageFolderBuilder):
     """Builder for vqa datasets stored in a folder."""
 
-    WORKSPACE_TYPE = WorkspaceType.IMAGE_VQA
     DEFAULT_INFO = DatasetInfo(
         workspace=WorkspaceType.IMAGE_VQA,
         record=Record,

@@ -8,6 +8,7 @@ import type {
   RecordComponentResponse,
   RecordResponse,
   SFrameResponse,
+  TextResponse,
 } from "./restTypes";
 import { normalizeTableName } from "./resourceNames";
 import {
@@ -281,20 +282,23 @@ export function toRawEntity(entity: EntityResponse, tableName = "entities"): Raw
   };
 }
 
-export function toRawView(view: ImageResponse | SFrameResponse): RawSchemaData {
+export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): RawSchemaData {
   const {
     id,
     created_at = "",
     updated_at = "",
     record_id = "",
     logical_name = "",
-    src,
-    width,
-    height,
-    format,
   } = view;
+  const src = "src" in view ? view.src : undefined;
+  const width = "width" in view ? view.width : undefined;
+  const height = "height" in view ? view.height : undefined;
+  const format = "format" in view ? view.format : undefined;
+  const content = "content" in view ? view.content : undefined;
+  const uri = "uri" in view ? view.uri : undefined;
   const frame_index = "frame_index" in view ? view.frame_index : undefined;
   const timestamp = "timestamp" in view ? view.timestamp : undefined;
+  const isText = "content" in view || "uri" in view;
   const isSequenceFrame = typeof frame_index === "number";
 
   return {
@@ -302,15 +306,17 @@ export function toRawView(view: ImageResponse | SFrameResponse): RawSchemaData {
     created_at,
     updated_at,
     table_info: tableInfo(
-      isSequenceFrame ? "sequence_frames" : "images",
+      isText ? "texts" : isSequenceFrame ? "sequence_frames" : "images",
       "views",
-      isSequenceFrame ? BaseSchema.SequenceFrame : BaseSchema.Image,
+      isText ? BaseSchema.TextView : isSequenceFrame ? BaseSchema.SequenceFrame : BaseSchema.Image,
     ),
     data: {
       item_id: record_id,
       parent_id: "",
       view_name: logical_name,
       url: src,
+      content,
+      uri,
       width,
       height,
       format,

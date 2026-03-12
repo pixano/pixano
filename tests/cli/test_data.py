@@ -20,7 +20,7 @@ def test_data_import_dry_run_reports_clean_metadata(tmp_path: Path):
     split_dir = source_dir / "train"
     split_dir.mkdir(parents=True)
     (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
-    (split_dir / "metadata.jsonl").write_text('{"image":"item_0.jpg"}\n', encoding="utf-8")
+    (split_dir / "metadata.jsonl").write_text('{"views":{"image":"item_0.jpg"}}\n', encoding="utf-8")
 
     result = runner.invoke(
         app,
@@ -50,7 +50,7 @@ def test_data_import_dry_run_strict_rejects_aliases(tmp_path: Path):
     split_dir.mkdir(parents=True)
     (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
     (split_dir / "metadata.jsonl").write_text(
-        '{"image":"item_0.jpg","objects":{"category":["person"]}}\n', encoding="utf-8"
+        '{"views":{"image":"item_0.jpg"},"objects":[{"category":"person"}]}\n', encoding="utf-8"
     )
 
     result = runner.invoke(
@@ -93,7 +93,7 @@ def test_data_import_uses_dataset_info_workspace_and_snake_case_name(mock_import
     split_dir = source_dir / "train"
     split_dir.mkdir(parents=True)
     (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
-    (split_dir / "metadata.jsonl").write_text('{"image":"item_0.jpg"}\n', encoding="utf-8")
+    (split_dir / "metadata.jsonl").write_text('{"views":{"image":"item_0.jpg"}}\n', encoding="utf-8")
 
     mock_dataset = MagicMock()
     mock_dataset.num_rows = 1
@@ -138,7 +138,7 @@ def test_data_import_preserves_message_question_type(tmp_path: Path):
     PILImage.new("RGB", (4, 4), color=(255, 0, 0)).save(image_path)
     (split_dir / "metadata.jsonl").write_text(
         (
-            '{"image":"item_0.jpg","messages":[{"question":{"content":"Is this red?",'
+            '{"views":{"image":"item_0.jpg"},"messages":[{"question":{"content":"Is this red?",'
             '"question_type":"open"},"responses":[{"content":"yes"}]}]}\n'
         ),
         encoding="utf-8",

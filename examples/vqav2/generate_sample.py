@@ -19,7 +19,7 @@ Usage:
     python generate_sample.py ./vqav2_sample --num-samples 100
 
 Then import into Pixano:
-    pixano data import ./my_data ./vqav2_sample --info examples/vqav2/schema.py:dataset_info
+    pixano data import ./my_data ./vqav2_sample --info examples/vqav2/info.py:dataset_info
 """
 
 import argparse
@@ -76,7 +76,7 @@ def export_split(output_dir: Path, num_samples: int, seed: int) -> int:
             "responses": [{"content": entry["multiple_choice_answer"]}],
         }
 
-        metadata_entry = {"image": filename, "messages": [conversation]}
+        metadata_entry = {"views": {"image": filename}, "messages": [conversation]}
         metadata_lines.append(json.dumps(metadata_entry, ensure_ascii=False))
 
     # Write metadata.jsonl
@@ -122,7 +122,7 @@ def main():
 
     print(f"\nDone. {total} images exported.")
     print("\nTo import into Pixano:")
-    print(f"  pixano data import ./my_data {output_dir} --info examples/vqav2/schema.py:dataset_info")
+    print(f"  pixano data import ./my_data {output_dir} --info examples/vqav2/info.py:dataset_info")
 
 
 if __name__ == "__main__":
