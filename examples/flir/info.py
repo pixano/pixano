@@ -8,9 +8,9 @@
 
 Usage:
     pixano data import ./my_data ./flir_sample \
-        --info examples/flir/schema.py:dataset_info
+        --info examples/flir/info.py:dataset_info
     pixano data import ./my_data ./flir_sample \
-        --info examples/flir/schema.py:video_dataset_info
+        --info examples/flir/info.py:video_dataset_info
 """
 
 from pixano.datasets import DatasetInfo

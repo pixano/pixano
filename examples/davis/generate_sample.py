@@ -77,9 +77,12 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, davi
 
         # Build metadata entry with glob patterns
         entry = {
-            "image": f"frames/{video_name}/*.jpg",
-            "masks": f"masks/{video_name}/*.png",
-            "fps": 24,
+            "views": {
+                "image": {"path": f"frames/{video_name}/*.jpg", "fps": 24},
+            },
+            "annotation_files": {
+                "mask": f"masks/{video_name}/*.png",
+            },
         }
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))
 
@@ -145,7 +148,7 @@ def main():
     print(f"\nDone. {total} videos exported.")
     print("\nTo import into Pixano:")
     print(f"  pixano dataset import ./my_data {output_dir} \\")
-    print(f'      --name "DAVIS 2017 Sample" --type video --info examples/davis/schema.py:dataset_info')
+    print("      --info examples/davis/info.py:dataset_info")
 
 
 if __name__ == "__main__":

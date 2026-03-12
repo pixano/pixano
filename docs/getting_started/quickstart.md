@@ -104,51 +104,51 @@ Extending `Entity` lets you add custom attributes to each detected object. Exten
 
 **Write the metadata.jsonl**
 
-Create a `metadata.jsonl` file in each split folder that has pre-annotations. Each line is a JSON object describing one image:
+Create a `metadata.jsonl` file in each split folder that has pre-annotations. Each line is a JSON object describing one record.
 
 **`street_objects/train/metadata.jsonl`**
 
 ```json
-{"image": "img_001.jpg", "image_source": "dashcam", "objects": {"bboxes": [[0.12, 0.25, 0.15, 0.30], [0.55, 0.10, 0.20, 0.45]], "category": ["car", "pedestrian"]}}
-{"image": "img_002.jpg", "image_source": "dashcam", "objects": {"bboxes": [[0.30, 0.40, 0.08, 0.12]], "category": ["bicycle"]}}
-{"image": "img_003.jpg", "image_source": "drone"}
+{"views": {"image": "img_001.jpg"}, "image_source": "dashcam", "entities": [{"category": "car", "annotations": {"image": {"bbox": [0.12, 0.25, 0.15, 0.30]}}}, {"category": "pedestrian", "annotations": {"image": {"bbox": [0.55, 0.10, 0.20, 0.45]}}}]}
+{"views": {"image": "img_002.jpg"}, "image_source": "dashcam", "entities": [{"category": "bicycle", "annotations": {"image": {"bbox": [0.30, 0.40, 0.08, 0.12]}}}]}
+{"views": {"image": "img_003.jpg"}, "image_source": "drone"}
 ```
 
 Format rules:
 
-- **`image`** matches the view field name in the schema and points to the image file in the same folder.
-- **`image_source`** is stored as item-level metadata (it does not match any schema table name).
-- **`objects`** matches the entity field name in the schema. Its value is a dict containing entity attributes and annotation data.
-- **`bboxes`** inside `objects` matches the annotation table name. Each bounding box is `[x, y, w, h]`.
-- **Entity attributes** (`category`) are parallel arrays — one value per bounding box.
-- **Items without `objects`** (like `img_003.jpg`) have no pre-annotations.
+- **`views`** maps logical view names to file paths relative to the split folder.
+- **`image_source`** is stored as record-level metadata because it does not match a schema slot.
+- **`entities`** is a list of entity objects.
+- Each entity stores its own attributes (`category`) and optional per-view annotations under `annotations.<view_name>`.
+- **`bbox`** uses `[x, y, w, h]` coordinates.
+- **Items without `entities`** (like `img_003.jpg`) have no pre-annotations.
 - **Coordinates** are auto-detected as normalized when all values fall within [0, 1].
 
 ??? note "Format details"
 
-    The `metadata.jsonl` format mirrors the schema structure:
+    The canonical `metadata.jsonl` format is entity-centric:
 
-    - **Top-level keys** that match a view field (e.g. `image`) are treated as view references — the value is the filename relative to the split folder.
-    - **Top-level keys** that match an entity field (e.g. `objects`) contain a nested dict. Keys inside this dict that match annotation table names (e.g. `bboxes`) are parsed as annotation data. All other keys are treated as entity attributes.
-    - **Top-level keys** that don't match any view or entity field (e.g. `image_source`) are stored as item-level metadata.
-    - Entity attributes and annotation arrays must have the same length — each index corresponds to one object.
+    - **`views`** is always the entry point for media.
+    - **`entities`** is always a list.
+    - **Annotations are optional** and attached to entities per view under `annotations.<view_name>`.
+    - **Top-level keys** that do not match a schema slot (for example `image_source`) are stored as record metadata.
+    - For temporal datasets, use **`annotation_files`** to reference sidecar files such as masks or per-frame bbox JSON files.
 
 **Run the import**
 
 ```bash
 pixano data import ./my_data ./street_objects \
-    --name "Street Objects" \
-    --schema ./schema.py:StreetObjectsDatasetItem
+    --info ./info.py:dataset_info
 ```
 
 Common options:
 
-| Option     | Description                                                                       |
-| ---------- | --------------------------------------------------------------------------------- |
-| `--name`   | Dataset name. Defaults to the source directory name.                              |
-| `--type`   | Dataset type: `image` (default), `video`, or `vqa`.                               |
-| `--mode`   | `create` (default, fails if exists), `overwrite`, or `add` (append).              |
-| `--schema` | Custom schema as `path/to/file.py:ClassName`. Uses the default schema if omitted. |
+| Option                  | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| `--info`                | Dataset info as `path/to/file.py:attribute`. Required for import.    |
+| `--mode`                | `create` (default), `overwrite`, or `add`.                           |
+| `--metadata-validation` | `default` or `strict`. Strict mode rejects aliases and normalization. |
+| `--dry-run`             | Validate metadata and exit without creating the dataset.             |
 
 ??? note "Alternative: build the dataset with Python"
 
@@ -203,10 +203,10 @@ voc_sample/
     metadata.jsonl
 ```
 
-Each line in `metadata.jsonl` follows the format described above:
+Each line in `metadata.jsonl` follows the canonical format described above:
 
 ```json
-{"image": "000032.jpg", "objects": {"bboxes": [[0.078, 0.090, 0.756, 0.792], ...], "category": ["aeroplane", ...], "is_difficult": [false, ...]}}
+{"views": {"image": "000032.jpg"}, "entities": [{"category": "aeroplane", "is_difficult": false, "annotations": {"image": {"bbox": [0.078, 0.090, 0.756, 0.792]}}}]}
 ```
 
 **2. Review the schema**
@@ -234,8 +234,7 @@ Same pattern as the street-objects example — a custom `Entity` subclass with d
 ```bash
 pixano init ./my_data
 pixano data import ./my_data ./voc_sample \
-    --name "VOC 2007 Sample" \
-    --schema examples/voc/schema.py:VOCDatasetItem
+    --info examples/voc/info.py:dataset_info
 pixano server run ./my_data
 ```
 
@@ -267,14 +266,14 @@ For VQA datasets, each line in `metadata.jsonl` describes one image and its asso
 **`vqa_data/train/metadata.jsonl`**
 
 ```json
-{"image": "image_001.jpg", "conversations": [{"question": {"content": "What color is the car?", "question_type": "OPEN"}, "responses": [{"content": "red", "user": "annotator_0"}, {"content": "dark red", "user": "annotator_1"}]}, {"question": {"content": "How many people are visible?", "question_type": "OPEN"}, "responses": [{"content": "3", "user": "annotator_0"}]}]}
-{"image": "image_002.jpg", "conversations": [{"question": {"content": "Is it raining?", "question_type": "OPEN"}, "responses": [{"content": "no", "user": "annotator_0"}]}]}
+{"views": {"image": "image_001.jpg"}, "messages": [{"question": {"content": "What color is the car?", "question_type": "OPEN"}, "responses": [{"content": "red", "user": "annotator_0"}, {"content": "dark red", "user": "annotator_1"}]}, {"question": {"content": "How many people are visible?", "question_type": "OPEN"}, "responses": [{"content": "3", "user": "annotator_0"}]}]}
+{"views": {"image": "image_002.jpg"}, "messages": [{"question": {"content": "Is it raining?", "question_type": "OPEN"}, "responses": [{"content": "no", "user": "annotator_0"}]}]}
 ```
 
 Format rules:
 
-- **`image`** points to the image file in the same folder.
-- **`conversations`** is a list of question-answer exchanges for the image.
+- **`views.image`** points to the image file in the same folder.
+- **`messages`** is a list of question-answer exchanges for the record.
 - Each conversation has a **`question`** with `content` (the question text) and `question_type` (`"OPEN"` for free-form answers).
 - **`responses`** is a list of answers. Each response has `content` (the answer text) and an optional `user` field to distinguish annotators.
 - An image can have **multiple conversations** (multiple questions about the same image).
@@ -291,11 +290,10 @@ Format rules:
 
 ```bash
 pixano data import ./my_data ./vqa_data \
-    --name "VQA Data" \
-    --type vqa
+    --info ./info.py:dataset_info
 ```
 
-The `--type vqa` flag tells Pixano to use the VQA folder builder, which parses the `conversations` format. No custom schema is required — the default `DefaultVQADatasetItem` schema handles images, conversations, messages, objects, bounding boxes, masks, and keypoints.
+Pixano uses the workspace declared in `DatasetInfo` to select the right folder builder automatically.
 
 ??? note "Alternative: build the dataset with Python"
 
@@ -350,8 +348,8 @@ Each line in `metadata.jsonl` describes one image with its question and answer:
 
 ```json
 {
-  "image": "000000.jpg",
-  "conversations": [
+  "views": {"image": "000000.jpg"},
+  "messages": [
     {
       "question": {
         "content": "Where are the kids riding?",
@@ -393,9 +391,7 @@ Same pattern as the VOC example — a custom `Entity` subclass with domain-speci
 ```bash
 pixano init ./my_data
 pixano data import ./my_data ./vqav2_sample \
-    --name "VQAv2 Sample" \
-    --type vqa \
-    --schema examples/vqav2/schema.py:VQAv2DatasetItem
+    --info examples/vqav2/info.py:dataset_info
 pixano server run ./my_data
 ```
 

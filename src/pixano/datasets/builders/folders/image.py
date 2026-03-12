@@ -8,7 +8,7 @@ from pixano.datasets import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import BBox, Entity, Image, KeyPoints, Record
 
-from .base import FolderBaseBuilder
+from .folder_base_builder import FolderBaseBuilder
 
 
 # Image extensions supported by Pillow
@@ -83,7 +83,6 @@ class ImageFolderBuilder(FolderBaseBuilder):
     """Builder for image datasets stored in a folder."""
 
     EXTENSIONS = IMAGE_EXTENSIONS
-    WORKSPACE_TYPE = WorkspaceType.IMAGE
     DEFAULT_INFO = DatasetInfo(
         workspace=WorkspaceType.IMAGE,
         record=Record,

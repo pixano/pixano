@@ -8,7 +8,7 @@
 
 Usage:
     pixano data import ./my_data ./davis_sample \
-        --info examples/davis/schema.py:dataset_info
+        --info examples/davis/info.py:dataset_info
 """
 
 from pixano.datasets import DatasetInfo

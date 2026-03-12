@@ -36,7 +36,7 @@ Usage:
 
 Then import into Pixano:
     pixano data import ./my_data ./flir_sample \\
-        --info examples/flir/schema.py:dataset_info
+        --info examples/flir/info.py:dataset_info
 """
 
 import argparse
@@ -146,15 +146,23 @@ def export_video_test(
                 categories.append(category_map.get(ann.get("category_id", 0), "unknown"))
 
         entry: dict = {
-            "rgb": f"rgb/{out_name}",
-            "thermal": f"thermal/{out_name}",
+            "views": {
+                "rgb": f"rgb/{out_name}",
+                "thermal": f"thermal/{out_name}",
+            }
         }
         if bboxes:
-            entry["entities"] = {
-                "view_name": "thermal",
-                "bboxes": bboxes,
-                "category": categories,
-            }
+            entry["entities"] = [
+                {
+                    "category": category,
+                    "annotations": {
+                        "thermal": {
+                            "bbox": bbox,
+                        }
+                    },
+                }
+                for bbox, category in zip(bboxes, categories)
+            ]
 
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))
         exported += 1
@@ -278,10 +286,13 @@ def export_video_test_video_mode(
                     )
 
         entry = {
-            "rgb": f"rgb/{video_name}/*.jpg",
-            "thermal": f"thermal/{video_name}/*.jpg",
-            "bboxes": f"bboxes/{video_name}/*.json",
-            "fps": 30,
+            "views": {
+                "rgb": {"path": f"rgb/{video_name}/*.jpg", "fps": 30},
+                "thermal": {"path": f"thermal/{video_name}/*.jpg", "fps": 30},
+            },
+            "annotation_files": {
+                "bbox": f"bboxes/{video_name}/*.json",
+            },
         }
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))
         exported += 1
@@ -360,7 +371,7 @@ def main():
 
     print(f"\nDone. {total} {unit} exported.")
     print("\nTo import into Pixano:")
-    print(f"  pixano data import ./my_data {output_dir} --info examples/flir/schema.py:{schema_object}")
+    print(f"  pixano data import ./my_data {output_dir} --info examples/flir/info.py:{schema_object}")
 
 
 if __name__ == "__main__":

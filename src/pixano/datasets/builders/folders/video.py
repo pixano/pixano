@@ -8,7 +8,7 @@ from pixano.datasets import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import BBox, Entity, EntityDynamicState, KeyPoints, Record, SequenceFrame, Tracklet
 
-from .base import FolderBaseBuilder
+from .folder_base_builder import FolderBaseBuilder
 from .image import IMAGE_EXTENSIONS
 
 
@@ -28,7 +28,6 @@ class VideoFolderBuilder(FolderBaseBuilder):
     """Builder for video datasets stored in a folder."""
 
     EXTENSIONS = VIDEO_EXTENSIONS + IMAGE_EXTENSIONS
-    WORKSPACE_TYPE = WorkspaceType.VIDEO
     DEFAULT_INFO = DatasetInfo(
         workspace=WorkspaceType.VIDEO,
         record=Record,

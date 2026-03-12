@@ -9,10 +9,11 @@ from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_
 from .conversation import Conversation, create_conversation, is_conversation
 from .entity_annotation import AnnotationSourceKind, EntityAnnotation, is_entity_annotation
 from .entity_group_annotation import EntityGroupAnnotation, is_entity_group_annotation
-from .info_extraction import Relation, TextSpan, create_relation, create_text_span, is_relation, is_text_span
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
 from .message import Message, QuestionType, create_message, is_message
 from .per_frame_annotation import PerFrameAnnotation, is_per_frame_annotation
+from .relation import Relation, create_relation, is_relation
+from .text_span import TextSpan, create_text_span, is_text_span
 from .tracklet import Tracklet, is_tracklet
 
 
@@ -30,9 +31,9 @@ __all__ = [
     "KeyPoints3D",
     "Message",
     "QuestionType",
+    "Relation",
     "TextSpan",
     "Tracklet",
-    "Relation",
     "is_entity_annotation",
     "is_entity_group_annotation",
     "is_per_frame_annotation",
@@ -44,7 +45,9 @@ __all__ = [
     "is_keypoints",
     "is_keypoints3d",
     "is_message",
+    "is_relation",
     "is_text_span",
     "is_tracklet",
-    "is_relation",
+    "create_relation",
+    "create_text_span",
 ]

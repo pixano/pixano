@@ -70,8 +70,12 @@ function finalizeWorkspaceData(
       if (Array.isArray(view)) {
         throw new Error("Not video workspace with SequenceFrames.");
       }
-      view.data.type = WorkspaceType.IMAGE;
-      view.data.url = normalizeMediaUrl(view.data.url);
+      if (view.table_info.base_schema === BaseSchema.TextView) {
+        view.data.type = WorkspaceType.IMAGE_TEXT_ENTITY_LINKING;
+      } else {
+        view.data.type = WorkspaceType.IMAGE;
+        view.data.url = normalizeMediaUrl(view.data.url);
+      }
     }
   }
 
@@ -132,9 +136,7 @@ export async function loadWorkspaceRecord(
     ),
   ]);
 
-  void texts;
-
-  const views = [...images, ...sframes];
+  const views = [...images, ...texts, ...sframes];
 
   const viewsByLogicalName: Record<string, ReturnType<typeof toRawView>[]> = {};
   const viewNamesById = new Map<string, string>();

@@ -199,10 +199,7 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, voc_
             with Image.open(src_image) as img:
                 width, height = img.size
 
-        # Convert pixel bboxes to normalized (x, y, w, h)
-        bboxes_xywh = []
-        categories = []
-        difficult_flags = []
+        entities = []
 
         for obj in objects:
             xmin, ymin, xmax, ymax = obj["bbox"]
@@ -210,18 +207,22 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, voc_
             y = ymin / height
             w = (xmax - xmin) / width
             h = (ymax - ymin) / height
-            bboxes_xywh.append([round(x, 6), round(y, 6), round(w, 6), round(h, 6)])
-            categories.append(obj["category"])
-            difficult_flags.append(obj["is_difficult"])
+            entities.append(
+                {
+                    "category": obj["category"],
+                    "is_difficult": obj["is_difficult"],
+                    "annotations": {
+                        "image": {
+                            "bbox": [round(x, 6), round(y, 6), round(w, 6), round(h, 6)],
+                        }
+                    },
+                }
+            )
 
         # Build metadata line
-        entry: dict = {"image": filename}
-        if bboxes_xywh:
-            entry["entities"] = {
-                "bboxes": bboxes_xywh,
-                "category": categories,
-                "is_difficult": difficult_flags,
-            }
+        entry: dict = {"views": {"image": filename}}
+        if entities:
+            entry["entities"] = entities
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))
 
     # Write metadata.jsonl
