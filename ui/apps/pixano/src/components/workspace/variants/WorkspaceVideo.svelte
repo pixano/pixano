@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { navigating } from "$app/state";
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import { Loader2Icon } from "lucide-svelte";
+  import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
@@ -196,7 +196,7 @@ License: CECILL-C
         shape,
         currentFrameIndex.value,
         current_itemBBoxes.value,
-        current_itemKeypoints.value,
+        current_itemKeypoints.value as any,
       );
       annotations.value = objects;
       if (save_data) saveTo(save_data.change_type, save_data.data);
@@ -354,7 +354,7 @@ License: CECILL-C
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 bg-black/35 flex items-center justify-center pointer-events-none">
           <div class="flex flex-col items-center gap-2 text-white">
-            <Loader2Icon class="h-8 w-8 animate-spin" />
+            <CircleNotch weight="regular" class="h-8 w-8 animate-spin" />
             <p class="text-sm">Buffering next frames...</p>
           </div>
         </div>
@@ -373,7 +373,7 @@ License: CECILL-C
     {:else}
       <div class="h-full w-full bg-canvas flex items-center justify-center">
         <div class="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2Icon class="h-8 w-8 animate-spin text-white" />
+          <CircleNotch weight="regular" class="h-8 w-8 animate-spin text-white" />
           <p class="text-sm">Loading video frames...</p>
         </div>
       </div>

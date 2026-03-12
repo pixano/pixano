@@ -1,4 +1,5 @@
 import { sveltekit } from "@sveltejs/kit/vite";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { pixanoAliases } from "./pixano-aliases.js";
 
@@ -21,7 +22,7 @@ const proxies_list = [
 ];
 
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [sveltekit(), tailwindcss()],
   resolve: {
     alias: pixanoAliases,
   },

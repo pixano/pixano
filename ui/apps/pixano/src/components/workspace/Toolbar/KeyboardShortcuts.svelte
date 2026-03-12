@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Keyboard } from "lucide-svelte";
+  import { Keyboard } from "phosphor-svelte";
 
   import { Popover } from "bits-ui";
 

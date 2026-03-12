@@ -9,7 +9,6 @@ import type { AIRequestParams } from "$lib/types/tools";
 
 import type { ReactiveReadonly, ReactiveValue, ToolBridge } from "$lib/types/store";
 import type { ComputeJob } from "$lib/types/services";
-import type { TrackerService } from "$lib/types/tracker";
 import type { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
 import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
 
@@ -37,7 +36,7 @@ export class ToolBridgeImpl implements ToolBridge {
 
   private readonly commandBridge: CommandBridgeImpl;
   private readonly documentStore: DocumentStoreImpl;
-  private trackerService: TrackerService | null = null;
+  private trackerService: any | null = null;
 
   private canvasViewName = "";
   private canvasWidth = 0;
@@ -89,7 +88,7 @@ export class ToolBridgeImpl implements ToolBridge {
   }
 
   /** Inject a TrackerService for handling AI tracking side effects. */
-  setTrackerService(service: TrackerService): void {
+  setTrackerService(service: any): void {
     this.trackerService = service;
   }
 

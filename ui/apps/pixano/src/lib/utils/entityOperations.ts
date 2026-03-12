@@ -257,7 +257,7 @@ export const defineCreatedAnnotation = (
     const coords = [];
     const states = [];
 
-    for (let vi = 0; vi < shape.keypoints.graph.vertices.length; vi++) {
+    for (let vi = 0; vi <shape.keypoints.graph.vertices.length; vi++) {
       const vertex = shape.keypoints.graph.vertices[vi];
       coords.push(vertex.x / shape.imageWidth);
       coords.push(vertex.y / shape.imageHeight);

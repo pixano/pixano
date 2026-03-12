@@ -18,7 +18,7 @@ import VideoCell from "./TableCells/VideoCell.svelte";
 type CellValue = string | number | boolean | DatasetStat;
 
 // Generic function to create a renderComponent call for a given cell component
-const createCellRenderer = (Cell: typeof TextCell) => (value: CellValue) => {
+const createCellRenderer = (Cell: any) => (value: CellValue) => {
   return renderComponent(Cell, { value: value as never });
 };
 

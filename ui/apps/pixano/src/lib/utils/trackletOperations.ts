@@ -84,7 +84,7 @@ export function addKeyItemToTracklet(
       ];
       const coords: number[] = [];
       const states: string[] = [];
-      for (let vi = 0; vi < interpolatedKpt.graph.vertices.length; vi++) {
+      for (let vi = 0; vi <interpolatedKpt.graph.vertices.length; vi++) {
         const vertex = interpolatedKpt.graph.vertices[vi];
         coords.push(vertex.x / currentSf.data.width);
         coords.push(vertex.y / currentSf.data.height);
@@ -197,9 +197,9 @@ export function findNeighborFrameIndices(
   for (const subtrack of allTracklets) {
     if (subtrack.data.view_name === tracklet.data.view_name) {
       for (const child of subtrack.ui.childs) {
-        if (child.ui.frame_index < frameIndex && child.ui.frame_index > previous) {
+        if (child.ui.frame_index <frameIndex && child.ui.frame_index > previous) {
           previous = child.ui.frame_index!;
-        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index < next) {
+        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index <next) {
           next = child.ui.frame_index!;
         }
       }

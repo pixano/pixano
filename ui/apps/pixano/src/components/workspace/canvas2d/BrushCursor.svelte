@@ -25,7 +25,7 @@ License: CECILL-C
   {y}
   {radius}
   stroke={cursorColor}
-  strokeWidth={2}
+  
   fill={fillColor}
   listening={false}
 />

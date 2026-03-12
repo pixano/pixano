@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Loader2Icon, PauseIcon, PlayIcon, StepBack, StepForward } from "lucide-svelte";
+  import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
   import { getCurrentImageTime } from "$lib/utils/videoUtils";
   import {
     ensureFrameAvailable,
@@ -104,7 +104,7 @@ License: CECILL-C
       clearTimeout(timer);
       if (isShown && token === bufferingToken) {
         const visibleFor = Date.now() - shownAt;
-        if (visibleFor < BUFFERING_MIN_VISIBLE_MS) {
+        if (visibleFor <BUFFERING_MIN_VISIBLE_MS) {
           await wait(BUFFERING_MIN_VISIBLE_MS - visibleFor);
         }
         if (token === bufferingToken) {
@@ -288,11 +288,11 @@ License: CECILL-C
     class="text-primary"
   >
     {#if playbackState.value.isBuffering}
-      <Loader2Icon class="animate-spin" />
+      <CircleNotch weight="regular" class="animate-spin" />
     {:else if playbackState.value.intervalId}
-      <PauseIcon />
+      <Pause weight="regular" />
     {:else}
-      <PlayIcon />
+      <Play weight="regular" />
     {/if}
   </button>
   <button
@@ -300,10 +300,10 @@ License: CECILL-C
     onclick={onPlayStepBackClick}
     class="text-primary"
   >
-    <StepBack />
+    <SkipBack weight="regular" />
   </button>
   <button title="Next frame (Right / D)" onclick={onPlayStepClick} class="text-primary">
-    <StepForward />
+    <SkipForward weight="regular" />
   </button>
   <p>
     <span>{currentTime}</span>

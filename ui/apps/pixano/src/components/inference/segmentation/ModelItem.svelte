@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Trash2 } from "lucide-svelte";
+  import { Trash } from "phosphor-svelte";
 
   import * as api from "$lib/api";
   import { IconButton } from "$lib/ui";
@@ -43,6 +43,6 @@ License: CECILL-C
   </label>
 
   <IconButton tooltipContent="Delete model" onclick={handleDeleteModel}>
-    <Trash2 />
+    <Trash weight="regular" />
   </IconButton>
 </div>

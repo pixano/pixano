@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Checkbox } from "bits-ui";
-  import { Check } from "lucide-svelte";
+  import { Check } from "phosphor-svelte";
 
   import { Annotation, Entity, Item, type FeaturesValues } from "$lib/ui";
 
@@ -55,7 +55,7 @@ License: CECILL-C
           {#snippet children({ checked })}
             <span class="flex items-center justify-center text-current h-full w-full">
               {#if checked}
-                <Check class="h-3.5 w-3.5" strokeWidth={3} />
+                <Check class="h-3.5 w-3.5"  />
               {/if}
             </span>
           {/snippet}

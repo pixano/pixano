@@ -7,17 +7,15 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { CircleSlash2 } from "lucide-svelte";
+  import { Check, Plus, Prohibit } from "phosphor-svelte";
 
   import { Checkbox, Slider } from "bits-ui";
-  import { Check } from "lucide-svelte";
 
   import {
     Annotation,
     BaseSchema,
     BBox,
     Entity,
-    IconButton,
     Keypoints,
     Mask,
     TextSpan,
@@ -92,33 +90,35 @@ License: CECILL-C
   };
 
   const filterSetup = $derived.by(() => {
-    const tablesByGroup = manifest.tablesByGroup;
-    const tablesByName = manifest.tablesByName;
-    const nextTableColumns: string[] = [];
-    let nextIsVideo = manifest.workspaceType === WorkspaceType.VIDEO;
-    for (const table of tablesByGroup.entities) {
+    const candidateTables: string[] = [];
+    let nextIsVideo = false;
+
+    for (const table of manifest.tablesByGroup.entities) {
+      if (manifest.tablesByName[table].baseSchema === BaseSchema.Track) nextIsVideo = true;
       if (
         entities.value.find(
           (ent) =>
             ent.table_info.name === table && ent.table_info.base_schema !== BaseSchema.Conversation,
         )
       ) {
-        nextTableColumns.push(table);
+        candidateTables.push(table);
       }
     }
-    for (const table of tablesByGroup.annotations) {
+
+    for (const table of manifest.tablesByGroup.annotations) {
       if (
         annotations.value.find(
           (ann) =>
             ann.table_info.name === table && ann.table_info.base_schema !== BaseSchema.Message,
         )
       ) {
-        nextTableColumns.push(table);
+        candidateTables.push(table);
       }
     }
-    if (nextTableColumns.length === 0) {
+
+    if (candidateTables.length === 0) {
       return {
-        tableColumns: nextTableColumns,
+        tableColumns: [] as string[],
         fieldColumns: {} as Record<string, FieldCol[]>,
         isVideo: nextIsVideo,
         disableFilter: true,
@@ -126,7 +126,7 @@ License: CECILL-C
       };
     }
 
-    const tableToGroup = Object.entries(tablesByGroup).reduce(
+    const tableToGroup = Object.entries(manifest.tablesByGroup).reduce(
       (acc, [group, tables]) => {
         for (const table of tables) {
           acc[table] = group;
@@ -135,31 +135,38 @@ License: CECILL-C
       },
       {} as Record<string, string>,
     );
-    const firstTable = nextTableColumns[0];
+
     const nextFieldColumns: Record<string, FieldCol[]> = {};
-    for (const table of nextTableColumns) {
+    for (const table of candidateTables) {
       nextFieldColumns[table] = [];
-      const tableManifest = tablesByName[table];
-      if (!tableManifest) continue;
-      const nonFeatsFields = getNonFeaturesFields(tableManifest.baseSchema, tableToGroup[table]);
-      for (const [k, v] of Object.entries(tableManifest.fields)) {
-        if (!v.collection && allowedTypes.includes(v.type) && !nonFeatsFields.includes(k))
-          nextFieldColumns[table].push({
-            name: k,
-            type: v.type,
-          });
+      const nonFeatsFields = getNonFeaturesFields(
+        manifest.tablesByName[table].baseSchema,
+        tableToGroup[table],
+      );
+      for (const [k, v] of Object.entries(manifest.tablesByName[table].fields)) {
+        if (!v.collection && allowedTypes.includes(v.type) && !nonFeatsFields.includes(k)) {
+          nextFieldColumns[table].push({ name: k, type: v.type });
+        }
       }
     }
-    const firstField = nextFieldColumns[firstTable]?.[0];
-    if (!firstField) {
+
+    const filterableTables = candidateTables.filter(
+      (table) => (nextFieldColumns[table] ?? []).length > 0,
+    );
+
+    if (filterableTables.length === 0) {
       return {
-        tableColumns: nextTableColumns,
+        tableColumns: [] as string[],
         fieldColumns: nextFieldColumns,
         isVideo: nextIsVideo,
         disableFilter: true,
         defaultFilter: undefined as EntityFilter | undefined,
       };
     }
+
+    const firstTable = filterableTables[0];
+    const firstField = nextFieldColumns[firstTable][0];
+
     const nextDefaultFilter = {
       logicOperator: "FIRST",
       table: firstTable,
@@ -167,14 +174,17 @@ License: CECILL-C
       fieldOperator: "=",
       value: "",
     } as EntityFilter;
+
     return {
-      tableColumns: nextTableColumns,
+      tableColumns: filterableTables,
       fieldColumns: nextFieldColumns,
       isVideo: nextIsVideo,
       disableFilter: false,
       defaultFilter: nextDefaultFilter,
     };
   });
+
+  const confidenceValueLabel = $derived.by(() => (confidenceThreshold.value[0] ?? 0).toFixed(2));
 
   // Only side-effect: init entityFilters when schema changes
   let lastFilterSig = "";
@@ -189,7 +199,7 @@ License: CECILL-C
 
   const handleAddFilter = (logicOperator: LogicOperator) => {
     if (!filterSetup.defaultFilter) return;
-    const newFilter = { ...filterSetup.defaultFilter, logicOperator };
+    const newFilter = { ...structuredClone(filterSetup.defaultFilter), logicOperator };
     entityFilters.value = [...entityFilters.value, newFilter]; //note: a push will not trigger reactive
   };
 
@@ -199,13 +209,12 @@ License: CECILL-C
     op: FieldOperator,
   ): boolean {
     const val =
-      typeof a === "number" && typeof b === "string"
-        ? parseFloat(b)
+      typeof a === "number"
+        ? Number(b)
         : typeof a === "boolean"
-          ? b
-            ? true
-            : false
-          : b;
+          ? (typeof b === "boolean" ? b : b === "true")
+          : String(b);
+
     switch (op) {
       case "=":
         return a === val;
@@ -242,9 +251,10 @@ License: CECILL-C
   }
 
   const filterAnnOrEnt = (annOrEnt: Annotation | Entity, cond: EntityFilter): boolean => {
-    let value: string | number | boolean;
-    if (cond.name === "id") value = annOrEnt.id;
-    else value = annOrEnt.data[cond.name] as string | number | boolean;
+    const rawValue = cond.name === "id" ? annOrEnt.id : annOrEnt.data[cond.name];
+    if (rawValue === undefined || rawValue === null) return false;
+    const value = rawValue as string | number | boolean;
+
     return (
       cond.table === annOrEnt.table_info.name &&
       applyOperator(value, cond.value, cond.fieldOperator)
@@ -253,6 +263,7 @@ License: CECILL-C
 
   function evaluateGroups(): Entity[] {
     const groups = groupConditions(entityFilters.value);
+    if (groups.length === 0) return [...entities.value];
 
     // Union of "OR" objets groups
     const matching = new Set<Entity>();
@@ -285,75 +296,133 @@ License: CECILL-C
 
   const handleClearFilter = () => {
     if (filterSetup.defaultFilter) {
-      entityFilters.value = [filterSetup.defaultFilter];
+      entityFilters.value = [structuredClone(filterSetup.defaultFilter)];
     }
     onFilter?.(entities.value);
   };
 </script>
 
-<div class="flex flex-col gap-2 border-2 rounded-md border-primary p-2">
-  <span title="Hide all objects with confidence < threshold. O disable threshold.">
-    Confidence threshold
-  </span>
-  <div class="flex gap-4">
-    <span>0</span>
-    <Slider.Root
-      type="multiple"
-      bind:value={confidenceThreshold.value}
-      min={0}
-      max={1}
-      step={0.01}
-      onValueChange={() => { onConfidenceThresholdChange?.(); }}
-      class="relative flex w-full touch-none select-none items-center"
-    >
-      <span class="relative h-2 w-full grow overflow-hidden rounded-full bg-card">
-        <Slider.Range class="absolute h-full bg-primary" />
+<div class="flex flex-col gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
+  <div class="space-y-2">
+    <div class="flex items-center justify-between">
+      <span
+        class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground"
+        title="Hide all objects with confidence below threshold. 0 disables threshold."
+      >
+        Confidence threshold
       </span>
-      <Slider.Thumb
-        index={0}
-        class="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-      />
-    </Slider.Root>
-    <span>1</span>
+      <span class="text-xs tabular-nums text-muted-foreground">{confidenceValueLabel}</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] text-muted-foreground">0</span>
+      <Slider.Root
+        type="multiple"
+        bind:value={confidenceThreshold.value}
+        min={0}
+        max={1}
+        step={0.01}
+        onValueChange={() => {
+          onConfidenceThresholdChange?.();
+        }}
+        class="relative flex w-full touch-none select-none items-center"
+      >
+        <span class="relative h-2 w-full grow overflow-hidden rounded-full bg-background">
+          <Slider.Range class="absolute h-full bg-primary" />
+        </span>
+        <Slider.Thumb
+          index={0}
+          class="block h-4 w-4 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        />
+      </Slider.Root>
+      <span class="text-[10px] text-muted-foreground">1</span>
+    </div>
   </div>
+
   {#if filterSetup.isVideo}
-    <div class="flex gap-4 items-center">
+    <div class="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 px-2 py-1.5">
       <Checkbox.Root
         checked={interpolate.value}
-        onCheckedChange={(c) => { interpolate.value = c; }}
-        class="peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+        onCheckedChange={(c) => {
+          interpolate.value = c;
+        }}
+        class="peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
       >
         {#snippet children({ checked })}
           <span class="flex items-center justify-center text-current h-full w-full">
             {#if checked}
-              <Check class="h-3.5 w-3.5" strokeWidth={3} />
+              <Check class="h-3.5 w-3.5" />
             {/if}
           </span>
         {/snippet}
       </Checkbox.Root>
-      <span>Interpolate</span>
+      <span class="text-xs text-muted-foreground">Interpolate track visibility</span>
     </div>
   {/if}
+
   {#if !filterSetup.disableFilter}
-    <div class="flex items-center justify-between w-full">
-      <span class="font-medium">Filters</span>
-      <div class="flex gap-4 items-center">
-        <IconButton onclick={() => handleAddFilter("AND")} tooltipContent={"Add a AND condition"}>
-          AND
-        </IconButton>
-        <IconButton onclick={() => handleAddFilter("OR")} tooltipContent={"Add a OR condition"}>
-          OR
-        </IconButton>
-        <IconButton onclick={handleClearFilter} tooltipContent={"Clear filter"}>
-          <CircleSlash2 />
-        </IconButton>
+    <div class="space-y-2 border-t border-border/40 pt-3">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+          Advanced Rules
+        </span>
+
+        <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            onclick={() => handleAddFilter("AND")}
+            class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
+            title="Add an AND condition"
+          >
+            <Plus class="h-3 w-3" />
+            AND
+          </button>
+          <button
+            type="button"
+            onclick={() => handleAddFilter("OR")}
+            class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
+            title="Add an OR condition"
+          >
+            <Plus class="h-3 w-3" />
+            OR
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        {#each entityFilters.value as filter}
+          <FilterLine
+            {filter}
+            tableColumns={filterSetup.tableColumns}
+            fieldColumns={filterSetup.fieldColumns}
+          />
+        {/each}
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onclick={handleClearFilter}
+          class="h-8 inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          title="Clear all filter rules"
+        >
+          <Prohibit class="h-3.5 w-3.5" />
+          Clear
+        </button>
+
+        <button
+          type="button"
+          onclick={handleFilterOK}
+          class="h-8 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          title="Apply current filter rules"
+        >
+          Apply filters
+        </button>
       </div>
     </div>
-    {#each entityFilters.value as filter}
-      <FilterLine {filter} tableColumns={filterSetup.tableColumns} fieldColumns={filterSetup.fieldColumns} />
-    {/each}
-    <IconButton big onclick={() => handleFilterOK()} tooltipContent="Filter with conditions.">
-      Filter
-    </IconButton>
+  {:else}
+    <div class="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
+      No filterable fields are available for this item.
+    </div>
   {/if}
 </div>

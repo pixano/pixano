@@ -22,7 +22,7 @@ function listsAreEqual(list1: string[], list2: string[]): boolean {
   }
   const sortedList1 = list1.slice().sort();
   const sortedList2 = list2.slice().sort();
-  for (let i = 0; i < sortedList1.length; i++) {
+  for (let i = 0; i <sortedList1.length; i++) {
     if (sortedList1[i] !== sortedList2[i]) {
       return false;
     }

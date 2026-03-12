@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Settings } from "lucide-svelte";
+  import { Gear } from "phosphor-svelte";
 
   import { Popover } from "bits-ui";
 
@@ -33,7 +33,7 @@ License: CECILL-C
     class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/60 transition-all duration-200"
     title="Brush Settings"
   >
-    <Settings class="h-4.5 w-4.5" />
+    <Gear weight="regular" class="h-4.5 w-4.5" />
   </Popover.Trigger>
   <Popover.Content class="w-64 p-4 space-y-4">
     <div class="text-sm font-medium text-foreground mb-2">Brush Settings</div>

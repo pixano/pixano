@@ -320,7 +320,7 @@ export class PolygonToolFSM implements ToolFSM {
       return changed ? nextPoints : null;
     };
 
-    if (event.polygonIndex < state.closedPolygons.length) {
+    if (event.polygonIndex <state.closedPolygons.length) {
       const target = state.closedPolygons[event.polygonIndex];
       const updated = updatePoint(target);
       if (!updated) return null;
@@ -351,8 +351,8 @@ export class PolygonToolFSM implements ToolFSM {
     event: Extract<ToolEvent, { type: "polygonInsertVertex" }>,
   ): ToolState | null {
     const target = state.closedPolygons[event.polygonIndex];
-    if (!target || target.length < 2) return null;
-    if (event.afterIndex < 0 || event.afterIndex >= target.length) return null;
+    if (!target || target.length <2) return null;
+    if (event.afterIndex <0 || event.afterIndex >= target.length) return null;
 
     const newPoint: IndexedPoint2D = this.createPoint(
       {
@@ -376,7 +376,7 @@ export class PolygonToolFSM implements ToolFSM {
   private isCloseToFirstPoint(point: Point2D, first: Point2D): boolean {
     const dx = point.x - first.x;
     const dy = point.y - first.y;
-    return Math.sqrt(dx * dx + dy * dy) < PolygonToolFSM.CLOSE_DISTANCE;
+    return Math.sqrt(dx * dx + dy * dy) <PolygonToolFSM.CLOSE_DISTANCE;
   }
 
   private translatePolygonState(

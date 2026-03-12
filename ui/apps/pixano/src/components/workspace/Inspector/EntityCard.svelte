@@ -6,13 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ChevronRight, Eye, EyeOff, ListPlus, ListX, Pencil, Trash2 } from "lucide-svelte";
+  import { CaretRight, Eye, EyeClosed, ListPlus, ListDashes, Pencil, Trash } from "phosphor-svelte";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
     setEntityDisplayControl as setDisplayCtrl,
-    ensureEntityCardOpen,
     handleSetDisplayControl as handleSetDC,
     saveInputChange as saveInput,
   } from "./entityCardOps";
@@ -48,7 +47,6 @@ License: CECILL-C
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
-  import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
   interface Props {
@@ -57,14 +55,8 @@ License: CECILL-C
 
   let { entity }: Props = $props();
   const { manifest } = getWorkspaceContext();
-  let showIcons = $state(false);
-  let childsPanelOpen = $state(true);
-  let featuresPanelOpen = $state(true);
+  let detailsTab = $state<"properties" | "annotations">("properties");
 
-  const displayName = $derived.by(() => {
-    const displayFeat = getDefaultDisplayFeat(entity);
-    return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
-  });
   const color = $derived(colorScale.value[1](entity.id));
   const entityDisplayControl = $derived.by(() => {
     void entities.value;
@@ -116,15 +108,17 @@ License: CECILL-C
     }
     return res;
   };
-  const allowableChilds = $derived.by(() => {
-    if (!isExpanded) return [];
-    return entity.ui.childs?.filter((ann) => isAllowableChild(ann)) ?? [];
+
+  const totalAllowableChildCount = $derived.by(() => {
+    return entity.ui.childs?.filter((ann) => isAllowableChild(ann)).length ?? 0;
   });
+
   const allowedChilds = $derived.by(() => {
     if (!isExpanded) return [];
     if (currentFrameIndex.value === undefined) return [];
     return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   });
+
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
   const highlightState = $derived.by<"all" | "self" | "none">(() => {
     if (selectedToolType === ToolType.Pan) {
@@ -150,7 +144,7 @@ License: CECILL-C
   const hiddenTrack = $derived(entityHasTracklets(entity) ? entityDisplayControl.hidden : false);
 
   const features = $derived.by(() => {
-    if (!isExpanded || !featuresPanelOpen) return [];
+    if (!isExpanded) return [];
     const currentEntities = entities.value;
     const frameIndex = currentFrameIndex.value;
     void annotations.value;
@@ -213,10 +207,6 @@ License: CECILL-C
     setDisplayCtrl(entity.id, entityDisplayControl, updates, entities);
   };
 
-  const ensureCardOpen = () => {
-    ensureEntityCardOpen(entity.id, entityDisplayControl, entities);
-  };
-
   const handleSetDisplayControl = (
     displayControlProperty: keyof DisplayControl,
     new_value: boolean,
@@ -234,13 +224,23 @@ License: CECILL-C
     saveInput(value, propertyName, obj, entities, annotations);
   };
 
-  const onColoredDotClick = () => {
-    ensureCardOpen();
-    const newFrameIndex = highlightEntity(entity.id, highlightState === "self", false);
+  const focusEntity = () => {
+    const newFrameIndex = highlightEntity(entity.id, false, false);
     if (newFrameIndex != currentFrameIndex.value) {
       currentFrameIndex.value = newFrameIndex;
       updateView(currentFrameIndex.value);
     }
+  };
+
+  const onColoredDotClick = () => {
+    setEntityDisplayControl({ open: true });
+    focusEntity();
+  };
+
+  const onCardClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, input, select, textarea, [role='button']")) return;
+    onColoredDotClick();
   };
 
   const onTrackVisClick = () => {
@@ -252,7 +252,7 @@ License: CECILL-C
     if (child) {
       handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
     } else {
-      featuresPanelOpen = true;
+      detailsTab = "properties";
       if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entityDisplayControl.editing);
     }
@@ -266,166 +266,164 @@ License: CECILL-C
 
 <Card.Root
   class={cn(
-    "shadow-none rounded-xl border-border/50 overflow-hidden transition-all duration-200",
+    "shadow-none rounded-2xl border border-border/60 overflow-hidden transition-all duration-200 bg-card/90",
     highlightState === "self"
-      ? "ring-1 ring-primary/20 bg-primary/[0.03]"
-      : "hover:bg-accent/60 hover:border-border",
+      ? "ring-1 ring-primary/25 bg-primary/[0.04]"
+      : "hover:bg-accent/40 hover:border-border",
   )}
   style={`
-    border-left: ${highlightState === "self" ? `4px solid ${color}` : "4px solid transparent"};
+    border-left: ${highlightState === "self" ? `3px solid ${color}` : "3px solid transparent"};
   `}
-  onmouseenter={() => (showIcons = true)}
-  onmouseleave={() => (showIcons = entityDisplayControl.open ?? false)}
   id={`card-object-${entity.id}`}
+  onclick={onCardClick}
 >
-  <Card.Header class="p-2 py-1.5 flex-row space-y-0 items-center justify-between gap-2">
-    <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 gap-1.5">
-      <IconButton
-        onclick={() => handleSetDisplayControl("hidden", isVisible)}
-        tooltipContent={isVisible ? "Hide entity" : "Show entity"}
-        class="opacity-70 hover:opacity-100"
-      >
-        {#if isVisible}
-          <Eye class="h-4 w-4" />
-        {:else}
-          <EyeOff class="h-4 w-4" />
-        {/if}
-      </IconButton>
-      {#if thumbnails.length > 0}
-        {@const thumb = thumbnails[0]}
-        {@const innerSize = 44}
-        {@const cropW = thumb.coords[2] * thumb.baseImageDimensions.width}
-        {@const cropH = thumb.coords[3] * thumb.baseImageDimensions.height}
-        {@const cropAspect = cropW / cropH}
-        {@const fitW = cropAspect >= 1 ? innerSize : innerSize * cropAspect}
-        {@const fitH = cropAspect >= 1 ? innerSize / cropAspect : innerSize}
-        {@const imgScale = fitW / cropW}
-        {@const imgW = thumb.baseImageDimensions.width * imgScale}
-        {@const imgH = thumb.baseImageDimensions.height * imgScale}
-        {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
-        {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
-        <button
-          class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden
-                 transition-all duration-200 hover:ring-2 hover:ring-primary/30"
-          style="width: 48px; height: 48px; border: 2.5px solid {color};
-                 background: hsl(var(--muted) / 0.8);"
-          title="Highlight entity"
-          onclick={onColoredDotClick}
-        >
-          <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
-            <img
-              src="/{thumb.uri}"
-              alt=""
-              class="absolute max-w-none"
-              style="width: {imgW}px; height: {imgH}px;
-                     left: {offX}px; top: {offY}px;"
-            />
-          </div>
-        </button>
-      {:else}
-        <button
-          class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-card shadow-sm
-                 transition-transform hover:scale-125"
-          style="background:{color}"
-          title="Highlight entity"
-          onclick={onColoredDotClick}
-        ></button>
-      {/if}
-      <div class="flex flex-col min-w-0 overflow-hidden">
-        <span
-          class={cn("truncate text-[13px] font-semibold leading-tight transition-colors", {
-            "text-foreground": highlightState !== "none",
-            "text-muted-foreground":
-              highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
-          })}
-          title="{entity.table_info.base_schema} ({entity.id})"
-        >
-          {displayName}
-        </span>
-        <span
-          class="text-[10px] text-muted-foreground uppercase tracking-tight font-medium opacity-70"
-        >
-          {entity.table_info.base_schema}
-        </span>
-      </div>
-    </div>
-    <div class="flex-shrink-0 flex items-center justify-end gap-0.5">
-      <div
-        class={cn(
-          "flex items-center gap-0.5 transition-opacity duration-200",
-          showIcons || entityDisplayControl.editing ? "opacity-100" : "opacity-0",
-        )}
-      >
-        {#if showIcons || entityDisplayControl.editing}
-          <IconButton
-            tooltipContent="Delete entity"
-            redconfirm
-            onclick={() => deleteEntity(entity)}
-            class="text-muted-foreground hover:text-destructive"
+  <Card.Header class="p-2.5 flex-col space-y-2">
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 gap-2">
+        {#if thumbnails.length > 0}
+          {@const thumb = thumbnails[0]}
+          {@const innerSize = 36}
+          {@const cropW = thumb.coords[2] * thumb.baseImageDimensions.width}
+          {@const cropH = thumb.coords[3] * thumb.baseImageDimensions.height}
+          {@const cropAspect = cropW / cropH}
+          {@const fitW = cropAspect >= 1 ? innerSize : innerSize * cropAspect}
+          {@const fitH = cropAspect >= 1 ? innerSize / cropAspect : innerSize}
+          {@const imgScale = fitW / cropW}
+          {@const imgW = thumb.baseImageDimensions.width * imgScale}
+          {@const imgH = thumb.baseImageDimensions.height * imgScale}
+          {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
+          {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
+          <button
+            type="button"
+            class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+            style="width: 40px; height: 40px; border: 2px solid {color}; background: hsl(var(--muted) / 0.8);"
+            title="Highlight entity"
+            onclick={onColoredDotClick}
           >
-            <Trash2 class="h-4 w-4" />
-          </IconButton>
+            <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
+              <img
+                src="/{thumb.uri}"
+                alt=""
+                class="absolute max-w-none"
+                style="width: {imgW}px; height: {imgH}px; left: {offX}px; top: {offY}px;"
+              />
+            </div>
+          </button>
+        {:else}
+          <button
+            type="button"
+            class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
+            style="background:{color}"
+            title="Highlight entity"
+            onclick={onColoredDotClick}
+          ></button>
         {/if}
-        {#if entityHasTracklets(entity) && (showIcons || entityDisplayControl.editing || hiddenTrack)}
+
+        <button type="button" class="min-w-0 text-left" onclick={onColoredDotClick} title="Highlight entity">
+          <span
+            class={cn("block truncate text-[13px] font-semibold leading-tight transition-colors", {
+              "text-foreground": highlightState !== "none",
+              "text-muted-foreground":
+                highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
+            })}
+            title={entity.id}
+          >
+            {entity.id}
+          </span>
+        </button>
+      </div>
+
+      <div class="flex-shrink-0 flex items-center justify-end gap-1">
+        <IconButton
+          onclick={() => handleSetDisplayControl("hidden", isVisible)}
+          tooltipContent={isVisible ? "Hide entity" : "Show entity"}
+          class="h-7 w-7 rounded-md"
+        >
+          {#if isVisible}
+            <Eye class="h-3.5 w-3.5" />
+          {:else}
+            <EyeClosed weight="regular" class="h-3.5 w-3.5" />
+          {/if}
+        </IconButton>
+
+        {#if entityHasTracklets(entity)}
           <IconButton
             tooltipContent={hiddenTrack ? "Show track" : "Hide track"}
             onclick={onTrackVisClick}
-            class="text-muted-foreground"
+            class="h-7 w-7 rounded-md"
           >
-            {#if hiddenTrack}<ListPlus class="h-4 w-4" />{:else}<ListX class="h-4 w-4" />{/if}
+            {#if hiddenTrack}<ListPlus class="h-3.5 w-3.5" />{:else}<ListDashes weight="regular" class="h-3.5 w-3.5" />{/if}
           </IconButton>
         {/if}
+
+        {#if selectedTool.value?.type !== ToolType.Fusion}
+          <IconButton
+            tooltipContent={entityDisplayControl.editing ? "Stop editing" : "Edit properties"}
+            selected={entityDisplayControl.editing}
+            onclick={() => onEditIconClick()}
+            class="h-7 w-7 rounded-md"
+          >
+            <Pencil class="h-3.5 w-3.5" />
+          </IconButton>
+        {/if}
+
+        <IconButton
+          tooltipContent="Delete entity"
+          redconfirm
+          onclick={() => deleteEntity(entity)}
+          class="h-7 w-7 rounded-md text-muted-foreground hover:text-destructive"
+        >
+          <Trash weight="regular" class="h-3.5 w-3.5" />
+        </IconButton>
+
+        <IconButton
+          onclick={toggleCardOpen}
+          tooltipContent={entityDisplayControl.open ? "Collapse" : "Expand"}
+          class="h-7 w-7 rounded-md"
+        >
+          <CaretRight
+            weight="regular"
+            class={cn("h-3.5 w-3.5 transition-transform duration-200", {
+              "rotate-90": entityDisplayControl.open,
+            })}
+          />
+        </IconButton>
       </div>
-      <IconButton
-        onclick={toggleCardOpen}
-        tooltipContent={entityDisplayControl.open ? "Hide features" : "Show features"}
-        class="text-muted-foreground"
-      >
-        <ChevronRight
-          class={cn("transition-transform duration-200", {
-            "rotate-90": entityDisplayControl.open,
-          })}
-          strokeWidth={2}
-        />
-      </IconButton>
     </div>
   </Card.Header>
+
   {#if entityDisplayControl.open}
-    <Card.Content class="p-3 bg-muted/40 border-t border-border/40 space-y-4">
-      <!-- Features Section -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between py-1 border-b border-border/30">
-          <h4 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
-            Properties
-          </h4>
-          <div class="flex items-center gap-1">
-            {#if selectedTool.value?.type !== ToolType.Fusion}
-              <IconButton
-                tooltipContent="Edit properties"
-                selected={entityDisplayControl.editing}
-                onclick={() => onEditIconClick()}
-                class="h-6 w-6"
-              >
-                <Pencil class="h-3.5 w-3.5" />
-              </IconButton>
-            {/if}
-            <IconButton
-              onclick={() => {
-                featuresPanelOpen = !featuresPanelOpen;
-                setEntityDisplayControl({ editing: false });
-              }}
-              tooltipContent={featuresPanelOpen ? "Collapse" : "Expand"}
-              class="h-6 w-6"
-            >
-              <ChevronRight
-                class={cn("h-4 w-4 transition-transform duration-200", {
-                  "rotate-90": featuresPanelOpen,
-                })}
-              />
-            </IconButton>
-          </div>
-        </div>
-        {#if featuresPanelOpen}
+    <Card.Content class="p-3 bg-muted/35 border-t border-border/40 space-y-3">
+      <div class="inline-flex rounded-lg border border-border/50 bg-background/70 p-0.5">
+        <button
+          type="button"
+          onclick={() => (detailsTab = "properties")}
+          class={cn(
+            "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
+            detailsTab === "properties"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Properties
+        </button>
+        <button
+          type="button"
+          onclick={() => (detailsTab = "annotations")}
+          class={cn(
+            "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
+            detailsTab === "annotations"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Annotations ({totalAllowableChildCount})
+        </button>
+      </div>
+
+      {#if detailsTab === "properties"}
+        <div class="space-y-2">
+          <p class="text-[11px] text-muted-foreground">Entity metadata and editable features</p>
           <div class="pl-1 pt-1">
             <UpdateFeatureInputs
               featureClass="objects"
@@ -434,49 +432,32 @@ License: CECILL-C
               {saveInputChange}
             />
           </div>
-        {/if}
-      </div>
-
-      <!-- Objects Section -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between py-1 border-b border-border/30">
-          <h4 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
-            Annotations
-            <span class="ml-1.5 tabular-nums opacity-60">
-              ({allowableChilds.length})
-            </span>
-          </h4>
-          <IconButton
-            onclick={() => (childsPanelOpen = !childsPanelOpen)}
-            tooltipContent={childsPanelOpen ? "Collapse" : "Expand"}
-            class="h-6 w-6"
-          >
-            <ChevronRight
-              class={cn("h-4 w-4 transition-transform duration-200", {
-                "rotate-90": childsPanelOpen,
-              })}
-            />
-          </IconButton>
         </div>
+      {:else}
+        <div class="space-y-2">
+          {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+            <p class="text-[11px] text-center text-muted-foreground/80 py-1 bg-muted/30 rounded-md">
+              {allowedChilds.length > 0 ? allowedChilds.length : "No"}
+              annotation{allowedChilds.length === 1 ? "" : "s"}
+              on frame {currentFrameIndex.value}
+            </p>
+          {/if}
 
-        {#if childsPanelOpen}
-          <div class="space-y-1 pl-1">
-            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-              <p
-                class="text-[11px] text-center text-muted-foreground/70 italic py-1 bg-muted/20 rounded"
-              >
-                {allowedChilds.length > 0 ? allowedChilds.length : "No"}
-                annotation{allowedChilds.length === 1 ? "" : "s"}
-                on frame {currentFrameIndex.value}
-              </p>
-            {/if}
-            {#each allowedChilds as child}
-              <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-            {/each}
-          </div>
-        {/if}
-        <TextSpansContent annotations={entity.ui.childs} />
-      </div>
+          {#if allowedChilds.length === 0}
+            <div class="rounded-md border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
+              No annotations currently visible for this entity.
+            </div>
+          {:else}
+            <div class="space-y-1">
+              {#each allowedChilds as child}
+                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
+              {/each}
+            </div>
+          {/if}
+
+          <TextSpansContent annotations={entity.ui.childs} />
+        </div>
+      {/if}
     </Card.Content>
   {/if}
 </Card.Root>

@@ -70,7 +70,7 @@ License: CECILL-C
       radius={(j === 0 ? 6 : 4) / zoomFactor}
       fill={j === 0 ? FIRST_VERTEX_COLOR : OTHER_VERTEX_COLOR}
       stroke="white"
-      strokeWidth={1}
+      
       strokeScaleEnabled={false}
       id={`dot-${polygonId}-${i}-${point.id}`}
       draggable={true}

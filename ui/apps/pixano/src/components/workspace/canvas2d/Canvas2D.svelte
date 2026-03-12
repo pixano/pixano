@@ -44,6 +44,7 @@ License: CECILL-C
     createInternalToolBridge,
     createToolFSMForSelection,
   } from "$lib/tools/canvasBridgeRuntime";
+  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     brushDrawTool,
     getFallbackCanvasTool,
@@ -768,6 +769,12 @@ License: CECILL-C
   function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
+
+    if (selectedTool?.type === ToolType.Pan && event.button === 0) {
+      highlightedEntity.value = null;
+      return;
+    }
+
     if (selectedTool?.type === ToolType.Pan && event.button !== 1) {
       return;
     }
@@ -894,7 +901,7 @@ License: CECILL-C
     beginViewportInteraction();
 
     // Get zoom direction
-    let direction = event.deltaY < 0 ? 1 : -1;
+    let direction = event.deltaY <0 ? 1 : -1;
 
     // Revert direction for trackpad
     if (event.ctrlKey) direction = -direction;

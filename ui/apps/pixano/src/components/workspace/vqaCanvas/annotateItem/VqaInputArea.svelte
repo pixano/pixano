@@ -5,15 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import {
-    CheckCircle2,
-    HelpCircle,
-    ListOrdered,
-    MessageSquare,
-    Reply,
-    Send,
-    Sparkles,
-  } from "lucide-svelte";
+  import { CheckCircle, Question, ListNumbers, Chat, ArrowBendUpLeft, PaperPlaneRight, Sparkle } from "phosphor-svelte";
 
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
   import { AutoResizeTextarea, IconButton, LoadingModal } from "$lib/ui";
@@ -55,9 +47,9 @@ License: CECILL-C
   let isAnswering = $derived(!!pendingQuestion);
 
   const allowedTypes = [
-    { type: QuestionTypeEnum.OPEN, label: "Open Question", icon: MessageSquare },
-    { type: QuestionTypeEnum.SINGLE_CHOICE, label: "Single Choice", icon: CheckCircle2 },
-    { type: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple Choice", icon: ListOrdered },
+    { type: QuestionTypeEnum.OPEN, label: "Open Question", icon: Chat },
+    { type: QuestionTypeEnum.SINGLE_CHOICE, label: "Single Choice", icon: CheckCircle },
+    { type: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple Choice", icon: ListNumbers },
   ];
 
   const parseQuestionInput = (
@@ -157,12 +149,12 @@ License: CECILL-C
             } else if (labelFormat === "alpha_lower") {
               if (part.length === 1) {
                 const code = part.toLowerCase().charCodeAt(0) - 97;
-                if (code >= 0 && code < choices.length) foundIndex = code;
+                if (code >= 0 && code <choices.length) foundIndex = code;
               }
             } else if (labelFormat === "alpha_upper" || labelFormat === undefined) {
               if (part.length === 1) {
                 const code = part.toUpperCase().charCodeAt(0) - 65;
-                if (code >= 0 && code < choices.length) foundIndex = code;
+                if (code >= 0 && code <choices.length) foundIndex = code;
               }
             }
 
@@ -284,9 +276,9 @@ License: CECILL-C
           : 'border-primary/10'}"
       >
         {#if isAnswering}
-          <Reply size={10} /> Answering Question #{(pendingQuestion?.data.number ?? 0) + 1}
+          <ArrowBendUpLeft weight="regular" size={14} /> Answering Question #{(pendingQuestion?.data.number ?? 0) + 1}
         {:else}
-          <MessageSquare size={10} /> New Question
+          <Chat weight="regular" size={14} /> New Question
         {/if}
       </div>
     </div>
@@ -330,7 +322,7 @@ License: CECILL-C
         tooltipContent={isAnswering ? "Generate answer with VLM" : "Generate question from VLM"}
         class="h-10 w-10 bg-muted text-muted-foreground hover:bg-accent border border-border"
       >
-        <Sparkles size={18} />
+        <Sparkle weight="regular" size={22} />
       </IconButton>
 
       <IconButton
@@ -341,13 +333,13 @@ License: CECILL-C
           ? 'bg-warning hover:bg-warning/90'
           : 'bg-primary hover:bg-primary/90'} text-primary-foreground shadow-md"
       >
-        <Send size={18} />
+        <PaperPlaneRight weight="regular" size={22} />
       </IconButton>
     </div>
   </div>
 
   <p class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
-    <HelpCircle size={10} />
+    <Question weight="regular" size={14} />
     {#if isAnswering}
       Complete this question by providing an answer manually or using <strong>VLM</strong>
       .

@@ -13,47 +13,118 @@ License: CECILL-C
   import { BaseSchema, BBox, Entity, entityHasTracklets, type AnnotationThumbnail } from "$lib/ui";
 
   import { ToolType } from "$lib/tools";
-  import { defineAnnotationThumbnail, getTopEntity } from "$lib/utils/entityLookupUtils";
+  import { defineAnnotationThumbnail, getTopEntity, sortEntities } from "$lib/utils/entityLookupUtils";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
   import {
     annotations,
     confidenceThreshold,
     entities,
+    entityFilters,
     highlightedEntity,
     itemMetas,
     mediaViews,
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import { sortEntities } from "$lib/utils/entityLookupUtils";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import EntityCard from "./EntityCard.svelte";
   import EntitiesSection from "./EntitiesSection.svelte";
+  import {
+    buildTopEntityIdByEntityId,
+    buildSearchQueryChips,
+    buildTopEntitySearchIndex,
+    isSearchQueryEmpty,
+    matchesParsedSearchQuery,
+    parseSearchQuery,
+  } from "./entitySearch";
 
   let filteredEntities = $state<Entity[]>([]);
-  let hasAppliedFilter = $state(false);
+  let hasAppliedAdvancedFilter = $state(false);
+  let searchQuery = $state("");
+  let wasVisibilityFilterActive = $state(false);
 
   const globalSourceLabel = { name: "All", kind: "global" };
 
+  const parsedSearchQuery = $derived.by(() => parseSearchQuery(searchQuery));
+  const hasSearchQuery = $derived.by(() => !isSearchQueryEmpty(parsedSearchQuery));
+  const searchQueryChips = $derived.by(() => buildSearchQueryChips(parsedSearchQuery));
   const currentEntities = $derived.by(() => (Array.isArray(entities.value) ? entities.value : []));
-  const visibleEntities = $derived.by(() =>
-    hasAppliedFilter ? filteredEntities : currentEntities,
-  );
-  const allTopEntities = $derived.by(() =>
+  const topEntityIdByEntityId = $derived.by(() => buildTopEntityIdByEntityId(currentEntities));
+  const topEntities = $derived.by(() =>
     currentEntities
-      .filter(
-        (ent) => !ent.is_conversation && ent.data.parent_id === "" && visibleEntities.includes(ent),
-      )
+      .filter((ent) => !ent.is_conversation && ent.data.parent_id === "")
       .sort(sortEntities),
   );
+  const allTopEntityIds = $derived.by(() => new Set(topEntities.map((ent) => ent.id)));
+  const advancedFilteredTopEntityIds = $derived.by(() => {
+    if (!hasAppliedAdvancedFilter) return new Set(allTopEntityIds);
+    const nextTopEntityIds = new Set<string>();
+    for (const entity of filteredEntities) {
+      const topEntityId = topEntityIdByEntityId.get(entity.id);
+      if (topEntityId && allTopEntityIds.has(topEntityId)) {
+        nextTopEntityIds.add(topEntityId);
+      }
+    }
+    return nextTopEntityIds;
+  });
+  const topEntitySearchIndex = $derived.by(() =>
+    buildTopEntitySearchIndex(currentEntities, topEntityIdByEntityId),
+  );
+  const searchMatchedTopEntityIds = $derived.by(() => {
+    if (!hasSearchQuery) return new Set(allTopEntityIds);
+    const nextTopEntityIds = new Set<string>();
+    for (const topEntityId of allTopEntityIds) {
+      const searchCorpus = topEntitySearchIndex.corpusByTopEntityId.get(topEntityId) ?? "";
+      const fieldValues = topEntitySearchIndex.fieldValuesByTopEntityId.get(topEntityId) ?? new Map();
+      if (matchesParsedSearchQuery(searchCorpus, fieldValues, parsedSearchQuery)) {
+        nextTopEntityIds.add(topEntityId);
+      }
+    }
+    return nextTopEntityIds;
+  });
+  const visibleTopEntityIds = $derived.by(() => {
+    const nextTopEntityIds = new Set<string>();
+    for (const topEntityId of advancedFilteredTopEntityIds) {
+      if (searchMatchedTopEntityIds.has(topEntityId)) {
+        nextTopEntityIds.add(topEntityId);
+      }
+    }
+    return nextTopEntityIds;
+  });
+  const visibleEntities = $derived.by(() =>
+    currentEntities.filter((entity) => {
+      const topEntityId = topEntityIdByEntityId.get(entity.id);
+      return topEntityId !== undefined && visibleTopEntityIds.has(topEntityId);
+    }),
+  );
+  const allTopEntities = $derived.by(() =>
+    topEntities.filter((ent) => visibleTopEntityIds.has(ent.id)),
+  );
+  const visibleTopEntityIdsSignature = $derived.by(() =>
+    Array.from(visibleTopEntityIds).sort().join("|"),
+  );
   const countText = $derived.by(() => {
-    const unFilteredCount = currentEntities.filter(
-      (ent) => !ent.is_conversation && ent.data.parent_id === "",
-    ).length;
+    const unFilteredCount = topEntities.length;
     const nextTopCount = allTopEntities.length;
     return unFilteredCount !== nextTopCount
       ? `${nextTopCount} / ${unFilteredCount}`
       : `${nextTopCount}`;
+  });
+
+  const activeFilters = $derived.by(() => {
+    const nextActiveFilters: string[] = [];
+    if (hasSearchQuery) {
+      nextActiveFilters.push(...searchQueryChips);
+    }
+    if (hasAppliedAdvancedFilter) {
+      const ruleCount = entityFilters.value.length;
+      nextActiveFilters.push(ruleCount > 0 ? `Rule Builder (${ruleCount})` : "Rule Builder");
+    }
+    const confidenceLimit = confidenceThreshold.value[0] ?? 0;
+    if (confidenceLimit > 0) {
+      nextActiveFilters.push(`Confidence >= ${confidenceLimit.toFixed(2)}`);
+    }
+    return nextActiveFilters;
   });
 
   function applyAnnotationsVisibility(): void {
@@ -62,6 +133,7 @@ License: CECILL-C
     untrack(() => {
       const confidenceLimit = confidenceThreshold.value[0] ?? 0;
       const visibleEntityIds = new Set(visibleEntities.map((ent) => ent.id));
+      const visibleTopIds = visibleTopEntityIds;
 
       // for video: show/hide track in Video inspector depending on filter
       const hasTrackChange = currentEntities.some(
@@ -86,7 +158,7 @@ License: CECILL-C
         if (ann.is_type(BaseSchema.Tracklet)) return false;
         try {
           const topEntity = getTopEntity(ann);
-          const isEntityVisible = visibleEntityIds.has(topEntity.id);
+          const isEntityVisible = visibleTopIds.has(topEntity.id);
           const isLowConfidenceBBox =
             confidenceLimit > 0 &&
             ann.is_type(BaseSchema.BBox) &&
@@ -105,7 +177,7 @@ License: CECILL-C
           if (ann.is_type(BaseSchema.Tracklet)) return ann;
           try {
             const topEntity = getTopEntity(ann);
-            const isEntityVisible = visibleEntityIds.has(topEntity.id);
+            const isEntityVisible = visibleTopIds.has(topEntity.id);
             const isLowConfidenceBBox =
               confidenceLimit > 0 &&
               ann.is_type(BaseSchema.BBox) &&
@@ -191,15 +263,29 @@ License: CECILL-C
     return nextThumbnails;
   });
   const selectedEntitiesId = $derived.by(() => Object.keys(thumbnailsByEntityId));
+  const selectedPreviewEntityId = $derived.by(() => selectedEntitiesId[0] ?? null);
 
   function handleFilter(filteredEnts: Entity[]): void {
     const shouldApplyFilter = !hasSameEntitySelection(filteredEnts, currentEntities);
-    if (hasAppliedFilter === shouldApplyFilter && hasSameEntitySelection(filteredEnts, filteredEntities)) {
+    if (
+      hasAppliedAdvancedFilter === shouldApplyFilter &&
+      hasSameEntitySelection(filteredEnts, filteredEntities)
+    ) {
       return;
     }
-    hasAppliedFilter = shouldApplyFilter;
+    hasAppliedAdvancedFilter = shouldApplyFilter;
     filteredEntities = filteredEnts;
     applyAnnotationsVisibility();
+  }
+
+  function handleSearchQueryChange(value: string): void {
+    if (searchQuery === value) return;
+    searchQuery = value;
+  }
+
+  function handleClearSearch(): void {
+    if (!searchQuery) return;
+    searchQuery = "";
   }
 
   function handleConfidenceThresholdChange(): void {
@@ -207,112 +293,101 @@ License: CECILL-C
   }
 
   $effect(() => {
+    void visibleTopEntityIdsSignature;
     const confidenceLimit = confidenceThreshold.value[0] ?? 0;
-    if (hasAppliedFilter || confidenceLimit > 0) {
+    const hasVisibilityFilterActive =
+      hasAppliedAdvancedFilter || hasSearchQuery || confidenceLimit > 0;
+    if (hasVisibilityFilterActive || wasVisibilityFilterActive) {
       applyAnnotationsVisibility();
     }
+    wasVisibilityFilterActive = hasVisibilityFilterActive;
   });
 </script>
 
 <div class="flex flex-col h-full bg-card overflow-hidden">
-  <div class="shrink-0 p-3 pb-0 space-y-4">
+  <div class="shrink-0 p-3 pb-2 space-y-3 border-b border-border/40 bg-card/95">
     <PreAnnotation />
 
-    {#if !preAnnotationIsActive.value}
-      <!-- Preview Area -->
-      <div class="space-y-2">
-        <div class="flex items-center justify-between px-1">
-          <h3 class="text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground/80">
-            Object Preview
-          </h3>
-        </div>
-        <div
-          class="group relative flex h-[180px] items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/20 shadow-inner transition-all duration-300 hover:border-primary/20"
-        >
-          {#if selectedEntitiesId.length > 0}
-            {#each selectedEntitiesId as selectedEntity}
-              {#if thumbnailsByEntityId[selectedEntity]}
-                {@const selectedThumbnail = thumbnailsByEntityId[selectedEntity]}
-                {#key selectedThumbnail.coords?.[0]}
-                  <div class="animate-in fade-in zoom-in-95 duration-300">
-                    <Thumbnail
-                      imageDimension={selectedThumbnail.baseImageDimensions}
-                      coords={selectedThumbnail.coords}
-                      imageUrl={`/${selectedThumbnail.uri}`}
-                      minSide={150}
-                      maxHeight={160}
-                      maxWidth={240}
-                    />
-                  </div>
-                {/key}
-              {/if}
-            {/each}
-          {:else}
-            <div class="flex flex-col items-center gap-2 text-center px-6">
-              <div class="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="text-muted-foreground/40"
-                >
-                  <path
-                    d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-                  ></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <circle cx="10" cy="13" r="2"></circle>
-                  <path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"></path>
-                </svg>
-              </div>
-              <p class="text-xs font-medium text-muted-foreground/60">
-                Select an object to see its preview
-              </p>
+    <!-- Preview Area -->
+    <div>
+      <div
+        class="group relative flex h-[228px] items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted/20 shadow-inner transition-all duration-300 hover:border-primary/20"
+      >
+        {#if selectedPreviewEntityId && thumbnailsByEntityId[selectedPreviewEntityId]}
+          {@const selectedThumbnail = thumbnailsByEntityId[selectedPreviewEntityId]}
+          {#key selectedThumbnail.coords?.[0]}
+            <div class="animate-in fade-in zoom-in-95 duration-300">
+              <Thumbnail
+                imageDimension={selectedThumbnail.baseImageDimensions}
+                coords={selectedThumbnail.coords}
+                imageUrl={`/${selectedThumbnail.uri}`}
+                minSide={180}
+                maxHeight={200}
+                maxWidth={300}
+              />
             </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </div>
-
-  <!-- Scrollable List Area -->
-  <div class="flex-1 overflow-y-auto custom-scrollbar">
-    <div class="p-3 pt-2">
-      {#if !preAnnotationIsActive.value}
-        <EntitiesSection
-          sourceLabel={globalSourceLabel}
-          {countText}
-          onFilter={handleFilter}
-          onConfidenceThresholdChange={handleConfidenceThresholdChange}
-        >
-          <div class="space-y-2 mt-2">
-            {#each allTopEntities as entity (entity.id)}
-              <EntityCard {entity} />
-            {/each}
+          {/key}
+        {:else}
+          <div class="flex flex-col items-center gap-2 text-center px-8">
+            <div class="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-muted-foreground/40"
+              >
+                <path
+                  d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <circle cx="10" cy="13" r="2"></circle>
+                <path d="m20 17-1.09-1.09a2 2 0 0 0-2.82 0L10 22"></path>
+              </svg>
+            </div>
+            <p class="text-xs font-medium text-muted-foreground/60">
+              Select an entity to lock its preview here
+            </p>
           </div>
-        </EntitiesSection>
-      {/if}
+        {/if}
+      </div>
     </div>
   </div>
-</div>
 
-<style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.3);
-  }
-</style>
+  <div class="flex-1 min-h-0 overflow-hidden p-3 pt-2">
+    <EntitiesSection
+      sourceLabel={globalSourceLabel}
+      {countText}
+      searchQuery={searchQuery}
+      onSearchQueryChange={handleSearchQueryChange}
+      onClearSearch={handleClearSearch}
+      {activeFilters}
+      onFilter={handleFilter}
+      onConfidenceThresholdChange={handleConfidenceThresholdChange}
+    >
+      {#if preAnnotationIsActive.value}
+        <div class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+          Entity exploration is temporarily unavailable while pre-annotation is active.
+        </div>
+      {:else if allTopEntities.length === 0}
+        <div class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center space-y-1">
+          <p class="text-sm font-medium">No entities match the current query</p>
+          <p class="text-xs text-muted-foreground">
+            Adjust search text, confidence threshold, or advanced rules.
+          </p>
+        </div>
+      {:else}
+        <div class="space-y-2">
+          {#each allTopEntities as entity (entity.id)}
+            <EntityCard {entity} />
+          {/each}
+        </div>
+      {/if}
+    </EntitiesSection>
+  </div>
+</div>

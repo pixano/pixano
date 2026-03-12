@@ -43,9 +43,7 @@ export function getEffectiveHighlight(
   ) {
     return currentHighlight;
   }
-  return getTopEntityId(annotation, entitiesById) === focusedEntityId
-    ? "self"
-    : currentHighlight === "none"
-      ? "none"
-      : "all";
+  // In Pan mode, a focused entity should visually stand out in context:
+  // selected entity = self, every other entity = neutral (none).
+  return getTopEntityId(annotation, entitiesById) === focusedEntityId ? "self" : "none";
 }

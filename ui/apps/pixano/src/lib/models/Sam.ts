@@ -79,7 +79,7 @@ export class SAM implements InteractiveImageSegmenter {
     const pointLabels = new Float32Array(n + num_additionalPoints);
 
     // Add clicks and scale to what SAM expects
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i <n; i++) {
       pointCoords[2 * i] = clicks[i].x * scale;
       pointCoords[2 * i + 1] = clicks[i].y * scale;
       pointLabels[i] = clicks[i].label;

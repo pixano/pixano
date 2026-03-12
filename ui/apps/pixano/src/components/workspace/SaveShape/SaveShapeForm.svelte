@@ -170,7 +170,6 @@ License: CECILL-C
           lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
         }
       }
-
       // Multi-keyframe tracking: create BBox annotations and tracklets per segment
       const trackingKeyframeBBoxes: BBox[] = [];
       if (isMultiKeyframe && newAnnotation.is_type(BaseSchema.BBox)) {

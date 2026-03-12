@@ -21,11 +21,11 @@ export const getImageIndexFromMouseMove = (
 ) => {
   const parentBounding = node.parentElement?.getBoundingClientRect();
   let left = event.clientX - (parentBounding?.left || 0);
-  if (left < 0) left = 0;
+  if (left <0) left = 0;
   const max = node.parentElement?.offsetWidth || left;
   if (left > max) left = max;
   const index = Math.round((left / max) * length) - 1;
-  return index < 0 ? 0 : index;
+  return index <0 ? 0 : index;
 };
 
 export const sortByFrameIndex = (a: Annotation, b: Annotation) => {

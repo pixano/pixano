@@ -142,7 +142,7 @@ export const highlightEntity = (
   if (
     !isHighlighted &&
     trackStart <= trackEnd &&
-    (currentFrameIndex.value < trackStart || currentFrameIndex.value > trackEnd)
+    (currentFrameIndex.value <trackStart || currentFrameIndex.value > trackEnd)
   ) {
     return trackStart;
   } else {

@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { untrack } from "svelte";
-  import { Settings } from "lucide-svelte";
+  import { Gear } from "phosphor-svelte";
 
   import { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
   import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
@@ -137,11 +137,11 @@ License: CECILL-C
       disabled={completionModels.length === 0}
       onclick={() => (showPromptModal = !showPromptModal)}
     >
-      <Settings />
+      <Gear weight="regular" />
     </IconButton>
   </div>
 {/if}
 
 {#if showPromptModal}
-  <ConfigurePromptModal {vqaSectionWidth} onCancelPrompt={() => (showPromptModal = false)} />
+  <ConfigurePromptModal {vqaSectionWidth} {completionModels} onCancelPrompt={() => (showPromptModal = false)} />
 {/if}

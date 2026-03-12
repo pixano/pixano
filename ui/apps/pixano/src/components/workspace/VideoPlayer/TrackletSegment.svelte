@@ -130,12 +130,12 @@ License: CECILL-C
 
   let canAddKeyFrame =
     $derived(currentFrameIndex.value > tracklet.data.start_frame &&
-    currentFrameIndex.value < tracklet.data.end_frame &&
+    currentFrameIndex.value <tracklet.data.end_frame &&
     !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
 
   let canSplit =
     $derived(currentFrameIndex.value >= tracklet.data.start_frame &&
-    currentFrameIndex.value < tracklet.data.end_frame);
+    currentFrameIndex.value <tracklet.data.end_frame);
 
   const getNeighborTracklet = (
     allAnnotations: Annotation[],
@@ -152,7 +152,7 @@ License: CECILL-C
         t.data.view_name === tracklet.data.view_name &&
         t.data.entity_id === entityId &&
         (isLeft
-          ? t.data.end_frame < refCompareTimestep
+          ? t.data.end_frame <refCompareTimestep
           : t.data.start_frame > refCompareTimestep)
       );
     });
@@ -170,7 +170,7 @@ License: CECILL-C
         ? currVal > bestVal
           ? curr
           : best
-        : currVal < bestVal
+        : currVal <bestVal
           ? curr
           : best;
     });
@@ -179,7 +179,7 @@ License: CECILL-C
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
     if (
-      (prevFrameIndex !== 0 && newFrameIndex < prevFrameIndex + 1) ||
+      (prevFrameIndex !== 0 && newFrameIndex <prevFrameIndex + 1) ||
       (nextFrameIndex !== lastFrameIndex.value && newFrameIndex > nextFrameIndex - 1)
     )
       return false;

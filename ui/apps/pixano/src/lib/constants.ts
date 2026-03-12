@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { Database, Home } from "lucide-svelte";
+import { Database, House } from "phosphor-svelte";
 
 // --- Dataset table defaults ---
 
@@ -18,7 +18,7 @@ export const COUNTS_COLUMNS_PREFIX = "#";
 export const navItems = [
   {
     name: "Dashboard",
-    Icon: Home,
+    Icon: House,
   },
   {
     name: "Dataset",

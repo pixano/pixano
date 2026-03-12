@@ -166,7 +166,7 @@ export const mapKeypointsForDisplay = (
   const displayControl = { ...keypoints.ui.displayControl, highlighted: effectiveHighlight };
   const vertices: Array<{ x: number; y: number }> = [];
   const vertexMetadata: KeypointAnnotation["vertexMetadata"] = [];
-  for (let i = 0; i < keypoints.data.coords.length / 2; i++) {
+  for (let i = 0; i <keypoints.data.coords.length / 2; i++) {
     const x = keypoints.data.coords[i * 2] * imageWidth;
     const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
     vertices.push({ x, y });

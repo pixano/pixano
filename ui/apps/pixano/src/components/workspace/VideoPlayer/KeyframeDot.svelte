@@ -105,7 +105,7 @@ License: CECILL-C
             const distance = event.clientX - startPosition;
             const raise = distance / startOneFrameInPixel;
             newFrameIndex = Math.round(startFrameIndex + raise);
-            if (newFrameIndex < 0 || newFrameIndex > lastFrameIndex.value) return;
+            if (newFrameIndex <0 || newFrameIndex > lastFrameIndex.value) return;
             const canContinue = canContinueDragging(newFrameIndex, itemFrameIndex);
             if (canContinue) {
               left = getKeyItemLeftPosition(newFrameIndex);
@@ -120,7 +120,7 @@ License: CECILL-C
         () => {
           moving = false;
           if (newFrameIndex !== undefined) {
-            if (newFrameIndex < 0) newFrameIndex = 0;
+            if (newFrameIndex <0) newFrameIndex = 0;
             if (newFrameIndex > lastFrameIndex.value) newFrameIndex = lastFrameIndex.value;
             updateTrackletWidth(newFrameIndex, itemFrameIndex);
           }

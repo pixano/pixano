@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Check } from "lucide-svelte";
+  import { Check } from "phosphor-svelte";
   import { tick } from "svelte";
 
   import { Command, Popover } from "bits-ui";

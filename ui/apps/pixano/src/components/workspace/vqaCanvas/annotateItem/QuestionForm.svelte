@@ -5,16 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import {
-    CheckCircle2,
-    Clock,
-    ListOrdered,
-    PencilLine,
-    Save,
-    Sparkles,
-    Trash2,
-    X,
-  } from "lucide-svelte";
+  import { CheckCircle, Clock, ListNumbers, PencilSimple, FloppyDisk, Sparkle, Trash, X } from "phosphor-svelte";
 
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
 
@@ -178,9 +169,9 @@ License: CECILL-C
           </span>
         {/if}
         {#if questionCompleted}
-          <CheckCircle2 size={12} class="text-success" />
+          <CheckCircle weight="regular" size={16} class="text-success" />
         {:else}
-          <Clock size={12} class="text-warning animate-pulse" />
+          <Clock size={16} class="text-warning animate-pulse" />
         {/if}
       </div>
 
@@ -205,7 +196,7 @@ License: CECILL-C
                 onclick={() => saveEdit(question)}
                 class="p-1 text-primary hover:text-primary-dark"
               >
-                <Save size={14} />
+                <FloppyDisk weight="regular" size={18} />
               </button>
             </div>
           </div>
@@ -218,7 +209,7 @@ License: CECILL-C
                 <div
                   class="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight mb-1"
                 >
-                  <ListOrdered size={12} /> Options
+                  <ListNumbers weight="regular" size={16} /> Options
                 </div>
                 {#each choices as choice, i}
                   {@const label = getChoiceLabel(i, labelFormat)}
@@ -245,7 +236,7 @@ License: CECILL-C
               class="p-1.5 text-muted-foreground/50 hover:text-primary transition-colors"
               title="Edit question"
             >
-              <PencilLine size={14} />
+              <PencilSimple weight="regular" size={18} />
             </button>
             <button
               onclick={() => {
@@ -254,7 +245,7 @@ License: CECILL-C
               class="p-1.5 text-muted-foreground/50 hover:text-destructive transition-colors"
               title="Delete question"
             >
-              <Trash2 size={14} />
+              <Trash weight="regular" size={18} />
             </button>
           </div>
 
@@ -316,7 +307,7 @@ License: CECILL-C
                     onclick={() => saveEdit(answer)}
                     class="p-1 text-primary hover:text-primary-dark"
                   >
-                    <Save size={14} />
+                    <FloppyDisk weight="regular" size={18} />
                   </button>
                 </div>
               </div>
@@ -337,7 +328,7 @@ License: CECILL-C
                 class="absolute -right-8 top-0 p-1.5 text-muted-foreground/50 hover:text-primary opacity-0 group-hover/bubble:opacity-100 transition-all"
                 title="Edit answer"
               >
-                <PencilLine size={14} />
+                <PencilSimple weight="regular" size={18} />
               </button>
             {/if}
           </div>
@@ -355,7 +346,7 @@ License: CECILL-C
             class="ml-1 flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-[11px] font-bold uppercase tracking-tighter text-muted-foreground hover:border-primary hover:text-primary transition-all group/btn shadow-sm"
             onclick={handleGenerateAnswer}
           >
-            <Sparkles size={12} class="group-hover/btn:animate-pulse" />
+            <Sparkle weight="regular" size={16} class="group-hover/btn:animate-pulse" />
             VLM Suggestion
           </button>
         </div>

@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import type { Message } from "$lib/types/dataset";
   import { Checkbox } from "bits-ui";
-  import { Check } from "lucide-svelte";
+  import { Check } from "phosphor-svelte";
 
   import { ContentChangeEventType, type ContentChangeEvent } from "$lib/types/vqa";
   import {
@@ -81,7 +81,7 @@ License: CECILL-C
         {#snippet children({ checked: isChecked })}
           <span class="flex items-center justify-center text-current h-full w-full">
             {#if isChecked}
-              <Check class="h-3.5 w-3.5" strokeWidth={3} />
+              <Check class="h-3.5 w-3.5"  />
             {/if}
           </span>
         {/snippet}

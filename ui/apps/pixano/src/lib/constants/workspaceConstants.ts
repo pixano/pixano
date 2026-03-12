@@ -31,3 +31,4 @@ export const temporayTextSpanId = "temporaryHighlightedTextSpan_x45mqsw";
 export const HIGHLIGHTED_BOX_STROKE_FACTOR = 4;
 export const HIGHLIGHTED_MASK_STROKE_FACTOR = 2;
 export const NOT_ANNOTATION_ITEM_OPACITY = 0.3;
+export const NEUTRAL_ENTITY_COLOR = "rgba(148, 163, 184, 0.55)";

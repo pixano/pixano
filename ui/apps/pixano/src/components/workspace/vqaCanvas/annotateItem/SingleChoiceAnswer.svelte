@@ -8,7 +8,7 @@ License: CECILL-C
     import { untrack } from "svelte";
     import type { Message } from "$lib/types/dataset";
     import { Label, RadioGroup } from "bits-ui";
-    import { Check } from "lucide-svelte";
+    import { Check } from "phosphor-svelte";
 
     import { cn } from "$lib/utils/styleUtils";
     import { effectProbe } from "$lib/utils/effectProbe";
@@ -111,7 +111,7 @@ License: CECILL-C
             class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground flex items-center justify-center"
           >
             {#snippet children({ checked })}
-              {#if checked}<Check class="h-3.5 w-3.5" strokeWidth={3} />{/if}
+              {#if checked}<Check class="h-3.5 w-3.5"  />{/if}
             {/snippet}
           </RadioGroup.Item>
           <Label.Root for={value} class="pl-3">{label}</Label.Root>

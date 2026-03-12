@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
 
   // Svelte Imports
-  import { ChevronsDown, ChevronsUp, ChevronsUpDown } from "lucide-svelte";
+  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown } from "phosphor-svelte";
   import SortableList from "svelte-sortable-list";
 
   // Pixano Core Imports
@@ -15,7 +15,7 @@ License: CECILL-C
 
   import type { TableData, TableRow } from "$lib/types/dataset";
   import { Checkbox } from "bits-ui";
-  import { Check } from "lucide-svelte";
+  import { Check } from "phosphor-svelte";
 
   import { icons } from "$lib/ui";
 
@@ -185,7 +185,7 @@ License: CECILL-C
                 {#snippet children({ checked })}
                   <span class="flex items-center justify-center text-current h-full w-full">
                     {#if checked}
-                      <Check class="h-3.5 w-3.5" strokeWidth={3} />
+                      <Check class="h-3.5 w-3.5"  />
                     {/if}
                   </span>
                 {/snippet}
@@ -243,11 +243,11 @@ License: CECILL-C
                 {/if}
                 {#if !disableSort && header.column.getCanSort()}
                   {#if header.column.getIsSorted() === "asc"}
-                    <ChevronsDown />
+                    <CaretDoubleDown weight="regular" />
                   {:else if header.column.getIsSorted() === "desc"}
-                    <ChevronsUp />
+                    <CaretDoubleUp weight="regular" />
                   {:else}
-                    <ChevronsUpDown class="opacity-20" />
+                    <CaretUpDown weight="regular" class="opacity-20" />
                   {/if}
                 {/if}
               </span>
@@ -289,7 +289,7 @@ License: CECILL-C
         >
           {#each row.getVisibleCells() as cell (cell.id)}
             <td class="px-3 py-1 border-b border-border">
-              <FlexRender content={cell.column.columnDef.cell?.(cell.getContext())} />
+              <FlexRender content={(cell.column.columnDef.cell as any)?.(cell.getContext())} />
             </td>
           {/each}
           <td class="w-full border-b border-border"></td>

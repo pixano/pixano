@@ -106,7 +106,7 @@ License: CECILL-C
     draftVertices = null;
   });
 
-  let opacity = $derived(keypointStructure.ui?.displayControl.highlighted === "none" ? 0.5 : 1);
+  let opacity = $derived(keypointStructure.ui?.displayControl.highlighted === "none" ? 0.3 : 1);
 </script>
 
 {@render children?.()}
@@ -114,7 +114,7 @@ License: CECILL-C
   <Line
     points={[...findVertex(line[0]), ...findVertex(line[1])]}
     stroke={color}
-    strokeWidth={keypointStructure.ui?.displayControl.highlighted === "self" ? 4 : 2}
+    
     strokeScaleEnabled={false}
     shadowForStrokeEnabled={false}
     {opacity}

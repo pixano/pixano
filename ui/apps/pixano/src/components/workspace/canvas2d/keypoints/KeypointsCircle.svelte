@@ -128,7 +128,7 @@ License: CECILL-C
   radius={4 / zoomFactor}
   {fill}
   stroke="white"
-  strokeWidth={1}
+  
   strokeScaleEnabled={false}
   shadowForStrokeEnabled={false}
   id={`keypoint-${keypointsId}-${vertexIndex}`}
