@@ -17,11 +17,13 @@ import pyarrow.json as pa_json
 import shortuuid
 from lancedb.pydantic import LanceModel
 
+from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.utils import mosaic
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.utils.creators import create_instance_of_schema
 from pixano.schemas import (
+    PDF,
     BBox,
     CompressedRLE,
     Entity,
@@ -31,7 +33,6 @@ from pixano.schemas import (
     Image,
     KeyPoints,
     Message,
-    PDF,
     Record,
     RecordComponent,
     SchemaGroup,
@@ -52,8 +53,8 @@ from pixano.schemas import (
     is_video,
     is_view,
 )
-from pixano.schemas.annotations.entity_annotation import AnnotationSourceKind
 from pixano.schemas.annotations.compressed_rle import CompressedRLE, is_compressed_rle
+from pixano.schemas.annotations.entity_annotation import AnnotationSourceKind
 
 
 # Union type for annotation base classes
@@ -119,7 +120,6 @@ def _is_annotation(cls: type) -> bool:
     return isinstance(cls, type) and (issubclass(cls, EntityAnnotation) or issubclass(cls, EntityGroupAnnotation))
 
 
-from ..dataset_builder import DatasetBuilder
 
 
 class FolderBaseBuilder(DatasetBuilder):
