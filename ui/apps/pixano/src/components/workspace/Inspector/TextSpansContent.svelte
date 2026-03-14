@@ -4,82 +4,20 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------->
 
+<!--
+  DEPRECATED: TextSpan annotations are now rendered inline within ChildCard.svelte
+  via the type-specific visualization system. This component is kept as an empty shell
+  for backward compatibility but no longer renders any content.
+-->
+
 <script lang="ts">
-  
-  import { BaseSchema, TextSpan, type Annotation } from "$lib/types/dataset";
-  const DISPLAY_MENTION_FEATURES = ["role", "concept", "mention"] as const;
+  import type { Annotation } from "$lib/types/dataset";
 
   interface Props {
     annotations: Annotation[] | undefined;
   }
 
-  let { annotations }: Props = $props();
-
-  let col_names: string[] = $state([]);
-  let mentionRows: { [key: string]: string | undefined }[] = $state([]);
-
-
-  const buildTextSpanTable = () => {
-    const textSpans =
-      (annotations?.filter((ann) => ann.is_type(BaseSchema.TextSpan)) as TextSpan[]) ?? [];
-    // get used fields
-    const foundFields = new Set<string>();
-    for (const tspan of textSpans) {
-      for (const field of DISPLAY_MENTION_FEATURES) {
-        const val = tspan.data[field];
-        if (typeof val === "string") {
-          foundFields.add(field);
-        }
-      }
-    }
-    // force "mention"
-    foundFields.add("mention");
-    // filter col_names
-    col_names = DISPLAY_MENTION_FEATURES.filter((f) => foundFields.has(f));
-    // build rows
-    const rawRows = textSpans.map((tspan) => {
-      const row: { [key: string]: string | undefined } = {};
-      for (const field of col_names) {
-        const val = tspan.data[field];
-        row[field] = typeof val === "string" ? val : undefined;
-      }
-      return row;
-    });
-    // deduplicate
-    const seen = new Set<string>();
-    mentionRows = rawRows.filter((row) => {
-      const key = JSON.stringify(row);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  };
-  $effect(() => {
-    if (annotations) buildTextSpanTable();
-  });
+  let { annotations: _annotations }: Props = $props();
 </script>
 
-{#if mentionRows.length > 0}
-  <div class="mt-4 mr-4">
-    <p class="font-medium mb-2">Text spans</p>
-
-    <table class="table-auto border-collapse w-full text-sm">
-      <thead class="bg-muted">
-        <tr>
-          {#each col_names as col}
-            <th class="border px-2 py-1 text-left">{col}</th>
-          {/each}
-        </tr>
-      </thead>
-      <tbody>
-        {#each mentionRows as row}
-          <tr>
-            {#each col_names as col}
-              <td class="border px-2 py-1">{row[col] ?? ""}</td>
-            {/each}
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
-{/if}
+<!-- Intentionally empty: TextSpan content is now displayed in ChildCard -->
