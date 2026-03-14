@@ -395,6 +395,15 @@ class FolderBaseBuilder(DatasetBuilder):
         """Apply folder-specific integrity validation before inserting a batch."""
         self._view_family_validator.validate(batch, dataset)
 
+        tracklet_table_name = canonical_table_name_for_slot("tracklet")
+        for row in batch.get(tracklet_table_name, []):
+            start_timestep = getattr(row, "start_timestep", -1)
+            end_timestep = getattr(row, "end_timestep", -1)
+            if start_timestep == -1 or end_timestep == -1:
+                raise ValueError(
+                    "Invalid imported tracklet: start_timestep/end_timestep must be set before insertion."
+                )
+
     def generate_data(
         self,
     ) -> Iterator[dict[str, LanceModel | list[LanceModel]]]:

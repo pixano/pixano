@@ -389,7 +389,7 @@ License: CECILL-C
       }}
     ></button>
     <div
-      class="h-full grow max-h-[25%] overflow-hidden"
+      class="h-full grow max-h-[28%] overflow-hidden border-t border-border/40 bg-card/90"
       style={`max-height: ${inspectorMaxHeight}px`}
     >
       <TimelinePanel />

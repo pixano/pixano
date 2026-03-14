@@ -5,8 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
-
+  import { PushPin, PushPinSlash } from "phosphor-svelte";
   import { ToolType } from "$lib/tools";
   import type {
     TrackTimelineEntry,
@@ -17,6 +16,7 @@ License: CECILL-C
     cn,
     ContextMenu,
     Entity,
+    IconButton,
     Tracklet,
   } from "$lib/ui";
 
@@ -45,7 +45,6 @@ License: CECILL-C
   import {
     currentFrameIndex,
     lastFrameIndex,
-    timelineZoom,
   } from "$lib/stores/videoStores.svelte";
   import TrackletSegment from "./TrackletSegment.svelte";
 
@@ -56,13 +55,19 @@ License: CECILL-C
     views: MView;
     onFrameClick: (imageIndex: number) => void;
     resetTool: () => void;
+    isPinned?: boolean;
+    isPrimaryFocus?: boolean;
+    onTogglePin?: () => void;
   }
 
   let {
     entity,
     views,
     onFrameClick,
-    resetTool
+    resetTool,
+    isPinned = false,
+    isPrimaryFocus = false,
+    onTogglePin,
   }: Props = $props();
 
   let objectTimeTrack: HTMLElement = $state();
@@ -71,7 +76,7 @@ License: CECILL-C
     return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
   });
 
-  let totalWidth = $derived((lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100);
+  let totalWidth = $derived(lastFrameIndex.value !== undefined ? (lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100 : 100);
   let color = $derived(colorScale.value[1](entity.id));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
@@ -152,85 +157,104 @@ License: CECILL-C
       updateView(currentFrameIndex.value);
     }
   };
+
+  const laneHeight = 18;
+  const laneOutline = $derived.by(() => {
+    if (isPrimaryFocus) return "border-primary/30 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.18)]";
+    if (isPinned) return "border-primary/18 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.10)]";
+    return "border-border/30";
+  });
+  const trackBackground = $derived.by(() => {
+    if (highlightState === "self") return `${color}20`;
+    if (highlightState === "none" && selectedToolType === ToolType.Fusion) return `${color}08`;
+    if (isPinned) return `${color}12`;
+    return `${color}0d`;
+  });
 </script>
 
 {#if entity}
-  <div style={`width: ${timelineZoom.value[0]}%;`}>
-    <div
-      class={cn("w-fit sticky left-5 my-1 px-1 border-2 rounded-sm", {
-        "text-foreground": highlightState !== "none",
-        "text-muted-foreground":
-          highlightState === "none" && selectedToolType === ToolType.Fusion,
-      })}
-      style={`
-        background: ${
-          highlightState === "self"
-            ? `${color}8a`
-            : highlightState === "none" && selectedToolType === ToolType.Fusion
-              ? "white"
-              : `${color}3a`
-        };
-        border-color:${highlightState === "self" ? color : "transparent"}
-      `}
-    >
-      <button
-        class="rounded-full border w-3 h-3"
-        style="background:{color}"
-        title="Highlight object"
-        onclick={onColoredDotClick}
-></button>
-      <span title="{entity.table_info.base_schema} ({entity.id})">
-        {displayName}
-      </span>
-    </div>
-  </div>
-  <div
-    id={`video-object-${entity.id}`}
-    class="flex gap-5 relative my-auto z-20 border-2 rounded-sm"
-    style={`
-      width: ${timelineZoom.value[0]}%;
-      height: ${Object.keys(views).length * 10}px;
-      background: ${
-        highlightState === "self"
-          ? `${color}8a`
-          : highlightState === "none" && selectedToolType === ToolType.Fusion
-            ? `${color}0a`
-            : `${color}3a`
-      };
-      border-color:${highlightState === "self" ? color : "transparent"}
-    `}
-    bind:this={objectTimeTrack}
-    role="complementary"
+  <section
+    title={displayName}
+    class={cn(
+      "group relative transition-all",
+      isPrimaryFocus
+        ? "z-[1]"
+        : "",
+    )}
+    style="width: 100%;"
   >
-    <span
-      class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
-      style={`left: ${(currentFrameIndex.value / (lastFrameIndex.value + 1)) * 100}%`}
-></span>
-    <ContextMenu.Root>
-      <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
-        <p oncontextmenu={handleTrackContextMenu} class="h-full w-full"></p>
-      </ContextMenu.Trigger>
-      <!--  //TODO we don't allow adding a point outside of a tracklet right now
-            //you can extend tracket to add a point inside, and split if needed
-      <ContextMenu.Content>
-        <ContextMenu.Item onclick={onAddKeyItemClick}>Add a point</ContextMenu.Item>
-      </ContextMenu.Content>
-      -->
-    </ContextMenu.Root>
-    {#each tracklets as tracklet (tracklet.id)}
-      <TrackletSegment
-        {tracklet}
-        entityId={entity.id}
-        {views}
-        onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
-        {onContextMenu}
-        {onEditKeyItemClick}
-        onSplitTrackClick={() => onSplitTrackletClick(tracklet)}
-        onDeleteTrackClick={() => deleteEntity(entity, tracklet)}
-        {findNeighborItems}
-        {moveCursorToPosition}
-        {resetTool}
-      />
-    {/each}
-  </div>
+    <div
+      id={`video-object-${entity.id}`}
+      class={cn(
+        "relative flex gap-5 overflow-hidden rounded-md border bg-background/70",
+        laneOutline,
+      )}
+      style={`height: ${laneHeight}px; background: ${trackBackground}`}
+      bind:this={objectTimeTrack}
+      role="complementary"
+    >
+      <div class="pointer-events-none sticky left-1 z-30 flex h-full items-center">
+        <div
+          class={cn(
+            "pointer-events-auto flex items-center gap-0.5 rounded-sm border bg-background/72 px-0.5 py-0.5 shadow-sm backdrop-blur-md transition-colors",
+            isPrimaryFocus ? "border-primary/30" : isPinned ? "border-primary/25" : "border-border/30",
+          )}
+        >
+          <button
+            type="button"
+            class="h-2.5 w-2.5 rounded-full border border-background/90 shadow-sm transition-transform hover:scale-125"
+            style={`background: ${color}`}
+            title={displayName}
+            onclick={onColoredDotClick}
+          ></button>
+          {#if onTogglePin}
+            <div
+              class={cn(
+                "transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
+                isPinned ? "opacity-100" : "opacity-0",
+              )}
+            >
+              <IconButton
+                onclick={onTogglePin}
+                tooltipContent={isPinned ? "Unpin from timeline" : "Pin to timeline"}
+                selected={isPinned}
+                class="h-4 w-4 rounded-sm bg-transparent"
+              >
+                {#if isPinned}
+                  <PushPinSlash class="h-2.5 w-2.5 text-primary" />
+                {:else}
+                  <PushPin class="h-2.5 w-2.5 text-muted-foreground" />
+                {/if}
+              </IconButton>
+            </div>
+          {/if}
+          {#if isPinned}
+            <span class="h-1.5 w-1.5 rounded-full bg-primary/80"></span>
+          {/if}
+        </div>
+      </div>
+      <div class="pointer-events-none absolute inset-y-0 left-0 w-5" style={`background: linear-gradient(90deg, ${color}${isPrimaryFocus ? "30" : isPinned ? "20" : "16"} 0%, transparent 100%)`}></div>
+      <ContextMenu.Root>
+        <ContextMenu.Trigger class="absolute left-0 h-full w-full" style={`width: ${totalWidth}%`}>
+          <p oncontextmenu={handleTrackContextMenu} class="h-full w-full"></p>
+        </ContextMenu.Trigger>
+      </ContextMenu.Root>
+      {#each tracklets as tracklet (tracklet.id)}
+        <TrackletSegment
+          {tracklet}
+          entityId={entity.id}
+          {views}
+          compact={true}
+          onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
+          {onContextMenu}
+          {onEditKeyItemClick}
+          onSplitTrackClick={() => onSplitTrackletClick(tracklet)}
+          onDeleteTrackClick={() => deleteEntity(entity, tracklet)}
+          {findNeighborItems}
+          {moveCursorToPosition}
+          {resetTool}
+        />
+      {/each}
+    </div>
+  </section>
 {/if}

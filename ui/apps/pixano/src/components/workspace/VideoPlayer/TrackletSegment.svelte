@@ -41,6 +41,7 @@ License: CECILL-C
     entityId: string;
     tracklet: Tracklet;
     views: MView;
+    compact?: boolean;
     onContextMenu: (tracklet: Tracklet) => void;
     onEditKeyItemClick: (
     frameIndex: TrackTimelineEntry["frame_index"],
@@ -58,6 +59,7 @@ License: CECILL-C
     entityId,
     tracklet = $bindable(),
     views,
+    compact = false,
     onContextMenu,
     onEditKeyItemClick,
     onAddKeyItemClick,
@@ -85,8 +87,12 @@ License: CECILL-C
     let end = Math.max(trk.data.start_frame, trk.data.end_frame) + track_margin;
     return (end / (lastFrameIndex.value + 1)) * 100;
   };
-  const getHeight = (views: MView) => 80 / Object.keys(views).length;
+  const getHeight = (views: MView, compactLane: boolean) => {
+    if (compactLane) return 72;
+    return 80 / Object.keys(views).length;
+  };
   const getTop = (trk: Tracklet, views: MView) => {
+    if (compact) return 14;
     return (
       10 +
       (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length
@@ -95,7 +101,7 @@ License: CECILL-C
 
   let left = $derived(getLeft(tracklet));
   let right = $derived(getRight(tracklet));
-  let height = $derived(getHeight(views));
+  let height = $derived(getHeight(views, compact));
   let top = $derived(getTop(tracklet, views));
   let trackElement: HTMLElement = $state();
 
