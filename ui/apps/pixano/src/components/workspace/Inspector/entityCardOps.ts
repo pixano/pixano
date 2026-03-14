@@ -95,10 +95,17 @@ export function handleSetDisplayControl(
     }
     annotationsStore.update((anns) => {
       return anns.map((ann) => {
-        const shouldUpdate =
-          (child && ann.id === child.id) ||
-          track_childs_ids.has(ann.id) ||
-          (!child && getTopEntity(ann).id === entityId);
+        let shouldUpdate = false;
+        try {
+          shouldUpdate =
+            (child && ann.id === child.id) ||
+            track_childs_ids.has(ann.id) ||
+            (!child && getTopEntity(ann).id === entityId);
+        } catch {
+          // Annotations without a resolvable top entity (e.g., Messages
+          // with entity_ids instead of entity_id) are skipped.
+          return ann;
+        }
         if (shouldUpdate) {
           toggleAnnotationDisplayControl(ann, displayControlProperty, new_value);
         } else if (other_anns_value !== null) {

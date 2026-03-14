@@ -6,7 +6,21 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { CaretRight, Eye, EyeClosed, ListPlus, ListDashes, Pencil, Trash } from "phosphor-svelte";
+  import { slide } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
+  import {
+    CaretRight,
+    Eye,
+    EyeClosed,
+    Ghost,
+    GitCommit,
+    ListPlus,
+    ListDashes,
+    Pencil,
+    Square,
+    TextT,
+    Trash,
+  } from "phosphor-svelte";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ChildCard from "./ChildCard.svelte";
@@ -15,7 +29,6 @@ License: CECILL-C
     handleSetDisplayControl as handleSetDC,
     saveInputChange as saveInput,
   } from "./entityCardOps";
-  import TextSpansContent from "./TextSpansContent.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -42,6 +55,7 @@ License: CECILL-C
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
+  import { keypointsIcon } from "$lib/assets";
   import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { createFeature } from "$lib/utils/featureMapping";
@@ -49,13 +63,55 @@ License: CECILL-C
   import { updateView } from "$lib/utils/videoOperations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
+  // ─── Hidden fields: internal plumbing excluded from Attributes tab ──────────
+  const HIDDEN_FIELDS = new Set([
+    "item_id",
+    "entity_id",
+    "parent_id",
+    "source_id",
+    "source_type",
+    // source_name & source_metadata are shown on ChildCard, NOT hidden
+    "tracklet_id",
+    "entity_dynamic_state_id",
+    "frame_id",
+    "frame_index",
+    "view_id",
+    "view_name",
+    "inference_metadata",
+    // Schema-specific raw data (shown via specialized ChildCard visualizations)
+    "coords",
+    "format",
+    "is_normalized",
+    "confidence",
+    "size",
+    "counts",
+    "spans_start",
+    "spans_end",
+    "mention",
+    "template_id",
+    "states",
+    "start_frame",
+    "end_frame",
+    "start_timestamp",
+    "end_timestamp",
+  ]);
+
+  // ─── Annotation type display metadata ───────────────────────────────────────
+  const TYPE_META: Record<string, { label: string; color: string }> = {
+    [BaseSchema.BBox]: { label: "BBox", color: "bg-blue-500/15 text-blue-400" },
+    [BaseSchema.Mask]: { label: "Mask", color: "bg-purple-500/15 text-purple-400" },
+    [BaseSchema.Keypoints]: { label: "Keypoints", color: "bg-teal-500/15 text-teal-400" },
+    [BaseSchema.TextSpan]: { label: "Text", color: "bg-amber-500/15 text-amber-400" },
+    [BaseSchema.Tracklet]: { label: "Track", color: "bg-cyan-500/15 text-cyan-400" },
+  };
+
   interface Props {
     entity: Entity;
   }
 
   let { entity }: Props = $props();
   const { manifest } = getWorkspaceContext();
-  let detailsTab = $state<"properties" | "annotations">("properties");
+  let detailsTab = $state<"attributes" | "annotations">("attributes");
 
   const color = $derived(colorScale.value[1](entity.id));
   const entityDisplayControl = $derived.by(() => {
@@ -64,6 +120,7 @@ License: CECILL-C
   });
   const isExpanded = $derived(entityDisplayControl.open ?? false);
 
+  // ─── Child filtering & sorting (unchanged logic) ───────────────────────────
   const isAllowedChild = (child: Annotation): boolean => {
     if (child.ui.datasetItemType !== WorkspaceType.VIDEO) return true;
     if (
@@ -82,12 +139,9 @@ License: CECILL-C
   };
 
   const sortChilds = (a: Annotation, b: Annotation): number => {
-    // first sort by BaseSchema -- convenient because lexical order is quite good:
-    // BBox, CompressedRLE, KeyPoints, TextSpan, Tracklet
     let res = a.table_info.base_schema.localeCompare(b.table_info.base_schema);
     if (res === 0) {
       if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
-        //sort by view -- we know there is only one tracklet per view
         const orderMap = new Map(Object.keys(mediaViews.value).map((val, index) => [val, index]));
         res =
           (orderMap.get(a.data.view_name) ?? Infinity) -
@@ -119,12 +173,30 @@ License: CECILL-C
     return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   });
 
+  // ─── Annotation type summary for header pills ──────────────────────────────
+  const annotationTypeSummary = $derived.by(() => {
+    const counts: Record<string, number> = {};
+    for (const ann of entity.ui.childs ?? []) {
+      if (!isAllowableChild(ann)) continue;
+      const schema = ann.table_info.base_schema;
+      counts[schema] = (counts[schema] ?? 0) + 1;
+    }
+    return counts;
+  });
+
+  // ─── Detect text-only entities (for typographic fallback thumbnail) ─────────
+  const hasOnlyTextSpans = $derived.by(() => {
+    const childs = entity.ui.childs ?? [];
+    if (childs.length === 0) return false;
+    return childs.every((ann) => ann.is_type(BaseSchema.TextSpan));
+  });
+
+  // ─── Highlight, visibility, tool state ──────────────────────────────────────
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
   const highlightState = $derived.by<"all" | "self" | "none">(() => {
     if (selectedToolType === ToolType.Pan) {
       return highlightedEntity.value === entity.id ? "self" : "all";
     }
-
     void annotations.value;
     let nextHighlightState: "all" | "self" | "none" = "all";
     for (const ann of entity.ui.childs ?? []) {
@@ -138,17 +210,33 @@ License: CECILL-C
     }
     return nextHighlightState;
   });
-  const isVisible = $derived(
-    entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false,
-  );
+  const isVisible = $derived.by(() => {
+    void annotations.value; // reactive bridge: recompute when annotations are toggled
+    return entity.ui.childs?.some((ann) => !ann.ui.displayControl.hidden) || false;
+  });
   const hiddenTrack = $derived(entityHasTracklets(entity) ? entityDisplayControl.hidden : false);
 
-  const features = $derived.by(() => {
+  // ─── Entity-only features (Attributes tab) ──────────────────────────────────
+  // Clean labels: no bracketed prefix since the Attributes tab is entity-only.
+  const entityFeatures = $derived.by(() => {
     if (!isExpanded) return [];
+    void entities.value;
+    void annotations.value;
+    return createFeature(entity, manifest, "").filter((f) => !HIDDEN_FIELDS.has(f.name));
+  });
+
+  // ─── Per-annotation features map (Annotations tab, inside each ChildCard) ──
+  // Keys are annotation IDs. Values contain both the annotation's own custom
+  // attributes and any sub-entity attributes (when the annotation's entity_id
+  // differs from the top-level entity).
+  const annotationFeaturesMap = $derived.by(() => {
+    if (!isExpanded) return new Map<string, { annFeats: Feature[]; subEntityFeats: Feature[] }>();
     const currentEntities = entities.value;
     const frameIndex = currentFrameIndex.value;
     void annotations.value;
-    const feats: Record<string, Feature[]> = {};
+    const result = new Map<string, { annFeats: Feature[]; subEntityFeats: Feature[] }>();
+    const seenSubEntities = new Map<string, Feature[]>();
+
     let childAnns: Annotation[] = [];
     if (entityHasTracklets(entity)) {
       if (frameIndex !== null) {
@@ -161,19 +249,33 @@ License: CECILL-C
     } else {
       childAnns = entity.ui.childs ?? [];
     }
+
     for (const ann of childAnns) {
-      if (ann.data.entity_id !== entity.id && !(ann.data.entity_id in feats)) {
-        const subentity = currentEntities.find((ent) => ent.id === ann.data.entity_id);
-        if (subentity) {
-          feats[subentity.id] = createFeature(subentity, manifest, subentity.table_info.name);
+      // Annotation's own custom features (no prefix -- ChildCard provides context)
+      const annFeats = createFeature(ann, manifest, "").filter((f) => !HIDDEN_FIELDS.has(f.name));
+
+      // Sub-entity features (if annotation belongs to a different entity)
+      let subEntityFeats: Feature[] = [];
+      if (ann.data.entity_id !== entity.id) {
+        if (seenSubEntities.has(ann.data.entity_id)) {
+          subEntityFeats = seenSubEntities.get(ann.data.entity_id)!;
+        } else {
+          const subentity = currentEntities.find((ent) => ent.id === ann.data.entity_id);
+          if (subentity) {
+            subEntityFeats = createFeature(subentity, manifest, "").filter(
+              (f) => !HIDDEN_FIELDS.has(f.name),
+            );
+            seenSubEntities.set(ann.data.entity_id, subEntityFeats);
+          }
         }
       }
-      feats[ann.id] = createFeature(ann, manifest, `${ann.table_info.name}.${ann.data.view_name}`);
+
+      result.set(ann.id, { annFeats, subEntityFeats });
     }
-    feats[entity.id] = createFeature(entity, manifest, entity.table_info.name);
-    return Object.values(feats).flat();
+    return result;
   });
 
+  // ─── Thumbnails ─────────────────────────────────────────────────────────────
   const thumbnails = $derived.by(() => {
     void entities.value;
     void annotations.value;
@@ -203,6 +305,7 @@ License: CECILL-C
     return annotationThumbnails;
   });
 
+  // ─── Actions ────────────────────────────────────────────────────────────────
   const setEntityDisplayControl = (updates: Partial<DisplayControl>) => {
     setDisplayCtrl(entity.id, entityDisplayControl, updates, entities);
   };
@@ -252,7 +355,7 @@ License: CECILL-C
     if (child) {
       handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
     } else {
-      detailsTab = "properties";
+      detailsTab = "attributes";
       if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entityDisplayControl.editing);
     }
@@ -264,6 +367,7 @@ License: CECILL-C
   };
 </script>
 
+<!-- ─── Entity Card Root ─────────────────────────────────────────────────────── -->
 <Card.Root
   class={cn(
     "shadow-none rounded-2xl border border-border/60 overflow-hidden transition-all duration-200 bg-card/90",
@@ -271,15 +375,16 @@ License: CECILL-C
       ? "ring-1 ring-primary/25 bg-primary/[0.04]"
       : "hover:bg-accent/40 hover:border-border",
   )}
-  style={`
-    border-left: ${highlightState === "self" ? `3px solid ${color}` : "3px solid transparent"};
-  `}
+  style={`border-left: ${highlightState === "self" ? `3px solid ${color}` : "3px solid transparent"};`}
   id={`card-object-${entity.id}`}
   onclick={onCardClick}
 >
-  <Card.Header class="p-2.5 flex-col space-y-2">
+  <!-- ─── Header ───────────────────────────────────────────────────────────── -->
+  <Card.Header class="p-2.5 flex-col space-y-1.5">
     <div class="flex items-start justify-between gap-2">
-      <div class="flex-[1_1_auto] flex items-center overflow-hidden min-w-0 gap-2">
+      <!-- Left: Thumbnail + Entity ID + Summary pills -->
+      <div class="flex-[1_1_auto] flex items-start overflow-hidden min-w-0 gap-2">
+        <!-- Thumbnail: Image crop / Typographic fallback / Colored dot -->
         {#if thumbnails.length > 0}
           {@const thumb = thumbnails[0]}
           {@const innerSize = 36}
@@ -309,19 +414,32 @@ License: CECILL-C
               />
             </div>
           </button>
-        {:else}
+        {:else if hasOnlyTextSpans}
+          <!-- Typographic fallback thumbnail for text-only entities -->
           <button
             type="button"
-            class="rounded-full w-3 h-3 mx-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
+            class="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+            style="width: 40px; height: 40px; border: 2px solid {color}; background: color-mix(in srgb, {color} 12%, transparent);"
+            title="Highlight entity (text entity)"
+            onclick={onColoredDotClick}
+          >
+            <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
+          </button>
+        {:else}
+          <!-- Minimal colored dot fallback -->
+          <button
+            type="button"
+            class="rounded-full w-3 h-3 mx-1 mt-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
             style="background:{color}"
             title="Highlight entity"
             onclick={onColoredDotClick}
           ></button>
         {/if}
 
-        <button type="button" class="min-w-0 text-left" onclick={onColoredDotClick} title="Highlight entity">
+        <!-- Entity ID + annotation summary pills -->
+        <button type="button" class="min-w-0 text-left flex flex-col gap-1" onclick={onColoredDotClick} title="Highlight entity">
           <span
-            class={cn("block truncate text-[13px] font-semibold leading-tight transition-colors", {
+            class={cn("block truncate text-[13px] font-semibold leading-tight transition-colors font-mono", {
               "text-foreground": highlightState !== "none",
               "text-muted-foreground":
                 highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
@@ -330,9 +448,35 @@ License: CECILL-C
           >
             {entity.id}
           </span>
+
+          <!-- Annotation type summary pills -->
+          {#if Object.keys(annotationTypeSummary).length > 0}
+            <div class="flex flex-wrap gap-1">
+              {#each Object.entries(annotationTypeSummary) as [schema, count]}
+                {@const meta = TYPE_META[schema]}
+                {#if meta}
+                  <span class={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none", meta.color)}>
+                    {#if schema === BaseSchema.BBox}
+                      <Square class="h-2.5 w-2.5" />
+                    {:else if schema === BaseSchema.Mask}
+                      <Ghost weight="regular" class="h-2.5 w-2.5" />
+                    {:else if schema === BaseSchema.Keypoints}
+                      <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
+                    {:else if schema === BaseSchema.TextSpan}
+                      <TextT weight="regular" class="h-2.5 w-2.5" />
+                    {:else if schema === BaseSchema.Tracklet}
+                      <GitCommit weight="regular" class="h-2.5 w-2.5" />
+                    {/if}
+                    {count}
+                  </span>
+                {/if}
+              {/each}
+            </div>
+          {/if}
         </button>
       </div>
 
+      <!-- Right: Action buttons -->
       <div class="flex-shrink-0 flex items-center justify-end gap-1">
         <IconButton
           onclick={() => handleSetDisplayControl("hidden", isVisible)}
@@ -358,7 +502,7 @@ License: CECILL-C
 
         {#if selectedTool.value?.type !== ToolType.Fusion}
           <IconButton
-            tooltipContent={entityDisplayControl.editing ? "Stop editing" : "Edit properties"}
+            tooltipContent={entityDisplayControl.editing ? "Stop editing" : "Edit attributes"}
             selected={entityDisplayControl.editing}
             onclick={() => onEditIconClick()}
             class="h-7 w-7 rounded-md"
@@ -392,72 +536,102 @@ License: CECILL-C
     </div>
   </Card.Header>
 
+  <!-- ─── Expanded Content (with slide transition) ─────────────────────────── -->
   {#if entityDisplayControl.open}
-    <Card.Content class="p-3 bg-muted/35 border-t border-border/40 space-y-3">
-      <div class="inline-flex rounded-lg border border-border/50 bg-background/70 p-0.5">
-        <button
-          type="button"
-          onclick={() => (detailsTab = "properties")}
-          class={cn(
-            "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
-            detailsTab === "properties"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Properties
-        </button>
-        <button
-          type="button"
-          onclick={() => (detailsTab = "annotations")}
-          class={cn(
-            "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
-            detailsTab === "annotations"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Annotations ({totalAllowableChildCount})
-        </button>
-      </div>
+    <div transition:slide={{ duration: 200, easing: cubicOut }}>
+      <Card.Content class="p-3 bg-muted/35 border-t border-border/40 space-y-3">
+        <!-- Tab switcher -->
+        <div class="inline-flex rounded-lg border border-border/50 bg-background/70 p-0.5">
+          <button
+            type="button"
+            onclick={() => (detailsTab = "attributes")}
+            class={cn(
+              "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
+              detailsTab === "attributes"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Attributes
+          </button>
+          <button
+            type="button"
+            onclick={() => (detailsTab = "annotations")}
+            class={cn(
+              "h-7 px-2.5 rounded-md text-[11px] font-semibold tracking-wide transition-colors",
+              detailsTab === "annotations"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Annotations ({totalAllowableChildCount})
+          </button>
+        </div>
 
-      {#if detailsTab === "properties"}
-        <div class="space-y-2">
-          <p class="text-[11px] text-muted-foreground">Entity metadata and editable features</p>
-          <div class="pl-1 pt-1">
-            <UpdateFeatureInputs
-              featureClass="objects"
-              {features}
-              isEditing={entityDisplayControl.editing ?? false}
-              {saveInputChange}
-            />
+        <!-- Attributes tab: entity-only features -->
+        {#if detailsTab === "attributes"}
+          <div class="space-y-2.5 animate-in fade-in duration-200">
+            <!-- Entity ID reference -->
+            <div class="flex items-center gap-2 px-1">
+              <span class="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">ID</span>
+              <span class="text-[11px] font-mono text-foreground/70 truncate select-all" title={entity.id}>
+                {entity.id}
+              </span>
+            </div>
+
+            {#if entityFeatures.length > 0}
+              <div class="rounded-lg border border-border/30 bg-background/60 overflow-hidden">
+                <UpdateFeatureInputs
+                  featureClass="objects"
+                  features={entityFeatures}
+                  isEditing={entityDisplayControl.editing ?? false}
+                  {saveInputChange}
+                />
+              </div>
+            {:else}
+              <div class="rounded-lg border border-dashed border-border/30 bg-muted/20 px-3 py-4 flex flex-col items-center gap-1">
+                <span class="text-[11px] text-muted-foreground/50">
+                  No custom attributes defined.
+                </span>
+              </div>
+            {/if}
           </div>
-        </div>
-      {:else}
-        <div class="space-y-2">
-          {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-            <p class="text-[11px] text-center text-muted-foreground/80 py-1 bg-muted/30 rounded-md">
-              {allowedChilds.length > 0 ? allowedChilds.length : "No"}
-              annotation{allowedChilds.length === 1 ? "" : "s"}
-              on frame {currentFrameIndex.value}
-            </p>
-          {/if}
 
-          {#if allowedChilds.length === 0}
-            <div class="rounded-md border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
-              No annotations currently visible for this entity.
-            </div>
-          {:else}
-            <div class="space-y-1">
-              {#each allowedChilds as child}
-                <ChildCard {entity} {child} {handleSetDisplayControl} {onEditIconClick} />
-              {/each}
-            </div>
-          {/if}
+        <!-- Annotations tab -->
+        {:else}
+          <div class="space-y-2 animate-in fade-in duration-200">
+            {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
+              <p class="text-[11px] text-center text-muted-foreground/80 py-1 bg-muted/30 rounded-md">
+                {allowedChilds.length > 0 ? allowedChilds.length : "No"}
+                annotation{allowedChilds.length === 1 ? "" : "s"}
+                on frame {currentFrameIndex.value}
+              </p>
+            {/if}
 
-          <TextSpansContent annotations={entity.ui.childs} />
-        </div>
-      {/if}
-    </Card.Content>
+            {#if allowedChilds.length === 0}
+              <div class="rounded-md border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
+                No annotations currently visible for this entity.
+              </div>
+            {:else}
+              <div class="space-y-1.5">
+                {#each allowedChilds as child (child.id)}
+                  {@const childFeats = annotationFeaturesMap.get(child.id)}
+                  <ChildCard
+                    {entity}
+                    {child}
+                    {handleSetDisplayControl}
+                    {onEditIconClick}
+                    features={childFeats?.annFeats ?? []}
+                    subEntityFeatures={childFeats?.subEntityFeats ?? []}
+                    isEditing={entityDisplayControl.editing ?? false}
+                    {saveInputChange}
+                  />
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </Card.Content>
+    </div>
   {/if}
 </Card.Root>
