@@ -5,9 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
   import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
-  import { getCurrentImageTime } from "$lib/utils/videoUtils";
   import {
     ensureFrameAvailable,
     getReadyAheadFrames,
@@ -27,8 +25,6 @@ License: CECILL-C
   }
 
   let { resetHighlight }: Props = $props();
-
-  let currentTime: string = $derived(getCurrentImageTime(currentFrameIndex.value, playbackState.value.videoSpeed));
   let playbackTransitionInFlight = false;
   let bufferingToken = 0;
   let shouldResumeAfterBuffering = false;
@@ -277,7 +273,7 @@ License: CECILL-C
   }
 </script>
 
-<div class="bg-card flex justify-between items-center gap-4 p-4 border-b border-border w-fit">
+<div class="flex items-center gap-1.5">
   <button
     title={playbackState.value.isBuffering
       ? "Buffering..."
@@ -285,32 +281,29 @@ License: CECILL-C
         ? "Pause (space)"
         : "Play (space)"}
     onclick={onPlayClick}
-    class="text-primary"
+    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80 disabled:pointer-events-none disabled:opacity-40"
   >
     {#if playbackState.value.isBuffering}
-      <CircleNotch weight="regular" class="animate-spin" />
+      <CircleNotch weight="regular" class="h-4 w-4 animate-spin" />
     {:else if playbackState.value.intervalId}
-      <Pause weight="regular" />
+      <Pause weight="fill" class="h-4 w-4" />
     {:else}
-      <Play weight="regular" />
+      <Play weight="fill" class="ml-0.5 h-4 w-4" />
     {/if}
   </button>
   <button
     title="Previous frame (Left / A or Q)"
     onclick={onPlayStepBackClick}
-    class="text-primary"
+    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80"
   >
-    <SkipBack weight="regular" />
+    <SkipBack weight="fill" class="h-4 w-4" />
   </button>
-  <button title="Next frame (Right / D)" onclick={onPlayStepClick} class="text-primary">
-    <SkipForward weight="regular" />
+  <button
+    title="Next frame (Right / D)"
+    onclick={onPlayStepClick}
+    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80"
+  >
+    <SkipForward weight="fill" class="h-4 w-4" />
   </button>
-  <p>
-    <span>{currentTime}</span>
-    <span class="text-muted-foreground">({currentFrameIndex.value})</span>
-    {#if playbackState.value.isBuffering}
-      <span class="text-muted-foreground pl-2">buffering...</span>
-    {/if}
-  </p>
 </div>
 <svelte:window onkeydown={shortcutHandler} />

@@ -251,8 +251,8 @@ class MaskTrackProcessor:
                         entity_id=entity.id,
                         source_type=self.row_factory.source.source_type,
                         source_name=self.row_factory.source.source_name,
-                        start_frame=start_idx,
-                        end_frame=end_idx,
+                        start_timestep=start_idx,
+                        end_timestep=end_idx,
                         start_timestamp=start_ts,
                         end_timestamp=end_ts,
                     )
@@ -433,8 +433,8 @@ class BBoxTrackProcessor:
                         entity_id=entity.id,
                         source_type=self.row_factory.source.source_type,
                         source_name=self.row_factory.source.source_name,
-                        start_frame=start_idx,
-                        end_frame=end_idx,
+                        start_timestep=start_idx,
+                        end_timestep=end_idx,
                         start_timestamp=start_ts,
                         end_timestamp=end_ts,
                     )
