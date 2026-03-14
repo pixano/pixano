@@ -31,6 +31,9 @@
     "simplify-js": "^1.2.4",
     "svelte-konva": "^1.0.1",
     "svelte-sortable-list": "^1.1.0",
+    "@tiptap/core": "^3.0.0",
+    "@tiptap/pm": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2"
   },

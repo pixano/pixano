@@ -138,10 +138,26 @@ export const tracks = reactiveDerived(
     annotations.value.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Tracklet[],
 );
 
-export const textSpans = reactiveDerived(
-  () =>
-    annotations.value.filter((annotation) => annotation.is_type(BaseSchema.TextSpan)) as TextSpan[],
-);
+export const textSpans = reactiveDerived(() => {
+  const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
+  const focusedEntityId = highlightedEntity.value;
+  const eById = entitiesById.value;
+
+  const spans = annotations.value.filter((annotation) =>
+    annotation.is_type(BaseSchema.TextSpan),
+  ) as TextSpan[];
+
+  return spans.map((span) => {
+    const effectiveHighlight = getEffectiveHighlight(span, focusedEntityId, selectedToolType, eById);
+    if (effectiveHighlight === span.ui.displayControl.highlighted) return span;
+    const clone = Object.assign(Object.create(Object.getPrototypeOf(span)), span);
+    clone.ui = {
+      ...span.ui,
+      displayControl: { ...span.ui.displayControl, highlighted: effectiveHighlight },
+    };
+    return clone as TextSpan;
+  });
+});
 
 export const messages = reactiveDerived(
   () =>

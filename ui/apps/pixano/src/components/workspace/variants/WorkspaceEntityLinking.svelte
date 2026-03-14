@@ -21,7 +21,7 @@ License: CECILL-C
     effectProbe,
     type LoadedImagesPerView,
   } from "$lib/ui";
-  import TextSpanArea from "../textCanvas/TextSpanArea.svelte";
+  import TextAnnotator from "../textAnnotator/TextAnnotator.svelte";
 
   // Import stores and API functions
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -167,7 +167,7 @@ License: CECILL-C
   tabindex="0"
 >
   <div class="w-full grow overflow-hidden" style={`max-width: ${entityLinkingAreaWidth}px`}>
-    <TextSpanArea
+    <TextAnnotator
       textViews={textViews.value}
       selectedItemId={selectedItem.item.id}
       colorScale={colorScale.value[1]}

@@ -14,14 +14,11 @@ License: CECILL-C
     type TextSpanAttributes,
     type TextSpanTypeWithViewName,
   } from "$lib/ui";
-  import { TEMPORARY_TEXT_SPAN_ID } from "./constants";
+  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
+  import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
+  import TiptapAnnotator from "./TiptapAnnotator.svelte";
 
-  import SpannableTextView from "./SpannableTextView.svelte";
-  import { groupTextSpansByViewId } from "./groupTextSpansByViewId";
-
-  
   interface Props {
-    // Exports
     selectedItemId: string;
     newShape: Shape;
     colorScale: (value: string) => string;
@@ -40,12 +37,23 @@ License: CECILL-C
     textViews,
     onCreateTemporaryTextSpan,
     onTextSpanClick,
-    onNewShapeChange
+    onNewShapeChange,
   }: Props = $props();
 
   let textSpanAttributes: TextSpanTypeWithViewName | null = $state(null);
 
   let spansByViewId = $derived(groupTextSpansByViewId(textSpans));
+
+  const onSelectionChange = (attrs: TextSpanTypeWithViewName) => {
+    textSpanAttributes = attrs;
+  };
+
+  const handleSpanClick = (id: string) => {
+    const span = textSpans.find((ts) => ts.id === id);
+    if (span) {
+      onTextSpanClick?.(span);
+    }
+  };
 
   const onTagText = () => {
     if (!textSpanAttributes) return;
@@ -55,17 +63,16 @@ License: CECILL-C
     const matchingView = textViews.find((v) => v.table_info.name === view_name);
     const viewId = matchingView?.id ?? "";
 
-    //temporary TextSpan to keep it highlighted while filling form
     const tempTextSpan = new TextSpan({
       id: TEMPORARY_TEXT_SPAN_ID,
       data: {
-        spans_start: textSpanAttributes?.spans_start,
-        spans_end: textSpanAttributes?.spans_end,
-        mention: textSpanAttributes?.mention,
+        spans_start: textSpanAttributes.spans_start,
+        spans_end: textSpanAttributes.spans_end,
+        mention: textSpanAttributes.mention,
         inference_metadata: {},
         item_id: selectedItemId,
         entity_id: "",
-        view_name: textSpanAttributes?.view_name ?? "",
+        view_name: textSpanAttributes.view_name ?? "",
         view_id: viewId,
         source_type: "",
         source_name: "",
@@ -78,8 +85,6 @@ License: CECILL-C
     tempTextSpan.ui.displayControl.highlighted = "self";
     onCreateTemporaryTextSpan?.(tempTextSpan);
 
-    // Changing newShape opens the window for customizing and saving a new
-    // anotation in the object inspector
     onNewShapeChange?.({
       viewRef: { name: view_name, id: viewId },
       itemId: selectedItemId,
@@ -101,13 +106,13 @@ License: CECILL-C
     Tag Selected Text
   </button>
   <div class="overflow-y-auto">
-    {#each textViews as textView}
-      <SpannableTextView
+    {#each textViews as textView (textView.id)}
+      <TiptapAnnotator
         {textView}
         {colorScale}
         textSpans={spansByViewId[textView.id]}
-        bind:textSpanAttributes
-        onSpanClick={onTextSpanClick}
+        {onSelectionChange}
+        onSpanClick={handleSpanClick}
       />
     {/each}
   </div>
