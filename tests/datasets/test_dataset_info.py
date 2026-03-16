@@ -44,6 +44,7 @@ class TestDatasetInfo:
             "entity_dynamic_state",
             "bbox",
             "mask",
+            "multi_path",
             "keypoint",
             "tracklet",
             "message",
@@ -104,6 +105,7 @@ class TestDatasetInfo:
     "keypoint": null,
     "tracklet": null,
     "message": null,
+    "multi_path": null,
     "text_span": null,
     "views": {
         "image": {
