@@ -8,6 +8,7 @@ import type { Reference } from "$lib/types/dataset";
 import type { Point2D, PolygonOutputMode } from "$lib/types/geometry";
 import { ShapeType, type PolygonVertex, type Shape } from "$lib/types/shapeTypes";
 import {
+  canvasAlphaToRle,
   dataUrlToBlob,
   getAlphaBoundingBox,
   type MaskBounds,
@@ -58,6 +59,7 @@ function rasterizePolygonsToMask(
   blob: Blob | null;
   mimeType: string;
   bounds: MaskBounds | null;
+  rle: { counts: number[]; size: [number, number] };
 } {
   const canvas = document.createElement("canvas");
   canvas.width = imageWidth;
@@ -70,6 +72,7 @@ function rasterizePolygonsToMask(
       blob: null,
       mimeType: "image/png",
       bounds: null,
+      rle: { counts: [imageWidth * imageHeight], size: [imageHeight, imageWidth] },
     };
   }
 
@@ -77,10 +80,10 @@ function rasterizePolygonsToMask(
   ctx.fillStyle = "white";
 
   for (const polygon of polygons) {
-    if (polygon.length <3) continue;
+    if (polygon.length < 3) continue;
     ctx.beginPath();
     ctx.moveTo(polygon[0].x, polygon[0].y);
-    for (let i = 1; i <polygon.length; i += 1) {
+    for (let i = 1; i < polygon.length; i += 1) {
       ctx.lineTo(polygon[i].x, polygon[i].y);
     }
     ctx.closePath();
@@ -90,12 +93,14 @@ function rasterizePolygonsToMask(
   const dataUrl = canvas.toDataURL("image/png");
   const blob = dataUrlToBlob(dataUrl);
   const bounds = getAlphaBoundingBox(canvas);
+  const rle = canvasAlphaToRle(canvas);
 
   return {
     dataUrl,
     blob,
     mimeType: "image/png",
     bounds,
+    rle,
   };
 }
 
@@ -168,6 +173,7 @@ export function buildPolygonSaveShape(
       maskMimeType: bitmap.mimeType,
       maskBlob: bitmap.blob ?? undefined,
       maskBounds: bitmap.bounds ?? undefined,
+      rle: bitmap.rle,
       viewRef,
       itemId: selectedItemId,
       imageWidth: currentImage.width,
@@ -182,10 +188,44 @@ export function buildPolygonSaveShape(
     type: ShapeType.polygon,
     polygonMode,
     polygonPoints,
+    isClosed: true as const,
     maskDataUrl: bitmap.dataUrl,
     maskMimeType: bitmap.mimeType,
     maskBlob: bitmap.blob ?? undefined,
     maskBounds: bitmap.bounds ?? undefined,
+    viewRef,
+    itemId: selectedItemId,
+    imageWidth: currentImage.width,
+    imageHeight: currentImage.height,
+  };
+}
+
+export function buildPolylineSaveShape(
+  payload: PolygonSavePayload,
+  viewRef: Reference,
+  selectedItemId: string,
+  currentImage: HTMLImageElement | ImageBitmap | undefined,
+): Shape | null {
+  const sourcePolygons = getSourcePolygons(payload);
+  if (sourcePolygons.length === 0) return null;
+  if (!currentImage) return null;
+
+  const polylinePoints = sourcePolygons
+    .map((path) =>
+      path.map((point, id) => ({
+        x: point.x,
+        y: point.y,
+        id: "id" in point ? point.id : id,
+      })),
+    )
+    .filter((path) => path.length >= 2);
+  if (polylinePoints.length === 0) return null;
+
+  return {
+    status: "saving",
+    type: ShapeType.polyline,
+    polylinePoints,
+    isClosed: false as const,
     viewRef,
     itemId: selectedItemId,
     imageWidth: currentImage.width,

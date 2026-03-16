@@ -145,6 +145,7 @@ export {
   itemBboxes,
   itemMasks,
   itemKeypoints,
+  itemMultiPaths,
   tracks,
   textSpans,
   messages,
@@ -154,4 +155,5 @@ export {
   current_itemBBoxes,
   current_itemKeypoints,
   current_itemMasks,
+  current_itemMultiPaths,
 } from "./frameAnnotationStores.svelte";

@@ -11,11 +11,13 @@ import {
   Entity,
   Keypoints,
   Mask,
+  MultiPath,
   SequenceFrame,
   Tracklet,
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { MView } from "$lib/types/workspace";
+import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
 import { mapBBoxForDisplay, mapKeypointsForDisplay, mapMaskForDisplay } from "$lib/utils/annotationMapping";
 import { boxLinearInterpolation, keypointsLinearInterpolation } from "$lib/utils/interpolation";
 import { getEffectiveHighlight, type HighlightState } from "$lib/utils/highlightUtils";
@@ -52,12 +54,14 @@ type FrameBuckets = {
   bboxes: Map<number, BBox[]>;
   keypoints: Map<number, Keypoints[]>;
   masks: Map<number, Mask[]>;
+  multiPaths: Map<number, MultiPath[]>;
 };
 
 const _frameBuckets = $derived.by<FrameBuckets>(() => {
   const bboxes = new Map<number, BBox[]>();
   const keypoints = new Map<number, Keypoints[]>();
   const masks = new Map<number, Mask[]>();
+  const multiPaths = new Map<number, MultiPath[]>();
 
   for (const ann of annotations.value) {
     const frameIndex = ann.ui.frame_index;
@@ -71,10 +75,14 @@ const _frameBuckets = $derived.by<FrameBuckets>(() => {
     }
     if (ann.is_type(BaseSchema.Mask)) {
       pushFrameEntry(masks, frameIndex, ann as Mask);
+      continue;
+    }
+    if (ann.is_type(BaseSchema.MultiPath)) {
+      pushFrameEntry(multiPaths, frameIndex, ann as MultiPath);
     }
   }
 
-  return { bboxes, keypoints, masks };
+  return { bboxes, keypoints, masks, multiPaths };
 });
 
 // --- Generic frame interpolation helper ---
@@ -230,4 +238,27 @@ export const current_itemMasks = reactiveDerived(() => {
   }
 
   return currentMasks;
+});
+
+export const current_itemMultiPaths = reactiveDerived(() => {
+  const frameIdx = currentFrameIndex.value;
+  const frameMultiPaths = _frameBuckets.multiPaths.get(frameIdx) ?? [];
+  const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
+  const focusedEntityId = highlightedEntity.value;
+  const eById = entitiesById.value;
+
+  const currentMultiPaths: MultiPath[] = [];
+  for (const mp of frameMultiPaths) {
+    const effectiveHighlight = getEffectiveHighlight(mp, focusedEntityId, selectedToolType, eById);
+    currentMultiPaths.push({
+      ...mp,
+      ui: {
+        ...mp.ui,
+        displayControl: { ...mp.ui.displayControl, highlighted: effectiveHighlight },
+        opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      },
+    } as MultiPath);
+  }
+
+  return currentMultiPaths;
 });

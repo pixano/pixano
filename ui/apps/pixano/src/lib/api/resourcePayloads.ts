@@ -32,6 +32,7 @@ const RESOURCE_BY_BASE_SCHEMA: Partial<Record<BaseSchema, string>> = {
   [BaseSchema.Tracklet]: "tracklets",
   [BaseSchema.BBox]: "bboxes",
   [BaseSchema.Mask]: "masks",
+  [BaseSchema.MultiPath]: "multi-paths",
   [BaseSchema.Keypoints]: "keypoints",
   [BaseSchema.TextSpan]: "text-spans",
   [BaseSchema.Message]: "messages",
@@ -154,6 +155,7 @@ export function serializeSchema(schema: Schema): Record<string, unknown> {
       return serializeTracklet(schema);
     case BaseSchema.BBox:
     case BaseSchema.Mask:
+    case BaseSchema.MultiPath:
     case BaseSchema.Keypoints:
     case BaseSchema.TextSpan:
       return serializeAnnotation(schema);

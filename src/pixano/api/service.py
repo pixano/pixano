@@ -1,5 +1,6 @@
 """Generic CRUD service for the API."""
 
+import logging
 from typing import Any
 
 from fastapi import HTTPException
@@ -14,6 +15,8 @@ from pixano.schemas import SchemaGroup, View
 from .models import PaginatedResponse, merge_update_payload, serialize_row
 from .resources import ResourceSpec
 
+logger = logging.getLogger(__name__)
+
 
 MAX_QUERY_LIMIT = 1000
 
@@ -26,11 +29,41 @@ class BaseService:
         self.resource = resource
 
     def resolve_table(self) -> str:
-        """Resolve the backing table for this resource."""
+        """Resolve the backing table for this resource.
+
+        For annotation resources, if the canonical table does not exist yet it
+        is created on the fly with the base schema.  This lets users start
+        annotating immediately even when the ``DatasetInfo`` did not originally
+        declare the slot.  To use a **custom** schema with extra fields,
+        recreate the dataset with ``DatasetInfo(<slot>=YourCustomSchema)``.
+        """
 
         resolved_table = self.resource.canonical_table_name
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
+            if self.resource.schema_group == SchemaGroup.ANNOTATION:
+                logger.warning(
+                    "Table '%s' does not exist in dataset '%s'. "
+                    "Auto-creating with base schema '%s'. "
+                    "To use a custom schema, recreate the dataset with "
+                    "DatasetInfo(%s=YourCustomSchema).",
+                    resolved_table,
+                    self.dataset.info.id,
+                    self.resource.schema_cls.__name__,
+                    self.resource.name,
+                )
+                self.dataset.create_table(
+                    resolved_table,
+                    self.resource.schema_cls,
+                    exist_ok=True,
+                )
+                # Ensure the DatasetInfo slot is set so the table
+                # survives serialisation to info.json across restarts.
+                slot_name = self.resource.name  # e.g. "multi_path"
+                if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
+                    setattr(self.dataset.info, slot_name, self.resource.schema_cls)
+                    self.dataset.info.to_json(self.dataset._info_file)
+                return resolved_table
             raise HTTPException(status_code=404, detail=f"No table found for resource '{self.resource.path}'.")
         if not issubclass(schema_type, self.resource.schema_cls):
             raise HTTPException(

@@ -26,6 +26,7 @@ export enum ShapeType {
   keypoints = "keypoints",
   mask = "mask",
   polygon = "polygon",
+  polyline = "polyline",
   track = "track",
   textSpan = "textSpan",
 }
@@ -118,11 +119,18 @@ export type SavePolygonShape = SaveShapeBase & {
   type: ShapeType.polygon;
   polygonMode: PolygonOutputMode;
   polygonPoints: PolygonVertex[][];
-  maskDataUrl: string;
+  isClosed: true;
+  maskDataUrl?: string;
   maskMimeType?: string;
   maskBlob?: Blob;
   maskBounds?: MaskBounds;
   rle?: MaskData;
+};
+
+export type SavePolylineShape = SaveShapeBase & {
+  type: ShapeType.polyline;
+  polylinePoints: PolygonVertex[][];
+  isClosed: false;
 };
 
 export type SaveTrackShape = SaveShapeBase & {
@@ -150,6 +158,7 @@ export type SaveShape =
   | SaveRectangleShape
   | SaveMaskShape
   | SavePolygonShape
+  | SavePolylineShape
   | SaveKeyBoxShape
   | SaveTrackShape
   | TextSpanShape;
@@ -186,6 +195,17 @@ export type CreatePolygonShape = {
   outputMode?: PolygonOutputMode;
 };
 
+export type CreatePolylineShape = {
+  status: "creating";
+  type: ShapeType.polyline;
+  points: PolygonVertex[];
+  closedPolygons: PolygonVertex[][];
+  phase: "drawing" | "editing";
+  viewRef: Reference;
+  current?: Point2D;
+  hoveredEdge?: PolygonEdgeHint | null;
+};
+
 export type CreateRectangleShape = {
   status: "creating";
   type: ShapeType.bbox;
@@ -196,7 +216,7 @@ export type CreateRectangleShape = {
   viewRef: Reference;
 };
 
-export type CreateShape = CreatePolygonShape | CreateRectangleShape | CreateKeypointShape;
+export type CreateShape = CreatePolygonShape | CreatePolylineShape | CreateRectangleShape | CreateKeypointShape;
 
 // ─── Edit Shape Types ──────────────────────────────────────────────────────────
 

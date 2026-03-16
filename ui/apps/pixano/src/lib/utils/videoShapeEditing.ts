@@ -77,8 +77,8 @@ export function editKeyItemInTracklet(
           });
         }
       }
-    } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon) {
-      // mask not implemented yet in video
+    } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) {
+      // mask / polygon / polyline not implemented yet in video
     }
 
     if (!newAnn) {

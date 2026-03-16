@@ -11,6 +11,7 @@ import {
   BrushToolFSM,
   PanToolFSM,
   PolygonToolFSM,
+  PolylineToolFSM,
   RectangleToolFSM,
   ToolType,
   type SelectionTool,
@@ -57,6 +58,8 @@ export function createToolFSMForSelection(tool: SelectionTool): ToolFSM | null {
       return new RectangleToolFSM({ isSmart: !!tool.isSmart });
     case ToolType.Polygon:
       return new PolygonToolFSM({ defaultOutputMode: tool.outputMode });
+    case ToolType.Polyline:
+      return new PolylineToolFSM();
     case ToolType.Brush:
       return new BrushToolFSM(tool.mode);
     default:

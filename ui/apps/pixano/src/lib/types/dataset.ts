@@ -14,6 +14,7 @@ import {
 export enum BaseSchema {
   BBox = "BBox",
   Mask = "CompressedRLE",
+  MultiPath = "MultiPath",
   Keypoints = "KeyPoints",
   Tracklet = "Tracklet",
   TextSpan = "TextSpan",
@@ -627,6 +628,34 @@ export class Mask extends Annotation {
 
   static nonFeaturesFields(): string[] {
     return super.perFrameNonFeaturesFields().concat(["size", "counts"]);
+  }
+}
+
+// ─── MultiPath ─────────────────────────────────────────────────────────────────
+
+export interface MultiPathData {
+  coords: number[];
+  num_points: number[];
+  is_closed: boolean;
+  [key: string]: unknown;
+}
+
+export class MultiPath extends Annotation {
+  declare data: MultiPathData & PerFrameAnnotationData;
+
+  //UI only fields
+  ui: AnnotationUIFields = {
+    datasetItemType: WorkspaceType.UNDEFINED,
+    displayControl: initDisplayControl,
+  };
+
+  constructor(obj: RawSchemaData) {
+    super(obj);
+    this.data = obj.data as MultiPathData & PerFrameAnnotationData;
+  }
+
+  static nonFeaturesFields(): string[] {
+    return super.perFrameNonFeaturesFields().concat(["coords", "num_points", "is_closed"]);
   }
 }
 

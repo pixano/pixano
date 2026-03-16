@@ -15,6 +15,7 @@ License: CECILL-C
     EyeClosed,
     Ghost,
     GitCommit,
+    LineSegments,
     Link,
     Pencil,
     Quotes,
@@ -66,6 +67,7 @@ License: CECILL-C
   const TYPE_LABELS: Record<string, string> = {
     [BaseSchema.BBox]: "Bounding Box",
     [BaseSchema.Mask]: "Segmentation Mask",
+    [BaseSchema.MultiPath]: "Multi-Path",
     [BaseSchema.Keypoints]: "Keypoints",
     [BaseSchema.TextSpan]: "Text Span",
     [BaseSchema.Tracklet]: "Track",
@@ -321,6 +323,8 @@ License: CECILL-C
           <Ghost weight="regular" class="h-3.5 w-3.5" />
         {:else if child.is_type(BaseSchema.Keypoints)}
           <img src={keypointsIcon} alt="keypoints" class="h-3.5 w-3.5 opacity-70" />
+        {:else if child.is_type(BaseSchema.MultiPath)}
+          <LineSegments weight="regular" class="h-3.5 w-3.5" />
         {:else if child.is_type(BaseSchema.Tracklet)}
           <GitCommit weight="regular" class="h-3.5 w-3.5" />
         {:else if child.is_type(BaseSchema.TextSpan)}

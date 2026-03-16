@@ -12,6 +12,7 @@ import {
   entityHasTracklets,
   type BBox,
   type Mask,
+  type MultiPath,
   type AnnotationThumbnail,
   type Schema,
   type Tracklet,
@@ -96,6 +97,15 @@ export const getAnnotationsToPreAnnotate = (objects: Annotation[]): Annotation[]
   );
 };
 
+/**
+ * Canonical fallback table names for annotation types that may not exist
+ * yet in the dataset schema.  When the first annotation of a new type is
+ * created, the backend will auto-create the table with the base schema.
+ */
+const CANONICAL_TABLE_FALLBACKS: Partial<Record<BaseSchema, string>> = {
+  [BaseSchema.MultiPath]: "multi_paths",
+};
+
 export const getTable = (
   workspaceManifest: WorkspaceManifest,
   group: WorkspaceTableGroup,
@@ -104,6 +114,10 @@ export const getTable = (
   const table = resolveWorkspaceTable(workspaceManifest, group, baseSchema);
   if (table) {
     return table;
+  }
+  const canonical = CANONICAL_TABLE_FALLBACKS[baseSchema];
+  if (canonical) {
+    return canonical;
   }
   throw new Error(`No table found for group '${group}' and base schema '${baseSchema}'.`);
 };
@@ -155,6 +169,21 @@ export const defineAnnotationThumbnail = (
       coords = [b.x, b.y, b.width, b.height];
     }
     frame_index = mask.ui.frame_index;
+  } else if (object.is_type(BaseSchema.MultiPath)) {
+    const mp = object as MultiPath;
+    const c = mp.data.coords;
+    if (c && c.length >= 4) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = 0; i < c.length; i += 2) {
+        if (c[i] < minX) minX = c[i];
+        if (c[i + 1] < minY) minY = c[i + 1];
+        if (c[i] > maxX) maxX = c[i];
+        if (c[i + 1] > maxY) maxY = c[i + 1];
+      }
+      // Coords are already normalised [0, 1]
+      coords = [minX, minY, maxX - minX, maxY - minY];
+    }
+    frame_index = mp.ui.frame_index;
   }
 
   const view_name = object.data.view_name;
@@ -178,7 +207,11 @@ export const defineAnnotationThumbnail = (
   if (!viewData?.url) return null;
   if (viewData.width === undefined || viewData.height === undefined) return null;
 
-  if (object.is_type(BaseSchema.Mask) || !(object as BBox).data.is_normalized) {
+  // Normalise pixel-space coords to [0, 1].  MultiPath coords are already normalised.
+  const needsNormalisation =
+    object.is_type(BaseSchema.Mask) ||
+    (object.is_type(BaseSchema.BBox) && !(object as BBox).data.is_normalized);
+  if (needsNormalisation) {
     coords = [
       coords[0] / viewData.width,
       coords[1] / viewData.height,

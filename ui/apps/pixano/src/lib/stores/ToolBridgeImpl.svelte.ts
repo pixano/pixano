@@ -13,7 +13,7 @@ import type { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
 import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
 
 type RequestSaveCallback = (
-  shapeType: "bbox" | "polygon" | "mask" | "keypoints",
+  shapeType: "bbox" | "polygon" | "polyline" | "mask" | "keypoints",
   geometry: unknown,
 ) => void;
 

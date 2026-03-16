@@ -15,6 +15,7 @@ from pixano.schemas import (
     EntityDynamicState,
     KeyPoints,
     Message,
+    MultiPath,
     Record,
     SchemaGroup,
     TextSpan,
@@ -43,6 +44,9 @@ from .models import (
     MaskCreate,
     MaskResponse,
     MaskUpdate,
+    MultiPathCreate,
+    MultiPathResponse,
+    MultiPathUpdate,
     MessageCreate,
     MessageResponse,
     MessageUpdate,
@@ -236,6 +240,28 @@ MASK_RESOURCE = ResourceSpec(
     validate_create=_validate_per_frame_annotation_create,
 )
 
+MULTI_PATH_RESOURCE = ResourceSpec(
+    name="multi_path",
+    path="multi-paths",
+    tag="Multi-Paths",
+    schema_group=SchemaGroup.ANNOTATION,
+    schema_cls=MultiPath,
+    canonical_table_name=canonical_table_name_for_schema(MultiPath),
+    create_model=MultiPathCreate,
+    update_model=MultiPathUpdate,
+    response_model=MultiPathResponse,
+    list_filters=(
+        "record_id",
+        "entity_id",
+        "view_name",
+        "source_type",
+        "tracklet_id",
+        "frame_index",
+        "where",
+    ),
+    validate_create=_validate_per_frame_annotation_create,
+)
+
 KEYPOINTS_RESOURCE = ResourceSpec(
     name="keypoints",
     path="keypoints",
@@ -308,6 +334,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     TRACKLET_RESOURCE,
     BBOX_RESOURCE,
     MASK_RESOURCE,
+    MULTI_PATH_RESOURCE,
     KEYPOINTS_RESOURCE,
     MESSAGE_RESOURCE,
     TEXT_SPAN_RESOURCE,
@@ -324,6 +351,7 @@ __all__ = [
     "KEYPOINTS_RESOURCE",
     "MASK_RESOURCE",
     "MESSAGE_RESOURCE",
+    "MULTI_PATH_RESOURCE",
     "ResourceSpec",
     "TEXT_SPAN_RESOURCE",
     "TRACKLET_RESOURCE",

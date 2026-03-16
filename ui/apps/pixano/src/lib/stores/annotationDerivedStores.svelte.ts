@@ -12,12 +12,16 @@ import {
   Keypoints,
   Mask,
   Message,
+  MultiPath,
   TextSpan,
   Tracklet,
   type View,
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { MView } from "$lib/types/workspace";
+import {
+  NOT_ANNOTATION_ITEM_OPACITY,
+} from "$lib/constants/workspaceConstants";
 import {
   mapBBoxForDisplay,
   mapKeypointsForDisplay,
@@ -131,6 +135,30 @@ export const itemKeypoints = reactiveDerived(() => {
     }
   }
   return m_keypoints;
+});
+
+export const itemMultiPaths = reactiveDerived(() => {
+  const multiPaths: MultiPath[] = [];
+  const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
+  const focusedEntityId = highlightedEntity.value;
+  const eById = entitiesById.value;
+
+  for (const ann of annotations.value) {
+    if (ann.is_type(BaseSchema.MultiPath)) {
+      const mp = ann as MultiPath;
+      const effectiveHighlight = getEffectiveHighlight(mp, focusedEntityId, selectedToolType, eById);
+      const mapped = {
+        ...mp,
+        ui: {
+          ...mp.ui,
+          displayControl: { ...mp.ui.displayControl, highlighted: effectiveHighlight },
+          opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+        },
+      } as MultiPath;
+      multiPaths.push(mapped);
+    }
+  }
+  return multiPaths;
 });
 
 export const tracks = reactiveDerived(

@@ -20,7 +20,8 @@ export const mapShapeType2BaseSchema: Partial<Record<ShapeType, BaseSchema>> = {
   [ShapeType.bbox]: BaseSchema.BBox,
   [ShapeType.keypoints]: BaseSchema.Keypoints,
   [ShapeType.mask]: BaseSchema.Mask,
-  [ShapeType.polygon]: BaseSchema.Mask,
+  [ShapeType.polygon]: BaseSchema.MultiPath,
+  [ShapeType.polyline]: BaseSchema.MultiPath,
   [ShapeType.track]: BaseSchema.Tracklet,
   [ShapeType.textSpan]: BaseSchema.TextSpan,
 };

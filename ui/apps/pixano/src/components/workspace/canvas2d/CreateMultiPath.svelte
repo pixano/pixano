@@ -13,7 +13,7 @@ License: CECILL-C
   import type { ToolEvent } from "$lib/tools";
   import type { Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
-  import { ShapeType, type CreatePolygonShape, type Shape } from "$lib/types/shapeTypes";
+  import { ShapeType, type CreatePolygonShape, type CreatePolylineShape, type Shape } from "$lib/types/shapeTypes";
   import type { PolygonVertex } from "$lib/types/shapeTypes";
 
   interface Props {
@@ -38,25 +38,38 @@ License: CECILL-C
 
   const POLYGON_ID = "creating";
 
-  const asPolygonCreation = (shape: Shape): CreatePolygonShape => shape as CreatePolygonShape;
+  type MultiPathCreation = CreatePolygonShape | CreatePolylineShape;
+  const asMultiPathCreation = (shape: Shape): MultiPathCreation => shape as MultiPathCreation;
   const getSavedPolygonPoints = (shape: Shape): PolygonVertex[][] =>
-    "polygonPoints" in shape && Array.isArray(shape.polygonPoints) ? shape.polygonPoints : [];
+    "polygonPoints" in shape && Array.isArray(shape.polygonPoints)
+      ? shape.polygonPoints
+      : "polylinePoints" in shape && Array.isArray(shape.polylinePoints)
+        ? shape.polylinePoints
+        : [];
 
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null =
     $state(null);
 
-  let polygonCreation = $derived(
-    newShape.status === "creating" && "type" in newShape && newShape.type === ShapeType.polygon
-      ? asPolygonCreation(newShape)
+  let multiPathCreation = $derived(
+    newShape.status === "creating" &&
+      "type" in newShape &&
+      (newShape.type === ShapeType.polygon || newShape.type === ShapeType.polyline)
+      ? asMultiPathCreation(newShape)
       : null,
   );
+
+  /** Whether paths are closed (polygon) or open (polyline). */
+  let isClosed = $derived(
+    multiPathCreation ? multiPathCreation.type === ShapeType.polygon : false,
+  );
+
   let polygonPoints = $derived(
-    polygonCreation?.phase === "drawing" && polygonCreation.points.length > 0
-      ? [...polygonCreation.closedPolygons, polygonCreation.points]
-      : (polygonCreation?.closedPolygons ?? []),
+    multiPathCreation?.phase === "drawing" && multiPathCreation.points.length > 0
+      ? [...multiPathCreation.closedPolygons, multiPathCreation.points]
+      : (multiPathCreation?.closedPolygons ?? []),
   );
   $effect(() => {
-    if (!polygonCreation || polygonCreation.phase !== "editing") {
+    if (!multiPathCreation || multiPathCreation.phase !== "editing") {
       hoveredEdge = null;
     }
   });
@@ -64,8 +77,17 @@ License: CECILL-C
   let shouldRenderSavedPolygon = $derived(
     newShape.status === "saving" &&
       "type" in newShape &&
-      (newShape.type === ShapeType.polygon || newShape.type === ShapeType.mask) &&
-      "polygonMode" in newShape,
+      (newShape.type === ShapeType.polygon ||
+        newShape.type === ShapeType.polyline ||
+        newShape.type === ShapeType.mask) &&
+      ("polygonMode" in newShape || "polylinePoints" in newShape),
+  );
+
+  /** Whether the saved shape is closed. */
+  let savedIsClosed = $derived(
+    newShape.status === "saving" && "type" in newShape
+      ? newShape.type === ShapeType.polygon || newShape.type === ShapeType.mask
+      : false,
   );
 
   function projectOnSegment(p: Point2D, a: Point2D, b: Point2D) {
@@ -79,19 +101,21 @@ License: CECILL-C
     return { dist: Math.hypot(p.x - projected.x, p.y - projected.y), point: projected };
   }
 
-  function findClosestEdge(pos: Point2D, polygons: PolygonVertex[][]) {
+  function findClosestEdge(pos: Point2D, polygons: PolygonVertex[][], closed: boolean) {
     let bestDist = Number.POSITIVE_INFINITY;
     let bestShape = -1;
     let bestIdx = -1;
     let bestPoint = pos;
 
-    for (let shapeIndex = 0; shapeIndex <polygons.length; shapeIndex++) {
+    for (let shapeIndex = 0; shapeIndex < polygons.length; shapeIndex++) {
       const polygon = polygons[shapeIndex];
-      for (let pointIndex = 0; pointIndex <polygon.length; pointIndex++) {
+      // For open polylines, only iterate up to length-1 (no wrapping edge)
+      const edgeCount = closed ? polygon.length : polygon.length - 1;
+      for (let pointIndex = 0; pointIndex < edgeCount; pointIndex++) {
         const start = polygon[pointIndex];
         const end = polygon[(pointIndex + 1) % polygon.length];
         const { dist, point } = projectOnSegment(pos, start, end);
-        if (dist <bestDist) {
+        if (dist < bestDist) {
           bestDist = dist;
           bestShape = shapeIndex;
           bestIdx = pointIndex;
@@ -104,11 +128,14 @@ License: CECILL-C
   }
 
   function handlePolygonPointsClick(pointIndex: number, shapeIndex: number) {
-    if (!polygonCreation || polygonCreation.phase !== "drawing") return;
+    if (!multiPathCreation || multiPathCreation.phase !== "drawing") return;
+    // For open polylines, clicking a vertex does not close the sub-path.
+    // Users press N to finish a sub-path instead.
+    if (!isClosed) return;
     const inProgressIndex = polygonPoints.length - 1;
     if (shapeIndex !== inProgressIndex || pointIndex !== 0) return;
     const inProgressPolygon = polygonPoints[shapeIndex];
-    if (!inProgressPolygon || inProgressPolygon.length <3) return;
+    if (!inProgressPolygon || inProgressPolygon.length < 3) return;
 
     const firstPoint = inProgressPolygon[0];
     onToolEvent({
@@ -137,7 +164,7 @@ License: CECILL-C
       hoveredEdge = null;
       return;
     }
-    if (!polygonCreation || polygonCreation.phase !== "editing") {
+    if (!multiPathCreation || multiPathCreation.phase !== "editing") {
       hoveredEdge = null;
       return;
     }
@@ -151,10 +178,11 @@ License: CECILL-C
     const threshold = EDGE_SNAP_PX / zoomFactor;
     const { bestDist, bestShape, bestIdx, bestPoint } = findClosestEdge(
       pos,
-      polygonCreation.closedPolygons,
+      multiPathCreation.closedPolygons,
+      isClosed,
     );
 
-    if (bestDist <threshold && bestShape >= 0) {
+    if (bestDist < threshold && bestShape >= 0) {
       hoveredEdge = {
         x: bestPoint.x,
         y: bestPoint.y,
@@ -171,7 +199,7 @@ License: CECILL-C
   }
 
   function handleEdgeClick(e: Konva.KonvaEventObject<MouseEvent>) {
-    if (!polygonCreation || polygonCreation.phase !== "editing") return;
+    if (!multiPathCreation || multiPathCreation.phase !== "editing") return;
 
     e.cancelBubble = true;
 
@@ -199,7 +227,7 @@ License: CECILL-C
   }
 
   function handlePolygonDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
-    if (!polygonCreation || polygonCreation.phase !== "editing") return;
+    if (!multiPathCreation || multiPathCreation.phase !== "editing") return;
 
     const target = e.target;
     if (!(target instanceof Konva.Group)) return;
@@ -220,52 +248,62 @@ License: CECILL-C
   function drawPolygonScene(ctx: Konva.Context, shape: Konva.Shape) {
     ctx.beginPath();
 
-    const closedPolygons = polygonCreation?.closedPolygons ?? [];
+    const closedPolygons = multiPathCreation?.closedPolygons ?? [];
     for (const polygon of closedPolygons) {
-      if (polygon.length <2) continue;
+      if (polygon.length < 2) continue;
       ctx.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i <polygon.length; i++) {
+      for (let i = 1; i < polygon.length; i++) {
         ctx.lineTo(polygon[i].x, polygon[i].y);
       }
-      ctx.closePath();
+      if (isClosed) {
+        ctx.closePath();
+      }
     }
 
-    const inProgress = polygonCreation?.phase === "drawing" ? polygonCreation.points : [];
-    const hasCurrent = !!polygonCreation?.current;
+    const inProgress = multiPathCreation?.phase === "drawing" ? multiPathCreation.points : [];
+    const hasCurrent = !!multiPathCreation?.current;
     if (inProgress.length > 0) {
       ctx.moveTo(inProgress[0].x, inProgress[0].y);
-      for (let i = 1; i <inProgress.length; i++) {
+      for (let i = 1; i < inProgress.length; i++) {
         ctx.lineTo(inProgress[i].x, inProgress[i].y);
       }
       if (hasCurrent) {
-        ctx.lineTo(polygonCreation.current.x, polygonCreation.current.y);
+        ctx.lineTo(multiPathCreation.current.x, multiPathCreation.current.y);
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
-    const fillColor = shape.fill() as string;
-    if (fillColor) {
-      rawCtx.fillStyle = fillColor;
-      rawCtx.fill("evenodd");
+    if (isClosed) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+      const fillColor = shape.fill() as string;
+      if (fillColor) {
+        rawCtx.fillStyle = fillColor;
+        rawCtx.fill("evenodd");
+      }
     }
     ctx.strokeShape(shape);
   }
 
   function drawPolygonHit(ctx: Konva.Context, shape: Konva.Shape) {
-    if (!polygonCreation || polygonCreation.phase !== "editing") {
+    if (!multiPathCreation || multiPathCreation.phase !== "editing") {
       return;
     }
     ctx.beginPath();
-    for (const polygon of polygonCreation.closedPolygons) {
-      if (polygon.length <2) continue;
+    for (const polygon of multiPathCreation.closedPolygons) {
+      if (polygon.length < 2) continue;
       ctx.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i <polygon.length; i++) {
+      for (let i = 1; i < polygon.length; i++) {
         ctx.lineTo(polygon[i].x, polygon[i].y);
       }
-      ctx.closePath();
+      if (isClosed) {
+        ctx.closePath();
+      }
     }
-    ctx.fillStrokeShape(shape);
+    if (isClosed) {
+      ctx.fillStrokeShape(shape);
+    } else {
+      ctx.strokeShape(shape);
+    }
   }
 </script>
 
@@ -273,22 +311,22 @@ License: CECILL-C
   <Group
     ondragend={handlePolygonDragEnd}
     id="polygon-draft"
-    draggable={polygonCreation?.phase === "editing"}
+    draggable={multiPathCreation?.phase === "editing"}
   >
-    {#if polygonCreation}
+    {#if multiPathCreation}
       <KonvaShape
         onclick={handleEdgeClick}
         onmousemove={handleShapeMouseMove}
         onmouseleave={handleShapeMouseLeave}
         sceneFunc={drawPolygonScene}
         stroke={DRAFT_LINE_COLOR}
-        
+        strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
-        fill={DRAFT_FILL_COLOR}
+        fill={isClosed ? DRAFT_FILL_COLOR : undefined}
         hitFunc={drawPolygonHit}
-        listening={polygonCreation.phase === "editing"}
+        listening={multiPathCreation.phase === "editing"}
       />
       <PolygonVertices
         {viewRef}
@@ -306,7 +344,7 @@ License: CECILL-C
           radius={5 / zoomFactor}
           fill={DRAFT_LINE_COLOR}
           stroke="white"
-          
+          strokeWidth={INPUTRECT_STROKEWIDTH}
           strokeScaleEnabled={false}
           listening={false}
         />
@@ -317,29 +355,33 @@ License: CECILL-C
           const polygons = getSavedPolygonPoints(newShape);
           ctx.beginPath();
           for (const polygon of polygons) {
-            if (polygon.length <2) continue;
+            if (polygon.length < 2) continue;
             ctx.moveTo(polygon[0].x, polygon[0].y);
-            for (let i = 1; i <polygon.length; i++) {
+            for (let i = 1; i < polygon.length; i++) {
               ctx.lineTo(polygon[i].x, polygon[i].y);
             }
-            ctx.closePath();
+            if (savedIsClosed) {
+              ctx.closePath();
+            }
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
-          const fillColor = shape.fill() as string;
-          if (fillColor) {
-            rawCtx.fillStyle = fillColor;
-            rawCtx.fill("evenodd");
+          if (savedIsClosed) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rawCtx = (ctx as any)._context as CanvasRenderingContext2D;
+            const fillColor = shape.fill() as string;
+            if (fillColor) {
+              rawCtx.fillStyle = fillColor;
+              rawCtx.fill("evenodd");
+            }
           }
           ctx.strokeShape(shape);
         }}
         stroke={DRAFT_LINE_COLOR}
-        
+        strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
-        closed={true}
-        fill={DRAFT_FILL_COLOR}
+        closed={savedIsClosed}
+        fill={savedIsClosed ? DRAFT_FILL_COLOR : undefined}
         listening={false}
       />
     {/if}

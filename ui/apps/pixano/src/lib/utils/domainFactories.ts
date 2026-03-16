@@ -11,6 +11,7 @@ import {
   Keypoints,
   Mask,
   Message,
+  MultiPath,
   TextSpan,
   Tracklet,
   BaseSchema,
@@ -35,6 +36,9 @@ export const createTypedAnnotation = (
   }
   if (annotation.table_info.base_schema === BaseSchema.Mask) {
     return new Mask(annotation);
+  }
+  if (annotation.table_info.base_schema === BaseSchema.MultiPath) {
+    return new MultiPath(annotation);
   }
   if (annotation.table_info.base_schema === BaseSchema.Message) {
     return new Message(annotation);

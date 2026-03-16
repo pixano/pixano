@@ -14,6 +14,7 @@ License: CECILL-C
     EyeClosed,
     Ghost,
     GitCommit,
+    LineSegments,
     ListPlus,
     ListDashes,
     Pencil,
@@ -100,6 +101,7 @@ License: CECILL-C
   const TYPE_META: Record<string, { label: string; color: string }> = {
     [BaseSchema.BBox]: { label: "BBox", color: "bg-blue-500/15 text-blue-400" },
     [BaseSchema.Mask]: { label: "Mask", color: "bg-purple-500/15 text-purple-400" },
+    [BaseSchema.MultiPath]: { label: "MultiPath", color: "bg-orange-500/15 text-orange-400" },
     [BaseSchema.Keypoints]: { label: "Keypoints", color: "bg-teal-500/15 text-teal-400" },
     [BaseSchema.TextSpan]: { label: "Text", color: "bg-amber-500/15 text-amber-400" },
     [BaseSchema.Tracklet]: { label: "Track", color: "bg-cyan-500/15 text-cyan-400" },
@@ -285,7 +287,7 @@ License: CECILL-C
     for (const view of Object.keys(currentViews)) {
       const highlightedBoxesByView = entity.ui.childs?.filter(
         (ann) =>
-          (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)) &&
+          (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask) || ann.is_type(BaseSchema.MultiPath)) &&
           ann.data.view_name === view,
       );
       if (highlightedBoxesByView) {
@@ -464,6 +466,8 @@ License: CECILL-C
                       <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
                     {:else if schema === BaseSchema.TextSpan}
                       <TextT weight="regular" class="h-2.5 w-2.5" />
+                    {:else if schema === BaseSchema.MultiPath}
+                      <LineSegments weight="regular" class="h-2.5 w-2.5" />
                     {:else if schema === BaseSchema.Tracklet}
                       <GitCommit weight="regular" class="h-2.5 w-2.5" />
                     {/if}

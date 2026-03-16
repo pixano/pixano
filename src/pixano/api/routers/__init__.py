@@ -16,6 +16,7 @@ from pixano.api.routers.entity_dynamic_states import router as entity_dynamic_st
 from pixano.api.routers.keypoints import router as keypoints_router
 from pixano.api.routers.masks import router as masks_router
 from pixano.api.routers.messages import router as messages_router
+from pixano.api.routers.multi_paths import router as multi_paths_router
 from pixano.api.routers.records import router as records_router
 from pixano.api.routers.text_spans import router as text_spans_router
 from pixano.api.routers.tracklets import router as tracklets_router
@@ -30,6 +31,7 @@ RESOURCE_ROUTERS: tuple[APIRouter, ...] = (
     tracklets_router,
     bboxes_router,
     masks_router,
+    multi_paths_router,
     keypoints_router,
     messages_router,
     conversations_router,

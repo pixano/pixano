@@ -28,6 +28,7 @@ License: CECILL-C
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    current_itemMultiPaths,
     imageSmoothing,
     newShape,
     selectedTool,
@@ -332,6 +333,7 @@ License: CECILL-C
         colorScale={colorScale.value[1]}
         bboxes={mergedBBoxes}
         masks={current_itemMasks.value}
+        multiPaths={current_itemMultiPaths.value}
         keypoints={current_itemKeypoints.value}
         canvasSize={inspectorMaxHeight + resize}
         enableRenderCache={false}

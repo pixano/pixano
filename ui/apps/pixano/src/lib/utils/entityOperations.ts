@@ -13,6 +13,7 @@ import {
   Entity,
   Keypoints,
   Mask,
+  MultiPath,
   TextSpan,
   Tracklet,
   WorkspaceType,
@@ -52,8 +53,8 @@ export const appendAnnotationsSorted = (
 export const buildMaskDataAndInferenceMetadata = (
   shape: SaveShape,
 ): { mask: MaskData; inferenceMetadata: Record<string, unknown> } => {
-  if (shape.type !== ShapeType.mask && shape.type !== ShapeType.polygon) {
-    throw new Error(`Expected mask or polygon shape, got ${shape.type}`);
+  if (shape.type !== ShapeType.mask) {
+    throw new Error(`Expected mask shape, got ${shape.type}`);
   }
 
   const emptyMaskCounts = [shape.imageWidth * shape.imageHeight];
@@ -70,9 +71,31 @@ export const applyEditedShapeDataToAnnotation = (
   ann: Annotation,
   shape: EditShape,
 ): boolean => {
-  if ((shape.type === ShapeType.mask || shape.type === ShapeType.polygon) && ann.is_type(BaseSchema.Mask)) {
+  if (shape.type === ShapeType.mask && ann.is_type(BaseSchema.Mask)) {
     if ("counts" in shape && Array.isArray(shape.counts)) {
       (ann as Mask).data.counts = shape.counts;
+    }
+    return true;
+  }
+
+  if ((shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) && ann.is_type(BaseSchema.MultiPath)) {
+    const sourcePolys: Array<Array<{ x: number; y: number }>> =
+      "polygonPoints" in shape && Array.isArray(shape.polygonPoints)
+        ? shape.polygonPoints
+        : "polylinePoints" in shape && Array.isArray(shape.polylinePoints)
+          ? shape.polylinePoints
+          : [];
+    if (sourcePolys.length > 0) {
+      const coords: number[] = [];
+      const numPoints: number[] = [];
+      for (const poly of sourcePolys) {
+        numPoints.push(poly.length);
+        for (const pt of poly) {
+          coords.push(pt.x, pt.y);
+        }
+      }
+      (ann as MultiPath).data.coords = coords;
+      (ann as MultiPath).data.num_points = numPoints;
     }
     return true;
   }
@@ -244,7 +267,7 @@ export const defineCreatedAnnotation = (
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.BBox },
       data: { ...perFrameData, ...bbox },
     });
-  } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon) {
+  } else if (shape.type === ShapeType.mask) {
     const { mask, inferenceMetadata } = buildMaskDataAndInferenceMetadata(shape);
 
     const table = getTable(workspaceManifest, "annotations", BaseSchema.Mask);
@@ -252,6 +275,30 @@ export const defineCreatedAnnotation = (
       ...baseAnn,
       table_info: { name: table, group: "annotations", base_schema: BaseSchema.Mask },
       data: { ...perFrameData, inference_metadata: inferenceMetadata, ...mask },
+    });
+  } else if (shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) {
+    const isClosed = shape.type === ShapeType.polygon;
+    const sourcePoints: Array<Array<{ x: number; y: number }>> =
+      "polygonPoints" in shape && Array.isArray(shape.polygonPoints)
+        ? shape.polygonPoints
+        : "polylinePoints" in shape && Array.isArray(shape.polylinePoints)
+          ? shape.polylinePoints
+          : [];
+
+    const coords: number[] = [];
+    const num_points: number[] = [];
+    for (const poly of sourcePoints) {
+      num_points.push(poly.length);
+      for (const pt of poly) {
+        coords.push(pt.x / shape.imageWidth, pt.y / shape.imageHeight);
+      }
+    }
+
+    const table = getTable(workspaceManifest, "annotations", BaseSchema.MultiPath);
+    newAnnotation = new MultiPath({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: BaseSchema.MultiPath },
+      data: { ...perFrameData, coords, num_points, is_closed: isClosed },
     });
   } else if (shape.type === ShapeType.keypoints) {
     const coords = [];

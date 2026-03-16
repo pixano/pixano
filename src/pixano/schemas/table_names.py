@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from lancedb.pydantic import LanceModel
 
-from .annotations import BBox, CompressedRLE, KeyPoints, Message, TextSpan, Tracklet
+from .annotations import BBox, CompressedRLE, KeyPoints, Message, MultiPath, TextSpan, Tracklet
 from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
@@ -38,6 +38,7 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
     CanonicalResourceFamily("keypoint", "keypoints", "keypoints", SchemaGroup.ANNOTATION, KeyPoints),
     CanonicalResourceFamily("tracklet", "tracklets", "tracklets", SchemaGroup.ANNOTATION, Tracklet),
     CanonicalResourceFamily("message", "messages", "messages", SchemaGroup.ANNOTATION, Message),
+    CanonicalResourceFamily("multi_path", "multi-paths", "multi_paths", SchemaGroup.ANNOTATION, MultiPath),
     CanonicalResourceFamily("text_span", "text-spans", "text_spans", SchemaGroup.ANNOTATION, TextSpan),
     CanonicalResourceFamily("image", "images", "images", SchemaGroup.VIEW, Image),
     CanonicalResourceFamily(
@@ -73,6 +74,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "entity_dynamic_state",
             "bbox",
             "mask",
+            "multi_path",
             "keypoint",
             "tracklet",
             "message",

@@ -31,6 +31,7 @@ from pixano.schemas import (
     EntityDynamicState,
     KeyPoints,
     Message,
+    MultiPath,
     PDF,
     Record,
     RecordComponent,
@@ -54,6 +55,7 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "entity_dynamic_state": EntityDynamicState,
     "bbox": BBox,
     "mask": CompressedRLE,
+    "multi_path": MultiPath,
     "keypoint": KeyPoints,
     "tracklet": Tracklet,
     "message": Message,
@@ -100,6 +102,7 @@ class DatasetInfo(BaseModel):
     entity_dynamic_state: type[EntityDynamicState] | None = None
     bbox: type[BBox] | None = None
     mask: type[CompressedRLE] | None = None
+    multi_path: type[MultiPath] | None = None
     keypoint: type[KeyPoints] | None = None
     tracklet: type[Tracklet] | None = None
     message: type[Message] | None = None

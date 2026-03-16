@@ -11,6 +11,7 @@ import {
 import {
   panTool,
   polygonTool,
+  polylineTool,
   rectangleTool,
 } from "$lib/tools/canvasToolPolicy";
 
@@ -70,6 +71,14 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cleanupPolygonPreview: false,
     };
   }
+  if (tool?.type === ToolType.Polyline) {
+    return {
+      cursor: polylineTool.cursor,
+      clearCrosshair: false,
+      clearBrushCursor: true,
+      cleanupPolygonPreview: false,
+    };
+  }
   if (tool?.type === ToolType.Brush) {
     return {
       cursor: "none",
@@ -103,6 +112,7 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
   const isDrawTool =
     tool?.type === ToolType.Rectangle ||
     tool?.type === ToolType.Polygon ||
+    tool?.type === ToolType.Polyline ||
     tool?.type === ToolType.Brush;
 
   return {
@@ -142,9 +152,9 @@ export function classifyKeyDown(
 
   if (event.key === "Escape") {
     const shouldKeepPolygonTool =
-      tool?.type === ToolType.Polygon &&
+      (tool?.type === ToolType.Polygon || tool?.type === ToolType.Polyline) &&
       interactionShape?.status === "creating" &&
-      interactionShape?.type === "polygon" &&
+      (interactionShape?.type === "polygon" || interactionShape?.type === "polyline") &&
       interactionShape?.phase === "drawing" &&
       (interactionShape?.closedPolygons?.length ?? 0) > 0;
 
@@ -157,7 +167,7 @@ export function classifyKeyDown(
 
   if (
     (event.key === "Enter" || event.key === "Backspace") &&
-    (tool?.type === ToolType.Rectangle || tool?.type === ToolType.Polygon)
+    (tool?.type === ToolType.Rectangle || tool?.type === ToolType.Polygon || tool?.type === ToolType.Polyline)
   ) {
     return {
       type: "forward-to-bridge",

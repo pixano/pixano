@@ -13,6 +13,7 @@ import {
   Keypoints,
   Mask,
   Message,
+  MultiPath,
   TextSpan,
   Tracklet,
   type FeatureList,
@@ -146,6 +147,8 @@ export const getValidationSchemaAndFormInputs = (
           nonFeatsFields = nonFeatsFields.concat(TextSpan.nonFeaturesFields());
         if (baseSchema === BaseSchema.Message)
           nonFeatsFields = nonFeatsFields.concat(Message.nonFeaturesFields());
+        if (baseSchema === BaseSchema.MultiPath)
+          nonFeatsFields = nonFeatsFields.concat(MultiPath.nonFeaturesFields());
       } else {
         nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
       }

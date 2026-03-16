@@ -122,7 +122,7 @@ License: CECILL-C
     let tracking_masks: Mask[] = [];
     const addedAnnotations: Annotation[] = [newAnnotation];
 
-    if (newShape.value.type === ShapeType.mask || newShape.value.type === ShapeType.polygon) {
+    if (newShape.value.type === ShapeType.mask) {
       const bboxCoords = newShape.value.maskBounds;
       if (bboxCoords) {
         const bboxShape: SaveRectangleShape = {

@@ -15,6 +15,7 @@ from pixano.schemas import (
     Record,
     KeyPoints,
     Message,
+    MultiPath,
     TextSpan,
     Tracklet,
 )
@@ -239,6 +240,20 @@ MaskUpdate = _create_transport_model(
 )
 MaskResponse = _create_transport_model("MaskResponse", CompressedRLE)
 
+MultiPathCreate = _create_transport_model(
+    "MultiPathCreate",
+    MultiPath,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+MultiPathUpdate = _create_transport_model(
+    "MultiPathUpdate",
+    MultiPath,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+MultiPathResponse = _create_transport_model("MultiPathResponse", MultiPath)
+
 KeyPointsCreate = _create_transport_model(
     "KeyPointsCreate",
     KeyPoints,
@@ -309,6 +324,7 @@ class DatasetInfoResponse(DatasetInfo):
         "entity_dynamic_state",
         "bbox",
         "mask",
+        "multi_path",
         "keypoint",
         "tracklet",
         "message",
@@ -381,6 +397,9 @@ __all__ = [
     "MaskCreate",
     "MaskResponse",
     "MaskUpdate",
+    "MultiPathCreate",
+    "MultiPathResponse",
+    "MultiPathUpdate",
     "ConversationResponse",
     "MessageCreate",
     "MessageResponse",

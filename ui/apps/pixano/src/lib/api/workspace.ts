@@ -22,6 +22,7 @@ import type { WorkspaceData } from "$lib/types/workspace";
 const WORKSPACE_COLLECTIONS = [
   "bboxes",
   "masks",
+  "multi-paths",
   "keypoints",
   "tracklets",
   "entity-dynamic-states",

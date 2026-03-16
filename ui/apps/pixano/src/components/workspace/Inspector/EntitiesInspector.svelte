@@ -215,7 +215,7 @@ License: CECILL-C
         const viewAnnotations =
           focusedEntity.ui.childs?.filter(
             (ann) =>
-              (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)) &&
+              (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask) || ann.is_type(BaseSchema.MultiPath)) &&
               ann.data.view_name === view,
           ) ?? [];
         if (viewAnnotations.length === 0) continue;
@@ -242,7 +242,7 @@ License: CECILL-C
     const highlightedBoxes = annotations.value.filter(
       (ann) =>
         ann.ui.displayControl.highlighted === "self" &&
-        (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask)),
+        (ann.is_type(BaseSchema.BBox) || ann.is_type(BaseSchema.Mask) || ann.is_type(BaseSchema.MultiPath)),
     );
 
     if (highlightedBoxes.length === 0) return nextThumbnails;

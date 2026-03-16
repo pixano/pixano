@@ -47,6 +47,14 @@ export type PreviewShape =
       readonly current?: Point2D;
       readonly hoveredEdge?: PolygonEdgeHint | null;
     }
+  | {
+      readonly type: "polyline";
+      readonly phase: "drawing" | "editing";
+      readonly closedPolygons: readonly (readonly IndexedPoint2D[])[];
+      readonly points: readonly IndexedPoint2D[];
+      readonly current?: Point2D;
+      readonly hoveredEdge?: PolygonEdgeHint | null;
+    }
   | { readonly type: "mask"; readonly data: ImageData }
   | { readonly type: "point"; readonly position: Point2D; readonly label: number }
   | { readonly type: "keypoints"; readonly points: readonly Point2D[] }
@@ -66,6 +74,13 @@ export type ToolState =
     }
   | {
       readonly phase: "drawingPolygon";
+      readonly mode: "drawing" | "editing";
+      readonly closedPolygons: readonly (readonly IndexedPoint2D[])[];
+      readonly points: readonly IndexedPoint2D[];
+      readonly current?: Point2D;
+    }
+  | {
+      readonly phase: "drawingPolyline";
       readonly mode: "drawing" | "editing";
       readonly closedPolygons: readonly (readonly IndexedPoint2D[])[];
       readonly points: readonly IndexedPoint2D[];
@@ -123,7 +138,7 @@ export type ToolSideEffect =
   | { readonly type: "beginTransaction"; readonly description: string }
   | { readonly type: "commitTransaction" }
   | { readonly type: "abortTransaction" }
-  | { readonly type: "requestSave"; readonly shapeType: "bbox" | "polygon" | "mask" | "keypoints"; readonly geometry: unknown };
+  | { readonly type: "requestSave"; readonly shapeType: "bbox" | "polygon" | "polyline" | "mask" | "keypoints"; readonly geometry: unknown };
 
 // --------------- Tool Transition ---------------
 
@@ -185,6 +200,7 @@ export enum ToolType {
   PointSelection = "POINT_SELECTION",
   Rectangle = "RECTANGLE",
   Polygon = "POLYGON",
+  Polyline = "POLYLINE",
   Keypoint = "KEY_POINT",
   Delete = "DELETE",
   Pan = "PAN",
@@ -221,8 +237,10 @@ export type PolygonSelectionTool = BaseTool<ToolType.Polygon> & {
   outputMode: PolygonOutputMode;
 };
 
+export type PolylineSelectionTool = BaseTool<ToolType.Polyline>;
+
 export type BrushSelectionTool = BaseTool<ToolType.Brush> & {
   mode: "draw" | "erase";
 };
 
-export type SelectionTool = AllTool | LabeledPointTool | BrushSelectionTool | PolygonSelectionTool;
+export type SelectionTool = AllTool | LabeledPointTool | BrushSelectionTool | PolygonSelectionTool | PolylineSelectionTool;

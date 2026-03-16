@@ -8,6 +8,7 @@ import {
   ToolType,
   type BrushSelectionTool,
   type PolygonSelectionTool,
+  type PolylineSelectionTool,
   type SelectionTool,
 } from "$lib/types/tools";
 
@@ -30,6 +31,13 @@ export const polygonTool: PolygonSelectionTool = {
   cursor: "crosshair",
   isSmart: false,
   outputMode: "polygon",
+};
+
+export const polylineTool: PolylineSelectionTool = {
+  name: "Create a polyline",
+  type: ToolType.Polyline,
+  cursor: "crosshair",
+  isSmart: false,
 };
 
 export const keyPointTool: SelectionTool = {

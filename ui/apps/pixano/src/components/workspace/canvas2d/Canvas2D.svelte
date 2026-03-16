@@ -13,7 +13,8 @@ License: CECILL-C
   import BBox2D from "./BBox2D.svelte";
   import BrushCursor from "./BrushCursor.svelte";
   import Mask from "./Mask.svelte";
-  import CreatePolygon from "./CreatePolygon.svelte";
+  import CreateMultiPath from "./CreateMultiPath.svelte";
+  import MultiPathShape from "./MultiPathShape.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
   import { zoomViewTransform } from "./canvasGeometry";
@@ -25,6 +26,7 @@ License: CECILL-C
     toClosedPolygonPoints,
     buildRectangleSaveShape,
     buildPolygonSaveShape,
+    buildPolylineSaveShape,
   } from "./shapeSaveOps";
   import {
     getToolSwitchSignature,
@@ -52,13 +54,15 @@ License: CECILL-C
     isSupportedCanvasTool,
     panTool,
     polygonTool,
+    polylineTool,
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
-  import type { BBox, LoadedImagesPerView, Mask as DatasetMask, Reference } from "$lib/types/dataset";
+  import type { BBox, LoadedImagesPerView, Mask as DatasetMask, MultiPath as DatasetMultiPath, Reference } from "$lib/types/dataset";
   import {
     ShapeType,
     type CreatePolygonShape,
+    type CreatePolylineShape,
     type CreateRectangleShape,
     type ImageFilters,
     type KeypointAnnotation,
@@ -95,6 +99,7 @@ License: CECILL-C
     selectedItemId: string;
     masks: DatasetMask[];
     bboxes: BBox[];
+    multiPaths?: DatasetMultiPath[];
     keypoints?: KeypointAnnotation[];
     selectedTool: SelectionTool;
     newShape: Shape;
@@ -119,6 +124,7 @@ License: CECILL-C
     selectedItemId,
     masks,
     bboxes,
+    multiPaths = [],
     keypoints = [],
     selectedTool,
     newShape,
@@ -208,6 +214,7 @@ License: CECILL-C
       newShape.status === "saving" &&
       (newShape.type === ShapeType.bbox ||
         newShape.type === ShapeType.polygon ||
+        newShape.type === ShapeType.polyline ||
         newShape.type === ShapeType.mask)
     ) {
       return newShape;
@@ -239,6 +246,23 @@ License: CECILL-C
         hoveredEdge: preview.hoveredEdge ?? null,
         outputMode: selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon",
       } as CreatePolygonShape;
+      if (bboxEditable) {
+        clearRectangleTransformer();
+      }
+      return;
+    }
+
+    if (preview?.type === "polyline") {
+      localDraftShape = {
+        status: "creating",
+        type: ShapeType.polyline,
+        viewRef,
+        phase: preview.phase,
+        closedPolygons: toClosedPolygonPoints(preview.closedPolygons),
+        points: toPolygonPoints(preview.points),
+        current: preview.current,
+        hoveredEdge: preview.hoveredEdge ?? null,
+      } as CreatePolylineShape;
       if (bboxEditable) {
         clearRectangleTransformer();
       }
@@ -311,8 +335,28 @@ License: CECILL-C
     onNewShapeChange?.(saveShape);
   }
 
+  function handlePolylineRequestSave(geometry: unknown): void {
+    const payload = geometry as PolygonSavePayload;
+    const viewRef = lastInputViewRef;
+    if (!viewRef) return;
+
+    const currentImage = getCurrentImage(viewRef.name);
+    const saveShape = buildPolylineSaveShape(
+      payload,
+      viewRef,
+      selectedItemId,
+      currentImage,
+    );
+
+    if (!saveShape) return;
+
+    localDraftShape = null;
+    cleanupPolygonPreviewListeners();
+    onNewShapeChange?.(saveShape);
+  }
+
   function handleToolRequestSave(
-    shapeType: "bbox" | "polygon" | "mask" | "keypoints",
+    shapeType: "bbox" | "polygon" | "polyline" | "mask" | "keypoints",
     geometry: unknown,
   ) {
     if (shapeType === "bbox") {
@@ -322,6 +366,11 @@ License: CECILL-C
 
     if (shapeType === "polygon") {
       handlePolygonRequestSave(geometry);
+      return;
+    }
+
+    if (shapeType === "polyline") {
+      handlePolylineRequestSave(geometry);
     }
   }
 
@@ -766,6 +815,38 @@ License: CECILL-C
     merge?.(bbox);
   }
 
+  function computeMultiPathBounds(
+    mp: DatasetMultiPath,
+    imgW: number,
+    imgH: number,
+  ): { x: number; y: number; width: number; height: number } | null {
+    const { coords } = mp.data;
+    if (!coords || coords.length < 4) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < coords.length; i += 2) {
+      const px = coords[i] * imgW;
+      const py = coords[i + 1] * imgH;
+      if (px < minX) minX = px;
+      if (py < minY) minY = py;
+      if (px > maxX) maxX = px;
+      if (py > maxY) maxY = py;
+    }
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }
+
+  function handleSelectMultiPath(multiPath: DatasetMultiPath) {
+    if (multiPath.ui.displayControl.highlighted !== "self") {
+      onNewShapeChange?.({
+        status: "editing",
+        shapeId: multiPath.id,
+        top_entity_id: (multiPath.ui.top_entities ?? [])[0]?.id ?? multiPath.data.entity_id,
+        viewRef: { name: multiPath.data.view_name, id: multiPath.data.frame_id },
+        highlighted: "self",
+        type: ShapeType.none,
+      });
+    }
+  }
+
   function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
@@ -784,7 +865,8 @@ License: CECILL-C
       (interactionShape.status === "none" || interactionShape.status === "editing") &&
       selectedTool?.type !== ToolType.Pan &&
       selectedTool?.type !== ToolType.Brush &&
-      selectedTool?.type !== ToolType.Polygon
+      selectedTool?.type !== ToolType.Polygon &&
+      selectedTool?.type !== ToolType.Polyline
     ) {
       onNewShapeChange?.({
         status: "editing",
@@ -845,6 +927,31 @@ License: CECILL-C
         viewLayer.off("pointerup.rectangle");
       });
     } else if (selectedTool?.type === ToolType.Polygon) {
+      if (event.button !== 0) return;
+      const bridge = activeToolBridge;
+      if (!bridge) return;
+
+      lastInputViewRef = viewRef;
+      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      const pos = viewLayer.getRelativePointerPosition();
+      if (!pos) return;
+
+      bridge.dispatchEvent({
+        type: "pointerDown",
+        position: { x: pos.x, y: pos.y },
+        button: event.button,
+      });
+
+      viewLayer.off("pointermove.polygon");
+      viewLayer.on("pointermove.polygon", () => {
+        const movePos = viewLayer.getRelativePointerPosition();
+        if (!movePos) return;
+        bridge.dispatchEvent({
+          type: "pointerMove",
+          position: { x: movePos.x, y: movePos.y },
+        });
+      });
+    } else if (selectedTool?.type === ToolType.Polyline) {
       if (event.button !== 0) return;
       const bridge = activeToolBridge;
       if (!bridge) return;
@@ -947,6 +1054,16 @@ License: CECILL-C
     return grouped;
   });
 
+  let multiPathsByView = $derived.by(() => {
+    const grouped: Record<string, DatasetMultiPath[]> = {};
+    for (const mp of multiPaths) {
+      const key = mp.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(mp);
+    }
+    return grouped;
+  });
+
   let draftRectangle = $derived.by<CreateRectangleShape | SaveRectangleShape | null>(() => {
     const shape = draftOrSavingShape;
     if (!shape) return null;
@@ -959,6 +1076,7 @@ License: CECILL-C
     if (!shape) return null;
     if (!("type" in shape)) return null;
     if (shape.type === ShapeType.polygon) return shape;
+    if (shape.type === ShapeType.polyline) return shape;
     if (shape.type === ShapeType.mask && "polygonMode" in shape) return shape;
     return null;
   });
@@ -974,7 +1092,7 @@ License: CECILL-C
 
   // Triggers a single batched redraw instead of tracking every annotation property.
   let frameFingerprint = $derived.by(() => {
-    return `${viewFrameIdentity}|b${bboxes.length}|m${masks.length}|k${keypoints.length}`;
+    return `${viewFrameIdentity}|b${bboxes.length}|m${masks.length}|k${keypoints.length}|p${multiPaths.length}`;
   });
 
   $effect(() => {
@@ -999,13 +1117,13 @@ License: CECILL-C
     if (event.key === "Escape") {
       const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
-        selectedTool?.type === ToolType.Polygon &&
+        (selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline) &&
         interactionShape.status === "creating" &&
-        interactionShape.type === ShapeType.polygon &&
+        (interactionShape.type === ShapeType.polygon || interactionShape.type === ShapeType.polyline) &&
         interactionShape.phase === "drawing" &&
         interactionShape.closedPolygons.length > 0;
 
-      if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon) {
+      if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline) {
         activeToolBridge?.dispatchEvent({ type: "cancel" });
       }
 
@@ -1028,6 +1146,7 @@ License: CECILL-C
       selectPan: () => onSelectedToolChange?.(panTool),
       selectRectangle: () => onSelectedToolChange?.(rectangleTool),
       selectPolygon: () => onSelectedToolChange?.(polygonTool),
+      selectPolyline: () => onSelectedToolChange?.(polylineTool),
       selectBrushDraw: () => onSelectedToolChange?.(brushDrawTool),
       toggleBrushMode: () => {
         if (selectedTool?.type === ToolType.Brush) {
@@ -1054,11 +1173,29 @@ License: CECILL-C
     const isConfirmKey = event.key === "Enter" || confirmKeys.includes(event.key);
     if (
       (isConfirmKey || event.key === "Backspace") &&
-      (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon)
+      (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline)
     ) {
       activeToolBridge?.dispatchEvent({
         type: "keyDown",
         key: isConfirmKey ? "Enter" : event.key,
+        modifiers: {
+          shift: event.shiftKey,
+          ctrl: event.ctrlKey,
+          alt: event.altKey,
+          meta: event.metaKey,
+        },
+      });
+      return;
+    }
+
+    // N key: finish current polyline sub-path and start a new one
+    if (
+      (event.key === "n" || event.key === "N") &&
+      selectedTool?.type === ToolType.Polyline
+    ) {
+      activeToolBridge?.dispatchEvent({
+        type: "keyDown",
+        key: event.key,
         modifiers: {
           shift: event.shiftKey,
           ctrl: event.ctrlKey,
@@ -1270,6 +1407,20 @@ License: CECILL-C
           {/if}
 
           {#if !isActivePaintingTool}
+            {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
+              {#if !multiPath.ui.displayControl.hidden}
+                <MultiPathShape
+                  {multiPath}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view_name] ?? 1}
+                  imageWidth={currentImage?.width ?? 0}
+                  imageHeight={currentImage?.height ?? 0}
+                />
+              {/if}
+            {/each}
+          {/if}
+
+          {#if !isActivePaintingTool}
             <Group listening={false}>
               <ShowKeypoints
                 {colorScale}
@@ -1386,8 +1537,30 @@ License: CECILL-C
             {/each}
           {/if}
 
+          {#if !isActivePaintingTool}
+            {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
+              {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
+                {@const bounds = computeMultiPathBounds(multiPath, currentImage?.width ?? 0, currentImage?.height ?? 0)}
+                {#if bounds}
+                  <Rect
+                    x={bounds.x}
+                    y={bounds.y}
+                    width={bounds.width}
+                    height={bounds.height}
+                    fill="rgba(0,0,0,0.001)"
+                    strokeEnabled={false}
+                    onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
+                      event.cancelBubble = true;
+                      handleSelectMultiPath(multiPath);
+                    }}
+                  />
+                {/if}
+              {/if}
+            {/each}
+          {/if}
+
           {#if draftPolygon && "viewRef" in draftPolygon && draftPolygon.viewRef?.name === view_name}
-            <CreatePolygon
+            <CreateMultiPath
               {viewRef}
               newShape={draftPolygon}
               zoomFactor={zoomFactor[view_name] ?? 1}

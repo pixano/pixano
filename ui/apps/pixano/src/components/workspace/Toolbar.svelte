@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Eraser, Cursor, PaintBucket, PaintBrush, PencilSimple, Square, Graph } from "phosphor-svelte";
+  import { LineSegments } from "phosphor-svelte";
   import {
     type PolygonOutputMode,
     ToolType,
@@ -13,6 +14,7 @@ License: CECILL-C
     brushEraseTool,
     panTool,
     polygonTool,
+    polylineTool,
     rectangleTool,
   } from "$lib/tools";
   import { IconButton, cn } from "$lib/ui";
@@ -41,6 +43,12 @@ License: CECILL-C
   const selectPolygonTool = () => {
     if (selectedTool.value?.type !== ToolType.Polygon) {
       selectedTool.value = polygonTool;
+    }
+  };
+
+  const selectPolylineTool = () => {
+    if (selectedTool.value?.type !== ToolType.Polyline) {
+      selectedTool.value = polylineTool;
     }
   };
 
@@ -123,6 +131,15 @@ License: CECILL-C
       </div>
     {/if}
   </div>
+
+  <IconButton
+    tooltipContent="Polyline Tool (L)"
+    onclick={selectPolylineTool}
+    selected={selectedTool.value?.type === ToolType.Polyline}
+    class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+  >
+    <LineSegments weight="regular" class="h-4.5 w-4.5" />
+  </IconButton>
 
   <div
     class={cn(

@@ -10,6 +10,7 @@ import {
   brushEraseTool,
   panTool,
   polygonTool,
+  polylineTool,
   rectangleTool,
   type BrushSelectionTool,
   type SelectionTool,
@@ -21,6 +22,7 @@ export function isSupportedCanvasTool(tool: SelectionTool | undefined): boolean 
     tool.type === ToolType.Pan ||
     (tool.type === ToolType.Rectangle && !tool.isSmart) ||
     tool.type === ToolType.Polygon ||
+    tool.type === ToolType.Polyline ||
     tool.type === ToolType.Brush
   );
 }
@@ -37,6 +39,7 @@ export interface ShortcutToolActions {
   selectPan(): void;
   selectRectangle(): void;
   selectPolygon(): void;
+  selectPolyline(): void;
   selectBrushDraw(): void;
   toggleBrushMode(): void;
   adjustBrushRadius(delta: number): void;
@@ -60,6 +63,11 @@ export function handleToolShortcuts(
 
   if (event.key === "p" || event.key === "P") {
     actions.selectPolygon();
+    return true;
+  }
+
+  if (event.key === "l" || event.key === "L") {
+    actions.selectPolyline();
     return true;
   }
 
@@ -103,4 +111,4 @@ export function handleToolShortcuts(
   return false;
 }
 
-export { brushDrawTool, brushEraseTool, panTool, polygonTool, rectangleTool };
+export { brushDrawTool, brushEraseTool, panTool, polygonTool, polylineTool, rectangleTool };

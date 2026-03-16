@@ -105,7 +105,7 @@ export interface ToolBridge {
 
   /** Register a callback for requestSave side effects. */
   onRequestSave(
-    callback: (shapeType: "bbox" | "polygon" | "mask" | "keypoints", geometry: unknown) => void,
+    callback: (shapeType: "bbox" | "polygon" | "polyline" | "mask" | "keypoints", geometry: unknown) => void,
   ): void;
 
   /** Switch the active FSM and reset transient state. */

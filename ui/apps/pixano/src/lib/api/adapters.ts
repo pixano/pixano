@@ -29,6 +29,7 @@ const BASE_SCHEMA_BY_NAME: Record<string, BaseSchema> = {
   EntityDynamicState: BaseSchema.Classification,
   BBox: BaseSchema.BBox,
   CompressedRLE: BaseSchema.Mask,
+  MultiPath: BaseSchema.MultiPath,
   KeyPoints: BaseSchema.Keypoints,
   Tracklet: BaseSchema.Tracklet,
   Message: BaseSchema.Message,
@@ -41,6 +42,7 @@ const BASE_SCHEMA_BY_NAME: Record<string, BaseSchema> = {
 const ANNOTATION_TABLES = new Set([
   "bboxes",
   "masks",
+  "multi_paths",
   "keypoints",
   "tracklets",
   "messages",
@@ -234,6 +236,8 @@ function baseSchemaFromTableName(tableName: string): BaseSchema {
       return BaseSchema.BBox;
     case "masks":
       return BaseSchema.Mask;
+    case "multi_paths":
+      return BaseSchema.MultiPath;
     case "keypoints":
       return BaseSchema.Keypoints;
     case "tracklets":

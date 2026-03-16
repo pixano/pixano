@@ -27,6 +27,7 @@ export type {
   LabeledPointTool,
   PolygonOutputMode,
   PolygonSelectionTool,
+  PolylineSelectionTool,
   SelectionTool,
   ToolPostProcessor,
 } from "$lib/types/tools";
@@ -39,6 +40,7 @@ export {
   keyPointTool,
   panTool,
   polygonTool,
+  polylineTool,
   rectangleTool,
   removeSmartPointTool,
   smartRectangleTool,
@@ -48,6 +50,7 @@ export {
 export { PanToolFSM } from "./fsm/PanToolFSM";
 export { RectangleToolFSM } from "./fsm/RectangleToolFSM";
 export { PolygonToolFSM } from "./fsm/PolygonToolFSM";
+export { PolylineToolFSM } from "./fsm/PolylineToolFSM";
 export { PointSelectionToolFSM } from "./fsm/PointSelectionToolFSM";
 export { KeypointToolFSM } from "./fsm/KeypointToolFSM";
 export { BrushToolFSM } from "./fsm/BrushToolFSM";

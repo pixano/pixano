@@ -49,6 +49,7 @@ License: CECILL-C
     itemBboxes,
     itemKeypoints,
     itemMasks,
+    itemMultiPaths,
     messages,
     modelsUiStore,
     newShape,
@@ -271,6 +272,7 @@ License: CECILL-C
         colorScale={colorScale.value[1]}
         bboxes={itemBboxes.value}
         masks={itemMasks.value}
+        multiPaths={itemMultiPaths.value}
         keypoints={itemKeypoints.value}
         filters={filters.value as unknown as ImageFilters}
         canvasSize={vqaAreaMaxWidth + resize}
