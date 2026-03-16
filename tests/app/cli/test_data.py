@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import re
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -305,4 +306,5 @@ class TestImportWithInfo:
             result = runner.invoke(app, ["data", "import", str(data_dir), str(source)])
 
             assert result.exit_code != 0
-            assert "--info" in result.output
+            plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+            assert "--info" in plain
