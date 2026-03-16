@@ -24,6 +24,7 @@ License: CECILL-C
 
   let { dataset, onSelectDataset }: Props = $props();
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let stats: {
     maxViews: number;
     entities: number;

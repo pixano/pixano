@@ -53,11 +53,7 @@ export const createTypedEntity = (entity: RawSchemaData) => {
 
 export const createTypedView = (view: RawSchemaData | RawSchemaData[]) => {
   if (Array.isArray(view)) {
-    const isSequenceFrame = view.every(
-      (v) =>
-        "frame_index" in (v.data as Record<string, unknown>) &&
-        "timestamp" in (v.data as Record<string, unknown>),
-    );
+    const isSequenceFrame = view.every((v) => "frame_index" in v.data && "timestamp" in v.data);
 
     if (isSequenceFrame) {
       const sequenceFrames: SequenceFrame[] = [];

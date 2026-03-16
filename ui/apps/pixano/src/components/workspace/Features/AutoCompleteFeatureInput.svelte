@@ -24,6 +24,7 @@ License: CECILL-C
 
   let {
     onTextInputChange,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     featureList = $bindable([]),
     placeholder = "Select a feature",
     value = $bindable(""),

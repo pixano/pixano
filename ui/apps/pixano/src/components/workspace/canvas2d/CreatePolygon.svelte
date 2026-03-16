@@ -8,12 +8,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
 
-  import {
-    DRAFT_FILL_COLOR,
-    DRAFT_LINE_COLOR,
-    EDGE_SNAP_PX,
-    INPUTRECT_STROKEWIDTH,
-  } from "./konvaConstants";
+  import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX } from "./konvaConstants";
   import PolygonVertices from "./PolygonVertices.svelte";
   import type { ToolEvent } from "$lib/tools";
   import type { Reference } from "$lib/types/dataset";
@@ -47,6 +42,7 @@ License: CECILL-C
   const getSavedPolygonPoints = (shape: Shape): PolygonVertex[][] =>
     "polygonPoints" in shape && Array.isArray(shape.polygonPoints) ? shape.polygonPoints : [];
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null =
     $state(null);
 

@@ -32,7 +32,7 @@ class DefaultJSONDatasetExporter(DatasetExporter):
         Returns:
             A dictionary containing the data to be exported.
         """
-        export_data = {"info": info.model_dump(exclude={"tables"})}
+        export_data: dict[str, Any] = {"info": info.json_info_dump()}
 
         for group, table_names in info.groups.items():
             if group == SchemaGroup.EMBEDDING:

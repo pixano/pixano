@@ -32,7 +32,7 @@ export class AssetManagerImpl implements AssetManager {
 
     // Check if already loading
     const existing = this.loadingPromises.get(uri);
-    if (existing) return existing;
+    if (existing !== undefined) return await existing;
 
     // Load the image
     const promise = this.doLoadImage(uri);

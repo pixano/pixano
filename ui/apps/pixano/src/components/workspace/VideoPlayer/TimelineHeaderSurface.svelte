@@ -129,6 +129,7 @@ License: CECILL-C
   }
 
   $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     timelineZoom.value[0];
     if (!surfaceElement) return;
 

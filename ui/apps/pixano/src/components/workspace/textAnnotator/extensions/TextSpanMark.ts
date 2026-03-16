@@ -54,7 +54,9 @@ export const TextSpanMark = Mark.create<TextSpanMarkOptions>({
     return [
       "span",
       {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         "data-text-span-id": id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         "data-entity-id": entityId,
         style,
       },

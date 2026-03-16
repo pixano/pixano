@@ -154,6 +154,7 @@ export const textSpans = reactiveDerived(() => {
       eById,
     );
     if (effectiveHighlight === span.ui.displayControl.highlighted) return span;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const clone = Object.assign(Object.create(Object.getPrototypeOf(span)), span);
     clone.ui = {
       ...span.ui,

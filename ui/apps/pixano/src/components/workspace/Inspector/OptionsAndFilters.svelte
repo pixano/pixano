@@ -28,7 +28,6 @@ License: CECILL-C
     Mask,
     TextSpan,
     Tracklet,
-    WorkspaceType,
   } from "$lib/ui";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";

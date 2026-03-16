@@ -212,6 +212,17 @@ class DatasetInfo(BaseModel):
     # Serialization
     # ------------------------------------------------------------------
 
+    _SCHEMA_FIELDS: set[str] = {"tables", "views", *_DATASET_INFO_SLOT_TYPES.keys()}
+
+    def json_info_dump(self) -> dict:
+        """Return a JSON-serializable dict of the dataset metadata.
+
+        This excludes all schema-type fields (``tables``, ``views``, and schema
+        slot fields like ``record``, ``entity``, etc.) that contain Python class
+        objects which cannot be serialized to JSON.
+        """
+        return self.model_dump(exclude=self._SCHEMA_FIELDS)
+
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
 

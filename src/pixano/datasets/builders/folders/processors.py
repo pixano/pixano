@@ -42,7 +42,7 @@ class TemporalSchemaResolver:
 
     def resolve_tracking_entity_schema(self) -> tuple[str | None, type[Entity] | None]:
         """Resolve the entity schema used for auto-generated temporal objects."""
-        candidates = [(name, schema) for name, schema in self.entities_schema.items()]
+        candidates = list(self.entities_schema.items())
         if not candidates:
             return None, None
 

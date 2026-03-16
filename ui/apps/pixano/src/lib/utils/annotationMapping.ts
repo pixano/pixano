@@ -52,6 +52,7 @@ function setBoundedMappedMaskCacheEntry(key: string, entry: MappedMaskCacheEntry
   }
   mappedMaskCache.set(key, entry);
   if (mappedMaskCache.size > MAX_MAPPED_MASK_CACHE_SIZE) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const oldestKey = mappedMaskCache.keys().next().value;
     if (oldestKey !== undefined) {
       mappedMaskCache.delete(oldestKey);

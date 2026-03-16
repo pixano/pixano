@@ -23,6 +23,7 @@ License: CECILL-C
   let { filter = $bindable(), tableColumns, fieldColumns }: Props = $props();
 
   let ftype: string = $state("str");
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let fieldOperators: FieldOperator[] = $state([]);
 
   const syncFieldConfig = () => {

@@ -54,6 +54,7 @@ License: CECILL-C
 
   let { currentTab = $bindable() }: Props = $props();
   let isFormValid: boolean = $state(false);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let formInputs: CreateEntityInputs = $state([]);
   const defaultButtonClass =
     "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";

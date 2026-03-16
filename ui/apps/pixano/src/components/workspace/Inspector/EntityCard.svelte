@@ -473,7 +473,8 @@ License: CECILL-C
           <!-- Annotation type summary pills -->
           {#if Object.keys(annotationTypeSummary).length > 0}
             <div class="flex flex-wrap gap-1">
-              {#each Object.entries(annotationTypeSummary) as [schema, count]}
+              {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
+                {@const typedSchema = schema as BaseSchema}
                 {@const meta = TYPE_META[schema]}
                 {#if meta}
                   <span
@@ -482,15 +483,15 @@ License: CECILL-C
                       meta.color,
                     )}
                   >
-                    {#if schema === BaseSchema.BBox}
+                    {#if typedSchema === BaseSchema.BBox}
                       <Square class="h-2.5 w-2.5" />
-                    {:else if schema === BaseSchema.Mask}
+                    {:else if typedSchema === BaseSchema.Mask}
                       <Ghost weight="regular" class="h-2.5 w-2.5" />
-                    {:else if schema === BaseSchema.Keypoints}
+                    {:else if typedSchema === BaseSchema.Keypoints}
                       <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
-                    {:else if schema === BaseSchema.TextSpan}
+                    {:else if typedSchema === BaseSchema.TextSpan}
                       <TextT weight="regular" class="h-2.5 w-2.5" />
-                    {:else if schema === BaseSchema.Tracklet}
+                    {:else if typedSchema === BaseSchema.Tracklet}
                       <GitCommit weight="regular" class="h-2.5 w-2.5" />
                     {/if}
                     {count}

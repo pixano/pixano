@@ -26,15 +26,6 @@ License: CECILL-C
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
-  type ViewMeta = {
-    url: string | undefined;
-    width: number;
-    height: number;
-    format: string;
-    id: string;
-    view: string;
-  };
-
   // Component state variables
   let isEditing: boolean = $state(false);
   let combineChannels: boolean = $state(false);
@@ -207,7 +198,7 @@ License: CECILL-C
             max={0.5}
             step={0.01}
             value={filters.value.brightness}
-            onValueChange={(v) => {
+            onValueChange={(v: number) => {
               filters.value.brightness = v;
             }}
             class={sliderRootClass}
@@ -231,7 +222,7 @@ License: CECILL-C
             max={50}
             step={1}
             value={filters.value.contrast}
-            onValueChange={(v) => {
+            onValueChange={(v: number) => {
               filters.value.contrast = v;
             }}
             class={sliderRootClass}
@@ -280,7 +271,7 @@ License: CECILL-C
               max={255}
               step={1}
               value={filters.value.redRange}
-              onValueChange={(v) => {
+              onValueChange={(v: number[]) => {
                 filters.value.redRange = v;
                 filters.value.blueRange = v;
                 filters.value.greenRange = v;
@@ -308,7 +299,7 @@ License: CECILL-C
               max={255}
               step={1}
               value={filters.value.redRange}
-              onValueChange={(v) => {
+              onValueChange={(v: number[]) => {
                 filters.value.redRange = v;
               }}
               class={sliderRootClass}
@@ -334,7 +325,7 @@ License: CECILL-C
               max={255}
               step={1}
               value={filters.value.greenRange}
-              onValueChange={(v) => {
+              onValueChange={(v: number[]) => {
                 filters.value.greenRange = v;
               }}
               class={sliderRootClass}
@@ -360,7 +351,7 @@ License: CECILL-C
               max={255}
               step={1}
               value={filters.value.blueRange}
-              onValueChange={(v) => {
+              onValueChange={(v: number[]) => {
                 filters.value.blueRange = v;
               }}
               class={sliderRootClass}
@@ -395,7 +386,7 @@ License: CECILL-C
               max={65535}
               step={1}
               value={filters.value.u16BitRange}
-              onValueChange={(v) => {
+              onValueChange={(v: number[]) => {
                 filters.value.u16BitRange = v;
               }}
               class={sliderRootClass}

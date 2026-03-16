@@ -32,7 +32,8 @@ License: CECILL-C
 
   let {
     selectedItemId,
-    newShape,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    newShape: _newShape,
     colorScale,
     textSpans,
     textViews,
@@ -41,6 +42,7 @@ License: CECILL-C
     onNewShapeChange,
   }: Props = $props();
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let textSpanAttributes: TextSpanTypeWithViewName | null = $state(null);
 
   let spansByViewId = $derived(groupTextSpansByViewId(textSpans));

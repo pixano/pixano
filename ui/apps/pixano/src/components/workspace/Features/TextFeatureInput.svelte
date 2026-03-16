@@ -65,8 +65,12 @@ License: CECILL-C
         step={feature.type === "int" ? "1" : "any"}
         onchange={(e) =>
           onTextInputChange((e.currentTarget as HTMLInputElement).value, feature.name, feature.obj)}
-        oninput={() => (isSaved = false)}
-        onkeyup={(e) => e.stopPropagation()}
+        oninput={() => {
+          isSaved = false;
+        }}
+        onkeyup={(e: KeyboardEvent) => {
+          e.stopPropagation();
+        }}
       />
     {/if}
     {#if isSaved}

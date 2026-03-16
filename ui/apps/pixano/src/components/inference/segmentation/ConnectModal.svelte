@@ -82,7 +82,9 @@ License: CECILL-C
       value={formData.pi_url}
       type="string"
       onchange={handleChange}
-      onkeyup={(e) => e.stopPropagation()}
+      onkeyup={(e: KeyboardEvent) => {
+        e.stopPropagation();
+      }}
     />
 
     <p class="italic text-justify text-sm">

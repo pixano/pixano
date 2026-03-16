@@ -27,7 +27,8 @@ License: CECILL-C
 
   let {
     keypoints = [],
-    newShape,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    newShape: _newShape,
     zoomFactor,
     colorScale,
     viewRef,

@@ -67,7 +67,7 @@ class BaseService:
         """Validate that the referenced entity exists and return its table name."""
         if not entity_id:
             return None
-        tables = self.dataset.info.groups.get(SchemaGroup.ENTITY, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ENTITY, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=entity_id)
             if row is not None:
@@ -81,7 +81,7 @@ class BaseService:
         """Validate that the referenced tracklet exists and belongs to the expected entity."""
         if not tracklet_id:
             return
-        tables = self.dataset.info.groups.get(SchemaGroup.ANNOTATION, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ANNOTATION, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=tracklet_id)
             if row is None:
@@ -101,7 +101,7 @@ class BaseService:
         """Validate that the referenced entity dynamic state exists."""
         if not eds_id:
             return
-        tables = self.dataset.info.groups.get(SchemaGroup.ENTITY_DYNAMIC_STATE, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ENTITY_DYNAMIC_STATE, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=eds_id)
             if row is None:

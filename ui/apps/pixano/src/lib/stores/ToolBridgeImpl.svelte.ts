@@ -42,7 +42,8 @@ export class ToolBridgeImpl implements ToolBridge {
 
   private readonly commandBridge: CommandBridgeImpl;
   private readonly documentStore: DocumentStoreImpl;
-  private trackerService: any | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private trackerService: any = null;
 
   private canvasViewName = "";
   private canvasWidth = 0;
@@ -64,6 +65,7 @@ export class ToolBridgeImpl implements ToolBridge {
     this._toolState = initialTool.getInitialState();
     this._preview = null;
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.activeTool = {
       get value() {
@@ -104,7 +106,9 @@ export class ToolBridgeImpl implements ToolBridge {
   }
 
   /** Inject a TrackerService for handling AI tracking side effects. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setTrackerService(service: any): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.trackerService = service;
   }
 

@@ -88,9 +88,9 @@ export const addAnswer = (detail: NewAnswerEvent) => {
     item_id: question.data.item_id ?? "",
     view_name: question.data.view_name ?? "",
     entity_id: question.data.entity_id ?? "",
-    source_type: (question.data.source_type as string) ?? undefined,
-    source_name: (question.data.source_name as string) ?? undefined,
-    source_metadata: (question.data.source_metadata as string) ?? undefined,
+    source_type: question.data.source_type ?? undefined,
+    source_name: question.data.source_name ?? undefined,
+    source_metadata: question.data.source_metadata ?? undefined,
     type: MessageTypeEnum.ANSWER,
     user: "user",
     inference_metadata: {},
@@ -167,9 +167,9 @@ export const deleteQuestion = ({ questionId }: DeleteQuestionEvent) => {
 
 function getQuestionContext(question: Message, imageUrl: string): VqaMessageContext {
   return {
-    recordId: ((question.data.record_id as string) ?? question.data.item_id ?? "") as string,
-    viewId: ((question.data.view_id as string) ?? "") as string,
-    conversationId: ((question.data.conversation_id as string) ?? "") as string,
+    recordId: (question.data.record_id as string) ?? question.data.item_id ?? "",
+    viewId: (question.data.view_id as string) ?? "",
+    conversationId: (question.data.conversation_id as string) ?? "",
     entityIds: getMessageEntityIds(question),
     imageUrl,
   };
@@ -234,9 +234,9 @@ export const generateAnswer = async (
       inference_metadata: generatedAnswer.metadata ?? {},
       content: generatedAnswer.data.generated_text,
       choices: [],
-      source_type: (question.data.source_type as string) ?? undefined,
-      source_name: (question.data.source_name as string) ?? undefined,
-      source_metadata: (question.data.source_metadata as string) ?? undefined,
+      source_type: question.data.source_type ?? undefined,
+      source_name: question.data.source_name ?? undefined,
+      source_metadata: question.data.source_metadata ?? undefined,
     });
 
     annotations.update((prevAnnotations) => [...prevAnnotations, newAnswer]);

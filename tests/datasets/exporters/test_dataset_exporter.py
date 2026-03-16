@@ -19,11 +19,11 @@ from pixano.datasets.exporters.dataset_exporter import DatasetExporter
 
 class DumbDatasetExporter(DatasetExporter):
     def initialize_export_data(self, info):
-        return {"info": info.model_dump(exclude={"tables"})}
+        return {"info": info.json_info_dump()}
 
     def export_record(self, export_data, record_data):
         # Use the record's id as the key; serialize record_data for JSON compatibility
-        record = record_data.get("record")
+        record = record_data.get("records")
         if record is not None:
             serialized = {}
             for table_name, rows in record_data.items():
@@ -83,7 +83,7 @@ class TestDatasetExporter:
                     json_content = json.load(file)
                 expected_data = jsonable_encoder(
                     {
-                        "info": dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}),
+                        "info": dataset_image_bboxes_keypoint.info.json_info_dump(),
                     }
                 )
                 for record in expected_records:
@@ -99,7 +99,7 @@ class TestDatasetExporter:
                         json_content = json.load(file)
                     expected_data = jsonable_encoder(
                         {
-                            "info": dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}),
+                            "info": dataset_image_bboxes_keypoint.info.json_info_dump(),
                         }
                     )
                     for record in expected_records[i * items_per_file : (i + 1) * items_per_file]:

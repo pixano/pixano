@@ -45,6 +45,7 @@ License: CECILL-C
   const question = $derived(thread.question);
   const messages = $derived(thread.messages);
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let editingId: string | null = $state(null);
   let editContent = $state("");
 

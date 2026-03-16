@@ -9,7 +9,6 @@ License: CECILL-C
   import { Group, Rect, Transformer } from "svelte-konva";
 
   import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
-  import { BBOX_STROKEWIDTH } from "./konvaConstants";
   import LabelTag from "./LabelTag.svelte";
   import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import type { BBox } from "$lib/types/dataset";

@@ -22,6 +22,7 @@ License: CECILL-C
   let {
     textSpans = [],
     colorScale,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     textSpanAttributes = $bindable(null),
     textView,
     onSpanClick,

@@ -71,17 +71,17 @@ export class DocumentImpl implements Document {
         // Index by view
         const viewName = ann.viewRef.name;
         if (!byView.has(viewName)) byView.set(viewName, []);
-        byView.get(viewName)!.push(ann);
+        byView.get(viewName).push(ann);
 
         // Index by entity
         const entityId = ann.entityRef.id as NodeId;
         if (!byEntity.has(entityId)) byEntity.set(entityId, []);
-        byEntity.get(entityId)!.push(ann);
+        byEntity.get(entityId).push(ann);
 
         // Index by base schema
         const baseSchema = ann.tableInfo.base_schema;
         if (!byType.has(baseSchema)) byType.set(baseSchema, []);
-        byType.get(baseSchema)!.push(ann);
+        byType.get(baseSchema).push(ann);
       } else if (node.nodeType === "entity") {
         entities.push(node as EntityNode);
       }

@@ -45,7 +45,8 @@ License: CECILL-C
         if (cellRenderer) {
           return cellRenderer(info.getValue() as never);
         }
-        return String(info.getValue() ?? "");
+        const val = info.getValue();
+        return val == null ? "" : String(val as string | number | boolean);
       },
       enableSorting: col.type !== "image" && col.type !== "video",
     }));
@@ -286,6 +287,7 @@ License: CECILL-C
         >
           {#each row.getVisibleCells() as cell (cell.id)}
             <td class="px-3 py-1 border-b border-border">
+              <!-- eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any -->
               <FlexRender content={(cell.column.columnDef.cell as any)?.(cell.getContext())} />
             </td>
           {/each}

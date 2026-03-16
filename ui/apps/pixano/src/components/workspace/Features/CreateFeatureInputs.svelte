@@ -34,6 +34,7 @@ License: CECILL-C
 
   let {
     isFormValid = $bindable(false),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     formInputs = $bindable([]),
     objectProperties = $bindable({}),
     initialValues = {},
@@ -172,13 +173,16 @@ License: CECILL-C
               ? normalizeNumericValue(initialValues[feature.sch.name][feature.name]?.value)
               : ""}
             autofocus={i === 0}
-            onkeyup={(e) => e.stopPropagation()}
-            oninput={(e) =>
+            onkeyup={(e: KeyboardEvent) => {
+              e.stopPropagation();
+            }}
+            oninput={(e) => {
               handleInputChange(
                 Number((e.currentTarget as HTMLInputElement).value),
                 feature.name,
                 feature.sch.name,
-              )}
+              );
+            }}
           />
         {/if}
       </div>

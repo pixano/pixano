@@ -17,6 +17,7 @@ import type { DatasetStat } from "$lib/types/dataset";
 type CellValue = string | number | boolean | DatasetStat;
 
 // Generic function to create a renderComponent call for a given cell component
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCellRenderer = (Cell: any) => (value: CellValue) => {
   return renderComponent(Cell, { value: value as never });
 };

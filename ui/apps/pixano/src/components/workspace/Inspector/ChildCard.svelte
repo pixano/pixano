@@ -156,6 +156,7 @@ License: CECILL-C
     const raw = child.data.source_metadata;
     if (typeof raw !== "string" || raw === "" || raw === "{}") return null;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsed = JSON.parse(raw);
       if (typeof parsed === "object" && parsed !== null && Object.keys(parsed).length > 0) {
         return parsed as Record<string, unknown>;
@@ -228,7 +229,7 @@ License: CECILL-C
     const data = (child as Keypoints).data;
     const templateId = typeof data.template_id === "string" ? data.template_id : "";
     const coords = Array.isArray(data.coords) ? data.coords : [];
-    const states = Array.isArray(data.states) ? (data.states as string[]) : [];
+    const states = Array.isArray(data.states) ? data.states : [];
     const vertexCount = Math.floor(coords.length / 2);
     const visibleCount = states.filter((s) => s === "visible").length;
     const hiddenCount = states.filter((s) => s === "hidden" || s === "invisible").length;
@@ -401,7 +402,7 @@ License: CECILL-C
       <div class="px-2.5 pb-2 space-y-1.5">
         <!-- Source provenance line -->
         {#if sourceName}
-          {@const style = sourceStyle!}
+          {@const style = sourceStyle}
           <div class="flex items-center gap-1.5">
             <span class="text-[10px] text-muted-foreground/60">Source</span>
             <span
@@ -410,7 +411,7 @@ License: CECILL-C
                 style.class,
               )}
             >
-              <svelte:component this={style.icon} weight="regular" class="h-2.5 w-2.5" />
+              <style.icon weight="regular" class="h-2.5 w-2.5" />
               {sourceName}
             </span>
             {#if sourceMetadataParsed}
@@ -419,7 +420,8 @@ License: CECILL-C
                 title={JSON.stringify(sourceMetadataParsed, null, 2)}
               >
                 {Object.entries(sourceMetadataParsed)
-                  .map(([k, v]) => `${k}: ${v}`)
+                  .map(([k, v]) => `${k}: ${String(v as string | number | boolean)}`)
+
                   .join(", ")}
               </span>
             {/if}

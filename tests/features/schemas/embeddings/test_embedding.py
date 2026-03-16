@@ -153,10 +153,10 @@ class TestViewEmbeddingFunction:
         )
         view_embedding_fn = view_embedding_fn_type.create()
 
-        views = dataset_image_bboxes_keypoint_copy.get_data("image", limit=2)
+        views = dataset_image_bboxes_keypoint_copy.get_data("images", limit=2)
         for view in views:
             view.uri = "file://" + str(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
-        dataset_image_bboxes_keypoint_copy.update_data("image", views)
+        dataset_image_bboxes_keypoint_copy.update_data("images", views)
         frame_ids = pa.array([view.id for view in views])
         embeddings = view_embedding_fn.compute_source_embeddings(frame_ids)
         assert embeddings == [[1, 2, 3, 4, 5, 6, 7, 8]] * 2

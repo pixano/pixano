@@ -24,7 +24,9 @@ License: CECILL-C
 
   let { textSpans = [], colorScale, textView, onSelectionChange, onSpanClick }: Props = $props();
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let editorElement: HTMLDivElement | undefined = $state(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let editor: Editor | undefined = $state(undefined);
 
   // Create editor when element is bound

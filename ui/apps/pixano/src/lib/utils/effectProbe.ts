@@ -33,7 +33,7 @@ const getProbeMap = (): Map<string, ProbeStats> => {
   if (!target[PROBE_KEY]) {
     target[PROBE_KEY] = new Map<string, ProbeStats>();
   }
-  return target[PROBE_KEY]!;
+  return target[PROBE_KEY];
 };
 
 export const getEffectProbeSnapshot = (): Array<{

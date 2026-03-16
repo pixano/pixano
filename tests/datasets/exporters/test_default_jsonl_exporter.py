@@ -20,14 +20,14 @@ class TestDefaultJSONLDataset:
 
         export_data = exporter.initialize_export_data(info)
         expected_export_data = [
-            {"info": info.model_dump(exclude={"tables"})},
+            {"info": info.json_info_dump()},
         ]
 
         assert export_data == expected_export_data
 
     def test_export_record(self, dataset_image_bboxes_keypoint: Dataset):
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, "/")
-        records = dataset_image_bboxes_keypoint.get_data("record", limit=1)
+        records = dataset_image_bboxes_keypoint.get_data("records", limit=1)
         record_id = records[0].id
         record_data = exporter._get_record_data(record_id)
 
@@ -37,12 +37,12 @@ class TestDefaultJSONLDataset:
         assert len(export_data) == 1
         exported = export_data[0]
         # The exported dict should have keys for each table
-        assert "record" in exported
+        assert "records" in exported
 
     def test_save_data(self, dataset_image_bboxes_keypoint: Dataset):
         export_dir = Path(tempfile.mkdtemp())
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, export_dir)
-        export_data = [dataset_image_bboxes_keypoint.info.model_dump(exclude={"tables"}), {"save": "please"}]
+        export_data = [dataset_image_bboxes_keypoint.info.json_info_dump(), {"save": "please"}]
         exporter.save_data(export_data, "split", "file", 1)
 
         saved_jsonl = (export_dir / "info.json").open().readlines() + (

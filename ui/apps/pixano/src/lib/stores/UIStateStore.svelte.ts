@@ -34,6 +34,7 @@ export class UIStateStore {
   readonly states: ReactiveReadonly<Map<NodeId, NodeUIState>>;
 
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.states = {
       get value() {
@@ -72,6 +73,7 @@ export class UIStateStore {
 
   /** Getter for a specific node's display control. */
   displayControlFor(nodeId: NodeId): ReactiveReadonly<DisplayControl> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     return {
       get value() {

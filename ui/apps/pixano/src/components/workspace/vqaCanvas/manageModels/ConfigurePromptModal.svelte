@@ -116,7 +116,13 @@ License: CECILL-C
   </div>
   <div class="px-3 flex flex-col gap-2">
     <h5 class="font-medium">Temperature</h5>
-    <Input bind:value={temperature} type="string" onkeyup={(e) => e.stopPropagation()} />
+    <Input
+      bind:value={temperature}
+      type="string"
+      onkeyup={(e: KeyboardEvent) => {
+        e.stopPropagation();
+      }}
+    />
   </div>
   <div class="flex flex-row gap-2 px-3 justify-center">
     <PrimaryButton onclick={handleCancel}>Cancel</PrimaryButton>

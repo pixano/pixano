@@ -18,7 +18,7 @@ License: CECILL-C
     preAnnotationIsActive,
   } from "$lib/stores/workspaceStores.svelte";
   import type { EntityProperties } from "$lib/types/workspace";
-  import { Annotation, cn, IconButton, PrimaryButton } from "$lib/ui";
+  import { cn, IconButton, PrimaryButton } from "$lib/ui";
   import { mapAnnotationWithNewStatus } from "$lib/utils/annotationMapping";
   import {
     getAnnotationsToPreAnnotate,

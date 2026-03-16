@@ -37,6 +37,7 @@ export class DocumentStoreImpl implements DocumentStore {
   constructor(initialDocument: Document) {
     this._doc = initialDocument;
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.document = {
       get value() {
@@ -64,6 +65,7 @@ export class DocumentStoreImpl implements DocumentStore {
   annotationsByView(viewName: string): ReactiveReadonly<ReadonlyArray<AnnotationNode>> {
     let getter = this.viewGetters.get(viewName);
     if (!getter) {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
       getter = {
         get value() {

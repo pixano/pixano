@@ -11,7 +11,6 @@ import type {
   EntityResponse,
   ImageResponse,
   PaginatedResponse,
-  PreviewDescriptor,
   RecordComponentResponse,
   RecordResponse,
   SFrameResponse,
@@ -176,7 +175,9 @@ export function toDatasetBrowser(
     items.sort((left, right) => {
       const leftValue = left[sort.col];
       const rightValue = right[sort.col];
-      const cmp = String(leftValue ?? "").localeCompare(String(rightValue ?? ""));
+      const leftStr = leftValue == null ? "" : String(leftValue as string | number);
+      const rightStr = rightValue == null ? "" : String(rightValue as string | number);
+      const cmp = leftStr.localeCompare(rightStr);
       return sort.order === "desc" ? -cmp : cmp;
     });
   }
@@ -193,7 +194,7 @@ export function toDatasetBrowser(
       }
     }
 
-    const viewPreviews = record.view_previews as Record<string, PreviewDescriptor> | undefined;
+    const viewPreviews = record.view_previews;
     for (const [logicalName, preview] of Object.entries(viewPreviews ?? {})) {
       row[logicalName] = preview.preview_url;
       viewColumns.set(logicalName, preview.kind);

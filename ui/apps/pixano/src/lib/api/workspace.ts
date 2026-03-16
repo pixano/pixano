@@ -151,12 +151,14 @@ export async function loadWorkspaceRecord(
     ),
   ]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const views = [...images, ...texts, ...sframes];
 
   const viewsByLogicalName: Record<string, ReturnType<typeof toRawView>[]> = {};
   const viewNamesById = new Map<string, string>();
   for (const view of views) {
     viewNamesById.set(view.id, view.logical_name ?? "");
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const logicalName = view.logical_name ?? "default";
     viewsByLogicalName[logicalName] ??= [];
     viewsByLogicalName[logicalName].push(toRawView(view));

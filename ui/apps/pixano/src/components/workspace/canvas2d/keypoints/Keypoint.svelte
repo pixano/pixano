@@ -102,6 +102,7 @@ License: CECILL-C
 
   $effect(() => {
     // External updates after a commit should replace temporary drag state.
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     keypointStructure.graph.vertices;
     draftVertices = null;
   });

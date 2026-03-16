@@ -31,6 +31,7 @@ export class CommandBridgeImpl implements CommandBridge {
     this.documentStore = documentStore;
     this.history = new HistoryStackImpl();
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.canUndo = {
       get value() {

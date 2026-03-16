@@ -15,7 +15,7 @@ const DEFAULT_FEATURES = ["name", "category", "category_name"];
 export const getDefaultDisplayFeat = (entity: Entity): string | null => {
   for (const default_feature of DEFAULT_FEATURES) {
     if (default_feature in entity.data) {
-      return String(entity.data[default_feature]);
+      return String(entity.data[default_feature] as string | number);
     }
   }
   return null;

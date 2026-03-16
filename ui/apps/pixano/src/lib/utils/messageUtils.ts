@@ -140,23 +140,20 @@ export function toMessageTransportPayload(message: Message): MessageTransportPay
     id: message.id,
     record_id: (message.data.record_id as string) ?? message.data.item_id ?? "",
     entity_ids: entityIds,
-    source_type: (message.data.source_type as string) ?? "other",
-    source_name: (message.data.source_name as string) ?? "",
+    source_type: message.data.source_type ?? "other",
+    source_name: message.data.source_name ?? "",
     source_metadata: stringifySourceMetadata(message.data.source_metadata),
     view_id: (message.data.view_id as string) ?? "",
     conversation_id: (message.data.conversation_id as string) ?? "",
-    number: (message.data.number as number) ?? 0,
-    user: (message.data.user as string) ?? "",
+    number: message.data.number ?? 0,
+    user: message.data.user ?? "",
     type: (message.data.type as string) ?? MessageTypeEnum.QUESTION,
-    content: (message.data.content as string) ?? "",
-    choices:
-      message.data.type === MessageTypeEnum.QUESTION
-        ? ((message.data.choices as string[]) ?? [])
-        : [],
+    content: message.data.content ?? "",
+    choices: message.data.type === MessageTypeEnum.QUESTION ? (message.data.choices ?? []) : [],
   };
 
   if (message.data.type === MessageTypeEnum.QUESTION) {
-    payload.question_type = message.data.question_type as QuestionTypeEnum;
+    payload.question_type = message.data.question_type;
   }
 
   return payload;

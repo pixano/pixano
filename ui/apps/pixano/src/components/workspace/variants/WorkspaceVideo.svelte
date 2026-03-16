@@ -49,7 +49,7 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { SequenceFrame, ShapeType, type EditShape, type SaveRectangleShape } from "$lib/ui";
+  import { SequenceFrame, ShapeType, type EditShape } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -102,7 +102,7 @@ License: CECILL-C
 
     // Intercept bbox saves to start/extend a tracking session
     if (shape.status === "saving" && shape.type === ShapeType.bbox) {
-      const saveShape = shape as SaveRectangleShape;
+      const saveShape = shape;
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
       if (!isTracking.value) {
@@ -196,6 +196,7 @@ License: CECILL-C
         shape,
         currentFrameIndex.value,
         current_itemBBoxes.value,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         current_itemKeypoints.value as any,
       );
       annotations.value = objects;

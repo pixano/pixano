@@ -532,7 +532,8 @@ async function fetchAndMarkFrameRange(
 async function requestChunk(
   viewName: string,
   chunkIndex: number,
-  token = sessionVersion,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _token = sessionVersion,
 ): Promise<void> {
   const sessionToken = await ensureSessionReady();
   if (sessionToken === undefined || sessionToken !== sessionVersion) return;

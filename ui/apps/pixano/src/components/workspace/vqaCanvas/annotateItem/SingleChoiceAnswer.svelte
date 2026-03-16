@@ -35,7 +35,8 @@ License: CECILL-C
 
   const radioGroupValues = $derived(choices.map((choice) => ({ value: choice, label: choice })));
 
-  let checked = $state<boolean[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let _checked = $state<boolean[]>([]);
   let explanations = $state("");
   let selectedValue = $state<string>("");
   let lastCommittedValue = $state<string>("");
@@ -49,7 +50,7 @@ License: CECILL-C
         choicesCount: choices.length,
       });
       const parsed = deserializeMessageContent(answerContent);
-      checked = parsed.checked;
+      _checked = parsed.checked;
       explanations = parsed.explanations;
       const syncedValue = rgValues[parsed.checked.indexOf(true)]?.value ?? "";
       selectedValue = syncedValue;
