@@ -9,7 +9,7 @@ name: Backend
 on:
   push:
     paths:
-      - "pixano/**"
+      - "src/pixano/**"
       - "tests/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
@@ -18,7 +18,7 @@ on:
       - "main"
   pull_request:
     paths:
-      - "pixano/**"
+      - "src/pixano/**"
       - "tests/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
@@ -84,7 +84,7 @@ jobs:
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_options: --check ./pixano/**/*.md
+          prettier_options: --check ./src/pixano/**/*.md
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
   pytest:
@@ -113,7 +113,7 @@ jobs:
           uv sync --group test
 
       - name: Test with pytest
-        run: uv run pytest --cov=pixano/ tests/
+        run: uv run pytest --cov=src/pixano/ tests/
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
         env:
