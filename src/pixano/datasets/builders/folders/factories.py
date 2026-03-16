@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from __future__ import annotations
 
 import re
@@ -40,6 +46,7 @@ class FolderRecordFactory:
     """Create record rows and default record metadata for folder imports."""
 
     def __init__(self, record_schema: type[Record]) -> None:
+        """Initialize the factory with the record schema."""
         self.record_schema = record_schema
 
     def create_record(self, **record_metadata: Any) -> Record:
@@ -60,6 +67,7 @@ class FolderMessageFactory:
     """Create message annotations from folder metadata payloads."""
 
     def __init__(self, source: AnnotationSource, normalize_view_name_alias) -> None:
+        """Initialize the factory with source metadata and view-name normalizer."""
         self.source = source
         self.normalize_view_name_alias = normalize_view_name_alias
 
@@ -211,6 +219,7 @@ class FolderEntityFactory:
         source: AnnotationSource,
         normalize_view_name_alias,
     ) -> None:
+        """Initialize the factory with schemas, source metadata, and view-name normalizer."""
         self.schemas = schemas
         self.source = source
         self.normalize_view_name_alias = normalize_view_name_alias
@@ -236,7 +245,7 @@ class FolderEntityFactory:
         if not isinstance(entities_data, list):
             raise ValueError("Entity payload must be a list of entity objects.")
 
-        views_by_name = {name: view for name, view in views_data}
+        views_by_name = dict(views_data)
 
         for entry in entities_data:
             if not isinstance(entry, dict):
@@ -277,7 +286,8 @@ class FolderEntityFactory:
                     schema = self.schemas[attr]
                     if not is_annotation_schema(schema):
                         raise ValueError(
-                            f"Attribute {attr} must be an annotation schema (EntityAnnotation or EntityGroupAnnotation subclass)"
+                            f"Attribute {attr} must be an annotation schema"
+                            " (EntityAnnotation or EntityGroupAnnotation subclass)"
                         )
                     annotations.setdefault(attr, [])
                     annotations[attr].append(

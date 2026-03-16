@@ -4,13 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  BaseSchema,
-  Message,
-  type Schema,
-  type View,
-} from "$lib/types/dataset";
 import { views } from "$lib/stores/workspaceStores.svelte";
+import { BaseSchema, Message, type Schema } from "$lib/types/dataset";
 import { rleToString } from "$lib/utils/maskUtils";
 import { toMessageTransportPayload } from "$lib/utils/messageUtils";
 
@@ -53,17 +48,18 @@ function withoutUndefined<T extends Record<string, unknown>>(payload: T): T {
 }
 
 function resolveViewId(schema: Schema): string {
-  const explicitViewId = schema.data.view_id;
+  const data = schema.data as Record<string, unknown>;
+  const explicitViewId = data.view_id;
   if (typeof explicitViewId === "string" && explicitViewId !== "") {
     return explicitViewId;
   }
 
-  const viewName = schema.data.view_name;
+  const viewName = data.view_name;
   if (typeof viewName !== "string" || viewName === "") {
     return "";
   }
 
-  const currentView = views.value[viewName] as View | View[] | undefined;
+  const currentView = views.value[viewName];
   if (!currentView) {
     return "";
   }
@@ -75,30 +71,29 @@ function resolveViewId(schema: Schema): string {
 }
 
 function normalizeBasePayload(schema: Schema): Record<string, unknown> {
+  const rawData = schema.data as Record<string, unknown>;
   const data = Object.fromEntries(
-    Object.entries(schema.data).filter(([key]) => !SHARED_EXCLUDED_FIELDS.has(key)),
+    Object.entries(rawData).filter(([key]) => !SHARED_EXCLUDED_FIELDS.has(key)),
   );
 
   const record_id =
-    typeof schema.data.record_id === "string" && schema.data.record_id !== ""
-      ? schema.data.record_id
-      : typeof schema.data.item_id === "string"
-        ? schema.data.item_id
+    typeof rawData.record_id === "string" && rawData.record_id !== ""
+      ? rawData.record_id
+      : typeof rawData.item_id === "string"
+        ? rawData.item_id
         : "";
 
   const payload = {
     id: schema.id,
     ...data,
     record_id,
-    source_type:
-      typeof schema.data.source_type === "string" ? schema.data.source_type : undefined,
-    source_name:
-      typeof schema.data.source_name === "string" ? schema.data.source_name : undefined,
+    source_type: typeof rawData.source_type === "string" ? rawData.source_type : undefined,
+    source_name: typeof rawData.source_name === "string" ? rawData.source_name : undefined,
     source_metadata:
-      typeof schema.data.source_metadata === "string"
-        ? schema.data.source_metadata
-        : schema.data.source_metadata !== undefined
-          ? JSON.stringify(schema.data.source_metadata)
+      typeof rawData.source_metadata === "string"
+        ? rawData.source_metadata
+        : rawData.source_metadata !== undefined
+          ? JSON.stringify(rawData.source_metadata)
           : undefined,
   } satisfies Record<string, unknown>;
 
@@ -160,7 +155,7 @@ export function serializeSchema(schema: Schema): Record<string, unknown> {
     case BaseSchema.TextSpan:
       return serializeAnnotation(schema);
     case BaseSchema.Message:
-      return toMessageTransportPayload(schema as Message);
+      return toMessageTransportPayload(schema as Message) as unknown as Record<string, unknown>;
     default:
       throw new Error(`Unsupported resource serialization for '${schema.table_info.base_schema}'.`);
   }

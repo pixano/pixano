@@ -20,19 +20,18 @@ import {
   type FeaturesValues,
   type ItemFeature,
 } from "$lib/types/dataset";
-import type { WorkspaceManifest } from "$lib/workspace/manifest";
-
-import type { InputFeatures } from "$lib/utils/featureValidationSchemas";
 import type {
   CheckboxFeature,
   CreateEntityInputs,
+  EntityProperties,
   Feature,
   FloatFeature,
   IntFeature,
   ListFeature,
-  EntityProperties,
   TextFeature,
 } from "$lib/types/workspace";
+import type { InputFeatures } from "$lib/utils/featureValidationSchemas";
+import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 export function createFeature(
   obj: Item | Entity | Annotation,
@@ -132,7 +131,7 @@ export const getValidationSchemaAndFormInputs = (
     const sch = { base_schema: table.baseSchema, fields: table.fields };
     let nonFeatsFields: string[] = [];
     let group = "entities";
-      if ([BaseSchema.Entity, baseSchema].includes(sch.base_schema)) {
+    if ([BaseSchema.Entity, baseSchema].includes(sch.base_schema)) {
       if (baseSchema === sch.base_schema) {
         group = "annotations";
         if (baseSchema === BaseSchema.BBox)

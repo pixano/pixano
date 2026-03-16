@@ -20,9 +20,7 @@ export interface PolygonSavePayload {
   outputMode?: PolygonOutputMode;
 }
 
-export function toPolygonPoints(
-  points: ReadonlyArray<PolygonVertex | Point2D>,
-): PolygonVertex[] {
+export function toPolygonPoints(points: ReadonlyArray<PolygonVertex | Point2D>): PolygonVertex[] {
   return points.map((point, index) => ({
     x: point.x,
     y: point.y,
@@ -115,10 +113,10 @@ export function buildRectangleSaveShape(
   let finalGeo = geometry;
   if (localDraftShape?.status === "creating" && localDraftShape.type === ShapeType.bbox) {
     const shape = localDraftShape;
-    const w = shape.width <0 ? -shape.width : shape.width;
-    const h = shape.height <0 ? -shape.height : shape.height;
-    const x = shape.width <0 ? shape.x + shape.width : shape.x;
-    const y = shape.height <0 ? shape.y + shape.height : shape.y;
+    const w = shape.width < 0 ? -shape.width : shape.width;
+    const h = shape.height < 0 ? -shape.height : shape.height;
+    const x = shape.width < 0 ? shape.x + shape.width : shape.x;
+    const y = shape.height < 0 ? shape.y + shape.height : shape.y;
     finalGeo = { x, y, width: w, height: h };
   }
 

@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Records router with optional explorer preview expansion."""
 
 from typing import Any
@@ -128,6 +134,7 @@ def list_records(
     filters: FilterParams = Depends(),
     include: str | None = Query(default=None),
 ) -> PaginatedResponse[RecordListResponse]:
+    """List records with optional filters, pagination, and view previews."""
     includes = _parse_include(include)
     service = BaseService(dataset, RECORD_RESOURCE)
     records_page = service.list(**_list_record_kwargs(filters, pagination))
@@ -158,7 +165,8 @@ def list_records(
     summary="Get a record",
     description="Fetch a single record by id.",
 )
-def get_record(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> RecordResponse:
+def get_record(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> RecordResponse:  # type: ignore[valid-type]
+    """Fetch a single record by ID."""
     service = BaseService(dataset, RECORD_RESOURCE)
     return service.get(id)
 
@@ -171,7 +179,8 @@ def get_record(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> RecordRe
     summary="Create a record",
     description="Create a new record row in the dataset.",
 )
-def create_record(body: RECORD_RESOURCE.create_model, dataset: Dataset = Depends(get_dataset_dep)) -> RecordResponse:
+def create_record(body: RECORD_RESOURCE.create_model, dataset: Dataset = Depends(get_dataset_dep)) -> Any:  # type: ignore[name-defined]
+    """Create a new record row in the dataset."""
     service = BaseService(dataset, RECORD_RESOURCE)
     return service.create(body.model_dump())
 
@@ -184,8 +193,11 @@ def create_record(body: RECORD_RESOURCE.create_model, dataset: Dataset = Depends
     description="Replace mutable fields on an existing record.",
 )
 def update_record(
-    id: str, body: RECORD_RESOURCE.update_model, dataset: Dataset = Depends(get_dataset_dep)
-) -> RecordResponse:
+    id: str,
+    body: RECORD_RESOURCE.update_model,  # type: ignore[name-defined]
+    dataset: Dataset = Depends(get_dataset_dep),
+) -> Any:
+    """Replace mutable fields on an existing record."""
     service = BaseService(dataset, RECORD_RESOURCE)
     return service.update(id, body.model_dump(exclude_unset=True))
 
@@ -198,5 +210,6 @@ def update_record(
     description="Delete a single record by id.",
 )
 def delete_record(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> None:
+    """Delete a single record by ID."""
     service = BaseService(dataset, RECORD_RESOURCE)
     service.delete(id)

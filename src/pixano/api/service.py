@@ -1,19 +1,26 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Generic CRUD service for the API."""
 
 import logging
 from typing import Any
 
 from fastapi import HTTPException
+from lancedb.pydantic import LanceModel
 from pydantic import BaseModel
 
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetIntegrityError
-from lancedb.pydantic import LanceModel
 from pixano.schemas import SchemaGroup, View
 
 from .models import PaginatedResponse, merge_update_payload, serialize_row
 from .resources import ResourceSpec
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +32,7 @@ class BaseService:
     """Shared CRUD operations for API resources."""
 
     def __init__(self, dataset: Dataset, resource: ResourceSpec):
+        """Initialize the service with a dataset and resource spec."""
         self.dataset = dataset
         self.resource = resource
 
@@ -37,7 +45,6 @@ class BaseService:
         declare the slot.  To use a **custom** schema with extra fields,
         recreate the dataset with ``DatasetInfo(<slot>=YourCustomSchema)``.
         """
-
         resolved_table = self.resource.canonical_table_name
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
@@ -77,7 +84,6 @@ class BaseService:
 
     def validate_fk_exists(self, table: str, fk_id: str, label: str) -> None:
         """Ensure a foreign key target exists."""
-
         if not fk_id:
             return
         row = self.dataset.get_data(table, ids=fk_id)
@@ -88,12 +94,14 @@ class BaseService:
             )
 
     def validate_record_exists(self, record_id: str) -> None:
+        """Validate that the referenced record exists."""
         self.validate_fk_exists(SchemaGroup.RECORD.value, record_id, "record_id")
 
     def validate_entity_exists(self, entity_id: str) -> str | None:
+        """Validate that the referenced entity exists and return its table name."""
         if not entity_id:
             return None
-        tables = self.dataset.info.groups.get(SchemaGroup.ENTITY, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ENTITY, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=entity_id)
             if row is not None:
@@ -104,9 +112,10 @@ class BaseService:
         )
 
     def validate_tracklet_exists(self, tracklet_id: str, expected_entity_id: str | None = None) -> None:
+        """Validate that the referenced tracklet exists and belongs to the expected entity."""
         if not tracklet_id:
             return
-        tables = self.dataset.info.groups.get(SchemaGroup.ANNOTATION, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ANNOTATION, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=tracklet_id)
             if row is None:
@@ -123,9 +132,10 @@ class BaseService:
         raise HTTPException(status_code=400, detail=f"Foreign key violation: tracklet_id='{tracklet_id}' not found.")
 
     def validate_eds_exists(self, eds_id: str, expected_entity_id: str | None = None) -> None:
+        """Validate that the referenced entity dynamic state exists."""
         if not eds_id:
             return
-        tables = self.dataset.info.groups.get(SchemaGroup.ENTITY_DYNAMIC_STATE, [])
+        tables: list[str] = list(self.dataset.info.groups.get(SchemaGroup.ENTITY_DYNAMIC_STATE, []))
         for table in tables:
             row = self.dataset.get_data(table, ids=eds_id)
             if row is None:
@@ -161,7 +171,6 @@ class BaseService:
         offset: int = 0,
     ) -> PaginatedResponse:
         """List resources with filtering and pagination."""
-
         resolved_table = self.resolve_table()
         limit = min(limit, MAX_QUERY_LIMIT)
 
@@ -202,7 +211,6 @@ class BaseService:
 
     def get(self, id: str) -> BaseModel:
         """Fetch one resource by ID."""
-
         resolved_table = self.resolve_table()
         row = self.dataset.get_data(resolved_table, ids=id)
         if row is None:
@@ -211,7 +219,6 @@ class BaseService:
 
     def create(self, data: dict[str, Any]) -> BaseModel:
         """Create a new resource row."""
-
         resolved_table = self.resolve_table()
         payload = dict(data)
 
@@ -235,7 +242,6 @@ class BaseService:
 
     def update(self, id: str, data: dict[str, Any]) -> BaseModel:
         """Update an existing resource row."""
-
         resolved_table = self.resolve_table()
         existing = self.dataset.get_data(resolved_table, ids=id)
         if existing is None:
@@ -259,7 +265,6 @@ class BaseService:
 
     def delete(self, id: str) -> None:
         """Delete a resource by ID."""
-
         resolved_table = self.resolve_table()
         ids_not_found = self.dataset.delete_data(resolved_table, [id])
         if ids_not_found:

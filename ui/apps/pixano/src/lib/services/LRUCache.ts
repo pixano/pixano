@@ -34,6 +34,7 @@ export class LRUCache<K, V> {
 
     // Evict least recently used if at capacity
     while (this.cache.size >= this.maxSize) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const oldest = this.cache.keys().next().value;
       if (oldest !== undefined) {
         const oldestValue = this.cache.get(oldest);

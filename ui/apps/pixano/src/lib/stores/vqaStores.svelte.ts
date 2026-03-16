@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
-
 import { reactiveStore } from "./reactiveStore.svelte";
+import type { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 

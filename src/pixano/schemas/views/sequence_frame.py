@@ -31,7 +31,7 @@ class SequenceFrame(Image):
     frame_index: int
 
     @classmethod
-    def from_uri(
+    def from_uri(  # type: ignore[override]
         cls,
         record_id: str,
         logical_name: str,
@@ -88,7 +88,7 @@ class SequenceFrame(Image):
         )
 
     @classmethod
-    def from_bytes(
+    def from_bytes(  # type: ignore[override]
         cls,
         record_id: str,
         logical_name: str,

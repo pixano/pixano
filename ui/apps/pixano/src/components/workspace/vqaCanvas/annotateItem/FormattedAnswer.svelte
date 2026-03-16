@@ -7,12 +7,11 @@ License: CECILL-C
 <!-- When svelte is updated, this component can be replaced by a {#snnipet} in QuestionForm.svelte -->
 
 <script lang="ts">
-  import { Message, QuestionTypeEnum } from "$lib/types/dataset";
-  import type { ContentChangeEvent } from "$lib/types/vqa";
-
   import MultipleChoiceAnswer from "./MultipleChoiceAnswer.svelte";
   import OpenAnswer from "./OpenAnswer.svelte";
   import SingleChoiceAnswer from "./SingleChoiceAnswer.svelte";
+  import { Message, QuestionTypeEnum } from "$lib/types/dataset";
+  import type { ContentChangeEvent } from "$lib/types/vqa";
 
   interface Props {
     questionId: string;

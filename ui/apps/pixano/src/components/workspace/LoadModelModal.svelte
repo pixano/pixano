@@ -5,14 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   import { untrack } from "svelte";
 
-  import { LoadingModal } from "$lib/ui";
-  import { segmentationModels, selectedSegmentationModelName } from "$lib/stores/inferenceStores.svelte";
   import SelectLocalOrDistantModelModal from "../inference/segmentation/SelectLocalOrDistantModelModal.svelte";
-  import { panTool } from "$lib/tools";
+  import {
+    segmentationModels,
+    selectedSegmentationModelName,
+  } from "$lib/stores/inferenceStores.svelte";
   import { modelsUiStore, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import { panTool } from "$lib/tools";
+  import { LoadingModal } from "$lib/ui";
 
   const currentModalOpen = $derived(modelsUiStore.value.currentModalOpen);
 

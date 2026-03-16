@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 import type {
-  Point2D,
   IndexedPoint2D,
+  Point2D,
+  PolygonOutputMode,
   ToolContext,
   ToolEvent,
   ToolFSM,
@@ -14,7 +15,6 @@ import type {
   ToolState,
   ToolTransition,
 } from "$lib/types/tools";
-import type { PolygonOutputMode } from "$lib/types/tools";
 
 /**
  * Polygon drawing tool.
@@ -172,9 +172,7 @@ export class PolygonToolFSM implements ToolFSM {
 
           if (polygonsToSave.length > 0) {
             const outputMode =
-              event.type === "keyDown" && event.modifiers?.shift
-                ? "mask"
-                : this.defaultOutputMode;
+              event.type === "keyDown" && event.modifiers?.shift ? "mask" : this.defaultOutputMode;
             return this.confirmPolygon(polygonsToSave, outputMode);
           }
         }
@@ -209,10 +207,7 @@ export class PolygonToolFSM implements ToolFSM {
           if (currentState.mode === "drawing" && currentState.points.length <= 1) {
             return {
               newState: { phase: "idle" },
-              sideEffects: [
-                { type: "updatePreview", preview: null },
-                { type: "abortTransaction" },
-              ],
+              sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
             };
           }
         }
@@ -233,10 +228,7 @@ export class PolygonToolFSM implements ToolFSM {
 
           return {
             newState: { phase: "idle" },
-            sideEffects: [
-              { type: "updatePreview", preview: null },
-              { type: "abortTransaction" },
-            ],
+            sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
           };
         }
         break;
@@ -320,7 +312,7 @@ export class PolygonToolFSM implements ToolFSM {
       return changed ? nextPoints : null;
     };
 
-    if (event.polygonIndex <state.closedPolygons.length) {
+    if (event.polygonIndex < state.closedPolygons.length) {
       const target = state.closedPolygons[event.polygonIndex];
       const updated = updatePoint(target);
       if (!updated) return null;
@@ -351,8 +343,8 @@ export class PolygonToolFSM implements ToolFSM {
     event: Extract<ToolEvent, { type: "polygonInsertVertex" }>,
   ): ToolState | null {
     const target = state.closedPolygons[event.polygonIndex];
-    if (!target || target.length <2) return null;
-    if (event.afterIndex <0 || event.afterIndex >= target.length) return null;
+    if (!target || target.length < 2) return null;
+    if (event.afterIndex < 0 || event.afterIndex >= target.length) return null;
 
     const newPoint: IndexedPoint2D = this.createPoint(
       {
@@ -376,7 +368,7 @@ export class PolygonToolFSM implements ToolFSM {
   private isCloseToFirstPoint(point: Point2D, first: Point2D): boolean {
     const dx = point.x - first.x;
     const dy = point.y - first.y;
-    return Math.sqrt(dx * dx + dy * dy) <PolygonToolFSM.CLOSE_DISTANCE;
+    return Math.sqrt(dx * dx + dy * dy) < PolygonToolFSM.CLOSE_DISTANCE;
   }
 
   private translatePolygonState(

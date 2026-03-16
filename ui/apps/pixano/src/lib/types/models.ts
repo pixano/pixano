@@ -8,7 +8,7 @@ License: CECILL-C
 import { Tensor } from "onnxruntime-web";
 
 import type { MaskData, Reference } from "$lib/types/dataset";
-import type { LabeledClick, BoundingBox } from "$lib/types/geometry";
+import type { BoundingBox, LabeledClick } from "$lib/types/geometry";
 import type { MaskBounds } from "$lib/utils/maskUtils";
 
 export type { Tensor };

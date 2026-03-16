@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { DatasetStat } from "$lib/types/dataset";
-
 import { renderComponent } from "./render-component";
 import BooleanCell from "./TableCells/BooleanCell.svelte";
 import DateTimeCell from "./TableCells/DateTimeCell.svelte";
@@ -14,10 +12,12 @@ import ImageCell from "./TableCells/ImageCell.svelte";
 import NumberCell from "./TableCells/NumberCell.svelte";
 import TextCell from "./TableCells/TextCell.svelte";
 import VideoCell from "./TableCells/VideoCell.svelte";
+import type { DatasetStat } from "$lib/types/dataset";
 
 type CellValue = string | number | boolean | DatasetStat;
 
 // Generic function to create a renderComponent call for a given cell component
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createCellRenderer = (Cell: any) => (value: CellValue) => {
   return renderComponent(Cell, { value: value as never });
 };

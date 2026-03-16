@@ -1,3 +1,10 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -82,7 +89,8 @@ def test_data_import_requires_info(tmp_path: Path):
     result = runner.invoke(app, ["data", "import", str(data_dir), str(source_dir)])
 
     assert result.exit_code != 0
-    assert "--info" in result.output
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "--info" in plain
 
 
 @patch("importlib.import_module")

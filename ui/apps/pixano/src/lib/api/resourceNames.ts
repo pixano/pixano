@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 const TABLE_TO_RESOURCE_PATH: Record<string, string> = {
   entity_dynamic_states: "entity-dynamic-states",
   text_spans: "text-spans",

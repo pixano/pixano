@@ -5,20 +5,26 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { CheckCircle, Question, ListNumbers, Chat, ArrowBendUpLeft, PaperPlaneRight, Sparkle } from "phosphor-svelte";
+  import {
+    ArrowBendUpLeft,
+    Chat,
+    CheckCircle,
+    ListNumbers,
+    PaperPlaneRight,
+    Question,
+    Sparkle,
+  } from "phosphor-svelte";
 
-  import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
-  import { AutoResizeTextarea, IconButton, LoadingModal } from "$lib/ui";
-
+  import { serializeMessageContent } from "./utils/serializeMessageContent";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import type { LabelFormat } from "$lib/types/vqa";
+  import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
+  import type { LabelFormat, StoreQuestionEvent } from "$lib/types/vqa";
   import {
     ContentChangeEventType,
     type ContentChangeEvent,
     type GenerateAnswerEvent,
   } from "$lib/types/vqa";
-  import type { StoreQuestionEvent } from "$lib/types/vqa";
-  import { serializeMessageContent } from "./utils/serializeMessageContent";
+  import { AutoResizeTextarea, IconButton, LoadingModal } from "$lib/ui";
 
   interface Props {
     pendingQuestion?: Message | null;
@@ -149,12 +155,12 @@ License: CECILL-C
             } else if (labelFormat === "alpha_lower") {
               if (part.length === 1) {
                 const code = part.toLowerCase().charCodeAt(0) - 97;
-                if (code >= 0 && code <choices.length) foundIndex = code;
+                if (code >= 0 && code < choices.length) foundIndex = code;
               }
             } else if (labelFormat === "alpha_upper" || labelFormat === undefined) {
               if (part.length === 1) {
                 const code = part.toUpperCase().charCodeAt(0) - 65;
-                if (code >= 0 && code <choices.length) foundIndex = code;
+                if (code >= 0 && code < choices.length) foundIndex = code;
               }
             }
 
@@ -227,13 +233,13 @@ License: CECILL-C
       const generated = await onGenerateQuestion(completionModel);
       isGenerating = false;
 
-        if (generated) {
-          onStoreQuestion?.({
-            content: generated.content,
-            question_type: generated.question_type,
-            choices: generated.choices || [],
-          });
-        }
+      if (generated) {
+        onStoreQuestion?.({
+          content: generated.content,
+          question_type: generated.question_type,
+          choices: generated.choices || [],
+        });
+      }
     }
   };
 
@@ -276,7 +282,8 @@ License: CECILL-C
           : 'border-primary/10'}"
       >
         {#if isAnswering}
-          <ArrowBendUpLeft weight="regular" size={14} /> Answering Question #{(pendingQuestion?.data.number ?? 0) + 1}
+          <ArrowBendUpLeft weight="regular" size={14} /> Answering Question #{(pendingQuestion?.data
+            .number ?? 0) + 1}
         {:else}
           <Chat weight="regular" size={14} /> New Question
         {/if}

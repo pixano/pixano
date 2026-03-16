@@ -39,7 +39,7 @@ function concatBytes(left: AnyBytes, right: AnyBytes): AnyBytes {
 function indexOfBytes(haystack: AnyBytes, needle: AnyBytes, from = 0): number {
   if (needle.length === 0) return from;
   outer: for (let i = from; i <= haystack.length - needle.length; i++) {
-    for (let j = 0; j <needle.length; j++) {
+    for (let j = 0; j < needle.length; j++) {
       if (haystack[i + j] !== needle[j]) continue outer;
     }
     return i;
@@ -123,7 +123,7 @@ export async function* streamViewFrameBatch(
         buffer = buffer.slice(boundaryPos);
       }
 
-      if (buffer.length <boundaryBytes.length + 2) break;
+      if (buffer.length < boundaryBytes.length + 2) break;
 
       let cursor = boundaryBytes.length;
 
@@ -147,14 +147,14 @@ export async function* streamViewFrameBatch(
       const bodyStart = headersEnd + headerSeparatorBytes.length;
       const bodyEnd = bodyStart + contentLength;
 
-      if (!Number.isFinite(contentLength) || contentLength <0) {
+      if (!Number.isFinite(contentLength) || contentLength < 0) {
         // Malformed part; skip the current boundary marker and continue parsing.
         buffer = buffer.slice(boundaryBytes.length);
         continue;
       }
 
       // Need body bytes + trailing CRLF.
-      if (buffer.length <bodyEnd + 2) break;
+      if (buffer.length < bodyEnd + 2) break;
 
       if (contentLength > 0 && frameIndex >= 0) {
         yield {

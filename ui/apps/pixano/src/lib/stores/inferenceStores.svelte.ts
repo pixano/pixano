@@ -4,12 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  ImageTask,
-  MultimodalImageNLPTask,
-  VideoTask,
-  type InferenceServerState,
-} from "$lib/types/inference";
 import type {
   MaskSegmentationOutput,
   PixanoInferenceSegmentationModel,
@@ -17,6 +11,12 @@ import type {
 } from "$components/inference/segmentation/inference";
 
 import { reactiveStore } from "./reactiveStore.svelte";
+import {
+  ImageTask,
+  MultimodalImageNLPTask,
+  VideoTask,
+  type InferenceServerState,
+} from "$lib/types/inference";
 
 // ─── Inference Server ───────────────────────────────────────────────────────────
 
@@ -52,7 +52,9 @@ export const selectedVqaModelName = reactiveStore<string | null>(null);
 const DEFAULT_SEG_URL = "http://pixano-inference-sami:8000";
 const DEFAULT_TRACK_URL = "http://pixano-inference-samv:8000";
 
-export const pixanoInferenceSegmentationModelsStore = reactiveStore<PixanoInferenceSegmentationModel[]>([]);
+export const pixanoInferenceSegmentationModelsStore = reactiveStore<
+  PixanoInferenceSegmentationModel[]
+>([]);
 export const pixanoInferenceSegmentationURL = reactiveStore<string>(DEFAULT_SEG_URL);
 export const pixanoInferenceTrackingURL = reactiveStore<string>(DEFAULT_TRACK_URL);
 export const pixanoInferenceToValidateTrackingMasks = reactiveStore<MaskSegmentationOutput[]>([]);

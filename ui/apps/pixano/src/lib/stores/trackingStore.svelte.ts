@@ -4,12 +4,18 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { MultiSegmentTracker, type BBoxKeyframe } from "$lib/trackers";
-import { BBox, BaseSchema, WorkspaceType, type Reference, type SequenceFrame } from "$lib/types/dataset";
-import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
-import { reactiveStore, reactiveDerived } from "./reactiveStore.svelte";
+import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 import { views } from "./workspaceBaseStores.svelte";
+import { MultiSegmentTracker, type BBoxKeyframe } from "$lib/trackers";
+import {
+  BaseSchema,
+  BBox,
+  WorkspaceType,
+  type Reference,
+  type SequenceFrame,
+} from "$lib/types/dataset";
+import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
 
 // ─── Session state ──────────────────────────────────────────────────────────
 
@@ -66,9 +72,7 @@ export function addTrackingKeyframe(
   trackingSession.update((s) => ({ ...s, version: tracker.version }));
 }
 
-export function promoteCurrentFrame(
-  coords?: readonly [number, number, number, number],
-): void {
+export function promoteCurrentFrame(coords?: readonly [number, number, number, number]): void {
   const { tracker } = trackingSession.value;
   if (!tracker) return;
   const frameIndex = currentFrameIndex.value;
@@ -226,7 +230,9 @@ export const isAwaitingNewSegmentKeyframe = reactiveDerived<boolean>(() => {
   return tracker.segmentCount > 1 && tracker.activeSegment.keyframeCount === 0;
 });
 
-export const hasPendingKeyframe = reactiveDerived(() => trackingSession.value.pendingKeyframe !== null);
+export const hasPendingKeyframe = reactiveDerived(
+  () => trackingSession.value.pendingKeyframe !== null,
+);
 
 export const pendingKeyframeIndex = reactiveDerived<number | null>(() => {
   return trackingSession.value.pendingKeyframe?.frameIndex ?? null;
@@ -265,15 +271,15 @@ function buildTrackingPreviewBBox(
       format: "xywh",
       is_normalized: false,
       confidence: 1.0,
-       item_id: "",
-       view_name: viewName,
-       frame_id: frame.id,
-       entity_id: "",
-       source_type: "",
-       source_name: "",
-       source_metadata: "{}",
-     },
-   });
+      item_id: "",
+      view_name: viewName,
+      frame_id: frame.id,
+      entity_id: "",
+      source_type: "",
+      source_name: "",
+      source_metadata: "{}",
+    },
+  });
 
   bbox.ui = {
     datasetItemType: WorkspaceType.VIDEO,

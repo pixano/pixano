@@ -5,31 +5,24 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-
   // Svelte Imports
-  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown } from "phosphor-svelte";
-  import SortableList from "svelte-sortable-list";
-
-  // Pixano Core Imports
-  import { Button } from "bits-ui";
-
-  import type { TableData, TableRow } from "$lib/types/dataset";
-  import { Checkbox } from "bits-ui";
-  import { Check } from "phosphor-svelte";
-
-  import { icons } from "$lib/ui";
-
-  import { createSvelteTable } from "./createSvelteTable.svelte";
-  import FlexRender from "./FlexRender.svelte";
   import {
     getCoreRowModel,
     type ColumnDef,
+    type ColumnOrderState,
     type SortingState,
     type VisibilityState,
-    type ColumnOrderState,
   } from "@tanstack/table-core";
-  import { TableCell } from "./TableCell";
+  // Pixano Core Imports
+  import { Button, Checkbox } from "bits-ui";
+  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown, Check } from "phosphor-svelte";
+  import SortableList from "svelte-sortable-list";
 
+  import { createSvelteTable } from "./createSvelteTable.svelte";
+  import FlexRender from "./FlexRender.svelte";
+  import { TableCell } from "./TableCell";
+  import type { TableData, TableRow } from "$lib/types/dataset";
+  import { icons } from "$lib/ui";
 
   interface Props {
     // Exports
@@ -52,7 +45,8 @@ License: CECILL-C
         if (cellRenderer) {
           return cellRenderer(info.getValue() as never);
         }
-        return String(info.getValue() ?? "");
+        const val = info.getValue();
+        return val == null ? "" : String(val as string | number | boolean);
       },
       enableSorting: col.type !== "image" && col.type !== "video",
     }));
@@ -81,14 +75,22 @@ License: CECILL-C
   const columns = buildColumns();
 
   const table = createSvelteTable({
-    get data() { return items.rows; },
+    get data() {
+      return items.rows;
+    },
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
     state: {
-      get sorting() { return sorting; },
-      get columnOrder() { return columnOrder; },
-      get columnVisibility() { return columnVisibility; },
+      get sorting() {
+        return sorting;
+      },
+      get columnOrder() {
+        return columnOrder;
+      },
+      get columnVisibility() {
+        return columnVisibility;
+      },
     },
     onSortingChange: (updater) => {
       if (typeof updater === "function") {
@@ -124,15 +126,11 @@ License: CECILL-C
       sorting = [{ id: "created_at", desc: false }];
     }
 
-    onColsort?.(
-      sorting.map((s) => ({ id: s.id, order: s.desc ? "desc" : "asc" })),
-    );
+    onColsort?.(sorting.map((s) => ({ id: s.id, order: s.desc ? "desc" : "asc" })));
   };
 
   // Column visibility tracking by id
-  let shownColumnsById = $state(
-    Object.fromEntries(initialColumnOrder.map((id) => [id, true])),
-  );
+  let shownColumnsById = $state(Object.fromEntries(initialColumnOrder.map((id) => [id, true])));
   $effect(() => {
     const hidden: VisibilityState = {};
     for (const [id, shown] of Object.entries(shownColumnsById)) {
@@ -174,9 +172,9 @@ License: CECILL-C
         Drag and drop to re-order, toggle box for visibility.
       </span>
       <div class="flex flex-col space-y-2">
-        <SortableList list={columnOrder} on:sort={sortList} >
+        <SortableList list={columnOrder} on:sort={sortList}>
           {#snippet children({ item })}
-                    <div class="py-1 px-2 flex items-center space-x-2 border border-border rounded-md">
+            <div class="py-1 px-2 flex items-center space-x-2 border border-border rounded-md">
               <Checkbox.Root
                 id={item}
                 bind:checked={shownColumnsById[item]}
@@ -185,7 +183,7 @@ License: CECILL-C
                 {#snippet children({ checked })}
                   <span class="flex items-center justify-center text-current h-full w-full">
                     {#if checked}
-                      <Check class="h-3.5 w-3.5"  />
+                      <Check class="h-3.5 w-3.5" />
                     {/if}
                   </span>
                 {/snippet}
@@ -203,8 +201,8 @@ License: CECILL-C
                 <path d={icons.svg_drag_handle} fill="grey" />
               </svg>
             </div>
-                            {/snippet}
-                </SortableList>
+          {/snippet}
+        </SortableList>
       </div>
 
       <div class="my-6 flex justify-end items-end">
@@ -289,6 +287,7 @@ License: CECILL-C
         >
           {#each row.getVisibleCells() as cell (cell.id)}
             <td class="px-3 py-1 border-b border-border">
+              <!-- eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any -->
               <FlexRender content={(cell.column.columnDef.cell as any)?.(cell.getContext())} />
             </td>
           {/each}

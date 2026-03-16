@@ -22,7 +22,7 @@ export function charOffsetToPmPos(doc: PmNode, charOffset: number): number {
     if (result !== -1) return false; // already found
     if (!node.isText) return;
 
-    const text = node.text!;
+    const text = node.text;
     if (counted + text.length >= charOffset) {
       result = pos + (charOffset - counted);
       return false;
@@ -50,7 +50,7 @@ export function pmPosToCharOffset(doc: PmNode, pmPos: number): number {
   doc.descendants((node, pos) => {
     if (!node.isText) return;
 
-    const text = node.text!;
+    const text = node.text;
     const nodeStart = pos;
     const nodeEnd = pos + text.length;
 

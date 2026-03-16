@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
@@ -12,6 +13,7 @@ from .entity_annotation import EntityAnnotation
 
 class Classification(EntityAnnotation):
     """Classification at the media level (Image or Text).
+
     Attributes:
         labels: List of class names.
         confidences: List of prediction confidences.
@@ -30,6 +32,7 @@ class Classification(EntityAnnotation):
     def none(cls) -> "Classification":
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" Classification.
         """
@@ -62,6 +65,7 @@ def create_classification(
     source_metadata: str = "{}",
 ) -> Classification:
     """Create a `Classification` instance.
+
     Args:
         labels: List of class names.
         confidences: List of prediction confidences.
@@ -72,6 +76,7 @@ def create_classification(
         source_type: Source type.
         source_name: Source name.
         source_metadata: Source metadata (JSON string).
+
     Returns:
         The created `Classification` instance.
     """

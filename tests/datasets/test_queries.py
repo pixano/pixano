@@ -14,7 +14,7 @@ from pixano.schemas.views.image import Image
 
 @pytest.fixture(scope="class")
 def image_table(dataset_image_bboxes_keypoint: Dataset) -> LanceTable:
-    return dataset_image_bboxes_keypoint.open_table("image")
+    return dataset_image_bboxes_keypoint.open_table("images")
 
 
 class TestTableQueryBuilder:

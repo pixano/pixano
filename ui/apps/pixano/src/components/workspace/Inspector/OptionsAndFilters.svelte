@@ -7,10 +7,18 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
+  import { Checkbox, Slider } from "bits-ui";
   import { Check, Plus, Prohibit } from "phosphor-svelte";
 
-  import { Checkbox, Slider } from "bits-ui";
-
+  import FilterLine from "./FilterLine.svelte";
+  import {
+    annotations,
+    confidenceThreshold,
+    entities,
+    entityFilters,
+    interpolate,
+  } from "$lib/stores/workspaceStores.svelte";
+  import type { EntityFilter, FieldCol, FieldOperator, LogicOperator } from "$lib/types/workspace";
   import {
     Annotation,
     BaseSchema,
@@ -20,25 +28,9 @@ License: CECILL-C
     Mask,
     TextSpan,
     Tracklet,
-    WorkspaceType,
   } from "$lib/ui";
-
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import {
-    annotations,
-    confidenceThreshold,
-    entities,
-    entityFilters,
-    interpolate,
-  } from "$lib/stores/workspaceStores.svelte";
-  import type {
-    FieldCol,
-    FieldOperator,
-    LogicOperator,
-    EntityFilter,
-  } from "$lib/types/workspace";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import FilterLine from "./FilterLine.svelte";
 
   interface Props {
     onFilter?: (entities: Entity[]) => void;
@@ -212,7 +204,9 @@ License: CECILL-C
       typeof a === "number"
         ? Number(b)
         : typeof a === "boolean"
-          ? (typeof b === "boolean" ? b : b === "true")
+          ? typeof b === "boolean"
+            ? b
+            : b === "true"
           : String(b);
 
     switch (op) {
@@ -340,7 +334,9 @@ License: CECILL-C
   </div>
 
   {#if filterSetup.isVideo}
-    <div class="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 px-2 py-1.5">
+    <div
+      class="flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 px-2 py-1.5"
+    >
       <Checkbox.Root
         checked={interpolate.value}
         onCheckedChange={(c) => {
@@ -421,7 +417,9 @@ License: CECILL-C
       </div>
     </div>
   {:else}
-    <div class="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
+    <div
+      class="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground"
+    >
       No filterable fields are available for this item.
     </div>
   {/if}

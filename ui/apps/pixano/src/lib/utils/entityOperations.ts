@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { nanoid } from "nanoid";
 
+import { entities, views } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
@@ -21,14 +22,13 @@ import {
   type DS_NamedSchema,
   type ItemFeature,
   type MaskData,
+  type Reference,
 } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes";
-import { PIXANO_SOURCE, getTable } from "$lib/utils/entityLookupUtils";
-import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 import { nowTimestamp } from "$lib/utils/coreUtils";
+import { getTable, PIXANO_SOURCE } from "$lib/utils/entityLookupUtils";
+import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
 import type { WorkspaceManifest } from "$lib/workspace/manifest";
-
-import { entities, views } from "$lib/stores/workspaceStores.svelte";
 
 export const removeAnnotationsByIds = (
   anns: Annotation[] | undefined,
@@ -67,10 +67,7 @@ export const buildMaskDataAndInferenceMetadata = (
   return { mask, inferenceMetadata };
 };
 
-export const applyEditedShapeDataToAnnotation = (
-  ann: Annotation,
-  shape: EditShape,
-): boolean => {
+export const applyEditedShapeDataToAnnotation = (ann: Annotation, shape: EditShape): boolean => {
   if (shape.type === ShapeType.mask && ann.is_type(BaseSchema.Mask)) {
     if ("counts" in shape && Array.isArray(shape.counts)) {
       (ann as Mask).data.counts = shape.counts;
@@ -78,7 +75,10 @@ export const applyEditedShapeDataToAnnotation = (
     return true;
   }
 
-  if ((shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) && ann.is_type(BaseSchema.MultiPath)) {
+  if (
+    (shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) &&
+    ann.is_type(BaseSchema.MultiPath)
+  ) {
     const sourcePolys: Array<Array<{ x: number; y: number }>> =
       "polygonPoints" in shape && Array.isArray(shape.polygonPoints)
         ? shape.polygonPoints
@@ -144,7 +144,9 @@ export const defineCreatedEntity = (
 export const getFrameIndex = (view_name: string, frame_id: string): number => {
   const vs = views.value;
   if (!Array.isArray(vs[view_name])) return 0;
-  const view = (vs[view_name] as import("$lib/types/dataset").SequenceFrame[]).find((sf) => sf.id === frame_id);
+  const view = (vs[view_name] as import("$lib/types/dataset").SequenceFrame[]).find(
+    (sf) => sf.id === frame_id,
+  );
   if (view) return view.data.frame_index;
   else {
     console.error("Could not find a matching view:", view_name, frame_id);
@@ -304,7 +306,7 @@ export const defineCreatedAnnotation = (
     const coords = [];
     const states = [];
 
-    for (let vi = 0; vi <shape.keypoints.graph.vertices.length; vi++) {
+    for (let vi = 0; vi < shape.keypoints.graph.vertices.length; vi++) {
       const vertex = shape.keypoints.graph.vertices[vi];
       coords.push(vertex.x / shape.imageWidth);
       coords.push(vertex.y / shape.imageHeight);

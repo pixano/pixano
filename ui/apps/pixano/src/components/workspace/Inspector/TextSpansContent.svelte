@@ -17,6 +17,7 @@ License: CECILL-C
     annotations: Annotation[] | undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let { annotations: _annotations }: Props = $props();
 </script>
 

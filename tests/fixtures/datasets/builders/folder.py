@@ -30,18 +30,20 @@ def _metadata_content(mode: str, num_items: int):
                 }
             )
             if item % 2:
-                metadata[-1]["entities"] = {
-                    "bbox": [
-                        [
-                            0 + item / num_items,
-                            0 + item / num_items,
-                            (100 + item) / (100 + num_items),
-                            (100 + item) / (100 + num_items),
-                        ]
-                    ]
-                    * item,
-                    "category": [("person" if item % 4 == 0 else "cat") if item % 2 else None] * item,
-                }
+                bbox_coords = [
+                    0 + item / num_items,
+                    0 + item / num_items,
+                    (100 + item) / (100 + num_items),
+                    (100 + item) / (100 + num_items),
+                ]
+                category = ("person" if item % 4 == 0 else "cat") if item % 2 else "none"
+                metadata[-1]["entities"] = [
+                    {
+                        "category": category,
+                        "annotations": {"view": {"bbox": bbox_coords}},
+                    }
+                    for _ in range(item)
+                ]
     elif mode == "vqa":
         for item in range(num_items):
             metadata.append(

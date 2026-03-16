@@ -6,9 +6,18 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ToolType } from "$lib/tools";
   import { Button } from "bits-ui";
 
+  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
+  import KeyframeDot from "./KeyframeDot.svelte";
+  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
+  import {
+    annotations,
+    colorScale,
+    entities,
+    selectedTool,
+  } from "$lib/stores/workspaceStores.svelte";
+  import { ToolType } from "$lib/tools";
   import {
     Annotation,
     BaseSchema,
@@ -19,21 +28,11 @@ License: CECILL-C
     View,
     type TrackTimelineEntry,
   } from "$lib/ui";
-
-  import { saveTo } from "$lib/utils/saveItemUtils";
-  import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { relink } from "$lib/utils/entityRelink";
+  import { saveTo } from "$lib/utils/saveItemUtils";
+  import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import {
-    annotations,
-    colorScale,
-    entities,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
-  import KeyframeDot from "./KeyframeDot.svelte";
 
   type MView = Record<string, View | View[]>;
 
@@ -43,10 +42,7 @@ License: CECILL-C
     views: MView;
     compact?: boolean;
     onContextMenu: (tracklet: Tracklet) => void;
-    onEditKeyItemClick: (
-    frameIndex: TrackTimelineEntry["frame_index"],
-    viewname: string,
-  ) => void;
+    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => void;
     onAddKeyItemClick: (event: MouseEvent) => void;
     onSplitTrackClick: () => void;
     onDeleteTrackClick: () => void;
@@ -67,7 +63,7 @@ License: CECILL-C
     onDeleteTrackClick,
     findNeighborItems,
     moveCursorToPosition,
-    resetTool
+    resetTool,
   }: Props = $props();
   const { manifest } = getWorkspaceContext();
 
@@ -93,10 +89,7 @@ License: CECILL-C
   };
   const getTop = (trk: Tracklet, views: MView) => {
     if (compact) return 14;
-    return (
-      10 +
-      (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length
-    );
+    return 10 + (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length;
   };
 
   let left = $derived(getLeft(tracklet));
@@ -134,14 +127,16 @@ License: CECILL-C
 
   let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
 
-  let canAddKeyFrame =
-    $derived(currentFrameIndex.value > tracklet.data.start_frame &&
-    currentFrameIndex.value <tracklet.data.end_frame &&
-    !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value));
+  let canAddKeyFrame = $derived(
+    currentFrameIndex.value > tracklet.data.start_frame &&
+      currentFrameIndex.value < tracklet.data.end_frame &&
+      !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value),
+  );
 
-  let canSplit =
-    $derived(currentFrameIndex.value >= tracklet.data.start_frame &&
-    currentFrameIndex.value <tracklet.data.end_frame);
+  let canSplit = $derived(
+    currentFrameIndex.value >= tracklet.data.start_frame &&
+      currentFrameIndex.value < tracklet.data.end_frame,
+  );
 
   const getNeighborTracklet = (
     allAnnotations: Annotation[],
@@ -157,9 +152,7 @@ License: CECILL-C
       return (
         t.data.view_name === tracklet.data.view_name &&
         t.data.entity_id === entityId &&
-        (isLeft
-          ? t.data.end_frame <refCompareTimestep
-          : t.data.start_frame > refCompareTimestep)
+        (isLeft ? t.data.end_frame < refCompareTimestep : t.data.start_frame > refCompareTimestep)
       );
     });
 
@@ -172,20 +165,14 @@ License: CECILL-C
       const bestVal = isLeft ? tBest.data.end_frame : tBest.data.start_frame;
       const currVal = isLeft ? tCurr.data.end_frame : tCurr.data.start_frame;
 
-      return isLeft
-        ? currVal > bestVal
-          ? curr
-          : best
-        : currVal <bestVal
-          ? curr
-          : best;
+      return isLeft ? (currVal > bestVal ? curr : best) : currVal < bestVal ? curr : best;
     });
   };
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(tracklet, draggedFrameIndex);
     if (
-      (prevFrameIndex !== 0 && newFrameIndex <prevFrameIndex + 1) ||
+      (prevFrameIndex !== 0 && newFrameIndex < prevFrameIndex + 1) ||
       (nextFrameIndex !== lastFrameIndex.value && newFrameIndex > nextFrameIndex - 1)
     )
       return false;
@@ -302,7 +289,14 @@ License: CECILL-C
   };
 
   const handleRelink = () => {
-    relink(tracklet, getTopEntity(tracklet), selectedEntityId, mustMerge, overlapTargetId, manifest);
+    relink(
+      tracklet,
+      getTopEntity(tracklet),
+      selectedEntityId,
+      mustMerge,
+      overlapTargetId,
+      manifest,
+    );
     showRelink = false;
   };
 </script>
@@ -324,7 +318,7 @@ License: CECILL-C
       class="absolute h-full w-full"
       bind:this={trackElement}
       onclick={(e) => onClick(e.button, e.clientX)}
-></button>
+    ></button>
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if selectedToolType === ToolType.Fusion}
@@ -362,7 +356,11 @@ License: CECILL-C
             viewRef={{ name: tracklet.data.view_name, id: tracklet.data.frame_id }}
             track={tracklet}
           />
-          <Button.Root type="button" class={cn(defaultButtonClass, "text-white mt-4")} onclick={handleRelink}>
+          <Button.Root
+            type="button"
+            class={cn(defaultButtonClass, "text-white mt-4")}
+            onclick={handleRelink}
+          >
             OK
           </Button.Root>
         </div>
@@ -375,7 +373,7 @@ License: CECILL-C
     {#each keyframeIndexes as itemFrameIndex}
       <KeyframeDot
         {itemFrameIndex}
-        tracklet={tracklet}
+        {tracklet}
         {color}
         {height}
         {top}
@@ -384,7 +382,7 @@ License: CECILL-C
         {onClick}
         {entityId}
         {canContinueDragging}
-        updateTrackletWidth={updateTrackletWidth}
+        {updateTrackletWidth}
         {resetTool}
       />
     {/each}

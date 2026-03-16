@@ -46,15 +46,13 @@ type MappedMaskCacheEntry = {
 const mappedMaskCache = new Map<string, MappedMaskCacheEntry>();
 const MAX_MAPPED_MASK_CACHE_SIZE = 10_000;
 
-function setBoundedMappedMaskCacheEntry(
-  key: string,
-  entry: MappedMaskCacheEntry,
-): void {
+function setBoundedMappedMaskCacheEntry(key: string, entry: MappedMaskCacheEntry): void {
   if (mappedMaskCache.has(key)) {
     mappedMaskCache.delete(key);
   }
   mappedMaskCache.set(key, entry);
   if (mappedMaskCache.size > MAX_MAPPED_MASK_CACHE_SIZE) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const oldestKey = mappedMaskCache.keys().next().value;
     if (oldestKey !== undefined) {
       mappedMaskCache.delete(oldestKey);
@@ -166,7 +164,7 @@ export const mapKeypointsForDisplay = (
   const displayControl = { ...keypoints.ui.displayControl, highlighted: effectiveHighlight };
   const vertices: Array<{ x: number; y: number }> = [];
   const vertexMetadata: KeypointAnnotation["vertexMetadata"] = [];
-  for (let i = 0; i <keypoints.data.coords.length / 2; i++) {
+  for (let i = 0; i < keypoints.data.coords.length / 2; i++) {
     const x = keypoints.data.coords[i * 2] * imageWidth;
     const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
     vertices.push({ x, y });

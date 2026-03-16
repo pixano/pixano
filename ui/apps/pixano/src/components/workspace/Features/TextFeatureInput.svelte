@@ -8,31 +8,24 @@ License: CECILL-C
   // Imports
   import { Checks } from "phosphor-svelte";
 
-  import { Annotation, Entity, Item } from "$lib/ui";
-  import { Input, type FeaturesValues } from "$lib/ui";
-
-  import { addNewInput, mapFeatureList } from "$lib/utils/featureMapping";
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
   import { itemMetas } from "$lib/stores/workspaceStores.svelte";
   import type { NumberFeature, TextFeature } from "$lib/types/workspace";
-  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
+  import { Annotation, Entity, Input, Item, type FeaturesValues } from "$lib/ui";
+  import { addNewInput, mapFeatureList } from "$lib/utils/featureMapping";
 
   interface Props {
     feature: TextFeature | NumberFeature;
     isEditing: boolean;
     saveInputChange: (
-    value: string | number,
-    propertyName: string,
-    obj: Item | Entity | Annotation,
-  ) => void;
+      value: string | number,
+      propertyName: string,
+      obj: Item | Entity | Annotation,
+    ) => void;
     featureClass: keyof FeaturesValues;
   }
 
-  let {
-    feature,
-    isEditing,
-    saveInputChange,
-    featureClass
-  }: Props = $props();
+  let { feature, isEditing, saveInputChange, featureClass }: Props = $props();
 
   let isSaved = $state(false);
 
@@ -72,8 +65,12 @@ License: CECILL-C
         step={feature.type === "int" ? "1" : "any"}
         onchange={(e) =>
           onTextInputChange((e.currentTarget as HTMLInputElement).value, feature.name, feature.obj)}
-        oninput={() => (isSaved = false)}
-        onkeyup={(e) => e.stopPropagation()}
+        oninput={() => {
+          isSaved = false;
+        }}
+        onkeyup={(e: KeyboardEvent) => {
+          e.stopPropagation();
+        }}
       />
     {/if}
     {#if isSaved}

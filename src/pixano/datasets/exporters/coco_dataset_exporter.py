@@ -212,6 +212,9 @@ def coco_annotation(
 
     Args:
         ann: Annotation
+        image_id: COCO image identifier for this annotation.
+        entity_id: Entity identifier owning this annotation.
+        category_name: Optional category name for the annotation.
         existing_coco_ann: Existing annotation in COCO format to complete
         category_dict: Category dictonary for name to ID conversion
     Returns:

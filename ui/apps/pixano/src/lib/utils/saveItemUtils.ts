@@ -4,15 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { toResourceMutation, type ResourceMutation } from "$lib/api/resourcePayloads";
 import { saveData } from "$lib/stores/workspaceStores.svelte";
 import type { SaveItem, Schema } from "$lib/types/dataset";
-import { toResourceMutation, type ResourceMutation } from "$lib/api/resourcePayloads";
 
 function sameTarget(left: ResourceMutation, right: ResourceMutation): boolean {
-  return (
-    left.target.resource === right.target.resource &&
-    left.target.id === right.target.id
-  );
+  return left.target.resource === right.target.resource && left.target.id === right.target.id;
 }
 
 function normalizeMutation(

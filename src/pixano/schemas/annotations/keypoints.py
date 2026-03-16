@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from typing import Literal
 
 from pydantic import model_validator
@@ -14,6 +15,7 @@ from .per_frame_annotation import PerFrameAnnotation
 
 class KeyPoints(PerFrameAnnotation):
     """A set of keypoints.
+
     Attributes:
         template_id: Id of the keypoint template.
         coords: List of 2D coordinates of the keypoints.
@@ -40,6 +42,7 @@ class KeyPoints(PerFrameAnnotation):
     def none(cls) -> "KeyPoints":
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" KeyPoints.
         """
@@ -52,8 +55,10 @@ class KeyPoints(PerFrameAnnotation):
 
     def map_back2front_vertices(self) -> list:
         """Utility function to map back format for KeyPoint to front vertices format.
+
         Raises:
             ValueError: If keypoints is ill-formed.
+
         Returns:
             keypoint list for vertices front format.
         """
@@ -76,6 +81,7 @@ class KeyPoints(PerFrameAnnotation):
 
 class KeyPoints3D(PerFrameAnnotation):
     """A set of 3D keypoints.
+
     Attributes:
         template_id: id of keypoint template.
         coords: List of 3D coordinates of the keypoints.
@@ -102,6 +108,7 @@ class KeyPoints3D(PerFrameAnnotation):
     def none(cls) -> "KeyPoints3D":
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" KeyPoints3D.
         """
@@ -147,6 +154,7 @@ def create_keypoints(
     frame_index: int = -1,
 ) -> KeyPoints:
     """Create a `KeyPoints` instance.
+
     Args:
         template_id: id of keypoint template.
         coords: List of 2D coordinates of the keypoints.
@@ -162,6 +170,7 @@ def create_keypoints(
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
         frame_index: Frame index.
+
     Returns:
         The created `KeyPoints` instance.
     """
@@ -200,6 +209,7 @@ def create_keypoints3d(
     frame_index: int = -1,
 ) -> KeyPoints3D:
     """Create a `KeyPoints3D` instance.
+
     Args:
         template_id: The id of the keypoint template.
         coords: The 3D coordinates of the keypoints.
@@ -215,6 +225,7 @@ def create_keypoints3d(
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
         frame_index: Frame index.
+
     Returns:
         The created `KeyPoints3D` instance.
     """

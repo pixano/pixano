@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { ReactiveValue } from "$lib/stores/reactiveStore.svelte";
 import {
   Annotation,
   BaseSchema,
@@ -12,11 +13,7 @@ import {
   Tracklet,
   type DisplayControl,
 } from "$lib/types/dataset";
-import type { ReactiveValue } from "$lib/stores/reactiveStore.svelte";
-import {
-  toggleAnnotationDisplayControl,
-  updateDisplayControl,
-} from "$lib/utils/displayControl";
+import { toggleAnnotationDisplayControl, updateDisplayControl } from "$lib/utils/displayControl";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
 import { saveTo } from "$lib/utils/saveItemUtils";
 

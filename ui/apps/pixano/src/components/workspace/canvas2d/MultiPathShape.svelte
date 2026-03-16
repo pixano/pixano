@@ -15,12 +15,11 @@ License: CECILL-C
   interface Props {
     multiPath: MultiPath;
     colorScale: (id: string) => string;
-    zoomFactor: number;
     imageWidth: number;
     imageHeight: number;
   }
 
-  let { multiPath, colorScale, zoomFactor, imageWidth, imageHeight }: Props = $props();
+  let { multiPath, colorScale, imageWidth, imageHeight }: Props = $props();
 
   let color = $derived.by(() => {
     if (multiPath.ui.displayControl.highlighted === "none") return NEUTRAL_ENTITY_COLOR;
@@ -41,7 +40,10 @@ License: CECILL-C
     ctx.beginPath();
     let offset = 0;
     for (const n of num_points) {
-      if (n < 2) { offset += n * 2; continue; }
+      if (n < 2) {
+        offset += n * 2;
+        continue;
+      }
       ctx.moveTo(coords[offset] * imageWidth, coords[offset + 1] * imageHeight);
       for (let i = 1; i < n; i++) {
         ctx.lineTo(coords[offset + i * 2] * imageWidth, coords[offset + i * 2 + 1] * imageHeight);

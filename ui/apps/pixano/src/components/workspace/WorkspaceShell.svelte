@@ -13,6 +13,7 @@ License: CECILL-C
 
   import WorkspaceInspectorPanel from "./Inspector/WorkspaceInspectorPanel.svelte";
   import LoadModelModal from "./LoadModelModal.svelte";
+  import type { ResourceMutation } from "$lib/api/resourcePayloads";
   import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -26,12 +27,8 @@ License: CECILL-C
     saveData,
     views,
   } from "$lib/stores/workspaceStores.svelte";
-  import {
-    effectProbe,
-    type FeaturesValues,
-  } from "$lib/ui";
-  import type { ResourceMutation } from "$lib/api/resourcePayloads";
   import type { WorkspaceData } from "$lib/types/workspace";
+  import { effectProbe, type FeaturesValues } from "$lib/ui";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
   import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
   import { attachTrackChildren, buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
@@ -124,13 +121,13 @@ License: CECILL-C
     const withTracks = attachTrackChildren(result.annotations, (ann) =>
       getTopEntityFromList(ann, result.entities),
     );
-      annotations.value = withTracks;
+    annotations.value = withTracks;
 
-      itemMetas.value = {
-        featuresList: featureValues || { main: {}, objects: {} },
-        item: workspaceData.item,
-        type: workspaceData.ui.type,
-      };
+    itemMetas.value = {
+      featuresList: featureValues || { main: {}, objects: {} },
+      item: workspaceData.item,
+      type: workspaceData.ui.type,
+    };
   };
 
   // --- Item change detection ---

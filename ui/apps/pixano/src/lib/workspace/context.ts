@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { getContext, setContext } from "svelte";
 
 import type { FeaturesValues } from "$lib/types/dataset";

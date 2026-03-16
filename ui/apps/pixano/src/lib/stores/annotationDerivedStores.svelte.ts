@@ -4,6 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { reactiveDerived } from "./reactiveStore.svelte";
+import {
+  annotations,
+  entities,
+  generatedPreviewBBoxes,
+  highlightedEntity,
+  selectedTool,
+  views,
+} from "./workspaceBaseStores.svelte";
+import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
+import { ToolType } from "$lib/tools";
 import {
   BaseSchema,
   BBox,
@@ -20,25 +31,11 @@ import {
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { MView } from "$lib/types/workspace";
 import {
-  NOT_ANNOTATION_ITEM_OPACITY,
-} from "$lib/constants/workspaceConstants";
-import {
   mapBBoxForDisplay,
   mapKeypointsForDisplay,
   mapMaskForDisplay,
 } from "$lib/utils/annotationMapping";
 import { getEffectiveHighlight } from "$lib/utils/highlightUtils";
-import { ToolType } from "$lib/tools";
-import { reactiveDerived } from "./reactiveStore.svelte";
-
-import {
-  annotations,
-  entities,
-  generatedPreviewBBoxes,
-  highlightedEntity,
-  selectedTool,
-  views,
-} from "./workspaceBaseStores.svelte";
 
 // --- Shared entity-by-id map ---
 // Only built when Pan tool + focused entity (used by highlight logic).
@@ -146,7 +143,12 @@ export const itemMultiPaths = reactiveDerived(() => {
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.MultiPath)) {
       const mp = ann as MultiPath;
-      const effectiveHighlight = getEffectiveHighlight(mp, focusedEntityId, selectedToolType, eById);
+      const effectiveHighlight = getEffectiveHighlight(
+        mp,
+        focusedEntityId,
+        selectedToolType,
+        eById,
+      );
       const mapped = {
         ...mp,
         ui: {
@@ -154,7 +156,7 @@ export const itemMultiPaths = reactiveDerived(() => {
           displayControl: { ...mp.ui.displayControl, highlighted: effectiveHighlight },
           opacity: effectiveHighlight === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
         },
-      } as MultiPath;
+      } as unknown as MultiPath;
       multiPaths.push(mapped);
     }
   }
@@ -176,8 +178,14 @@ export const textSpans = reactiveDerived(() => {
   ) as TextSpan[];
 
   return spans.map((span) => {
-    const effectiveHighlight = getEffectiveHighlight(span, focusedEntityId, selectedToolType, eById);
+    const effectiveHighlight = getEffectiveHighlight(
+      span,
+      focusedEntityId,
+      selectedToolType,
+      eById,
+    );
     if (effectiveHighlight === span.ui.displayControl.highlighted) return span;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const clone = Object.assign(Object.create(Object.getPrototypeOf(span)), span);
     clone.ui = {
       ...span.ui,

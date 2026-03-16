@@ -6,8 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import Canvas3D from "../canvas3d/Canvas3D.svelte";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
 
   interface Props {
     selectedItem: WorkspaceViewerItem;

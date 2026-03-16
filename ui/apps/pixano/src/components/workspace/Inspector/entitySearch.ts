@@ -50,7 +50,9 @@ export const DEFAULT_IGNORED_ENTITY_DATA_KEYS: ReadonlySet<string> = new Set([
 
 export function normalizeSearchText(value: unknown): string {
   if (value === null || value === undefined) return "";
-  return String(value)
+  const str =
+    typeof value === "object" ? JSON.stringify(value) : String(value as string | number | boolean);
+  return str
     .normalize("NFKD")
     .replace(DIACRITICS_REGEX, "")
     .toLowerCase()
@@ -198,9 +200,7 @@ function parseSearchToken(token: string): {
   const normalizedToken = normalizeSearchText(effectiveToken);
   if (normalizedToken.length === 0) return {};
 
-  return negated
-    ? { negatedTextToken: normalizedToken }
-    : { textToken: normalizedToken };
+  return negated ? { negatedTextToken: normalizedToken } : { textToken: normalizedToken };
 }
 
 export function parseSearchQuery(query: string): ParsedSearchQuery {
@@ -253,7 +253,11 @@ export function buildSearchQueryChips(parsedQuery: ParsedSearchQuery, maxChips =
   return visible;
 }
 
-function appendFieldValue(fieldValues: SearchFieldValueMap, fieldName: string, value: SearchScalar): void {
+function appendFieldValue(
+  fieldValues: SearchFieldValueMap,
+  fieldName: string,
+  value: SearchScalar,
+): void {
   const normalizedFieldName = normalizeSearchFieldName(fieldName);
   if (normalizedFieldName.length === 0) return;
   const existing = fieldValues.get(normalizedFieldName);

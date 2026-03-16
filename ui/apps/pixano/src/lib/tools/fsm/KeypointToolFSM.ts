@@ -107,10 +107,7 @@ export class KeypointToolFSM implements ToolFSM {
         if (event.type === "cancel" || (event.type === "keyDown" && event.key === "Escape")) {
           return {
             newState: { phase: "idle" },
-            sideEffects: [
-              { type: "updatePreview", preview: null },
-              { type: "abortTransaction" },
-            ],
+            sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
           };
         }
         break;

@@ -1,11 +1,16 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Canonical API resource definitions."""
 
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from pydantic import BaseModel
-
 from lancedb.pydantic import LanceModel
+from pydantic import BaseModel
 
 from pixano.schemas import (
     BBox,
@@ -35,21 +40,21 @@ from .models import (
     EntityDynamicStateUpdate,
     EntityResponse,
     EntityUpdate,
-    RecordCreate,
-    RecordResponse,
-    RecordUpdate,
     KeyPointsCreate,
     KeyPointsResponse,
     KeyPointsUpdate,
     MaskCreate,
     MaskResponse,
     MaskUpdate,
-    MultiPathCreate,
-    MultiPathResponse,
-    MultiPathUpdate,
     MessageCreate,
     MessageResponse,
     MessageUpdate,
+    MultiPathCreate,
+    MultiPathResponse,
+    MultiPathUpdate,
+    RecordCreate,
+    RecordResponse,
+    RecordUpdate,
     TextSpanCreate,
     TextSpanResponse,
     TextSpanUpdate,

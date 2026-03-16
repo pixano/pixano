@@ -4,8 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Annotation, Entity } from "$lib/types/dataset";
 import { ToolType } from "$lib/tools";
+import type { Annotation, Entity } from "$lib/types/dataset";
 
 export type HighlightState = "all" | "self" | "none";
 
@@ -36,11 +36,7 @@ export function getEffectiveHighlight(
   entitiesById: Map<string, Entity> | null,
 ): HighlightState {
   const currentHighlight = annotation.ui.displayControl.highlighted;
-  if (
-    selectedToolType !== ToolType.Pan ||
-    !focusedEntityId ||
-    entitiesById === null
-  ) {
+  if (selectedToolType !== ToolType.Pan || !focusedEntityId || entitiesById === null) {
     return currentHighlight;
   }
   // In Pan mode, a focused entity should visually stand out in context:

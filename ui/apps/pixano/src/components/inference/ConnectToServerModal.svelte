@@ -68,7 +68,7 @@ License: CECILL-C
             const target = event.currentTarget as HTMLInputElement;
             url = target.value;
           }}
-          onkeyup={(e) => {
+          onkeyup={(e: KeyboardEvent) => {
             e.stopPropagation();
             if (e.key === "Enter") void handleConnect();
           }}

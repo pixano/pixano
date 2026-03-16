@@ -21,7 +21,7 @@ class TestDefaultJSONDatasetExporter:
         export_data = exporter.initialize_export_data(info)
         # The new exporter no longer includes sources; verify expected keys
         assert "info" in export_data
-        assert export_data["info"] == info.model_dump(exclude={"tables"})
+        assert export_data["info"] == info.json_info_dump()
 
     def test_export_record(self, dataset_image_bboxes_keypoint: Dataset):
         exporter = DefaultJSONDatasetExporter(dataset_image_bboxes_keypoint, "/")
@@ -39,15 +39,13 @@ class TestDefaultJSONDatasetExporter:
             expected_export_data = exporter.initialize_export_data(info)
 
             # Record row
-            expected_export_data["records"].append(record_data["record"].model_dump(exclude=_TS_EXCLUDE))
+            expected_export_data["records"].append(record_data["records"].model_dump(exclude=_TS_EXCLUDE))
 
             # Views
-            image_data = record_data.get("image")
+            image_data = record_data.get("images")
             if image_data:
                 images = image_data if isinstance(image_data, list) else [image_data]
-                expected_export_data["views"]["image"].extend(
-                    [img.model_dump(exclude=_TS_EXCLUDE) for img in images]
-                )
+                expected_export_data["views"]["images"].extend([img.model_dump(exclude=_TS_EXCLUDE) for img in images])
 
             # Entities
             entity_data = record_data.get("entities")

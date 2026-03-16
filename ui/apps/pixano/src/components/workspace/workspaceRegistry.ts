@@ -6,14 +6,13 @@ License: CECILL-C
 
 import type { Component } from "svelte";
 
-import { WorkspaceType } from "$lib/ui";
-import type { WorkspaceViewerItem } from "$lib/types/workspace";
-
+import Workspace3D from "./variants/Workspace3D.svelte";
+import WorkspaceEntityLinking from "./variants/WorkspaceEntityLinking.svelte";
 import WorkspaceImage from "./variants/WorkspaceImage.svelte";
 import WorkspaceVideo from "./variants/WorkspaceVideo.svelte";
 import WorkspaceVqa from "./variants/WorkspaceVqa.svelte";
-import WorkspaceEntityLinking from "./variants/WorkspaceEntityLinking.svelte";
-import Workspace3D from "./variants/Workspace3D.svelte";
+import type { WorkspaceViewerItem } from "$lib/types/workspace";
+import { WorkspaceType } from "$lib/ui";
 
 type VariantProps = { selectedItem: WorkspaceViewerItem; resize: number };
 

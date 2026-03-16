@@ -25,10 +25,10 @@ import {
 import type { WorkspaceData } from "$lib/types/workspace";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import {
-  rleFrString,
-  rleCountsToBounds,
   resolveMaskBitmapSource,
   resolveMaskBounds,
+  rleCountsToBounds,
+  rleFrString,
 } from "$lib/utils/maskUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
 
@@ -54,8 +54,7 @@ function prepareAnnotation(
     }
     if (!mask.ui.bounds) {
       mask.ui.bounds =
-        resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ??
-        undefined;
+        resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ?? undefined;
     }
 
     // Fallback: infer bounds from RLE counts only when metadata bounds are absent.
@@ -76,8 +75,9 @@ function prepareAnnotation(
 
   if (workspaceType === WorkspaceType.VIDEO) {
     if (ann.table_info.base_schema !== BaseSchema.Tracklet) {
-      if (ann.data.frame_index >= 0) {
-        ann.ui.frame_index = ann.data.frame_index;
+      const frameIndex = ann.data.frame_index as number | undefined;
+      if (typeof frameIndex === "number" && frameIndex >= 0) {
+        ann.ui.frame_index = frameIndex;
       }
     }
   }
@@ -229,7 +229,9 @@ export function attachTrackChildren(
 /**
  * Compute video speed from views (time between frames).
  */
-export function computeWorkspaceVideoSpeed(views: Record<string, View | View[]>): number | undefined {
+export function computeWorkspaceVideoSpeed(
+  views: Record<string, View | View[]>,
+): number | undefined {
   for (const view in views) {
     if (isSequenceFrameArray(views[view])) {
       const video = views[view];

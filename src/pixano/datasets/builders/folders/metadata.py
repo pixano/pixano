@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from __future__ import annotations
 
 import json
@@ -17,6 +23,7 @@ class MetadataIssueAggregate:
     samples: list[str] = field(default_factory=list)
 
     def add(self, location: str) -> None:
+        """Record one occurrence of an issue at the given location."""
         self.count += 1
         if len(self.samples) < 3 and location not in self.samples:
             self.samples.append(location)
@@ -36,6 +43,7 @@ class MetadataValidationReport:
 
     @property
     def warning_count(self) -> int:
+        """Return the total number of warnings, aliases, and inferred issues."""
         return (
             sum(issue.count for issue in self.warnings.values())
             + sum(issue.count for issue in self.aliases.values())
@@ -44,25 +52,32 @@ class MetadataValidationReport:
 
     @property
     def error_count(self) -> int:
+        """Return the total number of errors."""
         return sum(issue.count for issue in self.errors.values())
 
     @property
     def is_valid(self) -> bool:
+        """Return True if no errors were recorded."""
         return self.error_count == 0
 
     def add_warning(self, code: str, location: str) -> None:
+        """Add a warning issue for the given code and location."""
         self.warnings.setdefault(code, MetadataIssueAggregate()).add(location)
 
     def add_error(self, code: str, location: str) -> None:
+        """Add an error issue for the given code and location."""
         self.errors.setdefault(code, MetadataIssueAggregate()).add(location)
 
     def add_alias(self, source_key: str, target_key: str, location: str) -> None:
+        """Record a key alias mapping from source_key to target_key."""
         self.aliases.setdefault(f"{source_key} -> {target_key}", MetadataIssueAggregate()).add(location)
 
     def add_inferred(self, description: str, location: str) -> None:
+        """Record an inferred value for the given description and location."""
         self.inferred.setdefault(description, MetadataIssueAggregate()).add(location)
 
     def add_normalized_example(self, description: str) -> None:
+        """Record a sample normalized-key transformation for the report."""
         if description not in self.normalized_examples and len(self.normalized_examples) < 3:
             self.normalized_examples.append(description)
 
@@ -82,6 +97,7 @@ class FolderMetadataService:
         annotations_schema: dict[str, type],
         resolve_view_files: Callable[[str, Any, type], list[Path]],
     ) -> None:
+        """Initialize the metadata service with schema definitions and source directory."""
         self.source_dir = source_dir
         self.metadata_filename = metadata_filename
         self.record_field_names = record_field_names
@@ -117,7 +133,7 @@ class FolderMetadataService:
 
     def metadata_alias_map(self) -> dict[str, str]:
         """Build accepted metadata aliases from the declared schema."""
-        from pixano.schemas import Image, PDF, SequenceFrame, Text
+        from pixano.schemas import PDF, Image, SequenceFrame, Text
 
         alias_map: dict[str, str] = {}
         for view_name, view_schema in self.views_schema.items():
@@ -336,7 +352,7 @@ class FolderMetadataService:
             return False
 
         state_schema = self.entity_dynamic_states_schema[state_name]
-        allowed_keys = set(state_schema.model_fields.keys()) | {"view_name"}
+        allowed_keys = set(state_schema.model_fields.keys()) | {"view_name"}  # type: ignore[attr-defined]
         return any(key in allowed_keys for key in value.keys())
 
     def _validate_entity_payload(
@@ -361,7 +377,7 @@ class FolderMetadataService:
         }
         if len(lengths) > 1:
             report.add_error("inconsistent_entity_lengths", location)
-        allowed_keys = set(schema.model_fields) | set(self.annotations_schema) | {"view_name"}
+        allowed_keys = set(schema.model_fields) | set(self.annotations_schema) | {"view_name"}  # type: ignore[attr-defined]
         for key, value in payload.items():
             if key in {"view_name"}:
                 continue
@@ -403,7 +419,7 @@ class FolderMetadataService:
         report: MetadataValidationReport,
     ) -> None:
         annotations_payload = payload.get("annotations")
-        allowed_keys = set(schema.model_fields) | {"annotations"}
+        allowed_keys = set(schema.model_fields) | {"annotations"}  # type: ignore[attr-defined]
         for key in payload:
             if key not in allowed_keys:
                 report.add_warning("unknown_entity_key", location)
@@ -432,7 +448,7 @@ class FolderMetadataService:
     def _is_entity_entry_payload(self, payload: Any, schema: type) -> bool:
         if not isinstance(payload, dict):
             return False
-        allowed_keys = set(schema.model_fields.keys()) | {"annotations"}
+        allowed_keys = set(schema.model_fields.keys()) | {"annotations"}  # type: ignore[attr-defined]
         return any(key in allowed_keys for key in payload)
 
     def _canonical_annotation_name(self, name: str) -> str:

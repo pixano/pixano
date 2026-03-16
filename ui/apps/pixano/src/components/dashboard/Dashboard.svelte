@@ -6,12 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { dashboardTabs } from "$lib/constants";
   import type { DatasetInfo, DatasetStat } from "$lib/ui";
   import { cn, Histogram } from "$lib/ui";
 
-  import { dashboardTabs } from "$lib/constants";
-
-  
   interface Props {
     // Exports
     selectedDataset: DatasetInfo & { stats?: DatasetStat[] };

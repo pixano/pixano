@@ -35,7 +35,7 @@ class DefaultJSONLDatasetExporter(DatasetExporter):
         """
         export_data = [
             {
-                "info": info.model_dump(exclude={"tables"}),
+                "info": info.json_info_dump(),
             }
         ]
         return export_data

@@ -8,9 +8,6 @@ import { untrack } from "svelte";
 
 import { cancelTrackingSession } from "./trackingStore.svelte";
 import { resetVideoStores } from "./videoStores.svelte";
-import { panTool } from "$lib/tools";
-import { clearAnnotationMappingCaches } from "$lib/utils/annotationMapping";
-import * as utils from "$lib/utils/coreUtils";
 import {
   annotations,
   brushSettings,
@@ -35,6 +32,9 @@ import {
   selectedTool,
   views,
 } from "./workspaceBaseStores.svelte";
+import { panTool } from "$lib/tools";
+import { clearAnnotationMappingCaches } from "$lib/utils/annotationMapping";
+import * as utils from "$lib/utils/coreUtils";
 
 export {
   annotations,

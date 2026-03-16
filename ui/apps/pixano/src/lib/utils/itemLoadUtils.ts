@@ -4,10 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  type DatasetSchema,
-  type FeaturesValues,
-} from "$lib/types/dataset";
+import { type DatasetSchema, type FeaturesValues } from "$lib/types/dataset";
 
 type BackFeatureValue = {
   name: string;
@@ -16,10 +13,7 @@ type BackFeatureValue = {
 };
 type BackFeatureValues = Record<string, Record<string, BackFeatureValue[]>>;
 
-export function mapFeatureValues(
-  rawFeatureValues: object,
-  schema: DatasetSchema,
-): FeaturesValues {
+export function mapFeatureValues(rawFeatureValues: object, schema: DatasetSchema): FeaturesValues {
   const feature_values = rawFeatureValues as BackFeatureValues;
   const frontFV: FeaturesValues = { main: {}, objects: {} };
 

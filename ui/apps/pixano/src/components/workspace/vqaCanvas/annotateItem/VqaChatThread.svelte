@@ -5,10 +5,14 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import type { ContentChangeEvent, DeleteQuestionEvent, GenerateAnswerEvent, QuestionThread } from "$lib/types/vqa";
-
   import QuestionForm from "./QuestionForm.svelte";
+  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
+  import type {
+    ContentChangeEvent,
+    DeleteQuestionEvent,
+    GenerateAnswerEvent,
+    QuestionThread,
+  } from "$lib/types/vqa";
 
   interface Props {
     questionThreads: QuestionThread[];
@@ -18,8 +22,13 @@ License: CECILL-C
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
   }
 
-  let { questionThreads, completionModels, onAnswerContentChange, onGenerateAnswer, onDeleteQuestion }: Props =
-    $props();
+  let {
+    questionThreads,
+    completionModels,
+    onAnswerContentChange,
+    onGenerateAnswer,
+    onDeleteQuestion,
+  }: Props = $props();
   let scrollContainer: HTMLDivElement | undefined = $state();
 
   $effect(() => {

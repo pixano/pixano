@@ -6,22 +6,22 @@ License: CECILL-C
 
 <script lang="ts">
   import { PushPin, PushPinSlash } from "phosphor-svelte";
-  import { ToolType } from "$lib/tools";
-  import type {
-    TrackTimelineEntry,
-    View,
-  } from "$lib/ui";
-  import {
-    BaseSchema,
-    cn,
-    ContextMenu,
-    Entity,
-    IconButton,
-    Tracklet,
-  } from "$lib/ui";
 
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
+  import TrackletSegment from "./TrackletSegment.svelte";
+  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
+  import {
+    annotations,
+    colorScale,
+    current_itemBBoxes,
+    current_itemKeypoints,
+    highlightedEntity,
+    selectedTool,
+  } from "$lib/stores/workspaceStores.svelte";
+  import { ToolType } from "$lib/tools";
+  import type { TrackTimelineEntry, View } from "$lib/ui";
+  import { BaseSchema, cn, ContextMenu, Entity, IconButton, Tracklet } from "$lib/ui";
   import { deleteEntity } from "$lib/utils/entityDeletion";
+  import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
     highlightEntity,
     highlightTrackletChildren,
@@ -34,19 +34,6 @@ License: CECILL-C
   } from "$lib/utils/trackletOperations";
   import { updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
-  import {
-    annotations,
-    colorScale,
-    current_itemBBoxes,
-    current_itemKeypoints,
-    highlightedEntity,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
-  import {
-    currentFrameIndex,
-    lastFrameIndex,
-  } from "$lib/stores/videoStores.svelte";
-  import TrackletSegment from "./TrackletSegment.svelte";
 
   type MView = Record<string, View | View[]>;
 
@@ -76,14 +63,16 @@ License: CECILL-C
     return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
   });
 
-  let totalWidth = $derived(lastFrameIndex.value !== undefined ? (lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100 : 100);
+  let totalWidth = $derived(
+    lastFrameIndex.value !== undefined
+      ? (lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100
+      : 100,
+  );
   let color = $derived(colorScale.value[1](entity.id));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let tracklets: Tracklet[] = $derived(
-    (entity.ui.childs ?? []).filter(
-      (ann) => ann.is_type(BaseSchema.Tracklet),
-    ) as Tracklet[],
+    (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[],
   );
 
   let highlightState: string = $derived.by(() => {
@@ -136,7 +125,13 @@ License: CECILL-C
   };
 
   const onAddKeyItemClick = (tracklet: Tracklet) => {
-    const added = addKeyItemToTracklet(tracklet, entity, views, current_itemBBoxes.value, current_itemKeypoints.value);
+    const added = addKeyItemToTracklet(
+      tracklet,
+      entity,
+      views,
+      current_itemBBoxes.value,
+      current_itemKeypoints.value,
+    );
     if (added) {
       onEditKeyItemClick(currentFrameIndex.value, tracklet.data.view_name);
     }
@@ -160,7 +155,8 @@ License: CECILL-C
 
   const laneHeight = 18;
   const laneOutline = $derived.by(() => {
-    if (isPrimaryFocus) return "border-primary/30 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.18)]";
+    if (isPrimaryFocus)
+      return "border-primary/30 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.18)]";
     if (isPinned) return "border-primary/18 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.10)]";
     return "border-border/30";
   });
@@ -175,12 +171,7 @@ License: CECILL-C
 {#if entity}
   <section
     title={displayName}
-    class={cn(
-      "group relative transition-all",
-      isPrimaryFocus
-        ? "z-[1]"
-        : "",
-    )}
+    class={cn("group relative transition-all", isPrimaryFocus ? "z-[1]" : "")}
     style="width: 100%;"
   >
     <div
@@ -197,7 +188,11 @@ License: CECILL-C
         <div
           class={cn(
             "pointer-events-auto flex items-center gap-0.5 rounded-sm border bg-background/72 px-0.5 py-0.5 shadow-sm backdrop-blur-md transition-colors",
-            isPrimaryFocus ? "border-primary/30" : isPinned ? "border-primary/25" : "border-border/30",
+            isPrimaryFocus
+              ? "border-primary/30"
+              : isPinned
+                ? "border-primary/25"
+                : "border-border/30",
           )}
         >
           <button
@@ -233,7 +228,10 @@ License: CECILL-C
           {/if}
         </div>
       </div>
-      <div class="pointer-events-none absolute inset-y-0 left-0 w-5" style={`background: linear-gradient(90deg, ${color}${isPrimaryFocus ? "30" : isPinned ? "20" : "16"} 0%, transparent 100%)`}></div>
+      <div
+        class="pointer-events-none absolute inset-y-0 left-0 w-5"
+        style={`background: linear-gradient(90deg, ${color}${isPrimaryFocus ? "30" : isPinned ? "20" : "16"} 0%, transparent 100%)`}
+      ></div>
       <ContextMenu.Root>
         <ContextMenu.Trigger class="absolute left-0 h-full w-full" style={`width: ${totalWidth}%`}>
           <p oncontextmenu={handleTrackContextMenu} class="h-full w-full"></p>

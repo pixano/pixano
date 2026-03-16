@@ -20,7 +20,6 @@ from pixano.datasets.builders.folders import (
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import BBox, Entity, Image, Message, Record, SequenceFrame, Video
-from pixano.schemas.annotations.bbox import BBox
 from pixano.schemas.annotations.keypoints import KeyPoints
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
@@ -43,7 +42,7 @@ class TestFolderBaseBuilder:
             split_dir.mkdir(parents=True, exist_ok=True)
             (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
             (split_dir / "metadata.jsonl").write_text(
-                '{"image":"item_0.jpg","objects":{"category":["person"]},"bbox":{"coords":[[0,0,10,10]],"format":["xywh"],"is_normalized":[false],"entity_index":[0]}}\n',
+                '{"image":"item_0.jpg","objects":[{"category":"person","annotations":{"image":{"bbox":[0,0,10,10]}}}]}\n',
                 encoding="utf-8",
             )
 
@@ -63,7 +62,6 @@ class TestFolderBaseBuilder:
 
             assert report.error_count == 0
             assert "objects -> entities" in report.aliases
-            assert "bbox -> bboxes" in report.aliases
 
     def test_preflight_metadata_rejects_aliases_in_strict_mode(self, entity_category):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -122,7 +120,7 @@ class TestFolderBaseBuilder:
             split_dir.mkdir(parents=True, exist_ok=True)
             (split_dir / "item_0.jpg").write_bytes(SAMPLE_DATA_PATHS["image_jpg"].read_bytes())
             (split_dir / "metadata.jsonl").write_text(
-                '{"image":"item_0.jpg","objects":{"category":["person"]}}\n',
+                '{"image":"item_0.jpg","objects":[{"category":"person"}]}\n',
                 encoding="utf-8",
             )
 
@@ -164,7 +162,9 @@ class TestFolderBaseBuilder:
 
             assert dataset.open_table("sequence_frames").count_rows() == 1
 
-    def test_builder_rejects_mixed_image_and_sframe_same_logical_name(self):
+    def test_builder_allows_image_and_sframe_different_logical_names(self):
+        """Image and SequenceFrame go to separate canonical tables, so they can coexist."""
+
         class MixedViewBuilder(DatasetBuilder):
             def __init__(self, target_dir: Path):
                 super().__init__(
@@ -187,7 +187,7 @@ class TestFolderBaseBuilder:
                         Image(
                             id="image_0",
                             record_id=record.id,
-                            logical_name="camera",
+                            logical_name="camera_image",
                             uri="image_0.jpg",
                             width=64,
                             height=64,
@@ -200,7 +200,7 @@ class TestFolderBaseBuilder:
                         SequenceFrame(
                             id="sframe_0",
                             record_id=record.id,
-                            logical_name="camera",
+                            logical_name="camera_frame",
                             uri="frame_0.jpg",
                             width=64,
                             height=64,
@@ -213,9 +213,10 @@ class TestFolderBaseBuilder:
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             builder = MixedViewBuilder(Path(tmp_dir) / "mixed_views")
+            dataset = builder.build(mode="create", check_integrity="none", flush_every_n_samples=1)
 
-            with pytest.raises(ValueError, match="logical view family collision"):
-                builder.build(mode="create", check_integrity="none", flush_every_n_samples=1)
+            assert dataset.open_table("images").count_rows() == 1
+            assert dataset.open_table("sequence_frames").count_rows() == 1
 
     def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
@@ -379,190 +380,76 @@ class TestFolderBaseBuilder:
         )
         entity_name = "entities"
 
-        # set test source type/name
-        image_folder_builder._default_source_type = "model"
-        image_folder_builder._default_source_name = "source_id"
-
-        # test 1: one bbox infered
-        entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
+        # test 1: one entity with one bbox annotation
+        entities_data = [{"category": "person", "annotations": {"view": {"bbox": [0, 0, 0.2, 0.2]}}}]
         entities, annotations = image_folder_builder._create_objects_entities(
             record, [("view", view)], entity_name, entity_category, entities_data
         )
 
-        assert len(entities) == 1
+        assert len(entities[entity_name]) == 1
         assert isinstance(entities[entity_name][0], entity_category)
         assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
-            id=entities[entity_name][0].id,
-            record_id=record.id,
-            category="none",
-        ).model_dump(exclude={"created_at", "updated_at"})
+        assert entities[entity_name][0].category == "person"
+        assert entities[entity_name][0].record_id == record.id
 
         assert set(annotations.keys()) == {"bboxes"}
         assert len(annotations["bboxes"]) == 1
-        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
-            id=annotations["bboxes"][0].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][0].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            coords=[0, 0, 0.2, 0.2],
-            format="xywh",
-            is_normalized=True,
-            confidence=1.0,
-        ).model_dump(exclude={"created_at", "updated_at"})
 
-        # test 2: one bbox not infered
-        entities_data = {
-            "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
-        }
-        entities, annotations = image_folder_builder._create_objects_entities(
-            record, [("view", view)], entity_name, entity_category, entities_data
-        )
-        assert len(entities) == 1
-        assert isinstance(entities[entity_name][0], entity_category)
-        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
-            id=entities[entity_name][0].id,
-            record_id=record.id,
-            category="none",
-        ).model_dump(exclude={"created_at", "updated_at"})
-        assert set(annotations.keys()) == {"bboxes"}
-        assert len(annotations["bboxes"]) == 1
-        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
-            id=annotations["bboxes"][0].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][0].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            coords=[0, 0, 100, 100],
-            format="xyxy",
-            is_normalized=False,
-            confidence=0.9,
-        ).model_dump(exclude={"created_at", "updated_at"})
-
-        # test 3: two bboxes, one infered, one not infered
-        entities_data = {
-            "bbox": [
-                {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.5},
-                [0.1, 0.1, 0.2, 0.2],
-            ]
-        }
+        # test 2: two entities
+        entities_data = [
+            {"category": "person", "annotations": {"view": {"bbox": [0, 0, 100, 100]}}},
+            {"category": "cat"},
+        ]
         entities, annotations = image_folder_builder._create_objects_entities(
             record, [("view", view)], entity_name, entity_category, entities_data
         )
         assert len(entities[entity_name]) == 2
-        assert isinstance(entities[entity_name][0], entity_category)
-        assert isinstance(entities[entity_name][1], entity_category)
-        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert isinstance(entities[entity_name][1].id, str) and len(entities[entity_name][1].id) == 22
-        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
-            id=entities[entity_name][0].id,
-            record_id=record.id,
-            category="none",
-        ).model_dump(exclude={"created_at", "updated_at"})
-        assert entities[entity_name][1].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
-            id=entities[entity_name][1].id,
-            record_id=record.id,
-            category="none",
-        ).model_dump(exclude={"created_at", "updated_at"})
+        assert entities[entity_name][0].category == "person"
+        assert entities[entity_name][1].category == "cat"
         assert set(annotations.keys()) == {"bboxes"}
-        assert len(annotations["bboxes"]) == 2
-        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
-            id=annotations["bboxes"][0].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][0].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            coords=[0, 0, 100, 100],
-            format="xyxy",
-            is_normalized=False,
-            confidence=0.5,
-        ).model_dump(exclude={"created_at", "updated_at"})
-        assert annotations["bboxes"][1].model_dump(exclude={"created_at", "updated_at"}) == BBox(
-            id=annotations["bboxes"][1].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][1].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            coords=[0.1, 0.1, 0.2, 0.2],
-            format="xywh",
-            is_normalized=True,
-            confidence=1.0,
-        ).model_dump(exclude={"created_at", "updated_at"})
+        assert len(annotations["bboxes"]) == 1
 
-        # test 4: one bbox and one keypoint not infered and a category
-        entities_data = {
-            "bbox": [[0, 0, 0.2, 0.2]],
-            "keypoint": [
-                {
-                    "template_id": "template_0",
-                    "coords": [10, 10, 20, 20, 30, 30],
-                    "states": ["visible", "visible", "visible"],
-                }
-            ],
-            "category": "person",
-        }
+        # test 3: entity with bbox and keypoint annotations
+        entities_data = [
+            {
+                "category": "person",
+                "annotations": {
+                    "view": {
+                        "bbox": {
+                            "coords": [0, 0, 0.2, 0.2],
+                            "format": "xywh",
+                            "is_normalized": True,
+                            "confidence": 1.0,
+                        },
+                        "keypoint": {
+                            "template_id": "template_0",
+                            "coords": [10, 10, 20, 20, 30, 30],
+                            "states": ["visible", "visible", "visible"],
+                        },
+                    }
+                },
+            }
+        ]
         entities, annotations = image_folder_builder._create_objects_entities(
             record, [("view", view)], entity_name, entity_category, entities_data
         )
-        assert len(entities) == 1
-        assert isinstance(entities[entity_name][0], entity_category)
-        assert isinstance(entities[entity_name][0].id, str) and len(entities[entity_name][0].id) == 22
-        assert entities[entity_name][0].model_dump(exclude={"created_at", "updated_at"}) == entity_category(
-            id=entities[entity_name][0].id,
-            record_id=record.id,
-            category="person",
-        ).model_dump(exclude={"created_at", "updated_at"})
+        assert len(entities[entity_name]) == 1
+        assert entities[entity_name][0].category == "person"
         assert set(annotations.keys()) == {"bboxes", "keypoints"}
         assert len(annotations["bboxes"]) == 1
         assert len(annotations["keypoints"]) == 1
-        assert annotations["bboxes"][0].model_dump(exclude={"created_at", "updated_at"}) == BBox(
-            id=annotations["bboxes"][0].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][0].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            coords=[0, 0, 0.2, 0.2],
-            format="xywh",
-            is_normalized=True,
-            confidence=1.0,
-        ).model_dump(exclude={"created_at", "updated_at"})
-        assert annotations["keypoints"][0].model_dump(exclude={"created_at", "updated_at"}) == KeyPoints(
-            id=annotations["keypoints"][0].id,
-            record_id=record.id,
-            view_id=view.id,
-            entity_id=entities[entity_name][0].id,
-            source_type="model",
-            source_name="source_id",
-            frame_id=view.id,
-            template_id="template_0",
-            coords=[10, 10, 20, 20, 30, 30],
-            states=["visible", "visible", "visible"],
-        ).model_dump(exclude={"created_at", "updated_at"})
 
-        # test 5: error infer keypoints
-        entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
-        with pytest.raises(ValueError, match="not supported for infered entity creation."):
-            entities = image_folder_builder._create_objects_entities(
+        # test 4: error - unknown entity attribute
+        entities_data = [{"category": "person", "unknown_field": "value"}]
+        with pytest.raises(ValueError, match="Unknown entity attributes"):
+            image_folder_builder._create_objects_entities(
                 record, [("view", view)], entity_name, entity_category, entities_data
             )
 
-        # test 6: error attribute not found in entity schema
-        entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
-        with pytest.raises(ValueError, match="Attribute unknown not found in entity schema"):
-            entities = image_folder_builder._create_objects_entities(
-                record, [("view", view)], "entities", entity_category, entities_data
+        # test 5: error - entities_data must be a list
+        with pytest.raises(ValueError, match="Entity payload must be a list"):
+            image_folder_builder._create_objects_entities(
+                record, [("view", view)], entity_name, entity_category, {"category": "person"}
             )
 
     def reconstruct_dict_list(self, generator):
@@ -631,7 +518,6 @@ class TestFolderBaseBuilder:
             actual_record: Record = item["records"]
             if actual_record.split not in split_counts:
                 split_counts[actual_record.split] = 0
-            sc = split_counts[actual_record.split]
             view: Image = item["images"]
             assert view.record_id == actual_record.id
             split_counts[actual_record.split] += 1

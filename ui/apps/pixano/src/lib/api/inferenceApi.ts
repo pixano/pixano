@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { apiFetch, apiMutate, JSON_HEADERS } from "./apiClient";
 import type {
   CondititionalGenerationTextImageInput,
   ConnectedProvider,
@@ -11,8 +12,6 @@ import type {
   Task,
   TextImageConditionalGenerationResult,
 } from "$lib/types/inference";
-
-import { apiFetch, apiMutate, JSON_HEADERS } from "./apiClient";
 
 function buildModelsUrl(basePath: string, task: Task | null): string {
   if (task === null) {
@@ -164,10 +163,5 @@ interface Model {
 export function listModels(task: Task | null = null): Promise<Model[]> {
   const url = buildModelsUrl("/inference/models/list", task);
 
-  return apiFetch(
-    url,
-    { headers: JSON_HEADERS, method: "GET" },
-    [] as Model[],
-    "listModels",
-  );
+  return apiFetch(url, { headers: JSON_HEADERS, method: "GET" }, [] as Model[], "listModels");
 }

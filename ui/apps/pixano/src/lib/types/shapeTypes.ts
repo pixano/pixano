@@ -5,18 +5,18 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { MaskData, Reference } from "./dataset";
-import type { MaskBounds } from "$lib/utils/maskUtils";
 import type {
-  Mutable,
-  IndexedPoint2D,
-  Point2D,
   BoundingBox,
+  IndexedPoint2D,
   KeypointGraph as KeypointSkeleton,
-  KeypointVisibility,
   KeypointVertexMetadata,
+  KeypointVisibility,
+  Mutable,
+  Point2D,
   PolygonEdgeHint,
   PolygonOutputMode,
 } from "./geometry";
+import type { MaskBounds } from "$lib/utils/maskUtils";
 
 // ─── ShapeType ─────────────────────────────────────────────────────────────────
 
@@ -216,7 +216,11 @@ export type CreateRectangleShape = {
   viewRef: Reference;
 };
 
-export type CreateShape = CreatePolygonShape | CreatePolylineShape | CreateRectangleShape | CreateKeypointShape;
+export type CreateShape =
+  | CreatePolygonShape
+  | CreatePolylineShape
+  | CreateRectangleShape
+  | CreateKeypointShape;
 
 // ─── Edit Shape Types ──────────────────────────────────────────────────────────
 
@@ -229,6 +233,11 @@ export type EditPolygonShape = {
   type: ShapeType.polygon;
   counts?: number[];
   polygonPoints?: PolygonVertex[][];
+};
+
+export type EditPolylineShape = {
+  type: ShapeType.polyline;
+  polylinePoints?: PolygonVertex[][];
 };
 
 export type EditRectangleShape = {
@@ -247,7 +256,14 @@ export type EditShape = {
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
   top_entity_id?: string;
-} & (EditRectangleShape | EditMaskShape | EditPolygonShape | EditKeypointsShape | { type: "none" });
+} & (
+  | EditRectangleShape
+  | EditMaskShape
+  | EditPolygonShape
+  | EditPolylineShape
+  | EditKeypointsShape
+  | { type: "none" }
+);
 
 // ─── Shape Union ───────────────────────────────────────────────────────────────
 

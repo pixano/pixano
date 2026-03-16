@@ -1,13 +1,18 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Read-only conversation aggregate endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException
-
-from pixano.datasets import Dataset
 
 from pixano.api.models import ConversationResponse, MessageResponse, PaginatedResponse, serialize_row
 from pixano.api.resources import MESSAGE_RESOURCE
 from pixano.api.routers._deps import FilterParams, PaginationParams, get_dataset_dep
 from pixano.api.service import BaseService
+from pixano.datasets import Dataset
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}/conversations", tags=["Conversations"])
@@ -27,7 +32,6 @@ def list_conversations(
     filters: FilterParams = Depends(),
 ) -> PaginatedResponse[ConversationResponse]:
     """List conversation aggregates reconstructed from message rows."""
-
     table_name = BaseService(dataset, MESSAGE_RESOURCE).resolve_table()
     conversations, total = dataset.get_conversations(
         table_name=table_name,
@@ -53,7 +57,6 @@ def get_conversation(
     dataset: Dataset = Depends(get_dataset_dep),
 ) -> ConversationResponse:
     """Get one conversation aggregate by conversation id."""
-
     table_name = BaseService(dataset, MESSAGE_RESOURCE).resolve_table()
     conversation = dataset.get_conversation(table_name=table_name, conversation_id=conversation_id)
     if conversation is None:

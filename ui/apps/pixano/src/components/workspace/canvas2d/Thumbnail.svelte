@@ -39,8 +39,8 @@ License: CECILL-C
     let cropWidth = width * imageDimension.width * (1 + enlargeFactor * 2);
     let cropHeight = height * imageDimension.height * (1 + enlargeFactor * 2);
 
-    if (cropX <0) cropX = 0;
-    if (cropY <0) cropY = 0;
+    if (cropX < 0) cropX = 0;
+    if (cropY < 0) cropY = 0;
     if (cropWidth > imageDimension.width) cropWidth = imageDimension.width;
     if (cropHeight > imageDimension.height) cropHeight = imageDimension.height;
 
@@ -51,7 +51,7 @@ License: CECILL-C
     let stageWidth = crop.cropWidth;
     let stageHeight = crop.cropHeight;
 
-    if (minSide && Math.max(stageWidth, stageHeight) <minSide) {
+    if (minSide && Math.max(stageWidth, stageHeight) < minSide) {
       const ratio = Math.max(stageWidth, stageHeight) / minSide;
       stageWidth /= ratio;
       stageHeight /= ratio;

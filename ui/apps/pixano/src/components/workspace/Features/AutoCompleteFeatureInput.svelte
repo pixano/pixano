@@ -6,10 +6,9 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Command, Popover } from "bits-ui";
   import { Check } from "phosphor-svelte";
   import { tick } from "svelte";
-
-  import { Command, Popover } from "bits-ui";
 
   import { cn } from "$lib/ui";
 
@@ -25,12 +24,13 @@ License: CECILL-C
 
   let {
     onTextInputChange,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     featureList = $bindable([]),
     placeholder = "Select a feature",
     value = $bindable(""),
     autofocus = false,
     className = "",
-    isInputEnabled = true
+    isInputEnabled = true,
   }: Props = $props();
 
   let open = $state(false);
@@ -83,7 +83,7 @@ License: CECILL-C
   };
 </script>
 
-<Popover.Root bind:open >
+<Popover.Root bind:open>
   <Popover.Trigger
     type="button"
     id={triggerId}
@@ -94,7 +94,10 @@ License: CECILL-C
   >
     {selectedValue}
   </Popover.Trigger>
-  <Popover.Content class="z-50 rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none" tabindex={-1}>
+  <Popover.Content
+    class="z-50 rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none"
+    tabindex={-1}
+  >
     <Command.Root>
       {#if isInputEnabled}
         <Command.Input {placeholder} bind:value={inputValue} oninput={onSearchInput} />

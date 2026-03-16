@@ -143,7 +143,6 @@ async def test_image_mask_generation(
 
     mask, score, out_image_embedding, out_high_resolution_features = await image_mask_generation(
         provider=simple_inference_provider,
-
         image=image_url,
         entity=entity,
         source_name="test_source",
@@ -274,7 +273,6 @@ async def test_video_mask_generation(
 
     masks, objects_ids, frame_indexes = await video_mask_generation(
         provider=simple_inference_provider,
-
         video=[image_url],
         entity=entity,
         source_name="test_source",
@@ -298,7 +296,6 @@ async def test_error_video_mask_generation(
     with pytest.raises(ValueError, match="Video format not currently supported, please use sequence frames."):
         await video_mask_generation(
             provider=simple_inference_provider,
-    
             video="not a list",
             source_name="test_source",
             bbox=None,

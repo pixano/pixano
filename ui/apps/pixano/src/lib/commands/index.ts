@@ -27,13 +27,5 @@ export type {
 } from "./annotationCommands";
 
 // Concrete commands — Entities
-export {
-  createAddEntity,
-  createDeleteEntity,
-  createMergeEntities,
-} from "./entityCommands";
-export type {
-  AddEntityPayload,
-  DeleteEntityPayload,
-  MergeEntitiesPayload,
-} from "./entityCommands";
+export { createAddEntity, createDeleteEntity, createMergeEntities } from "./entityCommands";
+export type { AddEntityPayload, DeleteEntityPayload, MergeEntitiesPayload } from "./entityCommands";

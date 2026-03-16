@@ -5,6 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
+  import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
+  import TiptapAnnotator from "./TiptapAnnotator.svelte";
   import {
     BaseSchema,
     ShapeType,
@@ -14,9 +17,6 @@ License: CECILL-C
     type TextSpanAttributes,
     type TextSpanTypeWithViewName,
   } from "$lib/ui";
-  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
-  import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
-  import TiptapAnnotator from "./TiptapAnnotator.svelte";
 
   interface Props {
     selectedItemId: string;
@@ -31,7 +31,8 @@ License: CECILL-C
 
   let {
     selectedItemId,
-    newShape,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    newShape: _newShape,
     colorScale,
     textSpans,
     textViews,
@@ -40,6 +41,7 @@ License: CECILL-C
     onNewShapeChange,
   }: Props = $props();
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let textSpanAttributes: TextSpanTypeWithViewName | null = $state(null);
 
   let spansByViewId = $derived(groupTextSpansByViewId(textSpans));

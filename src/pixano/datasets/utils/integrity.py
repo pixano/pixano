@@ -13,8 +13,9 @@ from pixano.schemas import SchemaGroup, canonical_table_name_for_slot
 
 
 if TYPE_CHECKING:
-    from pixano.datasets import Dataset
     from lancedb.pydantic import LanceModel
+
+    from pixano.datasets import Dataset
 
 
 class IntegrityCheck(Enum):
@@ -87,7 +88,6 @@ def check_table_integrity(
     ignore_checks: list[IntegrityCheck] | None = None,
 ) -> list[tuple[IntegrityCheck, str, str, str, Any]]:
     """Check table-level integrity against ID and FK constraints."""
-
     ignore = set(ignore_checks or [])
     schema_type = dataset.info.tables.get(table_name)
     if schema_type is None:
@@ -134,16 +134,16 @@ def check_table_integrity(
             if not target_tables:
                 continue
 
-            found = False
+            fk_found = False
             for target_table in target_tables:
                 try:
                     if dataset.find_ids_in_table(target_table, {field_value}).get(field_value, False):
-                        found = True
+                        fk_found = True
                         break
                 except Exception:
                     continue
 
-            if not found:
+            if not fk_found:
                 errors.append((IntegrityCheck.FK_ID, table_name, field_name, schema.id, field_value))
 
     return errors

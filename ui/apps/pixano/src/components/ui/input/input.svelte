@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  /* eslint-disable svelte/valid-compile */
   // Imports
   import type { Snippet } from "svelte";
   import type { HTMLInputAttributes } from "svelte/elements";
@@ -20,6 +21,7 @@ License: CECILL-C
 
   let {
     class: className = undefined,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     value = $bindable(undefined),
     autofocus = false,
     children,

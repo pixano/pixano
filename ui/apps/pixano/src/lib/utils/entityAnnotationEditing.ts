@@ -8,9 +8,9 @@ import { annotations, newShape } from "$lib/stores/workspaceStores.svelte";
 import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
-import { saveTo } from "$lib/utils/saveItemUtils";
 import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { highlightEntity } from "$lib/utils/highlightOperations";
+import { saveTo } from "$lib/utils/saveItemUtils";
 
 type SelectionShape = {
   status: EditShape["status"];
@@ -65,7 +65,11 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
     return objects;
   }
 
-  if (shape.status === "editing" && !objects.find((ann) => ann.id === shape.shapeId) && shape.highlighted === "self") {
+  if (
+    shape.status === "editing" &&
+    !objects.find((ann) => ann.id === shape.shapeId) &&
+    shape.highlighted === "self"
+  ) {
     // it is an interpolated object. Highlight anyway.
     if (shape.top_entity_id) highlightEntity(shape.top_entity_id, false);
     return objects;

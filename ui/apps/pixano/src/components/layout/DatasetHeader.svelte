@@ -8,24 +8,23 @@ License: CECILL-C
   // Imports
   import { fade } from "svelte/transition";
 
-  import { ConfirmModal, PrimaryButton } from "$lib/ui";
-
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import {
-    EXPLORER_ROUTE_ID,
-    WORKSPACE_ROUTE_ID,
-    findNeighborItemId,
-    getPageFromItemId,
-    getExplorerRoute,
-    getWorkspaceRoute,
-  } from "$lib/utils/routes";
   import {
     currentDatasetStore,
     datasetItemIds,
     saveCurrentItemStore,
   } from "$lib/stores/appStores.svelte";
+  import { ConfirmModal, PrimaryButton } from "$lib/ui";
+  import {
+    EXPLORER_ROUTE_ID,
+    findNeighborItemId,
+    getExplorerRoute,
+    getPageFromItemId,
+    getWorkspaceRoute,
+    WORKSPACE_ROUTE_ID,
+  } from "$lib/utils/routes";
 
   interface Props {
     pageId: string | null;

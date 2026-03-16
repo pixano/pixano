@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pixano.utils import issubclass_strict
 
 from .view import View
@@ -10,6 +11,7 @@ from .view import View
 
 class Text(View):
     """Text view.
+
     Attributes:
         content: The text content.
     """

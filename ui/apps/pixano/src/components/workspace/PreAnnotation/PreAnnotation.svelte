@@ -5,27 +5,25 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   // Imports
+  import { Slider, Switch, Tooltip } from "bits-ui";
   import { BoundingBox, Check, Funnel } from "phosphor-svelte";
   import { untrack } from "svelte";
 
-  import { Switch, Tooltip } from "bits-ui";
-
-  import { Slider } from "bits-ui";
-
-  import { Annotation, cn, IconButton, PrimaryButton } from "$lib/ui";
-
-  import { getAnnotationsToPreAnnotate, sortAndFilterAnnotations } from "$lib/utils/entityLookupUtils";
-  import { mapAnnotationWithNewStatus } from "$lib/utils/annotationMapping";
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     colorScale,
     preAnnotationIsActive,
   } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import type { EntityProperties } from "$lib/types/workspace";
-  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { cn, IconButton, PrimaryButton } from "$lib/ui";
+  import { mapAnnotationWithNewStatus } from "$lib/utils/annotationMapping";
+  import {
+    getAnnotationsToPreAnnotate,
+    sortAndFilterAnnotations,
+  } from "$lib/utils/entityLookupUtils";
 
   let isFormValid: boolean = $state(false);
   let confidenceFilterValue = $state([0]);
@@ -60,7 +58,12 @@ License: CECILL-C
     annotationToReview.ui.displayControl.highlighted = "none";
 
     annotations.update((objects) => [
-      ...mapAnnotationWithNewStatus(objects, filteredAnnotationsToReview, "accepted", objectProperties),
+      ...mapAnnotationWithNewStatus(
+        objects,
+        filteredAnnotationsToReview,
+        "accepted",
+        objectProperties,
+      ),
       annotationToReview,
     ]);
   };

@@ -1,5 +1,16 @@
-import { BaseSchema, type DatasetSchema, type FieldInfo, type WorkspaceType } from "$lib/types/dataset";
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { resourcePathForTable } from "$lib/api/resourceNames";
+import {
+  BaseSchema,
+  type DatasetSchema,
+  type FieldInfo,
+  type WorkspaceType,
+} from "$lib/types/dataset";
 
 export type WorkspaceTableGroup = keyof DatasetSchema["groups"];
 
@@ -31,10 +42,9 @@ export function buildWorkspaceManifest(
     embeddings: {},
   };
 
-  for (const [group, tables] of Object.entries(schema.groups) as Array<[
-    WorkspaceTableGroup,
-    string[],
-  ]>) {
+  for (const [group, tables] of Object.entries(schema.groups) as Array<
+    [WorkspaceTableGroup, string[]]
+  >) {
     for (const table of tables) {
       const tableSchema = schema.schemas[table];
       if (!tableSchema) continue;
@@ -46,8 +56,8 @@ export function buildWorkspaceManifest(
         fields: tableSchema.fields,
       };
 
-      if (!(tableSchema.base_schema in baseSchemaToTable[group]!)) {
-        baseSchemaToTable[group]![tableSchema.base_schema] = table;
+      if (!(tableSchema.base_schema in baseSchemaToTable[group])) {
+        baseSchemaToTable[group][tableSchema.base_schema] = table;
       }
     }
   }

@@ -9,7 +9,6 @@ License: CECILL-C
   import type { DatasetStat } from "$lib/types/dataset";
   import { Histogram } from "$lib/ui";
 
-  
   interface Props {
     // Exports
     value: DatasetStat;

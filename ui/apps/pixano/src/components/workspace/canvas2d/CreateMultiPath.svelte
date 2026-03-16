@@ -8,12 +8,17 @@ License: CECILL-C
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
 
-  import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX, INPUTRECT_STROKEWIDTH } from "./konvaConstants";
+  import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX } from "./konvaConstants";
   import PolygonVertices from "./PolygonVertices.svelte";
   import type { ToolEvent } from "$lib/tools";
   import type { Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
-  import { ShapeType, type CreatePolygonShape, type CreatePolylineShape, type Shape } from "$lib/types/shapeTypes";
+  import {
+    ShapeType,
+    type CreatePolygonShape,
+    type CreatePolylineShape,
+    type Shape,
+  } from "$lib/types/shapeTypes";
   import type { PolygonVertex } from "$lib/types/shapeTypes";
 
   interface Props {
@@ -47,6 +52,7 @@ License: CECILL-C
         ? shape.polylinePoints
         : [];
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let hoveredEdge: { x: number; y: number; shapeIndex: number; afterIndex: number } | null =
     $state(null);
 
@@ -59,9 +65,7 @@ License: CECILL-C
   );
 
   /** Whether paths are closed (polygon) or open (polyline). */
-  let isClosed = $derived(
-    multiPathCreation ? multiPathCreation.type === ShapeType.polygon : false,
-  );
+  let isClosed = $derived(multiPathCreation ? multiPathCreation.type === ShapeType.polygon : false);
 
   let polygonPoints = $derived(
     multiPathCreation?.phase === "drawing" && multiPathCreation.points.length > 0
@@ -320,7 +324,6 @@ License: CECILL-C
         onmouseleave={handleShapeMouseLeave}
         sceneFunc={drawPolygonScene}
         stroke={DRAFT_LINE_COLOR}
-        strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
@@ -344,7 +347,6 @@ License: CECILL-C
           radius={5 / zoomFactor}
           fill={DRAFT_LINE_COLOR}
           stroke="white"
-          strokeWidth={INPUTRECT_STROKEWIDTH}
           strokeScaleEnabled={false}
           listening={false}
         />
@@ -376,7 +378,6 @@ License: CECILL-C
           ctx.strokeShape(shape);
         }}
         stroke={DRAFT_LINE_COLOR}
-        strokeWidth={INPUTRECT_STROKEWIDTH}
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}

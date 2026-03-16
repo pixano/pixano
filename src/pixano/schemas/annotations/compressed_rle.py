@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from typing import Any
 
 import numpy as np
@@ -18,6 +19,7 @@ from .per_frame_annotation import PerFrameAnnotation
 
 class CompressedRLE(PerFrameAnnotation):
     """Compressed RLE mask type.
+
     Attributes:
         size: Mask size.
         counts: Mask RLE encoding.
@@ -51,6 +53,7 @@ class CompressedRLE(PerFrameAnnotation):
     def none(cls) -> Self:
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" `CompressedRLE`.
         """
@@ -63,6 +66,7 @@ class CompressedRLE(PerFrameAnnotation):
     @property
     def area(self) -> float:
         """Return mask area.
+
         Returns:
             Mask area
         """
@@ -70,6 +74,7 @@ class CompressedRLE(PerFrameAnnotation):
 
     def to_mask(self) -> np.ndarray:
         """Convert the compressed RLE mask to a NumPy array.
+
         Returns:
             The mask as a NumPy array.
         """
@@ -77,6 +82,7 @@ class CompressedRLE(PerFrameAnnotation):
 
     def to_urle(self) -> dict[str, list[int]]:
         """Convert compressed RLE mask to uncompressed RLE.
+
         Returns:
             The mask as an uncompressed RLE.
         """
@@ -84,6 +90,7 @@ class CompressedRLE(PerFrameAnnotation):
 
     def to_polygons(self) -> list[list]:
         """Convert the compressed RLE mask to poylgons.
+
         Returns:
             The mask as polygons.
         """
@@ -92,9 +99,11 @@ class CompressedRLE(PerFrameAnnotation):
     @staticmethod
     def from_mask(mask: pil_image.Image | np.ndarray, **kwargs: Any) -> "CompressedRLE":
         """Create a compressed RLE mask from a NumPy array.
+
         Args:
             mask: The mask as a NumPy array.
             kwargs: Additional arguments.
+
         Returns:
             The compressed RLE mask.
         """
@@ -104,9 +113,11 @@ class CompressedRLE(PerFrameAnnotation):
     @staticmethod
     def from_urle(urle: dict[str, list[int]], **kwargs: Any) -> "CompressedRLE":
         """Create a compressed RLE mask from an uncompressed RLE.
+
         Args:
             urle: The mask as an uncompressed RLE.
             kwargs: Additional arguments.
+
         Returns:
             The compressed RLE mask.
         """
@@ -120,11 +131,13 @@ class CompressedRLE(PerFrameAnnotation):
         **kwargs: Any,
     ) -> "CompressedRLE":
         """Create a compressed RLE mask from polygons.
+
         Args:
             polygons: The mask as polygons.
             height: Image height.
             width: Image width.
             kwargs: Additional arguments.
+
         Returns:
             The compressed RLE mask.
         """
@@ -133,11 +146,13 @@ class CompressedRLE(PerFrameAnnotation):
     @staticmethod
     def encode(mask: list[list] | dict[str, list[int]], height: int, width: int, **kwargs: Any) -> "CompressedRLE":
         """Create a compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
+
         Args:
             mask: Mask as polygons / uncompressed RLE / compressed RLE.
             height: Image height.
             width: Image width.
             kwargs: Additional arguments.
+
         Returns:
             The compressed RLE mask.
         """
@@ -165,6 +180,7 @@ def create_compressed_rle(
     frame_index: int = -1,
 ) -> CompressedRLE:
     """Create a `CompressedRLE` instance.
+
     Args:
         size: Mask size.
         counts: Mask RLE encoding.
@@ -179,6 +195,7 @@ def create_compressed_rle(
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
         frame_index: Frame index.
+
     Returns:
         The compressed RLE instance.
     """

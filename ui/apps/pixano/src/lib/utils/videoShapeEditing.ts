@@ -23,7 +23,11 @@ export function editKeyItemInTracklet(
   shape: EditShape,
   currentFrame: number,
   currentBBoxes: BBox[],
-  currentKeypoints: { id: string; ui?: { startRef?: { id: string } }; viewRef: { name: string; id: string } }[],
+  currentKeypoints: {
+    id: string;
+    ui?: { startRef?: { id: string } };
+    viewRef: { name: string; id: string };
+  }[],
 ): { objects: Annotation[]; save_data: SaveItem } {
   let saveData: SaveItem;
   let updatedAnnotations: Annotation[];
@@ -62,8 +66,7 @@ export function editKeyItemInTracklet(
       const interpolatedKpt = currentKeypoints.find((kpt) => kpt.id === shape.shapeId);
       if (interpolatedKpt && "startRef" in interpolatedKpt) {
         const keypointRef = allAnnotations.find(
-          (ann) =>
-            ann.is_type(BaseSchema.Keypoints) && ann.id === interpolatedKpt.ui?.startRef?.id,
+          (ann) => ann.is_type(BaseSchema.Keypoints) && ann.id === interpolatedKpt.ui?.startRef?.id,
         ) as Keypoints;
         if (keypointRef) {
           const { coords, states } = verticesToCoordsAndStates(shape.vertices);
@@ -77,7 +80,11 @@ export function editKeyItemInTracklet(
           });
         }
       }
-    } else if (shape.type === ShapeType.mask || shape.type === ShapeType.polygon || shape.type === ShapeType.polyline) {
+    } else if (
+      shape.type === ShapeType.mask ||
+      shape.type === ShapeType.polygon ||
+      shape.type === ShapeType.polyline
+    ) {
       // mask / polygon / polyline not implemented yet in video
     }
 

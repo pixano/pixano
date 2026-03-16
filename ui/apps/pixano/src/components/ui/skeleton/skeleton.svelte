@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  /* eslint-disable svelte/valid-compile */
   // Imports
   import type { HTMLAttributes } from "svelte/elements";
 

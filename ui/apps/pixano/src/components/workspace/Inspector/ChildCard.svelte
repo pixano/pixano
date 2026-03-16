@@ -7,8 +7,7 @@ License: CECILL-C
 <script lang="ts">
   /* eslint-disable svelte/no-at-html-tags */
 
-  import { slide } from "svelte/transition";
-  import { cubicOut } from "svelte/easing";
+  import { Button } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -19,17 +18,30 @@ License: CECILL-C
     Link,
     Pencil,
     Quotes,
+    Robot,
     Square,
+    Target,
     TextT,
     Trash,
     User,
-    Robot,
-    Target,
   } from "phosphor-svelte";
+  import { cubicOut } from "svelte/easing";
+  import { slide } from "svelte/transition";
 
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
+  import { keypointsIcon } from "$lib/assets";
+  import {
+    annotations,
+    current_itemBBoxes,
+    current_itemKeypoints,
+    current_itemMasks,
+    interpolate,
+    mediaViews,
+    selectedTool,
+  } from "$lib/stores/workspaceStores.svelte";
   import { ToolType } from "$lib/tools";
-  import { Button } from "bits-ui";
-
+  import type { Feature } from "$lib/types/workspace";
   import {
     Annotation,
     BaseSchema,
@@ -44,24 +56,10 @@ License: CECILL-C
     type DisplayControl,
     type KeypointAnnotation,
   } from "$lib/ui";
-  import type { Feature } from "$lib/types/workspace";
-  import { cn } from "$lib/utils/styleUtils";
-  import { keypointsIcon } from "$lib/assets";
-
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
+  import { cn } from "$lib/utils/styleUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import {
-    annotations,
-    current_itemBBoxes,
-    current_itemKeypoints,
-    current_itemMasks,
-    interpolate,
-    mediaViews,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
-  import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
 
   // ─── Type labels & icons mapping ──────────────────────────────────────────
   const TYPE_LABELS: Record<string, string> = {
@@ -143,7 +141,9 @@ License: CECILL-C
     return !child.ui.displayControl.hidden;
   });
 
-  const typeLabel = $derived(TYPE_LABELS[child.table_info.base_schema] ?? child.table_info.base_schema);
+  const typeLabel = $derived(
+    TYPE_LABELS[child.table_info.base_schema] ?? child.table_info.base_schema,
+  );
 
   const isMultiView = Object.keys(mediaViews.value).length > 1;
 
@@ -158,6 +158,7 @@ License: CECILL-C
     const raw = child.data.source_metadata;
     if (typeof raw !== "string" || raw === "" || raw === "{}") return null;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsed = JSON.parse(raw);
       if (typeof parsed === "object" && parsed !== null && Object.keys(parsed).length > 0) {
         return parsed as Record<string, unknown>;
@@ -184,7 +185,8 @@ License: CECILL-C
     if (format === "xywh") {
       labels = ["x", "y", "w", "h"];
     } else if (format === "xyzxyz" || format === "xyzwhd") {
-      labels = format === "xyzxyz" ? ["x1", "y1", "z1", "x2", "y2", "z2"] : ["x", "y", "z", "w", "h", "d"];
+      labels =
+        format === "xyzxyz" ? ["x1", "y1", "z1", "x2", "y2", "z2"] : ["x", "y", "z", "w", "h", "d"];
     } else {
       // default xyxy
       labels = ["x1", "y1", "x2", "y2"];
@@ -229,7 +231,7 @@ License: CECILL-C
     const data = (child as Keypoints).data;
     const templateId = typeof data.template_id === "string" ? data.template_id : "";
     const coords = Array.isArray(data.coords) ? data.coords : [];
-    const states = Array.isArray(data.states) ? data.states as string[] : [];
+    const states = Array.isArray(data.states) ? data.states : [];
     const vertexCount = Math.floor(coords.length / 2);
     const visibleCount = states.filter((s) => s === "visible").length;
     const hiddenCount = states.filter((s) => s === "hidden" || s === "invisible").length;
@@ -264,10 +266,7 @@ License: CECILL-C
       } else if (
         trackChilds.some(
           (ann) =>
-            cann.ui &&
-            "startRef" in cann.ui &&
-            cann.ui.startRef &&
-            ann.id === cann.ui.startRef.id,
+            cann.ui && "startRef" in cann.ui && cann.ui.startRef && ann.id === cann.ui.startRef.id,
         )
       ) {
         result.push({ trackChild: cann as Annotation, interpolated: true });
@@ -339,7 +338,9 @@ License: CECILL-C
 
       <!-- View name pill (multi-view only) -->
       {#if isMultiView && child.data.view_name}
-        <span class="flex-shrink-0 px-1.5 py-0.5 rounded bg-muted/60 text-[9px] font-medium text-muted-foreground leading-none">
+        <span
+          class="flex-shrink-0 px-1.5 py-0.5 rounded bg-muted/60 text-[9px] font-medium text-muted-foreground leading-none"
+        >
           {child.data.view_name}
         </span>
       {/if}
@@ -347,7 +348,9 @@ License: CECILL-C
 
     <!-- Right: action buttons (visible on hover) + detail toggle -->
     <div class="flex-shrink-0 flex items-center gap-0.5">
-      <div class="flex items-center gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200">
+      <div
+        class="flex items-center gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200"
+      >
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
@@ -362,7 +365,9 @@ License: CECILL-C
           <IconButton
             tooltipContent="Relink object"
             selected={showRelink}
-            onclick={() => { showRelink = !showRelink; }}
+            onclick={() => {
+              showRelink = !showRelink;
+            }}
             class="h-6 w-6"
           >
             <Link class="h-3 w-3" />
@@ -382,7 +387,9 @@ License: CECILL-C
       <button
         type="button"
         class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
-        onclick={() => { showDetails = !showDetails; }}
+        onclick={() => {
+          showDetails = !showDetails;
+        }}
         title={showDetails ? "Hide details" : "Show details"}
       >
         <CaretRight
@@ -399,11 +406,16 @@ License: CECILL-C
       <div class="px-2.5 pb-2 space-y-1.5">
         <!-- Source provenance line -->
         {#if sourceName}
-          {@const style = sourceStyle!}
+          {@const style = sourceStyle}
           <div class="flex items-center gap-1.5">
             <span class="text-[10px] text-muted-foreground/60">Source</span>
-            <span class={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium leading-none", style.class)}>
-              <svelte:component this={style.icon} weight="regular" class="h-2.5 w-2.5" />
+            <span
+              class={cn(
+                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium leading-none",
+                style.class,
+              )}
+            >
+              <style.icon weight="regular" class="h-2.5 w-2.5" />
               {sourceName}
             </span>
             {#if sourceMetadataParsed}
@@ -411,7 +423,10 @@ License: CECILL-C
                 class="text-[9px] text-muted-foreground/50 truncate max-w-[150px] cursor-help"
                 title={JSON.stringify(sourceMetadataParsed, null, 2)}
               >
-                {Object.entries(sourceMetadataParsed).map(([k, v]) => `${k}: ${v}`).join(", ")}
+                {Object.entries(sourceMetadataParsed)
+                  .map(([k, v]) => `${k}: ${String(v as string | number | boolean)}`)
+
+                  .join(", ")}
               </span>
             {/if}
           </div>
@@ -430,7 +445,9 @@ License: CECILL-C
                 {#if i < bboxData.coords.length}
                   <div class="flex items-center justify-between">
                     <span class="text-[10px] text-muted-foreground/70 font-medium">{label}</span>
-                    <span class="text-[11px] font-mono text-foreground/90">{fmtCoord(bboxData.coords[i])}</span>
+                    <span class="text-[11px] font-mono text-foreground/90">
+                      {fmtCoord(bboxData.coords[i])}
+                    </span>
                   </div>
                 {/if}
               {/each}
@@ -438,18 +455,23 @@ License: CECILL-C
 
             <!-- Format row -->
             <div class="flex items-center gap-2 pt-0.5">
-              <span class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none">
+              <span
+                class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none"
+              >
                 {bboxData.format}
               </span>
               {#if bboxData.isNormalized}
-                <span class="px-1 py-0.5 rounded bg-muted/50 text-[9px] font-medium text-muted-foreground/60 leading-none" title="Coordinates are normalized">
+                <span
+                  class="px-1 py-0.5 rounded bg-muted/50 text-[9px] font-medium text-muted-foreground/60 leading-none"
+                  title="Coordinates are normalized"
+                >
                   norm
                 </span>
               {/if}
             </div>
           </div>
 
-        <!-- ─── Mask / CompressedRLE ─────────────────────────────────────── -->
+          <!-- ─── Mask / CompressedRLE ─────────────────────────────────────── -->
         {:else if maskData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if maskData.size.length >= 2}
@@ -464,19 +486,24 @@ License: CECILL-C
               <div class="flex items-center gap-2">
                 <span class="text-[10px] text-muted-foreground/70 font-medium">Bounds</span>
                 <span class="text-[11px] font-mono text-foreground/80">
-                  {Math.round(maskData.bounds.x)}, {Math.round(maskData.bounds.y)} &mdash; {Math.round(maskData.bounds.width)}&times;{Math.round(maskData.bounds.height)}
+                  {Math.round(maskData.bounds.x)}, {Math.round(maskData.bounds.y)} &mdash; {Math.round(
+                    maskData.bounds.width,
+                  )}&times;{Math.round(maskData.bounds.height)}
                 </span>
               </div>
             {/if}
           </div>
 
-        <!-- ─── TextSpan ─────────────────────────────────────────────────── -->
+          <!-- ─── TextSpan ─────────────────────────────────────────────────── -->
         {:else if textSpanData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1.5">
             <!-- Mention as a styled quote -->
             {#if textSpanData.mention}
               <div class="flex items-start gap-1.5">
-                <Quotes weight="fill" class="h-3 w-3 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                <Quotes
+                  weight="fill"
+                  class="h-3 w-3 text-muted-foreground/40 flex-shrink-0 mt-0.5"
+                />
                 <span class="text-[11px] italic text-foreground/90 leading-snug break-words">
                   {textSpanData.mention}
                 </span>
@@ -488,7 +515,9 @@ License: CECILL-C
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] text-muted-foreground/70 font-medium">Spans</span>
                 {#each textSpanData.spans as span}
-                  <span class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none">
+                  <span
+                    class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none"
+                  >
                     [{span[0]}, {span[1]}]
                   </span>
                 {/each}
@@ -499,7 +528,9 @@ License: CECILL-C
             {#if textSpanData.extras.length > 0}
               <div class="flex items-center gap-1.5 flex-wrap">
                 {#each textSpanData.extras as extra}
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/30 text-[10px] font-medium text-foreground/70 leading-none">
+                  <span
+                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/30 text-[10px] font-medium text-foreground/70 leading-none"
+                  >
                     <span class="text-muted-foreground/60">{extra.key}:</span>
                     {extra.value}
                   </span>
@@ -508,13 +539,15 @@ License: CECILL-C
             {/if}
           </div>
 
-        <!-- ─── Keypoints ────────────────────────────────────────────────── -->
+          <!-- ─── Keypoints ────────────────────────────────────────────────── -->
         {:else if keypointsData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if keypointsData.templateId}
               <div class="flex items-center gap-2">
                 <span class="text-[10px] text-muted-foreground/70 font-medium">Template</span>
-                <span class="text-[11px] font-mono text-foreground/80">{keypointsData.templateId}</span>
+                <span class="text-[11px] font-mono text-foreground/80">
+                  {keypointsData.templateId}
+                </span>
               </div>
             {/if}
             <div class="flex items-center gap-2">
@@ -528,7 +561,7 @@ License: CECILL-C
             </div>
           </div>
 
-        <!-- ─── Tracklet ─────────────────────────────────────────────────── -->
+          <!-- ─── Tracklet ─────────────────────────────────────────────────── -->
         {:else if trackletData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2">
             <div class="flex items-center gap-2">
@@ -554,7 +587,9 @@ License: CECILL-C
         <!-- Sub-entity attributes (when annotation belongs to a sub-entity) -->
         {#if subEntityFeatures.length > 0}
           <div class="border-t border-border/20 pt-1.5 mt-1 space-y-0.5">
-            <span class="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-wider">Entity attributes</span>
+            <span class="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-wider">
+              Entity attributes
+            </span>
             <UpdateFeatureInputs
               featureClass="objects"
               features={subEntityFeatures}
@@ -565,13 +600,24 @@ License: CECILL-C
         {/if}
 
         <!-- Annotation's own custom attributes + confidence -->
-        {#if features.length > 0 || bboxData?.confidence !== null && bboxData?.confidence !== undefined}
+        {#if features.length > 0 || (bboxData?.confidence !== null && bboxData?.confidence !== undefined)}
           <div class="border-t border-border/20 pt-1.5 mt-1 space-y-0.5">
-            <span class="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-wider">Attributes</span>
+            <span class="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-wider">
+              Attributes
+            </span>
             {#if bboxData?.confidence !== null && bboxData?.confidence !== undefined}
-              <div class="flex w-full items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/50 transition-colors duration-100 min-h-[32px]">
-                <span class="text-[13px] text-muted-foreground truncate max-w-[45%]">confidence</span>
-                <span class={cn("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none", getConfidenceStyle(bboxData.confidence))}>
+              <div
+                class="flex w-full items-center justify-between py-1.5 px-2 rounded-md hover:bg-accent/50 transition-colors duration-100 min-h-[32px]"
+              >
+                <span class="text-[13px] text-muted-foreground truncate max-w-[45%]">
+                  confidence
+                </span>
+                <span
+                  class={cn(
+                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none",
+                    getConfidenceStyle(bboxData.confidence),
+                  )}
+                >
                   {fmtConfidence(bboxData.confidence)}
                 </span>
               </div>
@@ -624,7 +670,9 @@ License: CECILL-C
       {@const displayName = interpolated
         ? `<i class="text-muted-foreground/50">interpolated</i> (${trackChild.id})`
         : trackChild.id}
-      <div class="flex items-center justify-between w-full overflow-hidden py-0.5 px-1 rounded hover:bg-muted/30 transition-colors group/trackchild">
+      <div
+        class="flex items-center justify-between w-full overflow-hidden py-0.5 px-1 rounded hover:bg-muted/30 transition-colors group/trackchild"
+      >
         <div class="flex items-center flex-1 min-w-0 overflow-hidden gap-1">
           <div class="flex items-center text-muted-foreground/60 flex-shrink-0">
             {#if trackChild.table_info.base_schema === BaseSchema.BBox}
@@ -642,7 +690,9 @@ License: CECILL-C
           </span>
         </div>
         {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}
-          <div class="flex items-center gap-0.5 opacity-0 group-hover/trackchild:opacity-100 transition-opacity duration-200">
+          <div
+            class="flex items-center gap-0.5 opacity-0 group-hover/trackchild:opacity-100 transition-opacity duration-200"
+          >
             {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
               <IconButton
                 tooltipContent="Edit object"

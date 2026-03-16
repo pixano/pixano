@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from pathlib import Path
 
 from pixano.datasets.dataset import Dataset
@@ -116,14 +122,14 @@ def test_create_preserves_custom_component_schema_fields(tmp_path: Path):
     )
 
     entity_schema = dataset.info.tables["entities"]
-    view_schema = dataset.info.tables["custom_images"]
+    view_schema = dataset.info.tables["images"]
 
     assert issubclass(entity_schema, Entity)
     assert issubclass(view_schema, Image)
     assert {"id", "record_id", "parent_id", "category", "is_group"} <= set(entity_schema.model_fields)
     assert {"id", "record_id", "logical_name", "category", "is_group"} <= set(view_schema.model_fields)
     assert {"category", "is_group"} <= set(dataset.open_table("entities").schema.names)
-    assert {"category", "is_group"} <= set(dataset.open_table("custom_images").schema.names)
+    assert {"category", "is_group"} <= set(dataset.open_table("images").schema.names)
 
 
 def test_add_records_persists_custom_component_fields(tmp_path: Path):
@@ -150,14 +156,14 @@ def test_add_records_persists_custom_component_fields(tmp_path: Path):
 
     dataset.add_records(
         {
-            "custom_images": view,
+            "images": view,
             "entities": entity,
             "records": record,
         }
     )
 
     stored_entity = dataset.get_data("entities", ids=entity.id)
-    stored_view = dataset.get_data("custom_images", ids=view.id)
+    stored_view = dataset.get_data("images", ids=view.id)
 
     assert stored_entity is not None
     assert stored_entity.record_id == record.id

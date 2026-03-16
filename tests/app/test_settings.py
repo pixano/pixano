@@ -14,9 +14,7 @@ from pixano.api.settings import Settings, get_settings
 class TestSettings:
     def test_init_path(self):
         # Test with explicit library_dir/models_dir overrides
-        settings = Settings(
-            library_dir="/home/user/library", models_dir="/home/user/models"
-        )
+        settings = Settings(library_dir="/home/user/library", models_dir="/home/user/models")
 
         assert settings.library_dir == Path("/home/user/library")
         assert settings.models_dir == Path("/home/user/models")

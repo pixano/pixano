@@ -1,5 +1,12 @@
-from pydantic import model_validator
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from typing import Literal, get_args
+
+from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
 
@@ -57,6 +64,7 @@ class Message(EntityGroupAnnotation):
 
     @classmethod
     def none(cls) -> "Message":
+        """Return a placeholder empty Message instance."""
         return cls(
             id="",
             conversation_id="",
@@ -72,7 +80,6 @@ class Message(EntityGroupAnnotation):
 
 def is_message(cls: type, strict: bool = False) -> bool:
     """Check if a class is a Message or subclass of Message."""
-
     return issubclass_strict(cls, Message, strict)
 
 

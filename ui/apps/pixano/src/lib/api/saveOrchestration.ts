@@ -4,10 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
- import { BaseSchema } from "$lib/types/dataset";
-
- import type { ResourceMutation } from "./resourcePayloads";
+import type { ResourceMutation } from "./resourcePayloads";
 import { createResource, deleteResource, updateResource } from "./schemaApi";
+import { BaseSchema } from "$lib/types/dataset";
 
 function mutationPriority(mutation: ResourceMutation): number {
   if (mutation.op === "delete") {
@@ -25,7 +24,10 @@ function sortMutations(mutations: ResourceMutation[]): ResourceMutation[] {
   return [...mutations].sort((a, b) => mutationPriority(a) - mutationPriority(b));
 }
 
-export async function persistSaveItems(mutations: ResourceMutation[], datasetId: string): Promise<void> {
+export async function persistSaveItems(
+  mutations: ResourceMutation[],
+  datasetId: string,
+): Promise<void> {
   const orderedMutations = sortMutations(mutations);
 
   for (const mutation of orderedMutations) {

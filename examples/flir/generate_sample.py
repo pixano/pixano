@@ -360,12 +360,10 @@ def main():
 
     if args.mode == "video":
         total = export_video_test_video_mode(output_dir, flir_root, args.num_samples, args.seed)
-        dataset_type = "video"
         schema_object = "video_dataset_info"
         unit = "videos"
     else:
         total = export_video_test(output_dir, flir_root, args.num_samples, args.seed)
-        dataset_type = "image"
         schema_object = "dataset_info"
         unit = "frame pairs"
 

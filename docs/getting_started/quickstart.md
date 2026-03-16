@@ -147,12 +147,12 @@ pixano data import ./my_data ./street_objects \
 
 Common options:
 
-| Option                  | Description                                                          |
-| ----------------------- | -------------------------------------------------------------------- |
-| `--info`                | Dataset info as `path/to/file.py:attribute`. Required for import.    |
-| `--mode`                | `create` (default), `overwrite`, or `add`.                           |
+| Option                  | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
+| `--info`                | Dataset info as `path/to/file.py:attribute`. Required for import.     |
+| `--mode`                | `create` (default), `overwrite`, or `add`.                            |
 | `--metadata-validation` | `default` or `strict`. Strict mode rejects aliases and normalization. |
-| `--dry-run`             | Validate metadata and exit without creating the dataset.             |
+| `--dry-run`             | Validate metadata and exit without creating the dataset.              |
 
 ??? note "Alternative: build the dataset with Python"
 
@@ -210,7 +210,16 @@ voc_sample/
 Each line in `metadata.jsonl` follows the canonical format described above:
 
 ```json
-{"views": {"image": "000032.jpg"}, "entities": [{"category": "aeroplane", "is_difficult": false, "annotations": {"image": {"bbox": [0.078, 0.090, 0.756, 0.792]}}}]}
+{
+  "views": { "image": "000032.jpg" },
+  "entities": [
+    {
+      "category": "aeroplane",
+      "is_difficult": false,
+      "annotations": { "image": { "bbox": [0.078, 0.09, 0.756, 0.792] } }
+    }
+  ]
+}
 ```
 
 **2. Review the dataset info**
@@ -359,7 +368,7 @@ Each line in `metadata.jsonl` describes one image with its question and answer:
 
 ```json
 {
-  "views": {"image": "000000.jpg"},
+  "views": { "image": "000000.jpg" },
   "messages": [
     {
       "question": {

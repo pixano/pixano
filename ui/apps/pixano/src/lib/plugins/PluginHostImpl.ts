@@ -8,7 +8,6 @@ import type { Command } from "$lib/commands";
 import type { Document, DocumentQuery, NodeId } from "$lib/document";
 import type { ComputeJob } from "$lib/services";
 import type { ToolFSM } from "$lib/tools";
-
 import type {
   Capability,
   ModelInvocationParams,

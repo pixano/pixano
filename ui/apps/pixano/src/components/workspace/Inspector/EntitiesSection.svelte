@@ -5,17 +5,15 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { Popover } from "bits-ui";
+  import { Eye, EyeClosed, FunnelSimple, MagnifyingGlass, Question, X } from "phosphor-svelte";
   import type { Snippet } from "svelte";
 
-  import { Eye, EyeClosed, FunnelSimple, MagnifyingGlass, Question, X } from "phosphor-svelte";
-  import { Popover } from "bits-ui";
-
-  import { IconButton, type Entity } from "$lib/ui";
-
-  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
+  import OptionsAndFilters from "./OptionsAndFilters.svelte";
   import { GROUND_TRUTH, OTHER } from "$lib/constants/workspaceConstants";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
-  import OptionsAndFilters from "./OptionsAndFilters.svelte";
+  import { IconButton, type Entity } from "$lib/ui";
+  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
 
   interface Props {
     sourceLabel?: { name: string; kind: string };
@@ -90,8 +88,12 @@ License: CECILL-C
   };
 </script>
 
-<section class="h-full min-h-0 flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/60">
-  <div class="relative z-20 shrink-0 px-2.5 py-2.5 space-y-2.5 border-b border-border/40 bg-card/95 backdrop-blur">
+<section
+  class="h-full min-h-0 flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/60"
+>
+  <div
+    class="relative z-20 shrink-0 px-2.5 py-2.5 space-y-2.5 border-b border-border/40 bg-card/95 backdrop-blur"
+  >
     <div class="flex items-center gap-2 text-foreground">
       <IconButton {tooltipContent} onclick={handleVisibilityIconClick} class="h-8 w-8 rounded-lg">
         {#if visibilityStatus === "hidden"}
@@ -101,7 +103,9 @@ License: CECILL-C
         {/if}
       </IconButton>
 
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground grow truncate">
+      <h3
+        class="text-xs font-semibold uppercase tracking-wider text-muted-foreground grow truncate"
+      >
         {sectionTitle}
       </h3>
 
@@ -117,7 +121,9 @@ License: CECILL-C
 
     <div class="flex items-center gap-2">
       <div class="relative flex-1">
-        <MagnifyingGlass class="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 pointer-events-none" />
+        <MagnifyingGlass
+          class="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 pointer-events-none"
+        />
         <input
           type="text"
           placeholder="Quick search across all attributes"
@@ -147,7 +153,9 @@ License: CECILL-C
         >
           <Question class="h-4 w-4" />
         </Popover.Trigger>
-        <Popover.Content class="z-[120] w-80 rounded-lg border border-border bg-card p-3 text-foreground shadow-2xl ring-1 ring-border/70 outline-none space-y-2.5">
+        <Popover.Content
+          class="z-[120] w-80 rounded-lg border border-border bg-card p-3 text-foreground shadow-2xl ring-1 ring-border/70 outline-none space-y-2.5"
+        >
           <div class="space-y-0.5">
             <p class="text-xs font-semibold tracking-wide text-foreground">Search help</p>
             <p class="text-[11px] leading-relaxed text-muted-foreground">
@@ -166,7 +174,9 @@ License: CECILL-C
             </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-muted-foreground">Numeric compare</span>
-              <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">score&gt;=0.80</code>
+              <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                score&gt;=0.80
+              </code>
             </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-muted-foreground">Exclude term</span>
@@ -193,7 +203,9 @@ License: CECILL-C
     </div>
 
     {#if showFilters}
-      <div class="rounded-md border border-border/40 bg-muted/25 px-2 py-1.5 text-[10px] text-muted-foreground">
+      <div
+        class="rounded-md border border-border/40 bg-muted/25 px-2 py-1.5 text-[10px] text-muted-foreground"
+      >
         Rule builder creates exact typed constraints and is combined with search.
       </div>
     {/if}
@@ -212,10 +224,7 @@ License: CECILL-C
     {/if}
 
     {#if showFilters}
-      <OptionsAndFilters
-        onFilter={onFilter}
-        onConfidenceThresholdChange={onConfidenceThresholdChange}
-      />
+      <OptionsAndFilters {onFilter} {onConfidenceThresholdChange} />
     {/if}
   </div>
 

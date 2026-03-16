@@ -4,14 +4,13 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
+import { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
+import { ToolBridgeImpl } from "./ToolBridgeImpl.svelte";
 import type { CommandProcessor } from "$lib/commands";
 import { CommandProcessorImpl } from "$lib/commands";
 import type { Document } from "$lib/document";
 import type { ToolFSM } from "$lib/tools";
-
-import { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
-import { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
-import { ToolBridgeImpl } from "./ToolBridgeImpl.svelte";
 
 export interface PixanoContext {
   readonly documentStore: DocumentStoreImpl;

@@ -6,18 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Check, ArrowsLeftRight, X } from "phosphor-svelte";
+  import { ArrowsLeftRight, Check, X } from "phosphor-svelte";
 
-  import { ToolType, fusionTool, panTool, type SelectionTool } from "$lib/tools";
-  import { Annotation, IconButton, cn } from "$lib/ui";
-
+  import { annotations, entities, merges, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import { fusionTool, panTool, ToolType, type SelectionTool } from "$lib/tools";
+  import { Annotation, cn, IconButton } from "$lib/ui";
   import { saveTo } from "$lib/utils/saveItemUtils";
-  import {
-    annotations,
-    entities,
-    merges,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
 
   interface Props {
     selectTool: (tool: SelectionTool) => void;

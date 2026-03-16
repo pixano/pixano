@@ -5,9 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Gear } from "phosphor-svelte";
-
   import { Popover } from "bits-ui";
+  import { Gear } from "phosphor-svelte";
 
   import { brushSettings } from "$lib/stores/workspaceStores.svelte";
 

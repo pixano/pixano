@@ -4,8 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AssetManager } from "$lib/types/services";
 import { LRUCache } from "./LRUCache";
+import type { AssetManager } from "$lib/types/services";
 
 const DEFAULT_CACHE_SIZE = 200;
 
@@ -32,7 +32,7 @@ export class AssetManagerImpl implements AssetManager {
 
     // Check if already loading
     const existing = this.loadingPromises.get(uri);
-    if (existing) return existing;
+    if (existing !== undefined) return await existing;
 
     // Load the image
     const promise = this.doLoadImage(uri);
@@ -49,7 +49,7 @@ export class AssetManagerImpl implements AssetManager {
 
   async loadVideoFrame(viewName: string, frameIndex: number): Promise<HTMLImageElement> {
     const uris = this.frameUrisByView.get(viewName);
-    if (!uris || frameIndex <0 || frameIndex >= uris.length) {
+    if (!uris || frameIndex < 0 || frameIndex >= uris.length) {
       throw new Error(`Frame ${frameIndex} not available for view "${viewName}"`);
     }
     return this.loadImage(uris[frameIndex]);
@@ -60,7 +60,7 @@ export class AssetManagerImpl implements AssetManager {
     if (!uris) return;
 
     const end = Math.min(startFrame + count, uris.length);
-    for (let i = startFrame; i <end; i++) {
+    for (let i = startFrame; i < end; i++) {
       const uri = uris[i];
       if (!this.imageCache.has(uri) && !this.loadingPromises.has(uri)) {
         // Fire and forget — preloading is best-effort

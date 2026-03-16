@@ -5,10 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
   import { AutoResizeTextarea, Input, PrimaryButton } from "$lib/ui";
-
-  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
 
   interface Props {
     vqaSectionWidth: number;
@@ -17,7 +16,8 @@ License: CECILL-C
     onCancelPrompt?: () => void;
   }
 
-  let { vqaSectionWidth, completionModels, onCompletionModelsChange, onCancelPrompt }: Props = $props();
+  let { vqaSectionWidth, completionModels, onCompletionModelsChange, onCancelPrompt }: Props =
+    $props();
 
   let question_type = $state(QuestionTypeEnum.OPEN);
   const list_qt = Object.values(QuestionTypeEnum).map((value) => ({
@@ -116,7 +116,13 @@ License: CECILL-C
   </div>
   <div class="px-3 flex flex-col gap-2">
     <h5 class="font-medium">Temperature</h5>
-    <Input bind:value={temperature} type="string" onkeyup={(e) => e.stopPropagation()} />
+    <Input
+      bind:value={temperature}
+      type="string"
+      onkeyup={(e: KeyboardEvent) => {
+        e.stopPropagation();
+      }}
+    />
   </div>
   <div class="flex flex-row gap-2 px-3 justify-center">
     <PrimaryButton onclick={handleCancel}>Cancel</PrimaryButton>

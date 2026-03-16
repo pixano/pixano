@@ -3,7 +3,9 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pixano.utils import issubclass_strict
+
 from .view import View
 
 

@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
+
+  import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
   import {
     ensureFrameAvailable,
     getReadyAheadFrames,
@@ -14,11 +16,6 @@ License: CECILL-C
     updateViewAndWait,
     waitForReadyAheadFrames,
   } from "$lib/utils/videoOperations";
-  import {
-    currentFrameIndex,
-    lastFrameIndex,
-    playbackState,
-  } from "$lib/stores/videoStores.svelte";
 
   interface Props {
     resetHighlight: () => void;
@@ -100,7 +97,7 @@ License: CECILL-C
       clearTimeout(timer);
       if (isShown && token === bufferingToken) {
         const visibleFor = Date.now() - shownAt;
-        if (visibleFor <BUFFERING_MIN_VISIBLE_MS) {
+        if (visibleFor < BUFFERING_MIN_VISIBLE_MS) {
           await wait(BUFFERING_MIN_VISIBLE_MS - visibleFor);
         }
         if (token === bufferingToken) {
@@ -127,9 +124,8 @@ License: CECILL-C
     if (!instantlyReady) {
       stopPlayback();
       const token = ++bufferingToken;
-      const available = await awaitWithBufferingIndicator(
-        token,
-        () => ensureFrameAvailable(target),
+      const available = await awaitWithBufferingIndicator(token, () =>
+        ensureFrameAvailable(target),
       );
       if (token !== bufferingToken) return false;
       if (!available) return false;
@@ -161,9 +157,8 @@ License: CECILL-C
 
     stopPlayback();
     const token = ++bufferingToken;
-    const buffered = await awaitWithBufferingIndicator(
-      token,
-      () => waitForReadyAheadFrames(current, effectiveHigh),
+    const buffered = await awaitWithBufferingIndicator(token, () =>
+      waitForReadyAheadFrames(current, effectiveHigh),
     );
     if (token !== bufferingToken) return false;
 

@@ -5,12 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { QuestionTypeEnum } from "$lib/types/dataset";
-  import { AutoResizeTextarea, PrimaryButton } from "$lib/ui";
-
-  import type { StoreQuestionEvent } from "$lib/types/vqa";
   import AddChoiceButton from "./AddChoiceButton.svelte";
   import QuestionChoice from "./NewQuestionChoice.svelte";
+  import { QuestionTypeEnum } from "$lib/types/dataset";
+  import type { StoreQuestionEvent } from "$lib/types/vqa";
+  import { AutoResizeTextarea, PrimaryButton } from "$lib/ui";
 
   interface Props {
     questionType: QuestionTypeEnum;

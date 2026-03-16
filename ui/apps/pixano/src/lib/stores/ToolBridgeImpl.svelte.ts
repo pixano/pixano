@@ -4,13 +4,19 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { PreviewShape, ToolContext, ToolEvent, ToolFSM, ToolSideEffect, ToolState } from "$lib/tools";
-import type { AIRequestParams } from "$lib/types/tools";
-
-import type { ReactiveReadonly, ReactiveValue, ToolBridge } from "$lib/types/store";
-import type { ComputeJob } from "$lib/types/services";
 import type { CommandBridgeImpl } from "./CommandBridgeImpl.svelte";
 import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
+import type {
+  PreviewShape,
+  ToolContext,
+  ToolEvent,
+  ToolFSM,
+  ToolSideEffect,
+  ToolState,
+} from "$lib/tools";
+import type { ComputeJob } from "$lib/types/services";
+import type { ReactiveReadonly, ReactiveValue, ToolBridge } from "$lib/types/store";
+import type { AIRequestParams } from "$lib/types/tools";
 
 type RequestSaveCallback = (
   shapeType: "bbox" | "polygon" | "polyline" | "mask" | "keypoints",
@@ -36,7 +42,8 @@ export class ToolBridgeImpl implements ToolBridge {
 
   private readonly commandBridge: CommandBridgeImpl;
   private readonly documentStore: DocumentStoreImpl;
-  private trackerService: any | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private trackerService: any = null;
 
   private canvasViewName = "";
   private canvasWidth = 0;
@@ -58,17 +65,28 @@ export class ToolBridgeImpl implements ToolBridge {
     this._toolState = initialTool.getInitialState();
     this._preview = null;
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.activeTool = {
-      get value() { return self._activeTool; },
-      set value(v: ToolFSM) { self._activeTool = v; },
-      update(fn: (prev: ToolFSM) => ToolFSM) { self._activeTool = fn(self._activeTool); },
+      get value() {
+        return self._activeTool;
+      },
+      set value(v: ToolFSM) {
+        self._activeTool = v;
+      },
+      update(fn: (prev: ToolFSM) => ToolFSM) {
+        self._activeTool = fn(self._activeTool);
+      },
     };
     this.toolState = {
-      get value() { return self._toolState; },
+      get value() {
+        return self._toolState;
+      },
     };
     this.preview = {
-      get value() { return self._preview; },
+      get value() {
+        return self._preview;
+      },
     };
   }
 
@@ -88,7 +106,9 @@ export class ToolBridgeImpl implements ToolBridge {
   }
 
   /** Inject a TrackerService for handling AI tracking side effects. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setTrackerService(service: any): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.trackerService = service;
   }
 
@@ -139,7 +159,10 @@ export class ToolBridgeImpl implements ToolBridge {
         if (this.aiRequestCallback) {
           this.aiRequestCallback(effect.requestId, effect.params);
         } else if (!this.trackerService) {
-          console.warn("AI request received but no TrackerService or callback registered:", effect.requestId);
+          console.warn(
+            "AI request received but no TrackerService or callback registered:",
+            effect.requestId,
+          );
         }
         break;
       case "cancelAI": {

@@ -4,13 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type {
-  ToolContext,
-  ToolEvent,
-  ToolFSM,
-  ToolState,
-  ToolTransition,
-} from "$lib/types/tools";
+import type { ToolContext, ToolEvent, ToolFSM, ToolState, ToolTransition } from "$lib/types/tools";
 
 /**
  * Rectangle drawing tool.

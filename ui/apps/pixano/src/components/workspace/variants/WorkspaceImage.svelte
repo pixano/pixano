@@ -10,7 +10,6 @@ License: CECILL-C
   // Import stores and API functions
 
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import type { SelectionTool } from "$lib/tools";
   import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
@@ -29,9 +28,10 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
+  import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
-  import { Image, type LoadedImagesPerView } from "$lib/ui";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { Image, type LoadedImagesPerView } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 

@@ -5,11 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   import { Prohibit } from "phosphor-svelte";
-  import { IconButton } from "$lib/ui";
 
   import { COUNTS_COLUMNS_PREFIX } from "$lib/constants";
+  import { IconButton } from "$lib/ui";
 
   interface Props {
     columns?: { type: string; name: string }[];
@@ -63,7 +62,6 @@ License: CECILL-C
     }
     if (selectedCol) updateWidth();
   });
-
 </script>
 
 <div class="flex justify-end gap-2 mr-4">

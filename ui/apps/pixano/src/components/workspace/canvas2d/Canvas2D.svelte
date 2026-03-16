@@ -12,29 +12,30 @@ License: CECILL-C
 
   import BBox2D from "./BBox2D.svelte";
   import BrushCursor from "./BrushCursor.svelte";
-  import Mask from "./Mask.svelte";
+  import {
+    computeCursorFlushAction,
+    computeToolChangeAction,
+    getToolSwitchSignature,
+  } from "./canvasEventHandlers";
+  import { zoomViewTransform } from "./canvasGeometry";
   import CreateMultiPath from "./CreateMultiPath.svelte";
-  import MultiPathShape from "./MultiPathShape.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
-  import { zoomViewTransform } from "./canvasGeometry";
   import { CanvasFilterPipeline } from "./filterPipeline";
   import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
+  import Mask from "./Mask.svelte";
+  import MultiPathShape from "./MultiPathShape.svelte";
   import {
-    type PolygonSavePayload,
-    toPolygonPoints,
-    toClosedPolygonPoints,
-    buildRectangleSaveShape,
     buildPolygonSaveShape,
     buildPolylineSaveShape,
+    buildRectangleSaveShape,
+    toClosedPolygonPoints,
+    toPolygonPoints,
+    type PolygonSavePayload,
   } from "./shapeSaveOps";
-  import {
-    getToolSwitchSignature,
-    computeToolChangeAction,
-    computeCursorFlushAction,
-  } from "./canvasEventHandlers";
-  import { ViewRefManager } from "./viewRefs";
   import ShowKeypoints from "./ShowKeypoint.svelte";
+  import { ViewRefManager } from "./viewRefs";
+  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     ToolType,
     type Point2D,
@@ -46,7 +47,6 @@ License: CECILL-C
     createInternalToolBridge,
     createToolFSMForSelection,
   } from "$lib/tools/canvasBridgeRuntime";
-  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     brushDrawTool,
     getFallbackCanvasTool,
@@ -58,7 +58,13 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
-  import type { BBox, LoadedImagesPerView, Mask as DatasetMask, MultiPath as DatasetMultiPath, Reference } from "$lib/types/dataset";
+  import type {
+    BBox,
+    Mask as DatasetMask,
+    MultiPath as DatasetMultiPath,
+    LoadedImagesPerView,
+    Reference,
+  } from "$lib/types/dataset";
   import {
     ShapeType,
     type CreatePolygonShape,
@@ -70,7 +76,6 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
-
 
   interface BrushSettings {
     brushRadius: number;
@@ -341,12 +346,7 @@ License: CECILL-C
     if (!viewRef) return;
 
     const currentImage = getCurrentImage(viewRef.name);
-    const saveShape = buildPolylineSaveShape(
-      payload,
-      viewRef,
-      selectedItemId,
-      currentImage,
-    );
+    const saveShape = buildPolylineSaveShape(payload, viewRef, selectedItemId, currentImage);
 
     if (!saveShape) return;
 
@@ -822,7 +822,10 @@ License: CECILL-C
   ): { x: number; y: number; width: number; height: number } | null {
     const { coords } = mp.data;
     if (!coords || coords.length < 4) return null;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (let i = 0; i < coords.length; i += 2) {
       const px = coords[i] * imgW;
       const py = coords[i + 1] * imgH;
@@ -1008,7 +1011,7 @@ License: CECILL-C
     beginViewportInteraction();
 
     // Get zoom direction
-    let direction = event.deltaY <0 ? 1 : -1;
+    let direction = event.deltaY < 0 ? 1 : -1;
 
     // Revert direction for trackpad
     if (event.ctrlKey) direction = -direction;
@@ -1119,11 +1122,16 @@ License: CECILL-C
       const shouldKeepPolygonTool =
         (selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline) &&
         interactionShape.status === "creating" &&
-        (interactionShape.type === ShapeType.polygon || interactionShape.type === ShapeType.polyline) &&
+        (interactionShape.type === ShapeType.polygon ||
+          interactionShape.type === ShapeType.polyline) &&
         interactionShape.phase === "drawing" &&
         interactionShape.closedPolygons.length > 0;
 
-      if (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline) {
+      if (
+        selectedTool?.type === ToolType.Rectangle ||
+        selectedTool?.type === ToolType.Polygon ||
+        selectedTool?.type === ToolType.Polyline
+      ) {
         activeToolBridge?.dispatchEvent({ type: "cancel" });
       }
 
@@ -1173,7 +1181,9 @@ License: CECILL-C
     const isConfirmKey = event.key === "Enter" || confirmKeys.includes(event.key);
     if (
       (isConfirmKey || event.key === "Backspace") &&
-      (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Polygon || selectedTool?.type === ToolType.Polyline)
+      (selectedTool?.type === ToolType.Rectangle ||
+        selectedTool?.type === ToolType.Polygon ||
+        selectedTool?.type === ToolType.Polyline)
     ) {
       activeToolBridge?.dispatchEvent({
         type: "keyDown",
@@ -1189,10 +1199,7 @@ License: CECILL-C
     }
 
     // N key: finish current polyline sub-path and start a new one
-    if (
-      (event.key === "n" || event.key === "N") &&
-      selectedTool?.type === ToolType.Polyline
-    ) {
+    if ((event.key === "n" || event.key === "N") && selectedTool?.type === ToolType.Polyline) {
       activeToolBridge?.dispatchEvent({
         type: "keyDown",
         key: event.key,
@@ -1401,8 +1408,8 @@ License: CECILL-C
               {colorScale}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
-              selectedItemId={selectedItemId}
-              brushSettings={brushSettings}
+              {selectedItemId}
+              {brushSettings}
             />
           {/if}
 
@@ -1412,7 +1419,6 @@ License: CECILL-C
                 <MultiPathShape
                   {multiPath}
                   {colorScale}
-                  zoomFactor={zoomFactor[view_name] ?? 1}
                   imageWidth={currentImage?.width ?? 0}
                   imageHeight={currentImage?.height ?? 0}
                 />
@@ -1540,7 +1546,11 @@ License: CECILL-C
           {#if !isActivePaintingTool}
             {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
               {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
-                {@const bounds = computeMultiPathBounds(multiPath, currentImage?.width ?? 0, currentImage?.height ?? 0)}
+                {@const bounds = computeMultiPathBounds(
+                  multiPath,
+                  currentImage?.width ?? 0,
+                  currentImage?.height ?? 0,
+                )}
                 {#if bounds}
                   <Rect
                     x={bounds.x}

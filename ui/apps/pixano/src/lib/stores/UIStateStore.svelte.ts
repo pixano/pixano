@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { NodeId } from "$lib/document";
-
 import { initDisplayControl, type DisplayControl } from "$lib/types/dataset";
 import type { ReactiveReadonly } from "$lib/types/store";
 
@@ -35,9 +34,12 @@ export class UIStateStore {
   readonly states: ReactiveReadonly<Map<NodeId, NodeUIState>>;
 
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     this.states = {
-      get value() { return self._states; },
+      get value() {
+        return self._states;
+      },
     };
   }
 
@@ -71,6 +73,7 @@ export class UIStateStore {
 
   /** Getter for a specific node's display control. */
   displayControlFor(nodeId: NodeId): ReactiveReadonly<DisplayControl> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     return {
       get value() {

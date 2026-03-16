@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  /* eslint-disable svelte/valid-compile */
   import { tick } from "svelte";
   import type { HTMLTextareaAttributes } from "svelte/elements";
- 
+
   import { cn } from "$lib/utils/styleUtils";
 
   interface Props extends Omit<HTMLTextareaAttributes, "class" | "value"> {
@@ -37,6 +38,7 @@ License: CECILL-C
   };
 
   $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     value;
     void resizeTextarea();
   });

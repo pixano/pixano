@@ -148,13 +148,24 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
         "blue_car",
     ]
     SEQUENCE_FRAME_CATEGORY = ["RGB", "Depth", "IR"]
+
+    # Schema lookups use canonical table names
+    record_cls = schemas["records"]
+    sframe_cls = schemas["sequence_frames"]
+    entity_cls = schemas["entities"]
+    bbox_cls = schemas["bboxes"]
+    mask_cls = schemas["masks"]
+    kp_cls = schemas["keypoints"]
+    tracklet_cls = schemas["tracklets"]
+    image_cls = schemas["images"]
+
     for i in range(num_rows):
         item_id = str(i)
         split = "train" if i <= num_rows / 2 else "test"
         categories = (ITEM_CATEGORIES[i % 4],)
         other_categories = [ITEM_OTHER_CATEGORIES[i % 4]]
 
-        item = schemas["record"](
+        item = record_cls(
             id=item_id,
             categories=categories,
             other_categories=other_categories,
@@ -165,15 +176,14 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
 
         has_video = (i % 5 > 0) or i == 0
         sequence_frames = []
-        video_embeddings = []
         tracklets = []
-        entities_video = []
-        bboxes_video = []
-        keypoints_video = []
+        entities_list = []
+        bboxes_list = []
+        keypoints_list = []
         if has_video:
             num_frames = i % 2 + 1
             sequence_frames = [
-                schemas["video"](
+                sframe_cls(
                     id=f"video_{i}_{j}",
                     category=SEQUENCE_FRAME_CATEGORY[i % 3],
                     timestamp=j / 10,
@@ -190,42 +200,21 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 for j in range(num_frames)
             ]
 
-            video_embeddings = [
-                schemas["video_embeddings"](
-                    id=f"video_embedding_{i}_{j}",
-                    record_id=item_id,
-                    view_id="video",
-                    frame_id=sequence_frames[j].id,
-                    vector=[
-                        0.1 * i * j,
-                        0.2 * i * j,
-                        0.3 * i * j,
-                        0.4 * i * j,
-                        0.5 * i * j,
-                        0.6 * i * j,
-                        0.7 * i * j,
-                        0.8 * i * j,
-                    ],
-                    created_at=datetime(2021, 1, 1, 0, 0, 0),
-                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
-                )
-                for j in range(num_frames)
-            ]
-
             num_entities = i % 3
             for j in range(num_entities):
                 entity_id = f"entity_video_{i}_{j}"
                 tracklet_id = f"tracklet_{i}_{j}"
-                entities_video.append(
-                    schemas["entities_video"](
+                entities_list.append(
+                    entity_cls(
                         id=entity_id,
                         record_id=item_id,
+                        category="none",
                         created_at=datetime(2021, 1, 1, 0, 0, 0),
                         updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
                 tracklets.append(
-                    schemas["tracklets"](
+                    tracklet_cls(
                         id=tracklet_id,
                         record_id=item_id,
                         entity_id=entity_id,
@@ -243,12 +232,13 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 num_bboxes_and_keypoints = i % 4
                 for frame in sequence_frames:
                     for m in range(num_bboxes_and_keypoints):
-                        bboxes_video.append(
-                            schemas["bboxes_video"](
+                        bboxes_list.append(
+                            bbox_cls(
                                 coords=[m, m, m * 25, m * 25],
                                 format="xywh",
                                 is_normalized=False,
                                 confidence=0.25 * m,
+                                is_difficult=False,
                                 id=f"bbox_{i}_{j}_{frame.frame_index}_{m}",
                                 record_id=item_id,
                                 view_id="video",
@@ -262,8 +252,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
                             )
                         )
-                        keypoints_video.append(
-                            schemas["keypoints_video"](
+                        keypoints_list.append(
+                            kp_cls(
                                 template_id="template_id",
                                 coords=[m, m],
                                 states=["visible" if m % 2 == 0 else "invisible"],
@@ -283,7 +273,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
 
         has_image = (i % 3 > 0) or i == 0
         if has_image:
-            image = schemas["image"](
+            image = image_cls(
                 id=f"image_{i}",
                 record_id=item_id,
                 logical_name="image",
@@ -295,7 +285,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
-            entity_image = schemas["entity_image"](
+            entity_image = entity_cls(
                 id=f"entity_image_{i}",
                 record_id=item_id,
                 category=ENTITY_CATEGORY[i % 4 * 2 + i % 2],
@@ -303,7 +293,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
-            bbox_image = schemas["bbox_image"](
+            bbox_image = bbox_cls(
                 coords=[i, i, i * 25, i * 25],
                 format="xywh",
                 is_normalized=False,
@@ -319,7 +309,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
-            mask_image = schemas["mask_image"](
+            mask_image = mask_cls(
                 id=f"mask_image_{i}",
                 record_id=item_id,
                 view_id="image",
@@ -336,7 +326,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
             keypoints_image = []
             for j in range(num_keypoints):
                 keypoints_image.append(
-                    schemas["keypoints_image"](
+                    kp_cls(
                         template_id="template_id",
                         coords=[j, j],
                         states=["visible" if j % 2 == 0 else "invisible"],
@@ -350,38 +340,36 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
-
-            image_embedding = schemas["image_embedding"](
-                id=f"image_embedding_{i}",
-                record_id=item_id,
-                view_id="image",
-                frame_id=image.id,
-                vector=[0.1 * i, 0.2 * i, 0.3 * i, 0.4 * i, 0.5 * i, 0.6 * i, 0.7 * i, 0.8 * i],
-                created_at=datetime(2021, 1, 1, 0, 0, 0),
-                updated_at=datetime(2021, 1, 1, 0, 0, 0),
-            )
         else:
             image = None
-            image_embedding = None
             entity_image = None
             bbox_image = None
             mask_image = None
             keypoints_image = []
 
+        # Merge all entities/annotations into canonical tables
+        all_entities = entities_list[:]
+        all_bboxes = bboxes_list[:]
+        all_keypoints = keypoints_list[:]
+        all_masks = []
+        if has_image:
+            if entity_image is not None:
+                all_entities.append(entity_image)
+            if bbox_image is not None:
+                all_bboxes.append(bbox_image)
+            if mask_image is not None:
+                all_masks.append(mask_image)
+            all_keypoints.extend(keypoints_image)
+
         yield {
-            "record": item,
-            "video": sequence_frames,
-            "image": image,
-            "entity_image": entity_image,
-            "entities_video": entities_video,
-            "bbox_image": bbox_image,
-            "mask_image": mask_image,
-            "keypoints_image": keypoints_image,
-            "bboxes_video": bboxes_video,
-            "keypoints_video": keypoints_video,
+            "records": item,
+            "sequence_frames": sequence_frames,
+            "images": image,
+            "entities": all_entities,
+            "bboxes": all_bboxes,
+            "masks": all_masks,
+            "keypoints": all_keypoints,
             "tracklets": tracklets,
-            "image_embedding": image_embedding,
-            "video_embeddings": video_embeddings,
         }
 
 

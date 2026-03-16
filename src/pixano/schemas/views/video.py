@@ -3,9 +3,13 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pathlib import Path
+
 import shortuuid
+
 from pixano.utils import issubclass_strict
+
 from .view import View
 
 

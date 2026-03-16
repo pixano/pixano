@@ -9,12 +9,11 @@ License: CECILL-C
   import { ArrowLeft, ArrowRight, CaretLeft, CircleNotch, FloppyDisk } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
-  import { cn, IconButton } from "$lib/ui";
   import { Toolbar } from "../workspace";
-  import { saveData } from "$lib/stores/workspaceStores.svelte";
-
-  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { navigating } from "$app/state";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
+  import { saveData } from "$lib/stores/workspaceStores.svelte";
+  import { cn, IconButton } from "$lib/ui";
 
   interface Props {
     currentItemId: string;
@@ -29,7 +28,7 @@ License: CECILL-C
     goToNeighborItem,
     handleReturnToPreviousPage,
     handleSave,
-    getWorkspaceRecordDisplayCount
+    getWorkspaceRecordDisplayCount,
   }: Props = $props();
 
   const onKeyUp = async (event: KeyboardEvent) => {
@@ -84,7 +83,8 @@ License: CECILL-C
           class="group flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-all duration-200 border border-transparent hover:border-primary/10"
           title="Back to dataset"
         >
-          <CaretLeft weight="regular"
+          <CaretLeft
+            weight="regular"
             class="h-4 w-4 text-primary opacity-0 -ml-1 group-hover:opacity-100 transition-all duration-300"
           />
           <span
@@ -154,7 +154,8 @@ License: CECILL-C
               : "bg-background border-border text-muted-foreground opacity-40",
           )}
         >
-          <FloppyDisk weight="regular"
+          <FloppyDisk
+            weight="regular"
             class={cn(
               "h-5 w-5 transition-transform duration-300",
               saveData.value.length > 0 && "scale-110",

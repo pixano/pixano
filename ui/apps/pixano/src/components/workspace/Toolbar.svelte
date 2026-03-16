@@ -5,22 +5,31 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Eraser, Cursor, PaintBucket, PaintBrush, PencilSimple, Square, Graph } from "phosphor-svelte";
-  import { LineSegments } from "phosphor-svelte";
   import {
-    type PolygonOutputMode,
-    ToolType,
+    Cursor,
+    Eraser,
+    Graph,
+    LineSegments,
+    PaintBrush,
+    PaintBucket,
+    PencilSimple,
+    Square,
+  } from "phosphor-svelte";
+
+  import BrushSettings from "./Toolbar/BrushSettings.svelte";
+  import { polygonIcon } from "$lib/assets";
+  import { selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import {
     brushDrawTool,
     brushEraseTool,
     panTool,
     polygonTool,
     polylineTool,
     rectangleTool,
+    ToolType,
+    type PolygonOutputMode,
   } from "$lib/tools";
-  import { IconButton, cn } from "$lib/ui";
-  import { polygonIcon } from "$lib/assets";
-  import { selectedTool } from "$lib/stores/workspaceStores.svelte";
-  import BrushSettings from "./Toolbar/BrushSettings.svelte";
+  import { cn, IconButton } from "$lib/ui";
 
   const selectPanTool = () => {
     if (selectedTool.value !== panTool) {
@@ -114,7 +123,8 @@ License: CECILL-C
       >
         <IconButton
           tooltipContent="Keep Raw Polygon Geometry"
-          selected={selectedTool.value?.type === ToolType.Polygon && selectedTool.value.outputMode === "polygon"}
+          selected={selectedTool.value?.type === ToolType.Polygon &&
+            selectedTool.value.outputMode === "polygon"}
           onclick={() => setPolygonOutputMode("polygon")}
           class="h-8 w-8"
         >
@@ -122,7 +132,8 @@ License: CECILL-C
         </IconButton>
         <IconButton
           tooltipContent="Convert Polygon To Mask"
-          selected={selectedTool.value?.type === ToolType.Polygon && selectedTool.value.outputMode === "mask"}
+          selected={selectedTool.value?.type === ToolType.Polygon &&
+            selectedTool.value.outputMode === "mask"}
           onclick={() => setPolygonOutputMode("mask")}
           class="h-8 w-8"
         >
@@ -164,16 +175,18 @@ License: CECILL-C
       >
         <IconButton
           tooltipContent="Pencil (X to toggle)"
-          onclick={() => selectedTool.value = brushDrawTool}
-          selected={selectedTool.value?.type === ToolType.Brush && selectedTool.value.mode === "draw"}
+          onclick={() => (selectedTool.value = brushDrawTool)}
+          selected={selectedTool.value?.type === ToolType.Brush &&
+            selectedTool.value.mode === "draw"}
           class="h-8 w-8"
         >
           <PencilSimple weight="regular" class="h-4.5 w-4.5" />
         </IconButton>
         <IconButton
           tooltipContent="Eraser (X to toggle)"
-          onclick={() => selectedTool.value = brushEraseTool}
-          selected={selectedTool.value?.type === ToolType.Brush && selectedTool.value.mode === "erase"}
+          onclick={() => (selectedTool.value = brushEraseTool)}
+          selected={selectedTool.value?.type === ToolType.Brush &&
+            selectedTool.value.mode === "erase"}
           class="h-8 w-8"
         >
           <Eraser class="h-4.5 w-4.5" />

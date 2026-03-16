@@ -12,18 +12,18 @@ License: CECILL-C
 export function rleFrString(s: string): number[] {
   const cnts: number[] = [];
   let p = 0;
-  while (p <s.length) {
+  while (p < s.length) {
     let x = 0;
     let k = 0;
     let more = true;
     while (more) {
       const c = s.charCodeAt(p) - 48;
-      x |= (c & 0x1f) <<(5 * k);
+      x |= (c & 0x1f) << (5 * k);
       more = (c & 0x20) !== 0;
       p += 1;
       k += 1;
       if (!more && c & 0x10) {
-        x |= -1 <<(5 * k);
+        x |= -1 << (5 * k);
       }
     }
     if (cnts.length > 2) {
@@ -40,7 +40,7 @@ export function rleFrString(s: string): number[] {
  */
 export function rleToString(cnts: number[]): string {
   let s = "";
-  for (let i = 0; i <cnts.length; i++) {
+  for (let i = 0; i < cnts.length; i++) {
     let x = cnts[i];
     if (i > 2) {
       x -= cnts[i - 2];
@@ -63,10 +63,7 @@ export function rleToString(cnts: number[]): string {
  * White pixels (255,255,255,255) where mask=1, transparent where mask=0.
  * Returns an OffscreenCanvas — avoids the expensive toDataURL() roundtrip.
  */
-export function rleToBitmapCanvas(
-  counts: number[],
-  size: [number, number],
-): OffscreenCanvas {
+export function rleToBitmapCanvas(counts: number[], size: [number, number]): OffscreenCanvas {
   const [h, w] = size;
   const canvas = new OffscreenCanvas(w, h);
   const ctx = canvas.getContext("2d");
@@ -78,7 +75,7 @@ export function rleToBitmapCanvas(
   let idx = 0;
   let pixel = 0; // 0 = background, 1 = foreground (alternates)
   for (const count of counts) {
-    for (let j = 0; j <count; j++) {
+    for (let j = 0; j < count; j++) {
       if (pixel === 1) {
         const col = Math.floor(idx / h);
         const row = idx % h;
@@ -101,10 +98,7 @@ export function rleToBitmapCanvas(
  * Compute a tight alpha bounding box directly from uncompressed RLE counts.
  * This avoids full bitmap materialization + getImageData scan on the main thread.
  */
-export function rleCountsToBounds(
-  counts: number[],
-  size: [number, number],
-): MaskBounds | null {
+export function rleCountsToBounds(counts: number[], size: [number, number]): MaskBounds | null {
   const [h, w] = size;
   if (h <= 0 || w <= 0 || counts.length === 0) return null;
 
@@ -166,8 +160,8 @@ export function maskDataToFortranArrayToRle(
   // Flatten row-major input to column-major order
   const total = h * w;
   const colMajor = new Uint8Array(total);
-  for (let col = 0; col <w; col++) {
-    for (let row = 0; row <h; row++) {
+  for (let col = 0; col < w; col++) {
+    for (let row = 0; row < h; row++) {
       colMajor[col * h + row] = input[row * w + col] > 0 ? 1 : 0;
     }
   }
@@ -176,7 +170,7 @@ export function maskDataToFortranArrayToRle(
   const counts: number[] = [];
   let currentVal = 0;
   let runLen = 0;
-  for (let i = 0; i <total; i++) {
+  for (let i = 0; i < total; i++) {
     if (colMajor[i] === currentVal) {
       runLen++;
     } else {
@@ -295,7 +289,7 @@ export function dataUrlToBlob(dataUrl: string): Blob | null {
     const mimeType = match[1] || "image/png";
     const bytes = atob(parts[1]);
     const buffer = new Uint8Array(bytes.length);
-    for (let i = 0; i <bytes.length; i += 1) {
+    for (let i = 0; i < bytes.length; i += 1) {
       buffer[i] = bytes.charCodeAt(i);
     }
     return new Blob([buffer], { type: mimeType });
@@ -304,7 +298,9 @@ export function dataUrlToBlob(dataUrl: string): Blob | null {
   }
 }
 
-export function getAlphaBoundingBox(canvas: HTMLCanvasElement | OffscreenCanvas): MaskBounds | null {
+export function getAlphaBoundingBox(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+): MaskBounds | null {
   const ctx = canvas.getContext("2d");
   if (!hasImageDataAccess(ctx)) return null;
 
@@ -318,18 +314,18 @@ export function getAlphaBoundingBox(canvas: HTMLCanvasElement | OffscreenCanvas)
   let maxX = -1;
   let maxY = -1;
 
-  for (let y = 0; y <height; y += 1) {
-    for (let x = 0; x <width; x += 1) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
       const alpha = imageData[(y * width + x) * 4 + 3];
       if (alpha === 0) continue;
-      if (x <minX) minX = x;
-      if (y <minY) minY = y;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
       if (x > maxX) maxX = x;
       if (y > maxY) maxY = y;
     }
   }
 
-  if (maxX <minX || maxY <minY) {
+  if (maxX < minX || maxY < minY) {
     return null;
   }
 
@@ -345,9 +341,10 @@ export function getAlphaBoundingBox(canvas: HTMLCanvasElement | OffscreenCanvas)
  * Convert a canvas alpha channel to column-major (Fortran order) RLE.
  * Pixels with alpha > 0 are foreground (1), transparent pixels are background (0).
  */
-export function canvasAlphaToRle(
-  canvas: HTMLCanvasElement | OffscreenCanvas,
-): { counts: number[]; size: [number, number] } {
+export function canvasAlphaToRle(canvas: HTMLCanvasElement | OffscreenCanvas): {
+  counts: number[];
+  size: [number, number];
+} {
   const ctx = (canvas as HTMLCanvasElement).getContext("2d") as
     | CanvasRenderingContext2D
     | OffscreenCanvasRenderingContext2D;
@@ -358,8 +355,8 @@ export function canvasAlphaToRle(
 
   // Convert alpha channel to column-major (Fortran order) binary array
   const colMajor = new Uint8Array(total);
-  for (let col = 0; col <width; col++) {
-    for (let row = 0; row <height; row++) {
+  for (let col = 0; col < width; col++) {
+    for (let row = 0; row < height; row++) {
       colMajor[col * height + row] = data[(row * width + col) * 4 + 3] > 0 ? 1 : 0;
     }
   }
@@ -368,7 +365,7 @@ export function canvasAlphaToRle(
   const counts: number[] = [];
   let currentVal = 0;
   let runLen = 0;
-  for (let i = 0; i <total; i++) {
+  for (let i = 0; i < total; i++) {
     if (colMajor[i] === currentVal) {
       runLen++;
     } else {

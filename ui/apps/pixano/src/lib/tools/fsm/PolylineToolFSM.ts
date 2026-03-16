@@ -5,8 +5,8 @@ License: CECILL-C
 -------------------------------------*/
 
 import type {
-  Point2D,
   IndexedPoint2D,
+  Point2D,
   ToolContext,
   ToolEvent,
   ToolFSM,
@@ -208,10 +208,7 @@ export class PolylineToolFSM implements ToolFSM {
           if (currentState.mode === "drawing" && currentState.points.length <= 1) {
             return {
               newState: { phase: "idle" },
-              sideEffects: [
-                { type: "updatePreview", preview: null },
-                { type: "abortTransaction" },
-              ],
+              sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
             };
           }
         }
@@ -232,10 +229,7 @@ export class PolylineToolFSM implements ToolFSM {
 
           return {
             newState: { phase: "idle" },
-            sideEffects: [
-              { type: "updatePreview", preview: null },
-              { type: "abortTransaction" },
-            ],
+            sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
           };
         }
         break;
@@ -245,9 +239,7 @@ export class PolylineToolFSM implements ToolFSM {
     return { newState: state, sideEffects: [] };
   }
 
-  private confirmPolyline(
-    paths: readonly (readonly IndexedPoint2D[])[],
-  ): ToolTransition {
+  private confirmPolyline(paths: readonly (readonly IndexedPoint2D[])[]): ToolTransition {
     const sideEffects: ToolSideEffect[] = [
       { type: "updatePreview", preview: null },
       {

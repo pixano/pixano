@@ -4,22 +4,21 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
+import { entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
   Entity,
-  WorkspaceType,
   entityHasTracklets,
+  WorkspaceType,
+  type AnnotationThumbnail,
   type BBox,
   type Mask,
   type MultiPath,
-  type AnnotationThumbnail,
   type Schema,
   type Tracklet,
 } from "$lib/types/dataset";
-
-import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
-import { entities } from "$lib/stores/workspaceStores.svelte";
 import type { ItemsMeta, MView } from "$lib/types/workspace";
 import type { WorkspaceManifest, WorkspaceTableGroup } from "$lib/workspace/manifest";
 import { resolveWorkspaceTable } from "$lib/workspace/manifest";
@@ -28,10 +27,7 @@ import { resolveWorkspaceTable } from "$lib/workspace/manifest";
  * Pure variant of getTopEntity that accepts an entities list directly,
  * avoiding reading the store through the Svelte 5 proxy during loadData().
  */
-export const getTopEntityFromList = (
-  obj: Annotation | Entity,
-  entitiesList: Entity[],
-): Entity => {
+export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Entity[]): Entity => {
   let entity: Entity | undefined;
   if (obj.table_info.group === "entities") {
     entity = obj as Entity;
@@ -173,7 +169,10 @@ export const defineAnnotationThumbnail = (
     const mp = object as MultiPath;
     const c = mp.data.coords;
     if (c && c.length >= 4) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
       for (let i = 0; i < c.length; i += 2) {
         if (c[i] < minX) minX = c[i];
         if (c[i + 1] < minY) minY = c[i + 1];
@@ -196,12 +195,12 @@ export const defineAnnotationThumbnail = (
     metas.type === WorkspaceType.VIDEO
       ? (() => {
           if (frame_index === undefined || !Array.isArray(candidateView)) return null;
-          const frame = (candidateView)[frame_index];
+          const frame = candidateView[frame_index];
           return frame?.data ?? null;
         })()
       : (() => {
           if (Array.isArray(candidateView)) return null;
-          return (candidateView).data;
+          return candidateView.data;
         })();
 
   if (!viewData?.url) return null;

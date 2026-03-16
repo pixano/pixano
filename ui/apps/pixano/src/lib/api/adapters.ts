@@ -1,16 +1,21 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import { normalizeTableName } from "./resourceNames";
 import type {
   DatasetInfoResponse,
   DatasetResponse,
   EntityResponse,
   ImageResponse,
   PaginatedResponse,
-  PreviewDescriptor,
   RecordComponentResponse,
   RecordResponse,
   SFrameResponse,
   TextResponse,
 } from "./restTypes";
-import { normalizeTableName } from "./resourceNames";
 import {
   BaseSchema,
   type Dataset,
@@ -172,7 +177,9 @@ export function toDatasetBrowser(
     items.sort((left, right) => {
       const leftValue = left[sort.col];
       const rightValue = right[sort.col];
-      const cmp = String(leftValue ?? "").localeCompare(String(rightValue ?? ""));
+      const leftStr = leftValue == null ? "" : String(leftValue as string | number);
+      const rightStr = rightValue == null ? "" : String(rightValue as string | number);
+      const cmp = leftStr.localeCompare(rightStr);
       return sort.order === "desc" ? -cmp : cmp;
     });
   }
@@ -189,7 +196,7 @@ export function toDatasetBrowser(
       }
     }
 
-    const viewPreviews = record.view_previews as Record<string, PreviewDescriptor> | undefined;
+    const viewPreviews = record.view_previews;
     for (const [logicalName, preview] of Object.entries(viewPreviews ?? {})) {
       row[logicalName] = preview.preview_url;
       viewColumns.set(logicalName, preview.kind);
@@ -265,14 +272,7 @@ export function toRawRecord(record: RecordResponse, tableName = "records"): RawS
 }
 
 export function toRawEntity(entity: EntityResponse, tableName = "entities"): RawSchemaData {
-  const {
-    id,
-    created_at = "",
-    updated_at = "",
-    record_id = "",
-    parent_id = "",
-    ...data
-  } = entity;
+  const { id, created_at = "", updated_at = "", record_id = "", parent_id = "", ...data } = entity;
   return {
     id,
     created_at,
@@ -287,13 +287,7 @@ export function toRawEntity(entity: EntityResponse, tableName = "entities"): Raw
 }
 
 export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): RawSchemaData {
-  const {
-    id,
-    created_at = "",
-    updated_at = "",
-    record_id = "",
-    logical_name = "",
-  } = view;
+  const { id, created_at = "", updated_at = "", record_id = "", logical_name = "" } = view;
   const src = "src" in view ? view.src : undefined;
   const width = "width" in view ? view.width : undefined;
   const height = "height" in view ? view.height : undefined;
@@ -377,8 +371,14 @@ export function toRawAnnotation(
   // Reverse-map backend field names for tracklets
   if (normalizedTableName === "tracklets") {
     const d = result.data as Record<string, unknown>;
-    if ("start_timestep" in d) { d.start_frame = d.start_timestep; delete d.start_timestep; }
-    if ("end_timestep" in d) { d.end_frame = d.end_timestep; delete d.end_timestep; }
+    if ("start_timestep" in d) {
+      d.start_frame = d.start_timestep;
+      delete d.start_timestep;
+    }
+    if ("end_timestep" in d) {
+      d.end_frame = d.end_timestep;
+      delete d.end_timestep;
+    }
   }
 
   return result;

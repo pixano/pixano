@@ -8,8 +8,8 @@ License: CECILL-C
   import { Trash } from "phosphor-svelte";
 
   import * as api from "$lib/api";
-  import { IconButton } from "$lib/ui";
   import { pixanoInferenceSegmentationModelsStore } from "$lib/stores/inferenceStores.svelte";
+  import { IconButton } from "$lib/ui";
 
   interface Props {
     modelName: string;

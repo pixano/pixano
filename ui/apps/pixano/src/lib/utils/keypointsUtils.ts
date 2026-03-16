@@ -13,9 +13,10 @@ import type { KeypointVertex } from "$lib/types/shapeTypes";
  *
  * Accepts KeypointVertex[] (combined position + metadata from editing code).
  */
-export function verticesToCoordsAndStates(
-  vertices: ReadonlyArray<KeypointVertex>,
-): { coords: number[]; states: string[] } {
+export function verticesToCoordsAndStates(vertices: ReadonlyArray<KeypointVertex>): {
+  coords: number[];
+  states: string[];
+} {
   const coords: number[] = [];
   const states: string[] = [];
   for (const vertex of vertices) {

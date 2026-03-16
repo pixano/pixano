@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { AnnotationNode, DocumentNode, NodeId } from "$lib/document";
-
 import type { Command } from "$lib/types/commands";
 
 // --------------- Add Annotation ---------------
@@ -43,10 +42,7 @@ export interface UpdateAnnotationPayload {
   readonly changes: Readonly<Record<string, unknown>>;
 }
 
-export function createUpdateAnnotation(
-  nodeId: NodeId,
-  changes: Record<string, unknown>,
-): Command {
+export function createUpdateAnnotation(nodeId: NodeId, changes: Record<string, unknown>): Command {
   return {
     type: "UpdateAnnotation",
     payload: { nodeId, changes } satisfies UpdateAnnotationPayload,

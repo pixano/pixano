@@ -2,19 +2,22 @@
 Copyright: CEA-LIST/DIASI/SIALV/LVA
 Author : pixano@cea.fr
 License: CECILL-C
---------------------------------------->
+-------------------------------------->
 
 <script lang="ts">
   // Imports
   import { Group, Rect } from "svelte-konva";
 
-  import type { Reference } from "$lib/types/dataset";
-  import type { CreateKeypointShape, SaveKeyBoxShape } from "$lib/types/shapeTypes";
-  import type { KeypointAnnotation, KeypointVertex } from "$lib/types/shapeTypes";
-  import { initDisplayControl } from "$lib/types/dataset";
-
-  import { findRectBoundaries } from "$lib/utils/keypointsUtils";
   import Keypoints from "./keypoints/Keypoint.svelte";
+  import type { Reference } from "$lib/types/dataset";
+  import { initDisplayControl } from "$lib/types/dataset";
+  import type {
+    CreateKeypointShape,
+    KeypointAnnotation,
+    KeypointVertex,
+    SaveKeyBoxShape,
+  } from "$lib/types/shapeTypes";
+  import { findRectBoundaries } from "$lib/utils/keypointsUtils";
 
   interface Props {
     zoomFactor: number;
@@ -23,12 +26,7 @@ License: CECILL-C
     onNewShapeChange?: (shape: CreateKeypointShape | SaveKeyBoxShape) => void;
   }
 
-  let {
-    zoomFactor,
-    newShape,
-    viewRef,
-    onNewShapeChange
-  }: Props = $props();
+  let { zoomFactor, newShape, viewRef, onNewShapeChange }: Props = $props();
 
   let keypointsId = ""; //filler value while we don't have the real values for id and template_id
 
@@ -80,7 +78,7 @@ License: CECILL-C
 
 {#if newShape.viewRef.name === viewRef.name}
   <Group id={keypointsId} x={0} y={0}>
-    <Keypoints {keypointStructure} {zoomFactor} {findPointCoordinate} onPointChange={onPointChange}>
+    <Keypoints {keypointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
       {#if newShape.status === "creating"}
         <Rect
           x={findCreationRectangleDimensions(newShape).x}

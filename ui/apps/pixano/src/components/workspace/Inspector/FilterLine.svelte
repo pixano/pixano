@@ -9,9 +9,9 @@ License: CECILL-C
 
   import {
     getOperatorsForType,
+    type EntityFilter,
     type FieldCol,
     type FieldOperator,
-    type EntityFilter,
   } from "$lib/types/workspace";
 
   interface Props {
@@ -23,6 +23,7 @@ License: CECILL-C
   let { filter = $bindable(), tableColumns, fieldColumns }: Props = $props();
 
   let ftype: string = $state("str");
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let fieldOperators: FieldOperator[] = $state([]);
 
   const syncFieldConfig = () => {
@@ -62,7 +63,9 @@ License: CECILL-C
 <div class="rounded-lg border border-border/40 bg-background/70 p-2 space-y-2">
   <div class="flex flex-wrap items-center gap-2">
     {#if filter.logicOperator !== "FIRST"}
-      <span class="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+      <span
+        class="rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary"
+      >
         {filter.logicOperator}
       </span>
     {/if}

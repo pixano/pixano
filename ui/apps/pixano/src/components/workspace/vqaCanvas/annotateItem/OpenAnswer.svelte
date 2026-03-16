@@ -6,9 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   import type { Message } from "$lib/types/dataset";
-  import { AutoResizeTextarea } from "$lib/ui";
-
   import { ContentChangeEventType, type ContentChangeEvent } from "$lib/types/vqa";
+  import { AutoResizeTextarea } from "$lib/ui";
 
   interface Props {
     answer: Message | null;

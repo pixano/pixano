@@ -12,11 +12,7 @@ export type {
   PromptByQuestionType,
 } from "$lib/stores/vqaStores.svelte";
 export type { LabelFormat, StoreQuestionEvent, VqaMessageContext } from "$lib/types/vqa";
-export {
-  ContentChangeEventType,
-  isNewAnswerEvent,
-  isUpdatedMessageEvent,
-} from "$lib/types/vqa";
+export { ContentChangeEventType, isNewAnswerEvent, isUpdatedMessageEvent } from "$lib/types/vqa";
 export type {
   ContentChangeEvent,
   DeleteQuestionEvent,

@@ -63,10 +63,34 @@ def test_tracklet_init():
         (1, -1, -1.0, -1.0, "end_frame must be set if start_frame is set."),
         (-1, -1, -1.0, 1.0, "start_timestamp must be set if end_timestamp is set."),
         (-1, -1, 1.0, -1.0, "end_timestamp must be set if start_timestamp is set."),
-        (-1, -1, -2.0, -1.0, "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -1, -1.0, -2.0, "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-2, -1, -1.0, -1.0, "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -2, -1.0, -1.0, "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1."),
+        (
+            -1,
+            -1,
+            -2.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
+        (
+            -1,
+            -1,
+            -1.0,
+            -2.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
+        (
+            -2,
+            -1,
+            -1.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
+        (
+            -1,
+            -2,
+            -1.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
     ],
 )
 def test_invalid_tracklet(start_timestep, end_timestep, start_timestamp, end_timestamp, match):
