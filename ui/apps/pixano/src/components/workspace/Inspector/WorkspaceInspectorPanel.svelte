@@ -7,12 +7,12 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { BoundingBox, PencilSimple } from "phosphor-svelte";
-  import { Skeleton, Tabs } from "$lib/ui";
 
-  import { newShape } from "$lib/stores/workspaceStores.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import EntitiesInspector from "./EntitiesInspector.svelte";
   import SceneInspector from "./SceneInspector.svelte";
+  import { newShape } from "$lib/stores/workspaceStores.svelte";
+  import { Skeleton, Tabs } from "$lib/ui";
 
   interface Props {
     isLoading: boolean;
@@ -32,7 +32,9 @@ License: CECILL-C
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
       <div class="shrink-0 border-b border-border/50 bg-card px-2.5 py-2">
-        <Tabs.List class="grid grid-cols-2 rounded-xl border border-border/60 bg-muted/20 p-1 gap-1">
+        <Tabs.List
+          class="grid grid-cols-2 rounded-xl border border-border/60 bg-muted/20 p-1 gap-1"
+        >
           <Tabs.Trigger
             value="objects"
             class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"

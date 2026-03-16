@@ -12,10 +12,9 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 from lancedb.db import LanceTable
+from lancedb.pydantic import LanceModel as _LanceModel
 from lancedb.query import LanceEmptyQueryBuilder
 from typing_extensions import Self
-
-from lancedb.pydantic import LanceModel as _LanceModel
 
 
 T = TypeVar("T", bound=_LanceModel)
@@ -213,7 +212,9 @@ class TableQueryBuilder:
         if self._columns is None or self._columns == ["*"]:
             # If no columns are selected, select all columns except blob columns
             # Can have better performance than *
-            columns = [name for name in self.table.schema.names if name not in self._blob_columns]
+            columns: list[str] | dict[str, str] = [
+                name for name in self.table.schema.names if name not in self._blob_columns
+            ]
         else:
             columns = self._columns
 

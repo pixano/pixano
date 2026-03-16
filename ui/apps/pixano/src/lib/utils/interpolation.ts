@@ -6,10 +6,12 @@ License: CECILL-C
 
 import { nanoid } from "nanoid";
 
+import {
+  HIGHLIGHTED_BOX_STROKE_FACTOR,
+  NOT_ANNOTATION_ITEM_OPACITY,
+} from "$lib/constants/workspaceConstants";
 import { BBox } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
-
-import { HIGHLIGHTED_BOX_STROKE_FACTOR, NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
 
 export const boxLinearInterpolation = (
   boxes: BBox[], //bboxes of the tracklet
@@ -18,7 +20,7 @@ export const boxLinearInterpolation = (
 ): BBox | undefined => {
   //Note: this suppose boxes are sorted by frame_index (it should)
   const endIndex = boxes.findIndex((box) => box.ui.frame_index >= imageIndex);
-  if (endIndex <0) {
+  if (endIndex < 0) {
     return undefined;
   }
   const endBox = boxes[endIndex];
@@ -26,8 +28,7 @@ export const boxLinearInterpolation = (
     return endBox;
   }
   const startBox = boxes[endIndex - 1] || boxes[0];
-  if (startBox.ui.frame_index > imageIndex || endBox.ui.frame_index <imageIndex)
-    return undefined;
+  if (startBox.ui.frame_index > imageIndex || endBox.ui.frame_index < imageIndex) return undefined;
   const [startX, startY, startWidth, startHeight] = startBox.data.coords;
   const [endX, endY, endWidth, endHeight] = endBox.data.coords;
 
@@ -76,7 +77,7 @@ export const keypointsLinearInterpolation = (
 ): KeypointAnnotation | undefined => {
   //Note: this suppose keypoints are sorted by frame_index (it should)
   const endIndex = keypoints.findIndex((kpt) => kpt.ui.frame_index >= imageIndex);
-  if (endIndex <0) {
+  if (endIndex < 0) {
     return undefined;
   }
   const endKpt = keypoints[endIndex];
@@ -84,8 +85,7 @@ export const keypointsLinearInterpolation = (
     return endKpt;
   }
   const startKpt = keypoints[endIndex - 1] || keypoints[0];
-  if (startKpt.ui.frame_index > imageIndex || endKpt.ui.frame_index <imageIndex)
-    return undefined;
+  if (startKpt.ui.frame_index > imageIndex || endKpt.ui.frame_index < imageIndex) return undefined;
   if (endKpt.ui.frame_index === startKpt.ui.frame_index) {
     return startKpt;
   } else {

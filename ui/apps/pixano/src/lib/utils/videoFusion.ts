@@ -13,9 +13,7 @@ import { highlightAnnotationIds } from "$lib/utils/highlightOperations";
  * Build combined tracklet frame ranges for each view of the given entities.
  * Returns a record keyed by view name, each containing merged [start, end] ranges.
  */
-export function mergeFusionRangesByView(
-  toFuse: Entity[],
-): Record<string, [number, number][]> {
+export function mergeFusionRangesByView(toFuse: Entity[]): Record<string, [number, number][]> {
   const tracksByView: Record<string, Tracklet[]> = {};
   toFuse
     .flatMap((ent) =>
@@ -34,7 +32,7 @@ export function mergeFusionRangesByView(
     if (viewTracks.length > 0) {
       viewTracks.sort((a, b) => a.data.start_frame - b.data.start_frame);
       let currentTrack = { ...viewTracks[0] };
-      for (let i = 1; i <viewTracks.length; i++) {
+      for (let i = 1; i < viewTracks.length; i++) {
         const trk = viewTracks[i];
         if (trk.data.start_frame <= currentTrack.data.end_frame) {
           currentTrack.data.end_frame = Math.max(currentTrack.data.end_frame, trk.data.end_frame);
@@ -66,7 +64,7 @@ export function canMergeRangesByView(
     const allRanges = [...ranges1, ...ranges2].sort((a, b) =>
       a[0] === b[0] ? a[1] - b[1] : a[0] - b[0],
     );
-    for (let i = 1; i <allRanges.length; i++) {
+    for (let i = 1; i < allRanges.length; i++) {
       const prev = allRanges[i - 1];
       const curr = allRanges[i];
       if (prev[1] >= curr[0]) {
@@ -84,9 +82,7 @@ export function canMergeRangesByView(
 export function checkMergeForbids(toFuse: Entity[]): void {
   const forbids: Entity[] = merges.value.forbids;
   const toFuseRanges = mergeFusionRangesByView(toFuse);
-  const others = entities.value.filter(
-    (ent) => !toFuse.includes(ent) && ent.data.parent_id === "",
-  );
+  const others = entities.value.filter((ent) => !toFuse.includes(ent) && ent.data.parent_id === "");
   others.forEach((ent) => {
     const ranges = mergeFusionRangesByView([ent]);
     if (canMergeRangesByView(ranges, toFuseRanges)) {

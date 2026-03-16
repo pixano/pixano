@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Embeddings router."""
 
 from pixano.api.resources import EMBEDDING_RESOURCE

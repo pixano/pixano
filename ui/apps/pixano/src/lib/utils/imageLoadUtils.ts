@@ -6,8 +6,8 @@ License: CECILL-C
 
 import { Image as ImageJS } from "image-js";
 
-import { Image, isImage, type LoadedImagesPerView } from "$lib/types/dataset";
 import { filters, itemMetas } from "$lib/stores/workspaceStores.svelte";
+import { Image, isImage, type LoadedImagesPerView } from "$lib/types/dataset";
 import { toClientAssetUrl } from "$lib/utils/coreUtils";
 
 export const equalizeHistogram = (imageData: ImageData) => {
@@ -18,7 +18,7 @@ export const equalizeHistogram = (imageData: ImageData) => {
   const histG: number[] = new Array(256).fill(0) as number[];
   const histB: number[] = new Array(256).fill(0) as number[];
 
-  for (let i = 0; i <nPixels * 4; i += 4) {
+  for (let i = 0; i < nPixels * 4; i += 4) {
     histR[data[i]]++;
     histG[data[i + 1]]++;
     histB[data[i + 2]]++;
@@ -31,7 +31,7 @@ export const equalizeHistogram = (imageData: ImageData) => {
   cdfG[0] = histG[0];
   cdfB[0] = histB[0];
 
-  for (let i = 1; i <256; i++) {
+  for (let i = 1; i < 256; i++) {
     cdfR[i] = cdfR[i - 1] + histR[i];
     cdfG[i] = cdfG[i - 1] + histG[i];
     cdfB[i] = cdfB[i - 1] + histB[i];
@@ -41,13 +41,13 @@ export const equalizeHistogram = (imageData: ImageData) => {
   const cdfGMin = cdfG.find((value) => value > 0);
   const cdfBMin = cdfB.find((value) => value > 0);
 
-  for (let i = 0; i <256; i++) {
+  for (let i = 0; i < 256; i++) {
     cdfR[i] = ((cdfR[i] - cdfRMin) / (nPixels - cdfRMin)) * 255;
     cdfG[i] = ((cdfG[i] - cdfGMin) / (nPixels - cdfGMin)) * 255;
     cdfB[i] = ((cdfB[i] - cdfBMin) / (nPixels - cdfBMin)) * 255;
   }
 
-  for (let i = 0; i <nPixels * 4; i += 4) {
+  for (let i = 0; i < nPixels * 4; i += 4) {
     data[i] = Math.round(cdfR[data[i]]);
     data[i + 1] = Math.round(cdfG[data[i + 1]]);
     data[i + 2] = Math.round(cdfB[data[i + 2]]);
@@ -64,23 +64,23 @@ export const normalize16BitImage = (image: ImageJS, min: number, max: number): v
 
   const nPixels: number = image.size;
   if (image.channels === 4) {
-    for (let i = 0; i <nPixels; i += 4) {
+    for (let i = 0; i < nPixels; i += 4) {
       let rPixel: number = image.data[i];
       let gPixel: number = image.data[i + 1];
       let bPixel: number = image.data[i + 2];
 
-      rPixel = rPixel <min ? 0 : rPixel > max ? 255 : ((rPixel - min) / (max - min)) * 255;
-      gPixel = gPixel <min ? 0 : gPixel > max ? 255 : ((gPixel - min) / (max - min)) * 255;
-      bPixel = bPixel <min ? 0 : bPixel > max ? 255 : ((bPixel - min) / (max - min)) * 255;
+      rPixel = rPixel < min ? 0 : rPixel > max ? 255 : ((rPixel - min) / (max - min)) * 255;
+      gPixel = gPixel < min ? 0 : gPixel > max ? 255 : ((gPixel - min) / (max - min)) * 255;
+      bPixel = bPixel < min ? 0 : bPixel > max ? 255 : ((bPixel - min) / (max - min)) * 255;
 
       image.data[i] = rPixel;
       image.data[i + 1] = gPixel;
       image.data[i + 2] = bPixel;
     }
   } else {
-    for (let i = 0; i <nPixels; ++i) {
+    for (let i = 0; i < nPixels; ++i) {
       let pixel: number = image.data[i];
-      pixel = pixel <min ? 0 : pixel > max ? 255 : ((pixel - min) / (max - min)) * 255;
+      pixel = pixel < min ? 0 : pixel > max ? 255 : ((pixel - min) / (max - min)) * 255;
       image.data[i] = pixel;
     }
   }
@@ -114,11 +114,7 @@ export async function loadImagesFromViews(
   views: Record<string, Image | Image[]>,
   options: LoadImagesOptions = {},
 ): Promise<LoadedImagesPerView> {
-  const {
-    sortKeys = false,
-    unwrapArrays = false,
-    filterImages = false,
-  } = options;
+  const { sortKeys = false, unwrapArrays = false, filterImages = false } = options;
 
   const images: LoadedImagesPerView = {};
   const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {

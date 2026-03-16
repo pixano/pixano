@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from typing import Any, Literal
 
 import numpy as np
@@ -18,6 +19,7 @@ from .per_frame_annotation import PerFrameAnnotation
 
 class BBox(PerFrameAnnotation):
     """Bounding box using coordinates in xyxy or xywh format.
+
     Attributes:
         coords: List of coordinates in given format.
         format: Coordinates format, 'xyxy' or 'xywh'.
@@ -48,6 +50,7 @@ class BBox(PerFrameAnnotation):
     def none(cls) -> Self:
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" `BBox`.
         """
@@ -62,6 +65,7 @@ class BBox(PerFrameAnnotation):
     @property
     def xyxy_coords(self) -> list[float]:
         """Return the bounding box xyxy coordinates.
+
         Returns:
             Coordinates in xyxy format.
         """
@@ -70,6 +74,7 @@ class BBox(PerFrameAnnotation):
     @property
     def xywh_coords(self) -> list[float]:
         """Return the bounding box xywh coordinates.
+
         Returns:
             Coordinates in xywh format.
         """
@@ -77,6 +82,7 @@ class BBox(PerFrameAnnotation):
 
     def to_xyxy(self) -> Self:
         """Return the bounding box in xyxy format.
+
         Returns:
             Bounding box in xyxy format.
         """
@@ -89,6 +95,7 @@ class BBox(PerFrameAnnotation):
 
     def to_xywh(self) -> Self:
         """Return the bounding box in xywh format.
+
         Returns:
             Bounding box in xyxy format.
         """
@@ -101,9 +108,11 @@ class BBox(PerFrameAnnotation):
 
     def normalize(self, height: int, width: int) -> Self:
         """Return the bounding box with coordinates normalized relatively to the image size.
+
         Args:
             height: Image height.
             width: Image width.
+
         Returns:
             Bounding box with coordinates normalized relatively to the image size.
         """
@@ -116,9 +125,11 @@ class BBox(PerFrameAnnotation):
 
     def denormalize(self, height: int, width: int) -> Self:
         """Return the bounding box with coordinates denormalized relatively to the image size.
+
         Args:
             height: Image height.
             width: Image width.
+
         Returns:
             Bounding box with coordinates denormalized relatively to the image size.
         """
@@ -135,9 +146,11 @@ class BBox(PerFrameAnnotation):
         **kwargs: Any,
     ) -> "BBox":
         """Create a bounding box using normalized xyxy coordinates.
+
         Args:
             xyxy: List of coordinates in xyxy format.
             kwargs: Additional arguments.
+
         Returns:
             The bounding box.
         """
@@ -153,9 +166,11 @@ class BBox(PerFrameAnnotation):
         **kwargs: Any,
     ) -> "BBox":
         """Create a bounding box using normalized xywh coordinates.
+
         Args:
             xywh: List of coordinates in xywh format.
             kwargs: Additional arguments.
+
         Returns:
             The bounding box.
         """
@@ -168,9 +183,11 @@ class BBox(PerFrameAnnotation):
     @staticmethod
     def from_mask(mask: np.ndarray, **kwargs: Any) -> "BBox":
         """Create a bounding box using a NumPy array mask.
+
         Args:
             mask: NumPy array mask.
             kwargs: Additional arguments.
+
         Returns:
             The bounding box.
         """
@@ -186,9 +203,11 @@ class BBox(PerFrameAnnotation):
         **kwargs: Any,
     ) -> "BBox":
         """Create a bounding box using a RLE mask.
+
         Args:
             rle: RLE mask.
             kwargs: Additional arguments.
+
         Returns:
             The bounding box.
         """
@@ -197,6 +216,7 @@ class BBox(PerFrameAnnotation):
 
 class BBox3D(PerFrameAnnotation):
     """A 3D bounding Box.
+
     Attributes:
         coords: List of coordinates in given format.
         format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
@@ -229,6 +249,7 @@ class BBox3D(PerFrameAnnotation):
     def none(cls) -> Self:
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" BBox3D.
         """
@@ -270,6 +291,7 @@ def create_bbox(
     frame_index: int = -1,
 ) -> BBox:
     """Create a `BBox` instance.
+
     Args:
         coords: List of coordinates in given format.
         format: Coordinates format, 'xyxy' or 'xywh'.
@@ -286,6 +308,7 @@ def create_bbox(
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
         frame_index: Frame index.
+
     Returns:
         The created `BBox` instance.
     """
@@ -327,6 +350,7 @@ def create_bbox3d(
     frame_index: int = -1,
 ) -> BBox3D:
     """Create a `BBox3D` instance.
+
     Args:
         coords: The 3D position coordinates.
         format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
@@ -344,6 +368,7 @@ def create_bbox3d(
         entity_dynamic_state_id: Entity dynamic state ID.
         frame_id: Frame/view row ID.
         frame_index: Frame index.
+
     Returns:
         The created `BBox3D` instance.
     """

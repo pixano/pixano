@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { type LoadedImagesPerView } from "$lib/types/dataset";
-
 import { reactiveStore } from "./reactiveStore.svelte";
+import { type LoadedImagesPerView } from "$lib/types/dataset";
 
 // ─── Playback state ─────────────────────────────────────────────────────────
 

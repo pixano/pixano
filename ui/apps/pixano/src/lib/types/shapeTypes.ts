@@ -5,18 +5,18 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { MaskData, Reference } from "./dataset";
-import type { MaskBounds } from "$lib/utils/maskUtils";
 import type {
-  Mutable,
-  IndexedPoint2D,
-  Point2D,
   BoundingBox,
+  IndexedPoint2D,
   KeypointGraph as KeypointSkeleton,
-  KeypointVisibility,
   KeypointVertexMetadata,
+  KeypointVisibility,
+  Mutable,
+  Point2D,
   PolygonEdgeHint,
   PolygonOutputMode,
 } from "./geometry";
+import type { MaskBounds } from "$lib/utils/maskUtils";
 
 // ─── ShapeType ─────────────────────────────────────────────────────────────────
 

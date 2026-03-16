@@ -88,10 +88,7 @@ export class BrushToolFSM implements ToolFSM {
         if (event.type === "cancel") {
           return {
             newState: { phase: "idle" },
-            sideEffects: [
-              { type: "updatePreview", preview: null },
-              { type: "abortTransaction" },
-            ],
+            sideEffects: [{ type: "updatePreview", preview: null }, { type: "abortTransaction" }],
           };
         }
         break;

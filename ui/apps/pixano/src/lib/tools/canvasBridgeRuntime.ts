@@ -6,7 +6,6 @@ License: CECILL-C
 
 import { DocumentImpl, type DocumentNode, type NodeId } from "$lib/document";
 import { createPixanoContext } from "$lib/stores/createPixanoContext";
-import type { ToolBridge } from "$lib/types/store";
 import {
   BrushToolFSM,
   PanToolFSM,
@@ -16,6 +15,7 @@ import {
   type SelectionTool,
   type ToolFSM,
 } from "$lib/tools";
+import type { ToolBridge } from "$lib/types/store";
 
 export function createInternalToolBridge(selectedItemId: string): ToolBridge {
   const now = new Date().toISOString();

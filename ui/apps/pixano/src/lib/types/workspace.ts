@@ -17,6 +17,11 @@ import {
   type SequenceFrame,
 } from "$lib/types/dataset";
 import type { FeatureValues } from "$lib/types/shapeTypes";
+import type {
+  InputFeatures,
+  ListInput as ListInputDef,
+  OtherInput as OtherInputDef,
+} from "$lib/utils/featureValidationSchemas";
 
 export type MView = Record<string, Image | SequenceFrame[]>;
 export type WorkspaceViewerItem = {
@@ -31,12 +36,6 @@ export type WorkspaceData = WorkspaceViewerItem & {
   entities: Record<string, Entity[]>;
   annotations: Record<string, Annotation[]>;
 };
-
-import type {
-  ListInput as ListInputDef,
-  OtherInput as OtherInputDef,
-  InputFeatures,
-} from "$lib/utils/featureValidationSchemas";
 
 export type ListInput = ListInputDef;
 

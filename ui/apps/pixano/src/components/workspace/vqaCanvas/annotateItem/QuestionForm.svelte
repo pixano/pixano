@@ -5,11 +5,20 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { CheckCircle, Clock, ListNumbers, PencilSimple, FloppyDisk, Sparkle, Trash, X } from "phosphor-svelte";
+  import {
+    CheckCircle,
+    Clock,
+    FloppyDisk,
+    ListNumbers,
+    PencilSimple,
+    Sparkle,
+    Trash,
+    X,
+  } from "phosphor-svelte";
 
-  import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
-
+  import { deserializeMessageContent, isQuestionCompleted } from "./utils";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
+  import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
   import type { LabelFormat, QuestionThread } from "$lib/types/vqa";
   import {
     ContentChangeEventType,
@@ -17,7 +26,6 @@ License: CECILL-C
     type DeleteQuestionEvent,
     type GenerateAnswerEvent,
   } from "$lib/types/vqa";
-  import { deserializeMessageContent, isQuestionCompleted } from "./utils";
 
   interface Props {
     thread: QuestionThread;
@@ -36,8 +44,6 @@ License: CECILL-C
   }: Props = $props();
   const question = $derived(thread.question);
   const messages = $derived(thread.messages);
-
-
 
   let editingId: string | null = $state(null);
   let editContent = $state("");
@@ -74,7 +80,6 @@ License: CECILL-C
     });
   };
 
-
   const getChoiceLabel = (index: number, format: LabelFormat | undefined): string => {
     switch (format) {
       case "numeric":
@@ -88,7 +93,6 @@ License: CECILL-C
         return String.fromCharCode(65 + index);
     }
   };
-
 
   const getAnswerDisplay = (answer: Message): { selection: string; explanation: string } => {
     if (isOpen) {
@@ -116,16 +120,19 @@ License: CECILL-C
   let choices = $derived(question.data.choices as string[]);
   let answers = $derived(thread.answers);
   let questionCompleted = $derived(isQuestionCompleted(messages));
-  let isSingleChoice =
-    $derived(questionType === QuestionTypeEnum.SINGLE_CHOICE ||
-    questionType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION);
+  let isSingleChoice = $derived(
+    questionType === QuestionTypeEnum.SINGLE_CHOICE ||
+      questionType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION,
+  );
   // Determine label format from UI metadata (or default to none for single choice, alpha_upper otherwise)
-  let labelFormat =
-    $derived(((question.ui as Record<string, unknown>)?.labelFormat as LabelFormat | undefined) ??
-    (isSingleChoice ? "none" : "alpha_upper"));
-  let isMultiChoice =
-    $derived(questionType === QuestionTypeEnum.MULTI_CHOICE ||
-    questionType === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION);
+  let labelFormat = $derived(
+    ((question.ui as Record<string, unknown>)?.labelFormat as LabelFormat | undefined) ??
+      (isSingleChoice ? "none" : "alpha_upper"),
+  );
+  let isMultiChoice = $derived(
+    questionType === QuestionTypeEnum.MULTI_CHOICE ||
+      questionType === QuestionTypeEnum.MULTI_CHOICE_EXPLANATION,
+  );
   let isOpen = $derived(questionType === QuestionTypeEnum.OPEN);
 </script>
 

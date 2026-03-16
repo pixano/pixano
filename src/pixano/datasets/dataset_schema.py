@@ -11,20 +11,17 @@ table schemas to/from JSON-compatible dicts.  These are used by
 :class:`DatasetInfo` to persist the ``tables`` mapping in ``info.json``.
 """
 
-import json
 from base64 import b64decode, b64encode
 from datetime import datetime
-from pathlib import Path
 from typing import Any, get_args, get_origin
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import BaseModel, Field, create_model
 from pydantic_core import PydanticUndefined
 
-from pixano.features.types.nd_array_float import NDArrayFloat
 from pixano.features.pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATATYPE
+from pixano.features.types.nd_array_float import NDArrayFloat
 from pixano.schemas import CANONICAL_SCHEMA_MAP, BaseIntrinsics, Extrinsics, Intrinsics
-from pixano.schemas.views import View
 
 
 # ---------------------------------------------------------------------------
@@ -61,13 +58,16 @@ class DatasetItem(BaseModel):
 
     @classmethod
     def to_dataset_schema(cls):
+        """Convert to dataset schema (unsupported legacy method)."""
         raise NotImplementedError("DatasetItem compatibility methods are not supported by the record-based API.")
 
     @classmethod
     def from_dataset_schema(cls, schema):
+        """Build from dataset schema (unsupported legacy method)."""
         raise NotImplementedError("DatasetItem compatibility methods are not supported by the record-based API.")
 
     def to_schemas_data(self, schema):
+        """Convert to schemas data (unsupported legacy method)."""
         raise NotImplementedError("DatasetItem compatibility methods are not supported by the record-based API.")
 
 
@@ -142,8 +142,8 @@ def _serialize_annotation(annotation: Any) -> dict[str, Any]:
 
     if get_origin(inner) is None and isinstance(inner, type) and issubclass(inner, FixedSizeListMixin):
         payload["type"] = "FixedSizeList"
-        payload["dim"] = inner.dim()
-        payload["value_type"] = SERIALIZE_PYARROW_DATATYPE[inner.value_arrow_type()]
+        payload["dim"] = inner.dim()  # type: ignore[attr-defined]
+        payload["value_type"] = SERIALIZE_PYARROW_DATATYPE[inner.value_arrow_type()]  # type: ignore[attr-defined]
         return payload
 
     if get_origin(inner) is not None:
@@ -201,11 +201,11 @@ def _coerce_manifest_default(default: Any, annotation: Any, collection: bool) ->
             return default
         inner = annotation
         if isinstance(inner, type) and issubclass(inner, BaseModel):
-            return [inner.model_validate(item) if isinstance(item, dict) else item for item in default]
+            return [inner.model_validate(item) if isinstance(item, dict) else item for item in default]  # type: ignore[attr-defined]
         return default
 
     if isinstance(annotation, type) and issubclass(annotation, BaseModel) and isinstance(default, dict):
-        return annotation.model_validate(default)
+        return annotation.model_validate(default)  # type: ignore[attr-defined]
 
     return default
 
@@ -259,8 +259,8 @@ def _serialize_table_schema(schema: type[LanceModel]) -> dict[str, Any]:
         "base": base_type.__name__,
         "fields": {
             field_name: _serialize_field(field_name, field_info)
-            for field_name, field_info in schema.model_fields.items()
-            if not _field_matches_base(field_name, field_info, base_type.model_fields.get(field_name))
+            for field_name, field_info in schema.model_fields.items()  # type: ignore[attr-defined]
+            if not _field_matches_base(field_name, field_info, base_type.model_fields.get(field_name))  # type: ignore[attr-defined]
         },
     }
 

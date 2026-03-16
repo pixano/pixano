@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pydantic import model_validator
 from typing_extensions import Self
 
@@ -20,6 +21,7 @@ class Tracklet(EntityAnnotation):
         start_timestamp: The start timestamp of the tracklet.
         end_timestamp: The end timestamp of the tracklet.
     """
+
     start_timestep: int = -1
     end_timestep: int = -1
     start_timestamp: float = -1.0
@@ -53,6 +55,7 @@ class Tracklet(EntityAnnotation):
             if self.start_timestamp > self.end_timestamp:
                 raise ValueError("start_timestamp must be less than or equal to end_timestamp.")
         return self
+
 
 def is_tracklet(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a Tracklet or subclass of Tracklet."""

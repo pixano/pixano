@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from .embedding import (
     Embedding,
     ViewEmbedding,
@@ -10,6 +11,8 @@ from .embedding import (
     is_embedding,
     is_view_embedding,
 )
+
+
 __all__ = [
     "Embedding",
     "ViewEmbedding",

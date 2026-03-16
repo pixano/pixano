@@ -36,10 +36,10 @@ from pixano.schemas import (
     Record,
     SchemaGroup,
     ViewEmbedding,
-    validate_canonical_table_map,
     is_image,
     is_sequence_frame,
     is_view_embedding,
+    validate_canonical_table_map,
 )
 from pixano.utils.python import to_sql_list, unique_list
 
@@ -49,12 +49,7 @@ from .dataset_stat import DatasetStatistic
 
 
 if TYPE_CHECKING:
-    from ..schemas import (
-        Embedding,
-        Entity,
-        RecordComponent,
-        View,
-    )
+    pass
 
 
 def _combine_where_clauses(*clauses: str | None) -> str | None:
@@ -596,6 +591,7 @@ class Dataset:
         Args:
             table_name: View table name containing temporal frames.
             record_id: The record ID to filter by.
+            view_name: Optional logical view name to filter by.
             start_frame: Starting frame index.
             batch_size: Number of frames to load.
 
@@ -1100,7 +1096,7 @@ class Dataset:
         has_timestamps = hasattr(data[0], "created_at") if data else False
 
         if has_timestamps:
-            ids_found: dict[str, datetime] = {
+            ids_found: dict[str, datetime | None] = {
                 row["id"]: row["created_at"]
                 for row in TableQueryBuilder(table, self._db_connection)
                 .select(["id", "created_at"])

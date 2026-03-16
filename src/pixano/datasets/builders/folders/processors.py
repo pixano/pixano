@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from __future__ import annotations
 
 import json
@@ -65,6 +71,7 @@ class TemporalRowFactory:
     """Create temporal entities and states for folder processors."""
 
     def __init__(self, source: AnnotationSource) -> None:
+        """Initialize the factory with annotation source metadata."""
         self.source = source
 
     def create_tracking_entity(
@@ -121,6 +128,7 @@ class MaskTrackProcessor:
         schema_resolver: TemporalSchemaResolver,
         row_factory: TemporalRowFactory,
     ) -> None:
+        """Initialize the mask track processor with source directory and schemas."""
         self.source_dir = source_dir
         self.annotations_schema = annotations_schema
         self.schema_resolver = schema_resolver
@@ -201,7 +209,7 @@ class MaskTrackProcessor:
                         continue
 
                     object_appearances[obj_id].append((frame_index, timestamp))
-                    entity = object_entities.get(obj_id)
+                    entity = object_entities.get(obj_id)  # type: ignore[assignment]
                     entity_id = entity.id if entity else ""
                     tracklet_id = object_tracklet_ids.get(obj_id, "")
                     entity_dynamic_state_id = ""
@@ -237,7 +245,7 @@ class MaskTrackProcessor:
             if has_tracklets and frame_masks:
                 seq_view_name = frame_masks[0][1]
                 for obj_id, appearances in object_appearances.items():
-                    entity = object_entities.get(obj_id)
+                    entity = object_entities.get(obj_id)  # type: ignore[assignment]
                     if entity is None:
                         continue
                     appearances.sort()
@@ -271,6 +279,7 @@ class BBoxTrackProcessor:
         row_factory: TemporalRowFactory,
         normalize_view_name_alias,
     ) -> None:
+        """Initialize the bbox track processor with source directory and schemas."""
         self.source_dir = source_dir
         self.annotations_schema = annotations_schema
         self.schema_resolver = schema_resolver
@@ -376,7 +385,7 @@ class BBoxTrackProcessor:
                     else:
                         target_view = default_view
 
-                    entity = object_entities.get(track_id)
+                    entity = object_entities.get(track_id)  # type: ignore[assignment]
                     entity_id = entity.id if entity else ""
                     tracklet_id = object_tracklet_ids.get(track_id, "")
                     entity_dynamic_state_id = ""
@@ -415,7 +424,7 @@ class BBoxTrackProcessor:
 
             if has_tracklets:
                 for track_id, appearances in object_appearances.items():
-                    entity = object_entities.get(track_id)
+                    entity = object_entities.get(track_id)  # type: ignore[assignment]
                     if entity is None:
                         continue
                     appearances.sort()

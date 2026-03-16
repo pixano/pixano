@@ -5,16 +5,13 @@ License: CECILL-C
 -------------------------------------*/
 
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-import {
-  annotations,
-  entities,
-} from "$lib/stores/workspaceStores.svelte";
+import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
   BBox,
-  entityHasTracklets,
   Entity,
+  entityHasTracklets,
   Keypoints,
   Tracklet,
   type SequenceFrame,
@@ -24,8 +21,8 @@ import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
-import { sortByFrameIndex } from "$lib/utils/videoUtils";
 import { splitTrackInTwo } from "$lib/utils/videoOperations";
+import { sortByFrameIndex } from "$lib/utils/videoUtils";
 
 type MView = Record<string, View | View[]>;
 
@@ -84,7 +81,7 @@ export function addKeyItemToTracklet(
       ];
       const coords: number[] = [];
       const states: string[] = [];
-      for (let vi = 0; vi <interpolatedKpt.graph.vertices.length; vi++) {
+      for (let vi = 0; vi < interpolatedKpt.graph.vertices.length; vi++) {
         const vertex = interpolatedKpt.graph.vertices[vi];
         coords.push(vertex.x / currentSf.data.width);
         coords.push(vertex.y / currentSf.data.height);
@@ -166,10 +163,7 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
  * Split a tracklet at the current frame position into two tracklets.
  * The left tracklet retains the original ID; a new right tracklet is created.
  */
-export function splitTracklet(
-  tracklet: Tracklet,
-  entityId: string,
-): void {
+export function splitTracklet(tracklet: Tracklet, entityId: string): void {
   const [prev, next] = findPreviousAndNextFrames(tracklet);
   const newOnRight = splitTrackInTwo(tracklet, prev, next);
   entities.update((objects) =>
@@ -197,9 +191,9 @@ export function findNeighborFrameIndices(
   for (const subtrack of allTracklets) {
     if (subtrack.data.view_name === tracklet.data.view_name) {
       for (const child of subtrack.ui.childs) {
-        if (child.ui.frame_index <frameIndex && child.ui.frame_index > previous) {
+        if (child.ui.frame_index < frameIndex && child.ui.frame_index > previous) {
           previous = child.ui.frame_index!;
-        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index <next) {
+        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index < next) {
           next = child.ui.frame_index!;
         }
       }

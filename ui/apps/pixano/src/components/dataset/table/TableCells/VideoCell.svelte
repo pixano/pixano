@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   interface Props {
     // Exports
     value: string;
@@ -37,5 +36,5 @@ License: CECILL-C
     class="h-full w-full object-cover rounded-lg"
     onmouseenter={toggleHover}
     onmouseleave={toggleHover}
-></video>
+  ></video>
 </div>

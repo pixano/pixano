@@ -20,12 +20,4 @@ License: CECILL-C
   let fillColor = $derived(mode === "draw" ? "rgba(0, 200, 0, 0.1)" : "rgba(200, 0, 0, 0.1)");
 </script>
 
-<Circle
-  {x}
-  {y}
-  {radius}
-  stroke={cursorColor}
-  
-  fill={fillColor}
-  listening={false}
-/>
+<Circle {x} {y} {radius} stroke={cursorColor} fill={fillColor} listening={false} />

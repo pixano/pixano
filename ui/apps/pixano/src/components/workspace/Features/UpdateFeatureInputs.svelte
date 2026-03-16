@@ -9,30 +9,23 @@ License: CECILL-C
   import { Checkbox } from "bits-ui";
   import { Check } from "phosphor-svelte";
 
-  import { Annotation, Entity, Item, type FeaturesValues } from "$lib/ui";
-
-  import type { Feature } from "$lib/types/workspace";
   import ListFeature from "./SelectFeatureInput.svelte";
   import FeatureTextInput from "./TextFeatureInput.svelte";
-
+  import type { Feature } from "$lib/types/workspace";
+  import { Annotation, Entity, Item, type FeaturesValues } from "$lib/ui";
 
   interface Props {
     features: Feature[];
     featureClass: keyof FeaturesValues;
     isEditing: boolean;
     saveInputChange: (
-    value: string | boolean | number,
-    propertyName: string,
-    obj: Item | Entity | Annotation,
-  ) => void;
+      value: string | boolean | number,
+      propertyName: string,
+      obj: Item | Entity | Annotation,
+    ) => void;
   }
 
-  let {
-    features,
-    featureClass,
-    isEditing,
-    saveInputChange
-  }: Props = $props();
+  let { features, featureClass, isEditing, saveInputChange }: Props = $props();
 </script>
 
 {#each features as feature}
@@ -55,7 +48,7 @@ License: CECILL-C
           {#snippet children({ checked })}
             <span class="flex items-center justify-center text-current h-full w-full">
               {#if checked}
-                <Check class="h-3.5 w-3.5"  />
+                <Check class="h-3.5 w-3.5" />
               {/if}
             </span>
           {/snippet}

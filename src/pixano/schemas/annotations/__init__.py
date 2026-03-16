@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from .bbox import BBox, BBox3D, create_bbox, create_bbox3d, is_bbox, is_bbox3d
 from .classification import Classification, create_classification, is_classification
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
@@ -48,6 +49,14 @@ __all__ = [
     "is_relation",
     "is_text_span",
     "is_tracklet",
+    "create_bbox",
+    "create_bbox3d",
+    "create_classification",
+    "create_compressed_rle",
+    "create_conversation",
+    "create_keypoints",
+    "create_keypoints3d",
+    "create_message",
     "create_relation",
     "create_text_span",
 ]

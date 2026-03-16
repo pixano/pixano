@@ -5,22 +5,21 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { untrack } from "svelte";
   import { Gear } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
+  import { mergeModelLists } from "../utils/mergeModelsList";
+  import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
+  import { DEFAULT_QUESTION_PROMPT, DEFAULT_TEMPERATURE } from "./defaults";
+  import {
+    type MessageGenerationPrompts,
+    type PixanoInferenceCompletionModel,
+    type PromptByQuestionType,
+  } from "$lib/stores/vqaStores.svelte";
   import { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
   import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
   import { IconButton } from "$lib/ui";
   import { effectProbe } from "$lib/utils/effectProbe";
-
-  import {
-    type PixanoInferenceCompletionModel,
-    type MessageGenerationPrompts,
-    type PromptByQuestionType,
-  } from "$lib/stores/vqaStores.svelte";
-  import { mergeModelLists } from "../utils/mergeModelsList";
-  import { DEFAULT_QUESTION_PROMPT, DEFAULT_TEMPERATURE } from "./defaults";
-  import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
 
   interface Props {
     vqaSectionWidth: number;
@@ -30,7 +29,13 @@ License: CECILL-C
     onCompletionModelsChange?: (models: PixanoInferenceCompletionModel[]) => void;
   }
 
-  let { vqaSectionWidth, inferenceServer, vqaModels, completionModels, onCompletionModelsChange }: Props = $props();
+  let {
+    vqaSectionWidth,
+    inferenceServer,
+    vqaModels,
+    completionModels,
+    onCompletionModelsChange,
+  }: Props = $props();
 
   let selectedModel = $state("");
   let showPromptModal = $state(false);
@@ -143,5 +148,9 @@ License: CECILL-C
 {/if}
 
 {#if showPromptModal}
-  <ConfigurePromptModal {vqaSectionWidth} {completionModels} onCancelPrompt={() => (showPromptModal = false)} />
+  <ConfigurePromptModal
+    {vqaSectionWidth}
+    {completionModels}
+    onCancelPrompt={() => (showPromptModal = false)}
+  />
 {/if}

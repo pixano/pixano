@@ -77,7 +77,6 @@ License: CECILL-C
       {height}
       stroke={DRAFT_LINE_COLOR}
       fill={DRAFT_RECT_FILL_COLOR}
-      
       strokeScaleEnabled={false}
       perfectDrawEnabled={false}
       shadowForStrokeEnabled={false}

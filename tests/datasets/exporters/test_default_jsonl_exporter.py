@@ -12,6 +12,7 @@ from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_schema import build_model_dump_exclude_timestamps
 from pixano.datasets.exporters import DefaultJSONLDatasetExporter
 
+
 class TestDefaultJSONLDataset:
     def test_initialize_export_data(self, dataset_image_bboxes_keypoint: Dataset):
         exporter = DefaultJSONLDatasetExporter(dataset_image_bboxes_keypoint, "/")

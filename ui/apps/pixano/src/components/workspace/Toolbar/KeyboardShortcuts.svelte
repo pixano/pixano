@@ -5,9 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Keyboard } from "phosphor-svelte";
-
   import { Popover } from "bits-ui";
+  import { Keyboard } from "phosphor-svelte";
 
   interface Props {
     isVideo?: boolean;

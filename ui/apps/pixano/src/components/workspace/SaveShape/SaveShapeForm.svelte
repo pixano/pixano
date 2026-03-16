@@ -8,8 +8,22 @@ License: CECILL-C
   /* eslint-disable svelte/no-at-html-tags */
   // Imports
   import { Button } from "bits-ui";
-
   import { nanoid } from "nanoid";
+
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import RelinkAnnotation from "./RelinkAnnotation.svelte";
+  import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
+  import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
+  import { cancelTrackingSession, trackingSession } from "$lib/stores/trackingStore.svelte";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import {
+    annotations,
+    entities,
+    itemMetas,
+    newShape,
+    views,
+  } from "$lib/stores/workspaceStores.svelte";
+  import type { CreateEntityInputs, EntityProperties } from "$lib/types/workspace";
   import {
     Annotation,
     BaseSchema,
@@ -22,35 +36,17 @@ License: CECILL-C
     type SaveRectangleShape,
     type SaveTrackShape,
   } from "$lib/ui";
-  import { cn } from "$lib/utils/styleUtils";
-  import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
-
-  import { rleToBitmapCanvas, getAlphaBoundingBox } from "$lib/utils/maskUtils";
-  import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
-  import { saveTo } from "$lib/utils/saveItemUtils";
-  import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import {
     defineCreatedAnnotation,
     findOrCreateEntity,
     getFrameIndex,
   } from "$lib/utils/entityOperations";
-  import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
-  import {
-    annotations,
-    entities,
-    itemMetas,
-    newShape,
-    views,
-  } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { trackingSession, cancelTrackingSession } from "$lib/stores/trackingStore.svelte";
-  import type {
-    CreateEntityInputs,
-    EntityProperties,
-  } from "$lib/types/workspace";
+  import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
+  import { getAlphaBoundingBox, rleToBitmapCanvas } from "$lib/utils/maskUtils";
+  import { saveTo } from "$lib/utils/saveItemUtils";
+  import { cn } from "$lib/utils/styleUtils";
+  import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import RelinkAnnotation from "./RelinkAnnotation.svelte";
 
   interface Props {
     currentTab: "scene" | "objects";
@@ -83,12 +79,7 @@ License: CECILL-C
 
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
-    const entity = findOrCreateEntity(
-      selectedEntityId,
-      newShape.value,
-      features,
-      manifest,
-    );
+    const entity = findOrCreateEntity(selectedEntityId, newShape.value, features, manifest);
 
     newAnnotation = defineCreatedAnnotation(
       entity,
@@ -243,7 +234,7 @@ License: CECILL-C
                   end_timestamp: segEnd,
                 },
               };
-                const segTrack = defineCreatedAnnotation(
+              const segTrack = defineCreatedAnnotation(
                 entity,
                 features,
                 trackShape,
@@ -426,8 +417,12 @@ License: CECILL-C
       />
     </div>
     <div class="flex gap-4">
-      <Button.Root type="button" class={cn(defaultButtonClass)} onclick={handleCancel}>Cancel</Button.Root>
-      <Button.Root type="submit" class={cn(defaultButtonClass)} disabled={!isFormValid}>Confirm</Button.Root>
+      <Button.Root type="button" class={cn(defaultButtonClass)} onclick={handleCancel}>
+        Cancel
+      </Button.Root>
+      <Button.Root type="submit" class={cn(defaultButtonClass)} disabled={!isFormValid}>
+        Confirm
+      </Button.Root>
     </div>
   </form>
 {/if}

@@ -6,13 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { colorScale, entities } from "$lib/stores/workspaceStores.svelte";
   import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/ui";
-
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityRelink";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
-  import { colorScale, entities } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
 
   interface Props {
     selectedEntityId?: string;
@@ -29,7 +28,7 @@ License: CECILL-C
     overlapTargetId = $bindable(""),
     baseSchema,
     viewRef,
-    track = null
+    track = null,
   }: Props = $props();
 
   const entityAllowInfo = (

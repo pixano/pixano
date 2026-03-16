@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Generic resource routers."""
 
 from typing import Any
@@ -20,13 +26,12 @@ def _list_kwargs(resource: ResourceSpec, filters: FilterParams, pagination: Pagi
 
 def create_resource_router(resource: ResourceSpec) -> APIRouter:
     """Build one CRUD router from a static resource definition."""
-
     router = APIRouter(prefix=f"/datasets/{{dataset_id}}/{resource.path}", tags=[resource.tag])
     response_model = resource.response_model
 
     @router.get(
         "",
-        response_model=PaginatedResponse[response_model],
+        response_model=PaginatedResponse[response_model],  # type: ignore[valid-type]
         operation_id=f"list_{resource.path.replace('-', '_')}",
         summary=f"List {resource.tag.lower()}",
         description=f"List {resource.tag.lower()} in a dataset with optional filters and pagination.",
@@ -37,7 +42,6 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
         filters: FilterParams = Depends(),
     ) -> Any:
         """Return a paginated collection of resources."""
-
         service = BaseService(dataset, resource)
         return service.list(**_list_kwargs(resource, filters, pagination))
 
@@ -53,7 +57,6 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
         dataset: Dataset = Depends(get_dataset_dep),
     ) -> Any:
         """Return one resource by id."""
-
         service = BaseService(dataset, resource)
         return service.get(id)
 
@@ -69,13 +72,12 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
             description=f"Create a new {resource.name} row in the dataset.",
         )
         def create_resource(
-            body: create_model,
+            body: create_model,  # type: ignore[valid-type]
             dataset: Dataset = Depends(get_dataset_dep),
         ) -> Any:
             """Create a resource from the request body."""
-
             service = BaseService(dataset, resource)
-            return service.create(body.model_dump())
+            return service.create(body.model_dump())  # type: ignore[attr-defined]
 
     if resource.update_model is not None and resource.allow_update:
         update_model = resource.update_model
@@ -89,13 +91,12 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
         )
         def update_resource(
             id: str,
-            body: update_model,
+            body: update_model,  # type: ignore[valid-type]
             dataset: Dataset = Depends(get_dataset_dep),
         ) -> Any:
             """Update a resource by id."""
-
             service = BaseService(dataset, resource)
-            return service.update(id, body.model_dump(exclude_unset=True))
+            return service.update(id, body.model_dump(exclude_unset=True))  # type: ignore[attr-defined]
 
     if resource.allow_delete:
 
@@ -111,7 +112,6 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
             dataset: Dataset = Depends(get_dataset_dep),
         ) -> None:
             """Delete a resource by id."""
-
             service = BaseService(dataset, resource)
             service.delete(id)
 

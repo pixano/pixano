@@ -4,8 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { LinearBBTracker, type BBoxKeyframe } from "./LinearBBTracker";
 import type { InterpolationResult } from "./BaseTracker";
+import { LinearBBTracker, type BBoxKeyframe } from "./LinearBBTracker";
 
 export interface SegmentInfo {
   readonly index: number;
@@ -76,7 +76,12 @@ export class MultiSegmentTracker {
       const seg = this.segments[i];
       const start = seg.startFrame;
       const end = seg.endFrame;
-      if (start !== undefined && end !== undefined && kf.frameIndex >= start && kf.frameIndex <= end) {
+      if (
+        start !== undefined &&
+        end !== undefined &&
+        kf.frameIndex >= start &&
+        kf.frameIndex <= end
+      ) {
         seg.addKeyframe(kf);
         this.bump();
         return true;
@@ -103,10 +108,7 @@ export class MultiSegmentTracker {
   }
 
   /** Promote a frame to keyframe in the segment that owns it. */
-  promoteToKeyframe(
-    frameIndex: number,
-    overrideData?: Partial<BBoxKeyframe>,
-  ): BBoxKeyframe | null {
+  promoteToKeyframe(frameIndex: number, overrideData?: Partial<BBoxKeyframe>): BBoxKeyframe | null {
     const segIdx = this.findSegmentAt(frameIndex);
     const target = segIdx >= 0 ? this.segments[segIdx] : this.activeSegment;
     const result = target.promoteToKeyframe(frameIndex, overrideData);
@@ -156,9 +158,7 @@ export class MultiSegmentTracker {
 
   /** Per-segment keyframe arrays, filtering out empty segments. */
   get segmentKeyframes(): BBoxKeyframe[][] {
-    return this.segments
-      .filter((seg) => seg.keyframeCount > 0)
-      .map((seg) => seg.sortedKeyframes);
+    return this.segments.filter((seg) => seg.keyframeCount > 0).map((seg) => seg.sortedKeyframes);
   }
 
   /** Per-segment frame ranges [start, end], filtering out empty segments. */

@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -13,6 +19,7 @@ class ViewFamilyIntegrityValidator:
     """Reject mixed image and sequence-frame families for one logical view."""
 
     def __init__(self, schemas: dict[str, type[LanceModel]]) -> None:
+        """Initialize the validator with the dataset table schemas."""
         self.schemas = schemas
 
     def validate(self, batch: dict[str, list[LanceModel]], dataset: Dataset) -> None:

@@ -5,24 +5,24 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { untrack } from "svelte";
-  import { LazyBrush } from "lazy-brush";
-  import { Image as KonvaImage } from "svelte-konva";
   import type Konva from "konva";
+  import { LazyBrush } from "lazy-brush";
+  import { untrack } from "svelte";
+  import { Image as KonvaImage } from "svelte-konva";
 
   import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
-  import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import { ToolType, type SelectionTool } from "$lib/tools";
-  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
+  import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
+  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
   import {
     canvasAlphaToRle,
     dataUrlToBlob,
     getAlphaBoundingBox,
-    rleFrString,
-    rleToBitmapCanvas,
     resolveMaskBitmapSource,
     resolveMaskBounds,
+    rleFrString,
+    rleToBitmapCanvas,
   } from "$lib/utils/maskUtils";
 
   interface BrushSettings {
@@ -161,7 +161,7 @@ License: CECILL-C
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist <spacing) return [p2];
+    if (dist < spacing) return [p2];
     const points: Point2D[] = [];
     const steps = Math.ceil(dist / spacing);
     for (let i = 1; i <= steps; i += 1) {
@@ -296,8 +296,7 @@ License: CECILL-C
     for (const mask of masksToRender) {
       if (mask.ui.displayControl.hidden) continue;
 
-      const bounds =
-        mask.ui.bounds ??
+      const bounds = mask.ui.bounds ??
         resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata }) ?? {
           x: 0,
           y: 0,

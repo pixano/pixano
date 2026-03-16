@@ -11,10 +11,7 @@ export * from "$lib/types/shapeTypes";
 export * from "$lib/utils/domainFactories";
 export * from "$lib/utils/coreUtils";
 export * as utils from "$lib/utils/coreUtils";
-export {
-  effectProbe,
-  getEffectProbeSnapshot,
-} from "$lib/utils/effectProbe";
+export { effectProbe, getEffectProbeSnapshot } from "$lib/utils/effectProbe";
 export * as icons from "./icons";
 export { cn } from "$lib/utils/styleUtils";
 

@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,6 +20,8 @@ from .views import PDF, Image, PointCloud, SequenceFrame, Text, Video, View
 
 @dataclass(frozen=True, slots=True)
 class CanonicalResourceFamily:
+    """Descriptor for one canonical resource family in the dataset schema."""
+
     slot_name: str
     resource_name: str
     table_name: str
@@ -59,10 +67,12 @@ _RESOURCE_TO_FAMILY = {family.resource_name: family for family in _CANONICAL_RES
 
 
 def public_resource_families() -> tuple[CanonicalResourceFamily, ...]:
+    """Return all resource families exposed through the public API."""
     return tuple(family for family in _CANONICAL_RESOURCE_FAMILIES if family.public_api)
 
 
 def supported_dataset_info_slots() -> tuple[str, ...]:
+    """Return slot names that are supported in DatasetInfo."""
     return tuple(
         family.slot_name
         for family in _CANONICAL_RESOURCE_FAMILIES
@@ -82,6 +92,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
 
 
 def canonical_family_spec_for_slot(slot_name: str) -> CanonicalResourceFamily:
+    """Look up a resource family by its DatasetInfo slot name."""
     try:
         return _SLOT_TO_FAMILY[slot_name]
     except KeyError as exc:
@@ -89,6 +100,7 @@ def canonical_family_spec_for_slot(slot_name: str) -> CanonicalResourceFamily:
 
 
 def canonical_family_spec_for_resource(resource_name: str) -> CanonicalResourceFamily:
+    """Look up a resource family by its API resource name."""
     try:
         return _RESOURCE_TO_FAMILY[resource_name]
     except KeyError as exc:
@@ -96,6 +108,7 @@ def canonical_family_spec_for_resource(resource_name: str) -> CanonicalResourceF
 
 
 def canonical_base_schema_for_schema(schema_cls: type[LanceModel]) -> type[LanceModel]:
+    """Return the canonical base schema for the given schema class."""
     if not isinstance(schema_cls, type) or not issubclass(schema_cls, LanceModel):
         raise ValueError(f"Unsupported schema type for canonical family resolution: {schema_cls}.")
 
@@ -110,6 +123,7 @@ def canonical_base_schema_for_schema(schema_cls: type[LanceModel]) -> type[Lance
 
 
 def canonical_family_spec_for_schema(schema_cls: type[LanceModel]) -> CanonicalResourceFamily:
+    """Look up a resource family by its schema class."""
     base_schema = canonical_base_schema_for_schema(schema_cls)
     for family in _CANONICAL_RESOURCE_FAMILIES:
         if family.base_schema is base_schema:
@@ -118,22 +132,27 @@ def canonical_family_spec_for_schema(schema_cls: type[LanceModel]) -> CanonicalR
 
 
 def canonical_table_name_for_slot(slot_name: str) -> str:
+    """Return the canonical table name for a DatasetInfo slot."""
     return canonical_family_spec_for_slot(slot_name).table_name
 
 
 def canonical_table_name_for_schema(schema_cls: type[LanceModel]) -> str:
+    """Return the canonical table name for the given schema class."""
     return canonical_family_spec_for_schema(schema_cls).table_name
 
 
 def canonical_table_name_for_view_schema(schema_cls: type[View]) -> str:
+    """Return the canonical table name for a View schema class."""
     return canonical_table_name_for_schema(schema_cls)
 
 
 def canonical_resource_name_for_schema(schema_cls: type[LanceModel]) -> str:
+    """Return the canonical API resource name for the given schema class."""
     return canonical_family_spec_for_schema(schema_cls).resource_name
 
 
 def is_supported_view_schema(schema_cls: type[LanceModel]) -> bool:
+    """Check whether a schema class is a supported view schema."""
     try:
         family = canonical_family_spec_for_schema(schema_cls)
     except ValueError:
@@ -142,10 +161,12 @@ def is_supported_view_schema(schema_cls: type[LanceModel]) -> bool:
 
 
 def supported_slot_schema(slot_name: str) -> type[LanceModel]:
+    """Return the base schema class for the given DatasetInfo slot name."""
     return canonical_family_spec_for_slot(slot_name).base_schema
 
 
 def validate_canonical_table_map(tables: dict[str, type[LanceModel]]) -> None:
+    """Validate that all table names and schema classes are canonical and unique."""
     families_seen: dict[type[LanceModel], str] = {}
 
     for table_name, schema_cls in tables.items():

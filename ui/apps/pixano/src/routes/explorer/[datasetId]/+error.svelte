@@ -5,9 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { PrimaryButton } from "$lib/ui";
-  import { page } from "$app/state";
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import { PrimaryButton } from "$lib/ui";
 </script>
 
 <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">

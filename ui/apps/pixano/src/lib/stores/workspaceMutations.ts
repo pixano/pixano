@@ -4,6 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { completionModelsStore } from "./vqaStores.svelte";
+import { annotations } from "./workspaceBaseStores.svelte";
+import { messages as messagesStore } from "./workspaceStores.svelte";
 import * as api from "$lib/api";
 import {
   BaseSchema,
@@ -20,15 +23,9 @@ import type {
   UpdatedMessageEvent,
   VqaMessageContext,
 } from "$lib/types/vqa";
-
-import { completionModelsStore } from "./vqaStores.svelte";
-import { saveTo } from "$lib/utils/saveItemUtils";
 import { createMessage, updateMessage } from "$lib/utils/messageUtils";
+import { saveTo } from "$lib/utils/saveItemUtils";
 import { buildQuestionThreads } from "$lib/utils/vqaThreads";
-import {
-  annotations,
-} from "./workspaceBaseStores.svelte";
-import { messages as messagesStore } from "./workspaceStores.svelte";
 
 function getMessageEntityIds(message: Message): string[] {
   if (Array.isArray(message.data.entity_ids)) {
@@ -56,9 +53,7 @@ function buildPrompt(
     ];
   }
 
-  return [
-    { role: "user", content: `${instruction}\n\n${userContent}`.trim() },
-  ];
+  return [{ role: "user", content: `${instruction}\n\n${userContent}`.trim() }];
 }
 
 function getNextMessageNumber(conversationId: string): number {
@@ -149,7 +144,9 @@ export const deleteQuestion = ({ questionId }: DeleteQuestionEvent) => {
   const allAnnotations = annotations.value;
 
   const messages = allAnnotations.filter((a): a is Message => a instanceof Message);
-  const questionThread = buildQuestionThreads(messages).find((thread) => thread.question.id === questionId);
+  const questionThread = buildQuestionThreads(messages).find(
+    (thread) => thread.question.id === questionId,
+  );
   const question = questionThread?.question;
 
   if (!question) {
@@ -207,7 +204,11 @@ export const generateAnswer = async (
     selectedCompletionModel?.prompts[MessageTypeEnum.ANSWER][questionType] ?? "";
   const input: CondititionalGenerationTextImageInput = {
     model: completionModel,
-    prompt: buildPrompt(promptInstruction, question.data.content, selectedCompletionModel?.prompts.as_system ?? false),
+    prompt: buildPrompt(
+      promptInstruction,
+      question.data.content,
+      selectedCompletionModel?.prompts.as_system ?? false,
+    ),
     images: imageUrl ? [imageUrl] : null,
     temperature,
   };

@@ -6,24 +6,22 @@ License: CECILL-C
 
 import {
   Annotation,
+  BaseSchema,
   BBox,
   Classification,
+  Entity,
+  Image,
   Keypoints,
   Mask,
   Message,
-  TextSpan,
-  Tracklet,
-  BaseSchema,
-  Entity,
-  Image,
   SequenceFrame,
+  TextSpan,
   TextView,
+  Tracklet,
   type RawSchemaData,
 } from "$lib/types/dataset";
 
-export const createTypedAnnotation = (
-  annotation: RawSchemaData,
-): Annotation | null => {
+export const createTypedAnnotation = (annotation: RawSchemaData): Annotation | null => {
   if (annotation.table_info.base_schema === BaseSchema.BBox) {
     return new BBox(annotation);
   }
@@ -56,7 +54,9 @@ export const createTypedEntity = (entity: RawSchemaData) => {
 export const createTypedView = (view: RawSchemaData | RawSchemaData[]) => {
   if (Array.isArray(view)) {
     const isSequenceFrame = view.every(
-      (v) => "frame_index" in (v.data as Record<string, unknown>) && "timestamp" in (v.data as Record<string, unknown>),
+      (v) =>
+        "frame_index" in (v.data as Record<string, unknown>) &&
+        "timestamp" in (v.data as Record<string, unknown>),
     );
 
     if (isSequenceFrame) {

@@ -23,6 +23,8 @@ class ImportMode(str, Enum):
 
 
 class MetadataValidationMode(str, Enum):
+    """Validation strictness for folder metadata during import."""
+
     default = "default"
     strict = "strict"
 

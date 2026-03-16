@@ -6,9 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { Snippet } from "svelte";
-
   import { Button } from "bits-ui";
+  import type { Snippet } from "svelte";
 
   import { cn } from "$lib/utils/styleUtils";
 

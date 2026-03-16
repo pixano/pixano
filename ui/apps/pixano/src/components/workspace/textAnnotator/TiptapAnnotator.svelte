@@ -8,13 +8,11 @@ License: CECILL-C
   import { Editor } from "@tiptap/core";
   import { StarterKit } from "@tiptap/starter-kit";
 
-  import type { TextSpan, TextView } from "$lib/ui";
-  import type { TextSpanTypeWithViewName } from "$lib/ui";
-
-  import { TextSpanMark } from "./extensions/TextSpanMark";
-  import { ReadOnlyContent } from "./extensions/ReadOnlyContent";
   import { applyTextSpanMarks } from "./applyTextSpanMarks";
+  import { ReadOnlyContent } from "./extensions/ReadOnlyContent";
+  import { TextSpanMark } from "./extensions/TextSpanMark";
   import { pmPosToCharOffset } from "./positionMapping";
+  import type { TextSpan, TextSpanTypeWithViewName, TextView } from "$lib/ui";
 
   interface Props {
     textSpans?: TextSpan[];
@@ -24,13 +22,7 @@ License: CECILL-C
     onSpanClick?: (id: string) => void;
   }
 
-  let {
-    textSpans = [],
-    colorScale,
-    textView,
-    onSelectionChange,
-    onSpanClick,
-  }: Props = $props();
+  let { textSpans = [], colorScale, textView, onSelectionChange, onSpanClick }: Props = $props();
 
   let editorElement: HTMLDivElement | undefined = $state(undefined);
   let editor: Editor | undefined = $state(undefined);

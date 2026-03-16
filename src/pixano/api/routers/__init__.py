@@ -47,7 +47,6 @@ API_PREFIXES: tuple[str, ...] = tuple(dict.fromkeys(router.prefix for router in 
 
 def include_api_routers(app: FastAPI) -> None:
     """Attach all active API routers to the given FastAPI app."""
-
     for router in API_ROUTERS:
         app.include_router(router)
 

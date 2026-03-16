@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { EntityNode, NodeId } from "$lib/document";
-
 import type { Command } from "$lib/types/commands";
 
 // --------------- Add Entity ---------------
@@ -45,10 +44,7 @@ export interface MergeEntitiesPayload {
   readonly sourceEntityIds: readonly NodeId[];
 }
 
-export function createMergeEntities(
-  targetEntityId: NodeId,
-  sourceEntityIds: NodeId[],
-): Command {
+export function createMergeEntities(targetEntityId: NodeId, sourceEntityIds: NodeId[]): Command {
   return {
     type: "MergeEntities",
     payload: { targetEntityId, sourceEntityIds } satisfies MergeEntitiesPayload,

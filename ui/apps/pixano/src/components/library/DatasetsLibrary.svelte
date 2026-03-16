@@ -8,39 +8,29 @@ License: CECILL-C
   // Imports
   import { untrack } from "svelte";
 
+  import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
+  import { panTool } from "../workspace";
+  import { goto } from "$app/navigation";
+  import { datasetFilter, datasetsStore } from "$lib/stores/appStores.svelte";
+  import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import type { DatasetInfo } from "$lib/ui";
   import { icons } from "$lib/ui";
-  import { panTool } from "../workspace";
-  import {
-    modelsUiStore,
-    resetColorScale,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
-
-  import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
-  import { goto } from "$app/navigation";
   import { getExplorerRoute } from "$lib/utils/routes";
-  import {
-    datasetFilter,
-    datasetsStore,
-  } from "$lib/stores/appStores.svelte";
-
-  
 
   interface Props {
     /**
-   * DatasetsLibrary Component
-   *
-   * This component displays a list of datasets. Each dataset is represented by a
-   * DatasetPreviewCard component. When a dataset is selected, the user is navigated
-   * to the dataset's detail page.
-   *
-   * Props:
-   *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
-   *
-   * Events:
-   *   - selectDataset: Triggered when a dataset is selected.
-   */
+     * DatasetsLibrary Component
+     *
+     * This component displays a list of datasets. Each dataset is represented by a
+     * DatasetPreviewCard component. When a dataset is selected, the user is navigated
+     * to the dataset's detail page.
+     *
+     * Props:
+     *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
+     *
+     * Events:
+     *   - selectDataset: Triggered when a dataset is selected.
+     */
     datasets: Array<DatasetInfo>;
   }
 

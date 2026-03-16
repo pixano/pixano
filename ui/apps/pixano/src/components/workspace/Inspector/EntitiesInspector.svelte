@@ -7,14 +7,21 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { untrack } from "svelte";
   import { Thumbnail } from "$components/workspace/canvas2d";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { BaseSchema, BBox, Entity, entityHasTracklets, type AnnotationThumbnail } from "$lib/ui";
+  import { untrack } from "svelte";
 
-  import { ToolType } from "$lib/tools";
-  import { defineAnnotationThumbnail, getTopEntity, sortEntities } from "$lib/utils/entityLookupUtils";
-  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
+  import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
+  import EntitiesSection from "./EntitiesSection.svelte";
+  import EntityCard from "./EntityCard.svelte";
+  import {
+    buildSearchQueryChips,
+    buildTopEntityIdByEntityId,
+    buildTopEntitySearchIndex,
+    isSearchQueryEmpty,
+    matchesParsedSearchQuery,
+    parseSearchQuery,
+  } from "./entitySearch";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     confidenceThreshold,
@@ -26,17 +33,14 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
-  import EntityCard from "./EntityCard.svelte";
-  import EntitiesSection from "./EntitiesSection.svelte";
+  import { ToolType } from "$lib/tools";
+  import { BaseSchema, BBox, Entity, entityHasTracklets, type AnnotationThumbnail } from "$lib/ui";
+  import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
   import {
-    buildTopEntityIdByEntityId,
-    buildSearchQueryChips,
-    buildTopEntitySearchIndex,
-    isSearchQueryEmpty,
-    matchesParsedSearchQuery,
-    parseSearchQuery,
-  } from "./entitySearch";
+    defineAnnotationThumbnail,
+    getTopEntity,
+    sortEntities,
+  } from "$lib/utils/entityLookupUtils";
 
   let filteredEntities = $state<Entity[]>([]);
   let hasAppliedAdvancedFilter = $state(false);
@@ -75,7 +79,8 @@ License: CECILL-C
     const nextTopEntityIds = new Set<string>();
     for (const topEntityId of allTopEntityIds) {
       const searchCorpus = topEntitySearchIndex.corpusByTopEntityId.get(topEntityId) ?? "";
-      const fieldValues = topEntitySearchIndex.fieldValuesByTopEntityId.get(topEntityId) ?? new Map();
+      const fieldValues =
+        topEntitySearchIndex.fieldValuesByTopEntityId.get(topEntityId) ?? new Map();
       if (matchesParsedSearchQuery(searchCorpus, fieldValues, parsedSearchQuery)) {
         nextTopEntityIds.add(topEntityId);
       }
@@ -137,7 +142,8 @@ License: CECILL-C
 
       // for video: show/hide track in Video inspector depending on filter
       const hasTrackChange = currentEntities.some(
-        (ent) => entityHasTracklets(ent) && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
+        (ent) =>
+          entityHasTracklets(ent) && ent.ui.displayControl.hidden !== !visibleEntityIds.has(ent.id),
       );
       if (hasTrackChange) {
         entities.update((current) =>
@@ -229,7 +235,11 @@ License: CECILL-C
           viewAnnotations[Math.floor(viewAnnotations.length / 2)];
         if (!preferredBox) continue;
 
-        const selectedThumbnail = defineAnnotationThumbnail(itemMetas.value, mediaViews.value, preferredBox);
+        const selectedThumbnail = defineAnnotationThumbnail(
+          itemMetas.value,
+          mediaViews.value,
+          preferredBox,
+        );
         if (selectedThumbnail) {
           nextThumbnails[focusedEntityId] = selectedThumbnail;
           break;
@@ -247,14 +257,21 @@ License: CECILL-C
 
     if (highlightedBoxes.length === 0) return nextThumbnails;
 
-    const highlightedBoxesByEntityId = Object.groupBy(highlightedBoxes, (ann) => getTopEntity(ann).id);
+    const highlightedBoxesByEntityId = Object.groupBy(
+      highlightedBoxes,
+      (ann) => getTopEntity(ann).id,
+    );
     for (const [entityId, entityBoxes] of Object.entries(highlightedBoxesByEntityId)) {
       if (!entityBoxes) continue;
       const preferredBox =
         entityBoxes.find((ann) => ann.is_type(BaseSchema.BBox)) ||
         entityBoxes[Math.floor(entityBoxes.length / 2)];
       if (!preferredBox) continue;
-      const selectedThumbnail = defineAnnotationThumbnail(itemMetas.value, mediaViews.value, preferredBox);
+      const selectedThumbnail = defineAnnotationThumbnail(
+        itemMetas.value,
+        mediaViews.value,
+        preferredBox,
+      );
       if (selectedThumbnail) {
         nextThumbnails[entityId] = selectedThumbnail;
       }
@@ -363,7 +380,7 @@ License: CECILL-C
     <EntitiesSection
       sourceLabel={globalSourceLabel}
       {countText}
-      searchQuery={searchQuery}
+      {searchQuery}
       onSearchQueryChange={handleSearchQueryChange}
       onClearSearch={handleClearSearch}
       {activeFilters}
@@ -371,7 +388,9 @@ License: CECILL-C
       onConfidenceThresholdChange={handleConfidenceThresholdChange}
     >
       {#if preAnnotationIsActive.value}
-        <div class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        <div
+          class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center text-sm text-muted-foreground"
+        >
           Entity exploration is temporarily unavailable while pre-annotation is active.
         </div>
       {:else if allTopEntities.length === 0}

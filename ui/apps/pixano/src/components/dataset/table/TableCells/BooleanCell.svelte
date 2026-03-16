@@ -8,7 +8,6 @@ License: CECILL-C
   import { Checkbox } from "bits-ui";
   import { Check } from "phosphor-svelte";
 
-  
   interface Props {
     // Exports
     value: boolean;
@@ -26,7 +25,7 @@ License: CECILL-C
     {#snippet children({ checked })}
       <span class="flex items-center justify-center text-current h-full w-full">
         {#if checked}
-          <Check class="h-3.5 w-3.5"  />
+          <Check class="h-3.5 w-3.5" />
         {/if}
       </span>
     {/snippet}

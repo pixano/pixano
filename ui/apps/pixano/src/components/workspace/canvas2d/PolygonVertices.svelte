@@ -9,8 +9,8 @@ License: CECILL-C
   import { Circle } from "svelte-konva";
 
   import { FIRST_VERTEX_COLOR, OTHER_VERTEX_COLOR } from "./konvaConstants";
-  import type { PolygonVertex } from "$lib/types/shapeTypes";
   import type { Reference } from "$lib/types/dataset";
+  import type { PolygonVertex } from "$lib/types/shapeTypes";
 
   interface Props {
     viewRef: Reference;
@@ -18,7 +18,9 @@ License: CECILL-C
     polygonId: string;
     points: PolygonVertex[][];
     onPointClick?: ((pointIndex: number, shapeIndex: number, viewRef: Reference) => void) | null;
-    onPointDragMove?: ((id: number, shapeIndex: number, event: Konva.KonvaEventObject<DragEvent>) => void) | null;
+    onPointDragMove?:
+      | ((id: number, shapeIndex: number, event: Konva.KonvaEventObject<DragEvent>) => void)
+      | null;
     onPointDragEnd?: (() => void) | null;
   }
 
@@ -39,7 +41,11 @@ License: CECILL-C
     return hoveredKey === `${shapeIndex}-${pointId}` ? 2 : 1;
   }
 
-  function handleMouseOver(shapeIndex: number, pointId: number, e: Konva.KonvaEventObject<MouseEvent>) {
+  function handleMouseOver(
+    shapeIndex: number,
+    pointId: number,
+    e: Konva.KonvaEventObject<MouseEvent>,
+  ) {
     const targetId = (e.target as Konva.Circle)?.id();
     if (targetId === `dot-${polygonId}-${shapeIndex}-${pointId}`) {
       hoveredKey = `${shapeIndex}-${pointId}`;
@@ -70,7 +76,6 @@ License: CECILL-C
       radius={(j === 0 ? 6 : 4) / zoomFactor}
       fill={j === 0 ? FIRST_VERTEX_COLOR : OTHER_VERTEX_COLOR}
       stroke="white"
-      
       strokeScaleEnabled={false}
       id={`dot-${polygonId}-${i}-${point.id}`}
       draggable={true}

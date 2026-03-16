@@ -5,14 +5,12 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-
   // Imports
-  import type { TrackTimelineEntry } from "$lib/ui";
-  import { ContextMenu, Tracklet, cn } from "$lib/ui";
-  import { onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
-  import { annotations } from "$lib/stores/workspaceStores.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-
+  import { annotations } from "$lib/stores/workspaceStores.svelte";
+  import type { TrackTimelineEntry } from "$lib/ui";
+  import { cn, ContextMenu, Tracklet } from "$lib/ui";
+  import { onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
 
   interface Props {
     entityId: string;
@@ -22,19 +20,16 @@ License: CECILL-C
     height: number;
     top: number;
     oneFrameInPixel: number;
-    onEditKeyItemClick: (
-    frameIndex: TrackTimelineEntry["frame_index"],
-    viewname: string,
-  ) => void;
+    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => void;
     onClick: (button: number, clientX: number) => void;
     updateTrackletWidth: (
-    newIndex: TrackTimelineEntry["frame_index"],
-    draggedIndex: TrackTimelineEntry["frame_index"],
-  ) => void;
+      newIndex: TrackTimelineEntry["frame_index"],
+      draggedIndex: TrackTimelineEntry["frame_index"],
+    ) => void;
     canContinueDragging: (
-    newIndex: TrackTimelineEntry["frame_index"],
-    draggedIndex: TrackTimelineEntry["frame_index"],
-  ) => boolean;
+      newIndex: TrackTimelineEntry["frame_index"],
+      draggedIndex: TrackTimelineEntry["frame_index"],
+    ) => boolean;
     resetTool: () => void;
   }
 
@@ -50,7 +45,7 @@ License: CECILL-C
     onClick,
     updateTrackletWidth,
     canContinueDragging,
-    resetTool
+    resetTool,
   }: Props = $props();
 
   let isItemBeingEdited = $derived(
@@ -80,7 +75,7 @@ License: CECILL-C
     if (
       !tracklet.ui.childs?.length ||
       (tracklet.ui.childs[0].ui.frame_index !== itemFrameIndex &&
-      tracklet.ui.childs[tracklet.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
+        tracklet.ui.childs[tracklet.ui.childs.length - 1].ui.frame_index !== itemFrameIndex)
     )
       return;
 
@@ -105,7 +100,7 @@ License: CECILL-C
             const distance = event.clientX - startPosition;
             const raise = distance / startOneFrameInPixel;
             newFrameIndex = Math.round(startFrameIndex + raise);
-            if (newFrameIndex <0 || newFrameIndex > lastFrameIndex.value) return;
+            if (newFrameIndex < 0 || newFrameIndex > lastFrameIndex.value) return;
             const canContinue = canContinueDragging(newFrameIndex, itemFrameIndex);
             if (canContinue) {
               left = getKeyItemLeftPosition(newFrameIndex);
@@ -120,7 +115,7 @@ License: CECILL-C
         () => {
           moving = false;
           if (newFrameIndex !== undefined) {
-            if (newFrameIndex <0) newFrameIndex = 0;
+            if (newFrameIndex < 0) newFrameIndex = 0;
             if (newFrameIndex > lastFrameIndex.value) newFrameIndex = lastFrameIndex.value;
             updateTrackletWidth(newFrameIndex, itemFrameIndex);
           }
@@ -150,7 +145,7 @@ License: CECILL-C
       style={`background-color: ${color}`}
       use:dragMe
       onclick={(e) => onClick(e.button, e.clientX)}
-></button>
+    ></button>
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.ui.childs?.length > 2}
@@ -162,9 +157,7 @@ License: CECILL-C
       </ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item
-        onclick={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_name)}
-      >
+      <ContextMenu.Item onclick={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_name)}>
         Edit item
       </ContextMenu.Item>
     {/if}

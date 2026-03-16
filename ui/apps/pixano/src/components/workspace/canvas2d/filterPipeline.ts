@@ -6,12 +6,11 @@ License: CECILL-C
 
 import Konva from "konva";
 
-import type { ImageFilters } from "$lib/types/shapeTypes";
-import { equalizeHistogram } from "$lib/utils/imageLoadUtils";
-
 import { FILTER_DEBOUNCE_MS } from "./konvaConstants";
 import { FilterManager } from "./workers/filterManager";
 import type { FilterParams } from "./workers/filterWorker";
+import type { ImageFilters } from "$lib/types/shapeTypes";
+import { equalizeHistogram } from "$lib/utils/imageLoadUtils";
 
 export class CanvasFilterPipeline {
   private filterManager: FilterManager | null = null;
@@ -82,7 +81,10 @@ export class CanvasFilterPipeline {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
-    this.debounceTimer = setTimeout(() => this.applyFilters(filters, viewNames), FILTER_DEBOUNCE_MS);
+    this.debounceTimer = setTimeout(
+      () => this.applyFilters(filters, viewNames),
+      FILTER_DEBOUNCE_MS,
+    );
   }
 
   cancelPendingTimer(): void {
@@ -108,17 +110,17 @@ export class CanvasFilterPipeline {
       const blueMin = filters.blueRange[0];
       const blueMax = filters.blueRange[1];
 
-      for (let i = 0; i <data.length; i += 4) {
+      for (let i = 0; i < data.length; i += 4) {
         const red = data[i];
         const green = data[i + 1];
         const blue = data[i + 2];
 
         if (
-          red <redMin ||
+          red < redMin ||
           red > redMax ||
-          green <greenMin ||
+          green < greenMin ||
           green > greenMax ||
-          blue <blueMin ||
+          blue < blueMin ||
           blue > blueMax
         ) {
           data[i] = 0;

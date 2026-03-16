@@ -5,29 +5,12 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-
   // Imports
-  import { untrack } from "svelte";
-  import { CircleNotch } from "phosphor-svelte";
-
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import type { SelectionTool } from "$lib/tools";
-  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
-  import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import {
-    Image,
-    isImage,
-    TextSpan,
-    effectProbe,
-    type LoadedImagesPerView,
-  } from "$lib/ui";
-  import TextAnnotator from "../textAnnotator/TextAnnotator.svelte";
+  import { CircleNotch } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
-  // Import stores and API functions
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import { highlightEntity } from "$lib/utils/highlightOperations";
-  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
-  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
+  import TextAnnotator from "../textAnnotator/TextAnnotator.svelte";
   import {
     annotations,
     brushSettings,
@@ -45,7 +28,15 @@ License: CECILL-C
     textSpans,
     textViews,
   } from "$lib/stores/workspaceStores.svelte";
-
+  import type { SelectionTool } from "$lib/tools";
+  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { effectProbe, Image, isImage, TextSpan, type LoadedImagesPerView } from "$lib/ui";
+  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
+  // Import stores and API functions
+  import { getTopEntity } from "$lib/utils/entityLookupUtils";
+  import { highlightEntity } from "$lib/utils/highlightOperations";
+  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
   interface Props {
     // Attributes
@@ -185,7 +176,7 @@ License: CECILL-C
     onmousedown={() => {
       expanding = true;
     }}
-></button>
+  ></button>
   <div class="overflow-hidden grow relative">
     {#if loaded && hasImages}
       <Canvas2D
@@ -201,9 +192,9 @@ License: CECILL-C
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
         newShape={newShape.value}
-        onSelectedToolChange={(tool: SelectionTool) => selectedTool.value = tool}
+        onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
         onNewShapeChange={handleCanvasShapeChange}
-        onBrushSettingsChange={(settings: BrushSettings) => brushSettings.value = settings}
+        onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

@@ -7,11 +7,10 @@ License: CECILL-C
 import * as ort from "onnxruntime-web";
 
 import * as api from "$lib/api";
-import { WorkspaceType, type DatasetInfo } from "$lib/types/dataset";
-
 import { currentDatasetStore } from "$lib/stores/appStores.svelte";
-import { embeddings, mediaViews, modelsUiStore } from "$lib/stores/workspaceStores.svelte";
 import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+import { embeddings, mediaViews, modelsUiStore } from "$lib/stores/workspaceStores.svelte";
+import { WorkspaceType, type DatasetInfo } from "$lib/types/dataset";
 
 export function loadViewEmbeddings(forceLoad: boolean = false) {
   const dataset = currentDatasetStore.value;

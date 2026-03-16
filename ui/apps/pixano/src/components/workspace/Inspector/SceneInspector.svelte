@@ -8,15 +8,11 @@ License: CECILL-C
   // External library imports
 
   // Internal library imports
+  import { Slider as SliderPrimitive, Switch } from "bits-ui";
   import { Pencil } from "phosphor-svelte";
-  import { Slider as SliderPrimitive } from "bits-ui";
 
-  import { Switch } from "bits-ui";
-
-  import { IconButton, Image, SequenceFrame, View } from "$lib/ui";
-
-  import { createFeature } from "$lib/utils/featureMapping";
-  import { saveTo } from "$lib/utils/saveItemUtils";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   // Local imports
   import {
     filters,
@@ -24,10 +20,11 @@ License: CECILL-C
     itemMetas,
     mediaViews,
   } from "$lib/stores/workspaceStores.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import type { ItemsMeta } from "$lib/types/workspace";
+  import { IconButton, Image, SequenceFrame, View } from "$lib/ui";
+  import { createFeature } from "$lib/utils/featureMapping";
+  import { saveTo } from "$lib/utils/saveItemUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   type ViewMeta = {
     url: string | undefined;
@@ -175,7 +172,9 @@ License: CECILL-C
     <!-- Image Smoothing -->
     <div class="w-full my-1 flex items-center justify-between">
       <label for="smoothing" class="select-none cursor-pointer">Image smoothing</label>
-      <Switch.Root id="smoothing" bind:checked={imageSmoothing.value}
+      <Switch.Root
+        id="smoothing"
+        bind:checked={imageSmoothing.value}
         class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
       >
         <Switch.Thumb
@@ -188,7 +187,9 @@ License: CECILL-C
       <!-- Histogram Equalizer -->
       <div class="w-full my-1 flex items-center justify-between">
         <label for="equalizer" class="select-none cursor-pointer">Equalize histogram</label>
-        <Switch.Root id="equalizer" bind:checked={filters.value.equalizeHistogram}
+        <Switch.Root
+          id="equalizer"
+          bind:checked={filters.value.equalizeHistogram}
           class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
         >
           <Switch.Thumb
@@ -256,7 +257,9 @@ License: CECILL-C
           <label for="grayscale" class="select-none cursor-pointer text-sm">
             Combine RGB channels
           </label>
-          <Switch.Root id="grayscale" bind:checked={combineChannels}
+          <Switch.Root
+            id="grayscale"
+            bind:checked={combineChannels}
             class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
           >
             <Switch.Thumb

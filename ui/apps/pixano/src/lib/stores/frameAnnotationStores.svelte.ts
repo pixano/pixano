@@ -4,6 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
+import { reactiveDerived } from "./reactiveStore.svelte";
+import { currentFrameIndex } from "./videoStores.svelte";
+import {
+  annotations,
+  generatedPreviewBBoxes,
+  highlightedEntity,
+  interpolate,
+  selectedTool,
+} from "./workspaceBaseStores.svelte";
+import { ToolType } from "$lib/tools";
 import {
   Annotation,
   BaseSchema,
@@ -16,21 +27,13 @@ import {
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { MView } from "$lib/types/workspace";
-import { mapBBoxForDisplay, mapKeypointsForDisplay, mapMaskForDisplay } from "$lib/utils/annotationMapping";
-import { boxLinearInterpolation, keypointsLinearInterpolation } from "$lib/utils/interpolation";
-import { getEffectiveHighlight, type HighlightState } from "$lib/utils/highlightUtils";
-import { ToolType } from "$lib/tools";
-import { reactiveDerived } from "./reactiveStore.svelte";
-
 import {
-  annotations,
-  generatedPreviewBBoxes,
-  highlightedEntity,
-  interpolate,
-  selectedTool,
-} from "./workspaceBaseStores.svelte";
-import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
-import { currentFrameIndex } from "./videoStores.svelte";
+  mapBBoxForDisplay,
+  mapKeypointsForDisplay,
+  mapMaskForDisplay,
+} from "$lib/utils/annotationMapping";
+import { getEffectiveHighlight, type HighlightState } from "$lib/utils/highlightUtils";
+import { boxLinearInterpolation, keypointsLinearInterpolation } from "$lib/utils/interpolation";
 
 // --- Frame bucketing ---
 
@@ -107,7 +110,12 @@ function collectFrameAnnotations<TRaw extends Annotation, TDisplay extends { id:
       if (atFrame) {
         const mapped = opts.mapForDisplay(
           atFrame,
-          getEffectiveHighlight(atFrame, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+          getEffectiveHighlight(
+            atFrame,
+            opts.focusedEntityId,
+            opts.selectedToolType,
+            opts.entitiesById,
+          ),
         );
         if (mapped) {
           results.push(mapped);
@@ -125,7 +133,12 @@ function collectFrameAnnotations<TRaw extends Annotation, TDisplay extends { id:
             .map((ann) =>
               opts.mapForDisplay(
                 ann,
-                getEffectiveHighlight(ann, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+                getEffectiveHighlight(
+                  ann,
+                  opts.focusedEntityId,
+                  opts.selectedToolType,
+                  opts.entitiesById,
+                ),
               ),
             )
             .filter((v): v is TDisplay => v !== undefined);

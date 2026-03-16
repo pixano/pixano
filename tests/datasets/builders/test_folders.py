@@ -20,7 +20,6 @@ from pixano.datasets.builders.folders import (
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import BBox, Entity, Image, Message, Record, SequenceFrame, Video
-from pixano.schemas.annotations.bbox import BBox
 from pixano.schemas.annotations.keypoints import KeyPoints
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
@@ -631,7 +630,6 @@ class TestFolderBaseBuilder:
             actual_record: Record = item["records"]
             if actual_record.split not in split_counts:
                 split_counts[actual_record.split] = 0
-            sc = split_counts[actual_record.split]
             view: Image = item["images"]
             assert view.record_id == actual_record.id
             split_counts[actual_record.split] += 1

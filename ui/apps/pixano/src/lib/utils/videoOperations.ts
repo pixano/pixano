@@ -16,9 +16,7 @@ import {
   videoViewNames,
 } from "$lib/stores/videoStores.svelte";
 import { Tracklet, type Annotation, type LoadedImage } from "$lib/types/dataset";
-import {
-  applyPixanoSourceFields,
-} from "$lib/utils/entityLookupUtils";
+import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
 const NETWORK_BATCH_SIZE = 128;
@@ -152,8 +150,7 @@ function ensureFrameWorker(): Worker | null {
   };
 
   frameWorker.onerror = (event: ErrorEvent) => {
-    const message =
-      event.message || "Video frame worker failed while processing frame streaming.";
+    const message = event.message || "Video frame worker failed while processing frame streaming.";
     rejectPendingWorkerRequests(new Error(message));
     closeFrameWorker();
   };
@@ -161,9 +158,7 @@ function ensureFrameWorker(): Worker | null {
   return frameWorker;
 }
 
-function requestWorker(
-  payload: FrameWorkerRequestPayload,
-): Promise<FrameWorkerSuccessResponse> {
+function requestWorker(payload: FrameWorkerRequestPayload): Promise<FrameWorkerSuccessResponse> {
   const worker = ensureFrameWorker();
   if (!worker) {
     return Promise.reject(new Error("Web Worker is not supported in this browser."));
@@ -249,14 +244,16 @@ function getChunkRange(chunkIndex: number): { startFrame: number; batchSize: num
   const totalFrames = getTotalFrames();
   if (totalFrames <= 0) return undefined;
   const startFrame = chunkIndex * NETWORK_BATCH_SIZE;
-  if (startFrame >= totalFrames || chunkIndex <0) return undefined;
+  if (startFrame >= totalFrames || chunkIndex < 0) return undefined;
   return {
     startFrame,
     batchSize: Math.min(NETWORK_BATCH_SIZE, totalFrames - startFrame),
   };
 }
 
-function getSessionIdentifiers(datasetId?: string): { datasetId: string; itemId: string } | undefined {
+function getSessionIdentifiers(
+  datasetId?: string,
+): { datasetId: string; itemId: string } | undefined {
   const resolvedDatasetId = datasetId ?? currentDatasetStore.value?.id;
   const itemId = currentItemId.value;
   if (!resolvedDatasetId || !itemId) return undefined;
@@ -346,13 +343,13 @@ export function primePlaybackPrefetch(frameIndex: number): void {
   const anchor = clampFrameIndex(frameIndex);
   preloadAround(anchor);
 
-  if (anchor % NETWORK_BATCH_SIZE <PLAYBACK_PREFETCH_TRIGGER) {
+  if (anchor % NETWORK_BATCH_SIZE < PLAYBACK_PREFETCH_TRIGGER) {
     return;
   }
 
   const nextChunk = chunkForFrame(anchor) + 1;
   for (const viewName of videoViewNames.value) {
-    for (let step = 0; step <PLAYBACK_EXTRA_PREFETCH_CHUNKS; step++) {
+    for (let step = 0; step < PLAYBACK_EXTRA_PREFETCH_CHUNKS; step++) {
       void requestChunk(viewName, nextChunk + step);
     }
   }
@@ -395,7 +392,10 @@ export async function waitForReadyAheadFrames(
  * - OPFS is the source of truth for long videos.
  * - LRU holds only recently rendered/adjacent frames to keep UI snappy.
  */
-async function decodeAndCacheFrame(viewName: string, frameIndex: number): Promise<LoadedImage | undefined> {
+async function decodeAndCacheFrame(
+  viewName: string,
+  frameIndex: number,
+): Promise<LoadedImage | undefined> {
   const key = frameKey(viewName, frameIndex);
   const inMemory = decodedFrameCache.get(key);
   if (inMemory) return inMemory;
@@ -482,7 +482,7 @@ async function requestFrameRange(
 
   if (token === sessionVersion) {
     const endFrame = startFrame + batchSize;
-    for (let frame = startFrame; frame <endFrame; frame++) {
+    for (let frame = startFrame; frame < endFrame; frame++) {
       if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
         resolveFrameWaiters(viewName, frame, false);
       }
@@ -529,7 +529,11 @@ async function fetchAndMarkFrameRange(
  * Flow per frame:
  * network chunk -> OPFS write -> waiter resolve -> optional warm decode.
  */
-async function requestChunk(viewName: string, chunkIndex: number, token = sessionVersion): Promise<void> {
+async function requestChunk(
+  viewName: string,
+  chunkIndex: number,
+  token = sessionVersion,
+): Promise<void> {
   const sessionToken = await ensureSessionReady();
   if (sessionToken === undefined || sessionToken !== sessionVersion) return;
 
@@ -556,7 +560,7 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
     try {
       const endFrame = startFrame + batchSize;
       let isCompleteChunk = true;
-      for (let frame = startFrame; frame <endFrame; frame++) {
+      for (let frame = startFrame; frame < endFrame; frame++) {
         if (!runtime.availableFrames.has(frame)) {
           isCompleteChunk = false;
           break;
@@ -569,7 +573,7 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
     } finally {
       if (sessionToken === sessionVersion) {
         const endFrame = startFrame + batchSize;
-        for (let frame = startFrame; frame <endFrame; frame++) {
+        for (let frame = startFrame; frame < endFrame; frame++) {
           if (!availableFrames.has(frame) && !runtime.availableFrames.has(frame)) {
             resolveFrameWaiters(viewName, frame, false);
           }
@@ -591,7 +595,10 @@ async function requestChunk(viewName: string, chunkIndex: number, token = sessio
  * 2) OPFS (disk)
  * 3) network chunk stream (then OPFS)
  */
-async function ensureFrameReady(viewName: string, frameIndex: number): Promise<LoadedImage | undefined> {
+async function ensureFrameReady(
+  viewName: string,
+  frameIndex: number,
+): Promise<LoadedImage | undefined> {
   const key = frameKey(viewName, frameIndex);
   const inMemory = decodedFrameCache.get(key);
   if (inMemory) return inMemory;
@@ -735,11 +742,7 @@ function resetFrameRuntime(): void {
   imagesPerView.value = {};
 }
 
-export const splitTrackInTwo = (
-  track2split: Tracklet,
-  prev: number,
-  next: number,
-): Annotation => {
+export const splitTrackInTwo = (track2split: Tracklet, prev: number, next: number): Annotation => {
   const rightTrackOrig = structuredClone(track2split);
   const { ui, ...noUIfieldsTrack } = rightTrackOrig;
   const rightTrack = new Tracklet(noUIfieldsTrack);
@@ -831,7 +834,7 @@ async function updateViewInternal(imageIndex: number): Promise<boolean> {
     videoViewNames.value.map((viewName) => ensureFrameReady(viewName, target)),
   );
 
-  for (let i = 0; i <videoViewNames.value.length; i++) {
+  for (let i = 0; i < videoViewNames.value.length; i++) {
     const loaded = loadedFrames[i];
     if (loaded) {
       pushImageToCanvasView(videoViewNames.value[i], loaded);

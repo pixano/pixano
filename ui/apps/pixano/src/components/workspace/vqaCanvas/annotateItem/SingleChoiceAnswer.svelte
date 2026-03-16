@@ -4,17 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------->
 
-  <script lang="ts">
-    import { untrack } from "svelte";
-    import type { Message } from "$lib/types/dataset";
-    import { Label, RadioGroup } from "bits-ui";
-    import { Check } from "phosphor-svelte";
+<script lang="ts">
+  import { Label, RadioGroup } from "bits-ui";
+  import { Check } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
-    import { cn } from "$lib/utils/styleUtils";
-    import { effectProbe } from "$lib/utils/effectProbe";
-
-  import { ContentChangeEventType, type ContentChangeEvent } from "$lib/types/vqa";
   import { deserializeMessageContent, serializeMessageContent } from "./utils";
+  import type { Message } from "$lib/types/dataset";
+  import { ContentChangeEventType, type ContentChangeEvent } from "$lib/types/vqa";
+  import { effectProbe } from "$lib/utils/effectProbe";
+  import { cn } from "$lib/utils/styleUtils";
 
   interface Props {
     choices: string[];
@@ -83,8 +82,8 @@ License: CECILL-C
   $effect(() => {
     const currentValue = selectedValue;
     untrack(() => {
-        effectProbe("SingleChoiceAnswer.commitSelection", {
-          answerId: answer?.id ?? null,
+      effectProbe("SingleChoiceAnswer.commitSelection", {
+        answerId: answer?.id ?? null,
         selectedValue: currentValue,
         lastCommittedValue,
       });
@@ -98,12 +97,16 @@ License: CECILL-C
 <div class="flex flex-col gap-3">
   <div class="flex flex-col gap-1">
     <RadioGroup.Root
-      class="flex flex-col gap-4 text-sm font-medium {disabled ? 'pointer-events-none opacity-70' : ''}"
+      class="flex flex-col gap-4 text-sm font-medium {disabled
+        ? 'pointer-events-none opacity-70'
+        : ''}"
       bind:value={selectedValue}
       {disabled}
     >
       {#each radioGroupValues as { label, value }}
-        <div class={cn("group flex select-none items-center text-foreground transition-all", "gap-2")}>
+        <div
+          class={cn("group flex select-none items-center text-foreground transition-all", "gap-2")}
+        >
           <RadioGroup.Item
             id={value}
             {value}
@@ -111,7 +114,7 @@ License: CECILL-C
             class="size-5 shrink-0 rounded-full border border-primary transition-all duration-100 ease-in-out data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground flex items-center justify-center"
           >
             {#snippet children({ checked })}
-              {#if checked}<Check class="h-3.5 w-3.5"  />{/if}
+              {#if checked}<Check class="h-3.5 w-3.5" />{/if}
             {/snippet}
           </RadioGroup.Item>
           <Label.Root for={value} class="pl-3">{label}</Label.Root>

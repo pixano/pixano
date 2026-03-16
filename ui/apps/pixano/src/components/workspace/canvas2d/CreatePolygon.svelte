@@ -8,7 +8,12 @@ License: CECILL-C
   import Konva from "konva";
   import { Circle, Group, Shape as KonvaShape } from "svelte-konva";
 
-  import { DRAFT_FILL_COLOR, DRAFT_LINE_COLOR, EDGE_SNAP_PX, INPUTRECT_STROKEWIDTH } from "./konvaConstants";
+  import {
+    DRAFT_FILL_COLOR,
+    DRAFT_LINE_COLOR,
+    EDGE_SNAP_PX,
+    INPUTRECT_STROKEWIDTH,
+  } from "./konvaConstants";
   import PolygonVertices from "./PolygonVertices.svelte";
   import type { ToolEvent } from "$lib/tools";
   import type { Reference } from "$lib/types/dataset";
@@ -85,13 +90,13 @@ License: CECILL-C
     let bestIdx = -1;
     let bestPoint = pos;
 
-    for (let shapeIndex = 0; shapeIndex <polygons.length; shapeIndex++) {
+    for (let shapeIndex = 0; shapeIndex < polygons.length; shapeIndex++) {
       const polygon = polygons[shapeIndex];
-      for (let pointIndex = 0; pointIndex <polygon.length; pointIndex++) {
+      for (let pointIndex = 0; pointIndex < polygon.length; pointIndex++) {
         const start = polygon[pointIndex];
         const end = polygon[(pointIndex + 1) % polygon.length];
         const { dist, point } = projectOnSegment(pos, start, end);
-        if (dist <bestDist) {
+        if (dist < bestDist) {
           bestDist = dist;
           bestShape = shapeIndex;
           bestIdx = pointIndex;
@@ -108,7 +113,7 @@ License: CECILL-C
     const inProgressIndex = polygonPoints.length - 1;
     if (shapeIndex !== inProgressIndex || pointIndex !== 0) return;
     const inProgressPolygon = polygonPoints[shapeIndex];
-    if (!inProgressPolygon || inProgressPolygon.length <3) return;
+    if (!inProgressPolygon || inProgressPolygon.length < 3) return;
 
     const firstPoint = inProgressPolygon[0];
     onToolEvent({
@@ -154,7 +159,7 @@ License: CECILL-C
       polygonCreation.closedPolygons,
     );
 
-    if (bestDist <threshold && bestShape >= 0) {
+    if (bestDist < threshold && bestShape >= 0) {
       hoveredEdge = {
         x: bestPoint.x,
         y: bestPoint.y,
@@ -222,9 +227,9 @@ License: CECILL-C
 
     const closedPolygons = polygonCreation?.closedPolygons ?? [];
     for (const polygon of closedPolygons) {
-      if (polygon.length <2) continue;
+      if (polygon.length < 2) continue;
       ctx.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i <polygon.length; i++) {
+      for (let i = 1; i < polygon.length; i++) {
         ctx.lineTo(polygon[i].x, polygon[i].y);
       }
       ctx.closePath();
@@ -234,7 +239,7 @@ License: CECILL-C
     const hasCurrent = !!polygonCreation?.current;
     if (inProgress.length > 0) {
       ctx.moveTo(inProgress[0].x, inProgress[0].y);
-      for (let i = 1; i <inProgress.length; i++) {
+      for (let i = 1; i < inProgress.length; i++) {
         ctx.lineTo(inProgress[i].x, inProgress[i].y);
       }
       if (hasCurrent) {
@@ -258,9 +263,9 @@ License: CECILL-C
     }
     ctx.beginPath();
     for (const polygon of polygonCreation.closedPolygons) {
-      if (polygon.length <2) continue;
+      if (polygon.length < 2) continue;
       ctx.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i <polygon.length; i++) {
+      for (let i = 1; i < polygon.length; i++) {
         ctx.lineTo(polygon[i].x, polygon[i].y);
       }
       ctx.closePath();
@@ -282,7 +287,6 @@ License: CECILL-C
         onmouseleave={handleShapeMouseLeave}
         sceneFunc={drawPolygonScene}
         stroke={DRAFT_LINE_COLOR}
-        
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}
@@ -306,7 +310,6 @@ License: CECILL-C
           radius={5 / zoomFactor}
           fill={DRAFT_LINE_COLOR}
           stroke="white"
-          
           strokeScaleEnabled={false}
           listening={false}
         />
@@ -317,9 +320,9 @@ License: CECILL-C
           const polygons = getSavedPolygonPoints(newShape);
           ctx.beginPath();
           for (const polygon of polygons) {
-            if (polygon.length <2) continue;
+            if (polygon.length < 2) continue;
             ctx.moveTo(polygon[0].x, polygon[0].y);
-            for (let i = 1; i <polygon.length; i++) {
+            for (let i = 1; i < polygon.length; i++) {
               ctx.lineTo(polygon[i].x, polygon[i].y);
             }
             ctx.closePath();
@@ -334,7 +337,6 @@ License: CECILL-C
           ctx.strokeShape(shape);
         }}
         stroke={DRAFT_LINE_COLOR}
-        
         strokeScaleEnabled={false}
         perfectDrawEnabled={!isInteracting}
         shadowForStrokeEnabled={!isInteracting}

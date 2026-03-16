@@ -6,7 +6,6 @@ License: CECILL-C
 
 import { createMergeEntities } from "$lib/commands";
 import type { NodeId } from "$lib/document";
-
 import type {
   ToolContext,
   ToolEvent,
@@ -38,10 +37,7 @@ export class FusionToolFSM implements ToolFSM {
     switch (state.phase) {
       case "idle":
         // Fusion is triggered when entities are selected
-        if (
-          event.type === "confirm" ||
-          (event.type === "keyDown" && event.key === "Enter")
-        ) {
+        if (event.type === "confirm" || (event.type === "keyDown" && event.key === "Enter")) {
           if (context.selectedIds.size >= 2) {
             const ids = [...context.selectedIds] as NodeId[];
             const targetId = ids[0];

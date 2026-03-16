@@ -7,8 +7,8 @@ License: CECILL-C
 <script lang="ts">
   import { interpolatePlasma, scaleLinear } from "d3";
 
-  import { BaseSchema, type Entity, type Tracklet } from "$lib/ui";
   import { lastFrameIndex, playbackState, timelineZoom } from "$lib/stores/videoStores.svelte";
+  import { BaseSchema, type Entity, type Tracklet } from "$lib/ui";
   import { getCurrentImageTime } from "$lib/utils/videoUtils";
 
   interface Props {
@@ -34,7 +34,10 @@ License: CECILL-C
         if (!child.is_type(BaseSchema.Tracklet)) continue;
         const tracklet = child as Tracklet;
         const startBucket = Math.max(0, Math.floor(tracklet.data.start_frame / bucketSize));
-        const endBucket = Math.min(densityBucketCount - 1, Math.floor(tracklet.data.end_frame / bucketSize));
+        const endBucket = Math.min(
+          densityBucketCount - 1,
+          Math.floor(tracklet.data.end_frame / bucketSize),
+        );
 
         for (let bucketIndex = startBucket; bucketIndex <= endBucket; bucketIndex += 1) {
           buckets[bucketIndex] += 1;
@@ -101,13 +104,20 @@ License: CECILL-C
     return marks;
   });
   const hoveredBucketIndex = $derived(
-    hoveredFrameIndex === null ? null : Math.min(densityBucketCount - 1, Math.floor((hoveredFrameIndex / totalFrames) * densityBucketCount)),
+    hoveredFrameIndex === null
+      ? null
+      : Math.min(
+          densityBucketCount - 1,
+          Math.floor((hoveredFrameIndex / totalFrames) * densityBucketCount),
+        ),
   );
   const hoveredBucket = $derived(
     hoveredBucketIndex === null ? null : densityBuckets[hoveredBucketIndex],
   );
   const hoveredTimeLabel = $derived(
-    hoveredFrameIndex === null ? null : getCurrentImageTime(hoveredFrameIndex, playbackState.value.videoSpeed),
+    hoveredFrameIndex === null
+      ? null
+      : getCurrentImageTime(hoveredFrameIndex, playbackState.value.videoSpeed),
   );
 
   function getFrameFromClientX(clientX: number): number {
@@ -193,15 +203,22 @@ License: CECILL-C
   bind:this={surfaceElement}
 >
   <div class="absolute inset-0">
-    <div class="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.82)_0%,hsl(var(--background)/0.58)_44%,hsl(var(--background)/0.26)_100%)] backdrop-blur-[10px]"></div>
-    <div class="absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(180deg,transparent_0%,hsl(var(--background)/0.06)_48%,hsl(var(--background)/0.14)_100%)]"></div>
+    <div
+      class="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.82)_0%,hsl(var(--background)/0.58)_44%,hsl(var(--background)/0.26)_100%)] backdrop-blur-[10px]"
+    ></div>
+    <div
+      class="absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(180deg,transparent_0%,hsl(var(--background)/0.06)_48%,hsl(var(--background)/0.14)_100%)]"
+    ></div>
   </div>
 
   <div class="absolute inset-0 border-b border-border/35">
     <div class="absolute inset-x-0 bottom-0 h-px bg-border/80"></div>
     <div class="absolute inset-x-0 bottom-[6px] h-px bg-border/40"></div>
     {#each ticks as tick (tick.second)}
-      <span class="pointer-events-none absolute bottom-0 h-2.5 w-px bg-foreground/48" style={`left: ${tick.leftPct}%`}></span>
+      <span
+        class="pointer-events-none absolute bottom-0 h-2.5 w-px bg-foreground/48"
+        style={`left: ${tick.leftPct}%`}
+      ></span>
       {#if tick.second > 0}
         <span
           class="pointer-events-none absolute top-1 -translate-x-1/2 text-[10px] font-semibold text-foreground [text-shadow:0_1px_0_hsl(var(--background)/0.78),0_0_12px_hsl(var(--background)/0.35)]"
@@ -241,5 +258,4 @@ License: CECILL-C
       {/if}
     </div>
   {/if}
-
 </button>

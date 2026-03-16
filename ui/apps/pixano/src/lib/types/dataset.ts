@@ -9,6 +9,7 @@ import {
   createTypedEntity,
   createTypedView,
 } from "$lib/utils/domainFactories";
+
 // ─── BaseSchema ────────────────────────────────────────────────────────────────
 
 export enum BaseSchema {
@@ -350,7 +351,12 @@ export abstract class Annotation extends BaseData<AnnotationData> {
   }
 
   static perFrameNonFeaturesFields(): string[] {
-    return Annotation.nonFeaturesFields().concat(["frame_id", "frame_index", "tracklet_id", "entity_dynamic_state_id"]);
+    return Annotation.nonFeaturesFields().concat([
+      "frame_id",
+      "frame_index",
+      "tracklet_id",
+      "entity_dynamic_state_id",
+    ]);
   }
 
   static deepCreateInstanceArray(
@@ -465,20 +471,25 @@ export class BBox extends Annotation {
   }
 
   static nonFeaturesFields(): string[] {
-    return super.perFrameNonFeaturesFields().concat(["coords", "format", "is_normalized", "confidence"]);
+    return super
+      .perFrameNonFeaturesFields()
+      .concat(["coords", "format", "is_normalized", "confidence"]);
   }
 
-  static cloneForFrame(source: BBox, overrides: {
-    id?: string;
-    coords?: number[];
-    view_name?: string;
-    frame_id?: string;
-    frame_index?: number;
-    source_id?: string;
-    source_type?: string;
-    source_name?: string;
-    source_metadata?: string;
-  }): BBox {
+  static cloneForFrame(
+    source: BBox,
+    overrides: {
+      id?: string;
+      coords?: number[];
+      view_name?: string;
+      frame_id?: string;
+      frame_index?: number;
+      source_id?: string;
+      source_type?: string;
+      source_name?: string;
+      source_metadata?: string;
+    },
+  ): BBox {
     const cloned = structuredClone(source);
     const { ui, ...dataFields } = cloned;
     const instance = new BBox(dataFields);
@@ -497,7 +508,8 @@ export class BBox extends Annotation {
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
     if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
     if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;
-    if (overrides.source_metadata !== undefined) instance.data.source_metadata = overrides.source_metadata;
+    if (overrides.source_metadata !== undefined)
+      instance.data.source_metadata = overrides.source_metadata;
     instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
     return instance;
   }
@@ -561,19 +573,22 @@ export class Keypoints extends Annotation {
     return super.perFrameNonFeaturesFields().concat(["template_id", "coords", "states"]);
   }
 
-  static cloneForFrame(source: Keypoints, overrides: {
-    id?: string;
-    coords?: number[];
-    states?: string[];
-    view_name?: string;
-    frame_id?: string;
-    frame_index?: number;
-    source_id?: string;
-    source_type?: string;
-    source_name?: string;
-    source_metadata?: string;
-    displayControl?: DisplayControl;
-  }): Keypoints {
+  static cloneForFrame(
+    source: Keypoints,
+    overrides: {
+      id?: string;
+      coords?: number[];
+      states?: string[];
+      view_name?: string;
+      frame_id?: string;
+      frame_index?: number;
+      source_id?: string;
+      source_type?: string;
+      source_name?: string;
+      source_metadata?: string;
+      displayControl?: DisplayControl;
+    },
+  ): Keypoints {
     const cloned = structuredClone(source);
     const { ui, ...dataFields } = cloned;
     const instance = new Keypoints(dataFields);
@@ -591,8 +606,10 @@ export class Keypoints extends Annotation {
     if (overrides.source_id !== undefined) instance.data.source_id = overrides.source_id;
     if (overrides.source_type !== undefined) instance.data.source_type = overrides.source_type;
     if (overrides.source_name !== undefined) instance.data.source_name = overrides.source_name;
-    if (overrides.source_metadata !== undefined) instance.data.source_metadata = overrides.source_metadata;
-    if (overrides.displayControl !== undefined) instance.ui.displayControl = overrides.displayControl;
+    if (overrides.source_metadata !== undefined)
+      instance.data.source_metadata = overrides.source_metadata;
+    if (overrides.displayControl !== undefined)
+      instance.ui.displayControl = overrides.displayControl;
     instance.updated_at = new Date(Date.now()).toISOString().replace(/Z$/, "+00:00");
     return instance;
   }
@@ -605,7 +622,6 @@ export interface MaskData {
   counts: number[] | string;
   [key: string]: unknown;
 }
-
 
 export class Mask extends Annotation {
   declare data: MaskData & PerFrameAnnotationData;

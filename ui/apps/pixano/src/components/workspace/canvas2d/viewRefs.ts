@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type Konva from "konva";
+
 import type { Shape } from "$lib/types/shapeTypes";
 
 export type ViewGroupKind = "background" | "static" | "active";
@@ -79,10 +80,7 @@ export class ViewRefManager {
     });
   }
 
-  applyViewTransform(
-    view_name: string,
-    transform: { x: number; y: number; scale: number },
-  ): void {
+  applyViewTransform(view_name: string, transform: { x: number; y: number; scale: number }): void {
     this.forEachLinkedViewGroup(view_name, (group) => {
       group.scale({ x: transform.scale, y: transform.scale });
       group.position({ x: transform.x, y: transform.y });

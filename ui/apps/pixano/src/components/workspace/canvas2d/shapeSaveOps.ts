@@ -7,11 +7,7 @@ License: CECILL-C
 import type { Reference } from "$lib/types/dataset";
 import type { Point2D, PolygonOutputMode } from "$lib/types/geometry";
 import { ShapeType, type PolygonVertex, type Shape } from "$lib/types/shapeTypes";
-import {
-  dataUrlToBlob,
-  getAlphaBoundingBox,
-  type MaskBounds,
-} from "$lib/utils/maskUtils";
+import { dataUrlToBlob, getAlphaBoundingBox, type MaskBounds } from "$lib/utils/maskUtils";
 
 export interface PolygonSavePayload {
   polygons?: PolygonVertex[][];
@@ -19,9 +15,7 @@ export interface PolygonSavePayload {
   outputMode?: PolygonOutputMode;
 }
 
-export function toPolygonPoints(
-  points: ReadonlyArray<PolygonVertex | Point2D>,
-): PolygonVertex[] {
+export function toPolygonPoints(points: ReadonlyArray<PolygonVertex | Point2D>): PolygonVertex[] {
   return points.map((point, index) => ({
     x: point.x,
     y: point.y,
@@ -77,10 +71,10 @@ function rasterizePolygonsToMask(
   ctx.fillStyle = "white";
 
   for (const polygon of polygons) {
-    if (polygon.length <3) continue;
+    if (polygon.length < 3) continue;
     ctx.beginPath();
     ctx.moveTo(polygon[0].x, polygon[0].y);
-    for (let i = 1; i <polygon.length; i += 1) {
+    for (let i = 1; i < polygon.length; i += 1) {
       ctx.lineTo(polygon[i].x, polygon[i].y);
     }
     ctx.closePath();
@@ -110,10 +104,10 @@ export function buildRectangleSaveShape(
   let finalGeo = geometry;
   if (localDraftShape?.status === "creating" && localDraftShape.type === ShapeType.bbox) {
     const shape = localDraftShape;
-    const w = shape.width <0 ? -shape.width : shape.width;
-    const h = shape.height <0 ? -shape.height : shape.height;
-    const x = shape.width <0 ? shape.x + shape.width : shape.x;
-    const y = shape.height <0 ? shape.y + shape.height : shape.y;
+    const w = shape.width < 0 ? -shape.width : shape.width;
+    const h = shape.height < 0 ? -shape.height : shape.height;
+    const x = shape.width < 0 ? shape.x + shape.width : shape.x;
+    const y = shape.height < 0 ? shape.y + shape.height : shape.y;
     finalGeo = { x, y, width: w, height: h };
   }
 

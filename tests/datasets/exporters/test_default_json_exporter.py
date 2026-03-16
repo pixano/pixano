@@ -45,9 +45,7 @@ class TestDefaultJSONDatasetExporter:
             image_data = record_data.get("image")
             if image_data:
                 images = image_data if isinstance(image_data, list) else [image_data]
-                expected_export_data["views"]["image"].extend(
-                    [img.model_dump(exclude=_TS_EXCLUDE) for img in images]
-                )
+                expected_export_data["views"]["image"].extend([img.model_dump(exclude=_TS_EXCLUDE) for img in images])
 
             # Entities
             entity_data = record_data.get("entities")

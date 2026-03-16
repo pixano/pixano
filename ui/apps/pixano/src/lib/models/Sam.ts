@@ -8,17 +8,17 @@ License: CECILL-C
 import { nanoid } from "nanoid";
 import * as ort from "onnxruntime-web";
 
+import type { BoundingBox, LabeledClick } from "$lib/types/geometry";
 import type {
   InteractiveImageSegmenter,
   InteractiveImageSegmenterInput,
   LabeledPointsTensor,
   SegmentationResult,
 } from "$lib/types/models";
-import type { BoundingBox, LabeledClick } from "$lib/types/geometry";
 import {
+  getAlphaBoundingBox,
   maskDataToFortranArrayToRle,
   rleToBitmapCanvas,
-  getAlphaBoundingBox,
 } from "$lib/utils/maskUtils";
 
 ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
@@ -79,7 +79,7 @@ export class SAM implements InteractiveImageSegmenter {
     const pointLabels = new Float32Array(n + num_additionalPoints);
 
     // Add clicks and scale to what SAM expects
-    for (let i = 0; i <n; i++) {
+    for (let i = 0; i < n; i++) {
       pointCoords[2 * i] = clicks[i].x * scale;
       pointCoords[2 * i + 1] = clicks[i].y * scale;
       pointLabels[i] = clicks[i].label;
@@ -134,7 +134,11 @@ export class SAM implements InteractiveImageSegmenter {
     const results = await this.onnxModel.run(samInputs);
     console.log("SAM.segmentImage in", Date.now() - start, "ms");
     this.previousMask = results.low_res_masks;
-    const rleMask = maskDataToFortranArrayToRle(results.masks.data as ArrayLike<number>, imageHeight, imageWidth);
+    const rleMask = maskDataToFortranArrayToRle(
+      results.masks.data as ArrayLike<number>,
+      imageHeight,
+      imageWidth,
+    );
     const bitmapCanvas = rleToBitmapCanvas(rleMask, [imageHeight, imageWidth]);
     const maskBounds = getAlphaBoundingBox(bitmapCanvas) ?? undefined;
 

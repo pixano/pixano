@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   import * as api from "$lib/api";
-  import { Input, PrimaryButton, type InputEvents } from "$lib/ui";
   import {
     pixanoInferenceSegmentationURL,
     pixanoInferenceTrackingURL,
   } from "$lib/stores/inferenceStores.svelte";
+  import { Input, PrimaryButton, type InputEvents } from "$lib/ui";
 
   interface Props {
     isConnected?: boolean;

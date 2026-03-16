@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { DatasetInfo } from "$lib/types/dataset";
-
 import { reactiveStore } from "./reactiveStore.svelte";
+import type { DatasetInfo } from "$lib/types/dataset";
 
 // ─── Dataset Stores ─────────────────────────────────────────────────────────────
 

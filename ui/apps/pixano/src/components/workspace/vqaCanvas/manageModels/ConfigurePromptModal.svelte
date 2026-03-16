@@ -5,10 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
   import { AutoResizeTextarea, Input, PrimaryButton } from "$lib/ui";
-
-  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
 
   interface Props {
     vqaSectionWidth: number;
@@ -17,7 +16,8 @@ License: CECILL-C
     onCancelPrompt?: () => void;
   }
 
-  let { vqaSectionWidth, completionModels, onCompletionModelsChange, onCancelPrompt }: Props = $props();
+  let { vqaSectionWidth, completionModels, onCompletionModelsChange, onCancelPrompt }: Props =
+    $props();
 
   let question_type = $state(QuestionTypeEnum.OPEN);
   const list_qt = Object.values(QuestionTypeEnum).map((value) => ({

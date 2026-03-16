@@ -4,8 +4,8 @@
 # License: CECILL-C
 # =====================================
 
-import tempfile
 import re
+import tempfile
 
 import cv2
 import numpy as np

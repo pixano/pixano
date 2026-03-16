@@ -6,29 +6,30 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { slide } from "svelte/transition";
-  import { cubicOut } from "svelte/easing";
   import {
     CaretRight,
     Eye,
     EyeClosed,
     Ghost,
     GitCommit,
-    ListPlus,
     ListDashes,
+    ListPlus,
     Pencil,
     Square,
     TextT,
     Trash,
   } from "phosphor-svelte";
+  import { cubicOut } from "svelte/easing";
+  import { slide } from "svelte/transition";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
-    setEntityDisplayControl as setDisplayCtrl,
     handleSetDisplayControl as handleSetDC,
     saveInputChange as saveInput,
+    setEntityDisplayControl as setDisplayCtrl,
   } from "./entityCardOps";
+  import { keypointsIcon } from "$lib/assets";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -46,8 +47,8 @@ License: CECILL-C
     BaseSchema,
     Card,
     cn,
-    entityHasTracklets,
     Entity,
+    entityHasTracklets,
     IconButton,
     Item,
     Tracklet,
@@ -55,9 +56,8 @@ License: CECILL-C
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
-  import { keypointsIcon } from "$lib/assets";
-  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { deleteEntity } from "$lib/utils/entityDeletion";
+  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
@@ -149,7 +149,11 @@ License: CECILL-C
       } else {
         if ("name" in a.data && "name" in b.data) {
           const getComparableName = (value: unknown): string => {
-            if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+            if (
+              typeof value === "string" ||
+              typeof value === "number" ||
+              typeof value === "boolean"
+            ) {
               return String(value);
             }
             return "";
@@ -316,7 +320,16 @@ License: CECILL-C
     child: Annotation | null = null,
     other_anns_value: boolean | null = null,
   ) => {
-    handleSetDC(entity.id, entityDisplayControl, displayControlProperty, new_value, child, other_anns_value, entities, annotations);
+    handleSetDC(
+      entity.id,
+      entityDisplayControl,
+      displayControlProperty,
+      new_value,
+      child,
+      other_anns_value,
+      entities,
+      annotations,
+    );
   };
 
   const saveInputChange = (
@@ -437,13 +450,21 @@ License: CECILL-C
         {/if}
 
         <!-- Entity ID + annotation summary pills -->
-        <button type="button" class="min-w-0 text-left flex flex-col gap-1" onclick={onColoredDotClick} title="Highlight entity">
+        <button
+          type="button"
+          class="min-w-0 text-left flex flex-col gap-1"
+          onclick={onColoredDotClick}
+          title="Highlight entity"
+        >
           <span
-            class={cn("block truncate text-[13px] font-semibold leading-tight transition-colors font-mono", {
-              "text-foreground": highlightState !== "none",
-              "text-muted-foreground":
-                highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
-            })}
+            class={cn(
+              "block truncate text-[13px] font-semibold leading-tight transition-colors font-mono",
+              {
+                "text-foreground": highlightState !== "none",
+                "text-muted-foreground":
+                  highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
+              },
+            )}
             title={entity.id}
           >
             {entity.id}
@@ -455,7 +476,12 @@ License: CECILL-C
               {#each Object.entries(annotationTypeSummary) as [schema, count]}
                 {@const meta = TYPE_META[schema]}
                 {#if meta}
-                  <span class={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none", meta.color)}>
+                  <span
+                    class={cn(
+                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
+                      meta.color,
+                    )}
+                  >
                     {#if schema === BaseSchema.BBox}
                       <Square class="h-2.5 w-2.5" />
                     {:else if schema === BaseSchema.Mask}
@@ -496,7 +522,10 @@ License: CECILL-C
             onclick={onTrackVisClick}
             class="h-7 w-7 rounded-md"
           >
-            {#if hiddenTrack}<ListPlus class="h-3.5 w-3.5" />{:else}<ListDashes weight="regular" class="h-3.5 w-3.5" />{/if}
+            {#if hiddenTrack}<ListPlus class="h-3.5 w-3.5" />{:else}<ListDashes
+                weight="regular"
+                class="h-3.5 w-3.5"
+              />{/if}
           </IconButton>
         {/if}
 
@@ -573,8 +602,15 @@ License: CECILL-C
           <div class="space-y-2.5 animate-in fade-in duration-200">
             <!-- Entity ID reference -->
             <div class="flex items-center gap-2 px-1">
-              <span class="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider">ID</span>
-              <span class="text-[11px] font-mono text-foreground/70 truncate select-all" title={entity.id}>
+              <span
+                class="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wider"
+              >
+                ID
+              </span>
+              <span
+                class="text-[11px] font-mono text-foreground/70 truncate select-all"
+                title={entity.id}
+              >
                 {entity.id}
               </span>
             </div>
@@ -589,7 +625,9 @@ License: CECILL-C
                 />
               </div>
             {:else}
-              <div class="rounded-lg border border-dashed border-border/30 bg-muted/20 px-3 py-4 flex flex-col items-center gap-1">
+              <div
+                class="rounded-lg border border-dashed border-border/30 bg-muted/20 px-3 py-4 flex flex-col items-center gap-1"
+              >
                 <span class="text-[11px] text-muted-foreground/50">
                   No custom attributes defined.
                 </span>
@@ -597,11 +635,13 @@ License: CECILL-C
             {/if}
           </div>
 
-        <!-- Annotations tab -->
+          <!-- Annotations tab -->
         {:else}
           <div class="space-y-2 animate-in fade-in duration-200">
             {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === WorkspaceType.VIDEO)}
-              <p class="text-[11px] text-center text-muted-foreground/80 py-1 bg-muted/30 rounded-md">
+              <p
+                class="text-[11px] text-center text-muted-foreground/80 py-1 bg-muted/30 rounded-md"
+              >
                 {allowedChilds.length > 0 ? allowedChilds.length : "No"}
                 annotation{allowedChilds.length === 1 ? "" : "s"}
                 on frame {currentFrameIndex.value}
@@ -609,7 +649,9 @@ License: CECILL-C
             {/if}
 
             {#if allowedChilds.length === 0}
-              <div class="rounded-md border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground">
+              <div
+                class="rounded-md border border-border/40 bg-background/60 px-2.5 py-2 text-xs text-muted-foreground"
+              >
                 No annotations currently visible for this entity.
               </div>
             {:else}

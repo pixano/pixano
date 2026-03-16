@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from .camcalibration import (
     BaseIntrinsics,
     CamCalibration,

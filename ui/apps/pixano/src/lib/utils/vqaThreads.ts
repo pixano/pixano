@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { MessageTypeEnum, type Message } from "$lib/types/dataset";
 import type { QuestionThread } from "$lib/types/vqa";
 

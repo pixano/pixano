@@ -48,9 +48,7 @@ export const TextSpanMark = Mark.create<TextSpanMarkOptions>({
           "padding: 1px 4px;",
           "border-radius: 6px;",
           "margin: 0px 1px;",
-          highlighted
-            ? `box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 10px ${bgColor};`
-            : "",
+          highlighted ? `box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 10px ${bgColor};` : "",
         ].join(" ");
 
     return [

@@ -198,9 +198,7 @@ function parseSearchToken(token: string): {
   const normalizedToken = normalizeSearchText(effectiveToken);
   if (normalizedToken.length === 0) return {};
 
-  return negated
-    ? { negatedTextToken: normalizedToken }
-    : { textToken: normalizedToken };
+  return negated ? { negatedTextToken: normalizedToken } : { textToken: normalizedToken };
 }
 
 export function parseSearchQuery(query: string): ParsedSearchQuery {
@@ -253,7 +251,11 @@ export function buildSearchQueryChips(parsedQuery: ParsedSearchQuery, maxChips =
   return visible;
 }
 
-function appendFieldValue(fieldValues: SearchFieldValueMap, fieldName: string, value: SearchScalar): void {
+function appendFieldValue(
+  fieldValues: SearchFieldValueMap,
+  fieldName: string,
+  value: SearchScalar,
+): void {
   const normalizedFieldName = normalizeSearchFieldName(fieldName);
   if (normalizedFieldName.length === 0) return;
   const existing = fieldValues.get(normalizedFieldName);

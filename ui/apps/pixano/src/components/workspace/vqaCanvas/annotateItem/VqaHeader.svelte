@@ -5,15 +5,14 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { untrack } from "svelte";
   import { Cpu, Gear } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
+  import ConfigurePromptModal from "../manageModels/ConfigurePromptModal.svelte";
+  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
   import { IconButton } from "$lib/ui";
   import { effectProbe } from "$lib/utils/effectProbe";
-
-  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import ConfigurePromptModal from "../manageModels/ConfigurePromptModal.svelte";
 
   interface Props {
     vqaSectionWidth: number;
@@ -23,7 +22,13 @@ License: CECILL-C
     onCompletionModelsChange?: (models: PixanoInferenceCompletionModel[]) => void;
   }
 
-  let { vqaSectionWidth, inferenceServer, vqaModels, completionModels, onCompletionModelsChange }: Props = $props();
+  let {
+    vqaSectionWidth,
+    inferenceServer,
+    vqaModels,
+    completionModels,
+    onCompletionModelsChange,
+  }: Props = $props();
 
   let selectedModel = $state("");
   let showPromptModal = $state(false);
@@ -98,5 +103,10 @@ License: CECILL-C
 </div>
 
 {#if showPromptModal}
-  <ConfigurePromptModal {vqaSectionWidth} {completionModels} {onCompletionModelsChange} onCancelPrompt={() => (showPromptModal = false)} />
+  <ConfigurePromptModal
+    {vqaSectionWidth}
+    {completionModels}
+    {onCompletionModelsChange}
+    onCancelPrompt={() => (showPromptModal = false)}
+  />
 {/if}

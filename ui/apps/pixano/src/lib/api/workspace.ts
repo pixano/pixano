@@ -1,9 +1,10 @@
-import {
-  toRawAnnotation,
-  toRawEntity,
-  toRawRecord,
-  toRawView,
-} from "./adapters";
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import { toRawAnnotation, toRawEntity, toRawRecord, toRawView } from "./adapters";
 import { ApiError, buildQueryString, requestJson } from "./apiClient";
 import { normalizeTableName } from "./resourceNames";
 import type {
@@ -15,9 +16,18 @@ import type {
   SFrameResponse,
   TextResponse,
 } from "./restTypes";
-import { Annotation, BaseSchema, Entity, Item, View, WorkspaceType, type ViewEmbedding } from "$lib/types/dataset";
-import { normalizeMediaUrl } from "$lib/utils/coreUtils";
+import {
+  Annotation,
+  BaseSchema,
+  Entity,
+  Item,
+  View,
+  WorkspaceType,
+  type SequenceFrame,
+  type ViewEmbedding,
+} from "$lib/types/dataset";
 import type { WorkspaceData } from "$lib/types/workspace";
+import { normalizeMediaUrl } from "$lib/utils/coreUtils";
 
 const WORKSPACE_COLLECTIONS = [
   "bboxes",
@@ -50,7 +60,7 @@ function createWorkspaceData(payload: {
 function finalizeWorkspaceData(
   workspaceData: WorkspaceData,
   datasetId: string,
-  workspaceType: string,
+  workspaceType: WorkspaceType,
 ): WorkspaceData {
   if (workspaceType === WorkspaceType.VIDEO) {
     for (const viewName in workspaceData.views) {
@@ -59,10 +69,13 @@ function finalizeWorkspaceData(
         throw new Error("Video workspace without SequenceFrames.");
       }
       view.forEach((sframe) => {
-        sframe.data.type = WorkspaceType.VIDEO;
-        sframe.data.url = normalizeMediaUrl(sframe.data.url);
+        const sf = sframe as SequenceFrame;
+        sf.data.type = WorkspaceType.VIDEO;
+        sf.data.url = normalizeMediaUrl(sf.data.url);
       });
-      view.sort((a, b) => a.data.frame_index - b.data.frame_index);
+      view.sort(
+        (a, b) => (a as SequenceFrame).data.frame_index - (b as SequenceFrame).data.frame_index,
+      );
     }
   } else {
     for (const viewName in workspaceData.views) {
@@ -74,12 +87,12 @@ function finalizeWorkspaceData(
         view.data.type = WorkspaceType.IMAGE_TEXT_ENTITY_LINKING;
       } else {
         view.data.type = WorkspaceType.IMAGE;
-        view.data.url = normalizeMediaUrl(view.data.url);
+        view.data.url = normalizeMediaUrl(view.data.url as string);
       }
     }
   }
 
-  workspaceData.ui = { type: workspaceType as WorkspaceType, datasetId };
+  workspaceData.ui = { type: workspaceType, datasetId };
   return workspaceData;
 }
 
@@ -112,12 +125,12 @@ async function listAllPages<T>(
 export async function loadWorkspaceRecord(
   datasetId: string,
   recordId: string,
-  workspaceType: string,
+  workspaceType: WorkspaceType,
   resources: readonly string[] = WORKSPACE_COLLECTIONS,
 ): Promise<{ workspaceData: WorkspaceData }> {
-  const shouldLoadImages = workspaceType !== "video";
-  const shouldLoadTexts = workspaceType === "image_text_entity_linking";
-  const shouldLoadSFrames = workspaceType === "video";
+  const shouldLoadImages = workspaceType !== WorkspaceType.VIDEO;
+  const shouldLoadTexts = workspaceType === WorkspaceType.IMAGE_TEXT_ENTITY_LINKING;
+  const shouldLoadSFrames = workspaceType === WorkspaceType.VIDEO;
 
   const [record, images, texts, sframes, entities, ...annotationGroups] = await Promise.all([
     requestJson<RecordResponse>(`/datasets/${datasetId}/records/${recordId}`, {}, "getRecord"),
@@ -132,7 +145,9 @@ export async function loadWorkspaceRecord(
       : Promise.resolve([]),
     listAllPages<EntityResponse>(`/datasets/${datasetId}/entities`, { record_id: recordId }),
     ...resources.map((resource) =>
-      listAllPages<RecordComponentResponse>(`/datasets/${datasetId}/${resource}`, { record_id: recordId }),
+      listAllPages<RecordComponentResponse>(`/datasets/${datasetId}/${resource}`, {
+        record_id: recordId,
+      }),
     ),
   ]);
 

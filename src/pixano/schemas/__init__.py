@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from .annotations import (
     AnnotationSourceKind,
     BBox,
@@ -10,8 +16,8 @@ from .annotations import (
     KeyPoints,
     KeyPoints3D,
     Message,
-    QuestionType,
     PerFrameAnnotation,
+    QuestionType,
     Relation,
     TextSpan,
     Tracklet,

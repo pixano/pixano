@@ -4,11 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
 import type { Command, CommandProcessor, HistoryEntry } from "$lib/commands";
 import { HistoryStackImpl } from "$lib/commands";
-
 import type { CommandBridge, ReactiveReadonly } from "$lib/types/store";
-import type { DocumentStoreImpl } from "./DocumentStoreImpl.svelte";
 
 /**
  * Bridges the Command system to Svelte reactivity.
@@ -33,8 +32,16 @@ export class CommandBridgeImpl implements CommandBridge {
     this.history = new HistoryStackImpl();
 
     const self = this;
-    this.canUndo = { get value() { return self._canUndo; } };
-    this.canRedo = { get value() { return self._canRedo; } };
+    this.canUndo = {
+      get value() {
+        return self._canUndo;
+      },
+    };
+    this.canRedo = {
+      get value() {
+        return self._canRedo;
+      },
+    };
   }
 
   execute(command: Command): void {

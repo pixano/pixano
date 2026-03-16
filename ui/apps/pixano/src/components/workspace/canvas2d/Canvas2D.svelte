@@ -12,27 +12,28 @@ License: CECILL-C
 
   import BBox2D from "./BBox2D.svelte";
   import BrushCursor from "./BrushCursor.svelte";
-  import Mask from "./Mask.svelte";
+  import {
+    computeCursorFlushAction,
+    computeToolChangeAction,
+    getToolSwitchSignature,
+  } from "./canvasEventHandlers";
+  import { zoomViewTransform } from "./canvasGeometry";
   import CreatePolygon from "./CreatePolygon.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
-  import { zoomViewTransform } from "./canvasGeometry";
   import { CanvasFilterPipeline } from "./filterPipeline";
   import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
+  import Mask from "./Mask.svelte";
   import {
-    type PolygonSavePayload,
-    toPolygonPoints,
-    toClosedPolygonPoints,
-    buildRectangleSaveShape,
     buildPolygonSaveShape,
+    buildRectangleSaveShape,
+    toClosedPolygonPoints,
+    toPolygonPoints,
+    type PolygonSavePayload,
   } from "./shapeSaveOps";
-  import {
-    getToolSwitchSignature,
-    computeToolChangeAction,
-    computeCursorFlushAction,
-  } from "./canvasEventHandlers";
-  import { ViewRefManager } from "./viewRefs";
   import ShowKeypoints from "./ShowKeypoint.svelte";
+  import { ViewRefManager } from "./viewRefs";
+  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     ToolType,
     type Point2D,
@@ -44,7 +45,6 @@ License: CECILL-C
     createInternalToolBridge,
     createToolFSMForSelection,
   } from "$lib/tools/canvasBridgeRuntime";
-  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     brushDrawTool,
     getFallbackCanvasTool,
@@ -55,7 +55,12 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
-  import type { BBox, LoadedImagesPerView, Mask as DatasetMask, Reference } from "$lib/types/dataset";
+  import type {
+    BBox,
+    Mask as DatasetMask,
+    LoadedImagesPerView,
+    Reference,
+  } from "$lib/types/dataset";
   import {
     ShapeType,
     type CreatePolygonShape,
@@ -66,7 +71,6 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
-
 
   interface BrushSettings {
     brushRadius: number;
@@ -901,7 +905,7 @@ License: CECILL-C
     beginViewportInteraction();
 
     // Get zoom direction
-    let direction = event.deltaY <0 ? 1 : -1;
+    let direction = event.deltaY < 0 ? 1 : -1;
 
     // Revert direction for trackpad
     if (event.ctrlKey) direction = -direction;
@@ -1264,8 +1268,8 @@ License: CECILL-C
               {colorScale}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
-              selectedItemId={selectedItemId}
-              brushSettings={brushSettings}
+              {selectedItemId}
+              {brushSettings}
             />
           {/if}
 

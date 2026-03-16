@@ -2,7 +2,7 @@
 Copyright: CEA-LIST/DIASI/SIALV/LVA
 Author : pixano@cea.fr
 License: CECILL-C
---------------------------------------->
+-------------------------------------->
 
 <script lang="ts">
   import type Konva from "konva";
@@ -114,7 +114,6 @@ License: CECILL-C
   <Line
     points={[...findVertex(line[0]), ...findVertex(line[1])]}
     stroke={color}
-    
     strokeScaleEnabled={false}
     shadowForStrokeEnabled={false}
     {opacity}

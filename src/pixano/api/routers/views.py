@@ -1,13 +1,17 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Subtype-specific view routers."""
 
 import hashlib
 import io
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-
-from lancedb.pydantic import LanceModel
 
 from pixano.api.media import MULTIPART_BOUNDARY, iter_multipart_frames, media_type_from_format
 from pixano.api.models import ImageResponse, PaginatedResponse, SFrameResponse, TextResponse
@@ -18,9 +22,6 @@ from pixano.datasets.utils.errors import DatasetAccessError
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Views"])
-
-T = TypeVar("T", bound=LanceModel)
-R = TypeVar("R")
 
 IMAGE_TABLE = "images"
 TEXT_TABLE = "texts"
@@ -45,7 +46,7 @@ def _list_rows(
     record_id: str | None = None,
     view_name: str | None = None,
     where: str | None = None,
-) -> tuple[list[T], int]:
+) -> tuple[list[Any], int]:
     combined_where = _combine_where(
         f"record_id = '{record_id}'" if record_id else None,
         f"logical_name = '{view_name}'" if view_name else None,
@@ -68,7 +69,7 @@ def _list_rows(
     return (rows or []), total
 
 
-def _get_row(dataset: Dataset, table_name: str, row_id: str) -> T:
+def _get_row(dataset: Dataset, table_name: str, row_id: str) -> Any:
     try:
         row = dataset.get_data(table_name, ids=row_id)
     except DatasetAccessError as err:
@@ -246,6 +247,7 @@ def list_images(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[ImageResponse]:
+    """List image views with optional filtering."""
     return _list_image_responses(
         dataset_id,
         dataset,
@@ -258,16 +260,19 @@ def list_images(
 
 @router.get("/images/{id}", response_model=ImageResponse, operation_id="get_image")
 def get_image(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> ImageResponse:
+    """Fetch a single image view by ID."""
     return _to_image_response(dataset_id, _get_row(dataset, IMAGE_TABLE, id))
 
 
 @router.get("/images/{id}/blob", operation_id="get_image_blob")
 def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the raw binary blob of an image."""
     return _stream_blob(dataset, IMAGE_TABLE, id)
 
 
 @router.get("/images/{id}/preview", operation_id="get_image_preview")
 def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the preview thumbnail of an image."""
     return _stream_preview(dataset, IMAGE_TABLE, id)
 
 
@@ -279,6 +284,7 @@ def list_texts(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[TextResponse]:
+    """List text views with optional filtering."""
     return _list_text_responses(
         dataset,
         pagination,
@@ -290,6 +296,7 @@ def list_texts(
 
 @router.get("/texts/{id}", response_model=TextResponse, operation_id="get_text")
 def get_text(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> TextResponse:
+    """Fetch a single text view by ID."""
     return _to_text_response(_get_row(dataset, TEXT_TABLE, id))
 
 
@@ -302,6 +309,7 @@ def list_sframes(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[SFrameResponse]:
+    """List sequence frame views with optional filtering."""
     return _list_sframe_responses(
         dataset_id,
         dataset,
@@ -314,16 +322,19 @@ def list_sframes(
 
 @router.get("/sframes/{id}", response_model=SFrameResponse, operation_id="get_sframe")
 def get_sframe(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> SFrameResponse:
+    """Fetch a single sequence frame by ID."""
     return _to_sframe_response(dataset_id, _get_row(dataset, SFRAME_TABLE, id))
 
 
 @router.get("/sframes/{id}/blob", operation_id="get_sframe_blob")
 def get_sframe_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the raw binary blob of a sequence frame."""
     return _stream_blob(dataset, SFRAME_TABLE, id)
 
 
 @router.get("/sframes/{id}/preview", operation_id="get_sframe_preview")
 def get_sframe_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the preview thumbnail of a sequence frame."""
     return _stream_preview(dataset, SFRAME_TABLE, id)
 
 
@@ -340,6 +351,7 @@ def list_record_images(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[ImageResponse]:
+    """List images belonging to a specific record."""
     return _list_image_responses(
         dataset_id,
         dataset,
@@ -362,6 +374,7 @@ def list_record_texts(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[TextResponse]:
+    """List texts belonging to a specific record."""
     return _list_text_responses(
         dataset,
         pagination,
@@ -384,6 +397,7 @@ def list_record_sframes(
     view_name: str | None = None,
     where: str | None = None,
 ) -> PaginatedResponse[SFrameResponse]:
+    """List sequence frames belonging to a specific record."""
     return _list_sframe_responses(
         dataset_id,
         dataset,
@@ -411,6 +425,7 @@ def get_record_sframe_batch(
     start_frame: Annotated[int, Query(ge=0)] = 0,
     batch_size: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> StreamingResponse:
+    """Stream a batch of temporal frames as a multipart binary response."""
     try:
         frames = dataset.get_temporal_view_batch(
             SFRAME_TABLE,

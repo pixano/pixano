@@ -5,10 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Editor } from "@tiptap/core";
-import type { TextSpan } from "$lib/ui";
-import { isLuminanceHigh } from "$lib/ui";
+
 import { MARK_UPDATE_META } from "./extensions/ReadOnlyContent";
 import { charOffsetToPmPos } from "./positionMapping";
+import type { TextSpan } from "$lib/ui";
+import { isLuminanceHigh } from "$lib/ui";
 
 function getTextColor(bgColor: string): string {
   return isLuminanceHigh(bgColor) ? "black" : "white";
@@ -27,10 +28,7 @@ function getGluedRanges(textSpan: TextSpan): Array<{ start: number; end: number 
     let end = spans_end[i];
 
     // Glue next span if it's the next word (≤2 chars gap)
-    while (
-      spans_start.length > i + 1 &&
-      spans_start[i + 1] - end <= 2
-    ) {
+    while (spans_start.length > i + 1 && spans_start[i + 1] - end <= 2) {
       end = spans_end[i + 1];
       i++;
     }

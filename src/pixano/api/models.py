@@ -1,7 +1,15 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Lean API transport models derived from canonical Pixano schemas."""
 
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+
+from lancedb.pydantic import LanceModel
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_serializer
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
@@ -12,13 +20,12 @@ from pixano.schemas import (
     Embedding,
     Entity,
     EntityDynamicState,
-    Record,
     KeyPoints,
     Message,
+    Record,
     TextSpan,
     Tracklet,
 )
-from lancedb.pydantic import LanceModel
 
 
 T = TypeVar("T")
@@ -86,7 +93,6 @@ def serialize_row(
     exclude_fields: set[str] | frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Convert a Lance row to a flat API payload."""
-
     payload: dict[str, Any] = {}
     for key, value in row.model_dump(exclude=set(exclude_fields)).items():
         if isinstance(value, bytes):
@@ -97,7 +103,6 @@ def serialize_row(
 
 def merge_update_payload(existing_row: LanceModel, patch: dict[str, Any]) -> dict[str, Any]:
     """Apply a partial update payload onto an existing row dump."""
-
     merged = existing_row.model_dump()
     for key, value in patch.items():
         if value is None:
@@ -128,7 +133,7 @@ class PreviewDescriptor(ResponseModel):
     preview_url: str
 
 
-class RecordListResponse(RecordResponse):
+class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
 
 
@@ -162,6 +167,8 @@ EntityDynamicStateResponse = _create_transport_model("EntityDynamicStateResponse
 
 
 class ImageResponse(ResponseModel):
+    """Response model for an image view row."""
+
     id: str
     record_id: str
     logical_name: str = ""
@@ -174,6 +181,8 @@ class ImageResponse(ResponseModel):
 
 
 class TextResponse(ResponseModel):
+    """Response model for a text view row."""
+
     id: str
     record_id: str
     logical_name: str = ""
@@ -184,6 +193,8 @@ class TextResponse(ResponseModel):
 
 
 class SFrameResponse(ResponseModel):
+    """Response model for a sequence frame view row."""
+
     id: str
     record_id: str
     logical_name: str = ""
@@ -286,7 +297,7 @@ class ConversationResponse(BaseModel):
     """Read-only conversation aggregate returned by the API."""
 
     conversation_id: str
-    messages: list[MessageResponse]
+    messages: list[MessageResponse]  # type: ignore[valid-type]
 
 
 EmbeddingCreate = _create_transport_model(
@@ -317,17 +328,16 @@ class DatasetInfoResponse(DatasetInfo):
     )
     def serialize_schema_slot(self, schema_cls: type[LanceModel] | None) -> dict[str, Any] | None:
         """Serialize schema slots to JSON-friendly payloads."""
-
         return _serialize_table_schema(schema_cls) if schema_cls is not None else None
 
     @field_serializer("views", when_used="json")
     def serialize_views(self, views: dict[str, type[LanceModel]]) -> dict[str, dict[str, Any]]:
         """Serialize logical views to JSON-friendly payloads."""
-
         return {logical_name: _serialize_table_schema(schema_cls) for logical_name, schema_cls in views.items()}
 
     @classmethod
     def from_dataset_info(cls, info: DatasetInfo, dataset_dir: Path) -> "DatasetInfoResponse":
+        """Build a response from a DatasetInfo and its directory path."""
         dataset = Dataset(dataset_dir)
         num_records = dataset.num_rows
         return cls(num_records=num_records, **info.model_dump(exclude={"tables"}))
@@ -346,6 +356,7 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
+        """Build a full dataset response from a Dataset instance."""
         tables = {name: schema.__name__ for name, schema in dataset.info.tables.items()}
         return cls(
             id=dataset.info.id,

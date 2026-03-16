@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
@@ -13,6 +14,7 @@ from .view import View
 
 class BaseIntrinsics(BaseModel):
     """BaseIntrinsics (TODO: description?).
+
     Attributes:
         cx_offset_px: cx_offset_px
         cy_offset_px: cy_offset_px
@@ -41,6 +43,7 @@ class BaseIntrinsics(BaseModel):
 
 class Intrinsics(BaseModel):
     """Intrinsics (TODO: description?).
+
     Attributes:
         c1: c1.
         c2: c2.
@@ -71,6 +74,7 @@ class Intrinsics(BaseModel):
 
 class Extrinsics(BaseModel):
     """Extrinsics (TODO: description?).
+
     Attributes:
         pos_x_m: pos_x_m.
         pos_y_m: pos_y_m.
@@ -107,6 +111,7 @@ class Extrinsics(BaseModel):
 
 class CamCalibration(View):
     """Camera calibration.
+
     Attributes:
         type: Type of camera.
         base_intrinsics: Base intrinsics values.
@@ -123,6 +128,7 @@ class CamCalibration(View):
     def none(cls) -> Self:
         """Utility function to get a `None` equivalent.
         Should be removed as soon as Lance manages `None` value.
+
         Returns:
             "None" `CamCalibration`.
         """
@@ -184,6 +190,7 @@ def create_cam_calibration(
     validate: bool = True,
 ) -> CamCalibration:
     """Create a `CamCalibration` instance.
+
     Args:
         type: The type of camera.
         base_intrinsics: The base intrinsics.
@@ -208,6 +215,7 @@ def create_cam_calibration(
         record_id: Record ID.
         logical_name: Logical view name.
         validate: Set to False to skip pydantic validation.
+
     Returns:
         The created `CamCalibration` instance.
     """

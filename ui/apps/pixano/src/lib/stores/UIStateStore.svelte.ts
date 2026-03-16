@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { NodeId } from "$lib/document";
-
 import { initDisplayControl, type DisplayControl } from "$lib/types/dataset";
 import type { ReactiveReadonly } from "$lib/types/store";
 
@@ -37,7 +36,9 @@ export class UIStateStore {
   constructor() {
     const self = this;
     this.states = {
-      get value() { return self._states; },
+      get value() {
+        return self._states;
+      },
     };
   }
 

@@ -1,3 +1,10 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import { normalizeTableName } from "./resourceNames";
 import type {
   DatasetInfoResponse,
   DatasetResponse,
@@ -10,7 +17,6 @@ import type {
   SFrameResponse,
   TextResponse,
 } from "./restTypes";
-import { normalizeTableName } from "./resourceNames";
 import {
   BaseSchema,
   type Dataset,
@@ -261,14 +267,7 @@ export function toRawRecord(record: RecordResponse, tableName = "records"): RawS
 }
 
 export function toRawEntity(entity: EntityResponse, tableName = "entities"): RawSchemaData {
-  const {
-    id,
-    created_at = "",
-    updated_at = "",
-    record_id = "",
-    parent_id = "",
-    ...data
-  } = entity;
+  const { id, created_at = "", updated_at = "", record_id = "", parent_id = "", ...data } = entity;
   return {
     id,
     created_at,
@@ -283,13 +282,7 @@ export function toRawEntity(entity: EntityResponse, tableName = "entities"): Raw
 }
 
 export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): RawSchemaData {
-  const {
-    id,
-    created_at = "",
-    updated_at = "",
-    record_id = "",
-    logical_name = "",
-  } = view;
+  const { id, created_at = "", updated_at = "", record_id = "", logical_name = "" } = view;
   const src = "src" in view ? view.src : undefined;
   const width = "width" in view ? view.width : undefined;
   const height = "height" in view ? view.height : undefined;
@@ -373,8 +366,14 @@ export function toRawAnnotation(
   // Reverse-map backend field names for tracklets
   if (normalizedTableName === "tracklets") {
     const d = result.data as Record<string, unknown>;
-    if ("start_timestep" in d) { d.start_frame = d.start_timestep; delete d.start_timestep; }
-    if ("end_timestep" in d) { d.end_frame = d.end_timestep; delete d.end_timestep; }
+    if ("start_timestep" in d) {
+      d.start_frame = d.start_timestep;
+      delete d.start_timestep;
+    }
+    if ("end_timestep" in d) {
+      d.end_frame = d.end_timestep;
+      delete d.end_timestep;
+    }
   }
 
   return result;

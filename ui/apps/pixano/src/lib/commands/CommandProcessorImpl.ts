@@ -4,9 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AnnotationNode, Document, DocumentNode, NodeId, Patch } from "$lib/document";
-import { DocumentImpl } from "$lib/document";
-
 import type {
   AddAnnotationPayload,
   BatchDeletePayload,
@@ -24,6 +21,8 @@ import type {
   MergeEntitiesPayload,
 } from "../commands/entityCommands";
 import { createDeleteEntity } from "../commands/entityCommands";
+import type { AnnotationNode, Document, DocumentNode, NodeId, Patch } from "$lib/document";
+import { DocumentImpl } from "$lib/document";
 import type { Command, CommandProcessor, CommandResult } from "$lib/types/commands";
 
 type CommandHandler = (document: Document, payload: unknown) => CommandResult;
@@ -179,10 +178,7 @@ export class CommandProcessorImpl implements CommandProcessor {
     return { newDocument, inverse, patches };
   }
 
-  private handleBatchAdd(
-    document: Document,
-    payload: { nodes: DocumentNode[] },
-  ): CommandResult {
+  private handleBatchAdd(document: Document, payload: { nodes: DocumentNode[] }): CommandResult {
     const { nodes } = payload;
     const patches: Patch[] = nodes.map((node) => ({
       type: "add" as const,

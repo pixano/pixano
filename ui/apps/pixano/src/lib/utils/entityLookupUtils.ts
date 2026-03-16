@@ -4,21 +4,20 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
+import { entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
   Entity,
-  WorkspaceType,
   entityHasTracklets,
+  WorkspaceType,
+  type AnnotationThumbnail,
   type BBox,
   type Mask,
-  type AnnotationThumbnail,
   type Schema,
   type Tracklet,
 } from "$lib/types/dataset";
-
-import { PRE_ANNOTATION } from "$lib/constants/workspaceConstants";
-import { entities } from "$lib/stores/workspaceStores.svelte";
 import type { ItemsMeta, MView } from "$lib/types/workspace";
 import type { WorkspaceManifest, WorkspaceTableGroup } from "$lib/workspace/manifest";
 import { resolveWorkspaceTable } from "$lib/workspace/manifest";
@@ -27,10 +26,7 @@ import { resolveWorkspaceTable } from "$lib/workspace/manifest";
  * Pure variant of getTopEntity that accepts an entities list directly,
  * avoiding reading the store through the Svelte 5 proxy during loadData().
  */
-export const getTopEntityFromList = (
-  obj: Annotation | Entity,
-  entitiesList: Entity[],
-): Entity => {
+export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Entity[]): Entity => {
   let entity: Entity | undefined;
   if (obj.table_info.group === "entities") {
     entity = obj as Entity;
@@ -167,12 +163,12 @@ export const defineAnnotationThumbnail = (
     metas.type === WorkspaceType.VIDEO
       ? (() => {
           if (frame_index === undefined || !Array.isArray(candidateView)) return null;
-          const frame = (candidateView)[frame_index];
+          const frame = candidateView[frame_index];
           return frame?.data ?? null;
         })()
       : (() => {
           if (Array.isArray(candidateView)) return null;
-          return (candidateView).data;
+          return candidateView.data;
         })();
 
   if (!viewData?.url) return null;

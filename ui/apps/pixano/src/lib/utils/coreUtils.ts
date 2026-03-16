@@ -116,8 +116,7 @@ export function splitWithLimit(strings: string[], separator: string, limit: numb
   return result;
 }
 
-export const nowTimestamp = (): string =>
-  new Date().toISOString().replace(/Z$/, "+00:00");
+export const nowTimestamp = (): string => new Date().toISOString().replace(/Z$/, "+00:00");
 
 export const removeFieldFromValue = <T extends object, K extends keyof T>(
   value: T,

@@ -7,12 +7,10 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
+  import FilterTable from "./FilterTable.svelte";
   import type { DatasetBrowser } from "$lib/ui";
   import { icons } from "$lib/ui";
 
-  import FilterTable from "./FilterTable.svelte";
-
-  
   interface Props {
     selectedDataset: DatasetBrowser;
     selectedSearchModel: string | undefined;

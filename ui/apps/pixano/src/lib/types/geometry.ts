@@ -84,7 +84,6 @@ export interface KeypointVertexMetadata {
   readonly color: string;
 }
 
-
 /** A click with a binary label for interactive segmentation (SAM). 1=positive, 0=negative. */
 export interface LabeledClick extends Point2D {
   readonly label: number;

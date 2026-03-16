@@ -7,9 +7,9 @@ License: CECILL-C
 <script lang="ts">
   /* eslint-disable svelte/no-at-html-tags */
 
-  import type { TextSpan, TextSpanData, TextView } from "$lib/ui";
   import { editorSelectionToTextSpan } from "./editorSelectionToTextSpan";
   import { textSpansToHtml } from "./textSpansToHtml";
+  import type { TextSpan, TextSpanData, TextView } from "$lib/ui";
 
   interface Props {
     textSpans?: TextSpan[];
@@ -24,7 +24,7 @@ License: CECILL-C
     colorScale,
     textSpanAttributes = $bindable(null),
     textView,
-    onSpanClick
+    onSpanClick,
   }: Props = $props();
 
   function escapeHtmlTagsOnly(text: string): string {
@@ -33,11 +33,13 @@ License: CECILL-C
     });
   }
 
-  let richEditorContent = $derived(textSpansToHtml({
-    text: escapeHtmlTagsOnly(textView.data.content),
-    textSpans,
-    colorScale,
-  }));
+  let richEditorContent = $derived(
+    textSpansToHtml({
+      text: escapeHtmlTagsOnly(textView.data.content),
+      textSpans,
+      colorScale,
+    }),
+  );
 
   const mouseupListener = (
     e: MouseEvent & {

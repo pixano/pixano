@@ -7,17 +7,16 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { ToolType, keyPointTool, type SelectionTool } from "$lib/tools";
-  import { IconButton, cn } from "$lib/ui";
-  import type { KeypointVertexMetadata } from "$lib/types/geometry";
   import { keypointsIcon } from "$lib/assets";
-
-  import { templates } from "$lib/utils/keyPointsTemplates";
   import {
     newShape,
     selectedKeypointsTemplate,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
+  import { keyPointTool, ToolType, type SelectionTool } from "$lib/tools";
+  import type { KeypointVertexMetadata } from "$lib/types/geometry";
+  import { cn, IconButton } from "$lib/ui";
+  import { templates } from "$lib/utils/keyPointsTemplates";
 
   interface Props {
     selectTool: (tool: SelectionTool) => void;
@@ -83,7 +82,7 @@ License: CECILL-C
             <div
               class="w-1 h-1 bg-primary rounded-full absolute"
               style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(template.vertexMetadata[i], template.template_id === selectedKeypointsTemplate.value)}`}
-></div>
+            ></div>
           {/each}
         </IconButton>
       {/each}

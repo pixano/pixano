@@ -9,12 +9,8 @@ License: CECILL-C
 
   import ConnectToServerModal from "./ConnectToServerModal.svelte";
   import { disconnectFromProvider, refreshInferenceModels } from "$lib/services/inferenceService";
-  import {
-    IconButton,
-    PrimaryButton,
-    type InferenceModel,
-  } from "$lib/ui";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
+  import { IconButton, PrimaryButton, type InferenceModel } from "$lib/ui";
 
   let showConnectModal = $state(false);
 

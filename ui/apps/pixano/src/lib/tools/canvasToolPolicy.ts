@@ -5,12 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
-  ToolType,
   brushDrawTool,
   brushEraseTool,
   panTool,
   polygonTool,
   rectangleTool,
+  ToolType,
   type BrushSelectionTool,
   type SelectionTool,
 } from "$lib/tools";

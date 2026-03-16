@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { toDataset, toDatasetInfo } from "./adapters";
 import { requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";

@@ -5,9 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import type { PageProps } from "./$types";
-  import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
   import ModelsPanel from "../components/inference/ModelsPanel.svelte";
+  import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
+  import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
 </script>

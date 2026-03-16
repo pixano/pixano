@@ -10,6 +10,13 @@ License: CECILL-C
 
 import type { Command } from "$lib/commands";
 import type { Document, NodeId } from "$lib/document";
+import type {
+  IndexedPoint2D,
+  LabeledClick,
+  Point2D,
+  PolygonEdgeHint,
+  PolygonOutputMode,
+} from "$lib/types/geometry";
 
 // --------------- Geometry Primitives (re-exported from geometry.ts) ---------------
 
@@ -20,8 +27,6 @@ export type {
   LabeledClick,
   PolygonOutputMode,
 } from "$lib/types/geometry";
-
-import type { Point2D, IndexedPoint2D, LabeledClick, PolygonEdgeHint, PolygonOutputMode } from "$lib/types/geometry";
 
 // --------------- AI Types ---------------
 
@@ -38,7 +43,12 @@ export interface AIResult {
 // --------------- Preview ---------------
 
 export type PreviewShape =
-  | { readonly type: "rectangle"; readonly origin: Point2D; readonly current: Point2D; readonly editable?: boolean }
+  | {
+      readonly type: "rectangle";
+      readonly origin: Point2D;
+      readonly current: Point2D;
+      readonly editable?: boolean;
+    }
   | {
       readonly type: "polygon";
       readonly phase: "drawing" | "editing";
@@ -123,7 +133,11 @@ export type ToolSideEffect =
   | { readonly type: "beginTransaction"; readonly description: string }
   | { readonly type: "commitTransaction" }
   | { readonly type: "abortTransaction" }
-  | { readonly type: "requestSave"; readonly shapeType: "bbox" | "polygon" | "mask" | "keypoints"; readonly geometry: unknown };
+  | {
+      readonly type: "requestSave";
+      readonly shapeType: "bbox" | "polygon" | "mask" | "keypoints";
+      readonly geometry: unknown;
+    };
 
 // --------------- Tool Transition ---------------
 
@@ -205,7 +219,8 @@ type BaseTool<T extends ToolType> = {
   postProcessor?: ToolPostProcessor;
 };
 
-export type AllTool = BaseTool<| ToolType.Rectangle
+export type AllTool = BaseTool<
+  | ToolType.Rectangle
   | ToolType.Pan
   | ToolType.Delete
   | ToolType.Classification

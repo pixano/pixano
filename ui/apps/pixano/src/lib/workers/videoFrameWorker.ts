@@ -56,7 +56,11 @@ type ClearSessionRequest = {
   type: "clearSession";
 };
 
-type WorkerRequest = InitSessionRequest | FetchChunkRequest | DecodeFrameRequest | ClearSessionRequest;
+type WorkerRequest =
+  | InitSessionRequest
+  | FetchChunkRequest
+  | DecodeFrameRequest
+  | ClearSessionRequest;
 
 type FetchChunkFrameResult = {
   frameIndex: number;
@@ -140,10 +144,12 @@ class FrameDiskCache {
   private async waitForSessionWrites(sessionDir: string): Promise<void> {
     const pendingWrites = Array.from(this.frameWriteLocks.entries())
       .filter(([lockKey]) => lockKey.startsWith(`${sessionDir}/`))
-      .map(([, writePromise]) => writePromise.catch((error: unknown) => {
-        console.warn("[VideoFrameWorker] Pending frame write failed:", error);
-        return undefined;
-      }));
+      .map(([, writePromise]) =>
+        writePromise.catch((error: unknown) => {
+          console.warn("[VideoFrameWorker] Pending frame write failed:", error);
+          return undefined;
+        }),
+      );
 
     if (pendingWrites.length > 0) {
       await Promise.all(pendingWrites);
@@ -224,7 +230,7 @@ class FrameDiskCache {
         }
       }
 
-      for (let attempt = 0; attempt <4; attempt++) {
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
           const viewDir = await this.getViewDir(viewName, true);
           if (!viewDir) return false;
@@ -270,7 +276,11 @@ class FrameDiskCache {
     return wrote;
   }
 
-  async readFrame(viewName: string, frameIndex: number, mimeType?: string): Promise<Blob | undefined> {
+  async readFrame(
+    viewName: string,
+    frameIndex: number,
+    mimeType?: string,
+  ): Promise<Blob | undefined> {
     if (this.diskCacheDisabled) return undefined;
 
     const viewDir = await this.getViewDir(viewName, false);

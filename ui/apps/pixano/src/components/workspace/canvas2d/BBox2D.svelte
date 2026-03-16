@@ -8,10 +8,10 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Rect, Transformer } from "svelte-konva";
 
+  import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
   import LabelTag from "./LabelTag.svelte";
   import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
-  import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
@@ -139,7 +139,6 @@ License: CECILL-C
     width={bbox.data.coords[2]}
     height={bbox.data.coords[3]}
     stroke={color}
-    
     strokeScaleEnabled={false}
     perfectDrawEnabled={false}
     shadowForStrokeEnabled={false}

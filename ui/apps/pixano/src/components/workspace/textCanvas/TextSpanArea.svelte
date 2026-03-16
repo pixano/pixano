@@ -5,6 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { TEMPORARY_TEXT_SPAN_ID } from "./constants";
+  import { groupTextSpansByViewId } from "./groupTextSpansByViewId";
+  import SpannableTextView from "./SpannableTextView.svelte";
   import {
     BaseSchema,
     ShapeType,
@@ -14,12 +17,7 @@ License: CECILL-C
     type TextSpanAttributes,
     type TextSpanTypeWithViewName,
   } from "$lib/ui";
-  import { TEMPORARY_TEXT_SPAN_ID } from "./constants";
 
-  import SpannableTextView from "./SpannableTextView.svelte";
-  import { groupTextSpansByViewId } from "./groupTextSpansByViewId";
-
-  
   interface Props {
     // Exports
     selectedItemId: string;
@@ -40,7 +38,7 @@ License: CECILL-C
     textViews,
     onCreateTemporaryTextSpan,
     onTextSpanClick,
-    onNewShapeChange
+    onNewShapeChange,
   }: Props = $props();
 
   let textSpanAttributes: TextSpanTypeWithViewName | null = $state(null);

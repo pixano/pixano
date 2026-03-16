@@ -4,15 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  ToolType,
-  type SelectionTool,
-} from "$lib/tools";
-import {
-  panTool,
-  polygonTool,
-  rectangleTool,
-} from "$lib/tools/canvasToolPolicy";
+import { ToolType, type SelectionTool } from "$lib/tools";
+import { panTool, polygonTool, rectangleTool } from "$lib/tools/canvasToolPolicy";
 
 /**
  * Computes a stable signature for a tool configuration.
@@ -117,7 +110,11 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
 export type KeyDownAction =
   | { type: "escape-to-pan"; keepPolygonTool: boolean }
   | { type: "tool-shortcut-handled" }
-  | { type: "forward-to-bridge"; key: string; modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean } }
+  | {
+      type: "forward-to-bridge";
+      key: string;
+      modifiers: { shift: boolean; ctrl: boolean; alt: boolean; meta: boolean };
+    }
   | { type: "ignored" };
 
 /**
@@ -127,7 +124,12 @@ export type KeyDownAction =
 export function classifyKeyDown(
   event: KeyboardEvent,
   tool: SelectionTool | undefined,
-  interactionShape: { status: string; type?: string; phase?: string; closedPolygons?: unknown[] } | null,
+  interactionShape: {
+    status: string;
+    type?: string;
+    phase?: string;
+    closedPolygons?: unknown[];
+  } | null,
   shortcutHandled: boolean,
 ): KeyDownAction {
   // Ignore when typing in inputs

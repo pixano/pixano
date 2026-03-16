@@ -21,10 +21,9 @@ License: CECILL-C
   import zoomPlugin from "chartjs-plugin-zoom";
   import { untrack } from "svelte";
 
-  import type { DatasetStat } from "$lib/types/dataset";
   import { colors } from "./colors";
+  import type { DatasetStat } from "$lib/types/dataset";
 
-  
   interface Props {
     // Define props
     hist: DatasetStat;
@@ -106,11 +105,14 @@ License: CECILL-C
 
   $effect(() => {
     if (!canvasElement) return;
-    const c = untrack(() => new Chart(canvasElement, {
-      type: "bar",
-      data,
-      options,
-    }));
+    const c = untrack(
+      () =>
+        new Chart(canvasElement, {
+          type: "bar",
+          data,
+          options,
+        }),
+    );
     chart = c;
     return () => {
       c.destroy();

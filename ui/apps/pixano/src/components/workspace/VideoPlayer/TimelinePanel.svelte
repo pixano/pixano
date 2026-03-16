@@ -6,15 +6,18 @@ License: CECILL-C
 
 <script lang="ts">
   import { Slider } from "bits-ui";
-  import { CircleNotch, MagnifyingGlassMinus, MagnifyingGlassPlus, PushPinSlash } from "phosphor-svelte";
+  import {
+    CircleNotch,
+    MagnifyingGlassMinus,
+    MagnifyingGlassPlus,
+    PushPinSlash,
+  } from "phosphor-svelte";
 
   import EntityTimelineRow from "./EntityTimelineRow.svelte";
-  import TimelineHeaderSurface from "./TimelineHeaderSurface.svelte";
   import TimelineFocusEmptyState from "./TimelineFocusEmptyState.svelte";
+  import TimelineHeaderSurface from "./TimelineHeaderSurface.svelte";
   import TrackingTimelineRow from "./TrackingTimelineRow.svelte";
   import VideoControls from "./VideoControls.svelte";
-  import { currentFrameIndex, lastFrameIndex, playbackState, timelineZoom } from "$lib/stores/videoStores.svelte";
-  import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import {
     clearPinnedTimelineEntities,
     pinnedTimelineEntityIds,
@@ -22,15 +25,24 @@ License: CECILL-C
     togglePinnedTimelineEntity,
   } from "$lib/stores/timelineInspectorStore.svelte";
   import { isTracking } from "$lib/stores/trackingStore.svelte";
+  import {
+    currentFrameIndex,
+    lastFrameIndex,
+    playbackState,
+    timelineZoom,
+  } from "$lib/stores/videoStores.svelte";
+  import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
   import { entityHasTracklets, type Entity } from "$lib/ui";
-  import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { sortEntities } from "$lib/utils/entityLookupUtils";
+  import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { updateView } from "$lib/utils/videoOperations";
   import { getCurrentImageTime } from "$lib/utils/videoUtils";
 
   let videoEntities: Entity[] = $derived.by(() =>
-    entities.value.filter((entity) => entityHasTracklets(entity) && !entity.ui.displayControl.hidden).sort(sortEntities),
+    entities.value
+      .filter((entity) => entityHasTracklets(entity) && !entity.ui.displayControl.hidden)
+      .sort(sortEntities),
   );
   let entitiesById = $derived.by(() => new Map(videoEntities.map((entity) => [entity.id, entity])));
   let focusedTimelineEntities = $derived.by(() => {
@@ -45,7 +57,9 @@ License: CECILL-C
       .filter((entity): entity is Entity => Boolean(entity));
   });
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
-  const currentTimeLabel = $derived(getCurrentImageTime(currentFrameIndex.value, playbackState.value.videoSpeed));
+  const currentTimeLabel = $derived(
+    getCurrentImageTime(currentFrameIndex.value, playbackState.value.videoSpeed),
+  );
   const totalFrameCount = $derived((lastFrameIndex.value ?? 0) + 1);
   const playheadLeft = $derived((currentFrameIndex.value / Math.max(totalFrameCount - 1, 1)) * 100);
 
@@ -75,16 +89,22 @@ License: CECILL-C
       <div class="flex items-center justify-between gap-3 px-3 py-2">
         <div class="flex min-w-0 items-center gap-2">
           <VideoControls {resetHighlight} />
-          <div class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground">
+          <div
+            class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
+          >
             <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
             <span class="text-border">/</span>
             <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
           </div>
-          <div class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground">
+          <div
+            class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
+          >
             {currentTimeLabel}
           </div>
           {#if playbackState.value.isBuffering}
-            <div class="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300">
+            <div
+              class="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300"
+            >
               <CircleNotch class="h-3 w-3 animate-spin" />
               Buffering
             </div>
@@ -103,7 +123,9 @@ License: CECILL-C
               {pinnedTimelineEntityIds.value.length}
             </button>
           {/if}
-          <div class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5">
+          <div
+            class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
+          >
             <MagnifyingGlassMinus class="h-3.5 w-3.5 text-muted-foreground" />
             <Slider.Root
               type="multiple"
@@ -124,27 +146,37 @@ License: CECILL-C
           </div>
         </div>
       </div>
-
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto px-3 py-2">
-      <div class="relative flex min-h-full flex-col gap-1.5" style={`width: ${timelineZoom.value[0]}%`}>
+      <div
+        class="relative flex min-h-full flex-col gap-1.5"
+        style={`width: ${timelineZoom.value[0]}%`}
+      >
         <div
           class="pointer-events-none absolute inset-y-0 z-20 -translate-x-1/2"
           style={`left: ${playheadLeft}%`}
         >
           <div class="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
-            <span class="h-0 w-0 border-x-[5px] border-t-[7px] border-x-transparent border-t-primary drop-shadow-[0_1px_0_hsl(var(--background))]"></span>
-            <span class="mt-[1px] h-1 w-[2px] rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--background)/0.9)]"></span>
+            <span
+              class="h-0 w-0 border-x-[5px] border-t-[7px] border-x-transparent border-t-primary drop-shadow-[0_1px_0_hsl(var(--background))]"
+            ></span>
+            <span
+              class="mt-[1px] h-1 w-[2px] rounded-full bg-primary shadow-[0_0_0_1px_hsl(var(--background)/0.9)]"
+            ></span>
             <span class="mt-[2px] h-1 w-[2px] rounded-full bg-primary/85"></span>
           </div>
-          <span class="absolute left-1/2 top-[8px] h-full w-[1px] -translate-x-1/2 bg-[linear-gradient(180deg,hsl(var(--primary))_0%,hsl(var(--primary)/0.92)_14%,hsl(var(--primary)/0.52)_62%,hsl(var(--primary)/0.22)_100%)] shadow-[0_0_0_1px_hsl(var(--background)/0.92),0_0_12px_hsl(var(--primary)/0.20)]"></span>
+          <span
+            class="absolute left-1/2 top-[8px] h-full w-[1px] -translate-x-1/2 bg-[linear-gradient(180deg,hsl(var(--primary))_0%,hsl(var(--primary)/0.92)_14%,hsl(var(--primary)/0.52)_62%,hsl(var(--primary)/0.22)_100%)] shadow-[0_0_0_1px_hsl(var(--background)/0.92),0_0_12px_hsl(var(--primary)/0.20)]"
+          ></span>
         </div>
 
         <TimelineHeaderSurface entities={videoEntities} {onFrameClick} />
 
         {#if isTracking.value}
-          <div class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5">
+          <div
+            class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
+          >
             <TrackingTimelineRow />
           </div>
         {/if}

@@ -5,12 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
-import {
-  Annotation,
-  BaseSchema,
-  Entity,
-  Tracklet,
-} from "$lib/types/dataset";
+import { Annotation, BaseSchema, Entity, Tracklet } from "$lib/types/dataset";
 import { type SaveShape } from "$lib/types/shapeTypes";
 import type { EntityProperties } from "$lib/types/workspace";
 import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -50,7 +45,9 @@ export const relink = (
   // get overlap target tracks
   const overlapTargetIds: string[] = overlapTargetIdsString.split(OVERLAPIDS_SEPARATOR);
   // overlapping tracks after first one will be fused, so mark them to delete
-  const tracksToFuse = annotations.value.filter((ann) => overlapTargetIds.slice(1).includes(ann.id));
+  const tracksToFuse = annotations.value.filter((ann) =>
+    overlapTargetIds.slice(1).includes(ann.id),
+  );
   const tracksToFuseIds = tracksToFuse.map((trk) => trk.id);
   const tracksToFuseIdSet = new Set(tracksToFuseIds);
 
@@ -97,17 +94,16 @@ export const relink = (
     toRemoveAnnotationIds = [child.id];
   }
 
-  const targetEntity = findOrCreateEntity(
-    selectedEntityId,
-    shapeInfo,
-    features,
-    workspaceManifest,
-  );
+  const targetEntity = findOrCreateEntity(selectedEntityId, shapeInfo, features, workspaceManifest);
   const shouldAddTopEntity =
-    isEntityNewSelection || !entities.value.some((existingEntity) => existingEntity.id === targetEntity.id);
+    isEntityNewSelection ||
+    !entities.value.some((existingEntity) => existingEntity.id === targetEntity.id);
 
   entities.update((ents) => {
-    if (shouldAddTopEntity && !ents.some((existingEntity) => existingEntity.id === targetEntity.id)) {
+    if (
+      shouldAddTopEntity &&
+      !ents.some((existingEntity) => existingEntity.id === targetEntity.id)
+    ) {
       ents.push(targetEntity);
     }
 
@@ -142,7 +138,7 @@ export const relink = (
   // change child entity_ref
   annotations.update((anns: Annotation[]) => {
     let nextAnnotations = anns.map((ann) => {
-        if (toRelink.includes(ann)) {
+      if (toRelink.includes(ann)) {
         ann.data.entity_id = targetEntity.id;
         ann.ui.top_entities = []; // reset top_entities
       }
@@ -187,7 +183,12 @@ export const relink = (
   toMoveAnnotations.forEach((ann) => {
     ann.ui.top_entities = [];
     if (getTopEntity(ann) !== targetEntity) {
-      console.error("ERROR with Relink, something gone wrong", ann, getTopEntity(ann), targetEntity);
+      console.error(
+        "ERROR with Relink, something gone wrong",
+        ann,
+        getTopEntity(ann),
+        targetEntity,
+      );
     }
   });
 

@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   interface Props {
     // Exports
     value: number;

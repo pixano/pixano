@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Select } from "bits-ui";
-  import { Check, CaretUpDown } from "phosphor-svelte";
+  import { CaretUpDown, Check } from "phosphor-svelte";
 
   import type { ListFeature } from "$lib/types/workspace";
 

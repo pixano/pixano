@@ -6,13 +6,7 @@ License: CECILL-C
 
 import { nanoid } from "nanoid";
 
-import {
-  BaseSchema,
-  Message,
-  MessageTypeEnum,
-  QuestionTypeEnum,
-} from "$lib/types/dataset";
-
+import { BaseSchema, Message, MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import { PIXANO_SOURCE } from "$lib/utils/entityLookupUtils";
 
@@ -27,9 +21,9 @@ interface CreateMessageBaseProps {
   view_id: string;
   entity_ids: string[];
   conversation_id: string;
-   source_type?: string;
-   source_name?: string;
-   source_metadata?: string;
+  source_type?: string;
+  source_name?: string;
+  source_metadata?: string;
   item_id?: string;
   view_name?: string;
   entity_id?: string;
@@ -155,7 +149,10 @@ export function toMessageTransportPayload(message: Message): MessageTransportPay
     user: (message.data.user as string) ?? "",
     type: (message.data.type as string) ?? MessageTypeEnum.QUESTION,
     content: (message.data.content as string) ?? "",
-    choices: message.data.type === MessageTypeEnum.QUESTION ? ((message.data.choices as string[]) ?? []) : [],
+    choices:
+      message.data.type === MessageTypeEnum.QUESTION
+        ? ((message.data.choices as string[]) ?? [])
+        : [],
   };
 
   if (message.data.type === MessageTypeEnum.QUESTION) {

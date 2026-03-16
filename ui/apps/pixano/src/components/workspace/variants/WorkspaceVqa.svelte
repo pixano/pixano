@@ -5,26 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-
   // Imports
-  import { nanoid } from "nanoid";
-  import { untrack } from "svelte";
-  import { CircleNotch } from "phosphor-svelte";
-
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import type { SelectionTool } from "$lib/tools";
-  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
-  import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { nanoid } from "nanoid";
+  import { CircleNotch } from "phosphor-svelte";
+  import { untrack } from "svelte";
+
   import {
-    Image,
-    LoadingModal,
-    effectProbe,
-    type LoadedImagesPerView,
-  } from "$lib/ui";
-  import {
-    VqaArea,
     isNewAnswerEvent,
     isUpdatedMessageEvent,
+    VqaArea,
     type ContentChangeEvent,
     type DeleteQuestionEvent,
     type GenerateAnswerEvent,
@@ -37,9 +27,14 @@ License: CECILL-C
     completionModelsStore,
     type PixanoInferenceCompletionModel,
   } from "$lib/stores/vqaStores.svelte";
-
-  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
-  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
+  import {
+    addAnswer,
+    addQuestion,
+    deleteQuestion,
+    generateAnswer,
+    generateQuestion,
+    updateMessageContent,
+  } from "$lib/stores/workspaceMutations";
   import {
     brushSettings,
     colorScale,
@@ -55,8 +50,12 @@ License: CECILL-C
     preAnnotationIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import { addAnswer, addQuestion, deleteQuestion, generateAnswer, generateQuestion, updateMessageContent } from "$lib/stores/workspaceMutations";
-
+  import type { SelectionTool } from "$lib/tools";
+  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { effectProbe, Image, LoadingModal, type LoadedImagesPerView } from "$lib/ui";
+  import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
+  import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
   interface Props {
     // Attributes
@@ -109,10 +108,11 @@ License: CECILL-C
 
     embeddings.value = {};
     modelsUiStore.update((store) => ({ ...store, yetToLoadEmbedding: true }));
-    const nextImages = await loadImagesFromViews(
-      selectedItem.views as Record<string, Image>,
-      { unwrapArrays: true, filterImages: true, sortKeys: true },
-    );
+    const nextImages = await loadImagesFromViews(selectedItem.views as Record<string, Image>, {
+      unwrapArrays: true,
+      filterImages: true,
+      sortKeys: true,
+    });
 
     if (requestId !== imageLoadRequestId) return;
     imagesPerView = nextImages;
@@ -160,7 +160,10 @@ License: CECILL-C
     }
   };
 
-  const getImageViewContext = (): Pick<VqaMessageContext, "recordId" | "viewId" | "entityIds" | "imageUrl"> | null => {
+  const getImageViewContext = (): Pick<
+    VqaMessageContext,
+    "recordId" | "viewId" | "entityIds" | "imageUrl"
+  > | null => {
     const recordId = selectedItem.item.id;
     for (const view of Object.values(selectedItem.views)) {
       if (!Array.isArray(view) && typeof view.data.url === "string" && view.data.url !== "") {
@@ -262,7 +265,7 @@ License: CECILL-C
     onmousedown={() => {
       expanding = true;
     }}
-></button>
+  ></button>
   <div class="overflow-hidden grow relative">
     {#if loaded && hasImages}
       <Canvas2D
@@ -278,9 +281,9 @@ License: CECILL-C
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
         newShape={newShape.value}
-        onSelectedToolChange={(tool: SelectionTool) => selectedTool.value = tool}
+        onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
         onNewShapeChange={handleCanvasShapeChange}
-        onBrushSettingsChange={(settings: BrushSettings) => brushSettings.value = settings}
+        onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

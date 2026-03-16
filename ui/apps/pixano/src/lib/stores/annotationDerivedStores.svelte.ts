@@ -4,6 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { reactiveDerived } from "./reactiveStore.svelte";
+import {
+  annotations,
+  entities,
+  generatedPreviewBBoxes,
+  highlightedEntity,
+  selectedTool,
+  views,
+} from "./workspaceBaseStores.svelte";
+import { ToolType } from "$lib/tools";
 import {
   BaseSchema,
   BBox,
@@ -24,17 +34,6 @@ import {
   mapMaskForDisplay,
 } from "$lib/utils/annotationMapping";
 import { getEffectiveHighlight } from "$lib/utils/highlightUtils";
-import { ToolType } from "$lib/tools";
-import { reactiveDerived } from "./reactiveStore.svelte";
-
-import {
-  annotations,
-  entities,
-  generatedPreviewBBoxes,
-  highlightedEntity,
-  selectedTool,
-  views,
-} from "./workspaceBaseStores.svelte";
 
 // --- Shared entity-by-id map ---
 // Only built when Pan tool + focused entity (used by highlight logic).
@@ -148,7 +147,12 @@ export const textSpans = reactiveDerived(() => {
   ) as TextSpan[];
 
   return spans.map((span) => {
-    const effectiveHighlight = getEffectiveHighlight(span, focusedEntityId, selectedToolType, eById);
+    const effectiveHighlight = getEffectiveHighlight(
+      span,
+      focusedEntityId,
+      selectedToolType,
+      eById,
+    );
     if (effectiveHighlight === span.ui.displayControl.highlighted) return span;
     const clone = Object.assign(Object.create(Object.getPrototypeOf(span)), span);
     clone.ui = {

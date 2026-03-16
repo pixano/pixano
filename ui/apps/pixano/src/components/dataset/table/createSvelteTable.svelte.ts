@@ -7,9 +7,9 @@ License: CECILL-C
 import {
   createTable,
   type RowData,
+  type Table,
   type TableOptions,
   type TableOptionsResolved,
-  type Table,
 } from "@tanstack/table-core";
 
 /**

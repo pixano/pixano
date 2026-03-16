@@ -8,21 +8,14 @@ License: CECILL-C
   import { Check, HardDrives, MagicWand } from "phosphor-svelte";
 
   import {
-    Checkbox,
-    PrimaryButton,
-    WorkspaceType,
-  } from "$lib/ui";
-
-  import {
     inferenceServerStore,
+    pixanoInferenceTracking,
+    pixanoInferenceTrackingNbAdditionalFrames,
     segmentationModels,
     selectedSegmentationModelName,
   } from "$lib/stores/inferenceStores.svelte";
-  import {
-    pixanoInferenceTracking,
-    pixanoInferenceTrackingNbAdditionalFrames,
-  } from "$lib/stores/inferenceStores.svelte";
   import { itemMetas } from "$lib/stores/workspaceStores.svelte";
+  import { Checkbox, PrimaryButton, WorkspaceType } from "$lib/ui";
 
   interface Props {
     onConfirm?: () => void;
@@ -38,7 +31,7 @@ License: CECILL-C
     const availableModels = segmentationModels.value;
     const hasCurrentSelection = availableModels.some((model) => model.name === selectedModel);
     if (hasCurrentSelection) return;
-    selectedModel = selectedSegmentationModelName.value ?? (availableModels[0]?.name ?? "");
+    selectedModel = selectedSegmentationModelName.value ?? availableModels[0]?.name ?? "";
   });
 
   const handleSelect = (modelName: string) => {
@@ -165,7 +158,7 @@ License: CECILL-C
             {#snippet children({ checked })}
               <span class="flex items-center justify-center text-current h-full w-full">
                 {#if checked}
-                  <Check class="h-3.5 w-3.5"  />
+                  <Check class="h-3.5 w-3.5" />
                 {/if}
               </span>
             {/snippet}

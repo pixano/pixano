@@ -5,6 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
+  import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
+  import TiptapAnnotator from "./TiptapAnnotator.svelte";
   import {
     BaseSchema,
     ShapeType,
@@ -14,9 +17,6 @@ License: CECILL-C
     type TextSpanAttributes,
     type TextSpanTypeWithViewName,
   } from "$lib/ui";
-  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
-  import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
-  import TiptapAnnotator from "./TiptapAnnotator.svelte";
 
   interface Props {
     selectedItemId: string;

@@ -6,12 +6,27 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { navigating } from "$app/state";
   import { Canvas2D } from "$components/workspace/canvas2d";
   import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
+  import { navigating } from "$app/state";
+  import {
+    addTrackingKeyframe,
+    cancelTrackingSession,
+    confirmPendingKeyframe,
+    discardPendingKeyframe,
+    finalizeTrackingSession,
+    hasPendingKeyframe,
+    isAwaitingNewSegmentKeyframe,
+    isTracking,
+    pendingKeyframeIndex,
+    setPendingKeyframe,
+    startNewTrackingSegment,
+    startTrackingSession,
+    trackingPreviewBBoxes,
+  } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
     currentItemId,
@@ -32,24 +47,9 @@ License: CECILL-C
     newShape,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import {
-    isTracking,
-    trackingPreviewBBoxes,
-    startTrackingSession,
-    addTrackingKeyframe,
-    startNewTrackingSegment,
-    isAwaitingNewSegmentKeyframe,
-    setPendingKeyframe,
-    confirmPendingKeyframe,
-    discardPendingKeyframe,
-    hasPendingKeyframe,
-    pendingKeyframeIndex,
-    cancelTrackingSession,
-    finalizeTrackingSession,
-  } from "$lib/stores/trackingStore.svelte";
   import { ToolType, type SelectionTool } from "$lib/tools";
-  import { ShapeType, SequenceFrame, type EditShape, type SaveRectangleShape } from "$lib/ui";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { SequenceFrame, ShapeType, type EditShape, type SaveRectangleShape } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -216,8 +216,12 @@ License: CECILL-C
       // editCoords from BBox2D are already normalized [0,1]
       if (isTracking.value && shape.type === ShapeType.bbox) {
         const editCoords = (shape as EditShape & { coords: number[] }).coords;
-        setPendingKeyframe(currentFrameIndex.value,
-          [editCoords[0], editCoords[1], editCoords[2], editCoords[3]]);
+        setPendingKeyframe(currentFrameIndex.value, [
+          editCoords[0],
+          editCoords[1],
+          editCoords[2],
+          editCoords[3],
+        ]);
         newShape.value = { status: "none" };
         return;
       }
@@ -309,7 +313,6 @@ License: CECILL-C
       untrack(() => cancelTrackingSession());
     }
   });
-
 </script>
 
 <svelte:window onkeydown={handleTrackingKeydown} />
@@ -352,7 +355,9 @@ License: CECILL-C
         {merge}
       />
       {#if playbackState.value.isBuffering}
-        <div class="absolute inset-0 z-10 bg-black/35 flex items-center justify-center pointer-events-none">
+        <div
+          class="absolute inset-0 z-10 bg-black/35 flex items-center justify-center pointer-events-none"
+        >
           <div class="flex flex-col items-center gap-2 text-white">
             <CircleNotch weight="regular" class="h-8 w-8 animate-spin" />
             <p class="text-sm">Buffering next frames...</p>
@@ -360,13 +365,16 @@ License: CECILL-C
         </div>
       {/if}
       {#if isTracking.value}
-        <div class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none">
+        <div
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
+        >
           {#if hasPendingKeyframe.value}
             Drag to adjust &middot; Press T to confirm as keyframe &middot; Navigate away to discard
           {:else if isAwaitingNewSegmentKeyframe.value}
             New segment started &middot; Navigate to a frame and draw a bbox to begin
           {:else}
-            Draw or edit on a frame and press T &middot; N for new segment &middot; Enter to save &middot; Escape to cancel
+            Draw or edit on a frame and press T &middot; N for new segment &middot; Enter to save
+            &middot; Escape to cancel
           {/if}
         </div>
       {/if}

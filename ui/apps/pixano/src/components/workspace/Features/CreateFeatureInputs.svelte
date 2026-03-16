@@ -5,28 +5,22 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  
   // Imports
+  import { Checkbox, Select } from "bits-ui";
+  import { CaretUpDown, Check } from "phosphor-svelte";
   import { untrack } from "svelte";
 
-  import { Checkbox, Select } from "bits-ui";
-  import { Check, CaretUpDown } from "phosphor-svelte";
-
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
+  import { itemMetas } from "$lib/stores/workspaceStores.svelte";
+  import type { CreateEntityInputs, EntityProperties } from "$lib/types/workspace";
   import { BaseSchema, Input, type ItemFeature } from "$lib/ui";
-
   import {
     getEntityProperties,
     getValidationSchemaAndFormInputs,
     mapFeatureList,
   } from "$lib/utils/featureMapping";
   import { validateEntityForm } from "$lib/utils/featureValidationSchemas";
-  import { itemMetas } from "$lib/stores/workspaceStores.svelte";
-  import type {
-    CreateEntityInputs,
-    EntityProperties,
-  } from "$lib/types/workspace";
   import { getWorkspaceContext } from "$lib/workspace/context";
-  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
   interface Props {
     isFormValid?: boolean;
@@ -45,7 +39,7 @@ License: CECILL-C
     initialValues = {},
     isAutofocusEnabled = true,
     selectedEntityId = "new",
-    baseSchema
+    baseSchema,
   }: Props = $props();
   const { manifest } = getWorkspaceContext();
   $effect(() => {
@@ -109,7 +103,7 @@ License: CECILL-C
           {#snippet children({ checked })}
             <span class="flex items-center justify-center text-current h-full w-full">
               {#if checked}
-                <Check class="h-3.5 w-3.5"  />
+                <Check class="h-3.5 w-3.5" />
               {/if}
             </span>
           {/snippet}

@@ -18,16 +18,7 @@ License: CECILL-C
     color: string;
   }
 
-  let {
-    id,
-    x,
-    y,
-    visible = true,
-    zoomFactor,
-    opacity = 1,
-    tooltip,
-    color,
-  }: Props = $props();
+  let { id, x, y, visible = true, zoomFactor, opacity = 1, tooltip, color }: Props = $props();
 </script>
 
 <Label
@@ -42,16 +33,6 @@ License: CECILL-C
   scaleY={1 / zoomFactor}
   {opacity}
 >
-  <Tag
-    fill={color}
-    stroke={tooltip ? color : "transparent"}
-  />
-  <Text
-    id={`text${id}`}
-    x={0}
-    y={0}
-    text={tooltip}
-    fontSize={12}
-    fontStyle="100"
-  />
+  <Tag fill={color} stroke={tooltip ? color : "transparent"} />
+  <Text id={`text${id}`} x={0} y={0} text={tooltip} fontSize={12} fontStyle="100" />
 </Label>

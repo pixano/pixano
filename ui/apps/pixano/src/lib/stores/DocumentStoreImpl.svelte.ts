@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { AnnotationNode, Document, NodeId } from "$lib/document";
-
 import type { DocumentStore, ReactiveReadonly, ReactiveValue } from "$lib/types/store";
 
 /**
@@ -22,11 +21,15 @@ export class DocumentStoreImpl implements DocumentStore {
   private readonly viewGetters = new Map<string, ReactiveReadonly<ReadonlyArray<AnnotationNode>>>();
 
   readonly document: ReactiveReadonly<Document> = {
-    get value() { return undefined as unknown as Document; },
+    get value() {
+      return undefined as unknown as Document;
+    },
   };
 
   readonly annotations: ReactiveReadonly<ReadonlyArray<AnnotationNode>> = {
-    get value() { return [] as ReadonlyArray<AnnotationNode>; },
+    get value() {
+      return [] as ReadonlyArray<AnnotationNode>;
+    },
   };
 
   readonly selectedIds: ReactiveValue<Set<NodeId>>;
@@ -36,15 +39,25 @@ export class DocumentStoreImpl implements DocumentStore {
 
     const self = this;
     this.document = {
-      get value() { return self._doc; },
+      get value() {
+        return self._doc;
+      },
     };
     this.annotations = {
-      get value() { return self._doc.getAnnotations(); },
+      get value() {
+        return self._doc.getAnnotations();
+      },
     };
     this.selectedIds = {
-      get value() { return self._selectedIds; },
-      set value(v: Set<NodeId>) { self._selectedIds = v; },
-      update(fn: (prev: Set<NodeId>) => Set<NodeId>) { self._selectedIds = fn(self._selectedIds); },
+      get value() {
+        return self._selectedIds;
+      },
+      set value(v: Set<NodeId>) {
+        self._selectedIds = v;
+      },
+      update(fn: (prev: Set<NodeId>) => Set<NodeId>) {
+        self._selectedIds = fn(self._selectedIds);
+      },
     };
   }
 
@@ -53,7 +66,9 @@ export class DocumentStoreImpl implements DocumentStore {
     if (!getter) {
       const self = this;
       getter = {
-        get value() { return self._doc.getAnnotationsByView(viewName); },
+        get value() {
+          return self._doc.getAnnotationsByView(viewName);
+        },
       };
       this.viewGetters.set(viewName, getter);
     }

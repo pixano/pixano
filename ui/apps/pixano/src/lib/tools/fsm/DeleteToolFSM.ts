@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import { createDeleteAnnotation } from "$lib/commands";
-
 import type { ToolContext, ToolEvent, ToolFSM, ToolState, ToolTransition } from "$lib/types/tools";
 
 /**
@@ -41,10 +40,7 @@ export class DeleteToolFSM implements ToolFSM {
       }
 
       // Delete key shortcut
-      if (
-        event.type === "keyDown" &&
-        (event.key === "Delete" || event.key === "Backspace")
-      ) {
+      if (event.type === "keyDown" && (event.key === "Delete" || event.key === "Backspace")) {
         if (context.selectedIds.size > 0) {
           const effects = [...context.selectedIds].map((id) => ({
             type: "emitCommand" as const,

@@ -6,17 +6,17 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowRight, Database, Eye, Stack, Shapes } from "phosphor-svelte";
+  import { ArrowRight, Database, Eye, Shapes, Stack } from "phosphor-svelte";
+
   import * as api from "$lib/api";
-  import { WorkspaceType, type DatasetInfo } from "$lib/ui";
   import { pixanoLogo } from "$lib/assets";
+  import { WorkspaceType, type DatasetInfo } from "$lib/ui";
 
   /**
    * DatasetPreviewCard Component
    * Improved, professional grade dataset preview with disruptive hover stats.
    */
 
-  
   interface Props {
     dataset: DatasetInfo;
     onSelectDataset?: () => void;

@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Binary media helpers for API routes."""
 
 from collections.abc import Iterable, Iterator
@@ -28,7 +34,6 @@ MULTIPART_BOUNDARY = b"frame_boundary"
 
 def media_type_from_format(media_format: str | None) -> str:
     """Map a media format string to a MIME type."""
-
     if not media_format:
         return "application/octet-stream"
     return FORMAT_TO_MIME.get(media_format, "application/octet-stream")
@@ -36,7 +41,6 @@ def media_type_from_format(media_format: str | None) -> str:
 
 def iter_multipart_frames(frames: Iterable[tuple[int, bytes, str]]) -> Iterator[bytes]:
     """Yield a multipart stream for temporal frame binaries."""
-
     for frame_index, payload, media_type in frames:
         header = (
             b"--" + MULTIPART_BOUNDARY + b"\r\n"

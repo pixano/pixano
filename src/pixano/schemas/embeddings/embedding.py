@@ -3,20 +3,25 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 import json
 from abc import ABC
 from math import prod
 from typing import TYPE_CHECKING, Any, cast
+
 import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry, register
 from lancedb.pydantic import Vector
 from pydantic import create_model, model_validator
 from typing_extensions import Self
+
+from pixano.utils import issubclass_strict
+
+from ..records import RecordComponent
 from ..views.image import Image, is_image
 from ..views.sequence_frame import is_sequence_frame
-from pixano.utils import issubclass_strict
-from ..records import RecordComponent
+
 
 if TYPE_CHECKING:
     from pixano.datasets.dataset import Dataset
@@ -32,6 +37,7 @@ def _from_pixano_name(dataset: "Dataset", table_name: str, pixano_name: str) -> 
 
 class Embedding(RecordComponent, ABC):
     """Embeddings are used to define an embedding vector for a record in a dataset.
+
     Attributes:
         view_id: ID of the view this embedding is associated with.
         frame_id: ID of the view row used for this embedding.
@@ -60,9 +66,11 @@ class Embedding(RecordComponent, ABC):
         """Get the pyarrow schema of an `Embedding`.
         This function allows to remove the vector field and the metadata from the schema which can be useful for adding
         data with auto-vectorization.
+
         Args:
             remove_vector: Remove the vector field.
             remove_metadata: Remove the metadata.
+
         Returns:
             The pyarrow schema.
         """
@@ -76,6 +84,7 @@ class Embedding(RecordComponent, ABC):
 
 class ViewEmbedding(Embedding, ABC):
     """ViewEmbeddings are used to define an embedding vector for a view in a dataset.
+
     Attributes:
         frame_id: ID of the media row used as embedding source.
     """
@@ -83,10 +92,12 @@ class ViewEmbedding(Embedding, ABC):
     @staticmethod
     def get_embedding_fn_from_table(dataset: "Dataset", table_name: str, metadata: dict) -> EmbeddingFunction:
         """Get the embedding function from a table.
+
         Args:
             dataset: The dataset containing the table.
             table_name: The name of the table containing the embedding function.
             metadata: The pyarrow metadata of the table.
+
         Returns:
             The embedding function.
         """
@@ -110,11 +121,13 @@ class ViewEmbedding(Embedding, ABC):
         **embedding_function_kwargs: Any,
     ) -> type["ViewEmbedding"]:
         """Create a ViewEmbedding schema.
+
         Args:
             embedding_fn: The embedding function.
             table_name: The name of the table containing the schema.
             dataset: The dataset to which the schema belongs.
             embedding_function_kwargs: The keyword arguments for creating the embedding function.
+
         Returns:
             The `ViewEmbedding` schema.
         """
