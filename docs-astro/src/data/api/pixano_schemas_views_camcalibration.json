@@ -1,0 +1,379 @@
+{
+  "module": "pixano.schemas.views.camcalibration",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/camcalibration.py",
+  "classes": [
+    {
+      "name": "BaseIntrinsics",
+      "docstring": "BaseIntrinsics (TODO: description?).\n\nAttributes:\n    cx_offset_px: cx_offset_px\n    cy_offset_px: cy_offset_px\n    img_height_px: img_height_px\n    img_width_px: img_width_px",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "cx_offset_px",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "cy_offset_px",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "img_height_px",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "img_width_px",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(validate_assignment=True)",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 15
+    },
+    {
+      "name": "CamCalibration",
+      "docstring": "Camera calibration.\n\nAttributes:\n    type: Type of camera.\n    base_intrinsics: Base intrinsics values.\n    extrinsics: Extrinsics values.\n    intrinsics: Intrinsics values.",
+      "bases": [
+        "View"
+      ],
+      "attributes": [
+        {
+          "name": "base_intrinsics",
+          "annotation": "BaseIntrinsics",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "extrinsics",
+          "annotation": "Extrinsics",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "intrinsics",
+          "annotation": "Intrinsics",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "type",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "none",
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" `CamCalibration`.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 127
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 112
+    },
+    {
+      "name": "Extrinsics",
+      "docstring": "Extrinsics (TODO: description?).\n\nAttributes:\n    pos_x_m: pos_x_m.\n    pos_y_m: pos_y_m.\n    pos_z_m: pos_z_m.\n    rot_x_deg: rot_x_deg.\n    rot_z1_deg: rot_z1_deg.\n    rot_z2_deg: rot_z2_deg.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(validate_assignment=True)",
+          "docstring": ""
+        },
+        {
+          "name": "pos_x_m",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "pos_y_m",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "pos_z_m",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "rot_x_deg",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "rot_z1_deg",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "rot_z2_deg",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 75
+    },
+    {
+      "name": "Intrinsics",
+      "docstring": "Intrinsics (TODO: description?).\n\nAttributes:\n    c1: c1.\n    c2: c2.\n    c3: c3.\n    c4: c4.\n    pixel_aspect_ratio: pixel_aspect_ratio.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "c1",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "c2",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "c3",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "c4",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(validate_assignment=True)",
+          "docstring": ""
+        },
+        {
+          "name": "pixel_aspect_ratio",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 44
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_cam_calibration",
+      "docstring": "Create a `CamCalibration` instance.\n\nArgs:\n    type: The type of camera.\n    base_intrinsics: The base intrinsics.\n    extrinsics: The extrinsics.\n    intrinsics: The intrinsics.\n    cx_offset_px: cx_offset_px.\n    cy_offset_px: cy_offset_px.\n    img_height_px: img_height_px.\n    img_width_px: img_width_px.\n    pos_x_m: pos_x_m.\n    pos_y_m: pos_y_m.\n    pos_z_m: pos_z_m.\n    rot_x_deg: rot_x_deg.\n    rot_z1_deg: rot_z1_deg.\n    rot_z2_deg: rot_z2_deg.\n    c1: c1.\n    c2: c2.\n    c3: c3.\n    c4: c4.\n    pixel_aspect_ratio: pixel_aspect_ratio.\n    id: `CamCalibration` ID.\n    record_id: Record ID.\n    logical_name: Logical view name.\n    validate: Set to False to skip pydantic validation.\n\nReturns:\n    The created `CamCalibration` instance.",
+      "parameters": [
+        {
+          "name": "type",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "base_intrinsics",
+          "annotation": "BaseIntrinsics | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "extrinsics",
+          "annotation": "Extrinsics | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "intrinsics",
+          "annotation": "Intrinsics | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "cx_offset_px",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "cy_offset_px",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "img_height_px",
+          "annotation": "int | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "img_width_px",
+          "annotation": "int | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pos_x_m",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pos_y_m",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pos_z_m",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "rot_x_deg",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "rot_z1_deg",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "rot_z2_deg",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "c1",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "c2",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "c3",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "c4",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pixel_aspect_ratio",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "validate",
+          "annotation": "bool",
+          "default": "True",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "CamCalibration",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 167
+    },
+    {
+      "name": "is_cam_calibration",
+      "docstring": "Check if a class is a `CamCalibration` or subclass of `CamCalibration`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 162
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

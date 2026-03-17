@@ -1,0 +1,184 @@
+{
+  "module": "pixano.datasets.utils.mosaic",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/utils/mosaic.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "add_label_above",
+      "docstring": "Add a label at top left of image.",
+      "parameters": [
+        {
+          "name": "image",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "text",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "label_height",
+          "annotation": null,
+          "default": "30",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 41
+    },
+    {
+      "name": "arrange_grid",
+      "docstring": "Get optimal grid distribution (rows, cols) for num_images.",
+      "parameters": [
+        {
+          "name": "num_images",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 26
+    },
+    {
+      "name": "compute_average_size",
+      "docstring": "Compute images average size.",
+      "parameters": [
+        {
+          "name": "images",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 33
+    },
+    {
+      "name": "create_mosaic",
+      "docstring": "Create a mosaic from image_files with black background.",
+      "parameters": [
+        {
+          "name": "source_dir",
+          "annotation": "Path",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "split",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "image_files",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "output_path",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "label_prefix",
+          "annotation": null,
+          "default": "'image'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "padding",
+          "annotation": null,
+          "default": "10",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "label_height",
+          "annotation": null,
+          "default": "30",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 73
+    },
+    {
+      "name": "generate_mosaic_name",
+      "docstring": "Generate a name for mosaic file whime keeping most common path / filename as possible.",
+      "parameters": [
+        {
+          "name": "image_files",
+          "annotation": null,
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "extension",
+          "annotation": null,
+          "default": "'.jpg'",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 15
+    },
+    {
+      "name": "mosaic",
+      "docstring": "Create a mosaic from input images. Add a label if view_name is not empty string.",
+      "parameters": [
+        {
+          "name": "source_dir",
+          "annotation": "Path",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "split",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "image_files",
+          "annotation": "list[str]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_name",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "mosaic_filename",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 122
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

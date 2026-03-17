@@ -1,0 +1,37 @@
+{
+  "module": "pixano.datasets.workspaces.dataset_items",
+  "docstring": "Default table configurations for common dataset workspaces.\n\nThese functions return pre-configured ``tables`` dicts suitable for passing\nto :class:`DatasetInfo`.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/workspaces/dataset_items.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "default_image_tables",
+      "docstring": "Return default tables for an image dataset.",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 56
+    },
+    {
+      "name": "default_video_tables",
+      "docstring": "Return default tables for a video dataset.",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 42
+    },
+    {
+      "name": "default_vqa_tables",
+      "docstring": "Return default tables for a VQA dataset.",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 29
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

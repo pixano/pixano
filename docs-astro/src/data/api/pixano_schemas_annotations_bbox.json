@@ -1,0 +1,527 @@
+{
+  "module": "pixano.schemas.annotations.bbox",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/bbox.py",
+  "classes": [
+    {
+      "name": "BBox",
+      "docstring": "Bounding box using coordinates in xyxy or xywh format.\n\nAttributes:\n    coords: List of coordinates in given format.\n    format: Coordinates format, 'xyxy' or 'xywh'.\n    is_normalized: True if coordinates are normalized to image size.\n    confidence: Bounding box confidence if predicted. -1 if not predicted.",
+      "bases": [
+        "PerFrameAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "confidence",
+          "annotation": "float",
+          "value": "-1.0",
+          "docstring": ""
+        },
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "is_normalized",
+          "annotation": "bool",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "xywh_coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": "Return the bounding box xywh coordinates.\n\nReturns:\n    Coordinates in xywh format."
+        },
+        {
+          "name": "xyxy_coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": "Return the bounding box xyxy coordinates.\n\nReturns:\n    Coordinates in xyxy format."
+        }
+      ],
+      "methods": [
+        {
+          "name": "denormalize",
+          "docstring": "Return the bounding box with coordinates denormalized relatively to the image size.\n\nArgs:\n    height: Image height.\n    width: Image width.\n\nReturns:\n    Bounding box with coordinates denormalized relatively to the image size.",
+          "parameters": [
+            {
+              "name": "height",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "width",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 126
+        },
+        {
+          "name": "from_mask",
+          "docstring": "Create a bounding box using a NumPy array mask.\n\nArgs:\n    mask: NumPy array mask.\n    kwargs: Additional arguments.\n\nReturns:\n    The bounding box.",
+          "parameters": [
+            {
+              "name": "mask",
+              "annotation": "np.ndarray",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "BBox",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 183
+        },
+        {
+          "name": "from_rle",
+          "docstring": "Create a bounding box using a RLE mask.\n\nArgs:\n    rle: RLE mask.\n    kwargs: Additional arguments.\n\nReturns:\n    The bounding box.",
+          "parameters": [
+            {
+              "name": "rle",
+              "annotation": "CompressedRLE",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "BBox",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 200
+        },
+        {
+          "name": "from_xywh",
+          "docstring": "Create a bounding box using normalized xywh coordinates.\n\nArgs:\n    xywh: List of coordinates in xywh format.\n    kwargs: Additional arguments.\n\nReturns:\n    The bounding box.",
+          "parameters": [
+            {
+              "name": "xywh",
+              "annotation": "list[float]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "BBox",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 163
+        },
+        {
+          "name": "from_xyxy",
+          "docstring": "Create a bounding box using normalized xyxy coordinates.\n\nArgs:\n    xyxy: List of coordinates in xyxy format.\n    kwargs: Additional arguments.\n\nReturns:\n    The bounding box.",
+          "parameters": [
+            {
+              "name": "xyxy",
+              "annotation": "list[float]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "BBox",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 143
+        },
+        {
+          "name": "none",
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" `BBox`.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 49
+        },
+        {
+          "name": "normalize",
+          "docstring": "Return the bounding box with coordinates normalized relatively to the image size.\n\nArgs:\n    height: Image height.\n    width: Image width.\n\nReturns:\n    Bounding box with coordinates normalized relatively to the image size.",
+          "parameters": [
+            {
+              "name": "height",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "width",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 109
+        },
+        {
+          "name": "to_xywh",
+          "docstring": "Return the bounding box in xywh format.\n\nReturns:\n    Bounding box in xyxy format.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 96
+        },
+        {
+          "name": "to_xyxy",
+          "docstring": "Return the bounding box in xyxy format.\n\nReturns:\n    Bounding box in xyxy format.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 83
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 20
+    },
+    {
+      "name": "BBox3D",
+      "docstring": "A 3D bounding Box.\n\nAttributes:\n    coords: List of coordinates in given format.\n    format: Coordinates format, 'xyzxyz' or 'xyzwhd'.\n    heading: Orientation of the bounding box.\n    is_normalized: True if coordinates are normalized to image size.\n    confidence: Bounding box confidence if predicted. -1 if not predicted.",
+      "bases": [
+        "PerFrameAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "confidence",
+          "annotation": "float",
+          "value": "-1.0",
+          "docstring": ""
+        },
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "heading",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "is_normalized",
+          "annotation": "bool",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "none",
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" BBox3D.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 248
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 217
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_bbox",
+      "docstring": "Create a `BBox` instance.\n\nArgs:\n    coords: List of coordinates in given format.\n    format: Coordinates format, 'xyxy' or 'xywh'.\n    is_normalized: True if coordinates are normalized to image size.\n    confidence: Bounding box confidence if predicted.\n    id: BBox ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n    tracklet_id: Tracklet ID.\n    entity_dynamic_state_id: Entity dynamic state ID.\n    frame_id: Frame/view row ID.\n    frame_index: Frame index.\n\nReturns:\n    The created `BBox` instance.",
+      "parameters": [
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "format",
+          "annotation": "Literal['xyxy', 'xywh']",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "is_normalized",
+          "annotation": "bool",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "confidence",
+          "annotation": "float",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "BBox",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 276
+    },
+    {
+      "name": "create_bbox3d",
+      "docstring": "Create a `BBox3D` instance.\n\nArgs:\n    coords: The 3D position coordinates.\n    format: Coordinates format, 'xyzxyz' or 'xyzwhd'.\n    heading: The orientation.\n    is_normalized: True if coordinates are normalized to image size.\n    confidence: Bounding box confidence if predicted.\n    id: BBox3D ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n    tracklet_id: Tracklet ID.\n    entity_dynamic_state_id: Entity dynamic state ID.\n    frame_id: Frame/view row ID.\n    frame_index: Frame index.\n\nReturns:\n    The created `BBox3D` instance.",
+      "parameters": [
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "format",
+          "annotation": "Literal['xyzxyz', 'xyzwhd']",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "heading",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "is_normalized",
+          "annotation": "bool",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "confidence",
+          "annotation": "float",
+          "default": "-1.0",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "BBox3D",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 334
+    },
+    {
+      "name": "is_bbox",
+      "docstring": "Check if a class is a `BBox` or a subclass of `BBox`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 266
+    },
+    {
+      "name": "is_bbox3d",
+      "docstring": "Check if a class is a `BBox3D` or subclass of `BBox3D`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 271
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

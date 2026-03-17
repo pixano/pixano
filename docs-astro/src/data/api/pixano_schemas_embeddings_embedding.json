@@ -1,0 +1,218 @@
+{
+  "module": "pixano.schemas.embeddings.embedding",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/embeddings/embedding.py",
+  "classes": [
+    {
+      "name": "Embedding",
+      "docstring": "Embeddings are used to define an embedding vector for a record in a dataset.\n\nAttributes:\n    view_id: ID of the view this embedding is associated with.\n    frame_id: ID of the view row used for this embedding.\n    vector: The embedding vector that should be defined by subclasses.",
+      "bases": [
+        "RecordComponent",
+        "ABC"
+      ],
+      "attributes": [
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "shape",
+          "annotation": "list[int]",
+          "value": "[]",
+          "docstring": ""
+        },
+        {
+          "name": "vector",
+          "annotation": "Any",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "to_arrow_schema",
+          "docstring": "Get the pyarrow schema of an `Embedding`.\nThis function allows to remove the vector field and the metadata from the schema which can be useful for adding\ndata with auto-vectorization.\n\nArgs:\n    remove_vector: Remove the vector field.\n    remove_metadata: Remove the metadata.\n\nReturns:\n    The pyarrow schema.",
+          "parameters": [
+            {
+              "name": "remove_vector",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "remove_metadata",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "pa.Schema",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 60
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 38
+    },
+    {
+      "name": "ViewEmbedding",
+      "docstring": "ViewEmbeddings are used to define an embedding vector for a view in a dataset.\n\nAttributes:\n    frame_id: ID of the media row used as embedding source.",
+      "bases": [
+        "Embedding",
+        "ABC"
+      ],
+      "attributes": [],
+      "methods": [
+        {
+          "name": "create_schema",
+          "docstring": "Create a ViewEmbedding schema.\n\nArgs:\n    embedding_fn: The embedding function.\n    table_name: The name of the table containing the schema.\n    dataset: The dataset to which the schema belongs.\n    embedding_function_kwargs: The keyword arguments for creating the embedding function.\n\nReturns:\n    The `ViewEmbedding` schema.",
+          "parameters": [
+            {
+              "name": "embedding_fn",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "table_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "embedding_function_kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "type[ViewEmbedding]",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 115
+        },
+        {
+          "name": "get_embedding_fn_from_table",
+          "docstring": "Get the embedding function from a table.\n\nArgs:\n    dataset: The dataset containing the table.\n    table_name: The name of the table containing the embedding function.\n    metadata: The pyarrow metadata of the table.\n\nReturns:\n    The embedding function.",
+          "parameters": [
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "table_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata",
+              "annotation": "dict",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "EmbeddingFunction",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 92
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 85
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_view_embedding_function",
+      "docstring": "Create a `ViewEmbeddingFunction` based on an\n[EmbeddingFunction][lancedb.embeddings.base.EmbeddingFunction].",
+      "parameters": [
+        {
+          "name": "type_embedding_function",
+          "annotation": "type[EmbeddingFunction]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "name",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "type[EmbeddingFunction]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 167
+    },
+    {
+      "name": "is_embedding",
+      "docstring": "Check if a class is an `Embedding` or subclass of `Embedding`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 157
+    },
+    {
+      "name": "is_view_embedding",
+      "docstring": "Check if a class is an `ViewEmbedding` or subclass of `ViewEmbedding`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 162
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

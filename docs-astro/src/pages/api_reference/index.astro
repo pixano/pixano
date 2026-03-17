@@ -1,0 +1,25 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import CardGrid from "../../components/CardGrid.astro";
+import Card from "../../components/Card.astro";
+---
+
+<DocsLayout title="API Reference" section="api_reference">
+  <h1>Pixano API reference</h1>
+  <p>Here you will find the documentation for all of our Python API.</p>
+
+  <CardGrid>
+    <Card title="App" href="/api_reference/app/" icon="api">
+      The Pixano application, REST API, and CLI entry points.
+    </Card>
+    <Card title="Datasets" href="/api_reference/datasets/" icon="database">
+      Backend to construct, import, export, and manipulate datasets.
+    </Card>
+    <Card title="Features" href="/api_reference/features/" icon="code">
+      Schemas and data types for items, views, annotations, and more.
+    </Card>
+    <Card title="Utils" href="/api_reference/utils/" icon="wrench">
+      Utility functions at the library level.
+    </Card>
+  </CardGrid>
+</DocsLayout>

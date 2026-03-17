@@ -1,0 +1,54 @@
+{
+  "module": "pixano.utils.validation",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/utils/validation.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "issubclass_strict",
+      "docstring": "Check if the given object is of the given class type or a subclass of the given class type.\n\nArgs:\n    obj: The object to check.\n    cls: The class to compare against.\n    strict: If True, the object must be of the given class type.\n\nReturns:\n    True if the object is of the given class type or a subclass of the given class type.",
+      "parameters": [
+        {
+          "name": "obj",
+          "annotation": "type",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 10
+    },
+    {
+      "name": "validate_and_init_create_at_and_update_at",
+      "docstring": "Validate and initialize created_at and updated_at.\n\nThe validation and initialization of created_at and updated_at is done as follows:\n- If created_at is None, it is set to the current date and time.\n- If updated_at is None, it is set to created_at.\n- If updated_at is not None and created_at is None, a ValueError is raised.\n- If updated_at is not None and created_at is not None, updated_at should be greater than created_at.\n- If created_at and updated_at are provided as strings, they are converted to datetime objects from ISO format.\n\nArgs:\n    created_at: The creation date of the object.\n    updated_at: The last modification date of the object.\n\nReturns:\n    A tuple containing the created_at and updated_at.",
+      "parameters": [
+        {
+          "name": "created_at",
+          "annotation": "datetime | str | None",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "updated_at",
+          "annotation": "datetime | str | None",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "tuple[datetime, datetime]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 26
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

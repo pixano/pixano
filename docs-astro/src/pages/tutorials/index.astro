@@ -1,0 +1,25 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import CardGrid from "../../components/CardGrid.astro";
+import Card from "../../components/Card.astro";
+---
+
+<DocsLayout title="Tutorials" section="tutorials">
+  <h1>Tutorials</h1>
+  <p>In this section, we provide guides to cover Pixano functionalities.</p>
+
+  <CardGrid>
+    <Card title="Build and query a dataset" href="/tutorials/dataset/" icon="database">
+      Build a Pixano dataset and query it using the Python API.
+    </Card>
+    <Card title="Semantic search" href="/tutorials/semantic_search/" icon="search">
+      Use models like OpenCLIP to browse your data efficiently with semantic search.
+    </Card>
+    <Card title="Interactive segmentation" href="/tutorials/interactive_segmentation/" icon="select">
+      Use models like SAM to annotate your data efficiently with interactive segmentation.
+    </Card>
+    <Card title="Pre-annotation" href="/tutorials/pre_annotation/" icon="robot">
+      Use detection models like YOLO or GroundingDINO to pre-annotate your data.
+    </Card>
+  </CardGrid>
+</DocsLayout>

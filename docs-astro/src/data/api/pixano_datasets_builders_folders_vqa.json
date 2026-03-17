@@ -1,0 +1,31 @@
+{
+  "module": "pixano.datasets.builders.folders.vqa",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/vqa.py",
+  "classes": [
+    {
+      "name": "VQAFolderBuilder",
+      "docstring": "Builder for vqa datasets stored in a folder.",
+      "bases": [
+        "ImageFolderBuilder"
+      ],
+      "attributes": [
+        {
+          "name": "DEFAULT_INFO",
+          "annotation": null,
+          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE_VQA), record=Record, entity=Entity, message=Message, views={'image': Image})",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 14
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

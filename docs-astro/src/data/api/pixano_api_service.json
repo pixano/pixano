@@ -1,0 +1,318 @@
+{
+  "module": "pixano.api.service",
+  "docstring": "Generic CRUD service for the API.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/service.py",
+  "classes": [
+    {
+      "name": "BaseService",
+      "docstring": "Shared CRUD operations for API resources.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "dataset",
+          "annotation": null,
+          "value": "dataset",
+          "docstring": ""
+        },
+        {
+          "name": "resource",
+          "annotation": null,
+          "value": "resource",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initialize the service with a dataset and resource spec.",
+          "parameters": [
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "resource",
+              "annotation": "ResourceSpec",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [],
+          "lineno": 34
+        },
+        {
+          "name": "create",
+          "docstring": "Create a new resource row.",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "BaseModel",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 220
+        },
+        {
+          "name": "delete",
+          "docstring": "Delete a resource by ID.",
+          "parameters": [
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 266
+        },
+        {
+          "name": "get",
+          "docstring": "Fetch one resource by ID.",
+          "parameters": [
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "BaseModel",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 212
+        },
+        {
+          "name": "list",
+          "docstring": "List resources with filtering and pagination.",
+          "parameters": [
+            {
+              "name": "record_id",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "entity_id",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "view_name",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "source_type",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "tracklet_id",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "frame_index",
+              "annotation": "int | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "where",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "limit",
+              "annotation": "int",
+              "default": "100",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "offset",
+              "annotation": "int",
+              "default": "0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "PaginatedResponse",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 161
+        },
+        {
+          "name": "resolve_table",
+          "docstring": "Resolve the backing table for this resource.\n\nFor annotation resources, if the canonical table does not exist yet it\nis created on the fly with the base schema.  This lets users start\nannotating immediately even when the ``DatasetInfo`` did not originally\ndeclare the slot.  To use a **custom** schema with extra fields,\nrecreate the dataset with ``DatasetInfo(<slot>=YourCustomSchema)``.",
+          "parameters": [],
+          "returns": "str",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 39
+        },
+        {
+          "name": "update",
+          "docstring": "Update an existing resource row.",
+          "parameters": [
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "data",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "BaseModel",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 243
+        },
+        {
+          "name": "validate_eds_exists",
+          "docstring": "Validate that the referenced entity dynamic state exists.",
+          "parameters": [
+            {
+              "name": "eds_id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "expected_entity_id",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 134
+        },
+        {
+          "name": "validate_entity_exists",
+          "docstring": "Validate that the referenced entity exists and return its table name.",
+          "parameters": [
+            {
+              "name": "entity_id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "str | None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 100
+        },
+        {
+          "name": "validate_fk_exists",
+          "docstring": "Ensure a foreign key target exists.",
+          "parameters": [
+            {
+              "name": "table",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "fk_id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "label",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 85
+        },
+        {
+          "name": "validate_record_exists",
+          "docstring": "Validate that the referenced record exists.",
+          "parameters": [
+            {
+              "name": "record_id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 96
+        },
+        {
+          "name": "validate_tracklet_exists",
+          "docstring": "Validate that the referenced tracklet exists and belongs to the expected entity.",
+          "parameters": [
+            {
+              "name": "tracklet_id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "expected_entity_id",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 114
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 31
+    }
+  ],
+  "functions": [],
+  "attributes": [
+    {
+      "name": "MAX_QUERY_LIMIT",
+      "annotation": null,
+      "value": "1000",
+      "docstring": ""
+    },
+    {
+      "name": "logger",
+      "annotation": null,
+      "value": "logging.getLogger(__name__)",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

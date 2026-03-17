@@ -1,0 +1,112 @@
+{
+  "module": "pixano.datasets.dataset_schema",
+  "docstring": "Schema serialization utilities for table schemas.\n\nThis module provides helpers to serialize and deserialize LanceModel-based\ntable schemas to/from JSON-compatible dicts.  These are used by\n:class:`DatasetInfo` to persist the ``tables`` mapping in ``info.json``.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/dataset_schema.py",
+  "classes": [
+    {
+      "name": "DatasetItem",
+      "docstring": "Legacy compatibility model for item-centric tests and fixtures.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "created_at",
+          "annotation": "datetime",
+          "value": "Field(default_factory=(datetime.now))",
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "split",
+          "annotation": "str",
+          "value": "'default'",
+          "docstring": ""
+        },
+        {
+          "name": "updated_at",
+          "annotation": "datetime",
+          "value": "Field(default_factory=(datetime.now))",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_dataset_schema",
+          "docstring": "Build from dataset schema (unsupported legacy method).",
+          "parameters": [
+            {
+              "name": "schema",
+              "annotation": null,
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 64
+        },
+        {
+          "name": "to_dataset_schema",
+          "docstring": "Convert to dataset schema (unsupported legacy method).",
+          "parameters": [],
+          "returns": null,
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 59
+        },
+        {
+          "name": "to_schemas_data",
+          "docstring": "Convert to schemas data (unsupported legacy method).",
+          "parameters": [
+            {
+              "name": "schema",
+              "annotation": null,
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [],
+          "lineno": 69
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 51
+    }
+  ],
+  "functions": [
+    {
+      "name": "build_model_dump_exclude_timestamps",
+      "docstring": "Build a native Pydantic exclude map that removes timestamps recursively.",
+      "parameters": [
+        {
+          "name": "model",
+          "annotation": "BaseModel",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict[str, Any]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 74
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

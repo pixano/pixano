@@ -1,0 +1,97 @@
+{
+  "module": "pixano.datasets.exporters.default_jsonl_dataset_exporter",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/exporters/default_jsonl_dataset_exporter.py",
+  "classes": [
+    {
+      "name": "DefaultJSONLDatasetExporter",
+      "docstring": "Default JSON Lines dataset exporter.",
+      "bases": [
+        "DatasetExporter"
+      ],
+      "attributes": [],
+      "methods": [
+        {
+          "name": "export_record",
+          "docstring": "Store the record data in the `export_data` list of dictionaries.\n\nArgs:\n    export_data: A list of dictionaries containing the records to be exported.\n    record_data: Dict of table_name \u2192 row(s) for this record.\n\nReturns:\n    A list of dictionaries containing the records to be exported.",
+          "parameters": [
+            {
+              "name": "export_data",
+              "annotation": "list[dict[str, Any]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "record_data",
+              "annotation": "dict[str, LanceModel | list[LanceModel] | None]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "list[dict[str, Any]]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 43
+        },
+        {
+          "name": "initialize_export_data",
+          "docstring": "Initialize a list of dictionaries to be exported.\n\nThe first line contains the dataset info.\n\nArgs:\n    info: The dataset information.\n\nReturns:\n    A list of dictionaries containing the data to be exported.",
+          "parameters": [
+            {
+              "name": "info",
+              "annotation": "DatasetInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "list[dict[str, Any]]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 25
+        },
+        {
+          "name": "save_data",
+          "docstring": "Save data to the specified directory.\n\nThe saved directory has the following structure:\n    export_dir/{split}_{file_name}_0.jsonl\n              /...\n              /{split}_{file_name}_{file_num}.jsonl\n              /...\n              /{split}_{file_name}_n.jsonl\n\n\nArgs:\n    export_data: The list of dictionaries containing the data to be saved.\n    split: The split of the dataset item being saved.\n    file_name: The name of the file to save the data in.\n    file_num: The number of the file to save the data in.",
+          "parameters": [
+            {
+              "name": "export_data",
+              "annotation": "list[dict[str, Any]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "split",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "file_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "file_num",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 73
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 22
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

@@ -1,0 +1,267 @@
+{
+  "module": "pixano.datasets.dataset_info",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/dataset_info.py",
+  "classes": [
+    {
+      "name": "DatasetInfo",
+      "docstring": "Information and schema definition of a dataset.\n\nUsers declare schemas by role and Pixano derives canonical physical table\nnames internally. Multiple logical views may share the same physical table\nand are distinguished by the view ``logical_name`` field.\n\nAttributes:\n    id: Dataset ID. Must be unique.\n    name: Dataset name.\n    description: Dataset description.\n    size: Dataset estimated size.\n    preview: Path to a preview thumbnail.\n    workspace: Workspace type.\n    storage_mode: How media data is stored.\n    record: Main record schema.\n    entity: Entity schema.\n    entity_dynamic_state: Entity dynamic state schema.\n    bbox: Bounding box schema.\n    mask: Mask schema.\n    keypoint: Keypoint schema.\n    tracklet: Tracklet schema.\n    message: Message schema.\n    text_span: Text span schema.\n    views: Mapping of logical view names to view schema classes.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "bbox",
+          "annotation": "type[BBox] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "description",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "entity",
+          "annotation": "type[Entity] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "entity_dynamic_state",
+          "annotation": "type[EntityDynamicState] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "groups",
+          "annotation": "dict[SchemaGroup, set[str]]",
+          "value": null,
+          "docstring": "Compute schema groups dynamically from the tables mapping."
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "keypoint",
+          "annotation": "type[KeyPoints] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "mask",
+          "annotation": "type[CompressedRLE] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "message",
+          "annotation": "type[Message] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "{'arbitrary_types_allowed': True}",
+          "docstring": ""
+        },
+        {
+          "name": "multi_path",
+          "annotation": "type[MultiPath] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "name",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "preview",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "record",
+          "annotation": "type[Record] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "size",
+          "annotation": "str",
+          "value": "'Unknown'",
+          "docstring": ""
+        },
+        {
+          "name": "storage_mode",
+          "annotation": "Literal['filesystem', 'embedded', 'mixed']",
+          "value": "'filesystem'",
+          "docstring": ""
+        },
+        {
+          "name": "tables",
+          "annotation": "dict[str, type[LanceModel]]",
+          "value": "Field(default_factory=dict, exclude=True)",
+          "docstring": ""
+        },
+        {
+          "name": "text_span",
+          "annotation": "type[TextSpan] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "tracklet",
+          "annotation": "type[Tracklet] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "views",
+          "annotation": "dict[str, type[View]]",
+          "value": "Field(default_factory=dict)",
+          "docstring": ""
+        },
+        {
+          "name": "workspace",
+          "annotation": "WorkspaceType",
+          "value": "WorkspaceType.UNDEFINED",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_json",
+          "docstring": "Read DatasetInfo from JSON file.\n\nArgs:\n    json_fp: JSON file path.\n\nReturns:\n    the dataset info object.",
+          "parameters": [
+            {
+              "name": "json_fp",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "'DatasetInfo'",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 245
+        },
+        {
+          "name": "json_info_dump",
+          "docstring": "Return a JSON-serializable dict of the dataset metadata.\n\nThis excludes all schema-type fields (``tables``, ``views``, and schema\nslot fields like ``record``, ``entity``, etc.) that contain Python class\nobjects which cannot be serialized to JSON.",
+          "parameters": [],
+          "returns": "dict",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 220
+        },
+        {
+          "name": "load_directory",
+          "docstring": "Load list of DatasetInfo from directory.\n\nArgs:\n    directory: Directory to load.\n    return_path: Return the paths of the datasets.\n\nReturns:\n    The list of DatasetInfo and the paths of the datasets.",
+          "parameters": [
+            {
+              "name": "directory",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "return_path",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "list[tuple['DatasetInfo', Path]] | list['DatasetInfo']",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 292
+        },
+        {
+          "name": "load_id",
+          "docstring": "Load a specific DatasetInfo from directory.\n\nArgs:\n    id: The ID of the dataset to load.\n    directory: Directory to load.\n    return_path: Return the path of the dataset.\n\nReturns:\n    The DatasetInfo.",
+          "parameters": [
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "directory",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "return_path",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "tuple['DatasetInfo', Path] | 'DatasetInfo'",
+          "is_async": false,
+          "decorators": [
+            "staticmethod"
+          ],
+          "lineno": 347
+        },
+        {
+          "name": "serialize_workspace",
+          "docstring": "Dump workspace as string value, not enum.",
+          "parameters": [
+            {
+              "name": "workspace",
+              "annotation": "WorkspaceType",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [
+            "field_serializer('workspace')"
+          ],
+          "lineno": 116
+        },
+        {
+          "name": "to_json",
+          "docstring": "Writes the DatasetInfo object to a JSON file.\n\nArgs:\n    json_fp: The path to the file where the DatasetInfo object\n        will be written.",
+          "parameters": [
+            {
+              "name": "json_fp",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 229
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 63
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

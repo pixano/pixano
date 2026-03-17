@@ -1,0 +1,44 @@
+{
+  "module": "pixano.datasets.builders.folders.video",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/video.py",
+  "classes": [
+    {
+      "name": "VideoFolderBuilder",
+      "docstring": "Builder for video datasets stored in a folder.",
+      "bases": [
+        "FolderBaseBuilder"
+      ],
+      "attributes": [
+        {
+          "name": "DEFAULT_INFO",
+          "annotation": null,
+          "value": "DatasetInfo(workspace=(WorkspaceType.VIDEO), record=Record, entity=Entity, entity_dynamic_state=EntityDynamicState, bbox=BBox, keypoint=KeyPoints, tracklet=Tracklet, views={'image': SequenceFrame})",
+          "docstring": ""
+        },
+        {
+          "name": "EXTENSIONS",
+          "annotation": null,
+          "value": "VIDEO_EXTENSIONS + IMAGE_EXTENSIONS",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 27
+    }
+  ],
+  "functions": [],
+  "attributes": [
+    {
+      "name": "VIDEO_EXTENSIONS",
+      "annotation": null,
+      "value": "['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.vob']",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

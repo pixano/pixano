@@ -1,0 +1,62 @@
+{
+  "module": "pixano.api.routers",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/__init__.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "include_api_routers",
+      "docstring": "Attach all active API routers to the given FastAPI app.",
+      "parameters": [
+        {
+          "name": "app",
+          "annotation": "FastAPI",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "None",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 50
+    }
+  ],
+  "attributes": [
+    {
+      "name": "API_PREFIXES",
+      "annotation": "tuple[str, ...]",
+      "value": "tuple(dict.fromkeys((router.prefix) for router in API_ROUTERS if router.prefix))",
+      "docstring": ""
+    },
+    {
+      "name": "API_ROUTERS",
+      "annotation": "tuple[APIRouter, ...]",
+      "value": "(datasets_router, *RESOURCE_ROUTERS)",
+      "docstring": ""
+    },
+    {
+      "name": "RESOURCE_ROUTERS",
+      "annotation": "tuple[APIRouter, ...]",
+      "value": "(records_router, views_router, entities_router, entity_dynamic_states_router, tracklets_router, bboxes_router, masks_router, multi_paths_router, keypoints_router, messages_router, conversations_router, text_spans_router, embeddings_router)",
+      "docstring": ""
+    }
+  ],
+  "submodules": [
+    "bboxes",
+    "conversations",
+    "datasets",
+    "embeddings",
+    "entities",
+    "entity_dynamic_states",
+    "keypoints",
+    "masks",
+    "messages",
+    "multi_paths",
+    "records",
+    "resources",
+    "text_spans",
+    "thumbnail",
+    "tracklets",
+    "views"
+  ]
+}

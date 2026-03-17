@@ -1,0 +1,49 @@
+---
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+import ModuleDoc from "../../../components/api/ModuleDoc.astro";
+import fs from "node:fs";
+import path from "node:path";
+
+export async function getStaticPaths() {
+  const apiDir = path.join(process.cwd(), "src", "data", "api");
+  const files = fs.readdirSync(apiDir).filter(
+    (f) => f.endsWith(".json") && !f.startsWith("_")
+  );
+
+  return files.map((file) => {
+    const data = JSON.parse(fs.readFileSync(path.join(apiDir, file), "utf-8"));
+    // Convert module path to URL slug: pixano.api.main -> api/main
+    const slug = data.module.replace(/^pixano\.?/, "").replace(/\./g, "/") || "index";
+    return {
+      params: { slug },
+      props: { data, filename: file },
+    };
+  });
+}
+
+const { data } = Astro.props;
+
+// Build headings for ToC
+const headings: { depth: number; slug: string; text: string }[] = [];
+if (data.classes.length > 0) {
+  headings.push({ depth: 2, slug: "classes", text: "Classes" });
+  for (const cls of data.classes) {
+    headings.push({ depth: 3, slug: cls.name, text: cls.name });
+  }
+}
+if (data.functions.length > 0) {
+  headings.push({ depth: 2, slug: "functions", text: "Functions" });
+  for (const func of data.functions) {
+    headings.push({ depth: 3, slug: func.name, text: func.name });
+  }
+}
+---
+
+<DocsLayout
+  title={data.module}
+  description={data.docstring || `API reference for ${data.module}`}
+  headings={headings}
+  section="api_reference"
+>
+  <ModuleDoc data={data} />
+</DocsLayout>

@@ -1,0 +1,152 @@
+---
+/**
+ * Card component — Hyper-Glass Bento Tile.
+ *
+ * Usage:
+ *   <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
+ *     Import a dataset and launch the app in minutes.
+ *   </Card>
+ */
+
+interface Props {
+  title: string;
+  href: string;
+  icon?: string;
+}
+
+const { title, href, icon } = Astro.props;
+
+// Map icon names to unicode/emoji fallbacks or SVG
+const iconMap: Record<string, string> = {
+  rocket: "&#128640;",
+  download: "&#128229;",
+  lightbulb: "&#128161;",
+  play: "&#9654;&#65039;",
+  monitor: "&#128421;",
+  database: "&#128450;",
+  search: "&#128269;",
+  select: "&#9995;",
+  robot: "&#129302;",
+  api: "&#128268;",
+  code: "&#128187;",
+  wrench: "&#128295;",
+};
+
+const iconHtml = icon && iconMap[icon] ? iconMap[icon] : "";
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const fullHref = href.startsWith("/") ? `${basePath}${href}` : href;
+---
+
+<a href={fullHref} class="card">
+  {iconHtml && <span class="card-icon" set:html={iconHtml} />}
+  <h3 class="card-title">{title}</h3>
+  <div class="card-divider"></div>
+  <p class="card-description">
+    <slot />
+  </p>
+  <span class="card-link">
+    Read more <span class="card-arrow">&rarr;</span>
+  </span>
+</a>
+
+<style>
+  /* ── Hyper-Glass Bento Tile ── */
+  .card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.75rem;
+    background: var(--px-glass-bg);
+    backdrop-filter: var(--px-glass-blur);
+    -webkit-backdrop-filter: var(--px-glass-blur);
+    border: 1px solid var(--px-glass-border);
+    border-radius: var(--px-radius-xl);
+    box-shadow: var(--px-glass-shadow-inset);
+    transition:
+      all 250ms ease,
+      box-shadow 250ms ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      var(--px-glow-accent),
+      var(--px-glass-shadow-inset);
+    border-color: var(--px-accent);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+    filter: grayscale(20%);
+    transition: filter 250ms ease;
+  }
+
+  .card:hover .card-icon {
+    filter: grayscale(0%);
+  }
+
+  .card-title {
+    font-family: var(--px-font-ui);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--px-text);
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .card-divider {
+    height: 1px;
+    margin: 0.75rem 0;
+    background: linear-gradient(
+      90deg,
+      var(--px-accent) 0%,
+      var(--px-border) 50%,
+      transparent 100%
+    );
+    opacity: 0.5;
+    border-radius: 1px;
+  }
+
+  .card:hover .card-divider {
+    opacity: 0.8;
+  }
+
+  .card-description {
+    font-size: 0.875rem;
+    color: var(--px-text-secondary);
+    margin: 0 0 0.75rem;
+    flex: 1;
+    line-height: 1.6;
+    max-width: none;
+  }
+
+  .card-link {
+    font-family: var(--px-font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--px-primary);
+    transition:
+      color 200ms ease,
+      text-shadow 200ms ease;
+  }
+
+  .card:hover .card-link {
+    color: var(--px-accent);
+    text-shadow: var(--px-glow-text);
+  }
+
+  .card-arrow {
+    display: inline-block;
+    transition: transform 200ms ease;
+  }
+
+  .card:hover .card-arrow {
+    transform: translateX(4px);
+  }
+</style>

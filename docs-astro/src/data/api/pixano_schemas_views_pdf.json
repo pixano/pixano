@@ -1,0 +1,116 @@
+{
+  "module": "pixano.schemas.views.pdf",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/pdf.py",
+  "classes": [
+    {
+      "name": "PDF",
+      "docstring": "PDF view.\n\nAttributes:\n    num_pages: The number of pages in the PDF.",
+      "bases": [
+        "View"
+      ],
+      "attributes": [
+        {
+          "name": "num_pages",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "open",
+          "docstring": "Open the PDF and return its raw bytes.\n\nThe PDF data is read from the embedded ``raw_bytes`` field. If\n``raw_bytes`` is empty but ``uri`` is set, it is treated as an\nabsolute filesystem path or a remote URI.\n\nReturns:\n    The raw PDF bytes.",
+          "parameters": [],
+          "returns": "bytes",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 25
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 16
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_pdf",
+      "docstring": "Create a `PDF` instance.\n\nArgs:\n    uri: The PDF URI. Can be empty when using embedded raw_bytes.\n    id: PDF ID.\n    record_id: Record ID.\n    logical_name: Logical view name.\n    num_pages: The number of pages in the PDF.\n    raw_bytes: Raw PDF bytes.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").\n\nReturns:\n    The created `PDF` instance.",
+      "parameters": [
+        {
+          "name": "uri",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "num_pages",
+          "annotation": "int",
+          "default": "0",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "raw_bytes",
+          "annotation": "bytes | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview",
+          "annotation": "bytes",
+          "default": "b''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview_format",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "PDF",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 50
+    },
+    {
+      "name": "is_pdf",
+      "docstring": "Check if the given class is `PDF` or a subclass of `PDF`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 45
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

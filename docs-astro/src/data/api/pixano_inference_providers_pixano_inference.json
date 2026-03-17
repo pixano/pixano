@@ -1,0 +1,174 @@
+{
+  "module": "pixano.inference.providers.pixano_inference",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/providers/pixano_inference.py",
+  "classes": [
+    {
+      "name": "PixanoInferenceProvider",
+      "docstring": "Provider for pixano-inference server.\n\nThis provider communicates with a pixano-inference server using its HTTP API.\nIt translates between Pixano's types and the pixano-inference API format.\n\nExample:\n    ```python\n    from pixano.inference import get_provider\n\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n    models = await provider.list_models()\n    ```",
+      "bases": [
+        "HTTPProvider"
+      ],
+      "attributes": [
+        {
+          "name": "name",
+          "annotation": "str",
+          "value": null,
+          "docstring": "Provider name."
+        }
+      ],
+      "methods": [
+        {
+          "name": "connect",
+          "docstring": "Connect to a pixano-inference server.\n\nArgs:\n    url: The URL of the pixano-inference server.\n\nReturns:\n    A connected PixanoInferenceProvider instance.\n\nRaises:\n    ProviderConnectionError: If connection fails.",
+          "parameters": [
+            {
+              "name": "url",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "PixanoInferenceProvider",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 57
+        },
+        {
+          "name": "get_capabilities",
+          "docstring": "Return provider capabilities.",
+          "parameters": [],
+          "returns": "ProviderCapabilities",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 83
+        },
+        {
+          "name": "get_server_info",
+          "docstring": "Get server information.",
+          "parameters": [],
+          "returns": "ServerInfo",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 116
+        },
+        {
+          "name": "image_mask_generation",
+          "docstring": "Generate masks for an image.",
+          "parameters": [
+            {
+              "name": "input_data",
+              "annotation": "ImageMaskGenerationInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "ImageMaskGenerationResult",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 200
+        },
+        {
+          "name": "image_zero_shot_detection",
+          "docstring": "Detect objects using zero-shot detection.",
+          "parameters": [
+            {
+              "name": "input_data",
+              "annotation": "ImageZeroShotDetectionInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "ImageZeroShotDetectionResult",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 294
+        },
+        {
+          "name": "list_models",
+          "docstring": "List available models.",
+          "parameters": [
+            {
+              "name": "task",
+              "annotation": "InferenceTask | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "list[ModelInfo]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 96
+        },
+        {
+          "name": "text_image_conditional_generation",
+          "docstring": "Generate text conditioned on images.",
+          "parameters": [
+            {
+              "name": "input_data",
+              "annotation": "TextImageConditionalGenerationInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "TextImageConditionalGenerationResult",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 347
+        },
+        {
+          "name": "video_mask_generation",
+          "docstring": "Generate masks for video frames.",
+          "parameters": [
+            {
+              "name": "input_data",
+              "annotation": "VideoMaskGenerationInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "float",
+              "default": "120.0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "VideoMaskGenerationResult",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 253
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "register_provider('pixano-inference')"
+      ],
+      "lineno": 36
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}
