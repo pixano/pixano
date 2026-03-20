@@ -1,0 +1,203 @@
+{
+  "module": "pixano.datasets.queries.table",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/queries/table.py",
+  "classes": [
+    {
+      "name": "TableQueryBuilder",
+      "docstring": "Builder class for querying LanceTables.\n\nIt supports the select, where, limit, offset, and order_by clauses:\n- The select clause can be used to select specific columns from the table. If not provided, all columns\n    are selected.\n- The where clause can be used to filter the rows of the table.\n- The limit clause can be used to limit the number of rows returned.\n- The offset clause can be used to skip the first n rows.\n- The order_by clause can be used to sort the rows of the table.\n\nThe query is built and executed when calling to_pandas(), to_list(), to_pydantic(), or to_polars().\n\nAttributes:\n    table: The LanceTable to query.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "table",
+          "annotation": "LanceTable",
+          "value": "table",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initializes the TableQueryBuilder.\n\nArgs:\n    table: The LanceTable to query.\n    db_connection: Optional LanceDB connection. Used for count-join queries\n        instead of accessing table._conn (private attribute).\n    blob_columns: Set of column names containing blob data. These columns are excluded\n        from default projections (when no explicit select is called) to avoid loading\n        large binary data into memory unnecessarily.",
+          "parameters": [
+            {
+              "name": "table",
+              "annotation": "LanceTable",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "db_connection",
+              "annotation": "lancedb.DBConnection | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "blob_columns",
+              "annotation": "set[str] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [],
+          "lineno": 48
+        },
+        {
+          "name": "limit",
+          "docstring": "Sets the limit for the query.\n\nArgs:\n    limit: The number of rows to return.\n\nReturns:\n    The TableQueryBuilder instance.",
+          "parameters": [
+            {
+              "name": "limit",
+              "annotation": "int | None",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 137
+        },
+        {
+          "name": "offset",
+          "docstring": "Sets the offset for the query.\n\nArgs:\n    offset: The number of rows to skip.\n\nReturns:\n    The TableQueryBuilder instance.",
+          "parameters": [
+            {
+              "name": "offset",
+              "annotation": "int | None",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 153
+        },
+        {
+          "name": "order_by",
+          "docstring": "Sets the order_by clause for the query.\n\nArgs:\n    order_by: The column(s) to sort by.\n    descending: Whether to sort in descending order.\n\nReturns:\n    The TableQueryBuilder instance.",
+          "parameters": [
+            {
+              "name": "order_by",
+              "annotation": "str | list[str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "descending",
+              "annotation": "bool | list[bool]",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 169
+        },
+        {
+          "name": "select",
+          "docstring": "Selects columns to include in the query.\n\nNote:\n    'id' is always included in the select clause.\n\nArgs:\n    columns: The columns to include in the query. If a list, the columns are selected in the order they are\n        provided. If a dictionary, the keys are the column names and the values are the aliases.",
+          "parameters": [
+            {
+              "name": "columns",
+              "annotation": "str | list[str] | dict[str, str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 92
+        },
+        {
+          "name": "to_arrow",
+          "docstring": "Builds the query and returns the result as a PyArrow Table.\n\nReturns:\n    The result as a PyArrow Table.",
+          "parameters": [],
+          "returns": "pa.Table",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 338
+        },
+        {
+          "name": "to_list",
+          "docstring": "Builds the query and returns the result as a list of dictionaries.\n\nReturns:\n    The result as a list of dictionaries.",
+          "parameters": [],
+          "returns": "list[dict[str, Any]]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 354
+        },
+        {
+          "name": "to_pandas",
+          "docstring": "Builds the query and returns the result as a pandas DataFrame.\n\nReturns:\n    The result as a pandas DataFrame.",
+          "parameters": [],
+          "returns": "pd.DataFrame",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 346
+        },
+        {
+          "name": "to_polars",
+          "docstring": "Builds the query and returns the result as a polars DataFrame.\n\nReturns:\n    The result as a polars DataFrame.",
+          "parameters": [],
+          "returns": "pl.DataFrame",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 377
+        },
+        {
+          "name": "to_pydantic",
+          "docstring": "Builds the query and returns the result as a list of Pydantic models.\n\nReturns:\n    The result as a list of Pydantic models.",
+          "parameters": [
+            {
+              "name": "model",
+              "annotation": "type[T]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "list[T]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 362
+        },
+        {
+          "name": "where",
+          "docstring": "Sets the where clause for the query.\n\nArgs:\n    where: The condition to filter the rows.\n\nReturns:\n    The TableQueryBuilder instance.",
+          "parameters": [
+            {
+              "name": "where",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 122
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 31
+    }
+  ],
+  "functions": [],
+  "attributes": [
+    {
+      "name": "T",
+      "annotation": null,
+      "value": "TypeVar('T', bound=_LanceModel)",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

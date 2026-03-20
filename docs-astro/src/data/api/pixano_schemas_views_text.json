@@ -1,0 +1,88 @@
+{
+  "module": "pixano.schemas.views.text",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/text.py",
+  "classes": [
+    {
+      "name": "Text",
+      "docstring": "Text view.\n\nAttributes:\n    content: The text content.",
+      "bases": [
+        "View"
+      ],
+      "attributes": [
+        {
+          "name": "content",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 12
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_text",
+      "docstring": "Create a `Text` instance.\n\nArgs:\n    content: The text content.\n    id: Text ID.\n    record_id: Record ID.\n    logical_name: Logical view name (e.g. \"text\").\n    uri: URI for text loaded from a file.\n\nReturns:\n    The created `Text` instance.",
+      "parameters": [
+        {
+          "name": "content",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "uri",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Text",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 27
+    },
+    {
+      "name": "is_text",
+      "docstring": "Check if the given class is `Text` or a subclass of `Text`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 22
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

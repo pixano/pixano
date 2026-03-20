@@ -1,0 +1,788 @@
+{
+  "module": "pixano.api.models",
+  "docstring": "Lean API transport models derived from canonical Pixano schemas.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/models.py",
+  "classes": [
+    {
+      "name": "ConversationResponse",
+      "docstring": "Read-only conversation aggregate returned by the API.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "messages",
+          "annotation": "list[MessageResponse]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 311
+    },
+    {
+      "name": "DatasetInfoResponse",
+      "docstring": "Dataset info plus the number of records.",
+      "bases": [
+        "DatasetInfo"
+      ],
+      "attributes": [
+        {
+          "name": "num_records",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_dataset_info",
+          "docstring": "Build a response from a DatasetInfo and its directory path.",
+          "parameters": [
+            {
+              "name": "info",
+              "annotation": "DatasetInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "dataset_dir",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "DatasetInfoResponse",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 354
+        },
+        {
+          "name": "serialize_schema_slot",
+          "docstring": "Serialize schema slots to JSON-friendly payloads.",
+          "parameters": [
+            {
+              "name": "schema_cls",
+              "annotation": "type[LanceModel] | None",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "dict[str, Any] | None",
+          "is_async": false,
+          "decorators": [
+            "field_serializer('record', 'entity', 'entity_dynamic_state', 'bbox', 'mask', 'multi_path', 'keypoint', 'tracklet', 'message', 'text_span', when_used='json')"
+          ],
+          "lineno": 332
+        },
+        {
+          "name": "serialize_views",
+          "docstring": "Serialize logical views to JSON-friendly payloads.",
+          "parameters": [
+            {
+              "name": "views",
+              "annotation": "dict[str, type[LanceModel]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "dict[str, dict[str, Any]]",
+          "is_async": false,
+          "decorators": [
+            "field_serializer('views', when_used='json')"
+          ],
+          "lineno": 349
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 327
+    },
+    {
+      "name": "DatasetResponse",
+      "docstring": "Full dataset metadata returned by dataset endpoints.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "feature_values",
+          "annotation": "DatasetFeaturesValues",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "info",
+          "annotation": "DatasetInfoResponse",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "path",
+          "annotation": "Path",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "previews_path",
+          "annotation": "Path",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "tables",
+          "annotation": "dict[str, Any]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "thumbnail",
+          "annotation": "Path",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_dataset",
+          "docstring": "Build a full dataset response from a Dataset instance.",
+          "parameters": [
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "DatasetResponse",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 373
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 362
+    },
+    {
+      "name": "ImageResponse",
+      "docstring": "Response model for an image view row.",
+      "bases": [
+        "ResponseModel"
+      ],
+      "attributes": [
+        {
+          "name": "created_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "src",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "updated_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 170
+    },
+    {
+      "name": "PaginatedResponse",
+      "docstring": "Paginated list response.",
+      "bases": [
+        "BaseModel",
+        "Generic[T]"
+      ],
+      "attributes": [
+        {
+          "name": "items",
+          "annotation": "list[T]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "limit",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "offset",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "total",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 47
+    },
+    {
+      "name": "PreviewDescriptor",
+      "docstring": "",
+      "bases": [
+        "ResponseModel"
+      ],
+      "attributes": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "kind",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "preview_url",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "resource",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 130
+    },
+    {
+      "name": "RecordListResponse",
+      "docstring": "",
+      "bases": [
+        "RecordResponse"
+      ],
+      "attributes": [
+        {
+          "name": "view_previews",
+          "annotation": "dict[str, PreviewDescriptor] | None",
+          "value": "None",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 137
+    },
+    {
+      "name": "ResponseModel",
+      "docstring": "Base class for API response models.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(extra='allow', from_attributes=True)",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 41
+    },
+    {
+      "name": "SFrameResponse",
+      "docstring": "Response model for a sequence frame view row.",
+      "bases": [
+        "ResponseModel"
+      ],
+      "attributes": [
+        {
+          "name": "created_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "src",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "float",
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "updated_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 196
+    },
+    {
+      "name": "TextResponse",
+      "docstring": "Response model for a text view row.",
+      "bases": [
+        "ResponseModel"
+      ],
+      "attributes": [
+        {
+          "name": "content",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "created_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "updated_at",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "uri",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 184
+    },
+    {
+      "name": "TransportModel",
+      "docstring": "Base class for API request models.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(extra='allow')",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 35
+    }
+  ],
+  "functions": [
+    {
+      "name": "merge_update_payload",
+      "docstring": "Apply a partial update payload onto an existing row dump.",
+      "parameters": [
+        {
+          "name": "existing_row",
+          "annotation": "LanceModel",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "patch",
+          "annotation": "dict[str, Any]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict[str, Any]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 105
+    },
+    {
+      "name": "serialize_row",
+      "docstring": "Convert a Lance row to a flat API payload.",
+      "parameters": [
+        {
+          "name": "row",
+          "annotation": "LanceModel",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "exclude_fields",
+          "annotation": "set[str] | frozenset[str]",
+          "default": "frozenset()",
+          "kind": "ParameterKind.keyword_only"
+        }
+      ],
+      "returns": "dict[str, Any]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 91
+    }
+  ],
+  "attributes": [
+    {
+      "name": "BBoxCreate",
+      "annotation": null,
+      "value": "_create_transport_model('BBoxCreate', BBox, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "BBoxResponse",
+      "annotation": null,
+      "value": "_create_transport_model('BBoxResponse', BBox)",
+      "docstring": ""
+    },
+    {
+      "name": "BBoxUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('BBoxUpdate', BBox, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "EmbeddingCreate",
+      "annotation": null,
+      "value": "_create_transport_model('EmbeddingCreate', Embedding, exclude_fields={'created_at', 'updated_at', 'vector'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "EmbeddingResponse",
+      "annotation": null,
+      "value": "_create_transport_model('EmbeddingResponse', Embedding, exclude_fields={'vector'})",
+      "docstring": ""
+    },
+    {
+      "name": "EntityCreate",
+      "annotation": null,
+      "value": "_create_transport_model('EntityCreate', Entity, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "EntityDynamicStateCreate",
+      "annotation": null,
+      "value": "_create_transport_model('EntityDynamicStateCreate', EntityDynamicState, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "EntityDynamicStateResponse",
+      "annotation": null,
+      "value": "_create_transport_model('EntityDynamicStateResponse', EntityDynamicState)",
+      "docstring": ""
+    },
+    {
+      "name": "EntityDynamicStateUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('EntityDynamicStateUpdate', EntityDynamicState, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "EntityResponse",
+      "annotation": null,
+      "value": "_create_transport_model('EntityResponse', Entity)",
+      "docstring": ""
+    },
+    {
+      "name": "EntityUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('EntityUpdate', Entity, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "KeyPointsCreate",
+      "annotation": null,
+      "value": "_create_transport_model('KeyPointsCreate', KeyPoints, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "KeyPointsResponse",
+      "annotation": null,
+      "value": "_create_transport_model('KeyPointsResponse', KeyPoints)",
+      "docstring": ""
+    },
+    {
+      "name": "KeyPointsUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('KeyPointsUpdate', KeyPoints, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "MaskCreate",
+      "annotation": null,
+      "value": "_create_transport_model('MaskCreate', CompressedRLE, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "MaskResponse",
+      "annotation": null,
+      "value": "_create_transport_model('MaskResponse', CompressedRLE)",
+      "docstring": ""
+    },
+    {
+      "name": "MaskUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('MaskUpdate', CompressedRLE, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "MessageCreate",
+      "annotation": null,
+      "value": "_create_transport_model('MessageCreate', Message, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "MessageResponse",
+      "annotation": null,
+      "value": "_create_transport_model('MessageResponse', Message)",
+      "docstring": ""
+    },
+    {
+      "name": "MessageUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('MessageUpdate', Message, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "MultiPathCreate",
+      "annotation": null,
+      "value": "_create_transport_model('MultiPathCreate', MultiPath, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "MultiPathResponse",
+      "annotation": null,
+      "value": "_create_transport_model('MultiPathResponse', MultiPath)",
+      "docstring": ""
+    },
+    {
+      "name": "MultiPathUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('MultiPathUpdate', MultiPath, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "RecordCreate",
+      "annotation": null,
+      "value": "_create_transport_model('RecordCreate', Record, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "RecordResponse",
+      "annotation": null,
+      "value": "_create_transport_model('RecordResponse', Record)",
+      "docstring": ""
+    },
+    {
+      "name": "RecordUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('RecordUpdate', Record, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "T",
+      "annotation": null,
+      "value": "TypeVar('T')",
+      "docstring": ""
+    },
+    {
+      "name": "TextSpanCreate",
+      "annotation": null,
+      "value": "_create_transport_model('TextSpanCreate', TextSpan, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "TextSpanResponse",
+      "annotation": null,
+      "value": "_create_transport_model('TextSpanResponse', TextSpan)",
+      "docstring": ""
+    },
+    {
+      "name": "TextSpanUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('TextSpanUpdate', TextSpan, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    },
+    {
+      "name": "TrackletCreate",
+      "annotation": null,
+      "value": "_create_transport_model('TrackletCreate', Tracklet, exclude_fields={'created_at', 'updated_at'}, required_fields={'id'})",
+      "docstring": ""
+    },
+    {
+      "name": "TrackletResponse",
+      "annotation": null,
+      "value": "_create_transport_model('TrackletResponse', Tracklet)",
+      "docstring": ""
+    },
+    {
+      "name": "TrackletUpdate",
+      "annotation": null,
+      "value": "_create_transport_model('TrackletUpdate', Tracklet, exclude_fields={'id', 'created_at', 'updated_at'}, optional=True)",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

@@ -1,0 +1,68 @@
+{
+  "module": "pixano.datasets.builders.validators",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/validators.py",
+  "classes": [
+    {
+      "name": "ViewFamilyIntegrityValidator",
+      "docstring": "Reject mixed image and sequence-frame families for one logical view.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "schemas",
+          "annotation": null,
+          "value": "schemas",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initialize the validator with the dataset table schemas.",
+          "parameters": [
+            {
+              "name": "schemas",
+              "annotation": "dict[str, type[LanceModel]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 21
+        },
+        {
+          "name": "validate",
+          "docstring": "Validate one buffered batch before insertion.",
+          "parameters": [
+            {
+              "name": "batch",
+              "annotation": "dict[str, list[LanceModel]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 25
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 18
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

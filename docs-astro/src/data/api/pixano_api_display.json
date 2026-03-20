@@ -1,0 +1,88 @@
+{
+  "module": "pixano.api.display",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/display.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "display_cli",
+      "docstring": "Display a Pixano app inside a command line interface.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.",
+      "parameters": [
+        {
+          "name": "url",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "port",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 95
+    },
+    {
+      "name": "display_colab",
+      "docstring": "Display a Pixano app inside a Google Colab.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.\n    height: Frame height.",
+      "parameters": [
+        {
+          "name": "url",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "port",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 14
+    },
+    {
+      "name": "display_ipython",
+      "docstring": "Display a Pixano app inside a Jupyter notebook.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.\n    height: Frame height.",
+      "parameters": [
+        {
+          "name": "url",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "port",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": null,
+      "is_async": false,
+      "decorators": [],
+      "lineno": 53
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

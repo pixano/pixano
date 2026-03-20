@@ -1,0 +1,159 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Entity Linking"
+section: use_cases
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Entity Linking
+
+Link named entities between image regions and text spans. This guide uses the MEL (Multimodal Entity Linking) dataset format and covers: import, explore the image + text UI, and annotate with bounding boxes and text selection.
+
+## What is entity linking?
+
+Entity linking connects mentions of the same real-world entity across different modalities. For example, a sentence might mention "the Eiffel Tower" while the image shows the tower itself. Entity linking creates a shared entity that ties the text span to a bounding box (or mask) on the image.
+
+## Prerequisites
+
+- Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
+- A data directory initialized with `pixano init ./my_data`
+
+## Import the dataset
+
+### Prepare the source folder
+
+An entity-linking dataset has an image and a text document per item. Organize your source folder like this:
+
+```
+mel_source/
+  train/
+    image_001.jpg
+    image_002.jpg
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` describes one item with both an image view and a text view, plus entities that link regions across both:
+
+```json
+{
+  "views": {
+    "image": "image_001.jpg",
+    "text": "The Eiffel Tower is a wrought-iron lattice tower in Paris."
+  },
+  "entities": [
+    {
+      "name": "Eiffel Tower",
+      "annotations": {
+        "image": { "bbox": [0.3, 0.1, 0.4, 0.8] },
+        "text": { "text_span": [4, 16] }
+      }
+    }
+  ]
+}
+```
+
+- `views.text` is a string (the full text content).
+- `text_span` is a `[start, end]` character offset pair.
+- Each entity can have annotations on both the image and text views.
+
+### Review the dataset info
+
+The dataset info at `examples/mel/info.py`:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record, Text, TextSpan
+
+
+class MELEntity(Entity):
+    name: str = ""
+
+
+dataset_info = DatasetInfo(
+    name="MEL Sample",
+    description="Sample import for image-text entity linking datasets.",
+    workspace=WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+    record=Record,
+    entity=MELEntity,
+    bbox=BBox,
+    mask=CompressedRLE,
+    text_span=TextSpan,
+    views={"image": Image, "text": Text},
+)
+```
+
+Key elements:
+
+- `WorkspaceType.IMAGE_TEXT_ENTITY_LINKING` enables the image + text panel UI.
+- `views` has two entries: `"image"` (type `Image`) and `"text"` (type `Text`).
+- `TextSpan` is the annotation type that marks character ranges in the text.
+- Entities can be linked to both `BBox` (on the image) and `TextSpan` (on the text).
+
+### Run the import
+
+```bash
+pixano data import ./my_data ./mel_source \
+    --info examples/mel/info.py:dataset_info
+```
+
+### Launch the server
+
+```bash
+pixano server run ./my_data
+```
+
+## Explore in the UI
+
+### Item page — entity linking mode
+
+When you open an item from an entity-linking dataset, you see:
+
+- **Image** in the center — with bounding boxes and masks drawn on it.
+- **Text panel** on the left — displaying the full text with color-coded spans. Each text span is highlighted with the same color as its linked entity's bounding box.
+
+#### Text panel interactions
+
+- **Click a text span** to select the corresponding entity. The entity's bounding box highlights on the image, and its object card opens in the right panel.
+- **Select text and click "Tag Selected Text"** to create a new text span annotation. The creation panel opens so you can assign it to an existing entity or create a new one.
+
+#### Object panel
+
+The Object panel on the right shows all entities. Expand an entity card to see:
+
+- **Features** — entity attributes (name, etc.).
+- **Objects** — sub-objects (bounding boxes, masks, text spans).
+- **Text spans** — a table showing each text span's features alongside the highlighted text.
+
+<Callout type="tip" title="Linking workflow">
+1. Select text in the text panel and click "Tag Selected Text".
+2. In the creation prompt, choose an existing entity (or create a new one).
+3. Draw a bounding box on the image for the same entity.
+4. Both annotations are now linked through the shared entity.
+</Callout>
+
+## Annotate
+
+### Bounding boxes
+
+Use the **bounding box tool** on the image to draw regions around the entity. When prompted, select the entity you want to link it to.
+
+### Text spans
+
+Select text in the text panel and click **"Tag Selected Text"**. Choose the same entity that has the bounding box annotation.
+
+### Masks
+
+If your dataset includes `CompressedRLE` masks, you can also use the polygon tool or SAM to create segmentation masks linked to entities.
+
+## Next steps
+
+- [Visual Question Answering](/pixano/use_cases/vqa/) — image + conversation Q&A
+- [Object Detection](/pixano/use_cases/object_detection/) — image-only detection with pre-annotation
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Multi-View Detection", href: "/use_cases/multi_view_detection/" }}
+  next={{ title: "Visual Question Answering", href: "/use_cases/vqa/" }}
+/>

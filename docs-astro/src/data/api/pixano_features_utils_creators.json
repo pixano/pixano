@@ -1,0 +1,54 @@
+{
+  "module": "pixano.features.utils.creators",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/utils/creators.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "create_instance_of_pixano_type",
+      "docstring": "Create a pixano object.",
+      "parameters": [
+        {
+          "name": "pix_type",
+          "annotation": "type[BaseModel]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "data",
+          "annotation": null,
+          "default": "{}",
+          "kind": "ParameterKind.var_keyword"
+        }
+      ],
+      "returns": "BaseModel",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 80
+    },
+    {
+      "name": "create_instance_of_schema",
+      "docstring": "Create a row in a Schema.",
+      "parameters": [
+        {
+          "name": "schema",
+          "annotation": "type[LanceModel]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "data",
+          "annotation": null,
+          "default": "{}",
+          "kind": "ParameterKind.var_keyword"
+        }
+      ],
+      "returns": "LanceModel",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 11
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

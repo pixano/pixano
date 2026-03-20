@@ -1,0 +1,361 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Object Detection"
+section: use_cases
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Object Detection
+
+Detect and annotate objects in images with bounding boxes. This guide uses the [Pascal VOC 2007](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/) dataset and covers the full workflow: import, explore in the UI, annotate manually, pre-annotate with YOLO and GroundingDINO, and add semantic search.
+
+## Prerequisites
+
+- Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
+- A data directory initialized with `pixano init ./my_data`
+
+## Import the dataset
+
+### Generate the sample
+
+The repository includes a script that downloads Pascal VOC 2007 and produces a Pixano-compatible folder:
+
+```bash
+pip install pillow
+python examples/voc/generate_sample.py ./voc_sample --num-samples 50
+```
+
+The resulting folder:
+
+```
+voc_sample/
+  train/
+    000032.jpg
+    000045.jpg
+    ...
+    metadata.jsonl
+  validation/
+    000007.jpg
+    ...
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` describes one image with its annotations:
+
+```json
+{
+  "views": { "image": "000032.jpg" },
+  "entities": [
+    {
+      "category": "aeroplane",
+      "is_difficult": false,
+      "annotations": { "image": { "bbox": [0.078, 0.09, 0.756, 0.792] } }
+    }
+  ]
+}
+```
+
+### Review the dataset info
+
+The dataset info at `examples/voc/info.py` declares the schema:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, Entity, Image, Record
+
+
+class VOCEntity(Entity):
+    category: str = ""
+    is_difficult: bool = False
+
+
+dataset_info = DatasetInfo(
+    name="VOC 2007 Sample",
+    workspace=WorkspaceType.IMAGE,
+    record=Record,
+    entity=VOCEntity,
+    bbox=BBox,
+    views={"image": Image},
+)
+```
+
+`VOCEntity` extends `Entity` with domain-specific fields (`category`, `is_difficult`). `DatasetInfo` tells Pixano to create tables for records, entities, bounding boxes, and image views.
+
+### Run the import
+
+```bash
+pixano data import ./my_data ./voc_sample \
+    --info examples/voc/info.py:dataset_info
+```
+
+<Callout type="tip" title="Import options">
+Use `--dry-run` to validate your metadata without creating the dataset. Use `--mode overwrite` to re-import over an existing dataset.
+</Callout>
+
+### Launch the server
+
+```bash
+pixano server run ./my_data
+```
+
+Open `http://127.0.0.1:7492` in your browser.
+
+## Explore in the UI
+
+### Home page
+
+The home page shows all datasets in your library. Each **dataset card** displays the name, item count, and dataset type. Hover over a card to see details (description, view count, annotation count). Click the card to open the dataset.
+
+### Dataset page
+
+The dataset page shows a table of all items with thumbnail previews.
+
+- **Column filter** — filter by any column value. Use "free mode" for SQL-style WHERE clauses (e.g. `split = 'train' AND id LIKE '%009'`).
+- **Column ordering** — click a column header to sort ascending or descending.
+- **Column selector** — click the gear icon to choose which columns to display.
+- **Navigation** — use the pagination buttons at the bottom to move through pages.
+
+Click any item to open the item view.
+
+### Item page
+
+The item view shows the image in the center with two panels:
+
+- **Scene panel** (right tab) — displays item metadata (split, custom fields) and image settings (brightness, contrast, histogram equalization).
+- **Object panel** (right tab) — lists all entities. Each object card shows its category, color, and visibility toggle. Expand a card to see features, sub-objects (bounding boxes, masks), and thumbnails.
+
+### Dashboard
+
+From the dataset page header, switch to **Dashboard** to see statistics about your dataset: item counts, annotation distributions, and computed stats.
+
+## Annotate
+
+### Bounding box tool
+
+Select the **bounding box tool** from the toolbar, then click and drag a rectangle over an object. A prompt appears to set the entity's features (category, etc.) and choose whether to create a new entity or attach to an existing one.
+
+### Polygon tool
+
+Select the **polygon tool** to create a segmentation mask by placing points manually. Close the polygon by clicking the first point.
+
+### Keypoints tool
+
+Select the **keypoints tool**, choose a template, then drag a box to roughly place it. Adjust individual keypoints by dragging.
+
+<Callout type="tip" title="Navigation tips">
+- **Pan**: use the pan tool, or middle-click with any tool active.
+- **Zoom**: scroll the mouse wheel.
+- **Bring to front**: double-click an image in multi-view mode.
+- **Select through overlapping objects**: hide the front object using the visibility icon, then click the one behind it.
+</Callout>
+
+## Pre-annotation with YOLO
+
+You can use a detection model to pre-annotate your dataset programmatically before opening the UI.
+
+### Setup
+
+```bash
+pip install ultralytics
+```
+
+### Run YOLO on your dataset
+
+```python
+from pathlib import Path
+from pixano.datasets import Dataset
+from pixano.schemas import BBox, Entity
+from ultralytics import YOLO
+from tqdm.auto import tqdm
+import shortuuid
+
+library = Path("./my_data/library")
+media = Path("./my_data/media")
+dataset_dirname = "voc_2007_sample"
+
+
+class EntityWithCategory(Entity):
+    category: str = ""
+
+
+def create_pixano_bbox_entity(
+    pix_image, bbox_coords, score, category, *,
+    is_normalized=True, source_type="model", source_name="source",
+):
+    view_ref = {"id": pix_image.id, "name": "image"}
+    entity = EntityWithCategory(
+        id=shortuuid.uuid(),
+        item_ref=pix_image.item_ref,
+        view_ref=view_ref,
+        category=category,
+    )
+    bbox = BBox(
+        id=shortuuid.uuid(),
+        item_ref=pix_image.item_ref,
+        view_ref=view_ref,
+        entity_ref={"id": entity.id, "name": "objects"},
+        confidence=score,
+        coords=bbox_coords,
+        is_normalized=is_normalized,
+        format="xyxy",
+        source_type=source_type,
+        source_name=source_name,
+    )
+    return entity, bbox
+
+
+ds = Dataset(library / dataset_dirname, media_dir=media)
+model = YOLO("yolo11n.pt")
+
+new_entities = []
+new_bboxes = []
+
+images = ds.get_data("image")
+
+for image in tqdm(images):
+    results = model.predict(media / image.url, verbose=False)
+    for res in results:
+        for bbox, score, category in zip(
+            res.boxes.xyxyn.tolist(),
+            res.boxes.conf.tolist(),
+            res.boxes.cls.tolist(),
+        ):
+            entity, pix_bbox = create_pixano_bbox_entity(
+                image, bbox, score, res.names[category],
+                is_normalized=True, source_type="model", source_name="yolo11n",
+            )
+            new_entities.append(entity)
+            new_bboxes.append(pix_bbox)
+
+ds.add_data("objects", new_entities)
+ds.add_data("bboxes", new_bboxes)
+
+print("Done")
+```
+
+Restart the server and you'll see YOLO predictions alongside your existing annotations.
+
+## Pre-annotation with GroundingDINO
+
+For zero-shot detection (detect objects by text prompt), use GroundingDINO via Pixano Inference:
+
+```python
+from pixano_inference.providers.transformers import TransformersProvider
+from pixano_inference.tasks import ImageTask
+from pixano_inference.pydantic import ImageZeroShotDetectionOutput
+from pixano_inference.utils.media import convert_string_to_image
+from tqdm.auto import tqdm
+import torch
+
+provider = TransformersProvider()
+model = provider.load_model(
+    "dino",
+    ImageTask.ZERO_SHOT_DETECTION.value,
+    torch.device("cuda") if torch.cuda.is_available() else "cpu",
+    "IDEA-Research/grounding-dino-base"
+)
+
+new_entities = []
+new_bboxes = []
+
+images = ds.get_data("image")
+
+for image in tqdm(images):
+    output: ImageZeroShotDetectionOutput = model.image_zero_shot_detection(
+        image=convert_string_to_image(media / image.url),
+        classes=["person", "car", "motorcycle"],
+        box_threshold=0.3,
+        text_threshold=0.2,
+    )
+    for bbox, score, category in zip(
+        output.boxes, output.scores, output.classes,
+    ):
+        entity, pix_bbox = create_pixano_bbox_entity(
+            image, bbox, score, category,
+            is_normalized=False, source_type="model", source_name="GroundingDINO",
+        )
+        new_entities.append(entity)
+        new_bboxes.append(pix_bbox)
+
+ds.add_data("objects", new_entities)
+ds.add_data("bboxes", new_bboxes)
+
+print("Done")
+```
+
+## Semantic search
+
+Semantic search lets you find images by text query (e.g. "dog on a sofa") using precomputed embeddings.
+
+### Compute embeddings with OpenCLIP
+
+```bash
+pip install open-clip-torch
+```
+
+```python
+from pathlib import Path
+from pixano.datasets import Dataset
+from pixano.datasets.dataset_schema import SchemaRelation
+from pixano.schemas import ViewEmbedding
+import shortuuid
+from datetime import datetime
+
+ds = Dataset(
+    Path("./my_data/library/voc_2007_sample"),
+    media_dir=Path("./my_data/media"),
+)
+
+# Create the embedding table
+embedding_schema = ViewEmbedding.create_schema(
+    embedding_fn="open-clip",
+    table_name="emb_open-clip",
+    dataset=ds,
+)
+ds.create_table(
+    name="emb_open-clip",
+    schema=embedding_schema,
+    relation_item=SchemaRelation.ONE_TO_ONE,
+    mode="create",
+)
+
+# Compute embeddings for all views
+views = ds.get_data(table_name="image")
+
+data = []
+for view in views:
+    data.append({
+        "id": shortuuid.uuid(),
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "item_ref": {"id": view.item_ref.id, "name": view.item_ref.name},
+        "view_ref": {"id": view.id, "name": "image"},
+    })
+
+ds.compute_view_embeddings(table_name="emb_open-clip", data=data)
+```
+
+### Use semantic search in the UI
+
+Restart the server. On the dataset page, the **semantic search bar** now appears. Select the embedding table and type a query like "aeroplane" to rank images by semantic similarity.
+
+### Use semantic search with the Python API
+
+```python
+results, distances = ds.semantic_search("aeroplane", "emb_open-clip", limit=5)
+for item, dist in zip(results, distances):
+    print(f"Item {item.id} — distance: {dist:.4f}")
+```
+
+## Next steps
+
+- [Video Object Tracking](/pixano/use_cases/video_tracking/) — work with video datasets, tracklets, and SAM
+- [Key Concepts](/pixano/getting_started/key_concepts/) — deeper dive into the data model
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Overview", href: "/use_cases/" }}
+  next={{ title: "Video Object Tracking", href: "/use_cases/video_tracking/" }}
+/>

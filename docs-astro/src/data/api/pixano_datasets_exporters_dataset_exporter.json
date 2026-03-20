@@ -1,0 +1,179 @@
+{
+  "module": "pixano.datasets.exporters.dataset_exporter",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/exporters/dataset_exporter.py",
+  "classes": [
+    {
+      "name": "DatasetExporter",
+      "docstring": "Abstract base class for dataset exporters.\n\nTo export a dataset, you need to implement this class and provide\nan implementation for the abstract methods.\n\nAttributes:\n    dataset: The dataset to be exported.\n    export_dir: The directory where the exported files will be saved.",
+      "bases": [
+        "ABC"
+      ],
+      "attributes": [
+        {
+          "name": "dataset",
+          "annotation": null,
+          "value": "dataset",
+          "docstring": ""
+        },
+        {
+          "name": "export_dir",
+          "annotation": null,
+          "value": "Path(export_dir)",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initialize a new instance of the DatasetExporter class.\n\nArgs:\n    dataset: The dataset to be exported.\n    export_dir: The directory where the exported files will be saved.\n    overwrite: Whether to overwrite existing directory.",
+          "parameters": [
+            {
+              "name": "dataset",
+              "annotation": "Dataset",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "export_dir",
+              "annotation": "str | Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "overwrite",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [],
+          "lineno": 39
+        },
+        {
+          "name": "export",
+          "docstring": "Export the dataset to the specified directory.\n\nArgs:\n    file_name: The name of the exported dataset.\n    items_per_file: The number of records to export per file. If not specified, all records will be exported\n        in a single file.\n    batch_size: The size of each batch when exporting data. If not specified, all data will be exported at\n        once.",
+          "parameters": [
+            {
+              "name": "file_name",
+              "annotation": "str",
+              "default": "'pixano_export'",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "items_per_file",
+              "annotation": "int | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "batch_size",
+              "annotation": "int | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 108
+        },
+        {
+          "name": "export_record",
+          "docstring": "Store a record's data in the data structure to be exported.\n\nArgs:\n    export_data: The data structure to be exported.\n    record_data: Dict of table_name \u2192 row(s) for this record.\n\nReturns: The data structure to be exported.",
+          "parameters": [
+            {
+              "name": "export_data",
+              "annotation": "Any",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "record_data",
+              "annotation": "dict[str, LanceModel | list[LanceModel] | None]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Any",
+          "is_async": false,
+          "decorators": [
+            "abstractmethod"
+          ],
+          "lineno": 63
+        },
+        {
+          "name": "initialize_export_data",
+          "docstring": "Initialize the data structure to be exported.\n\nArgs:\n    info: The dataset information.\n\nReturns:\n    The data structure to be exported.",
+          "parameters": [
+            {
+              "name": "info",
+              "annotation": "DatasetInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Any",
+          "is_async": false,
+          "decorators": [
+            "abstractmethod"
+          ],
+          "lineno": 51
+        },
+        {
+          "name": "save_data",
+          "docstring": "Save data to the specified directory.\n\nArgs:\n    export_data: The data structure to be exported.\n    split: The split of the dataset item being saved.\n    file_name: The name of the file to save the data in.\n    file_num: The number of the file to save the data in.",
+          "parameters": [
+            {
+              "name": "export_data",
+              "annotation": "Any",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "split",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "file_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "file_num",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [
+            "abstractmethod"
+          ],
+          "lineno": 75
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 28
+    }
+  ],
+  "functions": [],
+  "attributes": [
+    {
+      "name": "logger",
+      "annotation": null,
+      "value": "logging.getLogger(__name__)",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

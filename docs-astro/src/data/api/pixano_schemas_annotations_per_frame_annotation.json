@@ -1,0 +1,66 @@
+{
+  "module": "pixano.schemas.annotations.per_frame_annotation",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/per_frame_annotation.py",
+  "classes": [
+    {
+      "name": "PerFrameAnnotation",
+      "docstring": "Per-frame annotations carry temporal linkage fields.\nUsed by BBox, CompressedRLE, KeyPoints, etc. \u2014 annotations that\nreference a specific frame within a video sequence.\n\nAttributes:\n    tracklet_id: ID of the tracklet for temporal linkage.\n    entity_dynamic_state_id: ID of the entity dynamic state row.\n    frame_id: ID of the referenced media row when annotation is frame-level.\n    frame_index: Frame index (denormalized for temporal queries).",
+      "bases": [
+        "EntityAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "value": "-1",
+          "docstring": ""
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 12
+    }
+  ],
+  "functions": [
+    {
+      "name": "is_per_frame_annotation",
+      "docstring": "Check if a class is a PerFrameAnnotation or subclass of PerFrameAnnotation.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 30
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

@@ -1,0 +1,160 @@
+{
+  "module": "pixano.schemas.annotations.multi_path",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/multi_path.py",
+  "classes": [
+    {
+      "name": "MultiPath",
+      "docstring": "A collection of 2D paths (polylines or polygon rings).\n\nInspired by GeoJSON, both multi-polygons and multi-linestrings share the\nsame data layout.  All coordinates are stored in a single flat list, and\n``num_points`` records how many points belong to each sub-path.\n\nThe ``is_closed`` flag distinguishes between the two semantics:\n\n* ``is_closed=True``  -> multi-polygon  (each sub-path is a closed ring)\n* ``is_closed=False`` -> multi-linestring (each sub-path is an open polyline)\n\nAttributes:\n    coords: Flat list of normalised 2-D coordinates\n        ``[x1, y1, x2, y2, ...]`` for **all** sub-paths concatenated.\n    num_points: Number of points in each sub-path.  For example\n        ``[4, 3]`` means two sub-paths with 4 and 3 points respectively.\n        ``sum(num_points) * 2`` must equal ``len(coords)``.\n    is_closed: Whether the paths represent closed polygons (``True``)\n        or open polylines (``False``).",
+      "bases": [
+        "PerFrameAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "is_closed",
+          "annotation": "bool",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "num_points",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "none",
+          "docstring": "Return a Lance-compatible 'null' ``MultiPath``.\n\nShould be removed once Lance manages ``None`` values natively.",
+          "parameters": [],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 60
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 15
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_multi_path",
+      "docstring": "Factory function that mirrors ``create_bbox``, ``create_compressed_rle``, etc.",
+      "parameters": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "coords",
+          "annotation": "list[float] | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "num_points",
+          "annotation": "list[int] | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "is_closed",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "MultiPath",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 79
+    },
+    {
+      "name": "is_multi_path",
+      "docstring": "Check whether *cls* is ``MultiPath`` or a subclass of it.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 74
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

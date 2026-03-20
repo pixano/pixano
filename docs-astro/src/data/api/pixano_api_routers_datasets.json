@@ -1,0 +1,113 @@
+{
+  "module": "pixano.api.routers.datasets",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/datasets.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "get_dataset",
+      "docstring": "Load dataset from ID.\n\nArgs:\n    id: Dataset ID to load.\n    settings: App settings.\n\nReturns:\n    Dataset model.",
+      "parameters": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "settings",
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "DatasetResponse",
+      "is_async": false,
+      "decorators": [
+        "router.get('/{id}', response_model=DatasetResponse, operation_id='get_dataset')"
+      ],
+      "lineno": 125
+    },
+    {
+      "name": "get_dataset_info",
+      "docstring": "Load a single dataset information.\n\nArgs:\n    id: Dataset ID to load info from.\n    settings: App settings.\n\nReturns:\n    The dataset info.",
+      "parameters": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "settings",
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "DatasetInfoResponse",
+      "is_async": false,
+      "decorators": [
+        "router.get('/{id}/info', response_model=DatasetInfoResponse, operation_id='get_dataset_info')"
+      ],
+      "lineno": 63
+    },
+    {
+      "name": "get_dataset_stats",
+      "docstring": "Get aggregate row counts per table, grouped by schema group.\n\nThis is a lightweight endpoint that only calls count_rows() per table,\navoiding any record-level data materialization.\n\nArgs:\n    id: Dataset ID.\n    settings: App settings.\n\nReturns:\n    Dict of group_name -> {table_name: count}.",
+      "parameters": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "settings",
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict[str, dict[str, int]]",
+      "is_async": false,
+      "decorators": [
+        "router.get('/{id}/stats', response_model=(dict[str, dict[str, int]]), operation_id='get_dataset_stats')"
+      ],
+      "lineno": 88
+    },
+    {
+      "name": "get_datasets_info",
+      "docstring": "Load a list of dataset information.\n\nArgs:\n    settings: App settings.\n\nReturns:\n    List of dataset info.",
+      "parameters": [
+        {
+          "name": "settings",
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[DatasetInfoResponse]",
+      "is_async": false,
+      "decorators": [
+        "router.get('', response_model=(list[DatasetInfoResponse]), operation_id='list_datasets_info')"
+      ],
+      "lineno": 24
+    }
+  ],
+  "attributes": [
+    {
+      "name": "logger",
+      "annotation": null,
+      "value": "logging.getLogger(__name__)",
+      "docstring": ""
+    },
+    {
+      "name": "router",
+      "annotation": null,
+      "value": "APIRouter(prefix='/datasets', tags=['Datasets'])",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

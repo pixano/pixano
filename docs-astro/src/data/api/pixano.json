@@ -1,0 +1,17 @@
+{
+  "module": "pixano",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/__init__.py",
+  "classes": [],
+  "functions": [],
+  "attributes": [],
+  "submodules": [
+    "api",
+    "cli",
+    "datasets",
+    "features",
+    "inference",
+    "schemas",
+    "utils"
+  ]
+}

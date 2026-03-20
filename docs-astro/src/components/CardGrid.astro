@@ -1,0 +1,49 @@
+---
+/**
+ * CardGrid — Bento-style responsive grid for navigation cards.
+ * 
+ * Usage:
+ *   <CardGrid>
+ *     <Card ... />
+ *   </CardGrid>
+ */
+interface Props {
+  columns?: 2 | 3;
+}
+
+const { columns = 3 } = Astro.props;
+---
+
+<div class={`card-grid cols-${columns}`}>
+  <slot />
+</div>
+
+<style>
+  .card-grid {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0;
+    max-width: 100%;
+  }
+
+  .cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 960px) {
+    .cols-3 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .cols-3,
+    .cols-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

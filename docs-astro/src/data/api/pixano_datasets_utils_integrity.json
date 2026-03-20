@@ -1,0 +1,190 @@
+{
+  "module": "pixano.datasets.utils.integrity",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/utils/integrity.py",
+  "classes": [
+    {
+      "name": "IntegrityCheck",
+      "docstring": "Integrity check types.",
+      "bases": [
+        "Enum"
+      ],
+      "attributes": [
+        {
+          "name": "DEFINED_ID",
+          "annotation": null,
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "FK_ID",
+          "annotation": null,
+          "value": "2",
+          "docstring": ""
+        },
+        {
+          "name": "UNIQUE_ID",
+          "annotation": null,
+          "value": "1",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 21
+    }
+  ],
+  "functions": [
+    {
+      "name": "check_dataset_integrity",
+      "docstring": "Check integrity for all dataset tables.",
+      "parameters": [
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 152
+    },
+    {
+      "name": "check_table_integrity",
+      "docstring": "Check table-level integrity against ID and FK constraints.",
+      "parameters": [
+        {
+          "name": "table_name",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "schemas",
+          "annotation": "list[LanceModel] | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "updating",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "ignore_checks",
+          "annotation": "list[IntegrityCheck] | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 83
+    },
+    {
+      "name": "get_integry_checks_from_schemas",
+      "docstring": "Expose normalized check candidates grouped by check type.",
+      "parameters": [
+        {
+          "name": "schemas",
+          "annotation": "list[LanceModel]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "table_name",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[list[tuple[str, str, str, str, Any]]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 70
+    },
+    {
+      "name": "handle_integrity_errors",
+      "docstring": "Handle integrity check errors.",
+      "parameters": [
+        {
+          "name": "check_errors",
+          "annotation": "list[tuple[IntegrityCheck, str, str, str, Any]]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "raise_or_warn",
+          "annotation": "str",
+          "default": "'raise'",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "None",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 160
+    },
+    {
+      "name": "validate_batch",
+      "docstring": "Validate a batch of schemas before insertion using in-memory ID tracking.\n\nInstead of per-row DB queries, this checks IDs in-memory and does at most one\nbulk DB query per FK target table per batch.\n\nArgs:\n    table_name: The table the batch will be inserted into.\n    schemas: The batch of schema instances to validate.\n    known_ids: Mapping of table_name -> set of known IDs (accumulated across flushes).\n    dataset: The dataset (used for bulk FK lookups against already-flushed data).\n    raise_or_warn: How to handle errors: \"raise\", \"warn\", or \"none\".\n    pending_ids: Mapping of table_name -> set of IDs that are buffered for insertion\n        in this flush cycle. Used only for FK checks so sibling tables that haven't\n        been flushed yet can be resolved.",
+      "parameters": [
+        {
+          "name": "table_name",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "schemas",
+          "annotation": "list[LanceModel]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "known_ids",
+          "annotation": "dict[str, set[str]]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "raise_or_warn",
+          "annotation": "Literal['raise', 'warn', 'none']",
+          "default": "'raise'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pending_ids",
+          "annotation": "dict[str, set[str]] | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "None",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 184
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

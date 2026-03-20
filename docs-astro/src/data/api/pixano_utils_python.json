@@ -1,0 +1,124 @@
+{
+  "module": "pixano.utils.python",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/utils/python.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "estimate_folder_size",
+      "docstring": "Estimate a folder size and return it as a human-readable string.\n\nArgs:\n    folder_path: Folder path.\n\nReturns:\n    Folder size as a human-readable string.",
+      "parameters": [
+        {
+          "name": "folder_path",
+          "annotation": "Path",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 26
+    },
+    {
+      "name": "fn_sort_dict",
+      "docstring": "Function to sort a dictionary by multiple keys in different orders.\n\nArgs:\n    dict_: Dictionary to sort.\n    order_by: List of keys to sort by.\n    descending: List of booleans indicating the order for each key.",
+      "parameters": [
+        {
+          "name": "dict_",
+          "annotation": "dict[str, Any]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "order_by",
+          "annotation": "list[str]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "descending",
+          "annotation": "list[bool]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "tuple[Any, ...]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 113
+    },
+    {
+      "name": "get_super_type_from_dict",
+      "docstring": "Get the first super type in a dictionary of types for the given type.\n\nArgs:\n    sub_type: Sub type to find the super type for.\n    dict_types: Dictionary of types.\n\nReturns:\n    Super type if found, None otherwise.",
+      "parameters": [
+        {
+          "name": "sub_type",
+          "annotation": "type",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "dict_types",
+          "annotation": "dict[str, type]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "type | None",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 56
+    },
+    {
+      "name": "natural_key",
+      "docstring": "Return key for string natural sort.\n\nArgs:\n    string: Input string.\n\nReturns:\n    Sort key.",
+      "parameters": [
+        {
+          "name": "string",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 14
+    },
+    {
+      "name": "to_sql_list",
+      "docstring": "Convert a list of IDs to a SQL-friendly string.\n\nArgs:\n    ids: List of IDs.\n\nReturns:\n    SQL-friendly string of IDs.",
+      "parameters": [
+        {
+          "name": "ids",
+          "annotation": "str | Sequence[str] | set[str]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 90
+    },
+    {
+      "name": "unique_list",
+      "docstring": "Select unique elements in a list while keeping order.\n\nArgs:\n    sequence: Input sequence.\n\nReturns:\n    List of unique elements.",
+      "parameters": [
+        {
+          "name": "sequence",
+          "annotation": "Sequence[Any]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[Any]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 143
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

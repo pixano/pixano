@@ -1,0 +1,118 @@
+{
+  "module": "pixano.schemas.views.point_cloud_frame",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/point_cloud_frame.py",
+  "classes": [
+    {
+      "name": "PointCloudFrame",
+      "docstring": "Temporal point-cloud frame.",
+      "bases": [
+        "PointCloud"
+      ],
+      "attributes": [
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "value": "0",
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "float",
+          "value": "0.0",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 12
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_point_cloud_frame",
+      "docstring": "Create a PointCloudFrame instance.\n\nArgs:\n    uri: The point cloud URI. Can be empty when using embedded raw_bytes.\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.\n    id: PointCloudFrame ID.\n    record_id: Record ID.\n    logical_name: Logical view name.\n    raw_bytes: Raw point cloud bytes.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").\n\nReturns:\n    The created `PointCloudFrame` instance.",
+      "parameters": [
+        {
+          "name": "uri",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "timestamp",
+          "annotation": "float",
+          "default": "0.0",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "0",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "raw_bytes",
+          "annotation": "bytes | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview",
+          "annotation": "bytes",
+          "default": "b''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview_format",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "PointCloudFrame",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 24
+    },
+    {
+      "name": "is_point_cloud_frame",
+      "docstring": "Check if the given class is a subclass of PointCloudFrame.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 19
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

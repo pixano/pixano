@@ -1,0 +1,125 @@
+---
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <img
+        src={`${import.meta.env.BASE_URL}assets/pixano_white.png`}
+        alt="Pixano"
+        width="24"
+        height="24"
+        class="footer-logo"
+      />
+      <span class="footer-brand">Pixano</span>
+      <span class="footer-copy">&copy; {currentYear} CEA-LIST. CECILL-C License.</span>
+    </div>
+    <div class="footer-right">
+      <a href="https://github.com/pixano/pixano" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+      <a href="https://github.com/pixano/pixano/releases" target="_blank" rel="noopener noreferrer">
+        Releases
+      </a>
+      <a href="https://pixano.github.io/" target="_blank" rel="noopener noreferrer">
+        Pixano Home
+      </a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  /* ── Glassmorphic Footer ── */
+  .footer {
+    border-top: 1px solid var(--px-glass-border);
+    background: var(--px-glass-bg);
+    backdrop-filter: var(--px-glass-blur);
+    -webkit-backdrop-filter: var(--px-glass-blur);
+    padding: 1.5rem 0;
+    margin: 2rem var(--px-layout-padding) 1.5rem;
+    border-radius: var(--px-radius-lg);
+    border: 1px solid var(--px-glass-border);
+    box-shadow: var(--px-glass-shadow-inset);
+    transition:
+      background var(--px-transition),
+      border-color var(--px-transition);
+  }
+
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: var(--px-layout-max-width);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .footer-logo {
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    opacity: 0.5;
+  }
+
+  /* Invert logo in light mode */
+  :global(:root:not([data-theme="dark"])) .footer-logo {
+    filter: brightness(0) saturate(100%) invert(15%) sepia(60%) saturate(3000%) hue-rotate(290deg) brightness(70%);
+  }
+
+  .footer-brand {
+    font-family: var(--px-font-ui);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--px-text-secondary);
+    letter-spacing: -0.01em;
+  }
+
+  .footer-copy {
+    font-size: 0.78rem;
+    color: var(--px-text-muted);
+  }
+
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .footer-right a {
+    font-family: var(--px-font-ui);
+    font-size: 0.78rem;
+    color: var(--px-text-muted);
+    text-decoration: none;
+    transition:
+      color var(--px-transition),
+      text-shadow var(--px-transition);
+  }
+
+  .footer-right a:hover {
+    color: var(--px-accent);
+    text-decoration: none;
+    text-shadow: var(--px-glow-text);
+  }
+
+  @media (max-width: 640px) {
+    .footer {
+      margin: 2rem 0.75rem 1rem;
+    }
+    .footer-inner {
+      flex-direction: column;
+      text-align: center;
+    }
+    .footer-right {
+      justify-content: center;
+    }
+  }
+</style>

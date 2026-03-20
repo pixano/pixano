@@ -1,0 +1,1759 @@
+{
+  "module": "pixano.inference.types",
+  "docstring": "Pixano's inference types.\n\nThis module defines Pixano's own types for inference operations,\nindependent of any specific inference backend.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/types.py",
+  "classes": [
+    {
+      "name": "CompressedRLEData",
+      "docstring": "Compressed RLE mask data.\n\nAttributes:\n    size: Mask size as [height, width].\n    counts: Mask RLE encoding as bytes.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "counts",
+          "annotation": "bytes",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "size",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "size",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "counts",
+              "annotation": "bytes",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        },
+        {
+          "name": "from_dict",
+          "docstring": "Create from dictionary.",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "CompressedRLEData",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 138
+        },
+        {
+          "name": "to_dict",
+          "docstring": "Convert to dictionary.",
+          "parameters": [],
+          "returns": "dict[str, Any]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 146
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 126
+    },
+    {
+      "name": "ImageMaskGenerationInput",
+      "docstring": "Input for image mask generation.\n\nAttributes:\n    image: Image as base64 string or URL.\n    model: Model name to use.\n    image_embedding: Pre-computed image embedding (optional).\n    high_resolution_features: Pre-computed high-res features (optional).\n    reset_predictor: Whether to reset predictor state for new image.\n    points: Points for mask generation [num_prompts, num_points, 2].\n    labels: Labels for points [num_prompts, num_points].\n    boxes: Bounding boxes [num_prompts, 4].\n    num_multimask_outputs: Number of masks to generate per prompt.\n    multimask_output: Whether to return multiple masks per prompt.\n    return_image_embedding: Whether to return computed embeddings.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "boxes",
+          "annotation": "list[list[int]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "high_resolution_features",
+          "annotation": "list[NDArrayData] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "image",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "image_embedding",
+          "annotation": "NDArrayData | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "labels",
+          "annotation": "list[list[int]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "model",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "multimask_output",
+          "annotation": "bool",
+          "value": "True",
+          "docstring": ""
+        },
+        {
+          "name": "num_multimask_outputs",
+          "annotation": "int",
+          "value": "3",
+          "docstring": ""
+        },
+        {
+          "name": "points",
+          "annotation": "list[list[list[int]]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "reset_predictor",
+          "annotation": "bool",
+          "value": "True",
+          "docstring": ""
+        },
+        {
+          "name": "return_image_embedding",
+          "annotation": "bool",
+          "value": "False",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "image",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "model",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "image_embedding",
+              "annotation": "NDArrayData | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "high_resolution_features",
+              "annotation": "list[NDArrayData] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "reset_predictor",
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "points",
+              "annotation": "list[list[list[int]]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "labels",
+              "annotation": "list[list[int]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "boxes",
+              "annotation": "list[list[int]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "num_multimask_outputs",
+              "annotation": "int",
+              "default": "3",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "multimask_output",
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "return_image_embedding",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 176
+    },
+    {
+      "name": "ImageMaskGenerationOutput",
+      "docstring": "Output for image mask generation.\n\nAttributes:\n    masks: Generated masks [num_prompts, num_masks].\n    scores: Confidence scores.\n    image_embedding: Computed image embedding (if requested).\n    high_resolution_features: Computed features (if requested).",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "high_resolution_features",
+          "annotation": "list[NDArrayData] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "image_embedding",
+          "annotation": "NDArrayData | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "masks",
+          "annotation": "list[list[CompressedRLEData]]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "scores",
+          "annotation": "NDArrayData",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "masks",
+              "annotation": "list[list[CompressedRLEData]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "scores",
+              "annotation": "NDArrayData",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "image_embedding",
+              "annotation": "NDArrayData | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "high_resolution_features",
+              "annotation": "list[NDArrayData] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 207
+    },
+    {
+      "name": "ImageMaskGenerationResult",
+      "docstring": "Complete result of image mask generation.\n\nAttributes:\n    data: The output data.\n    timestamp: When the inference completed.\n    processing_time: Time taken in seconds.\n    metadata: Additional metadata from the model.\n    id: Unique identifier for the inference request.\n    status: Status of the inference (\"SUCCESS\", \"FAILURE\").",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "data",
+          "annotation": "ImageMaskGenerationOutput",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "metadata",
+          "annotation": "dict[str, Any]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "processing_time",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "status",
+          "annotation": "str",
+          "value": "'SUCCESS'",
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "datetime",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "ImageMaskGenerationOutput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timestamp",
+              "annotation": "datetime",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "processing_time",
+              "annotation": "float",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": "''",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "status",
+              "annotation": "str",
+              "default": "'SUCCESS'",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 224
+    },
+    {
+      "name": "ImageZeroShotDetectionInput",
+      "docstring": "Input for zero-shot object detection.\n\nAttributes:\n    image: Image as base64 string or URL.\n    model: Model name to use.\n    classes: List of class names to detect.\n    box_threshold: Confidence threshold for boxes.\n    text_threshold: Confidence threshold for text matching.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "box_threshold",
+          "annotation": "float",
+          "value": "0.5",
+          "docstring": ""
+        },
+        {
+          "name": "classes",
+          "annotation": "list[str] | str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "image",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "model",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "text_threshold",
+          "annotation": "float",
+          "value": "0.5",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "image",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "model",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "classes",
+              "annotation": "list[str] | str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "box_threshold",
+              "annotation": "float",
+              "default": "0.5",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "text_threshold",
+              "annotation": "float",
+              "default": "0.5",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 310
+    },
+    {
+      "name": "ImageZeroShotDetectionOutput",
+      "docstring": "Output for zero-shot object detection.\n\nAttributes:\n    boxes: Detected bounding boxes as [x1, y1, x2, y2].\n    scores: Confidence scores for each detection.\n    classes: Class names for each detection.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "boxes",
+          "annotation": "list[list[int]]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "classes",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "scores",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "boxes",
+              "annotation": "list[list[int]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "scores",
+              "annotation": "list[float]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "classes",
+              "annotation": "list[str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 329
+    },
+    {
+      "name": "ImageZeroShotDetectionResult",
+      "docstring": "Complete result of zero-shot object detection.\n\nAttributes:\n    data: The output data.\n    timestamp: When the inference completed.\n    processing_time: Time taken in seconds.\n    metadata: Additional metadata from the model.\n    id: Unique identifier for the inference request.\n    status: Status of the inference (\"SUCCESS\", \"FAILURE\").",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "data",
+          "annotation": "ImageZeroShotDetectionOutput",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "metadata",
+          "annotation": "dict[str, Any]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "processing_time",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "status",
+          "annotation": "str",
+          "value": "'SUCCESS'",
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "datetime",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "ImageZeroShotDetectionOutput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timestamp",
+              "annotation": "datetime",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "processing_time",
+              "annotation": "float",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": "''",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "status",
+              "annotation": "str",
+              "default": "'SUCCESS'",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 344
+    },
+    {
+      "name": "InferenceTask",
+      "docstring": "Tasks supported by Pixano inference providers.",
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "attributes": [
+        {
+          "name": "MASK_GENERATION",
+          "annotation": null,
+          "value": "'image_mask_generation'",
+          "docstring": ""
+        },
+        {
+          "name": "OBJECT_DETECTION",
+          "annotation": null,
+          "value": "'image_zero_shot_detection'",
+          "docstring": ""
+        },
+        {
+          "name": "TEXT_GENERATION",
+          "annotation": null,
+          "value": "'text_image_conditional_generation'",
+          "docstring": ""
+        },
+        {
+          "name": "VIDEO_MASK_GENERATION",
+          "annotation": null,
+          "value": "'video_mask_generation'",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 49
+    },
+    {
+      "name": "ModelConfig",
+      "docstring": "Configuration for instantiating a model.\n\nAttributes:\n    name: Name of the model.\n    task: Task of the model.\n    path: Path to the model dump.\n    config: Configuration of the model.\n    processor_config: Configuration of the processor.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "config",
+          "annotation": "dict[str, Any]",
+          "value": "field(default_factory=dict)",
+          "docstring": ""
+        },
+        {
+          "name": "name",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "path",
+          "annotation": "Path | str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "processor_config",
+          "annotation": "dict[str, Any]",
+          "value": "field(default_factory=dict)",
+          "docstring": ""
+        },
+        {
+          "name": "task",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "task",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "path",
+              "annotation": "Path | str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "config",
+              "annotation": "dict[str, Any]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "processor_config",
+              "annotation": "dict[str, Any]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        },
+        {
+          "name": "to_dict",
+          "docstring": "Convert to dictionary.",
+          "parameters": [],
+          "returns": "dict[str, Any]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 76
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 58
+    },
+    {
+      "name": "ModelInfo",
+      "docstring": "Information about an available model.\n\nAttributes:\n    name: Name of the model.\n    task: Task the model can perform.\n    model_path: Path to the model weights (optional).\n    model_class: Class name of the model (optional).\n    provider: Provider backend for the model (optional).",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "model_class",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "model_path",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "name",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "provider",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "task",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "task",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "model_path",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "model_class",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "provider",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 87
+    },
+    {
+      "name": "NDArrayData",
+      "docstring": "N-dimensional array data.\n\nAttributes:\n    values: Flat list of values.\n    shape: Shape of the array.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "shape",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "values",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "values",
+              "annotation": "list[float]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "shape",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        },
+        {
+          "name": "from_dict",
+          "docstring": "Create from dictionary.",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "NDArrayData",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 166
+        },
+        {
+          "name": "to_dict",
+          "docstring": "Convert to dictionary.",
+          "parameters": [],
+          "returns": "dict[str, Any]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 171
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 154
+    },
+    {
+      "name": "ProviderCapabilities",
+      "docstring": "What a provider can do.\n\nAttributes:\n    tasks: List of supported inference tasks.\n    supports_batching: Whether the provider supports batch processing.\n    supports_streaming: Whether the provider supports streaming responses.\n    max_image_size: Maximum supported image size (optional).",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "max_image_size",
+          "annotation": "int | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "supports_batching",
+          "annotation": "bool",
+          "value": "False",
+          "docstring": ""
+        },
+        {
+          "name": "supports_streaming",
+          "annotation": "bool",
+          "value": "False",
+          "docstring": ""
+        },
+        {
+          "name": "tasks",
+          "annotation": "list[InferenceTask]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "tasks",
+              "annotation": "list[InferenceTask]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "supports_batching",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "supports_streaming",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "max_image_size",
+              "annotation": "int | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 106
+    },
+    {
+      "name": "ServerInfo",
+      "docstring": "Information about the inference server.\n\nAttributes:\n    app_name: Application name.\n    app_version: Application version string.\n    app_description: Application description.\n    num_cpus: Number of CPUs available (None if unknown).\n    num_gpus: Number of GPUs available.\n    num_nodes: Number of nodes in the cluster.\n    gpus_used: List of GPU indices currently in use.\n    gpu_to_model: Mapping of GPU index to model name.\n    models: List of loaded model names.\n    models_to_task: Mapping of model names to their tasks.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "app_description",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "app_name",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "app_version",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "gpu_to_model",
+          "annotation": "dict[str, str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "gpus_used",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "models",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "models_to_task",
+          "annotation": "dict[str, str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "num_cpus",
+          "annotation": "int | None",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "num_gpus",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "num_nodes",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "app_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "app_version",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "app_description",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "num_cpus",
+              "annotation": "int | None",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "num_gpus",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "num_nodes",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "gpus_used",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "gpu_to_model",
+              "annotation": "dict[str, str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "models",
+              "annotation": "list[str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "models_to_task",
+              "annotation": "dict[str, str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 20
+    },
+    {
+      "name": "TextImageConditionalGenerationInput",
+      "docstring": "Input for text-image conditional generation.\n\nAttributes:\n    model: Model name to use.\n    prompt: Prompt as string or list of message dicts.\n    images: Optional list of image paths/base64 strings.\n    max_new_tokens: Maximum tokens to generate.\n    temperature: Sampling temperature.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "images",
+          "annotation": "list[str | Path] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "max_new_tokens",
+          "annotation": "int",
+          "value": "100",
+          "docstring": ""
+        },
+        {
+          "name": "model",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "prompt",
+          "annotation": "str | list[dict[str, Any]]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "temperature",
+          "annotation": "float",
+          "value": "1.0",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "model",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "prompt",
+              "annotation": "str | list[dict[str, Any]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "images",
+              "annotation": "list[str | Path] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "max_new_tokens",
+              "annotation": "int",
+              "default": "100",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "temperature",
+              "annotation": "float",
+              "default": "1.0",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 383
+    },
+    {
+      "name": "TextImageConditionalGenerationOutput",
+      "docstring": "Output for text-image conditional generation.\n\nAttributes:\n    generated_text: The generated text response.\n    usage: Token usage information.\n    generation_config: Generation configuration used.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "generated_text",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "generation_config",
+          "annotation": "dict[str, Any]",
+          "value": "field(default_factory=dict)",
+          "docstring": ""
+        },
+        {
+          "name": "usage",
+          "annotation": "UsageInfo",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "generated_text",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "usage",
+              "annotation": "UsageInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "generation_config",
+              "annotation": "dict[str, Any]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 402
+    },
+    {
+      "name": "TextImageConditionalGenerationResult",
+      "docstring": "Complete result of text-image conditional generation.\n\nAttributes:\n    data: The output data.\n    timestamp: When the inference completed.\n    processing_time: Time taken in seconds.\n    metadata: Additional metadata from the model.\n    id: Unique identifier for the inference request.\n    status: Status of the inference (\"SUCCESS\", \"FAILURE\").",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "data",
+          "annotation": "TextImageConditionalGenerationOutput",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "metadata",
+          "annotation": "dict[str, Any]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "processing_time",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "status",
+          "annotation": "str",
+          "value": "'SUCCESS'",
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "datetime",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "TextImageConditionalGenerationOutput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timestamp",
+              "annotation": "datetime",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "processing_time",
+              "annotation": "float",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": "''",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "status",
+              "annotation": "str",
+              "default": "'SUCCESS'",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 417
+    },
+    {
+      "name": "UsageInfo",
+      "docstring": "Token usage information.\n\nAttributes:\n    prompt_tokens: Number of tokens in the prompt.\n    completion_tokens: Number of tokens generated.\n    total_tokens: Total tokens used.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "completion_tokens",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "prompt_tokens",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "total_tokens",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "prompt_tokens",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "completion_tokens",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "total_tokens",
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 368
+    },
+    {
+      "name": "VideoMaskGenerationInput",
+      "docstring": "Input for video mask generation.\n\nAttributes:\n    video: List of frame images as base64 or URLs.\n    model: Model name to use.\n    objects_ids: IDs for each object to track.\n    frame_indexes: Frame indices for prompts.\n    points: Points for mask generation.\n    labels: Labels for points.\n    boxes: Bounding boxes.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "boxes",
+          "annotation": "list[list[int]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "frame_indexes",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "labels",
+          "annotation": "list[list[int]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "model",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "objects_ids",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "points",
+          "annotation": "list[list[list[int]]] | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "video",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "video",
+              "annotation": "list[str]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "model",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "objects_ids",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "frame_indexes",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "points",
+              "annotation": "list[list[list[int]]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "labels",
+              "annotation": "list[list[int]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "boxes",
+              "annotation": "list[list[int]] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 248
+    },
+    {
+      "name": "VideoMaskGenerationOutput",
+      "docstring": "Output for video mask generation.\n\nAttributes:\n    objects_ids: IDs of tracked objects.\n    frame_indexes: Frame indices for each mask.\n    masks: Generated masks for each frame.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "frame_indexes",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "masks",
+          "annotation": "list[CompressedRLEData]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "objects_ids",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "objects_ids",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "frame_indexes",
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "masks",
+              "annotation": "list[CompressedRLEData]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 271
+    },
+    {
+      "name": "VideoMaskGenerationResult",
+      "docstring": "Complete result of video mask generation.\n\nAttributes:\n    data: The output data.\n    status: Status of the inference (\"SUCCESS\", \"FAILURE\").\n    timestamp: When the inference completed.\n    processing_time: Time taken in seconds.\n    metadata: Additional metadata from the model.\n    id: Unique identifier for the inference request.",
+      "bases": [],
+      "attributes": [
+        {
+          "name": "data",
+          "annotation": "VideoMaskGenerationOutput",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "metadata",
+          "annotation": "dict[str, Any]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "processing_time",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "status",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "timestamp",
+          "annotation": "datetime",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "",
+          "parameters": [
+            {
+              "name": "data",
+              "annotation": "VideoMaskGenerationOutput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "status",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timestamp",
+              "annotation": "datetime",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "processing_time",
+              "annotation": "float",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata",
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "id",
+              "annotation": "str",
+              "default": "''",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 0
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "lineno": 286
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

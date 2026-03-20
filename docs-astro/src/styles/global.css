@@ -1,0 +1,404 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+/* ============================================================================
+   Pixano Design System — 2026 Retro-Futurist / Hyper-Glass / Bento-Grid
+   ============================================================================ */
+
+/* ---------- Light theme (default) ---------- */
+:root {
+  /* Brand */
+  --px-primary: #771e5f;
+  --px-primary-light: #9b3a7f;
+  --px-primary-dark: #5a1648;
+  --px-primary-hover: #8a2670;
+  --px-accent: #f06cba;
+
+  /* Surfaces — frosted-white */
+  --px-bg: #fafafd;
+  --px-bg-alt: #f0edf4;
+  --px-bg-elevated: rgba(255, 255, 255, 0.7);
+  --px-bg-code: #f3eff6;
+
+  /* Borders */
+  --px-border: #e0d8e4;
+  --px-border-strong: #cfc4d6;
+
+  /* Text */
+  --px-text: #1a1a2e;
+  --px-text-secondary: #4a4a5a;
+  --px-text-muted: #8a8a9a;
+  --px-text-inverse: #ffffff;
+
+  /* Shadows */
+  --px-shadow-sm: 0 1px 3px rgba(119, 30, 95, 0.05);
+  --px-shadow: 0 2px 10px rgba(119, 30, 95, 0.07);
+  --px-shadow-md: 0 4px 20px rgba(119, 30, 95, 0.09);
+  --px-shadow-lg: 0 8px 40px rgba(119, 30, 95, 0.13);
+  --px-shadow-hover: 0 8px 30px rgba(119, 30, 95, 0.15);
+
+  /* Glass */
+  --px-glass-bg: rgba(255, 255, 255, 0.55);
+  --px-glass-bg-dense: rgba(255, 255, 255, 0.7);
+  --px-glass-border: rgba(255, 255, 255, 0.5);
+  --px-glass-blur: blur(24px) saturate(150%);
+  --px-glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+
+  /* Glow */
+  --px-glow-primary: 0 0 20px rgba(119, 30, 95, 0.2);
+  --px-glow-accent: 0 0 20px rgba(240, 108, 186, 0.3);
+  --px-glow-hover: 0 0 30px rgba(233, 30, 140, 0.25);
+  --px-glow-text: 0 0 10px rgba(240, 108, 186, 0.35);
+
+  /* Semantic */
+  --px-info: #3b82f6;
+  --px-info-bg: rgba(239, 246, 255, 0.7);
+  --px-info-border: #bfdbfe;
+  --px-success: #10b981;
+  --px-success-bg: rgba(236, 253, 245, 0.7);
+  --px-success-border: #a7f3d0;
+  --px-warning: #f59e0b;
+  --px-warning-bg: rgba(255, 251, 235, 0.7);
+  --px-warning-border: #fde68a;
+  --px-danger: #ef4444;
+  --px-danger-bg: rgba(254, 242, 242, 0.7);
+  --px-danger-border: #fecaca;
+  --px-tip: #8b5cf6;
+  --px-tip-bg: rgba(245, 243, 255, 0.7);
+  --px-tip-border: #ddd6fe;
+  --px-note: #6366f1;
+  --px-note-bg: rgba(238, 242, 255, 0.7);
+  --px-note-border: #c7d2fe;
+
+  /* Layout */
+  --px-radius-sm: 0.5rem;
+  --px-radius: 1rem;
+  --px-radius-lg: 1.5rem;
+  --px-radius-xl: 2rem;
+  --px-transition: 200ms ease;
+  --px-transition-slow: 300ms ease;
+
+  /* Sidebar & Layout */
+  --px-sidebar-width: 280px;
+  --px-toc-width: 240px;
+  --px-header-height: 64px;
+  --px-layout-max-width: min(100vw, 1920px);
+  --px-layout-gap: 1.5rem;
+  --px-layout-padding: 1.5rem;
+
+  /* Typography */
+  --px-font-heading: "JetBrains Mono", "Fira Code", monospace;
+  --px-font-ui: "JetBrains Mono", "Fira Code", monospace;
+  --px-font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --px-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  --px-line-height: 1.75;
+  --px-content-width: 90ch;
+
+  /* Retro grid pattern */
+  --px-grid-color: rgba(119, 30, 95, 0.04);
+  --px-grid-size: 32px;
+}
+
+/* ---------- Dark theme ---------- */
+[data-theme="dark"] {
+  /* Brand — brighter for dark surfaces */
+  --px-primary: #d17ab8;
+  --px-primary-light: #e494ce;
+  --px-primary-dark: #9b3a7f;
+  --px-primary-hover: #da8ac4;
+  --px-accent: #f06cba;
+
+  /* Surfaces — inky void */
+  --px-bg: #09090e;
+  --px-bg-alt: #0e0e18;
+  --px-bg-elevated: rgba(255, 255, 255, 0.03);
+  --px-bg-code: #0d0d16;
+
+  /* Borders */
+  --px-border: #1e1e30;
+  --px-border-strong: #2e2e48;
+
+  /* Text */
+  --px-text: #eaeaf2;
+  --px-text-secondary: #a8a8be;
+  --px-text-muted: #606078;
+  --px-text-inverse: #09090e;
+
+  /* Shadows */
+  --px-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --px-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --px-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --px-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --px-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.45);
+
+  /* Glass — dark variant */
+  --px-glass-bg: rgba(255, 255, 255, 0.04);
+  --px-glass-bg-dense: rgba(255, 255, 255, 0.06);
+  --px-glass-border: rgba(255, 255, 255, 0.08);
+  --px-glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Glow — dark variant (more visible) */
+  --px-glow-primary: 0 0 25px rgba(209, 122, 184, 0.25);
+  --px-glow-accent: 0 0 25px rgba(240, 108, 186, 0.3);
+  --px-glow-hover: 0 0 35px rgba(240, 108, 186, 0.35);
+  --px-glow-text: 0 0 12px rgba(240, 108, 186, 0.4);
+
+  /* Semantic (dark mode variants) */
+  --px-info: #60a5fa;
+  --px-info-bg: rgba(23, 37, 84, 0.5);
+  --px-info-border: #1e3a5f;
+  --px-success: #34d399;
+  --px-success-bg: rgba(5, 46, 22, 0.5);
+  --px-success-border: #064e3b;
+  --px-warning: #fbbf24;
+  --px-warning-bg: rgba(69, 26, 3, 0.5);
+  --px-warning-border: #78350f;
+  --px-danger: #f87171;
+  --px-danger-bg: rgba(69, 10, 10, 0.5);
+  --px-danger-border: #7f1d1d;
+  --px-tip: #a78bfa;
+  --px-tip-bg: rgba(30, 27, 75, 0.5);
+  --px-tip-border: #312e81;
+  --px-note: #818cf8;
+  --px-note-bg: rgba(30, 27, 75, 0.5);
+  --px-note-border: #312e81;
+
+  /* Retro grid — subtle on dark */
+  --px-grid-color: rgba(209, 122, 184, 0.03);
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--px-font-body);
+  color: var(--px-text);
+  background-color: var(--px-bg);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--px-header-height) + 3rem);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color var(--px-transition),
+    color var(--px-transition);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  line-height: var(--px-line-height);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Retro dot-grid background pattern */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: radial-gradient(
+    circle,
+    var(--px-grid-color) 1px,
+    transparent 1px
+  );
+  background-size: var(--px-grid-size) var(--px-grid-size);
+  pointer-events: none;
+}
+
+/* Ensure all direct body children are above the grid */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================================
+   Typography
+   ============================================================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--px-font-heading);
+  color: var(--px-text);
+  line-height: 1.3;
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--px-border);
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  max-width: var(--px-content-width);
+}
+
+a {
+  color: var(--px-primary);
+  text-decoration: none;
+  transition:
+    color var(--px-transition),
+    text-shadow var(--px-transition);
+}
+
+a:hover {
+  color: var(--px-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-shadow: var(--px-glow-text);
+}
+
+code {
+  font-family: var(--px-font-mono);
+  font-size: 0.875em;
+}
+
+/* Inline code */
+:not(pre) > code {
+  background: var(--px-bg-code);
+  border: 1px solid var(--px-border);
+  border-radius: var(--px-radius-sm);
+  padding: 0.15em 0.4em;
+  font-size: 0.85em;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--px-radius);
+  border: 1px solid var(--px-border);
+  box-shadow: var(--px-shadow);
+}
+
+/* ============================================================================
+   Tables
+   ============================================================================ */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--px-radius);
+  border: 1px solid var(--px-border);
+  box-shadow: var(--px-shadow-sm);
+  overflow: hidden;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+thead {
+  background: var(--px-primary);
+  color: var(--px-text-inverse);
+}
+
+th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  text-align: left;
+  font-family: var(--px-font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+td {
+  padding: 0.65rem 1rem;
+  border-top: 1px solid var(--px-border);
+}
+
+tbody tr {
+  transition: background-color var(--px-transition);
+}
+
+tbody tr:hover {
+  background-color: var(--px-bg-alt);
+}
+
+/* ============================================================================
+   Scrollbar
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--px-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--px-accent);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--px-border-strong) transparent;
+}
+
+/* ============================================================================
+   Selection
+   ============================================================================ */
+
+::selection {
+  background: var(--px-accent);
+  color: var(--px-text-inverse);
+}
+
+/* ============================================================================
+   Utilities
+   ============================================================================ */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,48 @@
+{
+  "module": "pixano.schemas.entities.entity",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/entities/entity.py",
+  "classes": [
+    {
+      "name": "Entity",
+      "docstring": "`Entity` base class.\nEntities are used to define an entity in a dataset such as an object, a track. It can refer to a record\nand a parent entity.\n\nAttributes:\n    parent_id: ID of the parent entity.",
+      "bases": [
+        "RecordComponent"
+      ],
+      "attributes": [
+        {
+          "name": "parent_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 12
+    }
+  ],
+  "functions": [
+    {
+      "name": "is_entity",
+      "docstring": "Check if a class is an Entity or subclass of Entity.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 24
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

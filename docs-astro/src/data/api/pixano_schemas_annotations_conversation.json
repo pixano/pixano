@@ -1,0 +1,95 @@
+{
+  "module": "pixano.schemas.annotations.conversation",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/conversation.py",
+  "classes": [
+    {
+      "name": "Conversation",
+      "docstring": "Derived conversation aggregate reconstructed from grouped messages.",
+      "bases": [
+        "BaseModel"
+      ],
+      "attributes": [
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "messages",
+          "annotation": "list[Message]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_messages",
+          "docstring": "Build a conversation aggregate from grouped messages.",
+          "parameters": [
+            {
+              "name": "messages",
+              "annotation": "list[Message]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Conversation",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 35
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 14
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_conversation",
+      "docstring": "Create a Conversation aggregate.",
+      "parameters": [
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "messages",
+          "annotation": "list[Message]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Conversation",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 48
+    },
+    {
+      "name": "is_conversation",
+      "docstring": "Check if a class is a Conversation or subclass of Conversation.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 43
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

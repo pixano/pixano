@@ -1,0 +1,140 @@
+---
+import Head from "../components/Head.astro";
+import Header from "../components/Header.svelte";
+import Sidebar from "../components/Sidebar.svelte";
+import TableOfContents from "../components/TableOfContents.svelte";
+import Footer from "../components/Footer.astro";
+import Banner from "../components/Banner.astro";
+import Search from "../components/Search.svelte";
+import { sidebarNav, getSidebarSection } from "../config/navigation";
+import { ClientRouter } from "astro:transitions";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  headings?: { depth: number; slug: string; text: string }[];
+  section?: string;
+}
+
+const { title, description, headings = [], section } = Astro.props;
+const currentPath = Astro.url.pathname;
+const sidebarSection = section || getSidebarSection(currentPath);
+const sidebarSections = sidebarNav[sidebarSection] || sidebarNav.getting_started;
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+  <Head title={title} description={description} />
+  <ClientRouter />
+  <body>
+    <Banner />
+    <Header
+      client:load
+      currentPath={currentPath}
+      basePath={import.meta.env.BASE_URL.replace(/\/$/, "")}
+    />
+
+    <div class="layout">
+      <Sidebar
+        client:load
+        sections={sidebarSections}
+        currentPath={currentPath}
+        basePath={import.meta.env.BASE_URL.replace(/\/$/, "")}
+      />
+
+      <main class="content" id="main-content">
+        <article class="article" data-pagefind-body>
+          <slot />
+        </article>
+      </main>
+
+      {headings.length > 0 && (
+        <TableOfContents
+          client:idle
+          headings={headings}
+        />
+      )}
+    </div>
+
+    <Footer />
+    <Search client:idle />
+  </body>
+</html>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: var(--px-sidebar-width) 1fr var(--px-toc-width);
+    gap: var(--px-layout-gap);
+    max-width: var(--px-layout-max-width);
+    margin: 0 auto;
+    min-height: calc(100vh - var(--px-header-height) - 120px);
+    padding: var(--px-layout-padding);
+    padding-top: calc(var(--px-layout-padding) + 0.5rem);
+  }
+
+  .content {
+    min-width: 0;
+    padding: 1.5rem 2rem;
+    background: var(--px-glass-bg-dense);
+    backdrop-filter: var(--px-glass-blur);
+    -webkit-backdrop-filter: var(--px-glass-blur);
+    border: 1px solid var(--px-glass-border);
+    border-radius: var(--px-radius-lg);
+    box-shadow: var(--px-glass-shadow-inset);
+  }
+
+  .article {
+    max-width: var(--px-content-width);
+    margin: 0 auto;
+    animation: fadeIn 300ms ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* No ToC — 2-column layout */
+  .layout:not(:has(.toc)) {
+    grid-template-columns: var(--px-sidebar-width) 1fr;
+  }
+
+  /* Responsive: hide ToC below 1200px */
+  @media (max-width: 1200px) {
+    .layout {
+      grid-template-columns: var(--px-sidebar-width) 1fr;
+    }
+
+    .layout :global(.toc) {
+      display: none;
+    }
+  }
+
+  /* Responsive: single column below 1024px */
+  @media (max-width: 1024px) {
+    .layout {
+      grid-template-columns: 1fr;
+      padding: 1rem;
+    }
+
+    .content {
+      padding: 1.25rem 1rem;
+    }
+
+    .layout :global(.sidebar) {
+      display: none;
+    }
+
+    .layout :global(.toc) {
+      display: none;
+    }
+  }
+</style>

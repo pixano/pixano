@@ -1,0 +1,339 @@
+{
+  "module": "pixano.schemas.annotations.keypoints",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/keypoints.py",
+  "classes": [
+    {
+      "name": "KeyPoints",
+      "docstring": "A set of keypoints.\n\nAttributes:\n    template_id: Id of the keypoint template.\n    coords: List of 2D coordinates of the keypoints.\n    states: Status for each keypoint. (\"visible\", \"invisible\", \"hidden\").",
+      "bases": [
+        "PerFrameAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "states",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "template_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "map_back2front_vertices",
+          "docstring": "Utility function to map back format for KeyPoint to front vertices format.\n\nRaises:\n    ValueError: If keypoints is ill-formed.\n\nReturns:\n    keypoint list for vertices front format.",
+          "parameters": [],
+          "returns": "list",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 56
+        },
+        {
+          "name": "none",
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" KeyPoints.",
+          "parameters": [],
+          "returns": "KeyPoints",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 41
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 16
+    },
+    {
+      "name": "KeyPoints3D",
+      "docstring": "A set of 3D keypoints.\n\nAttributes:\n    template_id: id of keypoint template.\n    coords: List of 3D coordinates of the keypoints.\n    states: Status for each keypoint.",
+      "bases": [
+        "PerFrameAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "states",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "template_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "map_back2front_vertices",
+          "docstring": "Utility function to map back format for KeyPoint3D to front vertices format.\nWarn:\n    Not implemented for 3D keypoints.",
+          "parameters": [],
+          "returns": "list",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 122
+        },
+        {
+          "name": "none",
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" KeyPoints3D.",
+          "parameters": [],
+          "returns": "KeyPoints3D",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 107
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 82
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_keypoints",
+      "docstring": "Create a `KeyPoints` instance.\n\nArgs:\n    template_id: id of keypoint template.\n    coords: List of 2D coordinates of the keypoints.\n    states: Status for each keypoint. (\"visible\", \"invisible\", \"hidden\").\n    id: Keypoints ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n    tracklet_id: Tracklet ID.\n    entity_dynamic_state_id: Entity dynamic state ID.\n    frame_id: Frame/view row ID.\n    frame_index: Frame index.\n\nReturns:\n    The created `KeyPoints` instance.",
+      "parameters": [
+        {
+          "name": "template_id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "states",
+          "annotation": "list[str]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "KeyPoints",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 140
+    },
+    {
+      "name": "create_keypoints3d",
+      "docstring": "Create a `KeyPoints3D` instance.\n\nArgs:\n    template_id: The id of the keypoint template.\n    coords: The 3D coordinates of the keypoints.\n    states: The visibility status for each keypoint.\n    id: Keypoints3D ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n    tracklet_id: Tracklet ID.\n    entity_dynamic_state_id: Entity dynamic state ID.\n    frame_id: Frame/view row ID.\n    frame_index: Frame index.\n\nReturns:\n    The created `KeyPoints3D` instance.",
+      "parameters": [
+        {
+          "name": "template_id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "coords",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "states",
+          "annotation": "list[Literal['visible', 'invisible', 'hidden']]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "tracklet_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_dynamic_state_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "frame_index",
+          "annotation": "int",
+          "default": "-1",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "KeyPoints3D",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 195
+    },
+    {
+      "name": "is_keypoints",
+      "docstring": "Check if a class is a `KeyPoints` or subclass of `KeyPoints`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 130
+    },
+    {
+      "name": "is_keypoints3d",
+      "docstring": "Check if a class is `Keypoints3D` or a subclass of `Keypoints3D`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 135
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

@@ -1,0 +1,186 @@
+{
+  "module": "pixano.datasets.builders.folders.folder_base_builder",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/folder_base_builder.py",
+  "classes": [
+    {
+      "name": "FolderBaseBuilder",
+      "docstring": "This is a class for building datasets based on a folder structure.\n\nThe folder structure should be as follows:\n    - source_dir/{split}/{item}.{ext}\n    - source_dir/{split}/metadata.jsonl\n\nThe metadata file should be a jsonl file with the following canonical format:\n```json\n    [\n        {\n            \"id\": \"item1\",\n            \"views\": {\n                \"image\": \"item1.jpg\"\n            },\n            \"entities\": [\n                {\n                    \"category\": \"person\",\n                    \"annotations\": {\n                        \"image\": {\n                            \"bbox\": [0.1, 0.1, 0.2, 0.3]\n                        }\n                    }\n                }\n            ]\n        },\n        ...\n    ]\n```\n\nNote:\n    Multiple views are supported through the top-level ``views`` mapping. Entity annotations are attached\n    per view under ``entities[].annotations.<view_name>``.\n    If you give a list of images for a single view field, they will be put in a mosaic.\n\nAttributes:\n    source_dir: The source directory for the dataset.\n    METADATA_FILENAME: The metadata filename.\n    EXTENSIONS: The list of supported extensions.\n    DEFAULT_INFO: Default dataset schema and workspace for the builder.",
+      "bases": [
+        "DatasetBuilder"
+      ],
+      "attributes": [
+        {
+          "name": "DEFAULT_INFO",
+          "annotation": "DatasetInfo | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "EXTENSIONS",
+          "annotation": "list[str]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "METADATA_FILENAME",
+          "annotation": "str",
+          "value": "'metadata.jsonl'",
+          "docstring": ""
+        },
+        {
+          "name": "annotations_schema",
+          "annotation": "dict[str, type[RecordComponent]]",
+          "value": "{}",
+          "docstring": ""
+        },
+        {
+          "name": "entities_schema",
+          "annotation": "dict[str, type[Entity]]",
+          "value": "{}",
+          "docstring": ""
+        },
+        {
+          "name": "entity_dynamic_states_schema",
+          "annotation": "dict[str, type[EntityDynamicState]]",
+          "value": "{}",
+          "docstring": ""
+        },
+        {
+          "name": "metadata_validation_mode",
+          "annotation": null,
+          "value": "metadata_validation_mode",
+          "docstring": ""
+        },
+        {
+          "name": "source_dir",
+          "annotation": null,
+          "value": "Path(source_dir)",
+          "docstring": ""
+        },
+        {
+          "name": "use_image_name_as_id",
+          "annotation": null,
+          "value": "use_image_name_as_id",
+          "docstring": ""
+        },
+        {
+          "name": "views_schema",
+          "annotation": "dict[str, type[View]]",
+          "value": "dict(self.info.views)",
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initialize the `FolderBaseBuilder`.\n\nArgs:\n    source_dir: The source directory containing the raw media files\n        to import.  All media is embedded in the database as blobs.\n    library_dir: The global directory for Pixano datasets library.\n    info: User informations (name, description, ...) for the dataset.\n    metadata_validation_mode: Metadata validation mode (\"default\" or \"strict\").\n    use_image_name_as_id: If True, use image base name as image id.\n                          Images MUST have unique base names.\n                          When no metadata file exists, also use it as record id,\n                          else, use 'record_#'\n                          This allows to reuse image embeddings after dataset overwrite.\n    target_name: If provided, use this name for the target directory in the library\n        instead of deriving it from source_dir name.",
+          "parameters": [
+            {
+              "name": "source_dir",
+              "annotation": "Path | str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "library_dir",
+              "annotation": "Path | str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "info",
+              "annotation": "DatasetInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "metadata_validation_mode",
+              "annotation": "str",
+              "default": "'default'",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "use_image_name_as_id",
+              "annotation": "bool",
+              "default": "False",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "target_name",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 86
+        },
+        {
+          "name": "generate_data",
+          "docstring": "Generate data from the source directory.\n\nReturns:\n    An iterator over the data following the dataset schemas.",
+          "parameters": [],
+          "returns": "Iterator[dict[str, LanceModel | list[LanceModel]]]",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 407
+        },
+        {
+          "name": "preflight_metadata",
+          "docstring": "Validate all ``metadata.jsonl`` files before building the dataset.",
+          "parameters": [
+            {
+              "name": "validation_mode",
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "MetadataValidationReport",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 383
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 40
+    }
+  ],
+  "functions": [
+    {
+      "name": "extract_video_frames",
+      "docstring": "Extract frames from a video as compressed image bytes.\n\nArgs:\n    video_path: Path to the video file.\n    format: Output image format (e.g., \"JPEG\", \"PNG\").\n    quality: JPEG quality (1-100). Only used for JPEG format.\n\nYields:\n    Tuples of (frame_index, timestamp_seconds, image_bytes).",
+      "parameters": [
+        {
+          "name": "video_path",
+          "annotation": "Path",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "default": "'JPEG'",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "quality",
+          "annotation": "int",
+          "default": "85",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Iterator[tuple[int, float, bytes]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 792
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}
