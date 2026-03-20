@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Generate structured JSON API documentation from Python source code.
 
 Uses griffe to parse Python source and extract docstrings, classes, functions,
