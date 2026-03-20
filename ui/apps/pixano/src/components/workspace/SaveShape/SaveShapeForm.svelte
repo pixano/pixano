@@ -212,7 +212,7 @@ License: CECILL-C
             const candidate_tracks = entity.ui.childs?.filter(
               (ann) =>
                 ann.is_type(BaseSchema.Tracklet) &&
-                ann.data.view_name === newShape.value.viewRef.name &&
+                ann.data.view_name === newAnnotation.data.view_name &&
                 (ann as Tracklet).data.start_frame <= segStart &&
                 (ann as Tracklet).data.end_frame >= segEnd,
             );
@@ -227,7 +227,7 @@ License: CECILL-C
                 itemId: "",
                 imageWidth: 0,
                 imageHeight: 0,
-                viewRef: { id: "", name: newShape.value.viewRef.name },
+                viewRef: { id: "", name: newAnnotation.data.view_name },
                 attrs: {
                   start_frame: segStart,
                   end_frame: segEnd,
@@ -260,7 +260,7 @@ License: CECILL-C
         const candidate_tracks = entity.ui.childs?.filter(
           (ann) =>
             ann.is_type(BaseSchema.Tracklet) &&
-            ann.data.view_name === newShape.value.viewRef.name &&
+            ann.data.view_name === newAnnotation.data.view_name &&
             (ann as Tracklet).data.start_frame <= trackStartFrame &&
             (ann as Tracklet).data.end_frame >= lastFrameIndex,
         );

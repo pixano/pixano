@@ -71,6 +71,7 @@ License: CECILL-C
   let selectedEntityId = $state("new");
   let mustMerge: boolean = $state(false);
   let overlapTargetId: string = $state("");
+  const trackletFrameId = typeof tracklet.data.frame_id === "string" ? tracklet.data.frame_id : "";
   const defaultButtonClass =
     "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
 
@@ -353,7 +354,7 @@ License: CECILL-C
             bind:mustMerge
             bind:overlapTargetId
             baseSchema={tracklet.table_info.base_schema}
-            viewRef={{ name: tracklet.data.view_name, id: tracklet.data.frame_id }}
+            viewRef={{ name: tracklet.data.view_name, id: trackletFrameId }}
             track={tracklet}
           />
           <Button.Root

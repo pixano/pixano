@@ -28,6 +28,10 @@ License: CECILL-C
     trackingPreviewBBoxes,
   } from "$lib/stores/trackingStore.svelte";
   import {
+    pixanoInferenceToValidateTrackingMasks,
+    selectedSegmentationModel,
+  } from "$lib/stores/inferenceStores.svelte";
+  import {
     currentFrameIndex,
     currentItemId,
     imagesPerView,
@@ -48,9 +52,20 @@ License: CECILL-C
     newShape,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import { ToolType, type SelectionTool } from "$lib/tools";
+  import { InteractiveSegmenter, saveMaskShapeToTrackingOutput } from "$lib/segmentation";
+  import { Sam2VideoTracker } from "$lib/trackers";
+  import {
+    ToolType,
+    type InteractiveSegmenterAIInput,
+    type SelectionTool,
+  } from "$lib/tools";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { SequenceFrame, ShapeType, type EditShape } from "$lib/ui";
+  import {
+    SequenceFrame,
+    ShapeType,
+    type EditShape,
+    type SaveMaskShape,
+  } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -85,6 +100,9 @@ License: CECILL-C
   let isLoaded = $state(false);
   let loadingCycle = 0;
   let lastLoadedVideoKey = "";
+  const interactiveSegmenter = new InteractiveSegmenter();
+  let sam2Tracker = $state<Sam2VideoTracker | null>(null);
+  let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
   const isRouteLoading = $derived(navigating.from !== null);
 
   function getSequenceFrameViews(item: WorkspaceViewerItem): Record<string, SequenceFrame[]> {
@@ -95,6 +113,158 @@ License: CECILL-C
       return [[viewName, view as SequenceFrame[]] as const];
     });
     return Object.fromEntries(entries);
+  }
+
+  function clearSmartPreview(viewName?: string): void {
+    if (viewName) {
+      const next = { ...smartPreviewMasks };
+      delete next[viewName];
+      smartPreviewMasks = next;
+      return;
+    }
+    smartPreviewMasks = {};
+  }
+
+  function resetSmartTracking(): void {
+    clearSmartPreview();
+    interactiveSegmenter.clear();
+    sam2Tracker?.clear();
+    sam2Tracker = null;
+    pixanoInferenceToValidateTrackingMasks.value = [];
+  }
+
+  function resolveFrameSource(viewRef: { id: string; name: string }):
+    | {
+        width: number;
+        height: number;
+      }
+    | null {
+    const frames = selectedItem.views?.[viewRef.name] as SequenceFrame[] | undefined;
+    if (!Array.isArray(frames)) return null;
+    const frame = frames.find((candidate) => candidate.id === viewRef.id);
+    if (!frame) return null;
+
+    return {
+      width: Number(frame.data.width),
+      height: Number(frame.data.height),
+    };
+  }
+
+  function resolveFrameSources(viewName: string) {
+    const frames = selectedItem.views?.[viewName] as SequenceFrame[] | undefined;
+    if (!Array.isArray(frames)) return [];
+    return frames.map((frame) => ({
+      frameIndex: Number(frame.data.frame_index),
+      viewRef: { id: frame.id, name: viewName },
+      width: Number(frame.data.width),
+      height: Number(frame.data.height),
+    }));
+  }
+
+  async function handleSmartSegmentationRequest(
+    _requestId: string,
+    request: InteractiveSegmenterAIInput,
+  ): Promise<void> {
+    const modelSelection = selectedSegmentationModel.value;
+    if (!modelSelection) return;
+
+    if (request.action === "clear") {
+      resetSmartTracking();
+      return;
+    }
+
+    if (request.action === "confirm") {
+      const previewMask = smartPreviewMasks[request.viewRef.name];
+      if (!previewMask) return;
+
+      const frameSources = resolveFrameSources(request.viewRef.name);
+      if (!frameSources.length) {
+        newShape.value = previewMask;
+        return;
+      }
+
+      const tracker =
+        sam2Tracker && sam2Tracker.viewName === request.viewRef.name
+          ? sam2Tracker
+          : new Sam2VideoTracker(
+              selectedItem.ui.datasetId,
+              selectedItem.item.id,
+              request.viewRef.name,
+            );
+      tracker.setFrameSources(frameSources);
+      sam2Tracker = tracker;
+
+      const keyframe = {
+        frameIndex: currentFrameIndex.value,
+        viewRef: request.viewRef,
+        objectId: 1,
+        model: modelSelection.name,
+        providerName: modelSelection.provider_name,
+        prompt: {
+          points: request.prompt.points.map((point) => ({
+            x: point.x,
+            y: point.y,
+            label: point.label as 0 | 1,
+          })),
+          box: request.prompt.box
+            ? {
+                x: request.prompt.box.x,
+                y: request.prompt.box.y,
+                width: request.prompt.box.width,
+                height: request.prompt.box.height,
+              }
+            : null,
+        },
+        mask: previewMask,
+      };
+
+      tracker.addKeyframe(keyframe);
+      const propagatedMasks = await tracker.propagateFromKeyframe(keyframe);
+      const currentMask = tracker.interpolateAt(currentFrameIndex.value)?.data.mask ?? previewMask;
+
+      smartPreviewMasks = {
+        ...smartPreviewMasks,
+        [request.viewRef.name]: currentMask,
+      };
+      pixanoInferenceToValidateTrackingMasks.value =
+        propagatedMasks.length > 0
+          ? tracker.getTrackingOutputs()
+          : [saveMaskShapeToTrackingOutput(currentMask, currentFrameIndex.value)];
+      newShape.value = currentMask;
+      return;
+    }
+
+    const frameSource = resolveFrameSource(request.viewRef);
+    if (!frameSource) return;
+
+    const prediction = await interactiveSegmenter.predictMask({
+      datasetId: selectedItem.ui.datasetId,
+      viewRef: request.viewRef,
+      itemId: selectedItem.item.id,
+      image: frameSource,
+      model: modelSelection.name,
+      providerName: modelSelection.provider_name,
+      prompt: {
+        points: request.prompt.points.map((point) => ({
+          x: point.x,
+          y: point.y,
+          label: point.label as 0 | 1,
+        })),
+        box: request.prompt.box
+          ? {
+              x: request.prompt.box.x,
+              y: request.prompt.box.y,
+              width: request.prompt.box.width,
+              height: request.prompt.box.height,
+            }
+          : null,
+      },
+    });
+
+    smartPreviewMasks = {
+      ...smartPreviewMasks,
+      [request.viewRef.name]: prediction?.previewMask ?? null,
+    };
   }
 
   const handleCanvasShapeChange = (shape: import("$lib/ui").Shape) => {
@@ -144,6 +314,7 @@ License: CECILL-C
     if (!viewNames.length || longestView <= 0) {
       lastLoadedVideoKey = "";
       isLoaded = false;
+      resetSmartTracking();
       resetVideoStores();
       return;
     }
@@ -161,6 +332,7 @@ License: CECILL-C
         isBuffering: false,
       }));
       isLoaded = false;
+      resetSmartTracking();
 
       currentItemId.value = nextItemId;
       videoViewNames.value = viewNames;
@@ -315,6 +487,33 @@ License: CECILL-C
       untrack(() => cancelTrackingSession());
     }
   });
+
+  $effect(() => {
+    const toolType = selectedTool.value?.type;
+    if (toolType === ToolType.InteractiveSegmenter) return;
+    untrack(() => {
+      resetSmartTracking();
+    });
+  });
+
+  $effect(() => {
+    void selectedSegmentationModel.value;
+    untrack(() => {
+      resetSmartTracking();
+    });
+  });
+
+  $effect(() => {
+    const tracker = sam2Tracker;
+    const frameIndex = currentFrameIndex.value;
+    if (!tracker) return;
+    const interpolated = tracker.interpolateAt(frameIndex);
+    if (!interpolated) return;
+    smartPreviewMasks = {
+      ...smartPreviewMasks,
+      [tracker.viewName]: interpolated.data.mask,
+    };
+  });
 </script>
 
 <svelte:window onkeydown={handleTrackingKeydown} />
@@ -346,6 +545,7 @@ License: CECILL-C
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
         newShape={newShape.value}
+        {smartPreviewMasks}
         onSelectedToolChange={(tool: SelectionTool) => {
           selectedTool.value = tool;
         }}
@@ -354,6 +554,9 @@ License: CECILL-C
         }}
         onBrushSettingsChange={(settings: BrushSettings) => {
           brushSettings.value = settings;
+        }}
+        onAIRequest={(requestId, request) => {
+          void handleSmartSegmentationRequest(requestId, request);
         }}
         {merge}
       />
