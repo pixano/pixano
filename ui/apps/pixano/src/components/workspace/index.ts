@@ -9,14 +9,12 @@ export { default as WorkspaceShell } from "./WorkspaceShell.svelte";
 export { resolveWorkspaceVariant } from "./workspaceRegistry";
 
 export {
-  addSmartPointTool,
   brushDrawTool,
   brushEraseTool,
   fusionTool,
+  interactiveSegmenterTool,
   keyPointTool,
   panTool,
   polygonTool,
   rectangleTool,
-  removeSmartPointTool,
-  smartRectangleTool,
 } from "$lib/tools";

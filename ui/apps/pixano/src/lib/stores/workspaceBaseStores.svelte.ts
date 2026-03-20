@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import * as ort from "onnxruntime-web";
-
 import { reactiveRawStore, reactiveStore } from "./reactiveStore.svelte";
 import type { ResourceMutation } from "$lib/api/resourcePayloads";
 import type { InteractiveImageSegmenter } from "$lib/models";
@@ -13,12 +11,21 @@ import { panTool, type SelectionTool } from "$lib/tools";
 import { Annotation, BBox, Entity, View } from "$lib/types/dataset";
 import type { KeypointAnnotation, Shape } from "$lib/types/shapeTypes";
 import type {
+  Embeddings,
   EntityFilter,
   Filters,
   ItemsMeta,
   Merges,
   ModelSelection,
+  SmartSegmentationUiState,
 } from "$lib/types/workspace";
+
+const idleSmartSegmentationUiState: SmartSegmentationUiState = {
+  phase: "idle",
+  requestId: null,
+  viewName: null,
+  message: "",
+};
 
 export const newShape = reactiveStore<Shape>({ status: "none" });
 export const selectedTool = reactiveStore<SelectionTool>(panTool);
@@ -39,7 +46,10 @@ export const modelsUiStore = reactiveStore<ModelSelection>({
   selectedTableName: "",
   yetToLoadEmbedding: true,
 });
-export const embeddings = reactiveRawStore<Record<string, ort.Tensor>>({});
+export const embeddings = reactiveRawStore<Embeddings>({});
+export const smartSegmentationUiState = reactiveStore<SmartSegmentationUiState>(
+  idleSmartSegmentationUiState,
+);
 export const filters = reactiveStore<Filters>({
   brightness: 0,
   contrast: 0,

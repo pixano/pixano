@@ -7,6 +7,7 @@ License: CECILL-C
 import {
   ToolType,
   type BrushSelectionTool,
+  type InteractiveSegmenterSelectionTool,
   type PolygonSelectionTool,
   type PolylineSelectionTool,
   type SelectionTool,
@@ -23,6 +24,13 @@ export const rectangleTool: SelectionTool = {
   type: ToolType.Rectangle,
   cursor: "crosshair",
   isSmart: false,
+};
+
+export const interactiveSegmenterTool: InteractiveSegmenterSelectionTool = {
+  name: "Interactive smart segmentation",
+  type: ToolType.InteractiveSegmenter,
+  cursor: "crosshair",
+  promptMode: "positive",
 };
 
 export const polygonTool: PolygonSelectionTool = {
@@ -52,29 +60,6 @@ export const fusionTool: SelectionTool = {
   type: ToolType.Fusion,
   cursor: "default",
   isSmart: false,
-};
-
-export const removeSmartPointTool: SelectionTool = {
-  name: "Negative point selection",
-  type: ToolType.PointSelection,
-  cursor: "crosshair",
-  label: 0,
-  isSmart: true,
-};
-
-export const addSmartPointTool: SelectionTool = {
-  name: "Positive point selection",
-  type: ToolType.PointSelection,
-  cursor: "crosshair",
-  label: 1,
-  isSmart: true,
-};
-
-export const smartRectangleTool: SelectionTool = {
-  name: "Rectangle selection",
-  type: ToolType.Rectangle,
-  cursor: "crosshair",
-  isSmart: true,
 };
 
 export const brushDrawTool: BrushSelectionTool = {

@@ -9,7 +9,7 @@ License: CECILL-C
 // ============================================================
 
 import type { AnnotationNode, Document, NodeId } from "$lib/document";
-import type { PreviewShape, ToolFSM, ToolState } from "$lib/tools";
+import type { AIRequestParams, PreviewShape, ToolFSM, ToolState } from "$lib/tools";
 
 /** Cleanup callback. */
 export type Unsubscribe = () => void;
@@ -101,7 +101,7 @@ export interface ToolBridge {
   dispatchEvent(event: import("$lib/tools").ToolEvent): void;
 
   /** Set canvas context used to build ToolContext for FSM transitions. */
-  setCanvasContext(viewName: string, canvasWidth: number, canvasHeight: number): void;
+  setCanvasContext(viewName: string, viewId: string, canvasWidth: number, canvasHeight: number): void;
 
   /** Register a callback for requestSave side effects. */
   onRequestSave(
@@ -110,6 +110,9 @@ export interface ToolBridge {
       geometry: unknown,
     ) => void,
   ): void;
+
+  /** Register a callback for AI prompt and confirmation requests. */
+  onAIRequest(callback: (requestId: string, params: AIRequestParams) => void): void;
 
   /** Switch the active FSM and reset transient state. */
   switchTool(tool: ToolFSM): void;

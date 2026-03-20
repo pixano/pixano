@@ -22,7 +22,15 @@ License: CECILL-C
     type VqaMessageContext,
   } from "../vqaCanvas";
   // Import stores and API functions
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import { inferenceServerStore, vqaModels } from "$lib/stores/inferenceStores.svelte";
+  import { selectedSegmentationModel } from "$lib/stores/inferenceStores.svelte";
+  import { InteractiveSegmenter } from "$lib/segmentation";
+  import {
+    createErrorSmartSegmentationUiState,
+    createIdleSmartSegmentationUiState,
+    createPendingSmartSegmentationUiState,
+  } from "$lib/segmentation/smartInferenceStatus";
   import {
     completionModelsStore,
     type PixanoInferenceCompletionModel,
@@ -49,10 +57,16 @@ License: CECILL-C
     modelsUiStore,
     newShape,
     preAnnotationIsActive,
+    smartSegmentationUiState,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
-  import type { SelectionTool } from "$lib/tools";
-  import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
+  import {
+    ToolType,
+    type InteractiveSegmenterAIInput,
+    type SelectionTool,
+  } from "$lib/tools";
+  import type { InferenceModelSelection } from "$lib/types/inference";
+  import { ShapeType, type ImageFilters, type SaveMaskShape, type Shape } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import { effectProbe, Image, LoadingModal, type LoadedImagesPerView } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
@@ -83,13 +97,140 @@ License: CECILL-C
   let prevSelectedItemId: string = $state("");
   let imageLoadRequestId = 0;
   const hasImages = $derived(Object.keys(imagesPerView).length > 0);
+  const interactiveSegmenter = new InteractiveSegmenter();
+  let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
 
   let isGenerating: boolean = $state(false);
 
   const handleCanvasShapeChange = (shape: Shape) => {
     if (shape.status === "creating") return;
+
+    if (
+      selectedTool.value?.type === ToolType.Brush &&
+      shape.status === "saving" &&
+      shape.type === ShapeType.mask &&
+      smartPreviewMasks[shape.viewRef.name]
+    ) {
+      clearSmartPreview(shape.viewRef.name);
+      interactiveSegmenter.clear(shape.viewRef);
+      smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
+    }
+
     newShape.value = shape as import("$lib/ui").Shape;
   };
+
+  function clearSmartPreview(viewName?: string): void {
+    if (viewName) {
+      const next = { ...smartPreviewMasks };
+      delete next[viewName];
+      smartPreviewMasks = next;
+      return;
+    }
+    smartPreviewMasks = {};
+  }
+
+  function resetSmartSegmentationFeedback(): void {
+    smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
+  }
+
+  function resolveImageSource(viewName: string):
+    | {
+        width: number;
+        height: number;
+      }
+    | null {
+    const rawView = selectedItem.views?.[viewName];
+    if (!rawView || Array.isArray(rawView)) return null;
+    const view = rawView as Image;
+
+    return {
+      width: Number(view.data.width),
+      height: Number(view.data.height),
+    };
+  }
+
+  async function handleSmartSegmentationRequest(
+    requestId: string,
+    request: InteractiveSegmenterAIInput,
+  ): Promise<void> {
+    const modelSelection = selectedSegmentationModel.value;
+
+    if (request.action === "clear") {
+      clearSmartPreview(request.viewRef.name);
+      interactiveSegmenter.clear(request.viewRef);
+      resetSmartSegmentationFeedback();
+      return;
+    }
+
+    if (request.action === "confirm") {
+      const previewMask = smartPreviewMasks[request.viewRef.name];
+      if (previewMask) {
+        resetSmartSegmentationFeedback();
+        newShape.value = previewMask;
+      }
+      return;
+    }
+
+    if (smartSegmentationUiState.value.phase === "pending") {
+      return;
+    }
+
+    if (!modelSelection) return;
+
+    const image = resolveImageSource(request.viewRef.name);
+    if (!image) return;
+
+    smartSegmentationUiState.value = createPendingSmartSegmentationUiState(
+      requestId,
+      request.viewRef.name,
+    );
+
+    try {
+      const prediction = await interactiveSegmenter.predictMask({
+        datasetId: selectedItem.ui.datasetId,
+        viewRef: request.viewRef,
+        itemId: selectedItem.item.id,
+        image,
+        model: modelSelection.name,
+        providerName: modelSelection.provider_name,
+        prompt: {
+          points: request.prompt.points.map((point) => ({
+            x: point.x,
+            y: point.y,
+            label: point.label as 0 | 1,
+          })),
+          box: request.prompt.box
+            ? {
+                x: request.prompt.box.x,
+                y: request.prompt.box.y,
+                width: request.prompt.box.width,
+                height: request.prompt.box.height,
+              }
+            : null,
+        },
+      });
+
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      resetSmartSegmentationFeedback();
+      smartPreviewMasks = {
+        ...smartPreviewMasks,
+        [request.viewRef.name]: prediction?.previewMask ?? null,
+      };
+    } catch (error) {
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        requestId,
+        request.viewRef.name,
+        error,
+      );
+    }
+  }
 
   /**
    * Update the images based on the selected item views.
@@ -132,6 +273,9 @@ License: CECILL-C
     if (itemChanged || rangeChanged) {
       prevSelectedItemId = selectedItemId;
       prev16BitRange = [...next16BitRange];
+      clearSmartPreview();
+      interactiveSegmenter.clear();
+      resetSmartSegmentationFeedback();
       void updateImages(itemChanged).catch(() => {
         console.error("Error loading the images.");
       });
@@ -217,7 +361,7 @@ License: CECILL-C
     isGenerating = false;
   };
 
-  const handleGenerateQuestion = async (completionModel: string) => {
+  const handleGenerateQuestion = async (completionModel: InferenceModelSelection) => {
     const context = createNewConversationContext();
     if (!context) {
       console.error("ERROR: No image view context found for VQA question generation");
@@ -231,6 +375,29 @@ License: CECILL-C
       vqaAreaMaxWidth = Math.max(e.pageX, minVqaAreaWidth);
     }
   };
+
+  $effect(() => {
+    const toolType = selectedTool.value?.type;
+    if (toolType === ToolType.InteractiveSegmenter || toolType === ToolType.Brush) return;
+    untrack(() => {
+      clearSmartPreview();
+      interactiveSegmenter.clear();
+      resetSmartSegmentationFeedback();
+    });
+  });
+
+  $effect(() => {
+    void selectedSegmentationModel.value;
+    untrack(() => {
+      clearSmartPreview();
+      interactiveSegmenter.clear();
+      resetSmartSegmentationFeedback();
+    });
+  });
+
+  $effect(() => {
+    void ensureInferenceRegistryLoaded();
+  });
 </script>
 
 <div
@@ -283,9 +450,14 @@ License: CECILL-C
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
         newShape={newShape.value}
+        {smartPreviewMasks}
+        smartInferenceStatus={smartSegmentationUiState.value}
         onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
         onNewShapeChange={handleCanvasShapeChange}
         onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
+        onAIRequest={(requestId, request) => {
+          void handleSmartSegmentationRequest(requestId, request);
+        }}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

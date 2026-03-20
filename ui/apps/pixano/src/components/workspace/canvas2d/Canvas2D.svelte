@@ -7,8 +7,9 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import Konva from "konva";
+  import { CircleNotch, WarningCircle } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
+  import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
   import BBox2D from "./BBox2D.svelte";
   import BrushCursor from "./BrushCursor.svelte";
@@ -35,9 +36,11 @@ License: CECILL-C
   } from "./shapeSaveOps";
   import ShowKeypoints from "./ShowKeypoint.svelte";
   import { ViewRefManager } from "./viewRefs";
+  import { createIdleSmartSegmentationUiState } from "$lib/segmentation/smartInferenceStatus";
   import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     ToolType,
+    type InteractiveSegmenterAIInput,
     type Point2D,
     type PreviewShape,
     type SelectionTool,
@@ -51,6 +54,7 @@ License: CECILL-C
     brushDrawTool,
     getFallbackCanvasTool,
     handleToolShortcuts,
+    interactiveSegmenterTool,
     isSupportedCanvasTool,
     panTool,
     polygonTool,
@@ -72,10 +76,12 @@ License: CECILL-C
     type CreateRectangleShape,
     type ImageFilters,
     type KeypointAnnotation,
+    type SaveMaskShape,
     type SaveRectangleShape,
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
+  import type { SmartSegmentationUiState } from "$lib/types/workspace";
 
   interface BrushSettings {
     brushRadius: number;
@@ -118,6 +124,9 @@ License: CECILL-C
     onSelectedToolChange?: (tool: SelectionTool) => void;
     onNewShapeChange?: (shape: Shape) => void;
     onBrushSettingsChange?: (settings: BrushSettings) => void;
+    onAIRequest?: (requestId: string, params: InteractiveSegmenterAIInput) => void;
+    smartPreviewMasks?: Record<string, SaveMaskShape | null>;
+    smartInferenceStatus?: SmartSegmentationUiState;
     toolBridge?: ToolBridge | undefined;
     // Image settings
     filters?: ImageFilters;
@@ -143,6 +152,9 @@ License: CECILL-C
     onSelectedToolChange,
     onNewShapeChange,
     onBrushSettingsChange,
+    onAIRequest,
+    smartPreviewMasks = {},
+    smartInferenceStatus = createIdleSmartSegmentationUiState(),
     toolBridge = undefined,
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
@@ -154,8 +166,11 @@ License: CECILL-C
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = $state({}); // {view_name: zoomFactor}
 
-  let lastInputViewRef: Reference;
+  let lastInputViewRef = $state<Reference | undefined>(undefined);
   let localDraftShape = $state<Shape | null>(null);
+  let smartPromptPreview = $state<Extract<PreviewShape, { type: "interactive-segmenter" }> | null>(
+    null,
+  );
 
   // Runtime interaction flag toggled during wheel/drag to disable expensive draw options.
   let isViewportInteracting = $state(false);
@@ -190,6 +205,33 @@ License: CECILL-C
   let activeToolBridge: ToolBridge | undefined = $state();
   let lastBridgeForToolSwitch: ToolBridge | undefined = undefined;
   let lastToolSwitchSignature: string | null = null;
+  let lastHydratedSmartMaskSignature: string | null = null;
+  const blockedSmartInteractionKeys = new Set([
+    "Escape",
+    "Enter",
+    "Backspace",
+    "w",
+    "W",
+    "r",
+    "R",
+    "p",
+    "P",
+    "l",
+    "L",
+    "b",
+    "B",
+    "x",
+    "X",
+    "q",
+    "Q",
+    "e",
+    "E",
+    "s",
+    "S",
+  ]);
+  const smartInferencePhase = $derived(smartInferenceStatus.phase);
+  const isSmartInferencePending = $derived(smartInferencePhase === "pending");
+  const isSmartInferenceError = $derived(smartInferencePhase === "error");
 
   function clearRectangleTransformer() {
     bboxEditable = false;
@@ -240,6 +282,7 @@ License: CECILL-C
     }
 
     if (preview?.type === "polygon") {
+      smartPromptPreview = null;
       localDraftShape = {
         status: "creating",
         type: ShapeType.polygon,
@@ -258,6 +301,7 @@ License: CECILL-C
     }
 
     if (preview?.type === "polyline") {
+      smartPromptPreview = null;
       localDraftShape = {
         status: "creating",
         type: ShapeType.polyline,
@@ -274,12 +318,21 @@ License: CECILL-C
       return;
     }
 
-    if (preview?.type !== "rectangle") {
+    if (preview?.type === "interactive-segmenter") {
+      smartPromptPreview = preview;
       localDraftShape = null;
       clearRectangleTransformer();
       return;
     }
 
+    if (preview?.type !== "rectangle") {
+      smartPromptPreview = null;
+      localDraftShape = null;
+      clearRectangleTransformer();
+      return;
+    }
+
+    smartPromptPreview = null;
     localDraftShape = {
       status: "creating",
       type: ShapeType.bbox,
@@ -480,6 +533,87 @@ License: CECILL-C
     return latestViewImage?.element;
   }
 
+  function getSmartMaskHydrationSignature(
+    previewMasks: Record<string, SaveMaskShape | null>,
+  ): string {
+    return Object.entries(previewMasks)
+      .filter(([, mask]) => mask)
+      .map(([viewName, mask]) => {
+        const counts = mask?.rle
+          ? Array.isArray(mask.rle.counts)
+            ? mask.rle.counts.length
+            : mask.rle.counts
+          : "none";
+        return [
+          viewName,
+          mask?.viewRef.id ?? "",
+          counts,
+          mask?.maskBounds?.x ?? 0,
+          mask?.maskBounds?.y ?? 0,
+          mask?.maskBounds?.width ?? 0,
+          mask?.maskBounds?.height ?? 0,
+        ].join(":");
+      })
+      .join("|");
+  }
+
+  function hydrateSmartPreviewMasksIntoBrushDraft(): boolean {
+    let hydratedAny = false;
+
+    for (const [view_name, previewMask] of Object.entries(smartPreviewMasks)) {
+      if (!previewMask) continue;
+      const maskRef = viewRefs.maskRefs[view_name];
+      if (!maskRef) continue;
+      if (maskRef.getMaskData()) continue;
+      maskRef.loadDraftFromMask(previewMask);
+      hydratedAny = true;
+    }
+
+    return hydratedAny;
+  }
+
+  function getPreviewMaskForView(view_name: string): SaveMaskShape | null {
+    if (selectedTool?.type === ToolType.Brush) {
+      return null;
+    }
+
+    return smartPreviewMasks[view_name] ?? null;
+  }
+
+  function getSmartInferenceViewBounds():
+    | {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+      }
+    | null {
+    const viewName = smartInferenceStatus.viewName;
+    if (!viewName) return null;
+
+    const viewLayer = getViewLayer(viewName);
+    const currentImage = getCurrentImage(viewName);
+    if (!viewLayer || !currentImage) return null;
+
+    const scale = viewLayer.scaleX() || 1;
+    return {
+      left: viewLayer.x(),
+      top: viewLayer.y(),
+      width: currentImage.width * scale,
+      height: currentImage.height * scale,
+    };
+  }
+
+  function getSmartInferenceOverlayStyle(
+    bounds: ReturnType<typeof getSmartInferenceViewBounds>,
+  ): string {
+    if (!bounds) {
+      return "inset: 0;";
+    }
+
+    return `left:${bounds.left}px;top:${bounds.top}px;width:${bounds.width}px;height:${bounds.height}px;`;
+  }
+
   function loadItem() {
     const thisLoadCycle = ++loadCycle;
     const keys = Object.keys(imagesPerView);
@@ -666,6 +800,8 @@ License: CECILL-C
   }
 
   function saveBrushMask(view_name: string) {
+    if (isSmartInferencePending) return;
+
     const brushCanvas = viewRefs.maskRefs[view_name];
     if (brushCanvas) {
       const maskData = brushCanvas.getMaskData();
@@ -732,6 +868,7 @@ License: CECILL-C
     }
     // Declarative cleanup — just reset state, Svelte will remove the components
     localDraftShape = null;
+    smartPromptPreview = null;
     isViewportInteracting = false;
     crosshairPosition = null;
     queuedCursorPosition = null;
@@ -786,6 +923,10 @@ License: CECILL-C
   }
 
   function handlePointerUpOnImage(viewRef: Reference) {
+    if (isSmartInferencePending) {
+      return;
+    }
+
     if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerUp(viewRef.name);
     }
@@ -851,6 +992,10 @@ License: CECILL-C
   }
 
   function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
+    if (isSmartInferencePending) {
+      return;
+    }
+
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
 
@@ -868,6 +1013,7 @@ License: CECILL-C
       (interactionShape.status === "none" || interactionShape.status === "editing") &&
       selectedTool?.type !== ToolType.Pan &&
       selectedTool?.type !== ToolType.Brush &&
+      selectedTool?.type !== ToolType.InteractiveSegmenter &&
       selectedTool?.type !== ToolType.Polygon &&
       selectedTool?.type !== ToolType.Polyline
     ) {
@@ -894,12 +1040,15 @@ License: CECILL-C
       return;
     } else if (selectedTool?.type === ToolType.Brush) {
       handleBrushPointerDown(viewRef);
-    } else if (selectedTool?.type === ToolType.Rectangle && !bboxEditable) {
+    } else if (
+      (selectedTool?.type === ToolType.Rectangle && !bboxEditable) ||
+      selectedTool?.type === ToolType.InteractiveSegmenter
+    ) {
       const bridge = activeToolBridge;
       if (!bridge) return;
 
       lastInputViewRef = viewRef;
-      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      bridge.setCanvasContext(viewRef.name, viewRef.id, stageWidth, stageHeight);
       const pos = viewLayer.getRelativePointerPosition();
       if (!pos) return;
       beginViewportInteraction();
@@ -935,7 +1084,7 @@ License: CECILL-C
       if (!bridge) return;
 
       lastInputViewRef = viewRef;
-      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      bridge.setCanvasContext(viewRef.name, viewRef.id, stageWidth, stageHeight);
       const pos = viewLayer.getRelativePointerPosition();
       if (!pos) return;
 
@@ -960,7 +1109,7 @@ License: CECILL-C
       if (!bridge) return;
 
       lastInputViewRef = viewRef;
-      bridge.setCanvasContext(viewRef.name, stageWidth, stageHeight);
+      bridge.setCanvasContext(viewRef.name, viewRef.id, stageWidth, stageHeight);
       const pos = viewLayer.getRelativePointerPosition();
       if (!pos) return;
 
@@ -1117,6 +1266,11 @@ License: CECILL-C
       return; // Ignore shortcut when typing text
     }
 
+    if (isSmartInferencePending && blockedSmartInteractionKeys.has(event.key)) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === "Escape") {
       const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
@@ -1129,6 +1283,7 @@ License: CECILL-C
 
       if (
         selectedTool?.type === ToolType.Rectangle ||
+        selectedTool?.type === ToolType.InteractiveSegmenter ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline
       ) {
@@ -1153,12 +1308,31 @@ License: CECILL-C
     const shortcutHandled = handleToolShortcuts(event, selectedTool, {
       selectPan: () => onSelectedToolChange?.(panTool),
       selectRectangle: () => onSelectedToolChange?.(rectangleTool),
+      selectInteractiveSegmenter: () => onSelectedToolChange?.(interactiveSegmenterTool),
       selectPolygon: () => onSelectedToolChange?.(polygonTool),
       selectPolyline: () => onSelectedToolChange?.(polylineTool),
       selectBrushDraw: () => onSelectedToolChange?.(brushDrawTool),
       toggleBrushMode: () => {
         if (selectedTool?.type === ToolType.Brush) {
           onSelectedToolChange?.(toggleBrushMode(selectedTool));
+        }
+      },
+      toggleInteractivePromptMode: () => {
+        if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+          onSelectedToolChange?.({
+            ...selectedTool,
+            promptMode: selectedTool.promptMode === "negative" ? "positive" : "negative",
+          });
+          activeToolBridge?.dispatchEvent({ type: "keyDown", key: event.key });
+        }
+      },
+      setInteractiveBoxPrompt: () => {
+        if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+          onSelectedToolChange?.({
+            ...selectedTool,
+            promptMode: "box",
+          });
+          activeToolBridge?.dispatchEvent({ type: "keyDown", key: event.key });
         }
       },
       adjustBrushRadius: (delta) => {
@@ -1182,6 +1356,7 @@ License: CECILL-C
     if (
       (isConfirmKey || event.key === "Backspace") &&
       (selectedTool?.type === ToolType.Rectangle ||
+        selectedTool?.type === ToolType.InteractiveSegmenter ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline)
     ) {
@@ -1267,6 +1442,12 @@ License: CECILL-C
       activeToolBridge = bridge;
       if (bridge) {
         bridge.onRequestSave(handleToolRequestSave);
+        bridge.onAIRequest((requestId, params) => {
+          const input = params.input;
+          if (!input || typeof input !== "object" || !("type" in input)) return;
+          if (input.type !== "interactive-segmenter") return;
+          onAIRequest?.(requestId, input as InteractiveSegmenterAIInput);
+        });
       }
     }
   });
@@ -1299,6 +1480,39 @@ License: CECILL-C
       untrack(() => bridge.switchTool(fsm));
       lastBridgeForToolSwitch = bridge;
       lastToolSwitchSignature = signature;
+    }
+  });
+  $effect(() => {
+    if (selectedTool?.type !== ToolType.InteractiveSegmenter) return;
+    activeToolBridge?.dispatchEvent({
+      type: "setInteractivePromptMode",
+      promptMode: selectedTool.promptMode,
+    });
+  });
+  $effect(() => {
+    const isBrushTool = selectedTool?.type === ToolType.Brush;
+    if (!isBrushTool || isSmartInferencePending) {
+      lastHydratedSmartMaskSignature = null;
+      return;
+    }
+
+    const signature = getSmartMaskHydrationSignature(smartPreviewMasks);
+    if (!signature) {
+      lastHydratedSmartMaskSignature = null;
+      return;
+    }
+
+    if (signature === lastHydratedSmartMaskSignature) {
+      return;
+    }
+
+    let hydratedAny = false;
+    untrack(() => {
+      hydratedAny = hydrateSmartPreviewMasksIntoBrushDraft();
+    });
+
+    if (hydratedAny) {
+      lastHydratedSmartMaskSignature = signature;
     }
   });
   // --- Targeted reactive statements (replaces monolithic afterUpdate) ---
@@ -1348,6 +1562,7 @@ License: CECILL-C
 
 <div
   class={`h-full bg-canvas transition-opacity duration-300 delay-100 relative ${isReady ? "" : "opacity-0"}`}
+  aria-busy={isSmartInferencePending}
   bind:this={stageContainer}
 >
   <Stage
@@ -1399,12 +1614,16 @@ License: CECILL-C
           {/if}
 
           {@const viewMasks = masksByView[view_name] ?? []}
-          {#if (viewMasks.length > 0 || selectedTool?.type === ToolType.Brush) && currentImage}
+          {#if (viewMasks.length > 0 ||
+            selectedTool?.type === ToolType.Brush ||
+            smartPreviewMasks[view_name]) &&
+            currentImage}
             <Mask
               bind:this={viewRefs.maskRefs[view_name]}
               {viewRef}
               {currentImage}
               masks={viewMasks}
+              previewMask={getPreviewMaskForView(view_name)}
               {colorScale}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
@@ -1477,6 +1696,58 @@ License: CECILL-C
             onpointerup={() => handlePointerUpOnImage(viewRef)}
             ondblclick={() => handleDoubleClickOnImage(view_name)}
           />
+
+          {#if smartPromptPreview && lastInputViewRef?.name === view_name}
+            {#each smartPromptPreview.points as point, index (`${point.x}-${point.y}-${point.label}-${index}`)}
+              <Circle
+                x={point.x}
+                y={point.y}
+                radius={6}
+                fill={point.label === 1 ? "rgba(40, 199, 111, 0.95)" : "rgba(255, 76, 76, 0.95)"}
+                stroke="white"
+                strokeWidth={1.5 / (zoomFactor[view_name] ?? 1)}
+                listening={false}
+              />
+            {/each}
+
+            {#if smartPromptPreview.box}
+              <Rect
+                x={smartPromptPreview.box.x}
+                y={smartPromptPreview.box.y}
+                width={smartPromptPreview.box.width}
+                height={smartPromptPreview.box.height}
+                stroke="rgba(255,255,255,0.95)"
+                dash={[10, 6]}
+                strokeWidth={2 / (zoomFactor[view_name] ?? 1)}
+                fill="rgba(255,255,255,0.04)"
+                listening={false}
+              />
+            {/if}
+
+            {#if smartPromptPreview.draftBox}
+              <Rect
+                x={Math.min(
+                  smartPromptPreview.draftBox.origin.x,
+                  smartPromptPreview.draftBox.current.x,
+                )}
+                y={Math.min(
+                  smartPromptPreview.draftBox.origin.y,
+                  smartPromptPreview.draftBox.current.y,
+                )}
+                width={Math.abs(
+                  smartPromptPreview.draftBox.current.x - smartPromptPreview.draftBox.origin.x,
+                )}
+                height={Math.abs(
+                  smartPromptPreview.draftBox.current.y - smartPromptPreview.draftBox.origin.y,
+                )}
+                stroke="rgba(255,255,255,0.75)"
+                dash={[10, 6]}
+                strokeWidth={2 / (zoomFactor[view_name] ?? 1)}
+                fill="rgba(255,255,255,0.02)"
+                listening={false}
+              />
+            {/if}
+          {/if}
 
           {#if draftRectangle && draftRectangle.viewRef.name === view_name}
             <CreateRectangle
@@ -1611,5 +1882,39 @@ License: CECILL-C
       {/if}
     </Layer>
   </Stage>
+
+  {#if isSmartInferencePending}
+    <div class="absolute inset-0 z-20 bg-transparent" aria-hidden="true"></div>
+  {/if}
+
+  {#if isSmartInferencePending || isSmartInferenceError}
+    {@const smartInferenceBounds = getSmartInferenceViewBounds()}
+    <div
+      class="absolute z-30 pointer-events-none"
+      style={getSmartInferenceOverlayStyle(smartInferenceBounds)}
+      aria-live="polite"
+    >
+      {#if isSmartInferencePending}
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <div
+            class="inline-flex items-center gap-3 rounded-xl border border-border/40 bg-card/90 px-4 py-3 text-sm text-foreground shadow-glass-sm backdrop-blur-sm"
+          >
+            <CircleNotch class="h-5 w-5 animate-spin text-primary" />
+            <span>{smartInferenceStatus.message || "Running segmentation..."}</span>
+          </div>
+        </div>
+      {:else}
+        <div
+          class="absolute left-3 top-3 max-w-[min(22rem,calc(100%-1.5rem))] rounded-xl border border-destructive/30 bg-card/95 px-4 py-3 text-sm text-foreground shadow-glass-sm backdrop-blur-sm"
+          role="alert"
+        >
+          <div class="flex items-start gap-3">
+            <WarningCircle class="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <p>{smartInferenceStatus.message}</p>
+          </div>
+        </div>
+      {/if}
+    </div>
+  {/if}
 </div>
 <svelte:window onkeydown={handleKeyDown} />

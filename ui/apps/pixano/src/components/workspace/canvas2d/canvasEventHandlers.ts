@@ -5,7 +5,13 @@ License: CECILL-C
 -------------------------------------*/
 
 import { ToolType, type SelectionTool } from "$lib/tools";
-import { panTool, polygonTool, polylineTool, rectangleTool } from "$lib/tools/canvasToolPolicy";
+import {
+  interactiveSegmenterTool,
+  panTool,
+  polygonTool,
+  polylineTool,
+  rectangleTool,
+} from "$lib/tools/canvasToolPolicy";
 
 /**
  * Computes a stable signature for a tool configuration.
@@ -20,6 +26,9 @@ export function getToolSwitchSignature(tool: SelectionTool): string {
   }
   if (tool.type === ToolType.Rectangle) {
     return `${tool.type}:${tool.isSmart ? "smart" : "regular"}`;
+  }
+  if (tool.type === ToolType.InteractiveSegmenter) {
+    return tool.type;
   }
   return tool.type;
 }
@@ -50,6 +59,14 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
   if (tool?.type === ToolType.Rectangle) {
     return {
       cursor: rectangleTool.cursor,
+      clearCrosshair: false,
+      clearBrushCursor: true,
+      cleanupPolygonPreview: true,
+    };
+  }
+  if (tool?.type === ToolType.InteractiveSegmenter) {
+    return {
+      cursor: interactiveSegmenterTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
       cleanupPolygonPreview: true,
@@ -103,6 +120,7 @@ export interface CursorFlushAction {
 export function computeCursorFlushAction(tool: SelectionTool | undefined): CursorFlushAction {
   const isDrawTool =
     tool?.type === ToolType.Rectangle ||
+    tool?.type === ToolType.InteractiveSegmenter ||
     tool?.type === ToolType.Polygon ||
     tool?.type === ToolType.Polyline ||
     tool?.type === ToolType.Brush;
@@ -169,6 +187,7 @@ export function classifyKeyDown(
   if (
     (event.key === "Enter" || event.key === "Backspace") &&
     (tool?.type === ToolType.Rectangle ||
+      tool?.type === ToolType.InteractiveSegmenter ||
       tool?.type === ToolType.Polygon ||
       tool?.type === ToolType.Polyline)
   ) {

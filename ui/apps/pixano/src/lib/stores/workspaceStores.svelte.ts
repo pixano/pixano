@@ -29,6 +29,7 @@ import {
   preAnnotationIsActive,
   saveData,
   selectedKeypointsTemplate,
+  smartSegmentationUiState,
   selectedTool,
   views,
 } from "./workspaceBaseStores.svelte";
@@ -57,6 +58,7 @@ export {
   preAnnotationIsActive,
   saveData,
   selectedKeypointsTemplate,
+  smartSegmentationUiState,
   selectedTool,
   views,
 };
@@ -108,6 +110,12 @@ export function resetWorkspaceStores() {
   interactiveSegmenterModel.value = undefined;
   itemMetas.value = undefined;
   preAnnotationIsActive.value = false;
+  smartSegmentationUiState.value = {
+    phase: "idle",
+    requestId: null,
+    viewName: null,
+    message: "",
+  };
   modelsUiStore.value = {
     currentModalOpen: "none",
     selectedModelName: "",

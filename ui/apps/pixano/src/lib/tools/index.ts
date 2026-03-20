@@ -19,11 +19,15 @@ export type {
   LabeledClick,
   AIResult,
   AIRequestParams,
+  InteractivePromptMode,
+  InteractiveSegmenterAIInput,
+  InteractiveSegmenterBoxPrompt,
   KeyModifiers,
 } from "$lib/types/tools";
 export type {
   AllTool,
   BrushSelectionTool,
+  InteractiveSegmenterSelectionTool,
   LabeledPointTool,
   PolygonOutputMode,
   PolygonSelectionTool,
@@ -33,22 +37,21 @@ export type {
 } from "$lib/types/tools";
 export { ToolType } from "$lib/types/tools";
 export {
-  addSmartPointTool,
   brushDrawTool,
   brushEraseTool,
   fusionTool,
+  interactiveSegmenterTool,
   keyPointTool,
   panTool,
   polygonTool,
   polylineTool,
   rectangleTool,
-  removeSmartPointTool,
-  smartRectangleTool,
 } from "./presets";
 
 // Tool FSMs
 export { PanToolFSM } from "./fsm/PanToolFSM";
 export { RectangleToolFSM } from "./fsm/RectangleToolFSM";
+export { InteractiveSegmenterToolFSM } from "./fsm/InteractiveSegmenterToolFSM";
 export { PolygonToolFSM } from "./fsm/PolygonToolFSM";
 export { PolylineToolFSM } from "./fsm/PolylineToolFSM";
 export { PointSelectionToolFSM } from "./fsm/PointSelectionToolFSM";

@@ -16,6 +16,7 @@ import {
   type Image,
   type SequenceFrame,
 } from "$lib/types/dataset";
+import type { NDArrayPayload } from "$lib/types/inference";
 import type { FeatureValues } from "$lib/types/shapeTypes";
 import type {
   InputFeatures,
@@ -78,7 +79,21 @@ export type ListFeature = ListInput & {
 
 export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
 
-export type Embeddings = Record<string, ort.Tensor>;
+export interface InteractiveSegmentationEmbeddingCache {
+  image_embedding: NDArrayPayload;
+  high_resolution_features?: NDArrayPayload[];
+}
+
+export interface SmartSegmentationUiState {
+  phase: "idle" | "pending" | "error";
+  requestId: string | null;
+  viewName: string | null;
+  message: string;
+}
+
+export type EmbeddingValue = ort.Tensor | NDArrayPayload | InteractiveSegmentationEmbeddingCache;
+
+export type Embeddings = Record<string, EmbeddingValue>;
 
 export type ModelSelection = {
   currentModalOpen:
