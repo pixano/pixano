@@ -86,7 +86,7 @@ License: CECILL-C
     let nextIsVideo = false;
 
     for (const table of manifest.tablesByGroup.entities) {
-      if (manifest.tablesByName[table].baseSchema === BaseSchema.Track) nextIsVideo = true;
+      if (manifest.tablesByName[table].baseSchema === BaseSchema.Tracklet) nextIsVideo = true;
       if (
         entities.value.find(
           (ent) =>

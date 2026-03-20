@@ -660,7 +660,11 @@ export class MultiPath extends Annotation {
   declare data: MultiPathData & PerFrameAnnotationData;
 
   //UI only fields
-  ui: AnnotationUIFields = {
+  ui: AnnotationUIFields & {
+    opacity?: number;
+    strokeFactor?: number;
+    tooltip?: string;
+  } = {
     datasetItemType: WorkspaceType.UNDEFINED,
     displayControl: initDisplayControl,
   };
