@@ -1,0 +1,38 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import type { Entity, ItemFeature } from "$lib/types/dataset";
+
+// TextSpan features to display in table of TextSpan section, in this order
+export const DISPLAY_MENTION_FEATURES = ["role", "concept", "mention"];
+
+// default entity features used to display tooltip, in this order
+const DEFAULT_FEATURES = ["name", "category", "category_name"];
+
+export const getDefaultDisplayFeat = (entity: Entity): string | null => {
+  for (const default_feature of DEFAULT_FEATURES) {
+    if (default_feature in entity.data) {
+      return String(entity.data[default_feature] as string | number);
+    }
+  }
+  return null;
+};
+
+export const defaultObjectFeatures = {
+  [DEFAULT_FEATURES[0]]: {
+    name: "name",
+    dtype: "str",
+    label: "name",
+  },
+};
+
+export const defaultSceneFeatures: Record<string, ItemFeature> = {
+  label: {
+    name: "label",
+    dtype: "str",
+    value: "None",
+  },
+};

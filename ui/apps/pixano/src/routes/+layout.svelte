@@ -5,77 +5,59 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // Imports
-  import { onDestroy, onMount } from "svelte";
+  import { Tooltip } from "bits-ui";
   import { fade } from "svelte/transition";
-
-  import { api, checkInferenceStatus, IconButton, initTheme } from "@pixano/core";
-  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import ThemeToggle from "@pixano/core/src/components/ui/theme-toggle/ThemeToggle.svelte";
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import {
-    currentDatasetStore,
-    datasetItemIds,
-    datasetsStore,
-    datasetTableStore,
-    datasetTotalItemsCount,
-  } from "../lib/stores/datasetStores";
+  import type { LayoutProps } from "./$types";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
+  import { pixanoLogo } from "$lib/assets";
+  import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
+  import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
 
   import "./styles.css";
 
-  let currentDatasetId: string;
-  let lastFetchedDatasetId: string;
+  let { data, children }: LayoutProps = $props();
 
   const HOME_ROUTE_ID = "/";
 
-  onMount(() => {
-    initTheme();
-    api
-      .getDatasetsInfo()
-      .then((loadedDatasetInfos) => {
-        datasetsStore.set(loadedDatasetInfos);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-    void checkInferenceStatus();
+  // Populate stores for backward compatibility
+  $effect(() => {
+    datasetsStore.value = data.datasets;
   });
 
-  // Get all the ids of the items of the selected dataset
-  $: void getCurrentDatasetItemsIds(currentDatasetId);
-
-  const unsubscribeDatasetTableStore = datasetTableStore.subscribe((value) => {
-    if (value.where != undefined) {
-      datasetTotalItemsCount.set($datasetItemIds.length);
+  const handleEffectDepthExceeded = (event: ErrorEvent) => {
+    const message = event.message ?? "";
+    if (!message.includes("effect_update_depth_exceeded")) return;
+    const topProbes = getEffectProbeSnapshot().slice(0, 12);
+    console.groupCollapsed("[pixano-debug] effect_update_depth_exceeded");
+    if (event.error) {
+      console.error(event.error);
+    } else {
+      console.error(message);
     }
-  });
-
-  const getCurrentDatasetItemsIds = async (datasetId: string) => {
-    if (datasetId === undefined || datasetId === lastFetchedDatasetId) return;
-    const item_ids = await api.getDatasetItemsIds(datasetId);
-    datasetItemIds.set(item_ids);
-    datasetTotalItemsCount.set(item_ids.length);
-    lastFetchedDatasetId = datasetId;
+    if (topProbes.length > 0) {
+      console.table(
+        topProbes.map((probe) => ({
+          effect: probe.label,
+          hitsInWindow: probe.hitsInWindow,
+          totalHits: probe.totalHits,
+          warnLevel: probe.warnLevel,
+        })),
+      );
+    } else {
+      console.warn(
+        "No effect probes captured yet. Enable verbose probes with PIXANO_EFFECT_DEBUG=1.",
+      );
+    }
+    console.groupEnd();
   };
 
-  $: unsubscribePage = page.subscribe((value) => {
-    currentDatasetId = value.params.dataset;
-    // if currentDatasetStore is not set yet (happens from a refresh on a datasetItem page), set it now
-    if (currentDatasetId && $currentDatasetStore == null) {
-      const currentDataset = $datasetsStore?.find((dataset) => dataset.id === currentDatasetId);
-      if (currentDataset) {
-        currentDatasetStore.set(currentDataset);
-      }
-    }
-  });
-
-  onDestroy(() => {
-    unsubscribeDatasetTableStore();
-    unsubscribePage();
+  $effect(() => {
+    window.addEventListener("error", handleEffectDepthExceeded);
+    return () => window.removeEventListener("error", handleEffectDepthExceeded);
   });
 
   async function navigateToHome() {
@@ -89,36 +71,38 @@ License: CECILL-C
   <meta name="description" content="Pixano app" />
 </svelte:head>
 
-<div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-sans">
-  <header
-    class="w-full h-16 px-6 flex items-center gap-6 bg-card/80 backdrop-blur-[16px] border-b border-border/40 z-50 shrink-0 shadow-glass-sm"
-  >
-    <div class="flex items-center shrink-0">
-      <IconButton
-        on:click={navigateToHome}
-        tooltipContent="Go to library"
-        class="p-1.5 hover:bg-primary/5 rounded-xl transition-all duration-200"
-      >
-        <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8" />
-      </IconButton>
-    </div>
+<Tooltip.Provider>
+  <div class="app h-screen flex flex-col overflow-hidden bg-background text-foreground font-sans">
+    <header
+      class="w-full h-16 px-6 flex items-center gap-6 bg-card/80 backdrop-blur-[16px] border-b border-border/40 z-50 shrink-0 shadow-glass-sm"
+    >
+      <div class="flex items-center shrink-0">
+        <IconButton
+          onclick={navigateToHome}
+          tooltipContent="Go to library"
+          class="p-1.5 hover:bg-primary/5 rounded-xl transition-all duration-200"
+        >
+          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8" />
+        </IconButton>
+      </div>
 
-    <div class="flex-1 h-full">
-      {#if $page.route.id !== HOME_ROUTE_ID}
-        <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
-          <DatasetHeader pageId={$page.route.id} />
-        </div>
-      {/if}
-    </div>
+      <div class="flex-1 h-full">
+        {#if page.route.id !== HOME_ROUTE_ID}
+          <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
+            <DatasetHeader pageId={page.route.id} />
+          </div>
+        {/if}
+      </div>
 
-    <div class="flex items-center shrink-0">
-      <ThemeToggle />
-    </div>
-  </header>
+      <div class="flex items-center shrink-0">
+        <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
+      </div>
+    </header>
 
-  <main class="flex-1 flex flex-col min-h-0 relative bg-background">
-    <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <slot />
-    </div>
-  </main>
-</div>
+    <main class="flex-1 flex flex-col min-h-0 relative bg-background">
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {@render children?.()}
+      </div>
+    </main>
+  </div>
+</Tooltip.Provider>

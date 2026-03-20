@@ -1,0 +1,40 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
+<script lang="ts">
+  import { Trash } from "phosphor-svelte";
+
+  interface Props {
+    index: number;
+    questionChoices: string[];
+  }
+
+  let { index, questionChoices = $bindable() }: Props = $props();
+
+  const handleDeleteChoice = () => {
+    questionChoices = questionChoices.filter((_, i) => i !== index);
+  };
+</script>
+
+<div class="flex items-center justify-between">
+  <h5 class="font-medium">Answer {index + 1}</h5>
+  <button
+    class="rounded-full p-[6px] hover:bg-primary-light transition duration-300"
+    onclick={handleDeleteChoice}
+  >
+    <Trash weight="regular" size={19} />
+  </button>
+</div>
+
+<!-- svelte-ignore a11y_autofocus -->
+<!-- Not an issue here since the input is only mounted if the user clicks on "Add an answer" button ? -->
+<input
+  placeholder="Type here..."
+  autofocus
+  type="text"
+  class="p-2 border rounded-lg border-border outline-none text-foreground focus:border-primary"
+  bind:value={questionChoices[index]}
+/>

@@ -7,7 +7,7 @@
 
 import pytest
 
-from pixano.features.schemas import SequenceFrame
+from pixano.schemas import SequenceFrame
 from tests.utils.schema import register_schema
 
 

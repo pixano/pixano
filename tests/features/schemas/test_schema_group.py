@@ -7,8 +7,9 @@
 import pytest
 from lancedb.pydantic import Vector
 
-from pixano.features import Annotation, Embedding, Entity, Item, SchemaGroup, Source, View
-from pixano.features.schemas.schema_group import group_to_str, schema_to_group
+from pixano.features import Embedding, Entity, Record, SchemaGroup, View
+from pixano.schemas.annotations.entity_annotation import EntityAnnotation
+from pixano.schemas.schema_group import group_to_str, schema_to_group
 
 
 class Embedding8(Embedding):
@@ -20,16 +21,14 @@ class Embedding8(Embedding):
     [
         (Entity(), SchemaGroup.ENTITY),
         (Entity, SchemaGroup.ENTITY),
-        (Annotation(), SchemaGroup.ANNOTATION),
-        (Annotation, SchemaGroup.ANNOTATION),
+        (EntityAnnotation(), SchemaGroup.ANNOTATION),
+        (EntityAnnotation, SchemaGroup.ANNOTATION),
         (View(), SchemaGroup.VIEW),
         (View, SchemaGroup.VIEW),
-        (Source(name="test", kind="model"), SchemaGroup.SOURCE),
-        (Source, SchemaGroup.SOURCE),
         (Embedding8(vector=list(range(8))), SchemaGroup.EMBEDDING),
         (Embedding, SchemaGroup.EMBEDDING),
-        (Item(), SchemaGroup.ITEM),
-        (Item, SchemaGroup.ITEM),
+        (Record(), SchemaGroup.RECORD),
+        (Record, SchemaGroup.RECORD),
     ],
 )
 def test_schema_to_group(schema_type, expected):
@@ -44,16 +43,12 @@ def test_schema_to_group_error():
 @pytest.mark.parametrize(
     "group, plural, expected",
     [
-        (SchemaGroup.SOURCE, False, "source"),
-        (SchemaGroup.SOURCE, True, "sources"),
         (SchemaGroup.VIEW, False, "view"),
         (SchemaGroup.VIEW, True, "views"),
         (SchemaGroup.ANNOTATION, False, "annotation"),
         (SchemaGroup.ANNOTATION, True, "annotations"),
-        (SchemaGroup.VIEW, False, "view"),
-        (SchemaGroup.VIEW, True, "views"),
-        (SchemaGroup.ITEM, False, "item"),
-        (SchemaGroup.ITEM, True, "items"),
+        (SchemaGroup.RECORD, False, "record"),
+        (SchemaGroup.RECORD, True, "records"),
         (SchemaGroup.EMBEDDING, False, "embedding"),
         (SchemaGroup.EMBEDDING, True, "embeddings"),
         (SchemaGroup.ENTITY, False, "entity"),

@@ -8,7 +8,7 @@
 
 In this tutorial, we will build a library consisting of one dataset from a folder dataset stored in the `./assets/health_images/` folder with a unique subfolder `all/` which will later be considered as a split.
 
-It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images.
+It contains 10 images of human parts from several image sources (MRI, microscope, and high-resolution photos). A `metadata.jsonl` also provides annotations, bounding boxes and keypoints, associated to these images using Pixano's canonical entity-centric format.
 
 ## Build your dataset
 
@@ -117,14 +117,14 @@ dataset = builder.build(mode="create")
 
 !!! tip "CLI alternative"
 
-    You can also import a dataset from the command line. The CLI copies your source directory into the data directory automatically:
+    You can also import a dataset from the command line. The CLI reads your source directory directly and uses the `DatasetInfo` file as the import contract:
 
     ```bash
     pixano data import ./my_data ./health_images \
-        --name "Health Images" --schema ./schema.py:HealthDatasetItem
+        --info ./info.py:dataset_info
     ```
 
-    See the [quickstart guide](../getting_started/quickstart.md) for more details.
+    See the [quickstart guide](../getting_started/quickstart.md) for the canonical `metadata.jsonl` format details.
 
 ### Write your own DatasetBuilder
 
@@ -139,20 +139,19 @@ from typing import Iterator
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.features import (
-    Annotation,
-    BaseSchema,
     Entity,
     Image,
-    SourceKind,
 )
+from lancedb.pydantic import LanceModel
 
 
 class TestFolderBuilder(ImageFolderBuilder):
 
     def generate_data(
         self,
-    ) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
-        self.source_id = self.add_source("Builder", SourceKind.OTHER)
+    ) -> Iterator[dict[str, LanceModel | list[LanceModel]]]:
+        self._default_source_type = "other"
+        self._default_source_name = "Builder"
         for split in self.source_dir.glob("*"):
             if not split.is_dir() or split.name.startswith("."):
                 continue
@@ -232,7 +231,7 @@ builder.build(mode="overwrite")
 
 We recommend that you take a look at the implementation of the class `pixano.datasets.builders.FolderBaseBuilder` for the complete code to understand how to construct your own builder.
 
-Notice that the `generate_data` is a generator of dictionaries whose keys are the names of the tables to fill and the values one example or a list of `pixano.features.BaseSchema` to fill these tables. The builder flushes data by chunks of a size configured for every table with the argument `flush_every_n_samples` in the `build` method. This offers a trade-off between speed and memory footprint.
+Notice that the `generate_data` is a generator of dictionaries whose keys are the names of the tables to fill and the values one example or a list of `LanceModel` subclasses to fill these tables. The builder flushes data by chunks of a size configured for every table with the argument `flush_every_n_samples` in the `build` method. This offers a trade-off between speed and memory footprint.
 
 ## Query your dataset
 

@@ -7,12 +7,12 @@
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetSchema, SchemaRelation
-from pixano.features.schemas import BBox, Entity, Image
-from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
-from pixano.features.schemas.annotations.keypoints import KeyPoints
-from pixano.features.schemas.annotations.tracklet import Tracklet
-from pixano.features.schemas.entities.track import Track
-from pixano.features.schemas.items.item import Item
+from pixano.schemas import BBox, Entity, Image
+from pixano.schemas.annotations.compressed_rle import CompressedRLE
+from pixano.schemas.annotations.keypoints import KeyPoints
+from pixano.schemas.annotations.tracklet import Tracklet
+from pixano.schemas.entities.track import Track
+from pixano.schemas.items.item import Item
 
 
 @pytest.fixture()
@@ -70,6 +70,7 @@ def json_dataset_schema_item_categories_image_bbox():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -100,8 +101,9 @@ def json_dataset_schema_item_categories_image_bbox():
                     "confidence": {"type": "float", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
         },
@@ -205,6 +207,7 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -235,8 +238,9 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "confidence": {"type": "float", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "embeddings": {
@@ -402,6 +406,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "timestamp": {"type": "float", "collection": False},
                     "frame_index": {"type": "int", "collection": False},
                     "category": {"type": "str", "collection": False},
@@ -420,6 +425,7 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "blob": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
                 },
@@ -477,8 +483,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "is_difficult": {"type": "bool", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "mask_image": {
@@ -493,8 +500,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "counts": {"type": "bytes", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_image": {
@@ -510,8 +518,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "states": {"type": "str", "collection": True},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "bboxes_video": {
@@ -528,8 +537,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "confidence": {"type": "float", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoints_video": {
@@ -545,8 +555,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "states": {"type": "str", "collection": True},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "tracklets": {
@@ -563,8 +574,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "end_timestamp": {"type": "float", "collection": False},
                     "created_at": {"type": "datetime", "collection": False},
                     "updated_at": {"type": "datetime", "collection": False},
-                    "source_ref": {"type": "SourceRef", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "image_embedding": {
@@ -610,36 +622,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
 
 
 @pytest.fixture()
-def dataset_schema_image_bboxes_keypoint(item_metadata):
-    return DatasetSchema(
-        schemas={
-            "item": item_metadata,
-            "image": Image,
-            "entities": Entity,
-            "bboxes": BBox,
-            "keypoint": KeyPoints,
-        },
-        relations={
-            "item": {
-                "image": SchemaRelation.ONE_TO_ONE,
-                "entities": SchemaRelation.ONE_TO_MANY,
-                "bboxes": SchemaRelation.ONE_TO_MANY,
-                "keypoint": SchemaRelation.ONE_TO_ONE,
-            },
-            "image": {
-                "item": SchemaRelation.ONE_TO_ONE,
-            },
-            "entities": {
-                "item": SchemaRelation.MANY_TO_ONE,
-            },
-            "bboxes": {
-                "item": SchemaRelation.MANY_TO_ONE,
-            },
-            "keypoint": {
-                "item": SchemaRelation.ONE_TO_ONE,
-            },
-        },
-    )
+def dataset_schema_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint):
+    return DatasetSchema.from_dataset_item(dataset_item_image_bboxes_keypoint)
 
 
 @pytest.fixture(scope="session")
@@ -693,7 +677,9 @@ def json_dataset_image_bboxes_keypoint():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "keypoint": {
@@ -707,7 +693,9 @@ def json_dataset_image_bboxes_keypoint():
                     "template_id": {"type": "str", "collection": False},
                     "coords": {"type": "float", "collection": True},
                     "states": {"type": "str", "collection": True},
-                    "inference_metadata": {"type": "str", "collection": False},
+                    "source_type": {"type": "str", "collection": False},
+                    "source_name": {"type": "str", "collection": False},
+                    "source_metadata": {"type": "str", "collection": False},
                 },
             },
             "item": {

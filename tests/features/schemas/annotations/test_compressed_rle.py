@@ -4,12 +4,9 @@
 # License: CECILL-C
 # =====================================
 
-from datetime import datetime
-
 import numpy as np
 
 from pixano.features import CompressedRLE, create_compressed_rle, is_compressed_rle
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from pixano.features.utils import (
     mask_area,
     mask_to_rle,
@@ -26,16 +23,12 @@ from tests.features.utils import make_tests_is_sublass_strict
 class TestCompressedRLE:
     def test_none(self):
         none_rle = CompressedRLE.none()
-        assert none_rle == CompressedRLE(
-            size=[0, 0],
-            counts=b"",
-            id="",
-            item_ref=ItemRef.none(),
-            view_ref=ViewRef.none(),
-            entity_ref=EntityRef.none(),
-            created_at=datetime(1970, 1, 1),
-            updated_at=datetime(1970, 1, 1),
-        )
+        assert none_rle.size == [0, 0]
+        assert none_rle.counts == b""
+        assert none_rle.id == ""
+        assert none_rle.record_id == ""
+        assert none_rle.view_id == ""
+        assert none_rle.entity_id == ""
 
     def test_to_mask(self, rle):
         mask = rle.to_mask()
@@ -114,24 +107,24 @@ def test_create_compressed_rle(size, counts):
     assert rle.size == size
     assert rle.counts == counts
     assert rle.id == ""
-    assert rle.item_ref == ItemRef.none()
-    assert rle.view_ref == ViewRef.none()
-    assert rle.entity_ref == EntityRef.none()
+    assert rle.record_id == ""
+    assert rle.view_id == ""
+    assert rle.entity_id == ""
 
     # Test 2: custom references
     rle = create_compressed_rle(
         size,
         counts,
         id="id",
-        item_ref=ItemRef(id="item_id"),
-        view_ref=ViewRef(id="view_id", name="view"),
-        entity_ref=EntityRef(id="entity_id", name="entity"),
+        record_id="record_id",
+        view_id="view",
+        entity_id="entity_id",
     )
 
     assert isinstance(rle, CompressedRLE)
     assert rle.size == size
     assert rle.counts == counts
     assert rle.id == "id"
-    assert rle.item_ref == ItemRef(id="item_id")
-    assert rle.view_ref == ViewRef(id="view_id", name="view")
-    assert rle.entity_ref == EntityRef(id="entity_id", name="entity")
+    assert rle.record_id == "record_id"
+    assert rle.view_id == "view"
+    assert rle.entity_id == "entity_id"

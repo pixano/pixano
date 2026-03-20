@@ -21,7 +21,7 @@ class EntityWithCategory(Entity):
 
 def create_pixano_bbox_entity(
     pix_image, bbox_coords, score, category, *,
-    is_normalized=True, source_id="source",
+    is_normalized=True, source_type="model", source_name="source",
 ):
     view_ref = {"id": pix_image.id, "name": "image"}
     entity = EntityWithCategory(
@@ -39,7 +39,8 @@ def create_pixano_bbox_entity(
         coords=bbox_coords,
         is_normalized=is_normalized,
         format="xyxy",
-        source_ref={"id": source_id, "name": "source"},
+        source_type=source_type,
+        source_name=source_name,
     )
 
     return entity, bbox
@@ -68,10 +69,6 @@ Load your Pixano dataset
 ```python
 from pixano.datasets import Dataset
 ds = Dataset(library / dataset_dirname, media_dir=media)
-
-# Add YOLO source
-if not ds.get_data("source", ids="src_yolo"):
-    ds.add_data("source", [Source(id="src_yolo", name="yolo11n", kind="model")])
 ```
 
 Load YOLOv11 model.
@@ -103,7 +100,7 @@ for image in tqdm(images):
         ):
             entity, pix_bbox = create_pixano_bbox_entity(
                 image, bbox, score, res.names[category],
-                is_normalized=True, source_id="src_yolo",
+                is_normalized=True, source_type="model", source_name="yolo11n",
             )
             new_entities.append(entity)
             new_bboxes.append(pix_bbox)
@@ -133,10 +130,6 @@ Load your Pixano dataset
 ```python
 from pixano.datasets import Dataset
 ds = Dataset(library / dataset_dirname, media_dir=media)
-
-# Add GroundingDINO source
-if not ds.get_data("source", ids="src_gdino"):
-    ds.add_data("source", [Source(id="src_gdino", name="GroundingDINO", kind="model")])
 ```
 
 Load Grounding DINO model with Pixano Inference from transformers provider ([HuggingFace](https://huggingface.co))
@@ -183,7 +176,7 @@ for image in tqdm(images):
     ):
         entity, pix_bbox = create_pixano_bbox_entity(
             image, bbox, score, category,
-            is_normalized=False, source_id="src_gdino",
+            is_normalized=False, source_type="model", source_name="GroundingDINO",
         )
         new_entities.append(entity)
         new_bboxes.append(pix_bbox)

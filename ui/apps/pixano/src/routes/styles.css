@@ -1,16 +1,34 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-muted: hsl(var(--muted));
+  --color-primary: hsl(var(--primary));
+  --color-primary-light: hsl(var(--primary-light));
+  --color-accent: hsl(var(--accent));
+  --color-border: hsl(var(--border));
+  --color-success: hsl(var(--success));
+
+  --radius-2xl: calc(var(--radius-xl) + 4px);
+  --radius-xl: var(--radius-xl);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --blur-glass: 16px;
+  --blur-glass-heavy: 24px;
+}
 
 @layer base {
   :root {
-    /* Backgrounds — off-white, not pure white */
     --background: 240 5% 96%;
     --foreground: 240 6% 10%;
 
-    /* Surfaces — 3 elevation levels */
     --card: 0 0% 100%;
     --card-foreground: 240 6% 10%;
     --popover: 0 0% 100%;
@@ -18,34 +36,27 @@
     --muted: 240 5% 92%;
     --muted-foreground: 240 4% 46%;
 
-    /* Brand accent — modernized pink/magenta */
     --primary: 330 65% 50%;
     --primary-foreground: 0 0% 100%;
     --primary-light: 330 60% 95%;
 
-    /* Secondary — neutral with slight warmth */
     --secondary: 240 5% 92%;
     --secondary-foreground: 240 6% 10%;
 
-    /* Accent — subtle warm overlay */
     --accent: 330 30% 95%;
     --accent-foreground: 240 6% 10%;
 
-    /* Destructive — keep red */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Utilities */
     --border: 240 6% 88%;
     --input: 240 6% 88%;
     --ring: 330 65% 50%;
 
-    /* Surface elevation tokens */
     --surface-1: 0 0% 100%;
     --surface-2: 240 5% 97%;
     --surface-3: 240 5% 93%;
 
-    /* Semantic status colors */
     --success: 142 60% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -53,18 +64,11 @@
     --info: 210 80% 52%;
     --info-foreground: 0 0% 100%;
 
-    /* Canvas viewer background */
     --canvas-bg: 240 5% 20%;
 
-    /* Radius scale */
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
-
-    /* Transition durations */
-    --transition-fast: 150ms;
-    --transition-normal: 200ms;
-    --transition-slow: 300ms;
   }
 
   .dark {
@@ -108,51 +112,105 @@
 
     --canvas-bg: 240 8% 14%;
   }
-}
 
-@layer base {
   * {
-    @apply border-border;
+    border-color: var(--color-border);
   }
   body {
-    @apply bg-background text-foreground antialiased font-sans text-sm;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   code,
   kbd,
   pre {
-    @apply font-mono;
+    font-family: var(--font-mono);
   }
 }
 
-@layer components {
-  /* Typography utilities */
-  .text-heading-lg {
-    @apply text-lg font-semibold tracking-tight;
-  }
-  .text-heading {
-    @apply text-base font-semibold tracking-tight;
-  }
-  .text-heading-sm {
-    @apply text-sm font-semibold;
-  }
-  .text-label {
-    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
-  }
-  .text-caption {
-    @apply text-xs text-muted-foreground;
-  }
-  .text-data {
-    @apply text-sm font-mono tabular-nums;
+@layer utilities {
+  .glass-panel {
+    background-color: color-mix(in srgb, var(--color-card) 60%, transparent);
+    backdrop-filter: blur(var(--blur-glass));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+      0 4px 24px -4px rgba(0, 0, 0, 0.2);
   }
 
-  /* Glassmorphism utilities */
+  .glass-panel-heavy {
+    background-color: color-mix(in srgb, var(--color-card) 80%, transparent);
+    backdrop-filter: blur(var(--blur-glass-heavy));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .crt-glow {
+    text-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 50%, transparent);
+  }
+
+  .neon-border {
+    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+    box-shadow:
+      inset 0 0 12px 0 color-mix(in srgb, var(--color-primary) 20%, transparent),
+      0 0 12px 0 color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+
+  .text-heading-lg {
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .text-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .text-heading-sm {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .text-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-muted-foreground);
+  }
+  .text-caption {
+    font-size: 0.75rem;
+    color: var(--color-muted-foreground);
+  }
+  .text-data {
+    font-size: 0.875rem;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
   .glass {
-    @apply bg-card/80 backdrop-blur-[16px] border border-border/40 shadow-glass;
+    background-color: color-mix(in srgb, var(--color-card) 80%, transparent);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 4px 24px rgba(0, 0, 0, 0.12);
   }
   .glass-subtle {
-    @apply bg-card/60 backdrop-blur-[12px] border border-border/30 shadow-glass-sm;
+    background-color: color-mix(in srgb, var(--color-card) 60%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 2px 8px rgba(0, 0, 0, 0.08);
   }
   .glass-heavy {
-    @apply bg-card/90 backdrop-blur-[24px] border border-border/50 shadow-glass-lg;
+    background-color: color-mix(in srgb, var(--color-card) 90%, transparent);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 8px 40px rgba(0, 0, 0, 0.16);
   }
 }

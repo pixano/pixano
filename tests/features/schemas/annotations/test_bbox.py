@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 
 from pixano.features import BBox, BBox3D, CompressedRLE, create_bbox, create_bbox3d, is_bbox, is_bbox3d
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -21,9 +20,9 @@ class TestBBox:
         none_bbox = BBox.none()
 
         assert none_bbox.id == ""
-        assert none_bbox.item_ref == ItemRef.none()
-        assert none_bbox.view_ref == ViewRef.none()
-        assert none_bbox.entity_ref == EntityRef.none()
+        assert none_bbox.record_id == ""
+        assert none_bbox.view_id == ""
+        assert none_bbox.entity_id == ""
         assert none_bbox.confidence == -1
         assert none_bbox.is_normalized
         assert none_bbox.format == "xywh"
@@ -65,114 +64,92 @@ class TestBBox:
         assert np.allclose(denormalized_bbox.xyxy_coords, coords["xyxy"])
 
     @pytest.mark.parametrize(
-        "id, item_ref, view_ref, entity_ref",
+        "id, record_id, view_id, entity_id",
         [
-            (
-                "bbox_1",
-                ItemRef(id="item_1"),
-                ViewRef(id="view_1", name="view"),
-                EntityRef(id="entity_1", name="entity"),
-            ),
-            ("", ItemRef.none(), ViewRef.none(), EntityRef.none()),
+            ("bbox_1", "item_1", "view", "entity_1"),
+            ("", "", "", ""),
         ],
     )
-    def test_from_xyxy(self, coords, id, item_ref, view_ref, entity_ref):
+    def test_from_xyxy(self, coords, id, record_id, view_id, entity_id):
         bbox = BBox.from_xyxy(
             coords["xyxy"],
             confidence=0.5,
             is_normalized=False,
             id=id,
-            item_ref=item_ref,
-            view_ref=view_ref,
-            entity_ref=entity_ref,
+            record_id=record_id,
+            view_id=view_id,
+            entity_id=entity_id,
         )
 
         assert bbox.confidence == 0.5
         assert np.allclose(bbox.xyxy_coords, coords["xyxy"])
         assert not bbox.is_normalized
-        assert id == id
-        assert bbox.item_ref == item_ref
-        assert bbox.view_ref == view_ref
-        assert bbox.entity_ref == entity_ref
+        assert bbox.record_id == record_id
+        assert bbox.view_id == view_id
+        assert bbox.entity_id == entity_id
 
     @pytest.mark.parametrize(
-        "id, item_ref, view_ref, entity_ref",
+        "id, record_id, view_id, entity_id",
         [
-            (
-                "bbox_1",
-                ItemRef(id="item_1"),
-                ViewRef(id="view_1", name="view"),
-                EntityRef(id="entity_1", name="entity"),
-            ),
-            ("", ItemRef.none(), ViewRef.none(), EntityRef.none()),
+            ("bbox_1", "item_1", "view", "entity_1"),
+            ("", "", "", ""),
         ],
     )
-    def test_from_xywh(self, coords, id, item_ref, view_ref, entity_ref):
+    def test_from_xywh(self, coords, id, record_id, view_id, entity_id):
         bbox = BBox.from_xywh(
             coords["xywh"],
             confidence=-1,
             is_normalized=False,
             id=id,
-            item_ref=item_ref,
-            view_ref=view_ref,
-            entity_ref=entity_ref,
+            record_id=record_id,
+            view_id=view_id,
+            entity_id=entity_id,
         )
 
         assert bbox.confidence == -1
         assert np.allclose(bbox.xywh_coords, coords["xywh"])
         assert not bbox.is_normalized
-        assert id == id
-        assert bbox.item_ref == item_ref
-        assert bbox.view_ref == view_ref
-        assert bbox.entity_ref == entity_ref
+        assert bbox.record_id == record_id
+        assert bbox.view_id == view_id
+        assert bbox.entity_id == entity_id
 
     @pytest.mark.parametrize(
-        "id, item_ref, view_ref, entity_ref",
+        "id, record_id, view_id, entity_id",
         [
-            (
-                "bbox_1",
-                ItemRef(id="item_1"),
-                ViewRef(id="view_1", name="view"),
-                EntityRef(id="entity_1", name="entity"),
-            ),
-            ("", ItemRef.none(), ViewRef.none(), EntityRef.none()),
+            ("bbox_1", "item_1", "view", "entity_1"),
+            ("", "", "", ""),
         ],
     )
-    def test_from_mask(self, id, item_ref, view_ref, entity_ref):
+    def test_from_mask(self, id, record_id, view_id, entity_id):
         mask = np.ones((10, 10), dtype=bool)
-        bbox = BBox.from_mask(mask, id=id, item_ref=item_ref, view_ref=view_ref, entity_ref=entity_ref)
+        bbox = BBox.from_mask(mask, id=id, record_id=record_id, view_id=view_id, entity_id=entity_id)
 
         assert np.allclose(bbox.xywh_coords, [0, 0, 1.0, 1.0])
         assert bbox.is_normalized
         assert bbox.confidence == -1
         assert bbox.id == id
-        assert bbox.item_ref == item_ref
-        assert bbox.view_ref == view_ref
-        assert bbox.entity_ref == entity_ref
+        assert bbox.record_id == record_id
+        assert bbox.view_id == view_id
+        assert bbox.entity_id == entity_id
 
     @pytest.mark.parametrize(
-        "id, item_ref, view_ref, entity_ref",
+        "id, record_id, view_id, entity_id",
         [
-            (
-                "bbox_1",
-                ItemRef(id="item_1"),
-                ViewRef(id="view_1", name="view"),
-                EntityRef(id="entity_1", name="entity"),
-            ),
-            ("", ItemRef.none(), ViewRef.none(), EntityRef.none()),
+            ("bbox_1", "item_1", "view", "entity_1"),
+            ("", "", "", ""),
         ],
     )
-    def test_from_rle(self, id, item_ref, view_ref, entity_ref):
+    def test_from_rle(self, id, record_id, view_id, entity_id):
         rle = CompressedRLE.from_mask(np.ones((10, 10), dtype=bool))
-        bbox = BBox.from_rle(rle, id=id, item_ref=item_ref, view_ref=view_ref, entity_ref=entity_ref)
+        bbox = BBox.from_rle(rle, id=id, record_id=record_id, view_id=view_id, entity_id=entity_id)
 
         assert np.allclose(bbox.xywh_coords, [0, 0, 1.0, 1.0])
         assert bbox.is_normalized
         assert bbox.confidence == -1
         assert bbox.id == id
-        assert bbox.item_ref == item_ref
-        assert bbox.view_ref == view_ref
-        assert bbox.entity_ref == entity_ref
+        assert bbox.record_id == record_id
+        assert bbox.view_id == view_id
+        assert bbox.entity_id == entity_id
 
 
 def test_is_bbox():
@@ -192,9 +169,9 @@ def test_create_bbox():
     assert bbox.confidence == 0.5
     assert bbox.xyxy_coords == [1, 1, 2, 2]
     assert bbox.id == ""
-    assert bbox.item_ref == ItemRef.none()
-    assert bbox.view_ref == ViewRef.none()
-    assert bbox.entity_ref == EntityRef.none()
+    assert bbox.record_id == ""
+    assert bbox.view_id == ""
+    assert bbox.entity_id == ""
 
     # Test 2: with references
     bbox = create_bbox(
@@ -203,9 +180,9 @@ def test_create_bbox():
         True,
         0.5,
         id="bbox_1",
-        item_ref=ItemRef(id="item_1"),
-        view_ref=ViewRef(id="view_1", name="view"),
-        entity_ref=EntityRef(id="entity_1", name="entity"),
+        record_id="item_1",
+        view_id="view",
+        entity_id="entity_1",
     )
     assert isinstance(bbox, BBox)
     assert bbox.format == "xyxy"
@@ -213,9 +190,9 @@ def test_create_bbox():
     assert bbox.confidence == 0.5
     assert bbox.xyxy_coords == [0.1, 0.1, 0.2, 0.2]
     assert bbox.id == "bbox_1"
-    assert bbox.item_ref == ItemRef(id="item_1")
-    assert bbox.view_ref == ViewRef(id="view_1", name="view")
-    assert bbox.entity_ref == EntityRef(id="entity_1", name="entity")
+    assert bbox.record_id == "item_1"
+    assert bbox.view_id == "view"
+    assert bbox.entity_id == "entity_1"
 
 
 def test_create_bbox3d():
@@ -228,9 +205,9 @@ def test_create_bbox3d():
     assert bbox.confidence == -1
     assert not bbox.is_normalized
     assert bbox.id == ""
-    assert bbox.item_ref == ItemRef.none()
-    assert bbox.view_ref == ViewRef.none()
-    assert bbox.entity_ref == EntityRef.none()
+    assert bbox.record_id == ""
+    assert bbox.view_id == ""
+    assert bbox.entity_id == ""
 
     # Test 2: with references
     bbox = create_bbox3d(
@@ -240,9 +217,9 @@ def test_create_bbox3d():
         is_normalized=True,
         confidence=0.5,
         id="bbox_1",
-        item_ref=ItemRef(id="item_1"),
-        view_ref=ViewRef(id="view_1", name="view"),
-        entity_ref=EntityRef(id="entity_1", name="entity"),
+        record_id="item_1",
+        view_id="view",
+        entity_id="entity_1",
     )
     assert isinstance(bbox, BBox3D)
     assert bbox.coords == [0.1, 0.1, 0.1, 0.2, 0.2, 0.2]
@@ -251,6 +228,6 @@ def test_create_bbox3d():
     assert bbox.confidence == 0.5
     assert bbox.is_normalized
     assert bbox.id == "bbox_1"
-    assert bbox.item_ref == ItemRef(id="item_1")
-    assert bbox.view_ref == ViewRef(id="view_1", name="view")
-    assert bbox.entity_ref == EntityRef(id="entity_1", name="entity")
+    assert bbox.record_id == "item_1"
+    assert bbox.view_id == "view"
+    assert bbox.entity_id == "entity_1"

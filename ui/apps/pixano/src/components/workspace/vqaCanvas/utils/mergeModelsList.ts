@@ -1,0 +1,29 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import type {
+  MessageGenerationPrompts,
+  PixanoInferenceCompletionModel,
+} from "$lib/stores/vqaStores.svelte";
+
+export function mergeModelLists(
+  newModelsName: string[],
+  existingModels: PixanoInferenceCompletionModel[],
+  defaultPrompts: MessageGenerationPrompts,
+  default_temperature: number,
+): PixanoInferenceCompletionModel[] {
+  const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
+
+  return newModelsName.map(
+    (model) =>
+      existingModelsMap.get(model) ?? {
+        name: model,
+        selected: false,
+        prompts: defaultPrompts,
+        temperature: default_temperature,
+      },
+  );
+}

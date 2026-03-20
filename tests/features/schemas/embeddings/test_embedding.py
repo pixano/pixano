@@ -20,8 +20,7 @@ from pixano.features import (
     is_embedding,
     is_view_embedding,
 )
-from pixano.features.schemas.embeddings.embedding import _to_pixano_name
-from pixano.features.types.schema_reference import ItemRef, ViewRef
+from pixano.schemas.embeddings.embedding import _to_pixano_name
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 from tests.features.utils import make_tests_is_sublass_strict
 
@@ -37,22 +36,22 @@ class TestEmbedding:
     def test_init(self, embedding_8: type[Embedding]):
         embedding = embedding_8(vector=[1, 2, 3, 4, 5, 6, 7, 8])
         assert embedding.id == ""
-        assert embedding.item_ref == ItemRef.none()
+        assert embedding.record_id == ""
         assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
         assert embedding.shape == [8]
 
     def test_to_arrow_schema(self, embedding_8):
         with patch("lancedb.pydantic.LanceModel.to_arrow_schema", mock_super_to_arrow_schema):
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "vector", "id", "created_at", "updated_at", "shape"}
+            assert set(arrow_schema.names) == {"record_id", "view_id", "frame_id", "vector", "id", "shape"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=True, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "id", "created_at", "updated_at", "shape"}
+            assert set(arrow_schema.names) == {"record_id", "view_id", "frame_id", "id", "shape"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=True)
-            assert set(arrow_schema.names) == {"vector", "id", "item_ref", "created_at", "updated_at", "shape"}
+            assert set(arrow_schema.names) == {"vector", "id", "record_id", "view_id", "frame_id", "shape"}
             assert arrow_schema.metadata is None
 
     def test_create_shema(
@@ -88,24 +87,22 @@ class TestEmbedding:
 
         assert set(schema.model_fields) == {
             "id",
-            "item_ref",
+            "record_id",
+            "view_id",
+            "frame_id",
             "vector",
-            "view_ref",
-            "created_at",
-            "updated_at",
             "shape",
         }
         assert schema.model_fields["id"].annotation is str
         assert schema.model_fields["id"].default == ""
-        assert schema.model_fields["item_ref"].annotation == ItemRef
-        assert schema.model_fields["item_ref"].default == ItemRef.none()
+        assert schema.model_fields["record_id"].annotation is str
+        assert schema.model_fields["record_id"].default == ""
         assert issubclass(schema.model_fields["vector"].annotation, FixedSizeListMixin)
         assert "vector_column_for" in schema.model_fields["vector"].json_schema_extra and isinstance(
             schema.model_fields["vector"].json_schema_extra["vector_column_for"], EmbeddingFunction
         )
-        assert schema.model_fields["view_ref"].annotation == ViewRef
-        assert "source_column_for" in schema.model_fields["view_ref"].json_schema_extra and isinstance(
-            schema.model_fields["view_ref"].json_schema_extra["source_column_for"], EmbeddingFunction
+        assert "source_column_for" in schema.model_fields["frame_id"].json_schema_extra and isinstance(
+            schema.model_fields["frame_id"].json_schema_extra["source_column_for"], EmbeddingFunction
         )
 
         # Check that pixano function can be reused
@@ -120,8 +117,8 @@ class TestViewEmbedding:
     def test_init(self, view_embedding_8: type[ViewEmbedding]):
         view_embedding = view_embedding_8(vector=[1, 2, 3, 4, 5, 6, 7, 8])
         assert view_embedding.id == ""
-        assert view_embedding.item_ref == ItemRef.none()
-        assert view_embedding.view_ref == ViewRef.none()
+        assert view_embedding.record_id == ""
+        assert view_embedding.view_id == ""
         assert view_embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
         assert view_embedding.shape == [2, 4]
 
@@ -156,10 +153,10 @@ class TestViewEmbeddingFunction:
         )
         view_embedding_fn = view_embedding_fn_type.create()
 
-        views = dataset_image_bboxes_keypoint_copy.get_data("image", limit=2)
+        views = dataset_image_bboxes_keypoint_copy.get_data("images", limit=2)
         for view in views:
-            view.url = "file://" + str(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
-        dataset_image_bboxes_keypoint_copy.update_data("image", views)
-        view_refs = pa.Table.from_pylist([ViewRef(id=view.id, name=view.table_name).model_dump() for view in views])
-        embeddings = view_embedding_fn.compute_source_embeddings(view_refs)
+            view.uri = "file://" + str(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
+        dataset_image_bboxes_keypoint_copy.update_data("images", views)
+        frame_ids = pa.array([view.id for view in views])
+        embeddings = view_embedding_fn.compute_source_embeddings(frame_ids)
         assert embeddings == [[1, 2, 3, 4, 5, 6, 7, 8]] * 2

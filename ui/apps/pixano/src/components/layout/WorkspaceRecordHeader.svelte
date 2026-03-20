@@ -1,0 +1,181 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
+<script lang="ts">
+  // Imports
+  import { ArrowLeft, ArrowRight, CaretLeft, CircleNotch, FloppyDisk } from "phosphor-svelte";
+  import { fade } from "svelte/transition";
+
+  import { Toolbar } from "../workspace";
+  import { navigating } from "$app/state";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
+  import { saveData } from "$lib/stores/workspaceStores.svelte";
+  import { cn, IconButton } from "$lib/ui";
+
+  interface Props {
+    currentItemId: string;
+    goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
+    handleReturnToPreviousPage: () => void;
+    handleSave: () => void;
+    getWorkspaceRecordDisplayCount: () => string;
+  }
+
+  let {
+    currentItemId,
+    goToNeighborItem,
+    handleReturnToPreviousPage,
+    handleSave,
+    getWorkspaceRecordDisplayCount,
+  }: Props = $props();
+
+  const onKeyUp = async (event: KeyboardEvent) => {
+    // Item navigation shortcuts should work globally, even when typing in a textarea
+    if (event.shiftKey) {
+      switch (event.code) {
+        case "ArrowRight":
+          await goToNeighborItem("next");
+          return;
+        case "ArrowLeft":
+          await goToNeighborItem("previous");
+          return;
+      }
+    }
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement?.getAttribute("contenteditable") === "true" ||
+      (event.target as Element)?.tagName === "INPUT"
+    ) {
+      // Ignore shortcut when typing text
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    return event.key;
+  };
+</script>
+
+{#if currentItemId}
+  <div
+    in:fade={{ duration: 200 }}
+    class="flex-1 flex items-center justify-between h-full relative px-2"
+  >
+    {#if navigating.from !== null}
+      <div class="flex items-center gap-3 px-4">
+        <CircleNotch weight="regular" class="animate-spin text-primary h-4 w-4" />
+        <span
+          class="text-[11px] text-muted-foreground animate-pulse font-bold uppercase tracking-wider"
+        >
+          Loading...
+        </span>
+      </div>
+    {:else}
+      <!-- LEFT: Navigation & Context -->
+      <div class="flex items-center gap-3 min-w-[240px]">
+        <button
+          onclick={handleReturnToPreviousPage}
+          class="group flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-all duration-200 border border-transparent hover:border-primary/10"
+          title="Back to dataset"
+        >
+          <CaretLeft
+            weight="regular"
+            class="h-4 w-4 text-primary opacity-0 -ml-1 group-hover:opacity-100 transition-all duration-300"
+          />
+          <span
+            class="text-[13px] font-black uppercase tracking-tighter text-foreground/80 group-hover:text-primary transition-colors"
+          >
+            {currentDatasetStore.value?.name}
+          </span>
+        </button>
+
+        <div class="h-4 w-px bg-border/40 mx-1"></div>
+
+        <div
+          class="flex items-center gap-1 bg-muted/20 rounded-xl border border-border/30 p-0.5 shadow-inner"
+        >
+          <IconButton
+            onclick={() => goToNeighborItem("previous")}
+            tooltipContent="Previous (Shift + ←)"
+            class="h-7 w-7 hover:bg-background/80"
+          >
+            <ArrowLeft class="h-3.5 w-3.5" />
+          </IconButton>
+
+          <div class="flex items-baseline gap-1.5 px-2">
+            <span class="text-[11px] font-black text-foreground/90 tabular-nums">
+              {currentItemId}
+            </span>
+            <span
+              class="text-[9px] text-muted-foreground font-bold opacity-40 uppercase tracking-tighter"
+            >
+              {getWorkspaceRecordDisplayCount()}
+            </span>
+          </div>
+
+          <IconButton
+            onclick={() => goToNeighborItem("next")}
+            tooltipContent="Next (Shift + →)"
+            class="h-7 w-7 hover:bg-background/80"
+          >
+            <ArrowRight class="h-3.5 w-3.5" />
+          </IconButton>
+        </div>
+      </div>
+
+      <!-- MIDDLE: Absolute Center Tools -->
+      <div
+        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
+      >
+        <div class="pointer-events-auto">
+          {#if currentDatasetStore.value}
+            <Toolbar />
+          {/if}
+        </div>
+      </div>
+
+      <!-- RIGHT: Action Group -->
+      <div class="flex items-center justify-end min-w-[60px]">
+        <IconButton
+          disabled={saveData.value.length === 0}
+          onclick={handleSave}
+          tooltipContent={saveData.value.length > 0
+            ? `Save ${saveData.value.length} changes`
+            : "No changes to save"}
+          class={cn(
+            "h-10 w-10 transition-all duration-500 rounded-xl border",
+            saveData.value.length > 0
+              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-110 animate-pulse"
+              : "bg-background border-border text-muted-foreground opacity-40",
+          )}
+        >
+          <FloppyDisk
+            weight="regular"
+            class={cn(
+              "h-5 w-5 transition-transform duration-300",
+              saveData.value.length > 0 && "scale-110",
+            )}
+          />
+          {#if saveData.value.length > 0}
+            <span class="absolute -top-1 -right-1 flex h-4 w-4">
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-foreground opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-4 w-4 bg-primary-foreground text-[9px] font-black text-primary items-center justify-center shadow-sm"
+              >
+                {saveData.value.length}
+              </span>
+            </span>
+          {/if}
+        </IconButton>
+      </div>
+    {/if}
+  </div>
+{/if}
+<svelte:window onkeyup={onKeyUp} />

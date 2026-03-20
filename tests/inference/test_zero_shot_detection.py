@@ -14,12 +14,7 @@ from pixano.features import (
     BBox,
     Classification,
     Entity,
-    EntityRef,
     Image,
-    ItemRef,
-    Source,
-    SourceRef,
-    ViewRef,
 )
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.types import (
@@ -37,13 +32,13 @@ ASSETS_PATH = FILE_PATH.parent / "assets"
 def image_url() -> Image:
     image = Image(
         id="image",
-        item_ref=ItemRef(id="test_item"),
-        url="http://www.fake_url.com/coco_dataset/image/val/000000000139.png",
+        record_id="test_item",
+        logical_name="image",
+        uri="http://www.fake_url.com/coco_dataset/image/val/000000000139.png",
         width=640,
         height=426,
         format="png",
     )
-    image.table_name = "image"
     return image
 
 
@@ -60,37 +55,36 @@ async def test_image_zero_shot_detection(
     )
 
     expected_box = BBox(
-        entity_ref=EntityRef(id="test_entity", name="entity"),
-        view_ref=ViewRef(id="image", name="image"),
-        item_ref=ItemRef(id="test_item"),
-        source_ref=SourceRef(id="test_source"),
+        entity_id="test_entity",
+        view_id="image",
+        record_id="test_item",
+        frame_id="image",
+        source_type="model",
+        source_name="test_source",
         coords=[1, 2, 3, 4],
         format="xyxy",
         is_normalized=False,
         confidence=0.5,
-        inference_metadata={"timestamp": "2025-02-19T00:00:00", "processing_time": 1.0, "metadata": "value"},
     )
     expected_classif = Classification(
-        entity_ref=EntityRef(id="test_entity", name="entity"),
-        view_ref=ViewRef(id="image", name="image"),
-        item_ref=ItemRef(id="test_item"),
-        source_ref=SourceRef(id="test_source"),
+        entity_id="test_entity",
+        view_id="image",
+        record_id="test_item",
+        source_type="model",
+        source_name="test_source",
         labels=["a cat"],
         confidences=[0.5],
-        inference_metadata={"timestamp": "2025-02-19T00:00:00", "processing_time": 1.0, "metadata": "value"},
     )
 
     simple_inference_provider.image_zero_shot_detection.return_value = response
 
     entity = Entity(id="test_entity")
-    entity.table_name = "entity"
 
     output = await image_zero_shot_detection(
         provider=simple_inference_provider,
-        media_dir=Path("."),
         image=image_url,
         entity=entity,
-        source=Source(id="test_source", name="test_source", kind="model"),
+        source_name="test_source",
         classes=["a cat", "a dog"],
     )
 

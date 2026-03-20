@@ -12,6 +12,7 @@ import pytest
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, Entity, Image, Record
 
 
 class TestDatasetInfo:
@@ -30,7 +31,27 @@ class TestDatasetInfo:
             workspace=WorkspaceType.IMAGE,
         )
 
-        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "preview", "workspace"}
+        assert set(type(info).model_fields.keys()) == {
+            "id",
+            "name",
+            "description",
+            "size",
+            "preview",
+            "workspace",
+            "storage_mode",
+            "record",
+            "entity",
+            "entity_dynamic_state",
+            "bbox",
+            "mask",
+            "multi_path",
+            "keypoint",
+            "tracklet",
+            "message",
+            "text_span",
+            "views",
+            "tables",
+        }
 
         with pytest.raises(ValueError, match="id must not contain spaces"):
             DatasetInfo(
@@ -50,6 +71,10 @@ class TestDatasetInfo:
             size="8GB",
             preview="/preview",
             workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image},
         )
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
         info.to_json(temp_file)
@@ -61,7 +86,33 @@ class TestDatasetInfo:
     "description": "PASCAL VOC 2007",
     "size": "8GB",
     "preview": "/preview",
-    "workspace": "image"
+    "workspace": "image",
+    "storage_mode": "filesystem",
+    "record": {
+        "base": "Record",
+        "fields": {}
+    },
+    "entity": {
+        "base": "Entity",
+        "fields": {}
+    },
+    "entity_dynamic_state": null,
+    "bbox": {
+        "base": "BBox",
+        "fields": {}
+    },
+    "mask": null,
+    "keypoint": null,
+    "tracklet": null,
+    "message": null,
+    "multi_path": null,
+    "text_span": null,
+    "views": {
+        "image": {
+            "base": "Image",
+            "fields": {}
+        }
+    }
 }"""
         )
 
@@ -74,7 +125,31 @@ class TestDatasetInfo:
     "description": "PASCAL VOC 2007",
     "size": "8GB",
     "preview": "/preview",
-    "workspace": "image"
+    "workspace": "image",
+    "record": {
+        "base": "Record",
+        "fields": {}
+    },
+    "entity": {
+        "base": "Entity",
+        "fields": {}
+    },
+    "entity_dynamic_state": null,
+    "bbox": {
+        "base": "BBox",
+        "fields": {}
+    },
+    "mask": null,
+    "keypoint": null,
+    "tracklet": null,
+    "message": null,
+    "text_span": null,
+    "views": {
+        "image": {
+            "base": "Image",
+            "fields": {}
+        }
+    }
 }"""
         )
         info = DatasetInfo.from_json(temp_file)
@@ -85,6 +160,10 @@ class TestDatasetInfo:
             size="8GB",
             preview="/preview",
             workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image},
         )
 
     def test_load_directory(self):
@@ -99,6 +178,10 @@ class TestDatasetInfo:
                 size="8GB",
                 preview="/preview",
                 workspace=WorkspaceType.IMAGE,
+                record=Record,
+                entity=Entity,
+                bbox=BBox,
+                views={"image": Image},
             )
             info.to_json(info_dir / "info.json")
 
@@ -113,6 +196,10 @@ class TestDatasetInfo:
                 size="8GB",
                 preview=info.preview,  # TODO: remove hard coded value
                 workspace=WorkspaceType.IMAGE,
+                record=Record,
+                entity=Entity,
+                bbox=BBox,
+                views={"image": Image},
             )
 
         # With return_path
@@ -126,6 +213,10 @@ class TestDatasetInfo:
                 size="8GB",
                 preview=info.preview,  # TODO: remove hard coded value
                 workspace=WorkspaceType.IMAGE,
+                record=Record,
+                entity=Entity,
+                bbox=BBox,
+                views={"image": Image},
             )
             assert path == temp_dir / f"info_{i}"
 
@@ -144,6 +235,10 @@ class TestDatasetInfo:
             size="8GB",
             preview="/preview",
             workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image},
         )
         info.to_json(info_dir / "info.json")
 
@@ -156,6 +251,10 @@ class TestDatasetInfo:
             size="8GB",
             preview=loaded_info.preview,  # TODO: remove hard coded value
             workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image},
         )
 
         # With return_path
@@ -167,8 +266,16 @@ class TestDatasetInfo:
             size="8GB",
             preview=loaded_info.preview,  # TODO: remove hard coded value
             workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image},
         )
         assert path == temp_dir / "info"
 
         with pytest.raises(FileNotFoundError):
             DatasetInfo.load_id("unknown", temp_dir)
+
+    def test_rejects_tables_mapping(self):
+        with pytest.raises(ValueError, match="no longer accepts a 'tables' mapping"):
+            DatasetInfo(tables={"records": Record})

@@ -5,85 +5,105 @@
 # =====================================
 
 
+import shutil
 import tempfile
 from pathlib import Path
 
-import lancedb
 import pytest
 import shortuuid
 
 from pixano.datasets.dataset import Dataset, DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
+from pixano.features import BBox, Entity, Image, Message, Record
+from pixano.schemas.annotations.compressed_rle import CompressedRLE
+from pixano.schemas.annotations.keypoints import KeyPoints
+from pixano.schemas.annotations.tracklet import Tracklet
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
 from tests.fixtures.datasets.builders.builder import (
     DatasetBuilderImageBboxesKeypoint,
     DatasetBuilderMultiViewTrackingAndImage,
     DatasetBuilderVQA,
 )
+from tests.fixtures.datasets.dataset_info import RecordWithCategories, RecordWithMetadata
 
 
 LIBRARY_DIR = ASSETS_DIRECTORY / "library"
 
 
 @pytest.fixture(scope="session")
-def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset:
-    info_dataset_image_bboxes_keypoint = DatasetInfo(
+def dataset_image_bboxes_keypoint() -> Dataset:
+    info = DatasetInfo(
         id="dataset_image_bboxes_keypoint",
         name="dataset_image_bboxes_keypoint",
         description="Description dataset_image_bboxes_keypoint.",
         workspace=WorkspaceType.IMAGE,
+        record=RecordWithMetadata,
+        entity=Entity,
+        bbox=BBox,
+        views={"image": Image},
     )
-    dataset_builder_image_bboxes_keypoint = DatasetBuilderImageBboxesKeypoint(
-        info=info_dataset_image_bboxes_keypoint,
+    builder = DatasetBuilderImageBboxesKeypoint(
+        info=info,
         target_dir=LIBRARY_DIR / "dataset_image_bboxes_keypoint",
-        dataset_item=dataset_item_image_bboxes_keypoint,
     )
-    dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
-        dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
-    )
-    return dataset_builder_image_bboxes_keypoint.build(mode="overwrite", check_integrity="none")
+    return builder.build(mode="overwrite", check_integrity="none")
 
 
 @pytest.fixture(scope="session")
-def dataset_vqa(dataset_item_vqa) -> Dataset:
-    info_dataset_vqa = DatasetInfo(
+def dataset_vqa() -> Dataset:
+    info = DatasetInfo(
         id="dataset_vqa",
         name="dataset_vqa",
         description="Description dataset_vqa.",
         workspace=WorkspaceType.IMAGE_VQA,
+        record=Record,
+        message=Message,
+        views={"image": Image},
     )
-    dataset_builder_vqa = DatasetBuilderVQA(
-        info=info_dataset_vqa,
+    builder = DatasetBuilderVQA(
+        info=info,
         target_dir=LIBRARY_DIR / "dataset_vqa",
-        dataset_item=dataset_item_vqa,
     )
-    dataset_builder_vqa.db = lancedb.connect(dataset_builder_vqa.target_dir / Dataset._DB_PATH)
-    return dataset_builder_vqa.build(mode="overwrite", check_integrity="none")
+    return builder.build(mode="overwrite", check_integrity="none")
 
 
 @pytest.fixture(scope="session")
-def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_image) -> Dataset:
+def dataset_multi_view_tracking_and_image(
+    sequence_frame_category,
+    entity_category,
+    bbox_difficult,
+    view_embedding_8,
+) -> Dataset:
     info = DatasetInfo(
         id="dataset_multi_view_tracking_and_image",
         name="dataset_multi_view_tracking_and_image",
         description="Description dataset_multi_view_tracking_and_image.",
         workspace=WorkspaceType.VIDEO,
+        record=RecordWithCategories,
+        entity=entity_category,
+        bbox=bbox_difficult,
+        mask=CompressedRLE,
+        keypoint=KeyPoints,
+        tracklet=Tracklet,
+        views={
+            "video": sequence_frame_category,
+            "image": Image,
+        },
     )
-
-    dataset_builder_multi_view_tracking_and_image = DatasetBuilderMultiViewTrackingAndImage(
+    builder = DatasetBuilderMultiViewTrackingAndImage(
         info=info,
         target_dir=LIBRARY_DIR / "dataset_multi_view_tracking_and_image",
-        dataset_item=dataset_item_multi_view_tracking_and_image,
     )
-    return dataset_builder_multi_view_tracking_and_image.build(mode="overwrite", check_integrity="none")
+    return builder.build(mode="overwrite", check_integrity="none")
 
 
 def copy_dataset(dataset_id: str) -> Dataset:
-    id = shortuuid.uuid()
-    dataset = Dataset.find(dataset_id, LIBRARY_DIR)
-    temp_folder = Path(tempfile.mkdtemp())
-    dataset._copy_dataset(temp_folder)
-    dataset.info.id = id
+    new_id = shortuuid.uuid()
+    source = Dataset.find(dataset_id, LIBRARY_DIR)
+    temp_folder = Path(tempfile.mkdtemp()) / dataset_id
+    shutil.copytree(source.path, temp_folder)
+    dataset = Dataset(temp_folder)
+    dataset.info.id = new_id
     dataset.info.to_json(dataset._info_file)
     return dataset
 

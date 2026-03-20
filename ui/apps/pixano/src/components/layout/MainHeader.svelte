@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import { pixanoLogo } from "$lib/assets";
 </script>
 
 <header

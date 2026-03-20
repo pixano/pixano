@@ -14,6 +14,8 @@ from pixano.datasets.builders.folders.image import ImageFolderBuilder
 from pixano.datasets.builders.folders.video import VideoFolderBuilder
 from pixano.datasets.builders.folders.vqa import VQAFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
+from pixano.features import BBox, Entity, Image, Record, SequenceFrame
+from pixano.schemas.annotations.keypoints import KeyPoints
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
 
@@ -28,28 +30,29 @@ def _metadata_content(mode: str, num_items: int):
                 }
             )
             if item % 2:
-                metadata[-1]["entities"] = {
-                    "bbox": [
-                        [
-                            0 + item / num_items,
-                            0 + item / num_items,
-                            (100 + item) / (100 + num_items),
-                            (100 + item) / (100 + num_items),
-                        ]
-                    ]
-                    * item,
-                    "category": [("person" if item % 4 == 0 else "cat") if item % 2 else None] * item,
-                }
+                bbox_coords = [
+                    0 + item / num_items,
+                    0 + item / num_items,
+                    (100 + item) / (100 + num_items),
+                    (100 + item) / (100 + num_items),
+                ]
+                category = ("person" if item % 4 == 0 else "cat") if item % 2 else "none"
+                metadata[-1]["entities"] = [
+                    {
+                        "category": category,
+                        "annotations": {"view": {"bbox": bbox_coords}},
+                    }
+                    for _ in range(item)
+                ]
     elif mode == "vqa":
         for item in range(num_items):
             metadata.append(
                 {
                     "image": [f"item_{item}{'.jpg' if item % 2 == 0 else '.png'}"],
-                    "conversations": [
+                    "messages": [
                         {
                             "question": {
                                 "content": "What is the greatest number ? <image 1>",
-                                "question_type": "multi_choice",
                                 "choices": ["0", "15", "3.14", "58"],
                             },
                             "responses": [] if item % 2 == 0 else [{"content": "58"}],
@@ -138,53 +141,80 @@ def edge_case_folder():
     return source_dir
 
 
+def _image_bboxes_keypoints_info(entity_category):
+    """Build DatasetInfo for image + bboxes + keypoints tests."""
+
+    class RecordWithMetadata(Record):
+        metadata: str = ""
+
+    return DatasetInfo(
+        name="test",
+        description="test",
+        record=RecordWithMetadata,
+        entity=entity_category,
+        bbox=BBox,
+        keypoint=KeyPoints,
+        views={"view": Image},
+    )
+
+
+def _video_bboxes_keypoints_info(entity_category):
+    """Build DatasetInfo for video + bboxes + keypoints tests."""
+
+    class RecordWithMetadata(Record):
+        metadata: str = ""
+
+    return DatasetInfo(
+        name="test",
+        description="test",
+        record=RecordWithMetadata,
+        entity=entity_category,
+        bbox=BBox,
+        keypoint=KeyPoints,
+        views={"view": SequenceFrame},
+    )
+
+
 @pytest.fixture
-def image_folder_builder(image_folder, dataset_item_image_bboxes_keypoints):
+def image_folder_builder(image_folder, entity_category):
     return ImageFolderBuilder(
-        media_dir=image_folder.parent,
+        source_dir=image_folder,
         library_dir=tempfile.mkdtemp(),
-        info=DatasetInfo(name="test", description="test"),
-        dataset_item=dataset_item_image_bboxes_keypoints,
-        dataset_path=image_folder.name,
+        info=_image_bboxes_keypoints_info(entity_category),
     )
 
 
 @pytest.fixture
 def vqa_folder_builder_no_jsonl(folder_no_jsonl):
     return VQAFolderBuilder(
-        media_dir=folder_no_jsonl.parent,
+        source_dir=folder_no_jsonl,
         library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
-        dataset_path=folder_no_jsonl.name,
     )
 
 
 @pytest.fixture
 def vqa_folder_builder(vqa_folder):
     return VQAFolderBuilder(
-        media_dir=vqa_folder.parent,
+        source_dir=vqa_folder,
         library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
-        dataset_path=vqa_folder.name,
     )
 
 
 @pytest.fixture
 def edge_case_folder_builder(edge_case_folder):
     return ImageFolderBuilder(
-        media_dir=edge_case_folder.parent,
+        source_dir=edge_case_folder,
         library_dir=tempfile.mkdtemp(),
         info=DatasetInfo(name="test", description="test"),
-        dataset_path=edge_case_folder.name,
     )
 
 
 @pytest.fixture
-def video_folder_builder(video_folder, dataset_item_video_bboxes_keypoint):
+def video_folder_builder(video_folder, entity_category):
     return VideoFolderBuilder(
-        media_dir=video_folder.parent,
+        source_dir=video_folder,
         library_dir=tempfile.mkdtemp(),
-        info=DatasetInfo(name="test", description="test"),
-        dataset_item=dataset_item_video_bboxes_keypoint,
-        dataset_path=video_folder.name,
+        info=_video_bboxes_keypoints_info(entity_category),
     )

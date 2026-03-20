@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import re
 import tempfile
 
 import cv2
@@ -12,7 +13,6 @@ import PIL.Image
 import pytest
 from PIL.Image import Image as PILImage
 
-from pixano.features.schemas.views.image import Image
 from pixano.features.utils.image import (
     base64_to_image,
     binary_to_url,
@@ -103,7 +103,7 @@ def test_urle_to_rle():
 
 
 def test_image_to_base64():
-    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    image = PIL.Image.open(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
     base64_image = image_to_base64(image)
     assert isinstance(base64_image, str)
     assert base64_image.startswith("data:image/jpeg;base64,")
@@ -115,7 +115,7 @@ def test_image_to_base64():
 
 
 def test_base64_to_image():
-    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    image = PIL.Image.open(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
     base64_image = image_to_base64(image)
     converted_image = base64_to_image(base64_image)
     assert isinstance(converted_image, PILImage)
@@ -134,14 +134,14 @@ def test_base64_to_image():
 
 
 def test_get_image_thumbnail():
-    image = Image.open_url("sample_data/image_jpg.jpg", ASSETS_DIRECTORY, "image")
+    image = PIL.Image.open(ASSETS_DIRECTORY / "sample_data/image_jpg.jpg")
     image_thumbnail = get_image_thumbnail(image, (100, 100))
     assert isinstance(image_thumbnail, PILImage)
     assert image_thumbnail.size == (92, 100)
 
     for size in [(0, 0), (100, 0), (0, 100), "yolo", (0.1, 2)]:
         match_regex = "Invalid thumbnail size: " + str(size)
-        with pytest.raises(ValueError, match=r"".format(match_regex)):  # noqa: F523
+        with pytest.raises(ValueError, match=re.escape(match_regex)):
             get_image_thumbnail(image, size)
 
 

@@ -36,12 +36,13 @@ Usage:
 
 Then import into Pixano:
     pixano data import ./my_data ./flir_sample \\
-        --name "FLIR ADAS Sample" --schema examples/flir/schema.py:FLIRDatasetItem
+        --info examples/flir/info.py:dataset_info
 """
 
 import argparse
 import json
 import random
+import re
 import shutil
 from pathlib import Path
 
@@ -145,15 +146,23 @@ def export_video_test(
                 categories.append(category_map.get(ann.get("category_id", 0), "unknown"))
 
         entry: dict = {
-            "rgb_image": f"rgb/{out_name}",
-            "thermal_image": f"thermal/{out_name}",
+            "views": {
+                "rgb": f"rgb/{out_name}",
+                "thermal": f"thermal/{out_name}",
+            }
         }
         if bboxes:
-            entry["objects"] = {
-                "view_ref": "thermal_image",
-                "bboxes": bboxes,
-                "category": categories,
-            }
+            entry["entities"] = [
+                {
+                    "category": category,
+                    "annotations": {
+                        "thermal": {
+                            "bbox": bbox,
+                        }
+                    },
+                }
+                for bbox, category in zip(bboxes, categories)
+            ]
 
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))
         exported += 1
@@ -162,6 +171,137 @@ def export_video_test(
     metadata_path.write_text("\n".join(metadata_lines) + "\n", encoding="utf-8")
 
     print(f"  Exported {exported} frame pairs to {split_dir}")
+    return exported
+
+
+def _parse_video_frame(filename: str) -> tuple[str, int] | None:
+    """Extract (video_id, frame_number) from a FLIR thermal filename.
+
+    Expected format: ``video-XXXXX-frame-NNNNN-HASH.jpg``
+    """
+    m = re.match(r"video-(\w+)-frame-(\d+)-", filename)
+    if m is None:
+        return None
+    return m.group(1), int(m.group(2))
+
+
+def export_video_test_video_mode(
+    output_dir: Path,
+    flir_root: Path,
+    num_samples: int,
+    seed: int,
+) -> int:
+    """Export sampled videos (as image sequences) to a Pixano-compatible folder.
+
+    Groups frame pairs by video, copies them into per-video directories,
+    and writes per-frame bbox JSON annotations with track IDs.
+
+    Args:
+        output_dir: Root output directory.
+        flir_root: Path to the FLIR ADAS v2 root directory.
+        num_samples: Maximum number of videos to export.
+        seed: Random seed for reproducible sampling.
+
+    Returns:
+        Number of videos actually exported.
+    """
+    pair_map: dict[str, str] = _load_json(flir_root / "rgb_to_thermal_vid_map.json")
+
+    thermal_coco = _load_json(flir_root / "video_thermal_test" / "coco.json")
+    category_map = _build_category_map(thermal_coco)
+    thermal_by_fname = _build_filename_to_image(thermal_coco)
+    thermal_annots = _build_annotations_by_image(thermal_coco)
+
+    # Group frame pairs by thermal video_id
+    videos: dict[str, list[tuple[int, str, str]]] = {}
+    for rgb_fname, thermal_fname in pair_map.items():
+        parsed = _parse_video_frame(thermal_fname)
+        if parsed is None:
+            continue
+        video_id, frame_num = parsed
+        videos.setdefault(video_id, []).append((frame_num, rgb_fname, thermal_fname))
+
+    # Sample videos
+    rng = random.Random(seed)
+    video_ids = sorted(videos.keys())
+    num_samples = min(num_samples, len(video_ids))
+    sampled_ids = sorted(rng.sample(video_ids, num_samples))
+
+    split_dir = output_dir / "test"
+    split_dir.mkdir(parents=True, exist_ok=True)
+    metadata_lines: list[str] = []
+    exported = 0
+
+    for vid_idx, video_id in enumerate(sampled_ids):
+        video_name = f"video_{vid_idx:03d}"
+        frames = sorted(videos[video_id])  # sort by frame_num
+
+        rgb_dir = split_dir / "rgb" / video_name
+        thermal_dir = split_dir / "thermal" / video_name
+        bbox_dir = split_dir / "bboxes" / video_name
+        rgb_dir.mkdir(parents=True, exist_ok=True)
+        thermal_dir.mkdir(parents=True, exist_ok=True)
+        bbox_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, (_frame_num, rgb_fname, thermal_fname) in enumerate(frames):
+            rgb_src = flir_root / "video_rgb_test" / "data" / rgb_fname
+            thermal_src = flir_root / "video_thermal_test" / "data" / thermal_fname
+
+            if not rgb_src.is_file() or not thermal_src.is_file():
+                continue
+
+            out_name = f"{idx:06d}.jpg"
+            shutil.copy2(rgb_src, rgb_dir / out_name)
+            shutil.copy2(thermal_src, thermal_dir / out_name)
+
+            # Build per-frame bbox annotation
+            thermal_info = thermal_by_fname.get(thermal_fname)
+            if thermal_info is not None:
+                anns = thermal_annots.get(thermal_info["id"], [])
+                if anns:
+                    th_w = thermal_info.get("width", 1)
+                    th_h = thermal_info.get("height", 1)
+                    objects = []
+                    for ann in anns:
+                        x, y, w, h = ann["bbox"]
+                        objects.append(
+                            {
+                                "track_id": ann.get("track_id", ann["id"]),
+                                "bbox": [
+                                    round(x / th_w, 6),
+                                    round(y / th_h, 6),
+                                    round(w / th_w, 6),
+                                    round(h / th_h, 6),
+                                ],
+                                "category": category_map.get(ann.get("category_id", 0), "unknown"),
+                            }
+                        )
+                    bbox_json = {
+                        "view_name": "thermal",
+                        "objects": objects,
+                    }
+                    json_name = f"{idx:06d}.json"
+                    (bbox_dir / json_name).write_text(
+                        json.dumps(bbox_json, ensure_ascii=False) + "\n", encoding="utf-8"
+                    )
+
+        entry = {
+            "views": {
+                "rgb": {"path": f"rgb/{video_name}/*.jpg", "fps": 30},
+                "thermal": {"path": f"thermal/{video_name}/*.jpg", "fps": 30},
+            },
+            "annotation_files": {
+                "bbox": f"bboxes/{video_name}/*.json",
+            },
+        }
+        metadata_lines.append(json.dumps(entry, ensure_ascii=False))
+        exported += 1
+        print(f"  {video_name}: {len(frames)} frames (source video-{video_id})")
+
+    metadata_path = split_dir / "metadata.jsonl"
+    metadata_path.write_text("\n".join(metadata_lines) + "\n", encoding="utf-8")
+
+    print(f"  Exported {exported} videos to {split_dir}")
     return exported
 
 
@@ -181,10 +321,16 @@ def main():
         help="Path to the FLIR ADAS v2 root directory.",
     )
     parser.add_argument(
+        "--mode",
+        choices=["image", "video"],
+        default="image",
+        help="Export mode: 'image' (individual frame pairs) or 'video' (per-video sequences). Default: image.",
+    )
+    parser.add_argument(
         "--num-samples",
         type=int,
         default=50,
-        help="Number of frame pairs to sample (default: 50).",
+        help="Number of frame pairs (image mode) or videos (video mode) to sample (default: 50).",
     )
     parser.add_argument(
         "--seed",
@@ -210,16 +356,20 @@ def main():
         )
 
     output_dir.mkdir(parents=True)
-    print(f"Generating FLIR ADAS v2 sample in {output_dir}")
+    print(f"Generating FLIR ADAS v2 sample ({args.mode} mode) in {output_dir}")
 
-    total = export_video_test(output_dir, flir_root, args.num_samples, args.seed)
+    if args.mode == "video":
+        total = export_video_test_video_mode(output_dir, flir_root, args.num_samples, args.seed)
+        schema_object = "video_dataset_info"
+        unit = "videos"
+    else:
+        total = export_video_test(output_dir, flir_root, args.num_samples, args.seed)
+        schema_object = "dataset_info"
+        unit = "frame pairs"
 
-    print(f"\nDone. {total} frame pairs exported.")
+    print(f"\nDone. {total} {unit} exported.")
     print("\nTo import into Pixano:")
-    print(
-        f'  pixano data import ./my_data {output_dir} --name "FLIR ADAS Sample" '
-        f"--schema examples/flir/schema.py:FLIRDatasetItem"
-    )
+    print(f"  pixano data import ./my_data {output_dir} --info examples/flir/info.py:{schema_object}")
 
 
 if __name__ == "__main__":

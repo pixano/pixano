@@ -7,8 +7,7 @@
 import pytest
 from pydantic import ValidationError
 
-from pixano.features import Tracklet, create_tracklet, is_tracklet
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features import Tracklet, is_tracklet
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -16,9 +15,9 @@ def test_is_tracklet():
     make_tests_is_sublass_strict(is_tracklet, Tracklet)
 
 
-def test_create_tracklet():
+def test_tracklet_init():
     # Test 1: Default references
-    tracklet = create_tracklet(
+    tracklet = Tracklet(
         start_timestamp=1.0,
         end_timestamp=2.0,
         start_timestep=3,
@@ -31,20 +30,18 @@ def test_create_tracklet():
     assert tracklet.start_timestep == 3
     assert tracklet.end_timestep == 4
     assert tracklet.id == ""
-    assert tracklet.item_ref == ItemRef.none()
-    assert tracklet.view_ref == ViewRef.none()
-    assert tracklet.entity_ref == EntityRef.none()
+    assert tracklet.record_id == ""
+    assert tracklet.entity_id == ""
 
     # Test 2: Custom references
-    tracklet = create_tracklet(
+    tracklet = Tracklet(
         start_timestamp=1.0,
         end_timestamp=2.0,
         start_timestep=1,
         end_timestep=2,
         id="id",
-        item_ref=ItemRef(id="item_id"),
-        view_ref=ViewRef(id="view_id", name="view"),
-        entity_ref=EntityRef(id="track_id", name="track"),
+        record_id="record_id",
+        entity_id="track_id",
     )
 
     assert isinstance(tracklet, Tracklet)
@@ -53,38 +50,52 @@ def test_create_tracklet():
     assert tracklet.start_timestep == 1
     assert tracklet.end_timestep == 2
     assert tracklet.id == "id"
-    assert tracklet.item_ref == ItemRef(id="item_id")
-    assert tracklet.view_ref == ViewRef(id="view_id", name="view")
-    assert tracklet.entity_ref == EntityRef(id="track_id", name="track")
+    assert tracklet.record_id == "record_id"
+    assert tracklet.entity_id == "track_id"
 
 
 @pytest.mark.parametrize(
     "start_timestep, end_timestep, start_timestamp, end_timestamp, match",
     [
-        (2, 1, -1.0, -1.0, "start_timestep must be less than or equal to end_timestep."),
-        (-1, -1.0, 2.0, 1.0, "start_timestamp must be less than or equal to end_timestamp."),
+        (2, 1, -1.0, -1.0, "start_frame must be less than or equal to end_frame."),
+        (-1, -1, 2.0, 1.0, "start_timestamp must be less than or equal to end_timestamp."),
+        (-1, 1, -1.0, -1.0, "start_frame must be set if end_frame is set."),
+        (1, -1, -1.0, -1.0, "end_frame must be set if start_frame is set."),
+        (-1, -1, -1.0, 1.0, "start_timestamp must be set if end_timestamp is set."),
+        (-1, -1, 1.0, -1.0, "end_timestamp must be set if start_timestamp is set."),
+        (
+            -1,
+            -1,
+            -2.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
         (
             -1,
             -1,
             -1.0,
-            -1.0,
-            "At least one of start_timestep, end_timestep, start_timestamp, or end_timestamp must be set.",
+            -2.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
         ),
-        (-1, 1, -1.0, -1.0, "start_timestep must be set if end_timestep is set."),
-        (1, -1, -1.0, -1.0, "end_timestep must be set if start_timestep is set."),
-        (-1, -1, -1.0, 1.0, "start_timestamp must be set if end_timestamp is set."),
-        (-1, -1, 1.0, -1.0, "end_timestamp must be set if start_timestamp is set."),
-        (-1, -1, -2.0, -1.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -1, -1.0, -2.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-2, -1, -1.0, -1.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -2, -1.0, -1.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -1, -2.0, -1.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
-        (-1, -1, -1.0, -2.0, "start_timestamp, and end_timestamp must be greater than or equal to -1."),
+        (
+            -2,
+            -1,
+            -1.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
+        (
+            -1,
+            -2,
+            -1.0,
+            -1.0,
+            "start_frame, end_frame, start_timestamp, and end_timestamp must be greater than or equal to -1.",
+        ),
     ],
 )
-def test_invalid_create_tracklet(start_timestamp, end_timestamp, start_timestep, end_timestep, match):
+def test_invalid_tracklet(start_timestep, end_timestep, start_timestamp, end_timestamp, match):
     with pytest.raises(ValidationError, match=match):
-        create_tracklet(
+        Tracklet(
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
             start_timestep=start_timestep,

@@ -4,5 +4,11 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export const prerender = false;
-export const ssr = false;
+import type { LayoutLoad } from "./$types";
+import * as api from "$lib/api";
+import { checkInferenceStatus } from "$lib/services/inferenceService";
+
+export const load: LayoutLoad = async () => {
+  const [datasets] = await Promise.all([api.listDatasets(), checkInferenceStatus()]);
+  return { datasets };
+};

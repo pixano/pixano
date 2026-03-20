@@ -7,16 +7,12 @@
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features.schemas.annotations.bbox import BBox
-from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
-from pixano.features.schemas.annotations.keypoints import KeyPoints
-from pixano.features.schemas.annotations.text_generation import Message
-from pixano.features.schemas.annotations.tracklet import Tracklet
-from pixano.features.schemas.entities.conversation import Conversation
-from pixano.features.schemas.entities.entity import Entity
-from pixano.features.schemas.entities.track import Track
-from pixano.features.schemas.views.image import Image
-from pixano.features.schemas.views.video import Video
+from pixano.features import Entity, Image, SequenceFrame
+from pixano.schemas.annotations.bbox import BBox
+from pixano.schemas.annotations.compressed_rle import CompressedRLE
+from pixano.schemas.annotations.keypoints import KeyPoints
+from pixano.schemas.annotations.message import Message
+from pixano.schemas.annotations.tracklet import Tracklet
 
 
 @pytest.fixture(scope="session")
@@ -35,7 +31,6 @@ def dataset_item_image_bboxes_keypoint():
 def dataset_item_vqa():
     class Schema(DatasetItem):
         image: Image
-        conversations: list[Conversation]
         messages: list[Message]
 
     return Schema
@@ -56,7 +51,7 @@ def dataset_item_image_bboxes_keypoints(entity_category):
 @pytest.fixture(scope="session")
 def dataset_item_video_bboxes_keypoint(entity_category):
     class Schema(DatasetItem):
-        view: Video
+        view: list[SequenceFrame]
         metadata: str
         entities: list[entity_category]
         bbox: list[BBox]
@@ -102,7 +97,6 @@ def dataset_item_multi_view_tracking_and_image(
         image: Image
         entity_image: entity_category
         entities_video: list[Entity]
-        tracks: list[Track]
         bbox_image: bbox_difficult
         mask_image: CompressedRLE
         keypoints_image: list[KeyPoints]

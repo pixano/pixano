@@ -9,7 +9,6 @@ import pytest
 from pydantic_core._pydantic_core import ValidationError
 
 from pixano.features import Relation, TextSpan, create_relation, create_text_span, is_relation, is_text_span
-from pixano.features.types.schema_reference import AnnotationRef, EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -48,9 +47,9 @@ class TestTextSpan:
         with pytest.warns(UserWarning, match="To ground a TextSpan in a text, spans offsets should not be empty"):
             none_ne = TextSpan.none()
         assert none_ne.id == ""
-        assert none_ne.item_ref == ItemRef.none()
-        assert none_ne.view_ref == ViewRef.none()
-        assert none_ne.entity_ref == EntityRef.none()
+        assert none_ne.record_id == ""
+        assert none_ne.view_id == ""
+        assert none_ne.entity_id == ""
         assert none_ne.mention == ""
         assert list(none_ne.spans) == []
 
@@ -60,36 +59,32 @@ class TestRelation:
         with pytest.raises(ValidationError):
             Relation()
         with pytest.raises(ValidationError):
-            Relation(subject_ref=AnnotationRef(id="456", name="named_entities"))
+            Relation(subject_id="456")
         with pytest.raises(ValidationError):
-            Relation(object_ref=AnnotationRef(id="789", name="named_entities"))
+            Relation(object_id="789")
 
     def test_references(self):
         ne1 = TextSpan(spans_start=[123], spans_end=[126], mention="abc", id="ne1")
         ne2 = TextSpan(spans_start=[128], spans_end=[131], mention="def", id="ne2")
         rel = Relation(
             predicate="ad-hoc",
-            subject_ref=AnnotationRef(id=ne1.id, name="named_entities"),
-            object_ref=AnnotationRef(id=ne2.id, name="named_entities"),
+            subject_id=ne1.id,
+            object_id=ne2.id,
         )
         assert rel.predicate == "ad-hoc"
-        assert isinstance(rel.subject_ref, AnnotationRef)
-        assert isinstance(rel.object_ref, AnnotationRef)
-        assert rel.subject_ref.id == "ne1"
-        assert rel.object_ref.id == "ne2"
-        assert rel.subject_ref.name == "named_entities"
-        assert rel.object_ref.name == "named_entities"
+        assert rel.subject_id == "ne1"
+        assert rel.object_id == "ne2"
 
     def test_none(self):
         none_rel = Relation.none()
 
         assert none_rel.id == ""
         assert none_rel.predicate == ""
-        assert none_rel.item_ref == ItemRef.none()
-        assert none_rel.view_ref == ViewRef.none()
-        assert none_rel.entity_ref == EntityRef.none()
-        assert none_rel.subject_ref == AnnotationRef.none()
-        assert none_rel.object_ref == AnnotationRef.none()
+        assert none_rel.record_id == ""
+        assert none_rel.view_id == ""
+        assert none_rel.entity_id == ""
+        assert none_rel.subject_id == ""
+        assert none_rel.object_id == ""
 
 
 def test_is_named_entity():
@@ -107,9 +102,9 @@ def test_create_text_span():
     assert ne.mention == "abc"
     assert list(ne.spans) == [(123, 126)]
     assert ne.id == ""
-    assert ne.item_ref == ItemRef.none()
-    assert ne.view_ref == ViewRef.none()
-    assert ne.entity_ref == EntityRef.none()
+    assert ne.record_id == ""
+    assert ne.view_id == ""
+    assert ne.entity_id == ""
 
     # Test 2: with references
     ne = create_text_span(
@@ -117,51 +112,51 @@ def test_create_text_span():
         spans_end=[126],
         mention="abc",
         id="ne_1",
-        item_ref=ItemRef(id="item_1"),
-        view_ref=ViewRef(id="view_1", name="text"),
-        entity_ref=EntityRef(id="entity_1", name="entity"),
+        record_id="item_1",
+        view_id="text",
+        entity_id="entity_1",
     )
     assert isinstance(ne, TextSpan)
     assert ne.mention == "abc"
     assert list(ne.spans) == [(123, 126)]
     assert ne.id == "ne_1"
-    assert ne.item_ref == ItemRef(id="item_1")
-    assert ne.view_ref == ViewRef(id="view_1", name="text")
-    assert ne.entity_ref == EntityRef(id="entity_1", name="entity")
+    assert ne.record_id == "item_1"
+    assert ne.view_id == "text"
+    assert ne.entity_id == "entity_1"
 
 
 def test_create_relation():
     # Test 1: default references
     rel = create_relation(
         predicate="ad-hoc",
-        subject_ref=AnnotationRef(id="ne1", name="named_entities"),
-        object_ref=AnnotationRef(id="ne2", name="named_entities"),
+        subject_id="ne1",
+        object_id="ne2",
     )
     assert isinstance(rel, Relation)
     assert rel.predicate == "ad-hoc"
-    assert rel.subject_ref == AnnotationRef(id="ne1", name="named_entities")
-    assert rel.object_ref == AnnotationRef(id="ne2", name="named_entities")
+    assert rel.subject_id == "ne1"
+    assert rel.object_id == "ne2"
     assert rel.id == ""
-    assert rel.item_ref == ItemRef.none()
-    assert rel.view_ref == ViewRef.none()
-    assert rel.entity_ref == EntityRef.none()
+    assert rel.record_id == ""
+    assert rel.view_id == ""
+    assert rel.entity_id == ""
 
     # Test 2: with references
     rel = create_relation(
         predicate="ad-hoc",
-        subject_ref=AnnotationRef(id="ne1", name="named_entities"),
-        object_ref=AnnotationRef(id="ne2", name="named_entities"),
+        subject_id="ne1",
+        object_id="ne2",
         id="rel_1",
-        item_ref=ItemRef(id="item_1"),
-        view_ref=ViewRef(id="view_1", name="text"),
-        entity_ref=EntityRef(id="entity_1", name="entity"),
+        record_id="item_1",
+        view_id="text",
+        entity_id="entity_1",
     )
 
     assert isinstance(rel, Relation)
     assert rel.predicate == "ad-hoc"
-    assert rel.subject_ref == AnnotationRef(id="ne1", name="named_entities")
-    assert rel.object_ref == AnnotationRef(id="ne2", name="named_entities")
+    assert rel.subject_id == "ne1"
+    assert rel.object_id == "ne2"
     assert rel.id == "rel_1"
-    assert rel.item_ref == ItemRef(id="item_1")
-    assert rel.view_ref == ViewRef(id="view_1", name="text")
-    assert rel.entity_ref == EntityRef(id="entity_1", name="entity")
+    assert rel.record_id == "item_1"
+    assert rel.view_id == "text"
+    assert rel.entity_id == "entity_1"
