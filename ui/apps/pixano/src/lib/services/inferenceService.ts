@@ -5,9 +5,8 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
-  disconnectProvider,
+  connectToServer,
   getInferenceStatus,
-  isInferenceApiHealthy,
   listAllModels,
   type ModelWithProvider,
 } from "$lib/api/inferenceApi";
@@ -53,25 +52,7 @@ export async function checkInferenceStatus(): Promise<void> {
 }
 
 export async function connectToInferenceServer(url: string): Promise<boolean> {
-  inferenceServerStore.update((s) => ({ ...s, isLoading: true }));
-  try {
-    const connected = await isInferenceApiHealthy(url);
-    if (connected) {
-      // Refresh full state from the server (additive — does not replace existing providers)
-      await checkInferenceStatus();
-      return true;
-    } else {
-      inferenceServerStore.update((s) => ({ ...s, isLoading: false }));
-      return false;
-    }
-  } catch {
-    inferenceServerStore.update((s) => ({ ...s, isLoading: false }));
-    return false;
-  }
-}
-
-export async function disconnectFromProvider(name: string): Promise<boolean> {
-  const success = await disconnectProvider(name);
+  const success = await connectToServer(url);
   if (success) {
     await checkInferenceStatus();
   }

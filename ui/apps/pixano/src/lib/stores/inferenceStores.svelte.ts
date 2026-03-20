@@ -31,7 +31,7 @@ export const inferenceServerStore = reactiveStore<InferenceServerState>({
 export const segmentationModels = {
   get value() {
     return inferenceServerStore.value.models.filter(
-      (m) => m.task === ImageTask.MASK_GENERATION || m.task === VideoTask.MASK_GENERATION,
+      (m) => m.task === ImageTask.SEGMENTATION || m.task === VideoTask.TRACKING,
     );
   },
 };
@@ -39,7 +39,7 @@ export const segmentationModels = {
 export const vqaModels = {
   get value() {
     return inferenceServerStore.value.models.filter(
-      (m) => m.task === MultimodalImageNLPTask.CONDITIONAL_GENERATION,
+      (m) => m.task === MultimodalImageNLPTask.VLM,
     );
   },
 };
@@ -49,14 +49,9 @@ export const selectedVqaModelName = reactiveStore<string | null>(null);
 
 // ─── Pixano Segmentation Inference ──────────────────────────────────────────────
 
-const DEFAULT_SEG_URL = "http://pixano-inference-sami:8000";
-const DEFAULT_TRACK_URL = "http://pixano-inference-samv:8000";
-
 export const pixanoInferenceSegmentationModelsStore = reactiveStore<
   PixanoInferenceSegmentationModel[]
 >([]);
-export const pixanoInferenceSegmentationURL = reactiveStore<string>(DEFAULT_SEG_URL);
-export const pixanoInferenceTrackingURL = reactiveStore<string>(DEFAULT_TRACK_URL);
 export const pixanoInferenceToValidateTrackingMasks = reactiveStore<MaskSegmentationOutput[]>([]);
 export const pixanoInferenceTrackingNbAdditionalFrames = reactiveStore<number>(5);
 export const pixanoInferenceTracking = reactiveStore<PixanoInferenceTrackingCfg>({

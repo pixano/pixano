@@ -4,14 +4,30 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { apiFetch, apiMutate, JSON_HEADERS } from "./apiClient";
+import { apiFetch, apiMutate, buildQueryString, JSON_HEADERS } from "./apiClient";
 import type {
   CondititionalGenerationTextImageInput,
   ConnectedProvider,
   ModelConfig,
   Task,
-  TextImageConditionalGenerationResult,
+  VLMResult,
 } from "$lib/types/inference";
+
+// ─── connectToServer ─────────────────────────────────────────────────────────
+
+export async function connectToServer(url: string): Promise<boolean> {
+  try {
+    const qs = buildQueryString({ url });
+    const response = await fetch(`/inference/connect${qs}`, {
+      headers: JSON_HEADERS,
+      method: "POST",
+    });
+    return response.ok;
+  } catch (e) {
+    console.error("api.connectToServer -", e);
+    return false;
+  }
+}
 
 function buildModelsUrl(basePath: string, task: Task | null): string {
   if (task === null) {
@@ -30,25 +46,11 @@ export function deleteModel(modelName: string): Promise<void> {
   );
 }
 
-// ─── disconnectProvider ─────────────────────────────────────────────────────────
-
-export async function disconnectProvider(providerName: string): Promise<boolean> {
-  try {
-    const response = await fetch(`/inference/disconnect/${encodeURIComponent(providerName)}`, {
-      headers: JSON_HEADERS,
-      method: "POST",
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
 // ─── conditional_generation_text_image ───────────────────────────────────────────
 
 export async function conditional_generation_text_image(
   input: CondititionalGenerationTextImageInput,
-): Promise<TextImageConditionalGenerationResult | null> {
+): Promise<VLMResult | null> {
   try {
     const response = await fetch("/inference/tasks/conditional_generation/text-image", {
       headers: JSON_HEADERS,
@@ -59,7 +61,7 @@ export async function conditional_generation_text_image(
     if (!response.ok) {
       return null;
     }
-    return (await response.json()) as TextImageConditionalGenerationResult;
+    return (await response.json()) as VLMResult;
   } catch (e) {
     console.error("api.conditional_generation_text_image -", e);
     return null;
@@ -115,21 +117,6 @@ export async function instantiateModel(modelConfig: ModelConfig): Promise<boolea
     return true;
   } catch (e) {
     console.error("api.instantiateModel -", e);
-    return false;
-  }
-}
-
-// ─── isInferenceApiHealthy ──────────────────────────────────────────────────────
-
-export async function isInferenceApiHealthy(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(`/inference/connect?url=${encodeURIComponent(url)}`, {
-      headers: JSON_HEADERS,
-      method: "POST",
-      signal: AbortSignal.timeout(4000),
-    });
-    return response.ok;
-  } catch {
     return false;
   }
 }

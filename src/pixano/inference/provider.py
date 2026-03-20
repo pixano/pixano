@@ -15,19 +15,19 @@ from abc import ABC, abstractmethod
 
 from .exceptions import TaskNotSupportedError
 from .types import (
-    ImageMaskGenerationInput,
-    ImageMaskGenerationResult,
-    ImageZeroShotDetectionInput,
-    ImageZeroShotDetectionResult,
+    DetectionInput,
+    DetectionResult,
     InferenceTask,
     ModelConfig,
     ModelInfo,
     ProviderCapabilities,
+    SegmentationInput,
+    SegmentationResult,
     ServerInfo,
-    TextImageConditionalGenerationInput,
-    TextImageConditionalGenerationResult,
-    VideoMaskGenerationInput,
-    VideoMaskGenerationResult,
+    TrackingInput,
+    TrackingResult,
+    VLMInput,
+    VLMResult,
 )
 
 
@@ -49,7 +49,7 @@ class InferenceProvider(ABC):
         models = await provider.list_models()
 
         # Generate masks
-        result = await provider.generate_masks(input_data)
+        result = await provider.segmentation(input_data)
         ```
     """
 
@@ -113,50 +113,50 @@ class InferenceProvider(ABC):
         """
         ...
 
-    # --- Mask Generation ---
+    # --- Segmentation ---
 
     @abstractmethod
-    async def image_mask_generation(
+    async def segmentation(
         self,
-        input_data: ImageMaskGenerationInput,
+        input_data: SegmentationInput,
         timeout: float = 60.0,
-    ) -> ImageMaskGenerationResult:
+    ) -> SegmentationResult:
         """Generate masks for an image.
 
         Args:
-            input_data: Input data for mask generation.
+            input_data: Input data for segmentation.
             timeout: Maximum time to wait for result.
 
         Returns:
-            Mask generation result.
+            Segmentation result.
         """
         ...
 
     @abstractmethod
-    async def video_mask_generation(
+    async def tracking(
         self,
-        input_data: VideoMaskGenerationInput,
+        input_data: TrackingInput,
         timeout: float = 120.0,
-    ) -> VideoMaskGenerationResult:
+    ) -> TrackingResult:
         """Generate masks for video frames.
 
         Args:
-            input_data: Input data for video mask generation.
+            input_data: Input data for tracking.
             timeout: Maximum time to wait for result.
 
         Returns:
-            Video mask generation result.
+            Tracking result.
         """
         ...
 
-    # --- Object Detection ---
+    # --- Detection ---
 
     @abstractmethod
-    async def image_zero_shot_detection(
+    async def detection(
         self,
-        input_data: ImageZeroShotDetectionInput,
+        input_data: DetectionInput,
         timeout: float = 60.0,
-    ) -> ImageZeroShotDetectionResult:
+    ) -> DetectionResult:
         """Detect objects in an image using zero-shot detection.
 
         Args:
@@ -168,21 +168,21 @@ class InferenceProvider(ABC):
         """
         ...
 
-    # --- Text Generation ---
+    # --- VLM ---
 
     @abstractmethod
-    async def text_image_conditional_generation(
+    async def vlm(
         self,
-        input_data: TextImageConditionalGenerationInput,
+        input_data: VLMInput,
         timeout: float = 60.0,
-    ) -> TextImageConditionalGenerationResult:
+    ) -> VLMResult:
         """Generate text conditioned on images.
 
         Args:
-            input_data: Input data for text generation.
+            input_data: Input data for VLM inference.
             timeout: Maximum time to wait for result.
 
         Returns:
-            Text generation result.
+            VLM result.
         """
         ...

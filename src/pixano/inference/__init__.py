@@ -34,39 +34,37 @@ from .exceptions import (
     ProviderNotFoundError,
     TaskNotSupportedError,
 )
-
-# Legacy functions for backward compatibility during migration
-from .mask_generation import image_mask_generation, video_mask_generation
+from .detection import detection
 from .provider import InferenceProvider
 
 # Concrete providers (importing these registers them)
 from .providers import PixanoInferenceProvider
 from .registry import get_provider, is_provider_registered, list_providers, register_provider
+from .segmentation import segmentation, tracking
 
 # Type definitions
 from .types import (
     CompressedRLEData,
-    ImageMaskGenerationInput,
-    ImageMaskGenerationOutput,
-    ImageMaskGenerationResult,
-    ImageZeroShotDetectionInput,
-    ImageZeroShotDetectionOutput,
-    ImageZeroShotDetectionResult,
+    DetectionInput,
+    DetectionOutput,
+    DetectionResult,
     InferenceTask,
     ModelConfig,
     ModelInfo,
     NDArrayData,
     ProviderCapabilities,
+    SegmentationInput,
+    SegmentationOutput,
+    SegmentationResult,
     ServerInfo,
-    TextImageConditionalGenerationInput,
-    TextImageConditionalGenerationOutput,
-    TextImageConditionalGenerationResult,
+    TrackingInput,
+    TrackingOutput,
+    TrackingResult,
     UsageInfo,
-    VideoMaskGenerationInput,
-    VideoMaskGenerationOutput,
-    VideoMaskGenerationResult,
+    VLMInput,
+    VLMOutput,
+    VLMResult,
 )
-from .zero_shot_detection import image_zero_shot_detection
 
 
 __all__ = [
@@ -92,23 +90,23 @@ __all__ = [
     "ServerInfo",
     "CompressedRLEData",
     "NDArrayData",
-    "ImageMaskGenerationInput",
-    "ImageMaskGenerationOutput",
-    "ImageMaskGenerationResult",
-    "VideoMaskGenerationInput",
-    "VideoMaskGenerationOutput",
-    "VideoMaskGenerationResult",
-    "ImageZeroShotDetectionInput",
-    "ImageZeroShotDetectionOutput",
-    "ImageZeroShotDetectionResult",
-    "TextImageConditionalGenerationInput",
-    "TextImageConditionalGenerationOutput",
-    "TextImageConditionalGenerationResult",
+    "SegmentationInput",
+    "SegmentationOutput",
+    "SegmentationResult",
+    "TrackingInput",
+    "TrackingOutput",
+    "TrackingResult",
+    "DetectionInput",
+    "DetectionOutput",
+    "DetectionResult",
+    "VLMInput",
+    "VLMOutput",
+    "VLMResult",
     "UsageInfo",
     # Concrete providers
     "PixanoInferenceProvider",
-    # Legacy functions (for backward compatibility)
-    "image_mask_generation",
-    "video_mask_generation",
-    "image_zero_shot_detection",
+    # Task functions
+    "segmentation",
+    "tracking",
+    "detection",
 ]

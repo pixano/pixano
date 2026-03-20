@@ -28,10 +28,10 @@ class ServerInfo:
         num_cpus: Number of CPUs available (None if unknown).
         num_gpus: Number of GPUs available.
         num_nodes: Number of nodes in the cluster.
-        gpus_used: List of GPU indices currently in use.
+        gpus_used: GPU usage (float value).
         gpu_to_model: Mapping of GPU index to model name.
         models: List of loaded model names.
-        models_to_task: Mapping of model names to their tasks.
+        models_to_capability: Mapping of model names to their capabilities.
     """
 
     app_name: str
@@ -40,19 +40,19 @@ class ServerInfo:
     num_cpus: int | None
     num_gpus: int
     num_nodes: int
-    gpus_used: list[int]
+    gpus_used: float
     gpu_to_model: dict[str, str]
     models: list[str]
-    models_to_task: dict[str, str]
+    models_to_capability: dict[str, str]
 
 
 class InferenceTask(str, Enum):
     """Tasks supported by Pixano inference providers."""
 
-    MASK_GENERATION = "image_mask_generation"
-    VIDEO_MASK_GENERATION = "video_mask_generation"
-    OBJECT_DETECTION = "image_zero_shot_detection"
-    TEXT_GENERATION = "text_image_conditional_generation"
+    SEGMENTATION = "segmentation"
+    TRACKING = "tracking"
+    DETECTION = "detection"
+    VLM = "vlm"
 
 
 @dataclass
@@ -90,17 +90,15 @@ class ModelInfo:
 
     Attributes:
         name: Name of the model.
-        task: Task the model can perform.
+        capability: Capability the model can perform.
         model_path: Path to the model weights (optional).
         model_class: Class name of the model (optional).
-        provider: Provider backend for the model (optional).
     """
 
     name: str
-    task: str
+    capability: str
     model_path: str | None = None
     model_class: str | None = None
-    provider: str | None = None
 
 
 @dataclass
@@ -120,7 +118,7 @@ class ProviderCapabilities:
     max_image_size: int | None = None
 
 
-# --- Mask Generation Types ---
+# --- Segmentation Types ---
 
 
 @dataclass
@@ -174,8 +172,8 @@ class NDArrayData:
 
 
 @dataclass
-class ImageMaskGenerationInput:
-    """Input for image mask generation.
+class SegmentationInput:
+    """Input for image segmentation.
 
     Attributes:
         image: Image as base64 string or URL.
@@ -205,8 +203,8 @@ class ImageMaskGenerationInput:
 
 
 @dataclass
-class ImageMaskGenerationOutput:
-    """Output for image mask generation.
+class SegmentationOutput:
+    """Output for image segmentation.
 
     Attributes:
         masks: Generated masks [num_prompts, num_masks].
@@ -222,8 +220,8 @@ class ImageMaskGenerationOutput:
 
 
 @dataclass
-class ImageMaskGenerationResult:
-    """Complete result of image mask generation.
+class SegmentationResult:
+    """Complete result of image segmentation.
 
     Attributes:
         data: The output data.
@@ -234,7 +232,7 @@ class ImageMaskGenerationResult:
         status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
-    data: ImageMaskGenerationOutput
+    data: SegmentationOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
@@ -242,12 +240,12 @@ class ImageMaskGenerationResult:
     status: str = "SUCCESS"
 
 
-# --- Video Mask Generation Types ---
+# --- Tracking Types ---
 
 
 @dataclass
-class VideoMaskGenerationInput:
-    """Input for video mask generation.
+class TrackingInput:
+    """Input for video tracking.
 
     Attributes:
         video: List of frame images as base64 or URLs.
@@ -269,8 +267,8 @@ class VideoMaskGenerationInput:
 
 
 @dataclass
-class VideoMaskGenerationOutput:
-    """Output for video mask generation.
+class TrackingOutput:
+    """Output for video tracking.
 
     Attributes:
         objects_ids: IDs of tracked objects.
@@ -284,8 +282,8 @@ class VideoMaskGenerationOutput:
 
 
 @dataclass
-class VideoMaskGenerationResult:
-    """Complete result of video mask generation.
+class TrackingResult:
+    """Complete result of video tracking.
 
     Attributes:
         data: The output data.
@@ -296,7 +294,7 @@ class VideoMaskGenerationResult:
         id: Unique identifier for the inference request.
     """
 
-    data: VideoMaskGenerationOutput
+    data: TrackingOutput
     status: str
     timestamp: datetime
     processing_time: float
@@ -304,11 +302,11 @@ class VideoMaskGenerationResult:
     id: str = ""
 
 
-# --- Zero-Shot Detection Types ---
+# --- Detection Types ---
 
 
 @dataclass
-class ImageZeroShotDetectionInput:
+class DetectionInput:
     """Input for zero-shot object detection.
 
     Attributes:
@@ -327,7 +325,7 @@ class ImageZeroShotDetectionInput:
 
 
 @dataclass
-class ImageZeroShotDetectionOutput:
+class DetectionOutput:
     """Output for zero-shot object detection.
 
     Attributes:
@@ -342,7 +340,7 @@ class ImageZeroShotDetectionOutput:
 
 
 @dataclass
-class ImageZeroShotDetectionResult:
+class DetectionResult:
     """Complete result of zero-shot object detection.
 
     Attributes:
@@ -354,7 +352,7 @@ class ImageZeroShotDetectionResult:
         status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
-    data: ImageZeroShotDetectionOutput
+    data: DetectionOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
@@ -362,7 +360,7 @@ class ImageZeroShotDetectionResult:
     status: str = "SUCCESS"
 
 
-# --- Text-Image Conditional Generation Types ---
+# --- VLM Types ---
 
 
 @dataclass
@@ -381,8 +379,8 @@ class UsageInfo:
 
 
 @dataclass
-class TextImageConditionalGenerationInput:
-    """Input for text-image conditional generation.
+class VLMInput:
+    """Input for VLM (vision-language model) inference.
 
     Attributes:
         model: Model name to use.
@@ -400,8 +398,8 @@ class TextImageConditionalGenerationInput:
 
 
 @dataclass
-class TextImageConditionalGenerationOutput:
-    """Output for text-image conditional generation.
+class VLMOutput:
+    """Output for VLM inference.
 
     Attributes:
         generated_text: The generated text response.
@@ -415,8 +413,8 @@ class TextImageConditionalGenerationOutput:
 
 
 @dataclass
-class TextImageConditionalGenerationResult:
-    """Complete result of text-image conditional generation.
+class VLMResult:
+    """Complete result of VLM inference.
 
     Attributes:
         data: The output data.
@@ -427,7 +425,7 @@ class TextImageConditionalGenerationResult:
         status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
-    data: TextImageConditionalGenerationOutput
+    data: VLMOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]

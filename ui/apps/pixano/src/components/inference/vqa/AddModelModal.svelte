@@ -76,7 +76,7 @@ License: CECILL-C
     const modelConfig: ModelConfig = {
       config: {
         name: formData.model_name,
-        task: MultimodalImageNLPTask.CONDITIONAL_GENERATION,
+        task: MultimodalImageNLPTask.VLM,
         path: formData.model_path,
         config: { dtype: formData.dtype },
         processor_config: {},

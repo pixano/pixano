@@ -5,10 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { ArrowsClockwise, HardDrives, Sparkle, X } from "phosphor-svelte";
+  import { ArrowsClockwise, HardDrives, Plus, Sparkle } from "phosphor-svelte";
 
   import ConnectToServerModal from "./ConnectToServerModal.svelte";
-  import { disconnectFromProvider, refreshInferenceModels } from "$lib/services/inferenceService";
+  import { refreshInferenceModels } from "$lib/services/inferenceService";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
   import { IconButton, PrimaryButton, type InferenceModel } from "$lib/ui";
 
@@ -79,13 +79,6 @@ License: CECILL-C
             <span class="text-[13px] text-foreground font-semibold truncate flex-1">
               {provider.url ?? provider.name}
             </span>
-            <button
-              class="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all shrink-0 p-1"
-              onclick={() => void disconnectFromProvider(provider.name)}
-              title="Disconnect"
-            >
-              <X size={14} />
-            </button>
           </div>
         {/each}
       </div>
@@ -111,14 +104,12 @@ License: CECILL-C
         <HardDrives weight="regular" size={28} class="text-muted-foreground/40" />
       </div>
       <div class="space-y-1.5">
-        <p class="text-sm font-bold text-foreground">Connect to server</p>
+        <p class="text-sm font-bold text-foreground">No server connected</p>
         <p class="text-[12px] text-muted-foreground leading-relaxed px-2">
-          Add an inference server to enable AI-powered annotation tools.
+          Connect an inference server to enable AI-powered annotation tools.
         </p>
       </div>
-      <PrimaryButton onclick={() => (showConnectModal = true)} isSelected class="w-full">
-        Connect Server
-      </PrimaryButton>
+      <PrimaryButton onclick={() => (showConnectModal = true)}>Connect Server</PrimaryButton>
     </div>
   {:else if inferenceServerStore.value.models.length === 0}
     <div
@@ -161,16 +152,13 @@ License: CECILL-C
     </div>
   {/if}
 
+  <!-- Add another server -->
   {#if inferenceServerStore.value.connected}
     <button
-      class="mt-auto group flex items-center gap-2 py-3 px-1 text-[11px] font-bold text-muted-foreground hover:text-primary transition-all duration-200 uppercase tracking-widest border-t border-border/30"
+      class="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-primary font-medium transition-colors px-1 mt-auto"
       onclick={() => (showConnectModal = true)}
     >
-      <span
-        class="w-4 h-4 rounded bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors"
-      >
-        +
-      </span>
+      <Plus weight="bold" size={14} />
       Add another server
     </button>
   {/if}
@@ -178,7 +166,6 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectToServerModal
-    defaultUrl=""
     onClose={() => (showConnectModal = false)}
     onConnected={() => (showConnectModal = false)}
   />

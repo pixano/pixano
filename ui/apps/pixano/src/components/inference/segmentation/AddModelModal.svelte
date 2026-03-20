@@ -74,7 +74,7 @@ License: CECILL-C
     const modelConfig: ModelConfig = {
       config: {
         name: formData.model_name,
-        task: isVideo ? VideoTask.MASK_GENERATION : ImageTask.MASK_GENERATION,
+        task: isVideo ? VideoTask.TRACKING : ImageTask.SEGMENTATION,
         path: formData.model_path,
         // Note: dtype or torch_dtype ? >> some model requires dtype, others torch_dtype, so use both
         config: { dtype: formData.dtype, torch_dtype: formData.dtype },

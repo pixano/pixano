@@ -16,7 +16,7 @@ export interface ConversationPromptContext {
 export enum MultimodalImageNLPTask {
   //Multimodal tasks
   CAPTIONING = "image_captioning",
-  CONDITIONAL_GENERATION = "text_image_conditional_generation",
+  VLM = "vlm",
   EMBEDDING = "image_text_embedding",
   MATCHING = "image_text_matching",
   QUESTION_ANSWERING = "image_question_answering",
@@ -28,16 +28,16 @@ export enum ImageTask {
   INSTANCE_SEGMENTATION = "instance_segmentation",
   FEATURE_EXTRACTION = "image_feature_extraction",
   KEYPOINT_DETECTION = "keypoint_detection",
-  MASK_GENERATION = "image_mask_generation",
+  SEGMENTATION = "segmentation",
   OBJECT_DETECTION = "object_detection",
   SEMANTIC_SEGMENTATION = "semantic_segmentation",
   UNIVERSAL_SEGMENTATION = "universal_segmentation",
   ZERO_SHOT_CLASSIFICATION = "image_zero_shot_classification",
-  ZERO_SHOT_DETECTION = "image_zero_shot_detection",
+  DETECTION = "detection",
 }
 
 export enum VideoTask {
-  MASK_GENERATION = "video_mask_generation",
+  TRACKING = "tracking",
 }
 
 export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
@@ -88,7 +88,7 @@ export interface CondititionalGenerationTextImageInput {
   temperature?: number;
 }
 
-export interface TextImageConditionalGenerationOutput {
+export interface VLMOutput {
   generated_text: string;
   usage: {
     prompt_tokens: number;
@@ -98,8 +98,8 @@ export interface TextImageConditionalGenerationOutput {
   generation_config: Record<string, unknown>;
 }
 
-export interface TextImageConditionalGenerationResult {
-  data: TextImageConditionalGenerationOutput;
+export interface VLMResult {
+  data: VLMOutput;
   timestamp: string;
   processing_time: number;
   metadata: Record<string, unknown>;
