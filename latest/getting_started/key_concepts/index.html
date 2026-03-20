@@ -1254,19 +1254,24 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Item</strong></td>
-<td>One row per dataset entry (metadata, split, ...)</td>
-<td><code>Item</code></td>
+<td><strong>Record</strong></td>
+<td>One row per dataset sample (metadata, split)</td>
+<td><code>Record</code></td>
 </tr>
 <tr>
 <td><strong>View</strong></td>
-<td>Media attached to an item</td>
+<td>Media attached to a record</td>
 <td><code>Image</code>, <code>Video</code></td>
 </tr>
 <tr>
 <td><strong>Entity</strong></td>
-<td>Objects or tracks within an item</td>
+<td>A physical object observable in one or several views</td>
 <td><code>Entity</code></td>
+</tr>
+<tr>
+<td><strong>EntityDynamicState</strong></td>
+<td>Per-frame state of an entity (e.g. visibility)</td>
+<td><code>EntityDynamicState</code></td>
 </tr>
 <tr>
 <td><strong>Annotation</strong></td>
@@ -1278,14 +1283,13 @@
 <td>Vectors for semantic search</td>
 <td><code>Embedding</code></td>
 </tr>
-<tr>
-<td><strong>Source</strong></td>
-<td>Provenance of annotations/predictions</td>
-<td><code>Source</code></td>
-</tr>
 </tbody>
 </table>
-<p>Each group has a base class (e.g. <code>Item</code>, <code>View</code>, <code>Entity</code>, <code>Annotation</code>) that you can subclass to add domain-specific fields:</p>
+<div class="admonition info">
+<p class="admonition-title">Source provenance</p>
+<p>There is no separate <strong>Source</strong> table. Provenance is tracked directly on annotations via three fields: <code>source_type</code> (one of <code>model</code>, <code>human</code>, <code>ground_truth</code>, <code>other</code>), <code>source_name</code>, and <code>source_metadata</code> (a JSON string). These fields are available on <code>EntityAnnotation</code>, <code>EntityGroupAnnotation</code>, and <code>EntityDynamicState</code>.</p>
+</div>
+<p>Each group has a base class (e.g. <code>Record</code>, <code>View</code>, <code>Entity</code>, <code>EntityAnnotation</code>) that you can subclass to add domain-specific fields:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">DetectedObject</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
