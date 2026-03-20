@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 from datetime import datetime
 from typing import Any
 
@@ -148,6 +149,9 @@ class PixanoInferenceProvider(HTTPProvider):
         if input_data.high_resolution_features is not None:
             request["high_resolution_features"] = [f.to_dict() for f in input_data.high_resolution_features]
 
+        if input_data.mask_input is not None:
+            request["mask_input"] = input_data.mask_input.to_dict()
+
         if input_data.points is not None:
             request["points"] = input_data.points
 
@@ -157,7 +161,24 @@ class PixanoInferenceProvider(HTTPProvider):
         if input_data.boxes is not None:
             request["boxes"] = input_data.boxes
 
+        if input_data.return_logits:
+            request["return_logits"] = input_data.return_logits
+
         return request
+
+    def _build_binary_segmentation_request(
+        self,
+        input_data: SegmentationInput,
+    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
+        request = self._build_segmentation_request(input_data)
+        image = request.pop("image")
+        if not isinstance(image, bytes):
+            raise TypeError("Binary segmentation requests require image bytes.")
+
+        return [
+            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
+            ("image", ("image.bin", image, "application/octet-stream")),
+        ]
 
     def _parse_segmentation_response(self, response: dict[str, Any]) -> SegmentationResult:
         """Parse segmentation response."""
@@ -180,11 +201,16 @@ class PixanoInferenceProvider(HTTPProvider):
         if data.get("high_resolution_features"):
             high_resolution_features = [NDArrayData.from_dict(f) for f in data["high_resolution_features"]]
 
+        mask_logits = None
+        if data.get("mask_logits"):
+            mask_logits = NDArrayData.from_dict(data["mask_logits"])
+
         output = SegmentationOutput(
             masks=masks,
             scores=scores,
             image_embedding=image_embedding,
             high_resolution_features=high_resolution_features,
+            mask_logits=mask_logits,
         )
 
         return SegmentationResult(
@@ -202,8 +228,15 @@ class PixanoInferenceProvider(HTTPProvider):
         timeout: float = 60.0,
     ) -> SegmentationResult:
         """Generate masks for an image."""
-        request_data = self._build_segmentation_request(input_data)
-        response = await self.post("inference/segmentation/", json=request_data, timeout=timeout)
+        if isinstance(input_data.image, bytes):
+            response = await self.post(
+                "inference/segmentation/binary",
+                files=self._build_binary_segmentation_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_segmentation_request(input_data)
+            response = await self.post("inference/segmentation/", json=request_data, timeout=timeout)
         return self._parse_segmentation_response(response.json())
 
     # --- Tracking ---
@@ -227,6 +260,27 @@ class PixanoInferenceProvider(HTTPProvider):
             request["boxes"] = input_data.boxes
 
         return request
+
+    def _build_binary_tracking_request(
+        self,
+        input_data: TrackingInput,
+    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
+        request = self._build_tracking_request(input_data)
+        video = request.pop("video")
+        if not isinstance(video, list) or not all(isinstance(frame, bytes) for frame in video):
+            raise TypeError("Binary tracking requests require a list of frame bytes.")
+
+        files: list[tuple[str, tuple[str | None, bytes | str, str]]] = [
+            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
+        ]
+        for index, frame in enumerate(video):
+            files.append(
+                (
+                    "frames",
+                    (f"frame-{index:06d}.bin", frame, "application/octet-stream"),
+                )
+            )
+        return files
 
     def _parse_tracking_response(self, response: dict[str, Any]) -> TrackingResult:
         """Parse tracking response."""
@@ -255,8 +309,15 @@ class PixanoInferenceProvider(HTTPProvider):
         timeout: float = 120.0,
     ) -> TrackingResult:
         """Generate masks for video frames."""
-        request_data = self._build_tracking_request(input_data)
-        response = await self.post("inference/tracking/", json=request_data, timeout=timeout)
+        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
+            response = await self.post(
+                "inference/tracking/binary",
+                files=self._build_binary_tracking_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_tracking_request(input_data)
+            response = await self.post("inference/tracking/", json=request_data, timeout=timeout)
         return self._parse_tracking_response(response.json())
 
     # --- Detection ---

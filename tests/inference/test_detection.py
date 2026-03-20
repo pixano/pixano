@@ -16,12 +16,12 @@ from pixano.features import (
     Entity,
     Image,
 )
+from pixano.inference.detection import detection
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.types import (
-    ImageZeroShotDetectionOutput,
-    ImageZeroShotDetectionResult,
+    DetectionOutput,
+    DetectionResult,
 )
-from pixano.inference.zero_shot_detection import image_zero_shot_detection
 
 
 FILE_PATH = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -43,15 +43,15 @@ def image_url() -> Image:
 
 
 @pytest.mark.asyncio
-async def test_image_zero_shot_detection(
+async def test_detection(
     simple_inference_provider: InferenceProvider,
     image_url: Image,
 ):
-    response = ImageZeroShotDetectionResult(
+    response = DetectionResult(
         timestamp=datetime(year=2025, month=2, day=19),
         processing_time=1.0,
         metadata={"metadata": "value"},
-        data=ImageZeroShotDetectionOutput(boxes=[[1, 2, 3, 4]], scores=[0.5], classes=["a cat"]),
+        data=DetectionOutput(boxes=[[1, 2, 3, 4]], scores=[0.5], classes=["a cat"]),
     )
 
     expected_box = BBox(
@@ -76,11 +76,11 @@ async def test_image_zero_shot_detection(
         confidences=[0.5],
     )
 
-    simple_inference_provider.image_zero_shot_detection.return_value = response
+    simple_inference_provider.detection.return_value = response
 
     entity = Entity(id="test_entity")
 
-    output = await image_zero_shot_detection(
+    output = await detection(
         provider=simple_inference_provider,
         image=image_url,
         entity=entity,

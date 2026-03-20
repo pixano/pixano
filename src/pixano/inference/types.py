@@ -180,6 +180,7 @@ class SegmentationInput:
         model: Model name to use.
         image_embedding: Pre-computed image embedding (optional).
         high_resolution_features: Pre-computed high-res features (optional).
+        mask_input: Previous low-resolution mask logits for iterative refinement.
         reset_predictor: Whether to reset predictor state for new image.
         points: Points for mask generation [num_prompts, num_points, 2].
         labels: Labels for points [num_prompts, num_points].
@@ -187,12 +188,14 @@ class SegmentationInput:
         num_multimask_outputs: Number of masks to generate per prompt.
         multimask_output: Whether to return multiple masks per prompt.
         return_image_embedding: Whether to return computed embeddings.
+        return_logits: Whether to return low-resolution mask logits.
     """
 
-    image: str
+    image: str | bytes
     model: str
     image_embedding: NDArrayData | None = None
     high_resolution_features: list[NDArrayData] | None = None
+    mask_input: NDArrayData | None = None
     reset_predictor: bool = True
     points: list[list[list[int]]] | None = None
     labels: list[list[int]] | None = None
@@ -200,6 +203,7 @@ class SegmentationInput:
     num_multimask_outputs: int = 3
     multimask_output: bool = True
     return_image_embedding: bool = False
+    return_logits: bool = False
 
 
 @dataclass
@@ -211,12 +215,14 @@ class SegmentationOutput:
         scores: Confidence scores.
         image_embedding: Computed image embedding (if requested).
         high_resolution_features: Computed features (if requested).
+        mask_logits: Low-resolution logits for iterative refinement (if requested).
     """
 
     masks: list[list[CompressedRLEData]]
     scores: NDArrayData
     image_embedding: NDArrayData | None = None
     high_resolution_features: list[NDArrayData] | None = None
+    mask_logits: NDArrayData | None = None
 
 
 @dataclass
@@ -257,7 +263,7 @@ class TrackingInput:
         boxes: Bounding boxes.
     """
 
-    video: list[str]
+    video: list[str | bytes] | str | bytes
     model: str
     objects_ids: list[int]
     frame_indexes: list[int]

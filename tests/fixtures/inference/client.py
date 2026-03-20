@@ -20,24 +20,24 @@ def simple_inference_provider() -> InferenceProvider:
     provider.url = "http://localhost:8081"
 
     # Setup async methods
-    provider.image_mask_generation = AsyncMock()
-    provider.video_mask_generation = AsyncMock()
-    provider.image_zero_shot_detection = AsyncMock()
-    provider.text_image_conditional_generation = AsyncMock()
+    provider.segmentation = AsyncMock()
+    provider.tracking = AsyncMock()
+    provider.detection = AsyncMock()
+    provider.vlm = AsyncMock()
     provider.list_models = AsyncMock(return_value=[])
     provider.get_capabilities = AsyncMock()
     provider.get_server_info = AsyncMock(
         return_value=ServerInfo(
             app_name="pixano-inference",
-            app_version="0.5.6",
+            app_version="0.6.0",
             app_description="Pixano Inference Server",
             num_cpus=8,
             num_gpus=1,
             num_nodes=1,
-            gpus_used=[0],
+            gpus_used=0.0,
             gpu_to_model={"0": "sam2"},
             models=["sam2", "grounding-dino"],
-            models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
+            models_to_capability={"sam2": "segmentation", "grounding-dino": "detection"},
         )
     )
 
@@ -52,24 +52,24 @@ def simple_inference_provider_fn_scope() -> InferenceProvider:
     provider.url = "http://localhost:8081"
 
     # Setup async methods
-    provider.image_mask_generation = AsyncMock()
-    provider.video_mask_generation = AsyncMock()
-    provider.image_zero_shot_detection = AsyncMock()
-    provider.text_image_conditional_generation = AsyncMock()
+    provider.segmentation = AsyncMock()
+    provider.tracking = AsyncMock()
+    provider.detection = AsyncMock()
+    provider.vlm = AsyncMock()
     provider.list_models = AsyncMock(return_value=[])
     provider.get_capabilities = AsyncMock()
     provider.get_server_info = AsyncMock(
         return_value=ServerInfo(
             app_name="pixano-inference",
-            app_version="0.5.6",
+            app_version="0.6.0",
             app_description="Pixano Inference Server",
             num_cpus=8,
             num_gpus=1,
             num_nodes=1,
-            gpus_used=[0],
+            gpus_used=0.0,
             gpu_to_model={"0": "sam2"},
             models=["sam2", "grounding-dino"],
-            models_to_task={"sam2": "image_mask_generation", "grounding-dino": "image_zero_shot_detection"},
+            models_to_capability={"sam2": "segmentation", "grounding-dino": "detection"},
         )
     )
 
