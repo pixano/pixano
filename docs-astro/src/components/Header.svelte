@@ -10,7 +10,7 @@
 
   const navItems = [
     { title: "Getting Started", href: `${basePath}/getting_started/` },
-    { title: "Tutorials", href: `${basePath}/tutorials/` },
+    { title: "Use Cases", href: `${basePath}/use_cases/` },
     { title: "API Reference", href: `${basePath}/api_reference/` },
   ];
 

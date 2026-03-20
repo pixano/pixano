@@ -13,25 +13,19 @@ import Card from "../../components/Card.astro";
   </p>
 
   <CardGrid>
-    <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
-      Import a dataset with pre-annotations and launch the app in minutes.
-    </Card>
     <Card title="Installation" href="/getting_started/installing_pixano/" icon="download">
       All the ways to install Pixano: pip, Docker, or from source.
     </Card>
+    <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
+      Import a dataset with pre-annotations and launch the app in minutes.
+    </Card>
     <Card title="Key Concepts" href="/getting_started/key_concepts/" icon="lightbulb">
       Understand the data model: items, views, entities, annotations, and more.
-    </Card>
-    <Card title="Launching the App" href="/getting_started/launching_the_app/" icon="play">
-      Start Pixano locally, from a notebook, with Docker, or connected to S3.
-    </Card>
-    <Card title="Using the App" href="/getting_started/using_the_app/" icon="monitor">
-      Navigate the web UI: browse datasets, annotate, and use AI-assisted tools.
     </Card>
   </CardGrid>
 
   <p>
     Once you are comfortable with the basics, head over to the
-    <a href={`${import.meta.env.BASE_URL}tutorials/`}>Tutorials</a> for deeper walkthroughs.
+    <a href={`${import.meta.env.BASE_URL}use_cases/`}>Use Cases</a> for end-to-end walkthroughs with real datasets.
   </p>
 </DocsLayout>

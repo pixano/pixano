@@ -1,0 +1,274 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Video Object Tracking"
+section: use_cases
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Video Object Tracking
+
+Track objects across video frames with segmentation masks and tracklets. This guide uses the [DAVIS 2017](https://davischallenge.org/) dataset and covers: import, explore the timeline UI, annotate with tracklets, and use SAM for interactive segmentation.
+
+## Prerequisites
+
+- Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
+- A data directory initialized with `pixano init ./my_data`
+- The DAVIS 2017 dataset downloaded locally (Full-Resolution version)
+
+## Import the dataset
+
+### Generate the sample
+
+The repository includes a script that exports DAVIS 2017 videos into a Pixano-compatible folder:
+
+```bash
+python examples/davis/generate_sample.py ./davis_sample /path/to/DAVIS \
+    --num-samples 5 --splits train val
+```
+
+The resulting folder:
+
+```
+davis_sample/
+  train/
+    frames/
+      bear/
+        00000.jpg
+        00001.jpg
+        ...
+      bmx-trees/
+        ...
+    masks/
+      bear/
+        00000.png
+        00001.png
+        ...
+    metadata.jsonl
+  val/
+    frames/...
+    masks/...
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` describes one video with glob patterns for frames and masks:
+
+```json
+{
+  "views": {
+    "image": { "path": "frames/bear/*.jpg", "fps": 24 }
+  },
+  "annotation_files": {
+    "mask": "masks/bear/*.png"
+  }
+}
+```
+
+### Review the dataset info
+
+The dataset info at `examples/davis/info.py`:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import (
+    CompressedRLE, Entity, EntityDynamicState,
+    Record, SequenceFrame, Tracklet,
+)
+
+
+class DAVISEntity(Entity):
+    category: str = "object"
+
+
+class DAVISEntityDynamicState(EntityDynamicState):
+    pass
+
+
+dataset_info = DatasetInfo(
+    name="DAVIS 2017 Sample",
+    description="Sample import for DAVIS 2017 video object segmentation data.",
+    workspace=WorkspaceType.VIDEO,
+    record=Record,
+    entity=DAVISEntity,
+    entity_dynamic_state=DAVISEntityDynamicState,
+    tracklet=Tracklet,
+    mask=CompressedRLE,
+    views={"image": SequenceFrame},
+)
+```
+
+Key differences from image datasets:
+
+- `WorkspaceType.VIDEO` enables the video timeline UI.
+- `SequenceFrame` instead of `Image` — represents a frame in a video sequence.
+- `Tracklet` links annotations across frames within the same entity.
+- `EntityDynamicState` stores per-frame state for entities.
+
+### Run the import
+
+```bash
+pixano data import ./my_data ./davis_sample \
+    --info examples/davis/info.py:dataset_info
+```
+
+### Launch the server
+
+```bash
+pixano server run ./my_data
+```
+
+Open `http://127.0.0.1:7492` and click the DAVIS dataset card.
+
+## Explore in the UI
+
+### Dataset page
+
+Same as image datasets: a table of items with thumbnails, filters, and pagination. Each item is a video (not a single frame).
+
+### Item page — video mode
+
+When you open a video item, the current frame is displayed in the center. The **Video Inspector** panel appears at the bottom of the screen.
+
+#### Video Inspector
+
+The Video Inspector has three parts:
+
+- **Timeline** — a time axis in seconds. Click or drag to change the current frame.
+- **Track items** — each entity's track is shown as a horizontal bar. Tracklets are colored segments within the bar. Keyframes (real annotations) are shown as dots when zoomed in; frames between keyframes are interpolated.
+- **Control panel** — play/pause, step forward/backward, current time and frame index, timeline zoom slider.
+
+#### Track interactions
+
+**Right-click a tracklet** to open the context menu:
+
+- **Add point** — replace an interpolated frame with a real keyframe.
+- **Split** — cut the tracklet into two at the current frame.
+- **Glue left/right** — merge with the adjacent tracklet.
+- **Relink** — move the tracklet to a different entity.
+- **Delete** — remove the tracklet and its annotations.
+
+**Right-click a keyframe** for keyframe-specific options:
+
+- **Remove item** — delete this keyframe.
+- **Edit item** — modify the annotation at this keyframe.
+
+#### Associate tool
+
+The **associate tool** (in the toolbar) lets you merge tracks. Select a first object, then select additional objects to merge into it. Validate to combine all selected objects into the first one.
+
+## Annotate
+
+All annotation tools from image mode work in video mode too (bounding boxes, polygons, keypoints). Annotations are automatically attached to the current frame and entity.
+
+<Callout type="tip" title="Video annotation workflow">
+1. Navigate to the frame where the object first appears.
+2. Create an annotation (bbox, mask, or keypoints).
+3. Step forward to the next keyframe and adjust the annotation.
+4. Pixano interpolates between keyframes automatically for bounding boxes and keypoints.
+</Callout>
+
+## Interactive segmentation with SAM
+
+SAM (Segment Anything Model) lets you create precise segmentation masks with just a few clicks.
+
+### Setup
+
+Install SAM and export the model to ONNX:
+
+```bash
+pip install git+https://github.com/facebookresearch/segment-anything.git
+pip install onnx transformers
+```
+
+```bash
+git clone https://github.com/facebookresearch/segment-anything.git
+cd segment-anything
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+python scripts/export_onnx_model.py \
+    --checkpoint sam_vit_h_4b8939.pth \
+    --model-type vit_h \
+    --output sam_h.onnx
+cp sam_h.onnx /path/to/my_data/models/
+```
+
+### Precompute SAM embeddings
+
+SAM requires precomputed image embeddings to run interactively:
+
+```python
+import torch
+import shortuuid
+from pathlib import Path
+from transformers import SamModel, SamProcessor
+from pixano.datasets import Dataset
+from pixano.datasets.dataset_schema import SchemaRelation
+from pixano.schemas import ViewEmbedding, ViewRef
+from lancedb.pydantic import Vector
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device=device)
+processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
+
+dataset = Dataset(
+    Path("./my_data/library/davis_2017_sample"),
+    media_dir=Path("./my_data/media"),
+)
+
+images = dataset.get_data("image")
+
+
+class SAMViewEmbedding(ViewEmbedding):
+    vector: Vector(1048576)
+
+
+sam_table = dataset.create_table(
+    name="sam_embedding",
+    schema=SAMViewEmbedding,
+    relation_item=SchemaRelation.ONE_TO_ONE,
+    mode="overwrite",
+)
+
+embeddings = []
+for image in images:
+    pil_image = image.open(
+        media_dir=dataset.media_dir, output_type="image"
+    ).convert("RGB")
+    with torch.inference_mode():
+        inputs = processor(pil_image, return_tensors="pt").to(device=device)
+        output = model.get_image_embeddings(inputs["pixel_values"])
+    embedding = dataset.schema.schemas["sam_embedding"](
+        id=shortuuid.uuid(),
+        item_ref=image.item_ref,
+        view_ref=ViewRef(id=image.id, name=image.table_name),
+        vector=output.flatten().tolist(),
+        shape=output.squeeze().shape,
+    )
+    embeddings.append(embedding)
+
+dataset.add_data("sam_embedding", embeddings)
+```
+
+### Use SAM in the UI
+
+1. Open a video item and navigate to a frame.
+2. Select the **smart segmentation tool** (magic wand icon) from the toolbar.
+3. On first use, the **Smart Model Selection** modal opens. Choose the local SAM model (which uses your precomputed embeddings).
+4. Click to place **positive points** (include) and **negative points** (exclude) on the image.
+5. SAM generates a segmentation mask in real time.
+6. Confirm to save the mask as an annotation.
+
+<Callout type="tip" title="Pixano Inference alternative">
+Instead of local SAM, you can connect to a [Pixano Inference](https://pixano.github.io/pixano-inference/latest) server that hosts SAM or other segmentation models remotely. The smart model selection modal lets you choose between local and remote models.
+</Callout>
+
+## Next steps
+
+- [Multi-View Detection](/pixano/use_cases/multi_view_detection/) — synchronized multi-camera views
+- [Object Detection](/pixano/use_cases/object_detection/) — pre-annotation with YOLO and GroundingDINO
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Object Detection", href: "/use_cases/object_detection/" }}
+  next={{ title: "Multi-View Detection", href: "/use_cases/multi_view_detection/" }}
+/>

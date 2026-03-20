@@ -13,7 +13,7 @@ export interface NavSection {
 
 export const topNav: NavItem[] = [
   { title: "Getting Started", href: "/getting_started/" },
-  { title: "Tutorials", href: "/tutorials/" },
+  { title: "Use Cases", href: "/use_cases/" },
   { title: "API Reference", href: "/api_reference/" },
 ];
 
@@ -23,32 +23,34 @@ export const sidebarNav: Record<string, NavSection[]> = {
       title: "Getting Started",
       items: [
         { title: "Overview", href: "/getting_started/" },
-        { title: "Quickstart", href: "/getting_started/quickstart/" },
         {
-          title: "Installing Pixano",
+          title: "Installation",
           href: "/getting_started/installing_pixano/",
         },
+        { title: "Quickstart", href: "/getting_started/quickstart/" },
         { title: "Key Concepts", href: "/getting_started/key_concepts/" },
-        {
-          title: "Launching the App",
-          href: "/getting_started/launching_the_app/",
-        },
-        { title: "Using the App", href: "/getting_started/using_the_app/" },
       ],
     },
   ],
-  tutorials: [
+  use_cases: [
     {
-      title: "Tutorials",
+      title: "Use Cases",
       items: [
-        { title: "Overview", href: "/tutorials/" },
-        { title: "Build a Dataset", href: "/tutorials/dataset/" },
-        { title: "Semantic Search", href: "/tutorials/semantic_search/" },
+        { title: "Overview", href: "/use_cases/" },
+        { title: "Object Detection", href: "/use_cases/object_detection/" },
         {
-          title: "Interactive Segmentation",
-          href: "/tutorials/interactive_segmentation/",
+          title: "Video Object Tracking",
+          href: "/use_cases/video_tracking/",
         },
-        { title: "Pre-annotation", href: "/tutorials/pre_annotation/" },
+        {
+          title: "Multi-View Detection",
+          href: "/use_cases/multi_view_detection/",
+        },
+        { title: "Entity Linking", href: "/use_cases/entity_linking/" },
+        {
+          title: "Visual Question Answering",
+          href: "/use_cases/vqa/",
+        },
       ],
     },
   ],
@@ -185,7 +187,7 @@ export const sidebarNav: Record<string, NavSection[]> = {
  * Determine which sidebar section to show based on the current path.
  */
 export function getSidebarSection(path: string): string {
-  if (path.includes("/tutorials")) return "tutorials";
+  if (path.includes("/use_cases")) return "use_cases";
   if (path.includes("/api_reference")) return "api_reference";
   return "getting_started";
 }

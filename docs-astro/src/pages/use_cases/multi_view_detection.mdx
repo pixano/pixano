@@ -1,0 +1,242 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Multi-View Detection"
+section: use_cases
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Multi-View Detection
+
+Work with synchronized multi-camera datasets. This guide uses the [FLIR ADAS v2](https://adas-dataset-v2.flirconservator.com/) dataset (RGB + thermal) and covers: import in image or video mode, browse synchronized views side by side, and annotate across modalities.
+
+## Prerequisites
+
+- Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
+- A data directory initialized with `pixano init ./my_data`
+- The FLIR ADAS v2 dataset downloaded locally (video test sets)
+
+<Callout type="note" title="FLIR ADAS v2 layout">
+
+This script uses the **video test sets** which contain time-synced RGB/thermal frame pairs documented in `rgb_to_thermal_vid_map.json`. The expected layout:
+
+```
+flir_adas_v2/
+  rgb_to_thermal_vid_map.json
+  video_rgb_test/
+    coco.json
+    data/
+      video-{vid}-frame-{n}-{hash}.jpg
+  video_thermal_test/
+    coco.json
+    data/
+      video-{vid}-frame-{n}-{hash}.jpg
+```
+
+</Callout>
+
+## Import the dataset
+
+FLIR ADAS v2 supports two import modes: **image** (individual frame pairs) and **video** (grouped by video sequence).
+
+### Image mode — static frame pairs
+
+Generate a sample of individual RGB + thermal frame pairs:
+
+```bash
+python examples/flir/generate_sample.py ./flir_sample /path/to/flir_adas_v2 \
+    --mode image --num-samples 50
+```
+
+The resulting folder:
+
+```
+flir_sample/
+  test/
+    rgb/
+      000000.jpg
+      000001.jpg
+      ...
+    thermal/
+      000000.jpg
+      000001.jpg
+      ...
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` pairs an RGB image with its thermal counterpart and includes bounding boxes detected in the thermal view:
+
+```json
+{
+  "views": {
+    "rgb": "rgb/000000.jpg",
+    "thermal": "thermal/000000.jpg"
+  },
+  "entities": [
+    {
+      "category": "person",
+      "annotations": {
+        "thermal": { "bbox": [0.12, 0.25, 0.15, 0.30] }
+      }
+    }
+  ]
+}
+```
+
+The dataset info for image mode (`examples/flir/info.py:dataset_info`):
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, Entity, Image, Record
+
+
+class FLIREntity(Entity):
+    category: str = ""
+
+
+dataset_info = DatasetInfo(
+    name="FLIR Static Sample",
+    description="Sample import for FLIR static image pairs.",
+    workspace=WorkspaceType.IMAGE,
+    record=Record,
+    entity=FLIREntity,
+    bbox=BBox,
+    views={"rgb": Image, "thermal": Image},
+)
+```
+
+Note `views` has two entries: `"rgb"` and `"thermal"`, both of type `Image`. This tells Pixano to display them side by side.
+
+Import:
+
+```bash
+pixano data import ./my_data ./flir_sample \
+    --info examples/flir/info.py:dataset_info
+```
+
+### Video mode — synchronized sequences
+
+Generate a sample grouped by video:
+
+```bash
+python examples/flir/generate_sample.py ./flir_video_sample /path/to/flir_adas_v2 \
+    --mode video --num-samples 5
+```
+
+The resulting folder:
+
+```
+flir_video_sample/
+  test/
+    rgb/
+      video_000/*.jpg
+      video_001/*.jpg
+    thermal/
+      video_000/*.jpg
+      video_001/*.jpg
+    bboxes/
+      video_000/*.json
+      video_001/*.json
+    metadata.jsonl
+```
+
+Each metadata entry uses glob patterns for frame sequences and per-frame annotation files:
+
+```json
+{
+  "views": {
+    "rgb": { "path": "rgb/video_000/*.jpg", "fps": 30 },
+    "thermal": { "path": "thermal/video_000/*.jpg", "fps": 30 }
+  },
+  "annotation_files": {
+    "bbox": "bboxes/video_000/*.json"
+  }
+}
+```
+
+The dataset info for video mode (`examples/flir/info.py:video_dataset_info`):
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import (
+    BBox, Entity, EntityDynamicState,
+    Record, SequenceFrame, Tracklet,
+)
+
+
+class FLIREntity(Entity):
+    category: str = ""
+
+
+class FLIREntityDynamicState(EntityDynamicState):
+    pass
+
+
+video_dataset_info = DatasetInfo(
+    name="FLIR Dynamic Sample",
+    description="Sample import for FLIR dynamic synchronized frame sequences.",
+    workspace=WorkspaceType.VIDEO,
+    record=Record,
+    entity=FLIREntity,
+    entity_dynamic_state=FLIREntityDynamicState,
+    tracklet=Tracklet,
+    bbox=BBox,
+    views={"rgb": SequenceFrame, "thermal": SequenceFrame},
+)
+```
+
+Import:
+
+```bash
+pixano data import ./my_data ./flir_video_sample \
+    --info examples/flir/info.py:video_dataset_info
+```
+
+### Launch the server
+
+```bash
+pixano server run ./my_data
+```
+
+## Explore in the UI
+
+### Multi-view image mode
+
+When you open an item with multiple views, Pixano tiles the images side by side. You can:
+
+- **Pan and zoom** each view independently.
+- **Drag** views to rearrange them.
+- **Double-click** a view to bring it to the front.
+
+Annotations are per-view: a bounding box on the thermal image is separate from one on the RGB image, but both can be linked to the same entity.
+
+### Multi-view video mode
+
+In video mode, the timeline synchronizes all views. When you play or step through frames, all views update together. The Video Inspector shows tracks across all views — tracklet bars are stacked by view on each track row.
+
+<Callout type="tip" title="Annotation across views">
+You can annotate objects in both the RGB and thermal views. Create a bounding box in the thermal view, then switch to the RGB view and add another annotation for the same entity. Pixano links them through the shared entity reference.
+</Callout>
+
+## Annotate
+
+All annotation tools work the same as in single-view mode:
+
+- **Bounding boxes** — click and drag on any view.
+- **Polygons and keypoints** — available per view.
+- **Smart segmentation** — if SAM embeddings are precomputed for a view, the magic wand tool works on that view.
+
+In video mode, the associate tool lets you merge tracks across frames, just as with single-view video datasets.
+
+## Next steps
+
+- [Entity Linking](/pixano/use_cases/entity_linking/) — link image regions to text spans
+- [Video Object Tracking](/pixano/use_cases/video_tracking/) — single-view video with SAM
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Video Object Tracking", href: "/use_cases/video_tracking/" }}
+  next={{ title: "Entity Linking", href: "/use_cases/entity_linking/" }}
+/>

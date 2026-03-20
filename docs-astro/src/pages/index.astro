@@ -1,4 +1,86 @@
 ---
-// Redirect root to Getting Started
-return Astro.redirect(`${import.meta.env.BASE_URL}getting_started/`);
+import DocsLayout from "../layouts/DocsLayout.astro";
+import CardGrid from "../components/CardGrid.astro";
+import Card from "../components/Card.astro";
 ---
+
+<DocsLayout title="Pixano Documentation" section="getting_started">
+  <div class="hero">
+    <h1>Pixano Documentation</h1>
+    <p class="hero-subtitle">
+      Open-source, data-centric AI platform for exploring and annotating
+      computer vision datasets. Built on Python, FastAPI, Svelte, and the
+      columnar Lance format.
+    </p>
+  </div>
+
+  <h2>Get up and running</h2>
+  <CardGrid columns={3}>
+    <Card title="Installation" href="/getting_started/installing_pixano/" icon="download">
+      Install Pixano via pip, Docker, or from source.
+    </Card>
+    <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
+      Import a dataset and launch the app in minutes.
+    </Card>
+    <Card title="Key Concepts" href="/getting_started/key_concepts/" icon="lightbulb">
+      Understand the data model: items, views, entities, annotations.
+    </Card>
+  </CardGrid>
+
+  <h2>Use cases</h2>
+  <p>
+    Each guide walks you end-to-end through a real dataset: import, explore in
+    the UI, annotate, and use advanced features like pre-annotation and
+    semantic search.
+  </p>
+  <CardGrid columns={3}>
+    <Card title="Object Detection" href="/use_cases/object_detection/" icon="target">
+      Pascal VOC 2007 with bounding boxes, YOLO pre-annotation, and semantic search.
+    </Card>
+    <Card title="Video Object Tracking" href="/use_cases/video_tracking/" icon="video">
+      DAVIS 2017 with timeline annotations, tracklets, and SAM segmentation.
+    </Card>
+    <Card title="Multi-View Detection" href="/use_cases/multi_view_detection/" icon="layers">
+      FLIR ADAS v2 with synchronized RGB and thermal views.
+    </Card>
+    <Card title="Entity Linking" href="/use_cases/entity_linking/" icon="link">
+      MEL dataset with image regions linked to text spans.
+    </Card>
+    <Card title="Visual Question Answering" href="/use_cases/vqa/" icon="message">
+      VQAv2 with conversation-based Q&A annotation.
+    </Card>
+  </CardGrid>
+
+  <h2>API Reference</h2>
+  <p>
+    Browse the auto-generated reference for every Python module.
+  </p>
+  <CardGrid columns={2}>
+    <Card title="Python API" href="/api_reference/" icon="api">
+      Full reference for pixano.datasets, pixano.schemas, pixano.api, and more.
+    </Card>
+    <Card title="GitHub" href="https://github.com/pixano/pixano" icon="code">
+      Source code, issues, and releases.
+    </Card>
+  </CardGrid>
+</DocsLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .hero h1 {
+    font-size: 2.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+    color: var(--px-text-secondary);
+    max-width: 60ch;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+</style>
