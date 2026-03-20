@@ -15,7 +15,11 @@ import {
   MessageTypeEnum,
   QuestionTypeEnum,
 } from "$lib/types/dataset";
-import type { CondititionalGenerationTextImageInput } from "$lib/types/inference";
+import {
+  isSameInferenceModel,
+  type CondititionalGenerationTextImageInput,
+  type InferenceModelSelection,
+} from "$lib/types/inference";
 import type {
   DeleteQuestionEvent,
   NewAnswerEvent,
@@ -178,13 +182,13 @@ function getQuestionContext(question: Message, imageUrl: string): VqaMessageCont
 // ─── generateAnswer ─────────────────────────────────────────────────────────────
 
 export const generateAnswer = async (
-  completionModel: string,
+  completionModel: InferenceModelSelection,
   question: Message,
   imageUrl: string,
 ) => {
   const questionData = question.data;
   const selectedCompletionModel =
-    completionModelsStore.value.find((m) => m.name === completionModel) ??
+    completionModelsStore.value.find((m) => isSameInferenceModel(m, completionModel)) ??
     completionModelsStore.value.find((m) => m.selected);
   const temperature = selectedCompletionModel?.temperature ?? 1.0;
 
@@ -203,7 +207,8 @@ export const generateAnswer = async (
   const promptInstruction =
     selectedCompletionModel?.prompts[MessageTypeEnum.ANSWER][questionType] ?? "";
   const input: CondititionalGenerationTextImageInput = {
-    model: completionModel,
+    model: completionModel.name,
+    provider_name: completionModel.provider_name,
     prompt: buildPrompt(
       promptInstruction,
       question.data.content,
@@ -214,7 +219,7 @@ export const generateAnswer = async (
   };
 
   try {
-    const generatedAnswer = await api.conditional_generation_text_image(input);
+    const generatedAnswer = await api.vlm(input);
 
     if (!generatedAnswer) {
       console.error(
@@ -252,11 +257,11 @@ export const generateAnswer = async (
 // ─── generateQuestion ───────────────────────────────────────────────────────────
 
 export const generateQuestion = async (
-  completionModel: string,
+  completionModel: InferenceModelSelection,
   context: VqaMessageContext,
 ): Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null> => {
   const selectedCompletionModel =
-    completionModelsStore.value.find((m) => m.name === completionModel) ??
+    completionModelsStore.value.find((m) => isSameInferenceModel(m, completionModel)) ??
     completionModelsStore.value.find((m) => m.selected);
   const temperature = selectedCompletionModel?.temperature ?? 1.0;
   const questionType =
@@ -267,7 +272,8 @@ export const generateQuestion = async (
     selectedCompletionModel?.prompts[MessageTypeEnum.QUESTION][questionType] ?? "";
 
   const input: CondititionalGenerationTextImageInput = {
-    model: completionModel,
+    model: completionModel.name,
+    provider_name: completionModel.provider_name,
     prompt: buildPrompt(
       promptInstruction,
       "Generate one question for this image.",
@@ -278,7 +284,7 @@ export const generateQuestion = async (
   };
 
   try {
-    const generatedQuestion = await api.conditional_generation_text_image(input);
+    const generatedQuestion = await api.vlm(input);
 
     if (!generatedQuestion) {
       return null;

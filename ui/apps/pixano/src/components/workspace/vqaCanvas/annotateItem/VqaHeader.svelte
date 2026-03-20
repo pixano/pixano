@@ -9,8 +9,14 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import ConfigurePromptModal from "../manageModels/ConfigurePromptModal.svelte";
+  import { selectedVqaModel } from "$lib/stores/inferenceStores.svelte";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
+  import {
+    formatInferenceProviderName,
+    getInferenceModelKey,
+    type InferenceModel,
+    type InferenceServerState,
+  } from "$lib/types/inference";
   import { IconButton } from "$lib/ui";
   import { effectProbe } from "$lib/utils/effectProbe";
 
@@ -33,7 +39,13 @@ License: CECILL-C
   let selectedModel = $state("");
   let showPromptModal = $state(false);
 
-  let inferenceModels = $derived(vqaModels.map((m) => ({ id: m.name, value: m.name })));
+  let inferenceModels = $derived(
+    vqaModels.map((m) => ({
+      id: getInferenceModelKey(m),
+      value: `${m.name} · ${formatInferenceProviderName(m.provider_name)}`,
+      selection: { name: m.name, provider_name: m.provider_name },
+    })),
+  );
 
   $effect(() => {
     const model = selectedModel;
@@ -43,14 +55,19 @@ License: CECILL-C
         selectedModel: model,
         modelCount: models.length,
       });
-      if (!model) return;
+      if (!model) {
+        selectedVqaModel.value = null;
+        return;
+      }
       let hasSelectionChange = false;
       const nextModels = completionModels.map((m) => {
-        const shouldSelect = m.name === model;
+        const shouldSelect = getInferenceModelKey(m) === model;
         if (m.selected === shouldSelect) return m;
         hasSelectionChange = true;
         return { ...m, selected: shouldSelect };
       });
+      const selectedInferenceModel = models.find((entry) => entry.id === model)?.selection ?? null;
+      selectedVqaModel.value = selectedInferenceModel;
       if (hasSelectionChange) onCompletionModelsChange?.(nextModels);
     });
   });
@@ -62,9 +79,11 @@ License: CECILL-C
         selectedModel,
         modelCount: models.length,
       });
-      if (!selectedModel && models.length >= 1) {
-        selectedModel = models[0].id;
-      }
+      const hasSelection = models.some((model) => model.id === selectedModel);
+      if (hasSelection) return;
+      const currentSelection = selectedVqaModel.value;
+      const currentSelectionId = currentSelection ? getInferenceModelKey(currentSelection) : "";
+      selectedModel = models.find((model) => model.id === currentSelectionId)?.id ?? models[0]?.id ?? "";
     });
   });
 </script>

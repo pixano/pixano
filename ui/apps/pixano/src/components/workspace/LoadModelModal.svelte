@@ -10,19 +10,19 @@ License: CECILL-C
   import SelectLocalOrDistantModelModal from "../inference/segmentation/SelectLocalOrDistantModelModal.svelte";
   import {
     segmentationModels,
-    selectedSegmentationModelName,
+    selectedSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
   import { modelsUiStore, selectedTool } from "$lib/stores/workspaceStores.svelte";
-  import { panTool } from "$lib/tools";
+  import { ToolType, panTool } from "$lib/tools";
   import { LoadingModal } from "$lib/ui";
 
   const currentModalOpen = $derived(modelsUiStore.value.currentModalOpen);
 
   function loadModel() {
-    // Remote-only: just close modal, the selected model name is stored in selectedSegmentationModelName
+    // Remote-only: keep the selected model name in modelsUiStore for embedding-related flows.
     modelsUiStore.value = {
       currentModalOpen: "none",
-      selectedModelName: selectedSegmentationModelName.value ?? "",
+      selectedModelName: selectedSegmentationModel.value?.name ?? "",
       selectedTableName: "",
       yetToLoadEmbedding: true,
     };
@@ -41,7 +41,11 @@ License: CECILL-C
   $effect(() => {
     const tool = selectedTool.value;
     const models = segmentationModels.value;
-    if (tool?.isSmart && models.length === 0) {
+    const selectedModel = selectedSegmentationModel.value;
+    if (
+      tool?.type === ToolType.InteractiveSegmenter &&
+      (!selectedModel || models.length === 0)
+    ) {
       untrack(() => {
         modelsUiStore.update((store) => {
           if (store.currentModalOpen === "selectModel") return store;

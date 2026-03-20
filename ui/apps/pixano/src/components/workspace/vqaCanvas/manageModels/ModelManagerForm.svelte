@@ -11,13 +11,19 @@ License: CECILL-C
   import { mergeModelLists } from "../utils/mergeModelsList";
   import ConfigurePromptModal from "./ConfigurePromptModal.svelte";
   import { DEFAULT_QUESTION_PROMPT, DEFAULT_TEMPERATURE } from "./defaults";
+  import { selectedVqaModel } from "$lib/stores/inferenceStores.svelte";
   import {
     type MessageGenerationPrompts,
     type PixanoInferenceCompletionModel,
     type PromptByQuestionType,
   } from "$lib/stores/vqaStores.svelte";
   import { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
-  import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
+  import {
+    formatInferenceProviderName,
+    getInferenceModelKey,
+    type InferenceModel,
+    type InferenceServerState,
+  } from "$lib/types/inference";
   import { IconButton } from "$lib/ui";
   import { effectProbe } from "$lib/utils/effectProbe";
 
@@ -41,7 +47,13 @@ License: CECILL-C
   let showPromptModal = $state(false);
 
   // Build model dropdown options from props
-  let inferenceModels = $derived(vqaModels.map((m) => ({ id: m.name, value: m.name })));
+  let inferenceModels = $derived(
+    vqaModels.map((m) => ({
+      id: getInferenceModelKey(m),
+      value: `${m.name} · ${formatInferenceProviderName(m.provider_name)}`,
+      selection: { name: m.name, provider_name: m.provider_name },
+    })),
+  );
 
   // When model selected, update completionModels via callback
   $effect(() => {
@@ -52,13 +64,18 @@ License: CECILL-C
         selectedModel: model,
         modelCount: models.length,
       });
+      if (!model) {
+        selectedVqaModel.value = null;
+        return;
+      }
       let hasSelectionChange = false;
       const nextModels = completionModels.map((m) => {
-        const shouldSelect = m.name === model;
+        const shouldSelect = getInferenceModelKey(m) === model;
         if (m.selected === shouldSelect) return m;
         hasSelectionChange = true;
         return { ...m, selected: shouldSelect };
       });
+      selectedVqaModel.value = models.find((entry) => entry.id === model)?.selection ?? null;
       if (hasSelectionChange) onCompletionModelsChange?.(nextModels);
     });
   });
@@ -71,9 +88,11 @@ License: CECILL-C
         selectedModel,
         modelCount: models.length,
       });
-      if (!selectedModel && models.length >= 1) {
-        selectedModel = models[0].id;
-      }
+      const hasSelection = models.some((model) => model.id === selectedModel);
+      if (hasSelection) return;
+      const currentSelection = selectedVqaModel.value;
+      const currentSelectionId = currentSelection ? getInferenceModelKey(currentSelection) : "";
+      selectedModel = models.find((model) => model.id === currentSelectionId)?.id ?? models[0]?.id ?? "";
     });
   });
 
@@ -85,38 +104,42 @@ License: CECILL-C
         modelCount: vqaModelsList.length,
       });
     });
-    const completionAvailableModelsName = vqaModelsList.map((model) => model.name);
+    const completionAvailableModels = vqaModelsList.map((model) => ({
+      name: model.name,
+      provider_name: model.provider_name,
+    }));
 
-    if (completionAvailableModelsName.length > 0) {
-      const defaultPromptsQuestion = Object.fromEntries(
-        Object.values(QuestionTypeEnum).map((questionType) => [
-          questionType,
-          DEFAULT_QUESTION_PROMPT,
-        ]),
-      ) as PromptByQuestionType;
+    const defaultPromptsQuestion = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [
+        questionType,
+        DEFAULT_QUESTION_PROMPT,
+      ]),
+    ) as PromptByQuestionType;
 
-      const defaultPromptOthers = Object.fromEntries(
-        Object.values(QuestionTypeEnum).map((questionType) => [questionType, ""]),
-      ) as PromptByQuestionType;
+    const defaultPromptOthers = Object.fromEntries(
+      Object.values(QuestionTypeEnum).map((questionType) => [questionType, ""]),
+    ) as PromptByQuestionType;
 
-      const prompts: MessageGenerationPrompts = {
-        ...Object.fromEntries(
-          Object.values(MessageTypeEnum).map((key) => [key, defaultPromptOthers]),
-        ),
-        [MessageTypeEnum.QUESTION]: defaultPromptsQuestion,
-        as_system: true,
-      } as MessageGenerationPrompts;
+    const prompts: MessageGenerationPrompts = {
+      ...Object.fromEntries(
+        Object.values(MessageTypeEnum).map((key) => [key, defaultPromptOthers]),
+      ),
+      [MessageTypeEnum.QUESTION]: defaultPromptsQuestion,
+      as_system: true,
+    } as MessageGenerationPrompts;
 
-      const nextList = mergeModelLists(
-        completionAvailableModelsName,
-        completionModels,
-        prompts,
-        DEFAULT_TEMPERATURE,
-      );
-      const hasListChange =
-        nextList.length !== completionModels.length ||
-        nextList.some((model, index) => model !== completionModels[index]);
-      if (hasListChange) onCompletionModelsChange?.(nextList);
+    const nextList = mergeModelLists(
+      completionAvailableModels,
+      completionModels,
+      prompts,
+      DEFAULT_TEMPERATURE,
+    );
+    const hasListChange =
+      nextList.length !== completionModels.length ||
+      nextList.some((model, index) => model !== completionModels[index]);
+    if (hasListChange) onCompletionModelsChange?.(nextList);
+    if (completionAvailableModels.length === 0) {
+      selectedVqaModel.value = null;
     }
   });
 </script>

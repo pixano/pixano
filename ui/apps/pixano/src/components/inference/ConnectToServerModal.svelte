@@ -25,11 +25,13 @@ License: CECILL-C
   });
 
   async function handleConnect() {
-    if (!url) return;
+    if (!url.trim()) return;
+
     isConnecting = true;
     error = "";
     const success = await connectToInferenceServer(url);
     isConnecting = false;
+
     if (success) {
       onConnected?.();
       onClose?.();
@@ -63,14 +65,14 @@ License: CECILL-C
           id="inference-url"
           name="inference-url"
           value={url}
-          placeholder="http://localhost:8000"
+          placeholder="http://localhost:7463"
           oninput={(event) => {
             const target = event.currentTarget as HTMLInputElement;
             url = target.value;
           }}
-          onkeyup={(e: KeyboardEvent) => {
-            e.stopPropagation();
-            if (e.key === "Enter") void handleConnect();
+          onkeyup={(event: KeyboardEvent) => {
+            event.stopPropagation();
+            if (event.key === "Enter") void handleConnect();
           }}
         />
       </div>
@@ -79,7 +81,7 @@ License: CECILL-C
       {/if}
       <div class="flex gap-3 justify-end">
         <PrimaryButton onclick={handleCancel}>Cancel</PrimaryButton>
-        <PrimaryButton onclick={handleConnect} isSelected disabled={!url || isConnecting}>
+        <PrimaryButton onclick={handleConnect} isSelected disabled={!url.trim() || isConnecting}>
           {isConnecting ? "Connecting..." : "Connect"}
         </PrimaryButton>
       </div>

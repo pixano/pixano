@@ -4,151 +4,143 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { apiFetch, apiMutate, buildQueryString, JSON_HEADERS } from "./apiClient";
+import { JSON_HEADERS, requestJson } from "./apiClient";
 import type {
   CondititionalGenerationTextImageInput,
   ConnectedProvider,
-  ModelConfig,
-  Task,
+  ImageSegmentationTaskInput,
+  ImageSegmentationTaskResult,
+  InferenceModel,
+  InferenceProviderRegistry,
+  VideoTrackingTaskInput,
+  VideoTrackingTaskResult,
   VLMResult,
 } from "$lib/types/inference";
 
-// ─── connectToServer ─────────────────────────────────────────────────────────
+const EMPTY_REGISTRY: InferenceProviderRegistry = {
+  connected: false,
+  providers: [],
+  default_provider: null,
+};
 
-export async function connectToServer(url: string): Promise<boolean> {
+const EMPTY_MODELS: InferenceModel[] = [];
+
+export async function getInferenceServers(): Promise<InferenceProviderRegistry> {
   try {
-    const qs = buildQueryString({ url });
-    const response = await fetch(`/inference/connect${qs}`, {
+    const response = await fetch("/app/inference/servers/", {
+      headers: { Accept: "application/json" },
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      console.error("api.getInferenceServers -", response.status, response.statusText);
+      return EMPTY_REGISTRY;
+    }
+
+    return (await response.json()) as InferenceProviderRegistry;
+  } catch (e) {
+    console.error("api.getInferenceServers -", e);
+    return EMPTY_REGISTRY;
+  }
+}
+
+export async function registerInferenceServer(url: string): Promise<ConnectedProvider | null> {
+  try {
+    const response = await fetch("/app/inference/servers/", {
       headers: JSON_HEADERS,
       method: "POST",
+      body: JSON.stringify({ url: url.trim() }),
     });
-    return response.ok;
+
+    if (!response.ok) {
+      console.error("api.registerInferenceServer -", response.status, response.statusText);
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      provider: ConnectedProvider;
+      default_provider: string | null;
+    };
+    return payload.provider;
   } catch (e) {
-    console.error("api.connectToServer -", e);
-    return false;
+    console.error("api.registerInferenceServer -", e);
+    return null;
   }
 }
 
-function buildModelsUrl(basePath: string, task: Task | null): string {
-  if (task === null) {
-    return basePath;
+export async function listInferenceModels(): Promise<InferenceModel[]> {
+  try {
+    const response = await fetch("/app/inference/models/", {
+      headers: { Accept: "application/json" },
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      console.error("api.listInferenceModels -", response.status, response.statusText);
+      return EMPTY_MODELS;
+    }
+
+    return (await response.json()) as InferenceModel[];
+  } catch (e) {
+    console.error("api.listInferenceModels -", e);
+    return EMPTY_MODELS;
   }
-  return `${basePath}?task=${encodeURIComponent(task)}`;
 }
 
-// ─── deleteModel ────────────────────────────────────────────────────────────────
-
-export function deleteModel(modelName: string): Promise<void> {
-  return apiMutate(
-    `/inference/models/delete/${modelName}`,
-    { headers: JSON_HEADERS, method: "DELETE" },
-    "deleteModel",
-  );
-}
-
-// ─── conditional_generation_text_image ───────────────────────────────────────────
-
-export async function conditional_generation_text_image(
+export async function vlm(
   input: CondititionalGenerationTextImageInput,
 ): Promise<VLMResult | null> {
   try {
-    const response = await fetch("/inference/tasks/conditional_generation/text-image", {
+    const response = await fetch("/inference/vlm", {
       headers: JSON_HEADERS,
       method: "POST",
       body: JSON.stringify(input),
     });
 
     if (!response.ok) {
+      console.error("api.vlm -", response.status, response.statusText);
       return null;
     }
+
     return (await response.json()) as VLMResult;
   } catch (e) {
-    console.error("api.conditional_generation_text_image -", e);
+    console.error("api.vlm -", e);
     return null;
   }
 }
 
-// ─── getInferenceStatus ─────────────────────────────────────────────────────────
-
-export interface InferenceStatusResponse {
-  connected: boolean;
-  providers: ConnectedProvider[];
-  default: string | null;
-}
-
-const DEFAULT_INFERENCE_STATUS: InferenceStatusResponse = {
-  connected: false,
-  providers: [],
-  default: null,
-};
-
-export async function getInferenceStatus(): Promise<InferenceStatusResponse> {
-  try {
-    const response = await fetch("/inference/status", {
-      headers: { Accept: "application/json" },
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      return DEFAULT_INFERENCE_STATUS;
-    }
-
-    return (await response.json()) as InferenceStatusResponse;
-  } catch {
-    return DEFAULT_INFERENCE_STATUS;
-  }
-}
-
-// ─── instantiateModel ───────────────────────────────────────────────────────────
-
-export async function instantiateModel(modelConfig: ModelConfig): Promise<boolean> {
-  try {
-    const response = await fetch(`/inference/models/instantiate`, {
+export async function segmentImage(
+  input: ImageSegmentationTaskInput,
+): Promise<ImageSegmentationTaskResult> {
+  return requestJson<ImageSegmentationTaskResult>(
+    "/inference/segmentation",
+    {
       headers: JSON_HEADERS,
       method: "POST",
-      body: JSON.stringify(modelConfig),
-    });
-
-    if (!response.ok) {
-      console.error("api.instantiateModel -", response.status, response.statusText);
-      return false;
-    }
-
-    return true;
-  } catch (e) {
-    console.error("api.instantiateModel -", e);
-    return false;
-  }
-}
-
-// ─── listAllModels ──────────────────────────────────────────────────────────────
-
-export interface ModelWithProvider {
-  name: string;
-  task: Task;
-  provider_name: string;
-}
-
-export function listAllModels(task: Task | null = null): Promise<ModelWithProvider[]> {
-  const url = buildModelsUrl("/inference/models/list-all", task);
-
-  return apiFetch(
-    url,
-    { headers: JSON_HEADERS, method: "GET" },
-    [] as ModelWithProvider[],
-    "listAllModels",
+      body: JSON.stringify(input),
+    },
+    "segmentImage",
   );
 }
 
-// ─── listModels ─────────────────────────────────────────────────────────────────
+export async function trackVideo(
+  input: VideoTrackingTaskInput,
+): Promise<VideoTrackingTaskResult | null> {
+  try {
+    const response = await fetch("/inference/tracking", {
+      headers: JSON_HEADERS,
+      method: "POST",
+      body: JSON.stringify(input),
+    });
 
-interface Model {
-  name: string;
-  task: Task;
-}
+    if (!response.ok) {
+      console.error("api.trackVideo -", response.status, response.statusText);
+      return null;
+    }
 
-export function listModels(task: Task | null = null): Promise<Model[]> {
-  const url = buildModelsUrl("/inference/models/list", task);
-
-  return apiFetch(url, { headers: JSON_HEADERS, method: "GET" }, [] as Model[], "listModels");
+    return (await response.json()) as VideoTrackingTaskResult;
+  } catch (e) {
+    console.error("api.trackVideo -", e);
+    return null;
+  }
 }

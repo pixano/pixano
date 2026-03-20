@@ -15,6 +15,7 @@ import {
   ImageTask,
   MultimodalImageNLPTask,
   VideoTask,
+  type InferenceModelSelection,
   type InferenceServerState,
 } from "$lib/types/inference";
 
@@ -44,8 +45,8 @@ export const vqaModels = {
   },
 };
 
-export const selectedSegmentationModelName = reactiveStore<string | null>(null);
-export const selectedVqaModelName = reactiveStore<string | null>(null);
+export const selectedSegmentationModel = reactiveStore<InferenceModelSelection | null>(null);
+export const selectedVqaModel = reactiveStore<InferenceModelSelection | null>(null);
 
 // ─── Pixano Segmentation Inference ──────────────────────────────────────────────
 

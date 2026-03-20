@@ -5,65 +5,59 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
-  connectToServer,
-  getInferenceStatus,
-  listAllModels,
-  type ModelWithProvider,
+  getInferenceServers,
+  listInferenceModels,
+  registerInferenceServer,
 } from "$lib/api/inferenceApi";
 import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
-import type { InferenceModel } from "$lib/types/inference";
 
-async function refreshModels(): Promise<InferenceModel[]> {
-  const models: ModelWithProvider[] = await listAllModels();
-  return models as InferenceModel[];
+function applyDisconnectedState(): void {
+  inferenceServerStore.value = {
+    connected: false,
+    providers: [],
+    defaultProvider: null,
+    models: [],
+    isLoading: false,
+  };
 }
 
-export async function checkInferenceStatus(): Promise<void> {
-  inferenceServerStore.update((s) => ({ ...s, isLoading: true }));
+export async function loadInferenceRegistry(): Promise<void> {
+  if (inferenceServerStore.value.isLoading) return;
+
+  inferenceServerStore.update((state) => ({ ...state, isLoading: true }));
+
   try {
-    const status = await getInferenceStatus();
-    if (status.connected) {
-      const models = await refreshModels();
-      inferenceServerStore.value = {
-        connected: true,
-        providers: status.providers,
-        defaultProvider: status.default,
-        models,
-        isLoading: false,
-      };
-    } else {
-      inferenceServerStore.value = {
-        connected: false,
-        providers: [],
-        defaultProvider: null,
-        models: [],
-        isLoading: false,
-      };
-    }
-  } catch {
+    const registry = await getInferenceServers();
+    const models = registry.connected ? await listInferenceModels() : [];
     inferenceServerStore.value = {
-      connected: false,
-      providers: [],
-      defaultProvider: null,
-      models: [],
+      connected: registry.connected,
+      providers: registry.providers,
+      defaultProvider: registry.default_provider,
+      models,
       isLoading: false,
     };
+  } catch {
+    applyDisconnectedState();
   }
 }
 
-export async function connectToInferenceServer(url: string): Promise<boolean> {
-  const success = await connectToServer(url);
-  if (success) {
-    await checkInferenceStatus();
-  }
-  return success;
+export async function ensureInferenceRegistryLoaded(): Promise<void> {
+  const state = inferenceServerStore.value;
+  if (state.isLoading) return;
+  if (state.providers.length > 0 || state.models.length > 0) return;
+  await loadInferenceRegistry();
 }
 
 export async function refreshInferenceModels(): Promise<void> {
-  try {
-    const models = await refreshModels();
-    inferenceServerStore.update((s) => ({ ...s, models }));
-  } catch {
-    // keep existing state on error
+  await loadInferenceRegistry();
+}
+
+export async function connectToInferenceServer(url: string): Promise<boolean> {
+  const connectedProvider = await registerInferenceServer(url);
+  if (!connectedProvider) {
+    return false;
   }
+
+  await loadInferenceRegistry();
+  return true;
 }

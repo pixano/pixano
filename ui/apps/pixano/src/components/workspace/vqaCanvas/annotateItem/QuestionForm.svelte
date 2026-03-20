@@ -69,7 +69,7 @@ License: CECILL-C
 
   const handleGenerateAnswer = () => {
     const completionModel =
-      completionModels.filter((model) => model.selected)[0]?.name ?? undefined;
+      completionModels.filter((model) => model.selected)[0] ?? undefined;
     if (completionModel === undefined) {
       console.error("ERROR: No model selected");
       return;

@@ -6,12 +6,12 @@ License: CECILL-C
 
 import { reactiveStore } from "./reactiveStore.svelte";
 import type { MessageTypeEnum, QuestionTypeEnum } from "$lib/types/dataset";
+import type { InferenceModelSelection } from "$lib/types/inference";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
-export interface PixanoInferenceCompletionModel {
+export interface PixanoInferenceCompletionModel extends InferenceModelSelection {
   selected: boolean;
-  name: string;
   prompts: MessageGenerationPrompts;
   temperature: number;
 }

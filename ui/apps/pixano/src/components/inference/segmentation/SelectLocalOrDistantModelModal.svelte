@@ -12,9 +12,11 @@ License: CECILL-C
     pixanoInferenceTracking,
     pixanoInferenceTrackingNbAdditionalFrames,
     segmentationModels,
-    selectedSegmentationModelName,
+    selectedSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import { itemMetas } from "$lib/stores/workspaceStores.svelte";
+  import { formatInferenceProviderName, getInferenceModelKey } from "$lib/types/inference";
   import { Checkbox, PrimaryButton, WorkspaceType } from "$lib/ui";
 
   interface Props {
@@ -26,16 +28,29 @@ License: CECILL-C
 
   const isVideo = $derived(itemMetas.value?.type === WorkspaceType.VIDEO);
 
-  let selectedModel = $state("");
+  let selectedModelKey = $state("");
+
   $effect(() => {
-    const availableModels = segmentationModels.value;
-    const hasCurrentSelection = availableModels.some((model) => model.name === selectedModel);
-    if (hasCurrentSelection) return;
-    selectedModel = selectedSegmentationModelName.value ?? availableModels[0]?.name ?? "";
+    void ensureInferenceRegistryLoaded();
   });
 
-  const handleSelect = (modelName: string) => {
-    selectedModel = modelName;
+  $effect(() => {
+    const availableModels = segmentationModels.value;
+    const currentSelection = selectedSegmentationModel.value;
+    const currentSelectionKey = currentSelection ? getInferenceModelKey(currentSelection) : "";
+    const hasCurrentSelection = availableModels.some(
+      (model) => getInferenceModelKey(model) === selectedModelKey,
+    );
+    if (hasCurrentSelection) return;
+    if (currentSelectionKey) {
+      selectedModelKey = currentSelectionKey;
+      return;
+    }
+    selectedModelKey = availableModels[0] ? getInferenceModelKey(availableModels[0]) : "";
+  });
+
+  const handleSelect = (modelKey: string) => {
+    selectedModelKey = modelKey;
   };
 
   const handleTrackingFramesChange = (nextValue: string) => {
@@ -53,7 +68,15 @@ License: CECILL-C
   };
 
   function handleConfirm() {
-    selectedSegmentationModelName.value = selectedModel || null;
+    const selectedModel = segmentationModels.value.find(
+      (model) => getInferenceModelKey(model) === selectedModelKey,
+    );
+    selectedSegmentationModel.value = selectedModel
+      ? {
+          name: selectedModel.name,
+          provider_name: selectedModel.provider_name,
+        }
+      : null;
     onConfirm?.();
   }
 
@@ -83,7 +106,7 @@ License: CECILL-C
           <HardDrives weight="regular" size={28} class="text-muted-foreground/50" />
         </div>
         <p class="text-xs text-muted-foreground leading-relaxed px-4">
-          Connect to an inference server from the toolbar to use AI models.
+          No inference server is connected. Register one from the home page to use AI models.
         </p>
       </div>
     {:else if segmentationModels.value.length === 0}
@@ -99,27 +122,24 @@ License: CECILL-C
         </h4>
         <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1">
           {#each segmentationModels.value as model}
+            {@const modelKey = getInferenceModelKey(model)}
             <button
               class="flex flex-col gap-1 px-4 py-3 rounded-xl border text-left transition-all duration-200
-              {selectedModel === model.name
+              {selectedModelKey === modelKey
                 ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                 : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'}"
-              onclick={() => handleSelect(model.name)}
+              onclick={() => handleSelect(modelKey)}
             >
               <span
-                class="text-xs font-bold {selectedModel === model.name
+                class="text-xs font-bold {selectedModelKey === modelKey
                   ? 'text-primary'
                   : 'text-foreground'}"
               >
                 {model.name}
               </span>
-              {#if model.provider_name}
-                <span class="text-[10px] text-muted-foreground font-medium italic opacity-70">
-                  via {model.provider_name.includes("@")
-                    ? model.provider_name.substring(model.provider_name.indexOf("@") + 1)
-                    : model.provider_name}
-                </span>
-              {/if}
+              <span class="text-[10px] text-muted-foreground font-medium italic opacity-70">
+                via {formatInferenceProviderName(model.provider_name)}
+              </span>
             </button>
           {/each}
         </div>
@@ -173,7 +193,7 @@ License: CECILL-C
       <PrimaryButton
         onclick={handleConfirm}
         isSelected
-        disabled={!selectedModel && segmentationModels.value.length > 0}
+        disabled={!selectedModelKey && segmentationModels.value.length > 0}
         class="flex-1 h-10"
       >
         Confirm

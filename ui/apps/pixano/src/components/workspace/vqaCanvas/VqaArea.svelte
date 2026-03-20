@@ -11,7 +11,11 @@ License: CECILL-C
   import VqaInputArea from "./annotateItem/VqaInputArea.svelte";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { Message } from "$lib/types/dataset";
-  import type { InferenceModel, InferenceServerState } from "$lib/types/inference";
+  import type {
+    InferenceModel,
+    InferenceModelSelection,
+    InferenceServerState,
+  } from "$lib/types/inference";
   import type {
     ContentChangeEvent,
     DeleteQuestionEvent,
@@ -31,7 +35,7 @@ License: CECILL-C
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
     onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
-    onGenerateQuestion?: (completionModel: string) => Promise<{
+    onGenerateQuestion?: (completionModel: InferenceModelSelection) => Promise<{
       content: string;
       choices: string[];
       question_type: import("$lib/types/dataset").QuestionTypeEnum;
