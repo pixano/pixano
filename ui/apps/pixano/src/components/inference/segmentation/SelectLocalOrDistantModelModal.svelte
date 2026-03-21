@@ -11,8 +11,10 @@ License: CECILL-C
     inferenceServerStore,
     pixanoInferenceTracking,
     pixanoInferenceTrackingNbAdditionalFrames,
-    segmentationModels,
-    selectedSegmentationModel,
+    selectedStaticSegmentationModel,
+    selectedVideoSegmentationModel,
+    staticSegmentationModels,
+    videoSegmentationModels,
   } from "$lib/stores/inferenceStores.svelte";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import { itemMetas } from "$lib/stores/workspaceStores.svelte";
@@ -27,6 +29,12 @@ License: CECILL-C
   let { onConfirm, onCancel }: Props = $props();
 
   const isVideo = $derived(itemMetas.value?.type === WorkspaceType.VIDEO);
+  const compatibleModels = $derived(
+    isVideo ? videoSegmentationModels.value : staticSegmentationModels.value,
+  );
+  const currentSegmentationSelection = $derived(
+    isVideo ? selectedVideoSegmentationModel.value : selectedStaticSegmentationModel.value,
+  );
 
   let selectedModelKey = $state("");
 
@@ -35,8 +43,8 @@ License: CECILL-C
   });
 
   $effect(() => {
-    const availableModels = segmentationModels.value;
-    const currentSelection = selectedSegmentationModel.value;
+    const availableModels = compatibleModels;
+    const currentSelection = currentSegmentationSelection;
     const currentSelectionKey = currentSelection ? getInferenceModelKey(currentSelection) : "";
     const hasCurrentSelection = availableModels.some(
       (model) => getInferenceModelKey(model) === selectedModelKey,
@@ -68,15 +76,20 @@ License: CECILL-C
   };
 
   function handleConfirm() {
-    const selectedModel = segmentationModels.value.find(
+    const selectedModel = compatibleModels.find(
       (model) => getInferenceModelKey(model) === selectedModelKey,
     );
-    selectedSegmentationModel.value = selectedModel
+    const selection = selectedModel
       ? {
           name: selectedModel.name,
           provider_name: selectedModel.provider_name,
         }
       : null;
+    if (isVideo) {
+      selectedVideoSegmentationModel.value = selection;
+    } else {
+      selectedStaticSegmentationModel.value = selection;
+    }
     onConfirm?.();
   }
 
@@ -109,10 +122,10 @@ License: CECILL-C
           No inference server is connected. Register one from the home page to use AI models.
         </p>
       </div>
-    {:else if segmentationModels.value.length === 0}
+    {:else if compatibleModels.length === 0}
       <div class="flex flex-col items-center gap-4 py-4 text-center">
         <p class="text-xs text-muted-foreground font-medium">
-          No segmentation models found on server.
+          {isVideo ? "No tracking models found on server." : "No image segmentation models found on server."}
         </p>
       </div>
     {:else}
@@ -121,7 +134,7 @@ License: CECILL-C
           Available Models
         </h4>
         <div class="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-1">
-          {#each segmentationModels.value as model}
+          {#each compatibleModels as model}
             {@const modelKey = getInferenceModelKey(model)}
             <button
               class="flex flex-col gap-1 px-4 py-3 rounded-xl border text-left transition-all duration-200
@@ -193,7 +206,7 @@ License: CECILL-C
       <PrimaryButton
         onclick={handleConfirm}
         isSelected
-        disabled={!selectedModelKey && segmentationModels.value.length > 0}
+        disabled={!selectedModelKey && compatibleModels.length > 0}
         class="flex-1 h-10"
       >
         Confirm

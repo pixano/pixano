@@ -24,7 +24,7 @@ License: CECILL-C
   // Import stores and API functions
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import { inferenceServerStore, vqaModels } from "$lib/stores/inferenceStores.svelte";
-  import { selectedSegmentationModel } from "$lib/stores/inferenceStores.svelte";
+  import { selectedStaticSegmentationModel } from "$lib/stores/inferenceStores.svelte";
   import { InteractiveSegmenter } from "$lib/segmentation";
   import {
     createErrorSmartSegmentationUiState,
@@ -153,7 +153,7 @@ License: CECILL-C
     requestId: string,
     request: InteractiveSegmenterAIInput,
   ): Promise<void> {
-    const modelSelection = selectedSegmentationModel.value;
+    const modelSelection = selectedStaticSegmentationModel.value;
 
     if (request.action === "clear") {
       clearSmartPreview(request.viewRef.name);
@@ -387,7 +387,7 @@ License: CECILL-C
   });
 
   $effect(() => {
-    void selectedSegmentationModel.value;
+    void selectedStaticSegmentationModel.value;
     untrack(() => {
       clearSmartPreview();
       interactiveSegmenter.clear();

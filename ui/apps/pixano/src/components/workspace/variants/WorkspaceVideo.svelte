@@ -29,7 +29,7 @@ License: CECILL-C
   } from "$lib/stores/trackingStore.svelte";
   import {
     pixanoInferenceToValidateTrackingMasks,
-    selectedSegmentationModel,
+    selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
   import {
     currentFrameIndex,
@@ -165,7 +165,7 @@ License: CECILL-C
     _requestId: string,
     request: InteractiveSegmenterAIInput,
   ): Promise<void> {
-    const modelSelection = selectedSegmentationModel.value;
+    const modelSelection = selectedVideoSegmentationModel.value;
     if (!modelSelection) return;
 
     if (request.action === "clear") {
@@ -497,7 +497,7 @@ License: CECILL-C
   });
 
   $effect(() => {
-    void selectedSegmentationModel.value;
+    void selectedVideoSegmentationModel.value;
     untrack(() => {
       resetSmartTracking();
     });
