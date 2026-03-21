@@ -279,6 +279,20 @@ License: CECILL-C
       resetSmartSegmentationFeedback();
     });
   });
+
+  $effect(() => {
+    const shape = newShape.value;
+    if (shape.status !== "none" || !shape.shouldReset) return;
+    if (shape.resetReason !== "save-confirmed" || shape.resetShapeType !== ShapeType.mask) return;
+    const viewRef = shape.resetViewRef;
+    if (!viewRef) return;
+
+    untrack(() => {
+      clearSmartPreview(viewRef.name);
+      interactiveSegmenter.clear(viewRef);
+      resetSmartSegmentationFeedback();
+    });
+  });
 </script>
 
 <div class="w-full h-full relative">
@@ -299,6 +313,7 @@ License: CECILL-C
       newShape={newShape.value}
       {smartPreviewMasks}
       smartInferenceStatus={smartSegmentationUiState.value}
+      showSmartPromptCursorOverlay={true}
       onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
       onNewShapeChange={handleCanvasShapeChange}
       onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}

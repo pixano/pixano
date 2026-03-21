@@ -40,6 +40,7 @@ export interface ToolChangeAction {
   cursor: string;
   clearCrosshair: boolean;
   clearBrushCursor: boolean;
+  clearSmartPromptCursor: boolean;
   cleanupPolygonPreview: boolean;
 }
 
@@ -53,6 +54,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: panTool.cursor,
       clearCrosshair: true,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: true,
     };
   }
@@ -61,6 +63,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: rectangleTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: true,
     };
   }
@@ -69,6 +72,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: interactiveSegmenterTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: false,
       cleanupPolygonPreview: true,
     };
   }
@@ -77,6 +81,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: polygonTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: false,
     };
   }
@@ -85,6 +90,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: polylineTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: false,
     };
   }
@@ -93,6 +99,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: "none",
       clearCrosshair: true,
       clearBrushCursor: false,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: true,
     };
   }
@@ -101,6 +108,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
     cursor: "default",
     clearCrosshair: true,
     clearBrushCursor: true,
+    clearSmartPromptCursor: true,
     cleanupPolygonPreview: true,
   };
 }
@@ -111,6 +119,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
 export interface CursorFlushAction {
   showCrosshair: boolean;
   showBrushCursor: boolean;
+  showSmartPromptCursor: boolean;
 }
 
 /**
@@ -128,6 +137,7 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
   return {
     showCrosshair: isDrawTool,
     showBrushCursor: tool?.type === ToolType.Brush,
+    showSmartPromptCursor: tool?.type === ToolType.InteractiveSegmenter,
   };
 }
 

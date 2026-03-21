@@ -26,6 +26,7 @@ License: CECILL-C
   import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
   import Mask from "./Mask.svelte";
   import MultiPathShape from "./MultiPathShape.svelte";
+  import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import {
     buildPolygonSaveShape,
     buildPolylineSaveShape,
@@ -127,6 +128,7 @@ License: CECILL-C
     onAIRequest?: (requestId: string, params: InteractiveSegmenterAIInput) => void;
     smartPreviewMasks?: Record<string, SaveMaskShape | null>;
     smartInferenceStatus?: SmartSegmentationUiState;
+    showSmartPromptCursorOverlay?: boolean;
     toolBridge?: ToolBridge | undefined;
     // Image settings
     filters?: ImageFilters;
@@ -155,6 +157,7 @@ License: CECILL-C
     onAIRequest,
     smartPreviewMasks = {},
     smartInferenceStatus = createIdleSmartSegmentationUiState(),
+    showSmartPromptCursorOverlay = false,
     toolBridge = undefined,
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
@@ -185,6 +188,11 @@ License: CECILL-C
     y: number;
     radius: number;
     mode: "draw" | "erase";
+  } | null>(null);
+  let smartPromptCursorState = $state<{
+    x: number;
+    y: number;
+    promptMode: "positive" | "negative" | "box";
   } | null>(null);
   let cursor = $state("default");
   let cursorFrameRequested = false;
@@ -736,6 +744,7 @@ License: CECILL-C
     cursor = action.cursor;
     if (action.clearCrosshair) crosshairPosition = null;
     if (action.clearBrushCursor) brushCursorState = null;
+    if (action.clearSmartPromptCursor) smartPromptCursorState = null;
     if (action.cleanupPolygonPreview) cleanupPolygonPreviewListeners();
   }
 
@@ -754,6 +763,15 @@ License: CECILL-C
     brushCursorState = null;
   }
 
+  function updateSmartPromptCursor(mousePos: Konva.Vector2d) {
+    if (selectedTool?.type !== ToolType.InteractiveSegmenter) return;
+    smartPromptCursorState = {
+      x: mousePos.x,
+      y: mousePos.y,
+      promptMode: selectedTool.promptMode,
+    };
+  }
+
   // Keep brush cursor in sync when brushSettings/mode change (Q/E/X keys)
   $effect(() => {
     const radius = brushSettings.brushRadius;
@@ -761,6 +779,17 @@ License: CECILL-C
     const current = untrack(() => brushCursorState);
     if (current && mode) {
       brushCursorState = { ...current, radius, mode };
+    }
+  });
+
+  $effect(() => {
+    const promptMode = selectedTool?.type === ToolType.InteractiveSegmenter ? selectedTool.promptMode : null;
+    const current = untrack(() => smartPromptCursorState);
+    if (current && promptMode) {
+      smartPromptCursorState = { ...current, promptMode };
+    }
+    if (!promptMode) {
+      smartPromptCursorState = null;
     }
   });
 
@@ -857,9 +886,16 @@ License: CECILL-C
     } else {
       brushCursorState = null;
     }
+
+    if (flush.showSmartPromptCursor && showSmartPromptCursorOverlay && !isSmartInferencePending) {
+      updateSmartPromptCursor(position);
+    } else {
+      smartPromptCursorState = null;
+    }
   }
 
-  function clearAnnotationAndInputs() {
+  function clearAnnotationAndInputs(options?: { preserveSmartPromptPreview?: boolean }) {
+    const preserveSmartPromptPreview = options?.preserveSmartPromptPreview ?? false;
     if (selectedTool?.postProcessor) {
       selectedTool.postProcessor.reset();
     }
@@ -868,12 +904,15 @@ License: CECILL-C
     }
     // Declarative cleanup — just reset state, Svelte will remove the components
     localDraftShape = null;
-    smartPromptPreview = null;
+    if (!preserveSmartPromptPreview) {
+      smartPromptPreview = null;
+    }
     isViewportInteracting = false;
     crosshairPosition = null;
     queuedCursorPosition = null;
     cursorFrameRequested = false;
     cleanupBrushCursor();
+    smartPromptCursorState = null;
     cleanupPolygonPreviewListeners();
     // Only clear brush canvases after the user confirms (shouldReset) or
     // when leaving the brush tool — NOT while the save form is open.
@@ -906,6 +945,7 @@ License: CECILL-C
     // Hide crosshair and brush cursor when mouse leaves stage
     crosshairPosition = null;
     brushCursorState = null;
+    smartPromptCursorState = null;
     queuedCursorPosition = null;
     cursorFrameRequested = false;
     // End any ongoing brush stroke when mouse leaves
@@ -1397,6 +1437,16 @@ License: CECILL-C
     const previousTool = prevSelectedTool;
     const shapeStatus = newShape.status;
     const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
+    const resetReason = "resetReason" in newShape ? newShape.resetReason : undefined;
+    const resetShapeType = "resetShapeType" in newShape ? newShape.resetShapeType : undefined;
+    const preserveSmartPromptPreview =
+      resetReason === "save-cancelled" &&
+      resetShapeType === ShapeType.mask &&
+      currentTool?.type === ToolType.InteractiveSegmenter;
+    const shouldClearInteractiveSession =
+      resetReason === "save-confirmed" &&
+      resetShapeType === ShapeType.mask &&
+      currentTool?.type === ToolType.InteractiveSegmenter;
 
     // Fallback unsupported tools
     if (currentTool && !isSupportedCanvasTool(currentTool)) {
@@ -1410,7 +1460,12 @@ License: CECILL-C
 
     // Reset when shape explicitly requests it
     if (shapeStatus === "none" && shouldReset) {
-      untrack(() => clearAnnotationAndInputs());
+      if (shouldClearInteractiveSession && activeToolBridge?.preview.value?.type === "interactive-segmenter") {
+        untrack(() => {
+          activeToolBridge?.dispatchEvent({ type: "cancel" });
+        });
+      }
+      untrack(() => clearAnnotationAndInputs({ preserveSmartPromptPreview }));
       onNewShapeChange?.({ status: "none" });
       prevSelectedTool = currentTool;
       return;
@@ -1872,6 +1927,15 @@ License: CECILL-C
 
     <Layer id="tools" listening={false}>
       <Crosshair position={crosshairPosition} {stageWidth} {stageHeight} />
+      {#if smartPromptCursorState && showSmartPromptCursorOverlay && !isSmartInferencePending}
+        <SmartPromptCursor
+          x={smartPromptCursorState.x}
+          y={smartPromptCursorState.y}
+          promptMode={smartPromptCursorState.promptMode}
+          {stageWidth}
+          {stageHeight}
+        />
+      {/if}
       {#if brushCursorState}
         <BrushCursor
           x={brushCursorState.x}

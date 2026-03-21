@@ -168,6 +168,9 @@ export type SaveShape =
 export type IdleState = {
   status: "none";
   shouldReset?: boolean;
+  resetReason?: "save-confirmed" | "save-cancelled";
+  resetShapeType?: ShapeType;
+  resetViewRef?: Reference;
 };
 
 // ─── Create Shape Types ────────────────────────────────────────────────────────

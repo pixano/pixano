@@ -63,6 +63,20 @@ License: CECILL-C
   let selectedEntityId: string = $state("");
   const { manifest } = getWorkspaceContext();
 
+  function buildShapeResetState(reason: "save-confirmed" | "save-cancelled") {
+    if (newShape.value.status !== "saving") {
+      return { status: "none", shouldReset: true } as const;
+    }
+
+    return {
+      status: "none",
+      shouldReset: true,
+      resetReason: reason,
+      resetShapeType: newShape.value.type,
+      resetViewRef: newShape.value.viewRef,
+    } as const;
+  }
+
   const handleFormSubmit = () => {
     removeTemporaryTextSpan();
     currentTab = "objects";
@@ -361,7 +375,7 @@ License: CECILL-C
       }
     }
 
-    newShape.value = { status: "none", shouldReset: true };
+    newShape.value = buildShapeResetState("save-confirmed");
   };
 
   function removeTemporaryTextSpan() {
@@ -370,7 +384,7 @@ License: CECILL-C
     }
   }
   function handleCancel() {
-    newShape.value = { status: "none", shouldReset: true };
+    newShape.value = buildShapeResetState("save-cancelled");
   }
 
   function handleKeyDown(event: KeyboardEvent) {
