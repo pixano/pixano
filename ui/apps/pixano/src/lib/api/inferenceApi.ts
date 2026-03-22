@@ -88,9 +88,7 @@ export async function listInferenceModels(): Promise<InferenceModel[]> {
   }
 }
 
-export async function vlm(
-  input: CondititionalGenerationTextImageInput,
-): Promise<VLMResult | null> {
+export async function vlm(input: CondititionalGenerationTextImageInput): Promise<VLMResult | null> {
   try {
     const response = await fetch("/inference/vlm", {
       headers: JSON_HEADERS,
@@ -124,9 +122,7 @@ export async function segmentImage(
   );
 }
 
-export async function trackVideo(
-  input: VideoTrackingTaskInput,
-): Promise<VideoTrackingTaskResult> {
+export async function trackVideo(input: VideoTrackingTaskInput): Promise<VideoTrackingTaskResult> {
   return requestJson<VideoTrackingTaskResult>(
     "/inference/tracking",
     {

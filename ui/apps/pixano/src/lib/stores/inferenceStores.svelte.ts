@@ -11,17 +11,17 @@ import type {
 } from "$components/inference/segmentation/inference";
 
 import { reactiveStore } from "./reactiveStore.svelte";
+import { itemMetas } from "$lib/stores/workspaceStores.svelte";
+import { WorkspaceType } from "$lib/types/dataset";
 import {
   ImageTask,
+  isSameInferenceModel,
   MultimodalImageNLPTask,
   VideoTask,
-  isSameInferenceModel,
-  type InferenceModelSelection,
   type InferenceModel,
+  type InferenceModelSelection,
   type InferenceServerState,
 } from "$lib/types/inference";
-import { WorkspaceType } from "$lib/types/dataset";
-import { itemMetas } from "$lib/stores/workspaceStores.svelte";
 
 // ─── Inference Server ───────────────────────────────────────────────────────────
 
@@ -67,10 +67,7 @@ function readStoredSelection(storageKey: string): InferenceModelSelection | null
   return null;
 }
 
-function writeStoredSelection(
-  storageKey: string,
-  selection: InferenceModelSelection | null,
-): void {
+function writeStoredSelection(storageKey: string, selection: InferenceModelSelection | null): void {
   if (!isBrowser()) return;
   if (!selection) {
     window.localStorage.removeItem(storageKey);
@@ -113,9 +110,7 @@ function hasSameSelection(
 
 export const staticSegmentationModels = {
   get value() {
-    return inferenceServerStore.value.models.filter(
-      (m) => m.task === ImageTask.SEGMENTATION,
-    );
+    return inferenceServerStore.value.models.filter((m) => m.task === ImageTask.SEGMENTATION);
   },
 };
 
@@ -127,9 +122,7 @@ export const videoSegmentationModels = {
 
 export const vqaModels = {
   get value() {
-    return inferenceServerStore.value.models.filter(
-      (m) => m.task === MultimodalImageNLPTask.VLM,
-    );
+    return inferenceServerStore.value.models.filter((m) => m.task === MultimodalImageNLPTask.VLM);
   },
 };
 

@@ -19,6 +19,7 @@ Outputs to: src/data/api/
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import griffe
 
@@ -161,7 +162,7 @@ def extract_module(module) -> dict:
 
 def build_nav_tree(modules: list[dict]) -> list[dict]:
     """Build a navigation tree from flat module list."""
-    tree = {}
+    tree: dict[str, Any] = {}
     for mod in modules:
         parts = mod["module"].replace("pixano.", "").split(".")
         current = tree

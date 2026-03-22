@@ -8,12 +8,12 @@ import {
   brushDrawTool,
   brushEraseTool,
   interactiveSegmenterTool,
-  vosTool,
   panTool,
   polygonTool,
   polylineTool,
   rectangleTool,
   ToolType,
+  vosTool,
   type BrushSelectionTool,
   type SelectionTool,
 } from "$lib/tools";
@@ -69,7 +69,10 @@ export function handleToolShortcuts(
   }
 
   if (event.key === "r" || event.key === "R") {
-    if (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) {
+    if (
+      selectedTool?.type === ToolType.InteractiveSegmenter ||
+      selectedTool?.type === ToolType.VOS
+    ) {
       actions.setInteractiveBoxPrompt();
       return true;
     }
@@ -97,7 +100,10 @@ export function handleToolShortcuts(
       actions.toggleBrushMode();
       return true;
     }
-    if (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) {
+    if (
+      selectedTool?.type === ToolType.InteractiveSegmenter ||
+      selectedTool?.type === ToolType.VOS
+    ) {
       actions.toggleInteractivePromptMode();
       return true;
     }

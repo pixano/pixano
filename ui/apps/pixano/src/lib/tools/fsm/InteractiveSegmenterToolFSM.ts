@@ -76,10 +76,7 @@ export class InteractiveSegmenterToolFSM implements ToolFSM {
       this.box = null;
       return {
         newState: { phase: "idle" },
-        sideEffects: [
-          { type: "updatePreview", preview: null },
-          this.requestAI(context, "clear"),
-        ],
+        sideEffects: [{ type: "updatePreview", preview: null }, this.requestAI(context, "clear")],
       };
     }
 
@@ -124,10 +121,7 @@ export class InteractiveSegmenterToolFSM implements ToolFSM {
 
     return {
       newState: { phase: "collectingPoints", points: this.points },
-      sideEffects: [
-        this.previewEffect(),
-        this.requestAI(context, "predict"),
-      ],
+      sideEffects: [this.previewEffect(), this.requestAI(context, "predict")],
     };
   }
 
@@ -151,7 +145,10 @@ export class InteractiveSegmenterToolFSM implements ToolFSM {
       const height = event.position.y - state.origin.y;
       if (Math.abs(width) <= 2 || Math.abs(height) <= 2) {
         return {
-          newState: this.points.length > 0 ? { phase: "collectingPoints", points: this.points } : { phase: "idle" },
+          newState:
+            this.points.length > 0
+              ? { phase: "collectingPoints", points: this.points }
+              : { phase: "idle" },
           sideEffects: [this.previewEffect()],
         };
       }
@@ -192,10 +189,7 @@ export class InteractiveSegmenterToolFSM implements ToolFSM {
     };
   }
 
-  private requestAI(
-    context: ToolContext,
-    action: "predict" | "confirm" | "clear",
-  ): ToolSideEffect {
+  private requestAI(context: ToolContext, action: "predict" | "confirm" | "clear"): ToolSideEffect {
     const requestId = `interactive-segmenter-${Date.now()}`;
     const params: AIRequestParams = {
       modelId: "interactive-segmenter",

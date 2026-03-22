@@ -4,6 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
+
+import { BaseTracker, type InterpolationResult, type TrackerKeyframe } from "./BaseTracker";
 import {
   cancelTrackingJob,
   getTrackingJob,
@@ -23,9 +26,6 @@ import type {
   VideoTrackingTaskOutput,
 } from "$lib/types/inference";
 import type { SaveMaskShape } from "$lib/types/shapeTypes";
-import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
-
-import { BaseTracker, type InterpolationResult, type TrackerKeyframe } from "./BaseTracker";
 
 export interface Sam2VideoFrameSource {
   frameIndex: number;
@@ -77,11 +77,9 @@ export class Sam2VideoTracker extends BaseTracker<Sam2TrackerKeyframe> {
     this.datasetId = datasetId;
     this.recordId = recordId;
     this.trackingClient = trackingClientImpl;
-    this.submitTrackingJobClient =
-      trackingJobClients.submitTrackingJobClient ?? submitTrackingJob;
+    this.submitTrackingJobClient = trackingJobClients.submitTrackingJobClient ?? submitTrackingJob;
     this.getTrackingJobClient = trackingJobClients.getTrackingJobClient ?? getTrackingJob;
-    this.cancelTrackingJobClient =
-      trackingJobClients.cancelTrackingJobClient ?? cancelTrackingJob;
+    this.cancelTrackingJobClient = trackingJobClients.cancelTrackingJobClient ?? cancelTrackingJob;
   }
 
   setFrameSources(frameSources: Sam2VideoFrameSource[]): void {
@@ -106,7 +104,9 @@ export class Sam2VideoTracker extends BaseTracker<Sam2TrackerKeyframe> {
   }
 
   async predictKeyframe(keyframe: Sam2TrackerPromptKeyframe): Promise<SaveMaskShape | null> {
-    const requestFrameSource = this.frameSources.find((frame) => frame.frameIndex === keyframe.frameIndex);
+    const requestFrameSource = this.frameSources.find(
+      (frame) => frame.frameIndex === keyframe.frameIndex,
+    );
     if (!requestFrameSource) {
       return null;
     }
@@ -120,7 +120,9 @@ export class Sam2VideoTracker extends BaseTracker<Sam2TrackerKeyframe> {
   async submitPredictKeyframeJob(
     keyframe: Sam2TrackerPromptKeyframe,
   ): Promise<VideoTrackingJobStatus | null> {
-    const requestFrameSource = this.frameSources.find((frame) => frame.frameIndex === keyframe.frameIndex);
+    const requestFrameSource = this.frameSources.find(
+      (frame) => frame.frameIndex === keyframe.frameIndex,
+    );
     if (!requestFrameSource) {
       return null;
     }
@@ -315,28 +317,16 @@ export class Sam2VideoTracker extends BaseTracker<Sam2TrackerKeyframe> {
       ? [
           [
             Math.round(
-              Math.min(
-                keyframe.prompt.box.x,
-                keyframe.prompt.box.x + keyframe.prompt.box.width,
-              ),
+              Math.min(keyframe.prompt.box.x, keyframe.prompt.box.x + keyframe.prompt.box.width),
             ),
             Math.round(
-              Math.min(
-                keyframe.prompt.box.y,
-                keyframe.prompt.box.y + keyframe.prompt.box.height,
-              ),
+              Math.min(keyframe.prompt.box.y, keyframe.prompt.box.y + keyframe.prompt.box.height),
             ),
             Math.round(
-              Math.max(
-                keyframe.prompt.box.x,
-                keyframe.prompt.box.x + keyframe.prompt.box.width,
-              ),
+              Math.max(keyframe.prompt.box.x, keyframe.prompt.box.x + keyframe.prompt.box.width),
             ),
             Math.round(
-              Math.max(
-                keyframe.prompt.box.y,
-                keyframe.prompt.box.y + keyframe.prompt.box.height,
-              ),
+              Math.max(keyframe.prompt.box.y, keyframe.prompt.box.y + keyframe.prompt.box.height),
             ),
           ],
         ]

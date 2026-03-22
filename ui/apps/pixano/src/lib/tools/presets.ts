@@ -8,10 +8,10 @@ import {
   ToolType,
   type BrushSelectionTool,
   type InteractiveSegmenterSelectionTool,
-  type VOSSelectionTool,
   type PolygonSelectionTool,
   type PolylineSelectionTool,
   type SelectionTool,
+  type VOSSelectionTool,
 } from "$lib/types/tools";
 
 export const panTool: SelectionTool = {

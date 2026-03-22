@@ -73,11 +73,11 @@ describe("buildPersistedVosMasks", () => {
     expect(built.trackingMasks.map((mask) => mask.data.frame_index)).toEqual([2, 4]);
     expect(built.allMasks).toHaveLength(3);
     expect(new Set(built.allMasks.map((mask) => mask.id)).size).toBe(3);
-    expect((built.trackingMasks[0]?.data.counts as number[])).toEqual([2, 4, 58]);
-    expect((built.trackingMasks[1]?.data.counts as number[])).toEqual([4, 6, 54]);
-    expect((built.currentMask?.data.counts as number[])).toEqual([6, 8, 50]);
+    expect(built.trackingMasks[0]?.data.counts as number[]).toEqual([2, 4, 58]);
+    expect(built.trackingMasks[1]?.data.counts as number[]).toEqual([4, 6, 54]);
+    expect(built.currentMask?.data.counts as number[]).toEqual([6, 8, 50]);
 
     (sessionMasks[0].output.data.counts as number[])[0] = 999;
-    expect((built.trackingMasks[0]?.data.counts as number[])).toEqual([2, 4, 58]);
+    expect(built.trackingMasks[0]?.data.counts as number[]).toEqual([2, 4, 58]);
   });
 });

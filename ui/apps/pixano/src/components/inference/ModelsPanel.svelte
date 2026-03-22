@@ -13,10 +13,7 @@ License: CECILL-C
     refreshInferenceModels,
   } from "$lib/services/inferenceService";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
-  import {
-    formatInferenceProviderName,
-    type InferenceModel,
-  } from "$lib/types/inference";
+  import { formatInferenceProviderName, type InferenceModel } from "$lib/types/inference";
   import { IconButton, PrimaryButton } from "$lib/ui";
 
   let showConnectModal = $state(false);
@@ -83,7 +80,9 @@ License: CECILL-C
                 {provider.url ?? provider.name}
               </p>
               <p class="text-[10px] text-muted-foreground truncate">
-                {provider.name === inferenceServerStore.value.defaultProvider ? "Default server" : provider.name}
+                {provider.name === inferenceServerStore.value.defaultProvider
+                  ? "Default server"
+                  : provider.name}
               </p>
             </div>
           </div>

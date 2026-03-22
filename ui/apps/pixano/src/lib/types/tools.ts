@@ -97,12 +97,10 @@ export type PreviewShape =
       readonly promptMode: InteractivePromptMode;
       readonly points: readonly LabeledClick[];
       readonly box: InteractiveSegmenterBoxPrompt | null;
-      readonly draftBox:
-        | {
-            readonly origin: Point2D;
-            readonly current: Point2D;
-          }
-        | null;
+      readonly draftBox: {
+        readonly origin: Point2D;
+        readonly current: Point2D;
+      } | null;
     };
 
 // --------------- Tool States ---------------

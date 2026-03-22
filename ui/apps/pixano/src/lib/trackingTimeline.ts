@@ -37,11 +37,12 @@ function uniqueSortedFrameIndices(frameIndices: number[]): number[] {
 
 function normalizeSegments(segments: Array<[number, number]>): Array<[number, number]> {
   return segments
-    .map(([startFrame, endFrame]) =>
-      (startFrame <= endFrame ? [startFrame, endFrame] : [endFrame, startFrame]) as [
-        number,
-        number,
-      ],
+    .map(
+      ([startFrame, endFrame]) =>
+        (startFrame <= endFrame ? [startFrame, endFrame] : [endFrame, startFrame]) as [
+          number,
+          number,
+        ],
     )
     .sort((left, right) => left[0] - right[0]);
 }

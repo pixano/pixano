@@ -5,13 +5,14 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
+
 import {
   cloneTrackingMaskOutput,
   saveMaskShapeToTrackingOutput,
 } from "$lib/segmentation/maskNormalization";
 import type { Reference } from "$lib/types/dataset";
-import type { InteractiveSegmenterAIInput } from "$lib/types/tools";
 import type { SaveMaskShape } from "$lib/types/shapeTypes";
+import type { InteractiveSegmenterAIInput } from "$lib/types/tools";
 
 export type VosAnchorSourceKind = "prompt" | "mask";
 
@@ -216,7 +217,11 @@ export function commitVosIntervalState(
     return state;
   }
 
-  const nextState = ensureActiveVosSegment(state, input.nextAnchor.viewRef.name, input.nextAnchor.frameIndex);
+  const nextState = ensureActiveVosSegment(
+    state,
+    input.nextAnchor.viewRef.name,
+    input.nextAnchor.frameIndex,
+  );
   if (nextState.activeSegmentId === null) {
     return {
       ...nextState,
@@ -236,7 +241,9 @@ export function commitVosIntervalState(
     });
   }
 
-  const activeSegment = nextState.segments.find((segment) => segment.id === nextState.activeSegmentId);
+  const activeSegment = nextState.segments.find(
+    (segment) => segment.id === nextState.activeSegmentId,
+  );
   const widenedSegment =
     activeSegment === undefined
       ? undefined
@@ -255,10 +262,7 @@ export function commitVosIntervalState(
       prompt: cloneVosPrompt(input.nextAnchor.prompt),
       mask: input.nextAnchor.mask,
     },
-    anchorFrameIndices: upsertFrameIndex(
-      nextState.anchorFrameIndices,
-      input.nextAnchor.frameIndex,
-    ),
+    anchorFrameIndices: upsertFrameIndex(nextState.anchorFrameIndices, input.nextAnchor.frameIndex),
     pendingInterval: null,
     masks: nextMasks,
     segments: widenedSegment

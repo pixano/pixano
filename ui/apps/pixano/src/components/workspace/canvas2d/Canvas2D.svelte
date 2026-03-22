@@ -27,7 +27,6 @@ License: CECILL-C
   import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
   import Mask from "./Mask.svelte";
   import MultiPathShape from "./MultiPathShape.svelte";
-  import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import {
     buildPolygonSaveShape,
     buildPolylineSaveShape,
@@ -37,6 +36,7 @@ License: CECILL-C
     type PolygonSavePayload,
   } from "./shapeSaveOps";
   import ShowKeypoints from "./ShowKeypoint.svelte";
+  import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import { ViewRefManager } from "./viewRefs";
   import { createIdleSmartSegmentationUiState } from "$lib/segmentation/smartInferenceStatus";
   import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
@@ -591,14 +591,12 @@ License: CECILL-C
     return smartPreviewMasks[view_name] ?? null;
   }
 
-  function getSmartInferenceViewBounds():
-    | {
-        left: number;
-        top: number;
-        width: number;
-        height: number;
-      }
-    | null {
+  function getSmartInferenceViewBounds(): {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null {
     const viewName = smartInferenceStatus.viewName;
     if (!viewName) return null;
 
@@ -767,7 +765,8 @@ License: CECILL-C
   }
 
   function updateSmartPromptCursor(mousePos: Konva.Vector2d) {
-    if ((selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)) return;
+    if (selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)
+      return;
     smartPromptCursorState = {
       x: mousePos.x,
       y: mousePos.y,
@@ -786,7 +785,10 @@ License: CECILL-C
   });
 
   $effect(() => {
-    const promptMode = (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ? selectedTool.promptMode : null;
+    const promptMode =
+      selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS
+        ? selectedTool.promptMode
+        : null;
     const current = untrack(() => smartPromptCursorState);
     if (current && promptMode) {
       smartPromptCursorState = { ...current, promptMode };
@@ -1056,7 +1058,8 @@ License: CECILL-C
       (interactionShape.status === "none" || interactionShape.status === "editing") &&
       selectedTool?.type !== ToolType.Pan &&
       selectedTool?.type !== ToolType.Brush &&
-      (selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS) &&
+      selectedTool?.type !== ToolType.InteractiveSegmenter &&
+      selectedTool?.type !== ToolType.VOS &&
       selectedTool?.type !== ToolType.Polygon &&
       selectedTool?.type !== ToolType.Polyline
     ) {
@@ -1085,7 +1088,8 @@ License: CECILL-C
       handleBrushPointerDown(viewRef);
     } else if (
       (selectedTool?.type === ToolType.Rectangle && !bboxEditable) ||
-      (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)
+      selectedTool?.type === ToolType.InteractiveSegmenter ||
+      selectedTool?.type === ToolType.VOS
     ) {
       const bridge = activeToolBridge;
       if (!bridge) return;
@@ -1338,7 +1342,8 @@ License: CECILL-C
 
       if (
         selectedTool?.type === ToolType.Rectangle ||
-        (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ||
+        selectedTool?.type === ToolType.InteractiveSegmenter ||
+        selectedTool?.type === ToolType.VOS ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline
       ) {
@@ -1373,7 +1378,10 @@ License: CECILL-C
         }
       },
       toggleInteractivePromptMode: () => {
-        if ((selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)) {
+        if (
+          selectedTool?.type === ToolType.InteractiveSegmenter ||
+          selectedTool?.type === ToolType.VOS
+        ) {
           onSelectedToolChange?.({
             ...selectedTool,
             promptMode: selectedTool.promptMode === "negative" ? "positive" : "negative",
@@ -1382,7 +1390,10 @@ License: CECILL-C
         }
       },
       setInteractiveBoxPrompt: () => {
-        if ((selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)) {
+        if (
+          selectedTool?.type === ToolType.InteractiveSegmenter ||
+          selectedTool?.type === ToolType.VOS
+        ) {
           onSelectedToolChange?.({
             ...selectedTool,
             promptMode: "box",
@@ -1411,7 +1422,8 @@ License: CECILL-C
     if (
       (isConfirmKey || event.key === "Backspace") &&
       (selectedTool?.type === ToolType.Rectangle ||
-        (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ||
+        selectedTool?.type === ToolType.InteractiveSegmenter ||
+        selectedTool?.type === ToolType.VOS ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline)
     ) {
@@ -1475,7 +1487,10 @@ License: CECILL-C
 
     // Reset when shape explicitly requests it
     if (shapeStatus === "none" && shouldReset) {
-      if (shouldClearInteractiveSession && activeToolBridge?.preview.value?.type === "interactive-segmenter") {
+      if (
+        shouldClearInteractiveSession &&
+        activeToolBridge?.preview.value?.type === "interactive-segmenter"
+      ) {
         untrack(() => {
           activeToolBridge?.dispatchEvent({ type: "cancel" });
         });
@@ -1553,7 +1568,8 @@ License: CECILL-C
     }
   });
   $effect(() => {
-    if ((selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)) return;
+    if (selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)
+      return;
     activeToolBridge?.dispatchEvent({
       type: "setInteractivePromptMode",
       promptMode: selectedTool.promptMode,
@@ -1688,10 +1704,7 @@ License: CECILL-C
           {/if}
 
           {@const viewMasks = masksByView[view_name] ?? []}
-          {#if (viewMasks.length > 0 ||
-            selectedTool?.type === ToolType.Brush ||
-            smartPreviewMasks[view_name]) &&
-            currentImage}
+          {#if (viewMasks.length > 0 || selectedTool?.type === ToolType.Brush || smartPreviewMasks[view_name]) && currentImage}
             <Mask
               bind:this={viewRefs.maskRefs[view_name]}
               {viewRef}

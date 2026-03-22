@@ -13,13 +13,13 @@ License: CECILL-C
   import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
-  import { selectedStaticSegmentationModel } from "$lib/stores/inferenceStores.svelte";
   import { InteractiveSegmenter } from "$lib/segmentation";
   import {
     createErrorSmartSegmentationUiState,
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
+  import { selectedStaticSegmentationModel } from "$lib/stores/inferenceStores.svelte";
   import {
     brushSettings,
     colorScale,
@@ -33,15 +33,16 @@ License: CECILL-C
     modelsUiStore,
     newShape,
     preAnnotationIsActive,
-    smartSegmentationUiState,
     selectedTool,
+    smartSegmentationUiState,
   } from "$lib/stores/workspaceStores.svelte";
+  import { ToolType, type InteractiveSegmenterAIInput, type SelectionTool } from "$lib/tools";
   import {
-    ToolType,
-    type InteractiveSegmenterAIInput,
-    type SelectionTool,
-  } from "$lib/tools";
-  import { ShapeType, type ImageFilters, type SaveMaskShape, type Shape } from "$lib/types/shapeTypes";
+    ShapeType,
+    type ImageFilters,
+    type SaveMaskShape,
+    type Shape,
+  } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import { Image, type LoadedImagesPerView } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
@@ -102,12 +103,10 @@ License: CECILL-C
     smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
   }
 
-  function resolveImageSource(viewName: string):
-    | {
-        width: number;
-        height: number;
-      }
-    | null {
+  function resolveImageSource(viewName: string): {
+    width: number;
+    height: number;
+  } | null {
     const rawView = selectedItem.views?.[viewName];
     if (!rawView || Array.isArray(rawView)) return null;
     const view = rawView as Image;

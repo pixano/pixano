@@ -28,8 +28,16 @@ License: CECILL-C
   let { x, y, promptMode, stageWidth, stageHeight }: Props = $props();
 
   let anchor = $derived.by(() => ({
-    x: clamp(x + OFFSET_X, BADGE_HALF_SIZE, Math.max(BADGE_HALF_SIZE, stageWidth - BADGE_HALF_SIZE)),
-    y: clamp(y + OFFSET_Y, BADGE_HALF_SIZE, Math.max(BADGE_HALF_SIZE, stageHeight - BADGE_HALF_SIZE)),
+    x: clamp(
+      x + OFFSET_X,
+      BADGE_HALF_SIZE,
+      Math.max(BADGE_HALF_SIZE, stageWidth - BADGE_HALF_SIZE),
+    ),
+    y: clamp(
+      y + OFFSET_Y,
+      BADGE_HALF_SIZE,
+      Math.max(BADGE_HALF_SIZE, stageHeight - BADGE_HALF_SIZE),
+    ),
   }));
 
   let palette = $derived.by(() => {

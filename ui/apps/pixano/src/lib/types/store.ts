@@ -101,7 +101,12 @@ export interface ToolBridge {
   dispatchEvent(event: import("$lib/tools").ToolEvent): void;
 
   /** Set canvas context used to build ToolContext for FSM transitions. */
-  setCanvasContext(viewName: string, viewId: string, canvasWidth: number, canvasHeight: number): void;
+  setCanvasContext(
+    viewName: string,
+    viewId: string,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): void;
 
   /** Register a callback for requestSave side effects. */
   onRequestSave(

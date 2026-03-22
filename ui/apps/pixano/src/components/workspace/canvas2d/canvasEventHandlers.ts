@@ -129,7 +129,8 @@ export interface CursorFlushAction {
 export function computeCursorFlushAction(tool: SelectionTool | undefined): CursorFlushAction {
   const isDrawTool =
     tool?.type === ToolType.Rectangle ||
-    tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS ||
+    tool?.type === ToolType.InteractiveSegmenter ||
+    tool?.type === ToolType.VOS ||
     tool?.type === ToolType.Polygon ||
     tool?.type === ToolType.Polyline ||
     tool?.type === ToolType.Brush;
@@ -137,7 +138,8 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
   return {
     showCrosshair: isDrawTool,
     showBrushCursor: tool?.type === ToolType.Brush,
-    showSmartPromptCursor: tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS,
+    showSmartPromptCursor:
+      tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS,
   };
 }
 
@@ -197,7 +199,8 @@ export function classifyKeyDown(
   if (
     (event.key === "Enter" || event.key === "Backspace") &&
     (tool?.type === ToolType.Rectangle ||
-      tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS ||
+      tool?.type === ToolType.InteractiveSegmenter ||
+      tool?.type === ToolType.VOS ||
       tool?.type === ToolType.Polygon ||
       tool?.type === ToolType.Polyline)
   ) {

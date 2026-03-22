@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { normalizeMaskToSaveShape } from "./maskNormalization";
+import { toBoxPrompt } from "./promptSerialization";
 import { segmentImage } from "$lib/api/inferenceApi";
 import { embeddings } from "$lib/stores/workspaceStores.svelte";
 import type { Reference } from "$lib/types/dataset";
@@ -13,13 +15,7 @@ import type {
   NDArrayPayload,
 } from "$lib/types/inference";
 import type { SaveMaskShape } from "$lib/types/shapeTypes";
-import type {
-  EmbeddingValue,
-  InteractiveSegmentationEmbeddingCache,
-} from "$lib/types/workspace";
-
-import { normalizeMaskToSaveShape } from "./maskNormalization";
-import { toBoxPrompt } from "./promptSerialization";
+import type { EmbeddingValue, InteractiveSegmentationEmbeddingCache } from "$lib/types/workspace";
 
 export type InteractivePromptMode = "positive" | "negative" | "box";
 
@@ -120,7 +116,9 @@ function hasReusableEmbedding(
 ): cache is InteractiveSegmentationEmbeddingCache & {
   high_resolution_features: NDArrayPayload[];
 } {
-  return Array.isArray(cache?.high_resolution_features) && cache.high_resolution_features.length > 0;
+  return (
+    Array.isArray(cache?.high_resolution_features) && cache.high_resolution_features.length > 0
+  );
 }
 
 function buildSegmentationRequest(
@@ -193,7 +191,10 @@ export class InteractiveSegmenter {
     return session.embeddingCache;
   }
 
-  private persistEmbedding(viewId: string, cacheEntry: InteractiveSegmentationEmbeddingCache): void {
+  private persistEmbedding(
+    viewId: string,
+    cacheEntry: InteractiveSegmentationEmbeddingCache,
+  ): void {
     const session = this.getSession(viewId);
     session.embeddingCache = cacheEntry;
     embeddings.update((current) => ({
@@ -246,8 +247,7 @@ export class InteractiveSegmenter {
     providerName: string;
     prompt: InteractivePromptState;
   }): Promise<InteractiveSegmentationPrediction | null> {
-    const cachedEmbedding =
-      this.syncStoredEmbedding(args.viewRef.id);
+    const cachedEmbedding = this.syncStoredEmbedding(args.viewRef.id);
     const session = this.getSession(args.viewRef.id);
     const requestToken = session.latestRequestToken + 1;
     session.latestRequestToken = requestToken;

@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { Check, HardDrives, MagicWand } from "phosphor-svelte";
 
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import {
     inferenceServerStore,
     pixanoInferenceTracking,
@@ -16,7 +17,6 @@ License: CECILL-C
     staticSegmentationModels,
     videoSegmentationModels,
   } from "$lib/stores/inferenceStores.svelte";
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import { itemMetas } from "$lib/stores/workspaceStores.svelte";
   import { formatInferenceProviderName, getInferenceModelKey } from "$lib/types/inference";
   import { Checkbox, PrimaryButton, WorkspaceType } from "$lib/ui";
@@ -125,7 +125,9 @@ License: CECILL-C
     {:else if compatibleModels.length === 0}
       <div class="flex flex-col items-center gap-4 py-4 text-center">
         <p class="text-xs text-muted-foreground font-medium">
-          {isVideo ? "No tracking models found on server." : "No image segmentation models found on server."}
+          {isVideo
+            ? "No tracking models found on server."
+            : "No image segmentation models found on server."}
         </p>
       </div>
     {:else}

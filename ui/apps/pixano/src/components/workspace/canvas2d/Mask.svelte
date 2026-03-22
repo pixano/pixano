@@ -219,9 +219,7 @@ License: CECILL-C
     return fp;
   });
 
-  function drawPreviewMask(
-    preview: SaveMaskShape | null,
-  ): OffscreenCanvas | null {
+  function drawPreviewMask(preview: SaveMaskShape | null): OffscreenCanvas | null {
     if (!preview?.rle) return null;
     const counts = Array.isArray(preview.rle.counts)
       ? preview.rle.counts

@@ -13,12 +13,16 @@ License: CECILL-C
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
+  import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import {
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
-  import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
-  import { cancelTrackingSession, trackingSession, vosSession } from "$lib/stores/trackingStore.svelte";
+  import {
+    cancelTrackingSession,
+    trackingSession,
+    vosSession,
+  } from "$lib/stores/trackingStore.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -117,7 +121,8 @@ License: CECILL-C
         : currentFrameIndex.value;
     const isFromVOS =
       isVideo && newShape.value.type === ShapeType.mask && vosSession.value.masks.length > 0;
-    const isFromTracking = !isFromVOS && isVideo && pixanoInferenceToValidateTrackingMasks.value.length > 1;
+    const isFromTracking =
+      !isFromVOS && isVideo && pixanoInferenceToValidateTrackingMasks.value.length > 1;
 
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
@@ -283,148 +288,148 @@ License: CECILL-C
             lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
           }
         }
-      if (isMultiKeyframe && newAnnotation.is_type(BaseSchema.BBox)) {
-        const segKeyframeArrays = tracker.segmentKeyframes;
-        const viewName = tracker.viewName;
-        const viewFrames = views.value[viewName];
-        let isFirstKfGlobal = true;
+        if (isMultiKeyframe && newAnnotation.is_type(BaseSchema.BBox)) {
+          const segKeyframeArrays = tracker.segmentKeyframes;
+          const viewName = tracker.viewName;
+          const viewFrames = views.value[viewName];
+          let isFirstKfGlobal = true;
 
-        for (const segKfs of segKeyframeArrays) {
-          const segBBoxes: BBox[] = [];
+          for (const segKfs of segKeyframeArrays) {
+            const segBBoxes: BBox[] = [];
 
-          for (const kf of segKfs) {
-            const frame = Array.isArray(viewFrames)
-              ? (viewFrames[kf.frameIndex] as SequenceFrame | undefined)
-              : undefined;
-            if (!frame) continue;
+            for (const kf of segKfs) {
+              const frame = Array.isArray(viewFrames)
+                ? (viewFrames[kf.frameIndex] as SequenceFrame | undefined)
+                : undefined;
+              if (!frame) continue;
 
-            if (isFirstKfGlobal) {
-              // Reuse newAnnotation for the very first keyframe of the first segment
-              newAnnotation.ui.frame_index = kf.frameIndex;
-              newAnnotation.data.frame_index = kf.frameIndex;
-              newAnnotation.data.frame_id = frame.id;
-              (newAnnotation as BBox).data.coords = [...kf.coords];
-              segBBoxes.push(newAnnotation as BBox);
-              isFirstKfGlobal = false;
-            } else {
-              const kfBBox = BBox.cloneForFrame(newAnnotation as BBox, {
-                id: nanoid(10),
-                coords: [...kf.coords],
-                view_name: viewName,
-                frame_id: frame.id,
-                frame_index: kf.frameIndex,
-              });
-              kfBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
-              entity.ui.childs?.push(kfBBox);
-              trackingKeyframeBBoxes.push(kfBBox);
-              addedAnnotations.push(kfBBox);
-              segBBoxes.push(kfBBox);
+              if (isFirstKfGlobal) {
+                // Reuse newAnnotation for the very first keyframe of the first segment
+                newAnnotation.ui.frame_index = kf.frameIndex;
+                newAnnotation.data.frame_index = kf.frameIndex;
+                newAnnotation.data.frame_id = frame.id;
+                (newAnnotation as BBox).data.coords = [...kf.coords];
+                segBBoxes.push(newAnnotation as BBox);
+                isFirstKfGlobal = false;
+              } else {
+                const kfBBox = BBox.cloneForFrame(newAnnotation as BBox, {
+                  id: nanoid(10),
+                  coords: [...kf.coords],
+                  view_name: viewName,
+                  frame_id: frame.id,
+                  frame_index: kf.frameIndex,
+                });
+                kfBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
+                entity.ui.childs?.push(kfBBox);
+                trackingKeyframeBBoxes.push(kfBBox);
+                addedAnnotations.push(kfBBox);
+                segBBoxes.push(kfBBox);
+              }
             }
-          }
 
-          // Create a Tracklet for this segment
-          if (segKfs.length > 0) {
-            const segStart = segKfs[0].frameIndex;
-            const segEnd = segKfs[segKfs.length - 1].frameIndex;
-            lastFrameIndex = Math.max(lastFrameIndex, segEnd);
+            // Create a Tracklet for this segment
+            if (segKfs.length > 0) {
+              const segStart = segKfs[0].frameIndex;
+              const segEnd = segKfs[segKfs.length - 1].frameIndex;
+              lastFrameIndex = Math.max(lastFrameIndex, segEnd);
 
-            const candidate_tracks = entity.ui.childs?.filter(
-              (ann) =>
-                ann.is_type(BaseSchema.Tracklet) &&
-                ann.data.view_name === newAnnotation.data.view_name &&
-                (ann as Tracklet).data.start_frame <= segStart &&
-                (ann as Tracklet).data.end_frame >= segEnd,
-            );
-            if (candidate_tracks && candidate_tracks.length === 1) {
-              const candidate_track = candidate_tracks[0] as Tracklet;
-              for (const bbox of segBBoxes) candidate_track.ui.childs.push(bbox);
-              candidate_track.ui.childs.sort(sortByFrameIndex);
-            } else {
-              const trackShape: SaveTrackShape = {
-                type: ShapeType.track,
-                status: newShape.value.status,
-                itemId: "",
-                imageWidth: 0,
-                imageHeight: 0,
-                viewRef: { id: "", name: newAnnotation.data.view_name },
-                attrs: {
-                  start_frame: segStart,
-                  end_frame: segEnd,
-                  start_timestamp: segStart,
-                  end_timestamp: segEnd,
-                },
-              };
-              const segTrack = defineCreatedAnnotation(
-                entity,
-                features,
-                trackShape,
-                trackShape.viewRef,
-                manifest,
-                isVideo,
-                shapeFrameIndex,
+              const candidate_tracks = entity.ui.childs?.filter(
+                (ann) =>
+                  ann.is_type(BaseSchema.Tracklet) &&
+                  ann.data.view_name === newAnnotation.data.view_name &&
+                  (ann as Tracklet).data.start_frame <= segStart &&
+                  (ann as Tracklet).data.end_frame >= segEnd,
               );
-              if (!segTrack) return;
-              segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-              (segTrack as Tracklet).ui.childs = [...segBBoxes];
-              (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
-              saveTo("add", segTrack);
-              entity.ui.childs?.push(segTrack);
-              newTracks.push(segTrack);
+              if (candidate_tracks && candidate_tracks.length === 1) {
+                const candidate_track = candidate_tracks[0] as Tracklet;
+                for (const bbox of segBBoxes) candidate_track.ui.childs.push(bbox);
+                candidate_track.ui.childs.sort(sortByFrameIndex);
+              } else {
+                const trackShape: SaveTrackShape = {
+                  type: ShapeType.track,
+                  status: newShape.value.status,
+                  itemId: "",
+                  imageWidth: 0,
+                  imageHeight: 0,
+                  viewRef: { id: "", name: newAnnotation.data.view_name },
+                  attrs: {
+                    start_frame: segStart,
+                    end_frame: segEnd,
+                    start_timestamp: segStart,
+                    end_timestamp: segEnd,
+                  },
+                };
+                const segTrack = defineCreatedAnnotation(
+                  entity,
+                  features,
+                  trackShape,
+                  trackShape.viewRef,
+                  manifest,
+                  isVideo,
+                  shapeFrameIndex,
+                );
+                if (!segTrack) return;
+                segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
+                (segTrack as Tracklet).ui.childs = [...segBBoxes];
+                (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
+                saveTo("add", segTrack);
+                entity.ui.childs?.push(segTrack);
+                newTracks.push(segTrack);
+              }
             }
           }
-        }
-      } else {
-        // Single keyframe or no tracker: create a single tracklet
-        const trackStartFrame = shapeFrameIndex;
-        const candidate_tracks = entity.ui.childs?.filter(
-          (ann) =>
-            ann.is_type(BaseSchema.Tracklet) &&
-            ann.data.view_name === newAnnotation.data.view_name &&
-            (ann as Tracklet).data.start_frame <= trackStartFrame &&
-            (ann as Tracklet).data.end_frame >= lastFrameIndex,
-        );
-        if (candidate_tracks && candidate_tracks.length === 1) {
-          const candidate_track = candidate_tracks[0] as Tracklet;
-          candidate_track.ui.childs.push(newAnnotation);
-          if (isFromTracking || isFromVOS) {
-            for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
-          }
-          candidate_track.ui.childs.sort(sortByFrameIndex);
         } else {
-          const trackShape: SaveTrackShape = {
-            type: ShapeType.track,
-            status: newShape.value.status,
-            itemId: "",
-            imageWidth: 0,
-            imageHeight: 0,
-            viewRef: { id: "", name: newShape.value.viewRef.name },
-            attrs: {
-              start_frame: trackStartFrame,
-              end_frame: lastFrameIndex,
-              start_timestamp: trackStartFrame,
-              end_timestamp: lastFrameIndex,
-            },
-          };
-          newTrack = defineCreatedAnnotation(
-            entity,
-            features,
-            trackShape,
-            trackShape.viewRef,
-            manifest,
-            isVideo,
-            shapeFrameIndex,
+          // Single keyframe or no tracker: create a single tracklet
+          const trackStartFrame = shapeFrameIndex;
+          const candidate_tracks = entity.ui.childs?.filter(
+            (ann) =>
+              ann.is_type(BaseSchema.Tracklet) &&
+              ann.data.view_name === newAnnotation.data.view_name &&
+              (ann as Tracklet).data.start_frame <= trackStartFrame &&
+              (ann as Tracklet).data.end_frame >= lastFrameIndex,
           );
-          if (!newTrack) return;
-          newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-          (newTrack as Tracklet).ui.childs = [newAnnotation];
-          if (isFromTracking || isFromVOS) {
-            for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
+          if (candidate_tracks && candidate_tracks.length === 1) {
+            const candidate_track = candidate_tracks[0] as Tracklet;
+            candidate_track.ui.childs.push(newAnnotation);
+            if (isFromTracking || isFromVOS) {
+              for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
+            }
+            candidate_track.ui.childs.sort(sortByFrameIndex);
+          } else {
+            const trackShape: SaveTrackShape = {
+              type: ShapeType.track,
+              status: newShape.value.status,
+              itemId: "",
+              imageWidth: 0,
+              imageHeight: 0,
+              viewRef: { id: "", name: newShape.value.viewRef.name },
+              attrs: {
+                start_frame: trackStartFrame,
+                end_frame: lastFrameIndex,
+                start_timestamp: trackStartFrame,
+                end_timestamp: lastFrameIndex,
+              },
+            };
+            newTrack = defineCreatedAnnotation(
+              entity,
+              features,
+              trackShape,
+              trackShape.viewRef,
+              manifest,
+              isVideo,
+              shapeFrameIndex,
+            );
+            if (!newTrack) return;
+            newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
+            (newTrack as Tracklet).ui.childs = [newAnnotation];
+            if (isFromTracking || isFromVOS) {
+              for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
+            }
+            (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
+            saveTo("add", newTrack);
+            entity.ui.childs?.push(newTrack);
           }
-          (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
-          saveTo("add", newTrack);
-          entity.ui.childs?.push(newTrack);
         }
-      }
       }
 
       // Save each tracking keyframe BBox
@@ -466,7 +471,7 @@ License: CECILL-C
       return [
         ...objectsWithoutHighlighted,
         ...addedAnnotations,
-        ...((isFromTracking || isFromVOS) ? tracking_masks : []),
+        ...(isFromTracking || isFromVOS ? tracking_masks : []),
         ...(newTrack ? [newTrack] : []),
         ...newTracks,
       ];

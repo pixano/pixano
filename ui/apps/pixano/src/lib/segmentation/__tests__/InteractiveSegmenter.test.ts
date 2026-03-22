@@ -1,5 +1,13 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { InteractiveSegmenter } from "../InteractiveSegmenter";
+import { toBoxPrompt } from "../promptSerialization";
 import type { ImageSegmentationTaskInput, ImageSegmentationTaskResult } from "$lib/types/inference";
 import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
 
@@ -13,12 +21,10 @@ const { embeddingsMock } = vi.hoisted(() => ({
 }));
 
 const { segmentImageMock, normalizeMaskToSaveShapeMock } = vi.hoisted(() => ({
-  segmentImageMock: vi.fn<
-    (input: ImageSegmentationTaskInput) => Promise<ImageSegmentationTaskResult>
-  >(),
-  normalizeMaskToSaveShapeMock: vi.fn<
-    (args: { viewRef: { id: string; name: string }; itemId: string }) => SaveMaskShape
-  >(),
+  segmentImageMock:
+    vi.fn<(input: ImageSegmentationTaskInput) => Promise<ImageSegmentationTaskResult>>(),
+  normalizeMaskToSaveShapeMock:
+    vi.fn<(args: { viewRef: { id: string; name: string }; itemId: string }) => SaveMaskShape>(),
 }));
 
 vi.mock("$lib/api/inferenceApi", () => ({
@@ -32,9 +38,6 @@ vi.mock("$lib/stores/workspaceStores.svelte", () => ({
 vi.mock("../maskNormalization", () => ({
   normalizeMaskToSaveShape: normalizeMaskToSaveShapeMock,
 }));
-
-import { InteractiveSegmenter } from "../InteractiveSegmenter";
-import { toBoxPrompt } from "../promptSerialization";
 
 const embeddings = embeddingsMock;
 
@@ -90,10 +93,8 @@ describe("InteractiveSegmenter", () => {
     segmentImageMock.mockReset();
     normalizeMaskToSaveShapeMock.mockReset();
     normalizeMaskToSaveShapeMock.mockImplementation(
-      (args: {
-        viewRef: { id: string; name: string };
-        itemId: string;
-      }) => makePreviewMask(args.viewRef.id, args.viewRef.name, args.itemId),
+      (args: { viewRef: { id: string; name: string }; itemId: string }) =>
+        makePreviewMask(args.viewRef.id, args.viewRef.name, args.itemId),
     );
     embeddings.value = {};
   });
@@ -191,7 +192,12 @@ describe("InteractiveSegmenter", () => {
       high_resolution_features: [{ values: [0.5], shape: [1, 1] }],
       mask_input: { values: [0.1, 0.2, 0.3, 0.4], shape: [1, 2, 2] },
       reset_predictor: true,
-      points: [[[10, 20], [30, 40]]],
+      points: [
+        [
+          [10, 20],
+          [30, 40],
+        ],
+      ],
       labels: [[1, 0]],
       boxes: null,
       num_multimask_outputs: 1,
@@ -205,7 +211,9 @@ describe("InteractiveSegmenter", () => {
     const segmenter = new InteractiveSegmenter();
     const firstResponse = deferred<ReturnType<typeof makeSegmentationResponse>>();
     const secondResponse = deferred<ReturnType<typeof makeSegmentationResponse>>();
-    segmentImageMock.mockReturnValueOnce(firstResponse.promise).mockReturnValueOnce(secondResponse.promise);
+    segmentImageMock
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise);
 
     const firstPrediction = segmenter.predictMask({
       datasetId: "dataset-1",

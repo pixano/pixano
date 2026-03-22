@@ -4,9 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import { nanoid } from "nanoid";
 
-import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import {
   cloneTrackingMaskOutput,
   normalizeTrackingMaskOutputForPersistence,

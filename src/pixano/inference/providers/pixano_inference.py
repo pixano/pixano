@@ -135,7 +135,7 @@ class PixanoInferenceProvider(HTTPProvider):
 
     def _build_segmentation_request(self, input_data: SegmentationInput) -> dict[str, Any]:
         """Build request data for segmentation."""
-        request = {
+        request: dict[str, Any] = {
             "model": input_data.model,
             "image": input_data.image,
             "reset_predictor": input_data.reset_predictor,
@@ -244,7 +244,7 @@ class PixanoInferenceProvider(HTTPProvider):
 
     def _build_tracking_request(self, input_data: TrackingInput) -> dict[str, Any]:
         """Build request data for tracking."""
-        request = {
+        request: dict[str, Any] = {
             "model": input_data.model,
             "video": input_data.video,
             "objects_ids": list(input_data.objects_ids),

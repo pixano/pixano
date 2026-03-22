@@ -29,17 +29,21 @@ License: CECILL-C
     selectedStaticSegmentationModel,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
-  import { itemMetas, selectedTool, smartSegmentationUiState } from "$lib/stores/workspaceStores.svelte";
+  import {
+    itemMetas,
+    selectedTool,
+    smartSegmentationUiState,
+  } from "$lib/stores/workspaceStores.svelte";
   import {
     brushDrawTool,
     brushEraseTool,
     interactiveSegmenterTool,
-    vosTool,
     panTool,
     polygonTool,
     polylineTool,
     rectangleTool,
     ToolType,
+    vosTool,
     type PolygonOutputMode,
   } from "$lib/tools";
   import { WorkspaceType } from "$lib/types/dataset";
@@ -59,7 +63,10 @@ License: CECILL-C
   };
 
   const selectInteractiveSegmenterTool = () => {
-    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter && selectedTool.value?.type !== ToolType.VOS) {
+    if (
+      selectedTool.value?.type !== ToolType.InteractiveSegmenter &&
+      selectedTool.value?.type !== ToolType.VOS
+    ) {
       if (itemMetas.value?.type === WorkspaceType.VIDEO) {
         selectedTool.value = vosTool;
       } else {
@@ -70,7 +77,8 @@ License: CECILL-C
 
   const setSegmentationModelSelection = (modelKey: string) => {
     const selectedModel =
-      currentSegmentationModels.value.find((model) => getInferenceModelKey(model) === modelKey) ?? null;
+      currentSegmentationModels.value.find((model) => getInferenceModelKey(model) === modelKey) ??
+      null;
     const selection = selectedModel
       ? {
           name: selectedModel.name,
@@ -86,8 +94,13 @@ License: CECILL-C
     selectedStaticSegmentationModel.value = selection;
   };
 
-  const setInteractivePromptMode = (promptMode: (typeof interactiveSegmenterTool)["promptMode"]) => {
-    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter && selectedTool.value?.type !== ToolType.VOS) {
+  const setInteractivePromptMode = (
+    promptMode: (typeof interactiveSegmenterTool)["promptMode"],
+  ) => {
+    if (
+      selectedTool.value?.type !== ToolType.InteractiveSegmenter &&
+      selectedTool.value?.type !== ToolType.VOS
+    ) {
       if (itemMetas.value?.type === WorkspaceType.VIDEO) {
         selectedTool.value = { ...vosTool, promptMode };
       } else {
@@ -138,7 +151,8 @@ License: CECILL-C
 
   let showBrushTools = $derived(selectedTool.value?.type === ToolType.Brush);
   let showInteractiveSegmenterTools = $derived(
-    selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS,
+    selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+      selectedTool.value?.type === ToolType.VOS,
   );
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);
   let smartInferencePending = $derived(smartSegmentationUiState.value.phase === "pending");
@@ -236,7 +250,8 @@ License: CECILL-C
     <IconButton
       tooltipContent="Interactive Smart Segmentation (W)"
       onclick={selectInteractiveSegmenterTool}
-      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS}
+      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+        selectedTool.value?.type === ToolType.VOS}
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
@@ -250,7 +265,8 @@ License: CECILL-C
         <IconButton
           tooltipContent="Positive Point Prompt (X toggles +/-)"
           onclick={() => setInteractivePromptMode("positive")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "positive"}
           disabled={smartInferencePending}
           class="h-8 w-8"
@@ -260,7 +276,8 @@ License: CECILL-C
         <IconButton
           tooltipContent="Negative Point Prompt (X toggles +/-)"
           onclick={() => setInteractivePromptMode("negative")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "negative"}
           disabled={smartInferencePending}
           class="h-8 w-8"
@@ -270,7 +287,8 @@ License: CECILL-C
         <IconButton
           tooltipContent="Bounding Box Prompt (R)"
           onclick={() => setInteractivePromptMode("box")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "box"}
           disabled={smartInferencePending}
           class="h-8 w-8"
@@ -289,10 +307,7 @@ License: CECILL-C
           onOpenChange={(open) => (isSegmentationModelSelectOpen = open)}
           onValueChange={setSegmentationModelSelection}
         >
-          <Select.Trigger
-            aria-label="Smart segmentation model"
-            class={segmentationChipClass}
-          >
+          <Select.Trigger aria-label="Smart segmentation model" class={segmentationChipClass}>
             {#snippet children()}
               <MagicWand
                 weight="fill"
@@ -304,9 +319,12 @@ License: CECILL-C
                 {segmentationModelLabel}
               </span>
               <CaretDown
-                class={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200", {
-                  "rotate-180": isSegmentationModelSelectOpen,
-                })}
+                class={cn(
+                  "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
+                  {
+                    "rotate-180": isSegmentationModelSelectOpen,
+                  },
+                )}
               />
             {/snippet}
           </Select.Trigger>
@@ -356,7 +374,9 @@ License: CECILL-C
                         </div>
 
                         {#if isSelected}
-                          <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/80">
+                          <div
+                            class="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/80"
+                          >
                             Active
                           </div>
                         {/if}

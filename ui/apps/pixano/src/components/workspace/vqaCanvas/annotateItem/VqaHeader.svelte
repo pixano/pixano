@@ -83,7 +83,8 @@ License: CECILL-C
       if (hasSelection) return;
       const currentSelection = selectedVqaModel.value;
       const currentSelectionId = currentSelection ? getInferenceModelKey(currentSelection) : "";
-      selectedModel = models.find((model) => model.id === currentSelectionId)?.id ?? models[0]?.id ?? "";
+      selectedModel =
+        models.find((model) => model.id === currentSelectionId)?.id ?? models[0]?.id ?? "";
     });
   });
 </script>

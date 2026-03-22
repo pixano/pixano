@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../apiClient";
@@ -88,11 +94,14 @@ describe("trackVideo", () => {
 
   it("throws ApiError and preserves backend detail on failure", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ detail: "Model 'sam2-video' is tracking-only; use /inference/tracking" }), {
-        status: 400,
-        statusText: "Bad Request",
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({ detail: "Model 'sam2-video' is tracking-only; use /inference/tracking" }),
+        {
+          status: 400,
+          statusText: "Bad Request",
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     await expect(

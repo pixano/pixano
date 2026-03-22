@@ -8,10 +8,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
 import {
-  NULL_VOS_STATE,
   beginVosPendingIntervalState,
   commitVosIntervalState,
   isVosSessionActiveState,
+  NULL_VOS_STATE,
   setVosAnchorState,
   startNewVosSegmentState,
   type VosSessionState,
@@ -60,7 +60,9 @@ describe("vosSession", () => {
     });
     state = commitVosIntervalState(state, {
       requestId: "track-1",
-      outputs: [2, 3, 4].map((frameIndex) => saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex)),
+      outputs: [2, 3, 4].map((frameIndex) =>
+        saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex),
+      ),
       nextAnchor: {
         frameIndex: 4,
         viewRef: { id: "frame-4", name: "camera" },
@@ -78,7 +80,9 @@ describe("vosSession", () => {
     });
     state = commitVosIntervalState(state, {
       requestId: "track-2",
-      outputs: [4, 5, 6].map((frameIndex) => saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex)),
+      outputs: [4, 5, 6].map((frameIndex) =>
+        saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex),
+      ),
       nextAnchor: {
         frameIndex: 6,
         viewRef: { id: "frame-6", name: "camera" },
@@ -116,7 +120,9 @@ describe("vosSession", () => {
     });
     state = commitVosIntervalState(state, {
       requestId: "track-1",
-      outputs: [2, 3, 4].map((frameIndex) => saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex)),
+      outputs: [2, 3, 4].map((frameIndex) =>
+        saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex),
+      ),
       nextAnchor: {
         frameIndex: 4,
         viewRef: { id: "frame-4", name: "camera" },
@@ -143,7 +149,9 @@ describe("vosSession", () => {
     });
     state = commitVosIntervalState(state, {
       requestId: "track-2",
-      outputs: [8, 9].map((frameIndex) => saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex)),
+      outputs: [8, 9].map((frameIndex) =>
+        saveMaskShapeToTrackingOutput(makeMask(frameIndex), frameIndex),
+      ),
       nextAnchor: {
         frameIndex: 9,
         viewRef: { id: "frame-9", name: "camera" },
@@ -224,12 +232,12 @@ describe("vosSession", () => {
     });
 
     (intervalOutputs[0].data.counts as number[])[0] = 777;
-    expect((state.masks.find((mask) => mask.frameIndex === 2)?.output.data.counts as number[])[0]).toBe(
-      21,
-    );
-    expect((state.masks.find((mask) => mask.frameIndex === 3)?.output.data.counts as number[])[0]).toBe(
-      30,
-    );
+    expect(
+      (state.masks.find((mask) => mask.frameIndex === 2)?.output.data.counts as number[])[0],
+    ).toBe(21);
+    expect(
+      (state.masks.find((mask) => mask.frameIndex === 3)?.output.data.counts as number[])[0],
+    ).toBe(30);
   });
 
   it("deduplicates anchor history when refining on the same frame", () => {

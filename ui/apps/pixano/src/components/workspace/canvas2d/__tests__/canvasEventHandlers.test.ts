@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { describe, expect, it } from "vitest";
 
 import { computeCursorFlushAction, computeToolChangeAction } from "../canvasEventHandlers";

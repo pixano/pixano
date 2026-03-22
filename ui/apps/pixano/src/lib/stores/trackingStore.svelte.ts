@@ -4,21 +4,23 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
+
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
+import { currentFrameIndex } from "./videoStores.svelte";
 import {
-  NULL_VOS_STATE,
   beginVosPendingIntervalState,
   commitVosIntervalState,
   failVosPendingIntervalState,
   isVosSessionActiveState,
+  NULL_VOS_STATE,
   setVosAnchorState,
   startNewVosSegmentState,
   type VosSessionState,
 } from "./vosSession";
-import { currentFrameIndex } from "./videoStores.svelte";
 import { views } from "./workspaceBaseStores.svelte";
-import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import { MultiSegmentTracker, type BBoxKeyframe } from "$lib/trackers";
+import type { TrackingTimelineState } from "$lib/trackingTimeline";
 import {
   BaseSchema,
   BBox,
@@ -27,7 +29,6 @@ import {
   type SequenceFrame,
 } from "$lib/types/dataset";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
-import type { TrackingTimelineState } from "$lib/trackingTimeline";
 
 export type {
   VosAnchorSourceKind,

@@ -8,7 +8,8 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from pathlib import Path
+from typing import Annotated, Any, Literal, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -146,7 +147,6 @@ class VideoTrackingKeyframeRequest(BaseModel):
 
 
 class VideoTrackingRequest(BaseModel):
-
     model: str
     provider_name: str | None = None
     dataset_id: str
@@ -351,19 +351,17 @@ def _derive_legacy_tracking_prompts(
         return None, None, None
 
     for keyframe in request.keyframes:
-        points = (
-            [[ [point.x, point.y] for point in keyframe.points ]]
-            if keyframe.points
-            else None
-        )
-        labels = ([[point.label for point in keyframe.points]] if keyframe.points else None)
+        points = [[[point.x, point.y] for point in keyframe.points]] if keyframe.points else None
+        labels = [[point.label for point in keyframe.points]] if keyframe.points else None
         boxes = (
-            [[
-                keyframe.box.x,
-                keyframe.box.y,
-                keyframe.box.x + keyframe.box.width,
-                keyframe.box.y + keyframe.box.height,
-            ]]
+            [
+                [
+                    keyframe.box.x,
+                    keyframe.box.y,
+                    keyframe.box.x + keyframe.box.width,
+                    keyframe.box.y + keyframe.box.height,
+                ]
+            ]
             if keyframe.box is not None
             else None
         )
@@ -402,7 +400,7 @@ def _parse_ndarray_request_list(
 ) -> list[NDArrayData] | None:
     if arrays is None:
         return None
-    return [_parse_ndarray_request(array) for array in arrays if array is not None]
+    return [NDArrayData(values=array.values, shape=array.shape) for array in arrays if array is not None]
 
 
 def _serialize_model_info(model: Any, provider_name: str) -> dict[str, Any]:
@@ -447,10 +445,7 @@ async def _ensure_model_capability(
 
     raise HTTPException(
         status_code=400,
-        detail=(
-            f"Model '{model_name}' is {actual_capability}-only; "
-            f"use /inference/{actual_capability}"
-        ),
+        detail=(f"Model '{model_name}' is {actual_capability}-only; use /inference/{actual_capability}"),
     )
 
 
@@ -602,6 +597,7 @@ def _build_tracking_input(
 def list_inference_servers(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> InferenceRegistryResponse:
+    """List all connected inference servers."""
     providers = _list_connected_providers(settings)
     return InferenceRegistryResponse(
         connected=len(providers) > 0,
@@ -615,6 +611,7 @@ async def register_inference_server(
     request: RegisterServerRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Register a new inference server."""
     normalized_url = _normalize_provider_url(request.url)
 
     try:
@@ -638,6 +635,7 @@ async def list_inference_models(
     settings: Annotated[Settings, Depends(get_settings)],
     task: Annotated[str | None, Query()] = None,
 ) -> list[dict[str, Any]]:
+    """List available inference models across all providers."""
     if not settings.inference_providers:
         return []
 
@@ -665,11 +663,12 @@ async def vlm(
     request: VLMRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Run vision-language model inference."""
     provider = _get_provider(settings, request.provider_name)
     input_data = VLMInput(
         model=request.model,
         prompt=request.prompt,
-        images=request.images,
+        images=cast(list[str | Path] | None, request.images),
         max_new_tokens=request.max_new_tokens,
         temperature=request.temperature,
     )
@@ -682,6 +681,7 @@ async def detect(
     request: DetectionRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Run object detection inference."""
     provider = _get_provider(settings, request.provider_name)
     input_data = DetectionInput(
         model=request.model,
@@ -699,6 +699,7 @@ async def segment_image(
     request: ImageSegmentationRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Run image segmentation inference."""
     provider = _get_provider(settings, request.provider_name)
     await _ensure_model_capability(provider, request.model, InferenceTask.SEGMENTATION)
     dataset = _get_dataset(request.dataset_id, settings)
@@ -730,6 +731,7 @@ async def track_video(
     request: VideoTrackingRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Run video object tracking inference."""
     provider = _get_provider(settings, request.provider_name)
     await _ensure_model_capability(provider, request.model, InferenceTask.TRACKING)
     input_data, resolved_frame_indexes = _build_tracking_input(request, settings)
@@ -753,6 +755,7 @@ async def submit_tracking_job(
     request: VideoTrackingRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Submit a new video tracking job."""
     provider_name = _get_provider_name(settings, request.provider_name)
     provider = _get_provider(settings, provider_name)
     await _ensure_model_capability(provider, request.model, InferenceTask.TRACKING)
@@ -788,6 +791,7 @@ async def get_tracking_job_status(
     job_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Get the status of a tracking job."""
     record = TRACKING_JOB_REGISTRY.get(job_id)
     if record is None:
         raise HTTPException(status_code=404, detail=f"Tracking job '{job_id}' was not found.")
@@ -820,6 +824,7 @@ async def cancel_tracking_job_status(
     job_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
+    """Cancel a tracking job."""
     record = TRACKING_JOB_REGISTRY.get(job_id)
     if record is None:
         raise HTTPException(status_code=404, detail=f"Tracking job '{job_id}' was not found.")
@@ -828,7 +833,7 @@ async def cancel_tracking_job_status(
         return record.terminal_payload
 
     provider = _get_provider(settings, record.provider_name)
-    canceled_payload = {
+    canceled_payload: dict[str, Any] = {
         "job_id": job_id,
         "status": "canceled",
         "detail": "Tracking job canceled.",

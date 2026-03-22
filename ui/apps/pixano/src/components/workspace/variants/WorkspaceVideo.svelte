@@ -13,9 +13,19 @@ License: CECILL-C
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
   import { buildCurrentSequenceFrameRefsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
+  import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
   import {
-    beginVosPendingInterval,
+    createErrorSmartSegmentationUiState,
+    createIdleSmartSegmentationUiState,
+    createPendingSmartSegmentationUiState,
+  } from "$lib/segmentation/smartInferenceStatus";
+  import {
+    pixanoInferenceToValidateTrackingMasks,
+    selectedVideoSegmentationModel,
+  } from "$lib/stores/inferenceStores.svelte";
+  import {
     addTrackingKeyframe,
+    beginVosPendingInterval,
     cancelTrackingSession,
     commitVosInterval,
     confirmPendingKeyframe,
@@ -29,19 +39,15 @@ License: CECILL-C
     pendingKeyframeIndex,
     resetVosSession,
     setPendingKeyframe,
+    setVosAnchor,
     startNewTrackingSegment,
     startNewVosSegment,
     startTrackingSession,
     trackingPreviewBBoxes,
-    setVosAnchor,
     vosAnchorFrameIndex,
     vosSession,
     vosTrackedMasks,
   } from "$lib/stores/trackingStore.svelte";
-  import {
-    pixanoInferenceToValidateTrackingMasks,
-    selectedVideoSegmentationModel,
-  } from "$lib/stores/inferenceStores.svelte";
   import {
     currentFrameIndex,
     currentItemId,
@@ -65,26 +71,15 @@ License: CECILL-C
     smartSegmentationUiState,
   } from "$lib/stores/workspaceStores.svelte";
   import {
-    createErrorSmartSegmentationUiState,
-    createIdleSmartSegmentationUiState,
-    createPendingSmartSegmentationUiState,
-  } from "$lib/segmentation/smartInferenceStatus";
-  import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
-  import { Sam2VideoTracker } from "$lib/trackers";
-  import {
     ToolType,
     vosTool,
     type InteractiveSegmenterAIInput,
     type SelectionTool,
   } from "$lib/tools";
+  import { Sam2VideoTracker } from "$lib/trackers";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import {
-    SequenceFrame,
-    ShapeType,
-    type EditShape,
-    type SaveMaskShape,
-  } from "$lib/ui";
+  import { SequenceFrame, ShapeType, type EditShape, type SaveMaskShape } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -344,11 +339,12 @@ License: CECILL-C
     mask: SaveMaskShape | null,
   ) {
     return {
-      points: prompt?.points.map((point) => ({
-        x: point.x,
-        y: point.y,
-        label: point.label as 0 | 1,
-      })) ?? [],
+      points:
+        prompt?.points.map((point) => ({
+          x: point.x,
+          y: point.y,
+          label: point.label as 0 | 1,
+        })) ?? [],
       box: prompt?.box
         ? {
             x: prompt.box.x,
@@ -948,7 +944,9 @@ License: CECILL-C
         {currentSequenceFrameRefsByView}
         onSelectedToolChange={(tool: SelectionTool) => {
           selectedTool.value =
-            tool.type === ToolType.InteractiveSegmenter ? { ...vosTool, promptMode: tool.promptMode } : tool;
+            tool.type === ToolType.InteractiveSegmenter
+              ? { ...vosTool, promptMode: tool.promptMode }
+              : tool;
         }}
         onNewShapeChange={(shape) => {
           handleCanvasShapeChange(shape as import("$lib/ui").Shape);
@@ -995,8 +993,8 @@ License: CECILL-C
             Prompt an object to set anchor A &middot; Scrub forward and press T &middot; N starts a
             new segment &middot; Enter saves &middot; Escape resets
           {:else}
-            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T
-            &middot; N starts a new segment &middot; Enter saves &middot; Escape resets
+            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T &middot;
+            N starts a new segment &middot; Enter saves &middot; Escape resets
           {/if}
         </div>
       {/if}

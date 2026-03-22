@@ -91,7 +91,12 @@ export class ToolBridgeImpl implements ToolBridge {
     };
   }
 
-  setCanvasContext(viewName: string, viewId: string, canvasWidth: number, canvasHeight: number): void {
+  setCanvasContext(
+    viewName: string,
+    viewId: string,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): void {
     this.canvasViewName = viewName;
     this.canvasViewId = viewId;
     this.canvasWidth = canvasWidth;

@@ -29,8 +29,8 @@ import {
   preAnnotationIsActive,
   saveData,
   selectedKeypointsTemplate,
-  smartSegmentationUiState,
   selectedTool,
+  smartSegmentationUiState,
   views,
 } from "./workspaceBaseStores.svelte";
 import { panTool } from "$lib/tools";

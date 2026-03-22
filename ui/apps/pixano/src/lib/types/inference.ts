@@ -192,12 +192,7 @@ export interface VideoTrackingTaskResult {
   status: string;
 }
 
-export type VideoTrackingJobState =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "canceled";
+export type VideoTrackingJobState = "queued" | "running" | "completed" | "failed" | "canceled";
 
 export interface VideoTrackingJobStatus {
   job_id: string;

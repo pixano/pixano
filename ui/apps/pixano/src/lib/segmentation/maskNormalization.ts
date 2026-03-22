@@ -4,9 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import { nanoid } from "nanoid";
 
-import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import { BaseSchema, type Reference } from "$lib/types/dataset";
 import type { CompressedRLEPayload } from "$lib/types/inference";
 import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
@@ -97,11 +97,14 @@ export function buildTrackingMaskSourceFields(
 }
 
 export function normalizeTrackingMaskSourceFields(
-  source: {
-    source_type?: unknown;
-    source_name?: unknown;
-    source_metadata?: unknown;
-  } | null | undefined,
+  source:
+    | {
+        source_type?: unknown;
+        source_name?: unknown;
+        source_metadata?: unknown;
+      }
+    | null
+    | undefined,
   fallback?: TrackingMaskSourceInput,
 ): TrackingMaskSourceFields {
   const sourceIsModel = source?.source_type === "model";
