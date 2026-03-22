@@ -1,0 +1,32 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import CardGrid from "../../components/CardGrid.astro";
+import Card from "../../components/Card.astro";
+---
+
+<DocsLayout title="Use Cases" section="use_cases">
+  <h1>Use Cases</h1>
+  <p>
+    Each guide walks you end-to-end through a real dataset: import it into Pixano,
+    explore and annotate in the web UI, and use advanced features like pre-annotation,
+    interactive segmentation, and semantic search.
+  </p>
+
+  <CardGrid>
+    <Card title="Object Detection" href="/use_cases/object_detection/" icon="target">
+      Import Pascal VOC 2007, browse bounding boxes, pre-annotate with YOLO and GroundingDINO, and search with embeddings.
+    </Card>
+    <Card title="Video Object Tracking" href="/use_cases/video_tracking/" icon="video">
+      Import DAVIS 2017 videos, use the timeline and tracklet UI, and annotate with SAM interactive segmentation.
+    </Card>
+    <Card title="Multi-View Detection" href="/use_cases/multi_view_detection/" icon="layers">
+      Import FLIR ADAS v2 in image or video mode, and browse synchronized RGB + thermal views side by side.
+    </Card>
+    <Card title="Entity Linking" href="/use_cases/entity_linking/" icon="link">
+      Import the MEL dataset, link image regions to text spans, and annotate with bounding boxes and text selection.
+    </Card>
+    <Card title="Visual Question Answering" href="/use_cases/vqa/" icon="message">
+      Import VQAv2, ask questions about images, and annotate with the conversation panel.
+    </Card>
+  </CardGrid>
+</DocsLayout>

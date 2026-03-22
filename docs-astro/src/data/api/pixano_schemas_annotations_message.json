@@ -1,0 +1,203 @@
+{
+  "module": "pixano.schemas.annotations.message",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/message.py",
+  "classes": [
+    {
+      "name": "Message",
+      "docstring": "One conversational turn grouped by ``conversation_id``.",
+      "bases": [
+        "EntityGroupAnnotation"
+      ],
+      "attributes": [
+        {
+          "name": "choices",
+          "annotation": "list[str]",
+          "value": "[]",
+          "docstring": ""
+        },
+        {
+          "name": "content",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "number",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "question_type",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "type",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "user",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "none",
+          "docstring": "Return a placeholder empty Message instance.",
+          "parameters": [],
+          "returns": "Message",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 65
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 27
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_message",
+      "docstring": "Create a Message instance.\n\nArgs:\n    conversation_id: Conversation ID.\n    number: Message number in conversation.\n    user: User who sent the message.\n    type: Message type (SYSTEM, QUESTION, ANSWER).\n    content: Message content.\n    choices: Choices for QUESTION messages.\n    question_type: Question type for QUESTION messages.\n    entity_ids: IDs of referenced entities.\n    id: Message ID.\n    record_id: Record ID.\n    view_id: View ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n\nReturns:\n    The created `Message` instance.",
+      "parameters": [
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "number",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "user",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "type",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "content",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "choices",
+          "annotation": "list[str]",
+          "default": "[]",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "question_type",
+          "annotation": "QuestionType | str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "entity_ids",
+          "annotation": "list[str]",
+          "default": "[]",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "default": "'{}'",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Message",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 86
+    },
+    {
+      "name": "is_message",
+      "docstring": "Check if a class is a Message or subclass of Message.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 81
+    }
+  ],
+  "attributes": [
+    {
+      "name": "QUESTION_TYPES",
+      "annotation": null,
+      "value": "set(get_args(QuestionType))",
+      "docstring": ""
+    },
+    {
+      "name": "QuestionType",
+      "annotation": null,
+      "value": "Literal['OPEN', 'SINGLE_CHOICE', 'SINGLE_CHOICE_EXPLANATION', 'MULTI_CHOICE', 'MULTI_CHOICE_EXPLANATION']",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

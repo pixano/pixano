@@ -1,0 +1,114 @@
+---
+/**
+ * Previous/Next navigation — Hyper-Glass treatment.
+ */
+
+interface Props {
+  prev?: { title: string; href: string };
+  next?: { title: string; href: string };
+}
+
+const { prev, next } = Astro.props;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+{(prev || next) && (
+  <nav class="prev-next" aria-label="Page navigation">
+    {prev ? (
+      <a href={`${basePath}${prev.href}`} class="pn-link pn-prev">
+        <span class="pn-label">Previous</span>
+        <span class="pn-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          {prev.title}
+        </span>
+      </a>
+    ) : <div />}
+    {next ? (
+      <a href={`${basePath}${next.href}`} class="pn-link pn-next">
+        <span class="pn-label">Next</span>
+        <span class="pn-title">
+          {next.title}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </span>
+      </a>
+    ) : <div />}
+  </nav>
+)}
+
+<style>
+  /* ── Hyper-Glass Prev/Next Navigation ── */
+  .prev-next {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--px-border);
+  }
+
+  .pn-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.85rem 1.25rem;
+    background: var(--px-glass-bg);
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    border: 1px solid var(--px-glass-border);
+    border-radius: var(--px-radius-lg);
+    box-shadow: var(--px-glass-shadow-inset);
+    text-decoration: none;
+    transition:
+      all 250ms ease,
+      box-shadow 250ms ease;
+    max-width: 48%;
+  }
+
+  .pn-link:hover {
+    border-color: var(--px-accent);
+    box-shadow:
+      var(--px-glow-accent),
+      var(--px-glass-shadow-inset);
+    text-decoration: none;
+    transform: translateY(-2px);
+  }
+
+  .pn-prev {
+    align-items: flex-start;
+  }
+
+  .pn-next {
+    align-items: flex-end;
+    margin-left: auto;
+  }
+
+  .pn-label {
+    font-family: var(--px-font-ui);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--px-text-muted);
+  }
+
+  .pn-title {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--px-primary);
+    transition:
+      color 200ms ease,
+      text-shadow 200ms ease;
+  }
+
+  .pn-link:hover .pn-title {
+    color: var(--px-accent);
+    text-shadow: var(--px-glow-text);
+  }
+</style>

@@ -1,0 +1,71 @@
+{
+  "module": "pixano.api.routers.conversations",
+  "docstring": "Read-only conversation aggregate endpoints.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/conversations.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "get_conversation",
+      "docstring": "Get one conversation aggregate by conversation id.",
+      "parameters": [
+        {
+          "name": "conversation_id",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": "Depends(get_dataset_dep)",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "ConversationResponse",
+      "is_async": false,
+      "decorators": [
+        "router.get('/{conversation_id}', response_model=ConversationResponse)"
+      ],
+      "lineno": 54
+    },
+    {
+      "name": "list_conversations",
+      "docstring": "List conversation aggregates reconstructed from message rows.",
+      "parameters": [
+        {
+          "name": "dataset",
+          "annotation": "Dataset",
+          "default": "Depends(get_dataset_dep)",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "pagination",
+          "annotation": "PaginationParams",
+          "default": "Depends()",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "filters",
+          "annotation": "FilterParams",
+          "default": "Depends()",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "PaginatedResponse[ConversationResponse]",
+      "is_async": false,
+      "decorators": [
+        "router.get('', response_model=(PaginatedResponse[ConversationResponse]))"
+      ],
+      "lineno": 28
+    }
+  ],
+  "attributes": [
+    {
+      "name": "router",
+      "annotation": null,
+      "value": "APIRouter(prefix='/datasets/{dataset_id}/conversations', tags=['Conversations'])",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

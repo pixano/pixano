@@ -1,0 +1,36 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Pixano Documentation — Open-source smart annotation tool for computer vision." } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="generator" content={Astro.generator} />
+
+  <!-- SEO -->
+  <title>{title} | Pixano Docs</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalURL} />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href={`${import.meta.env.BASE_URL}assets/pixano.png`} />
+
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Theme initialization — prevents flash of wrong theme -->
+  <script is:inline>
+    (function() {
+      const stored = localStorage.getItem('pixano-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = stored || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>

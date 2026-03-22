@@ -1,0 +1,26 @@
+{
+  "module": "pixano.api.main",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/main.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "create_app",
+      "docstring": "Create and configure the Pixano app.\n\nArgs:\n    settings: App settings.\n\nReturns:\n    The Pixano app.",
+      "parameters": [
+        {
+          "name": "settings",
+          "annotation": "Settings",
+          "default": "Settings()",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "FastAPI",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 17
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

@@ -1,0 +1,88 @@
+---
+/**
+ * Dismissible announcement banner — Retro-Futurist glass treatment.
+ */
+---
+
+<div class="banner" id="announcement-banner">
+  <div class="banner-inner">
+    <a
+      href="https://github.com/pixano/pixano/releases/tag/v0.6.12"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Pixano v0.6.12 is out &mdash; see what's new!
+    </a>
+    <button
+      class="banner-close"
+      aria-label="Dismiss announcement"
+      onclick="this.closest('.banner').style.display='none'; localStorage.setItem('pixano-banner-dismissed','true');"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  if (localStorage.getItem('pixano-banner-dismissed') === 'true') {
+    const banner = document.getElementById('announcement-banner');
+    if (banner) banner.style.display = 'none';
+  }
+</script>
+
+<style>
+  .banner {
+    background: linear-gradient(90deg, var(--px-primary-dark, #5a1648), var(--px-primary, #771e5f), var(--px-accent, #f06cba));
+    color: white;
+    font-family: var(--px-font-ui);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: center;
+    padding: 0.45rem 1rem;
+    letter-spacing: 0.01em;
+  }
+
+  .banner-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    max-width: var(--px-layout-max-width);
+    margin: 0 auto;
+  }
+
+  .banner a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    transition:
+      color 200ms ease,
+      text-shadow 200ms ease;
+  }
+
+  .banner a:hover {
+    color: white;
+    text-decoration: underline;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+
+  .banner-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: var(--px-radius-sm);
+    transition: all 200ms ease;
+  }
+
+  .banner-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+  }
+</style>

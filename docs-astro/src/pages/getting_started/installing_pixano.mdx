@@ -1,0 +1,104 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Installation"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Installation
+
+## Prerequisites
+
+- **Python 3.10 or later** — check with `python --version`
+- **pip** (included with Python) or [uv](https://docs.astral.sh/uv/) for faster installs
+- A modern browser (Chrome, Firefox, Safari, Edge)
+
+<Callout type="tip" title="Operating system support">
+Pixano works on Linux, macOS, and Windows. GPU support (for SAM, YOLO, etc.) requires CUDA on Linux; CPU-only mode works everywhere.
+</Callout>
+
+## pip (recommended)
+
+We recommend installing Pixano in a virtual environment to keep dependencies isolated:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install pixano
+```
+
+Verify the installation:
+
+```bash
+pixano --version
+```
+
+<Callout type="note" title="Optional extras" collapsible>
+
+Some features require additional packages:
+
+| Extra | What it enables | Install command |
+|-------|----------------|-----------------|
+| `ultralytics` | YOLO pre-annotation | `pip install ultralytics` |
+| `open-clip-torch` | Semantic search with OpenCLIP | `pip install open-clip-torch` |
+| `transformers` | SAM embeddings, GroundingDINO | `pip install transformers` |
+| `datasets` | Loading HuggingFace datasets | `pip install datasets` |
+
+Install them as you need them — the core Pixano package works without any of these.
+
+</Callout>
+
+## Docker
+
+Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano). Pull the stable version (latest release):
+
+```bash
+docker pull pixano/pixano:stable
+```
+
+Run the container with a mounted data directory:
+
+```bash
+docker run -d \
+    --name pixano \
+    -p 7492:7492 \
+    -v ./my_data:/app/data \
+    pixano/pixano:stable
+```
+
+Open `http://localhost:7492` in your browser. The `-v` flag maps your local `./my_data` directory into the container so Pixano can access your datasets.
+
+<Callout type="tip" title="GPU support with Docker">
+For GPU-accelerated features, use the NVIDIA Container Toolkit and add `--gpus all` to the `docker run` command.
+</Callout>
+
+## From source
+
+Clone the repository and install with [uv](https://docs.astral.sh/uv/):
+
+```bash
+git clone https://github.com/pixano/pixano.git
+cd pixano
+uv sync
+```
+
+When running from source, prefix every command with `uv run` (e.g. `uv run pixano server run ./my_data`).
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `pip install pixano` fails with build errors | Make sure you have Python 3.10+ and an up-to-date pip: `pip install --upgrade pip` |
+| `pixano` command not found after install | Activate your virtual environment: `source .venv/bin/activate` |
+| Port 7492 already in use | Use `--port 8000` or stop the other process |
+| Docker container exits immediately | Check logs with `docker logs pixano` — usually a missing data directory |
+
+## Next steps
+
+You're ready to go. Head to the [Quickstart](/pixano/getting_started/quickstart/) to import your first dataset and launch the app.
+
+<PrevNext
+  prev={{ title: "Overview", href: "/getting_started/" }}
+  next={{ title: "Quickstart", href: "/getting_started/quickstart/" }}
+/>

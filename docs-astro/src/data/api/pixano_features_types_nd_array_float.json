@@ -1,0 +1,140 @@
+{
+  "module": "pixano.features.types.nd_array_float",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/types/nd_array_float.py",
+  "classes": [
+    {
+      "name": "NDArray",
+      "docstring": "Represents an N-dimensional array.\n\nAttributes:\n    values: The list of values.\n    shape: The shape of the array, represented as a list of integers.\n    np_dtype: The NumPy data type of the array.",
+      "bases": [
+        "BaseModel",
+        "Generic[T]",
+        "ABC"
+      ],
+      "attributes": [
+        {
+          "name": "np_dtype",
+          "annotation": "np.dtype",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "shape",
+          "annotation": "list[int]",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "values",
+          "annotation": "list[T]",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [
+        {
+          "name": "from_numpy",
+          "docstring": "Create an instance from a NumPy array.",
+          "parameters": [
+            {
+              "name": "arr",
+              "annotation": "np.ndarray",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": "Self",
+          "is_async": false,
+          "decorators": [
+            "classmethod"
+          ],
+          "lineno": 42
+        },
+        {
+          "name": "to_numpy",
+          "docstring": "Convert to a NumPy array.",
+          "parameters": [],
+          "returns": "np.ndarray",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 49
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 20
+    },
+    {
+      "name": "NDArrayFloat",
+      "docstring": "N-dimensional array of 32-bit floating-point values.",
+      "bases": [
+        "NDArray[float]"
+      ],
+      "attributes": [
+        {
+          "name": "np_dtype",
+          "annotation": "np.dtype",
+          "value": "np.float32",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 54
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_ndarray_float",
+      "docstring": "Create a `NDArrayFloat` instance.\n\nArgs:\n    values: The list of floating-point values in the array.\n    shape: The shape of the array, represented as a list of integers.\n\nReturns:\n    The created `NDArrayFloat` instance.",
+      "parameters": [
+        {
+          "name": "values",
+          "annotation": "list[float]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "shape",
+          "annotation": "list[int]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "NDArrayFloat",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 65
+    },
+    {
+      "name": "is_ndarray_float",
+      "docstring": "Check if a class is a `NDArrayFloat` or a subclass of `NDArrayFloat`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 60
+    }
+  ],
+  "attributes": [
+    {
+      "name": "T",
+      "annotation": null,
+      "value": "TypeVar('T')",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

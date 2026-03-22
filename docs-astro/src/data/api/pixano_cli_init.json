@@ -1,0 +1,26 @@
+{
+  "module": "pixano.cli.init",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/cli/init.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "init",
+      "docstring": "Initialize a Pixano data directory.",
+      "parameters": [
+        {
+          "name": "data_dir",
+          "annotation": "Path",
+          "default": "typer.Argument(..., help='Path to initialize.')",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "None",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 12
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

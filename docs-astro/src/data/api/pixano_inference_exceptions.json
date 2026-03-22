@@ -1,0 +1,108 @@
+{
+  "module": "pixano.inference.exceptions",
+  "docstring": "Inference-specific exceptions.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/exceptions.py",
+  "classes": [
+    {
+      "name": "InferenceError",
+      "docstring": "Base exception for inference errors.",
+      "bases": [
+        "Exception"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 10
+    },
+    {
+      "name": "InferenceTimeoutError",
+      "docstring": "Raised when inference takes too long.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 28
+    },
+    {
+      "name": "InvalidRequestError",
+      "docstring": "Raised when the request is invalid.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 46
+    },
+    {
+      "name": "ModelNotFoundError",
+      "docstring": "Raised when a requested model is not available.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 34
+    },
+    {
+      "name": "ProviderConnectionError",
+      "docstring": "Raised when connection to a provider fails.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 22
+    },
+    {
+      "name": "ProviderNotFoundError",
+      "docstring": "Raised when a requested provider is not found.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 16
+    },
+    {
+      "name": "TaskNotSupportedError",
+      "docstring": "Raised when a task is not supported by the provider.",
+      "bases": [
+        "InferenceError"
+      ],
+      "attributes": [],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 40
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

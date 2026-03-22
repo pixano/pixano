@@ -1,0 +1,97 @@
+{
+  "module": "pixano.api.settings",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/settings.py",
+  "classes": [
+    {
+      "name": "Settings",
+      "docstring": "Pixano app settings.\n\nAttributes:\n    data_dir: Root data directory. If library_dir or models_dir are not provided,\n        they are derived as data_dir/library and data_dir/models respectively.\n    library_dir: Local or S3 path to dataset library. Overrides data_dir/library if provided.\n    models_dir: Models directory as Path. Overrides data_dir/models if provided. Must be provided\n        if library_dir is an S3 path.\n    aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.\n        Used if library_dir is an S3 path.\n    aws_region: S3 region name, not always required for private storages.\n        Used if library_dir is an S3 path.\n    aws_access_key: S3 AWS access key. Used if library_dir is an S3 path.\n    aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path.\n    inference_providers: Dictionary of connected inference providers (InferenceProvider instances),\n        keyed by name.\n    default_inference_provider: Name of the default inference provider to use.",
+      "bases": [
+        "BaseSettings"
+      ],
+      "attributes": [
+        {
+          "name": "aws_access_key",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "aws_endpoint",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "aws_region",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "aws_secret_key",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "data_dir",
+          "annotation": "Path | S3Path",
+          "value": "Path.cwd()",
+          "docstring": ""
+        },
+        {
+          "name": "default_inference_provider",
+          "annotation": "str | None",
+          "value": "None",
+          "docstring": ""
+        },
+        {
+          "name": "inference_providers",
+          "annotation": "dict[str, Any]",
+          "value": "{}",
+          "docstring": ""
+        },
+        {
+          "name": "library_dir",
+          "annotation": "Path | S3Path",
+          "value": "Path.cwd() / 'library'",
+          "docstring": ""
+        },
+        {
+          "name": "model_config",
+          "annotation": null,
+          "value": "ConfigDict(arbitrary_types_allowed=True)",
+          "docstring": ""
+        },
+        {
+          "name": "models_dir",
+          "annotation": "Path | None",
+          "value": "None",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 19
+    }
+  ],
+  "functions": [
+    {
+      "name": "get_settings",
+      "docstring": "Get app settings.\n\nReturns:\n    App settings.",
+      "parameters": [],
+      "returns": "Settings",
+      "is_async": false,
+      "decorators": [
+        "lru_cache"
+      ],
+      "lineno": 118
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

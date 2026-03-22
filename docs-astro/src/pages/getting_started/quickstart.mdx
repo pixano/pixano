@@ -1,0 +1,223 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Quickstart"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Quickstart
+
+Import an annotated dataset into Pixano and launch the app in three steps: **init**, **import**, **serve**. By the end you'll have a running Pixano instance displaying images with bounding-box annotations.
+
+## Prerequisites
+
+- Python 3.10+ with Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
+
+## Step 1 — Initialize your data directory
+
+Create the directory structure Pixano needs:
+
+```bash
+pixano init ./my_data
+```
+
+This creates:
+
+```
+my_data/
+  library/   # LanceDB dataset storage
+  media/     # Imported media files (images, videos)
+  models/    # Model files for inference
+```
+
+## Step 2 — Prepare and import a dataset
+
+Pixano imports datasets from a source directory organized by **splits** (e.g. `train/`, `val/`). Each split folder contains media files and an optional `metadata.jsonl` with pre-annotations.
+
+### Try it with Pascal VOC 2007
+
+The repository includes a ready-to-run example. Generate a sample folder:
+
+```bash
+pip install pillow
+python examples/voc/generate_sample.py ./voc_sample --num-samples 50
+```
+
+This downloads Pascal VOC 2007, samples 50 images per split, converts the XML annotations, and writes everything to `./voc_sample/`:
+
+```
+voc_sample/
+  train/
+    000032.jpg
+    000045.jpg
+    ...
+    metadata.jsonl
+  validation/
+    000007.jpg
+    ...
+    metadata.jsonl
+```
+
+Each line in `metadata.jsonl` follows this format:
+
+```json
+{
+  "views": { "image": "000032.jpg" },
+  "entities": [
+    {
+      "category": "aeroplane",
+      "is_difficult": false,
+      "annotations": { "image": { "bbox": [0.078, 0.09, 0.756, 0.792] } }
+    }
+  ]
+}
+```
+
+The dataset info at `examples/voc/info.py` describes the schema:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, Entity, Image, Record
+
+
+class VOCEntity(Entity):
+    category: str = ""
+    is_difficult: bool = False
+
+
+dataset_info = DatasetInfo(
+    name="VOC 2007 Sample",
+    workspace=WorkspaceType.IMAGE,
+    record=Record,
+    entity=VOCEntity,
+    bbox=BBox,
+    views={"image": Image},
+)
+```
+
+Import the dataset:
+
+```bash
+pixano data import ./my_data ./voc_sample \
+    --info examples/voc/info.py:dataset_info
+```
+
+Common import options:
+
+| Option | Description |
+|--------|-------------|
+| `--info` | Dataset info as `path/to/file.py:attribute`. Required. |
+| `--mode` | `create` (default), `overwrite`, or `add`. |
+| `--dry-run` | Validate metadata without creating the dataset. |
+
+<Callout type="note" title="Your own dataset" collapsible>
+
+To import your own images with bounding boxes:
+
+1. Organize your source folder with one subfolder per split.
+2. Create a `metadata.jsonl` in each split with `views`, `entities`, and `annotations`.
+3. Define a `DatasetInfo` with your custom entity and annotation types.
+4. Run `pixano data import`.
+
+See the [Object Detection](/pixano/use_cases/object_detection/) use case for a detailed walkthrough.
+
+</Callout>
+
+## Step 3 — Launch the server
+
+```bash
+pixano server run ./my_data
+```
+
+Open `http://127.0.0.1:7492` in your browser. You'll see the home page with your dataset card. Click it to browse images and bounding-box annotations.
+
+Server options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--host` | Bind address (e.g. `0.0.0.0` for network access) | `127.0.0.1` |
+| `--port` | Port number | `7492` |
+
+<Callout type="note" title="Other ways to launch Pixano" collapsible>
+
+**From a Jupyter/Colab notebook:**
+
+```python
+from pixano.app import App
+app = App("./my_data")
+app.display()
+```
+
+**From Docker:**
+
+```bash
+docker run -d \
+    --name pixano \
+    -p 7492:7492 \
+    -v ./my_data:/app/data \
+    pixano/pixano:stable
+```
+
+**With S3 storage (experimental):**
+
+```bash
+pixano server run ./my_data \
+    --aws-endpoint="https://your-aws-endpoint.com" \
+    --aws-region="" \
+    --aws-access-key="your_access_key" \
+    --aws-secret-key="your_secret_key"
+```
+
+</Callout>
+
+## Explore your data
+
+The web UI lets you browse items, view annotations, and start annotating.
+
+<Callout type="note" title="Explore the REST API" collapsible>
+
+While the server is running, interactive API documentation is available at:
+
+- **Swagger UI**: `http://127.0.0.1:7492/docs`
+- **ReDoc**: `http://127.0.0.1:7492/redoc`
+
+**List all datasets:**
+
+```bash
+curl -s http://localhost:7492/datasets/info | python -m json.tool
+```
+
+**Get items** (first 3):
+
+```bash
+curl -s 'http://localhost:7492/items/<DATASET_ID>?limit=3' | python -m json.tool
+```
+
+</Callout>
+
+<Callout type="note" title="Verify with the Python API" collapsible>
+
+```python
+from pathlib import Path
+from pixano.datasets import Dataset
+
+dataset = Dataset(Path("./my_data/library/voc_2007_sample"), media_dir=Path("./my_data/media"))
+items = dataset.get_dataset_items(limit=3)
+for item in items:
+    print(f"Item {item.id} | split={item.split}")
+```
+
+</Callout>
+
+## Next steps
+
+- [Key Concepts](/pixano/getting_started/key_concepts/) — understand the data model in depth
+- [Object Detection](/pixano/use_cases/object_detection/) — full walkthrough with pre-annotation and semantic search
+- [Video Object Tracking](/pixano/use_cases/video_tracking/) — work with video datasets and SAM
+
+<PrevNext
+  prev={{ title: "Installation", href: "/getting_started/installing_pixano/" }}
+  next={{ title: "Key Concepts", href: "/getting_started/key_concepts/" }}
+/>

@@ -1,0 +1,44 @@
+{
+  "module": "pixano.datasets.builders.folders.image",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/image.py",
+  "classes": [
+    {
+      "name": "ImageFolderBuilder",
+      "docstring": "Builder for image datasets stored in a folder.",
+      "bases": [
+        "FolderBaseBuilder"
+      ],
+      "attributes": [
+        {
+          "name": "DEFAULT_INFO",
+          "annotation": null,
+          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE), record=Record, entity=Entity, bbox=BBox, keypoint=KeyPoints, views={'image': Image})",
+          "docstring": ""
+        },
+        {
+          "name": "EXTENSIONS",
+          "annotation": null,
+          "value": "IMAGE_EXTENSIONS",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 82
+    }
+  ],
+  "functions": [],
+  "attributes": [
+    {
+      "name": "IMAGE_EXTENSIONS",
+      "annotation": null,
+      "value": "['.blp', '.bmp', '.dib', '.bufr', '.cur', '.pcx', '.dcx', '.dds', '.ps', '.eps', '.fit', '.fits', '.fli', '.flc', '.ftc', '.ftu', '.gbr', '.gif', '.grib', '.h5', '.hdf', '.png', '.apng', '.jp2', '.j2k', '.jpc', '.jpf', '.jpx', '.j2c', '.icns', '.ico', '.im', '.iim', '.tif', '.tiff', '.jfif', '.jpe', '.jpg', '.jpeg', '.mpg', '.mpeg', '.msp', '.pcd', '.pxr', '.pbm', '.pgm', '.ppm', '.pnm', '.psd', '.bw', '.rgb', '.rgba', '.sgi', '.ras', '.tga', '.icb', '.vda', '.vst', '.webp', '.wmf', '.emf', '.xbm', '.xpm']",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

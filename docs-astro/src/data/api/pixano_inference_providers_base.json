@@ -1,0 +1,175 @@
+{
+  "module": "pixano.inference.providers.base",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/providers/base.py",
+  "classes": [
+    {
+      "name": "HTTPProvider",
+      "docstring": "Base class for HTTP-based inference providers.\n\nThis class provides common HTTP client functionality that can be\nshared by providers that communicate over HTTP.\n\nAttributes:\n    url: The base URL of the inference server.",
+      "bases": [
+        "InferenceProvider"
+      ],
+      "attributes": [
+        {
+          "name": "name",
+          "annotation": "str",
+          "value": null,
+          "docstring": "Provider name."
+        },
+        {
+          "name": "url",
+          "annotation": "str",
+          "value": null,
+          "docstring": "The base URL of the inference server."
+        }
+      ],
+      "methods": [
+        {
+          "name": "__init__",
+          "docstring": "Initialize the HTTP provider.\n\nArgs:\n    url: The base URL of the inference server.",
+          "parameters": [
+            {
+              "name": "url",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            }
+          ],
+          "returns": null,
+          "is_async": false,
+          "decorators": [],
+          "lineno": 27
+        },
+        {
+          "name": "close",
+          "docstring": "Close the HTTP client.",
+          "parameters": [],
+          "returns": "None",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 47
+        },
+        {
+          "name": "delete",
+          "docstring": "Perform a DELETE request.\n\nArgs:\n    path: URL path.\n    timeout: Request timeout.\n    **kwargs: Additional request arguments.\n\nReturns:\n    The HTTP response.",
+          "parameters": [
+            {
+              "name": "path",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "int | float",
+              "default": "60",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "httpx.Response",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 166
+        },
+        {
+          "name": "get",
+          "docstring": "Perform a GET request.\n\nArgs:\n    path: URL path.\n    timeout: Request timeout.\n    **kwargs: Additional request arguments.\n\nReturns:\n    The HTTP response.",
+          "parameters": [
+            {
+              "name": "path",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "int | float",
+              "default": "60",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "httpx.Response",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 127
+        },
+        {
+          "name": "post",
+          "docstring": "Perform a POST request.\n\nArgs:\n    path: URL path.\n    timeout: Request timeout.\n    **kwargs: Additional request arguments.\n\nReturns:\n    The HTTP response.",
+          "parameters": [
+            {
+              "name": "path",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "int | float",
+              "default": "60",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "httpx.Response",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 140
+        },
+        {
+          "name": "put",
+          "docstring": "Perform a PUT request.\n\nArgs:\n    path: URL path.\n    timeout: Request timeout.\n    **kwargs: Additional request arguments.\n\nReturns:\n    The HTTP response.",
+          "parameters": [
+            {
+              "name": "path",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "timeout",
+              "annotation": "int | float",
+              "default": "60",
+              "kind": "ParameterKind.positional_or_keyword"
+            },
+            {
+              "name": "kwargs",
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword"
+            }
+          ],
+          "returns": "httpx.Response",
+          "is_async": false,
+          "decorators": [],
+          "lineno": 153
+        }
+      ],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 17
+    }
+  ],
+  "functions": [],
+  "attributes": [],
+  "submodules": []
+}

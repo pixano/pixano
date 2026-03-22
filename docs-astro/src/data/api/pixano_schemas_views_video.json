@@ -1,0 +1,160 @@
+{
+  "module": "pixano.schemas.views.video",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/video.py",
+  "classes": [
+    {
+      "name": "Video",
+      "docstring": "Video view.\n\nAttributes:\n    num_frames: The number of frames in the video.\n    fps: The frames per second of the video.\n    width: The video width.\n    height: The video height.\n    format: The video format.\n    duration: The video duration.",
+      "bases": [
+        "View"
+      ],
+      "attributes": [
+        {
+          "name": "duration",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "format",
+          "annotation": "str",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "fps",
+          "annotation": "float",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "num_frames",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "value": null,
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 16
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_video",
+      "docstring": "Create a `Video` instance.\n\nArgs:\n    uri: The video URI (absolute path or remote URI).\n    id: Video ID.\n    record_id: Record ID.\n    logical_name: Logical view name (e.g. \"front_camera\").\n    num_frames: The number of frames in the video. If None, the number of frames is\n        extracted from the video file.\n    fps: The frames per second of the video. If None, the fps is extracted from the video\n        file.\n    width: The video width. If None, the width is extracted from the video file.\n    height: The video height. If None, the height is extracted from the video file.\n    format: The video format. If None, the format is extracted from the video file.\n    duration: The video duration. If None, the duration is extracted from the video file.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").\n\nReturns:\n    The created `Video` instance.",
+      "parameters": [
+        {
+          "name": "uri",
+          "annotation": "Path",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "logical_name",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "num_frames",
+          "annotation": "int | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "fps",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "width",
+          "annotation": "int | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "format",
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "duration",
+          "annotation": "float | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview",
+          "annotation": "bytes",
+          "default": "b''",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "preview_format",
+          "annotation": "str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Video",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 41
+    },
+    {
+      "name": "is_video",
+      "docstring": "Check if the given class is a `Video` or a subclass of `Video`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 36
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

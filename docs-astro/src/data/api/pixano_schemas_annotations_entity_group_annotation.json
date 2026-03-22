@@ -1,0 +1,72 @@
+{
+  "module": "pixano.schemas.annotations.entity_group_annotation",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/entity_group_annotation.py",
+  "classes": [
+    {
+      "name": "EntityGroupAnnotation",
+      "docstring": "Annotation that references multiple entities.\n\nUsed for annotations like messages in conversations where a single\nannotation can be linked to several entities.\n\nAttributes:\n    entity_ids: IDs of the entities referenced.\n    source_type: Kind of annotation source (model, human, ground_truth, other).\n    source_name: Name of the annotation source.\n    source_metadata: Metadata of the annotation source (JSON string).\n    view_id: ID of the view from which the annotation is derived.",
+      "bases": [
+        "RecordComponent"
+      ],
+      "attributes": [
+        {
+          "name": "entity_ids",
+          "annotation": "list[str]",
+          "value": "[]",
+          "docstring": ""
+        },
+        {
+          "name": "source_metadata",
+          "annotation": "str",
+          "value": "json.dumps({})",
+          "docstring": ""
+        },
+        {
+          "name": "source_name",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "source_type",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "view_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 18
+    }
+  ],
+  "functions": [
+    {
+      "name": "is_entity_group_annotation",
+      "docstring": "Check if a class is an EntityGroupAnnotation or subclass.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 74
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

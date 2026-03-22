@@ -1,0 +1,109 @@
+{
+  "module": "pixano.schemas.records",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/records.py",
+  "classes": [
+    {
+      "name": "Record",
+      "docstring": "Record base class.\nRecords are top level objects to represent dataset samples.\nThey are stored in the main table of the database.\n\nAttributes:\n    id: The record's ID.\n    split: The record's split.\n    created_at: The record's creation date.\n    updated_at: The record's last modification date.",
+      "bases": [
+        "LanceModel"
+      ],
+      "attributes": [
+        {
+          "name": "created_at",
+          "annotation": "datetime",
+          "value": "Field(default_factory=(datetime.now))",
+          "docstring": ""
+        },
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "split",
+          "annotation": "str",
+          "value": "'default'",
+          "docstring": ""
+        },
+        {
+          "name": "updated_at",
+          "annotation": "datetime",
+          "value": "Field(default_factory=(datetime.now))",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 15
+    },
+    {
+      "name": "RecordComponent",
+      "docstring": "Record component.\nRecord components are used to store all other objects that are part of a record. That cannot be stored in\nthe main table of the database. Otherwise, the main table would be too big and have a deep structure.\nRecords components are stored in their corresponding auxiliary tables and referenced by the record's id.",
+      "bases": [
+        "LanceModel"
+      ],
+      "attributes": [
+        {
+          "name": "id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        },
+        {
+          "name": "record_id",
+          "annotation": "str",
+          "value": "''",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 33
+    }
+  ],
+  "functions": [
+    {
+      "name": "is_record",
+      "docstring": "Check if a class is a `Record` or subclass of `Record`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 44
+    },
+    {
+      "name": "is_record_component",
+      "docstring": "Check if a class is a `RecordComponent` or subclass of `RecordComponent`.",
+      "parameters": [
+        {
+          "name": "strict",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bool",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 49
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}

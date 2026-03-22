@@ -1,0 +1,440 @@
+---
+/**
+ * Renders the full documentation for a Python module.
+ */
+
+interface Props {
+  data: any;
+}
+
+const { data } = Astro.props;
+const moduleName = data.module;
+const parts = moduleName.split(".");
+const shortName = parts[parts.length - 1];
+---
+
+<div class="module-doc">
+  <div class="module-header">
+    <span class="module-badge">Module</span>
+    <h1 class="module-title">
+      <span class="module-prefix">{parts.slice(0, -1).join(".")}.</span>{shortName}
+    </h1>
+  </div>
+
+  {data.docstring && (
+    <p class="module-docstring">{data.docstring}</p>
+  )}
+
+  {/* Classes */}
+  {data.classes.length > 0 && (
+    <section class="api-section">
+      <h2 id="classes">Classes</h2>
+      {data.classes.map((cls: any) => (
+        <div class="class-doc" id={cls.name}>
+          <div class="api-item-header">
+            <span class="api-badge class-badge">class</span>
+            <h3 class="api-item-name">{cls.name}</h3>
+            {cls.bases.length > 0 && (
+              <span class="api-bases">
+                ({cls.bases.map((b: string) => b.split(".").pop()).join(", ")})
+              </span>
+            )}
+          </div>
+
+          {cls.docstring && (
+            <div class="api-docstring">{cls.docstring}</div>
+          )}
+
+          {/* Attributes */}
+          {cls.attributes.length > 0 && (
+            <div class="api-subsection">
+              <h4>Attributes</h4>
+              <table class="param-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Default</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cls.attributes.map((attr: any) => (
+                    <tr>
+                      <td><code>{attr.name}</code></td>
+                      <td class="type-cell">{attr.annotation ? <code>{attr.annotation}</code> : "—"}</td>
+                      <td>{attr.value ? <code>{attr.value}</code> : "—"}</td>
+                      <td class="desc-cell">{attr.docstring || ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Methods */}
+          {cls.methods.length > 0 && (
+            <div class="api-subsection">
+              <h4>Methods</h4>
+              {cls.methods.map((method: any) => (
+                <div class="method-doc" id={`${cls.name}-${method.name}`}>
+                  <div class="method-header">
+                    <code class="method-signature">
+                      <span class="method-name">{method.name}</span>
+                      <span class="method-params">
+                        ({method.parameters.map((p: any) => p.name).join(", ")})
+                      </span>
+                      {method.returns && (
+                        <span class="method-returns"> &rarr; {method.returns}</span>
+                      )}
+                    </code>
+                  </div>
+                  {method.docstring && (
+                    <p class="method-docstring">{method.docstring}</p>
+                  )}
+                  {method.parameters.length > 0 && (
+                    <table class="param-table param-table-sm">
+                      <thead>
+                        <tr>
+                          <th>Parameter</th>
+                          <th>Type</th>
+                          <th>Default</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {method.parameters.map((p: any) => (
+                          <tr>
+                            <td><code>{p.name}</code></td>
+                            <td class="type-cell">{p.annotation ? <code>{p.annotation}</code> : "—"}</td>
+                            <td>{p.default ? <code>{p.default}</code> : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Class methods */}
+          {cls.class_methods.length > 0 && (
+            <div class="api-subsection">
+              <h4>Class Methods</h4>
+              {cls.class_methods.map((method: any) => (
+                <div class="method-doc" id={`${cls.name}-${method.name}`}>
+                  <div class="method-header">
+                    <span class="decorator-badge">@classmethod</span>
+                    <code class="method-signature">
+                      <span class="method-name">{method.name}</span>
+                      <span class="method-params">
+                        ({method.parameters.map((p: any) => p.name).join(", ")})
+                      </span>
+                      {method.returns && (
+                        <span class="method-returns"> &rarr; {method.returns}</span>
+                      )}
+                    </code>
+                  </div>
+                  {method.docstring && (
+                    <p class="method-docstring">{method.docstring}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Properties */}
+          {cls.properties.length > 0 && (
+            <div class="api-subsection">
+              <h4>Properties</h4>
+              {cls.properties.map((prop: any) => (
+                <div class="method-doc" id={`${cls.name}-${prop.name}`}>
+                  <div class="method-header">
+                    <span class="decorator-badge">@property</span>
+                    <code class="method-signature">
+                      <span class="method-name">{prop.name}</span>
+                      {prop.returns && (
+                        <span class="method-returns"> &rarr; {prop.returns}</span>
+                      )}
+                    </code>
+                  </div>
+                  {prop.docstring && (
+                    <p class="method-docstring">{prop.docstring}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  )}
+
+  {/* Functions */}
+  {data.functions.length > 0 && (
+    <section class="api-section">
+      <h2 id="functions">Functions</h2>
+      {data.functions.map((func: any) => (
+        <div class="function-doc" id={func.name}>
+          <div class="api-item-header">
+            <span class="api-badge func-badge">{func.is_async ? "async " : ""}def</span>
+            <code class="func-signature">
+              <span class="func-name">{func.name}</span>
+              <span class="func-params">
+                ({func.parameters.map((p: any) => p.name).join(", ")})
+              </span>
+              {func.returns && (
+                <span class="func-returns"> &rarr; {func.returns}</span>
+              )}
+            </code>
+          </div>
+
+          {func.docstring && (
+            <div class="api-docstring">{func.docstring}</div>
+          )}
+
+          {func.parameters.length > 0 && (
+            <table class="param-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Default</th>
+                </tr>
+              </thead>
+              <tbody>
+                {func.parameters.map((p: any) => (
+                  <tr>
+                    <td><code>{p.name}</code></td>
+                    <td class="type-cell">{p.annotation ? <code>{p.annotation}</code> : "—"}</td>
+                    <td>{p.default ? <code>{p.default}</code> : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </section>
+  )}
+</div>
+
+<style>
+  .module-doc {
+    max-width: var(--px-content-width);
+  }
+
+  .module-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .module-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--px-primary);
+    color: white;
+    margin-bottom: 0.5rem;
+  }
+
+  .module-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0.25rem 0 0;
+    word-break: break-all;
+  }
+
+  .module-prefix {
+    color: var(--px-text-muted);
+    font-weight: 400;
+  }
+
+  .module-docstring {
+    font-size: 1rem;
+    color: var(--px-text-secondary);
+    line-height: 1.7;
+    max-width: var(--px-content-width);
+  }
+
+  /* Section */
+  .api-section {
+    margin-top: 2.5rem;
+  }
+
+  .api-subsection {
+    margin-top: 1.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--px-border);
+  }
+
+  .api-subsection h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--px-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  /* API Item */
+  .class-doc,
+  .function-doc {
+    margin: 1.5rem 0;
+    padding: 1.25rem;
+    background: var(--px-bg-alt);
+    border: 1px solid var(--px-border);
+    border-radius: var(--px-radius);
+    box-shadow: var(--px-shadow-sm);
+  }
+
+  .api-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+
+  .api-badge {
+    display: inline-block;
+    font-family: var(--px-font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .class-badge {
+    background: #8b5cf6;
+    color: white;
+  }
+
+  .func-badge {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .api-item-name {
+    font-family: var(--px-font-mono);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--px-text);
+  }
+
+  .api-bases {
+    font-family: var(--px-font-mono);
+    font-size: 0.85rem;
+    color: var(--px-text-muted);
+  }
+
+  .api-docstring {
+    font-size: 0.9rem;
+    color: var(--px-text-secondary);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+  }
+
+  /* Method */
+  .method-doc {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: var(--px-bg);
+    border: 1px solid var(--px-border);
+    border-radius: var(--px-radius-sm);
+  }
+
+  .method-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .decorator-badge {
+    font-family: var(--px-font-mono);
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    background: var(--px-tip-bg);
+    color: var(--px-tip);
+    border: 1px solid var(--px-tip-border);
+  }
+
+  .method-signature,
+  .func-signature {
+    font-size: 0.85rem;
+    word-break: break-all;
+  }
+
+  .method-name,
+  .func-name {
+    font-weight: 600;
+    color: var(--px-primary);
+  }
+
+  .method-params,
+  .func-params {
+    color: var(--px-text-secondary);
+  }
+
+  .method-returns,
+  .func-returns {
+    color: var(--px-text-muted);
+  }
+
+  .method-docstring {
+    font-size: 0.85rem;
+    color: var(--px-text-secondary);
+    line-height: 1.6;
+    margin: 0.5rem 0 0;
+    white-space: pre-wrap;
+  }
+
+  /* Parameter table */
+  .param-table {
+    width: 100%;
+    font-size: 0.8rem;
+    margin-top: 0.75rem;
+  }
+
+  .param-table th {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .param-table td {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .param-table-sm {
+    margin-top: 0.5rem;
+  }
+
+  .param-table-sm th {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .param-table-sm td {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .type-cell code {
+    font-size: 0.75rem;
+    color: var(--px-primary);
+  }
+
+  .desc-cell {
+    max-width: 300px;
+    font-size: 0.8rem;
+    color: var(--px-text-secondary);
+  }
+</style>

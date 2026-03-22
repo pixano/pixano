@@ -1,0 +1,596 @@
+[
+  {
+    "module": "pixano",
+    "docstring": "",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.display",
+    "docstring": "",
+    "classes": 0,
+    "functions": 3
+  },
+  {
+    "module": "pixano.api.main",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.api.media",
+    "docstring": "Binary media helpers for API routes.",
+    "classes": 0,
+    "functions": 2
+  },
+  {
+    "module": "pixano.api.models",
+    "docstring": "Lean API transport models derived from canonical Pixano schemas.",
+    "classes": 11,
+    "functions": 2
+  },
+  {
+    "module": "pixano.api.resources",
+    "docstring": "Canonical API resource definitions.",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.api.routers.bboxes",
+    "docstring": "BBoxes router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.conversations",
+    "docstring": "Read-only conversation aggregate endpoints.",
+    "classes": 0,
+    "functions": 2
+  },
+  {
+    "module": "pixano.api.routers.datasets",
+    "docstring": "",
+    "classes": 0,
+    "functions": 4
+  },
+  {
+    "module": "pixano.api.routers.embeddings",
+    "docstring": "Embeddings router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.entities",
+    "docstring": "Entities router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.entity_dynamic_states",
+    "docstring": "Entity dynamic states router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.keypoints",
+    "docstring": "KeyPoints router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.masks",
+    "docstring": "Masks router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.messages",
+    "docstring": "Messages router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.multi_paths",
+    "docstring": "Multi-paths router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.records",
+    "docstring": "Records router with optional explorer preview expansion.",
+    "classes": 0,
+    "functions": 5
+  },
+  {
+    "module": "pixano.api.routers.resources",
+    "docstring": "Generic resource routers.",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.api.routers.text_spans",
+    "docstring": "Text spans router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.tracklets",
+    "docstring": "Tracklets router.",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.routers.views",
+    "docstring": "Subtype-specific view routers.",
+    "classes": 0,
+    "functions": 14
+  },
+  {
+    "module": "pixano.api.serve",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.service",
+    "docstring": "Generic CRUD service for the API.",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.api.settings",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.cli",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.cli.data",
+    "docstring": "",
+    "classes": 2,
+    "functions": 1
+  },
+  {
+    "module": "pixano.cli.init",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.cli.server",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.datasets.builders.dataset_builder",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.factories",
+    "docstring": "",
+    "classes": 4,
+    "functions": 1
+  },
+  {
+    "module": "pixano.datasets.builders.folders.folder_base_builder",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.datasets.builders.folders.image",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.mel",
+    "docstring": "",
+    "classes": 2,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.metadata",
+    "docstring": "",
+    "classes": 3,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.processors",
+    "docstring": "",
+    "classes": 4,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.video",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.folders.vqa",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.builders.validators",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.dataset",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.dataset_features_values",
+    "docstring": "",
+    "classes": 2,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.dataset_info",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.dataset_schema",
+    "docstring": "Schema serialization utilities for table schemas.\n\nThis module provides helpers to serialize and deserialize LanceModel-based\ntable schemas to/from JSON-compatible dicts.  These are used by\n:class:`Da",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.datasets.dataset_stat",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.exporters.coco_dataset_exporter",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.datasets.exporters.dataset_exporter",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.exporters.default_json_dataset_exporter",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.exporters.default_jsonl_dataset_exporter",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.queries.table",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.utils.errors",
+    "docstring": "",
+    "classes": 4,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.utils.integrity",
+    "docstring": "",
+    "classes": 1,
+    "functions": 5
+  },
+  {
+    "module": "pixano.datasets.utils.labels",
+    "docstring": "",
+    "classes": 0,
+    "functions": 3
+  },
+  {
+    "module": "pixano.datasets.utils.mosaic",
+    "docstring": "",
+    "classes": 0,
+    "functions": 6
+  },
+  {
+    "module": "pixano.datasets.utils.video",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.datasets.workspaces",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.datasets.workspaces.dataset_items",
+    "docstring": "Default table configurations for common dataset workspaces.\n\nThese functions return pre-configured ``tables`` dicts suitable for passing\nto :class:`DatasetInfo`.",
+    "classes": 0,
+    "functions": 3
+  },
+  {
+    "module": "pixano.features.pyarrow_utils",
+    "docstring": "",
+    "classes": 0,
+    "functions": 0
+  },
+  {
+    "module": "pixano.features.types.nd_array_float",
+    "docstring": "",
+    "classes": 2,
+    "functions": 2
+  },
+  {
+    "module": "pixano.features.utils.boxes",
+    "docstring": "",
+    "classes": 0,
+    "functions": 6
+  },
+  {
+    "module": "pixano.features.utils.creators",
+    "docstring": "",
+    "classes": 0,
+    "functions": 2
+  },
+  {
+    "module": "pixano.features.utils.image",
+    "docstring": "",
+    "classes": 0,
+    "functions": 18
+  },
+  {
+    "module": "pixano.inference.exceptions",
+    "docstring": "Inference-specific exceptions.",
+    "classes": 7,
+    "functions": 0
+  },
+  {
+    "module": "pixano.inference.mask_generation",
+    "docstring": "",
+    "classes": 0,
+    "functions": 2
+  },
+  {
+    "module": "pixano.inference.provider",
+    "docstring": "Abstract inference provider interface.\n\nThis module defines the abstract interface that all inference providers must implement.\nPixano uses this interface to communicate with different backends (pixan",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.inference.providers.base",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.inference.providers.pixano_inference",
+    "docstring": "",
+    "classes": 1,
+    "functions": 0
+  },
+  {
+    "module": "pixano.inference.registry",
+    "docstring": "Provider registration and lookup.\n\nThis module provides a registry for inference providers, allowing them to be\nregistered and retrieved by name.",
+    "classes": 0,
+    "functions": 4
+  },
+  {
+    "module": "pixano.inference.types",
+    "docstring": "Pixano's inference types.\n\nThis module defines Pixano's own types for inference operations,\nindependent of any specific inference backend.",
+    "classes": 20,
+    "functions": 0
+  },
+  {
+    "module": "pixano.inference.zero_shot_detection",
+    "docstring": "",
+    "classes": 0,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.annotations.bbox",
+    "docstring": "",
+    "classes": 2,
+    "functions": 4
+  },
+  {
+    "module": "pixano.schemas.annotations.classification",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.compressed_rle",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.conversation",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.entity_annotation",
+    "docstring": "",
+    "classes": 2,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.annotations.entity_group_annotation",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.annotations.keypoints",
+    "docstring": "",
+    "classes": 2,
+    "functions": 4
+  },
+  {
+    "module": "pixano.schemas.annotations.message",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.multi_path",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.per_frame_annotation",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.annotations.relation",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.text_span",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.annotations.tracklet",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.embeddings.embedding",
+    "docstring": "",
+    "classes": 2,
+    "functions": 3
+  },
+  {
+    "module": "pixano.schemas.entities.entity",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.entities.entity_dynamic_state",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.records",
+    "docstring": "",
+    "classes": 2,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.schema_group",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.table_names",
+    "docstring": "",
+    "classes": 1,
+    "functions": 13
+  },
+  {
+    "module": "pixano.schemas.views.camcalibration",
+    "docstring": "",
+    "classes": 4,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.image",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.views.pdf",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.point_cloud",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.point_cloud_frame",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.sequence_frame",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.schemas.views.text",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.video",
+    "docstring": "",
+    "classes": 1,
+    "functions": 2
+  },
+  {
+    "module": "pixano.schemas.views.view",
+    "docstring": "",
+    "classes": 1,
+    "functions": 1
+  },
+  {
+    "module": "pixano.utils.python",
+    "docstring": "",
+    "classes": 0,
+    "functions": 6
+  },
+  {
+    "module": "pixano.utils.validation",
+    "docstring": "",
+    "classes": 0,
+    "functions": 2
+  }
+]

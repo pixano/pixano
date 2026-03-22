@@ -1,0 +1,113 @@
+{
+  "module": "pixano.schemas.schema_group",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/schema_group.py",
+  "classes": [
+    {
+      "name": "SchemaGroup",
+      "docstring": "High-level groups used by datasets and the API layer.",
+      "bases": [
+        "Enum"
+      ],
+      "attributes": [
+        {
+          "name": "ANNOTATION",
+          "annotation": null,
+          "value": "'annotations'",
+          "docstring": ""
+        },
+        {
+          "name": "EMBEDDING",
+          "annotation": null,
+          "value": "'embeddings'",
+          "docstring": ""
+        },
+        {
+          "name": "ENTITY",
+          "annotation": null,
+          "value": "'entities'",
+          "docstring": ""
+        },
+        {
+          "name": "ENTITY_DYNAMIC_STATE",
+          "annotation": null,
+          "value": "'entity_dynamic_states'",
+          "docstring": ""
+        },
+        {
+          "name": "RECORD",
+          "annotation": null,
+          "value": "'records'",
+          "docstring": ""
+        },
+        {
+          "name": "VIEW",
+          "annotation": null,
+          "value": "'views'",
+          "docstring": ""
+        }
+      ],
+      "methods": [],
+      "class_methods": [],
+      "static_methods": [],
+      "properties": [],
+      "decorators": [],
+      "lineno": 32
+    }
+  ],
+  "functions": [
+    {
+      "name": "group_to_str",
+      "docstring": "Convert a schema group to its API/storage string.",
+      "parameters": [
+        {
+          "name": "group",
+          "annotation": "SchemaGroup",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "plural",
+          "annotation": "bool",
+          "default": "False",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 122
+    },
+    {
+      "name": "schema_to_group",
+      "docstring": "Get the schema group of a given schema type.",
+      "parameters": [
+        {
+          "name": "schema_type",
+          "annotation": "LanceModel | type",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "SchemaGroup",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 95
+    }
+  ],
+  "attributes": [
+    {
+      "name": "CANONICAL_SCHEMA_MAP",
+      "annotation": "dict[str, type[LanceModel]]",
+      "value": "{(schema_type.__name__): schema_type for schema_type in CANONICAL_SCHEMA_TYPES}",
+      "docstring": ""
+    },
+    {
+      "name": "CANONICAL_SCHEMA_TYPES",
+      "annotation": null,
+      "value": "(Record, View, CamCalibration, Image, PDF, PointCloud, PointCloudFrame, SequenceFrame, Text, Video, Entity, EntityDynamicState, EntityAnnotation, EntityGroupAnnotation, BBox, BBox3D, Classification, CompressedRLE, KeyPoints, KeyPoints3D, Message, MultiPath, Relation, TextSpan, Tracklet, Embedding, ViewEmbedding)",
+      "docstring": ""
+    }
+  ],
+  "submodules": []
+}

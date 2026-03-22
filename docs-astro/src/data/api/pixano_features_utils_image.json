@@ -1,0 +1,382 @@
+{
+  "module": "pixano.features.utils.image",
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/utils/image.py",
+  "classes": [],
+  "functions": [
+    {
+      "name": "base64_to_image",
+      "docstring": "Decode image from base64 to Pillow.\n\nExpect the image to be formatted as \"data:image/{image_format};base64,{base64}\".\n\nArgs:\n    base64_image: Image as base64.\n\nReturns:\n    Pillow image.",
+      "parameters": [
+        {
+          "name": "base64_image",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Image.Image",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 294
+    },
+    {
+      "name": "binary_to_url",
+      "docstring": "Encode image from binary to base 64 URL.\n\nArgs:\n    im_bytes: Image as binary.\n\nReturns:\n    Image base 64 URL.",
+      "parameters": [
+        {
+          "name": "im_bytes",
+          "annotation": "bytes",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 35
+    },
+    {
+      "name": "create_mosaic",
+      "docstring": "Create a mosaic of images.\n\nArgs:\n    images: List of Pillow images.\n    size: Target mosaic size.\n\nReturns:\n    Mosaic image as Pillow.",
+      "parameters": [
+        {
+          "name": "images",
+          "annotation": "list[Image.Image]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "size",
+          "annotation": "tuple[int, int]",
+          "default": "(350, 150)",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Image.Image",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 333
+    },
+    {
+      "name": "depth_array_to_gray",
+      "docstring": "Encode depth array to gray levels.\n\nArgs:\n    depth: Depth array\n    valid_start: Valid start.\n    valid_end: Valid end.\n    scale: Scale.\n\nReturns:\n    Depth array in gray levels.",
+      "parameters": [
+        {
+          "name": "depth",
+          "annotation": "np.ndarray",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "valid_start",
+          "annotation": "float",
+          "default": "0.2",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "valid_end",
+          "annotation": "float",
+          "default": "1",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "scale",
+          "annotation": "float",
+          "default": "1.0",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "np.ndarray",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 64
+    },
+    {
+      "name": "depth_file_to_binary",
+      "docstring": "Encode depth file to RGB image in binary.\n\nArgs:\n    depth_path: Depth file path.\n\nReturns:\n    Depth file as RGB image in binary.",
+      "parameters": [
+        {
+          "name": "depth_path",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bytes",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 48
+    },
+    {
+      "name": "encode_rle",
+      "docstring": "Encode mask from polygons / uncompressed RLE / RLE to RLE.\n\nArgs:\n    mask: Mask as polygons / uncompressed RLE / RLE.\n    height: Image height.\n    width: Image width.\n\nReturns:\n    Mask as RLE.",
+      "parameters": [
+        {
+          "name": "mask",
+          "annotation": "list[list] | dict",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 97
+    },
+    {
+      "name": "generate_text_image_base64",
+      "docstring": "Generate a thumbnail displaying given text.\n\nArgs:\n    text: input text\n    width: thumbnail width\n    height: thumbnail height\n    font_size: font size\n\nReturns:\n    base64 image of given text.",
+      "parameters": [
+        {
+          "name": "text",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "default": "128",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "default": "128",
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "font_size",
+          "annotation": "int",
+          "default": "16",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 377
+    },
+    {
+      "name": "get_image_thumbnail",
+      "docstring": "Get image thumbnail.\n\nArgs:\n    image: Pillow Image.\n    size: Thumbnail size.\n\nReturns:\n    Image thumbnail as Pillow.",
+      "parameters": [
+        {
+          "name": "image",
+          "annotation": "Image.Image",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "size",
+          "annotation": "tuple[int, int]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "Image.Image",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 309
+    },
+    {
+      "name": "image_to_base64",
+      "docstring": "Encode image from Pillow to base64.\n\nThe image is returned as a base64 string formatted as\n\"data:image/{image_format};base64,{base64}\".\n\nArgs:\n    image: Pillow image.\n    format: Image format.\n\nReturns:\n    Image as base64.",
+      "parameters": [
+        {
+          "name": "image",
+          "annotation": "Image.Image",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "format",
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "str",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 267
+    },
+    {
+      "name": "image_to_binary",
+      "docstring": "Encode an image from Pillow to binary.\n\nArgs:\n    image: Pillow image.\n    im_format: Image file extension.\n\nReturns:\n    Image as binary.",
+      "parameters": [
+        {
+          "name": "image",
+          "annotation": "Image.Image",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "im_format",
+          "annotation": "str",
+          "default": "'PNG'",
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "bytes",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 18
+    },
+    {
+      "name": "mask_area",
+      "docstring": "Compute mask area.\n\nArgs:\n    rle: Mask as RLE\n\nReturns:\n    Mask area",
+      "parameters": [
+        {
+          "name": "rle",
+          "annotation": "dict[str, list[int] | bytes]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "float",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 255
+    },
+    {
+      "name": "mask_to_polygons",
+      "docstring": "Encode mask from NumPy array to polygons.\n\nArgs:\n    mask: Mask as NumPy array\n\nReturns:\n    Tuple:\n        - Mask as polygons\n        - True if mask has holes",
+      "parameters": [
+        {
+          "name": "mask",
+          "annotation": "np.ndarray",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "tuple[list[list], bool]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 179
+    },
+    {
+      "name": "mask_to_rle",
+      "docstring": "Encode mask from Pillow or NumPy array to RLE.\n\nArgs:\n    mask: Mask as Pillow or NumPy array.\n\nReturns:\n    Mask as RLE.",
+      "parameters": [
+        {
+          "name": "mask",
+          "annotation": "Image.Image | np.ndarray",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 117
+    },
+    {
+      "name": "polygons_to_rle",
+      "docstring": "Encode mask from polygons to RLE.\n\nArgs:\n    polygons: Mask as polygons.\n    height: Image height.\n    width: Image width.\n\nReturns:\n    Mask as RLE.",
+      "parameters": [
+        {
+          "name": "polygons",
+          "annotation": "list[list]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "height",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        },
+        {
+          "name": "width",
+          "annotation": "int",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 142
+    },
+    {
+      "name": "rle_to_mask",
+      "docstring": "Decode mask from RLE to NumPy array.\n\nArgs:\n    rle: Mask as RLE.\n\nReturns:\n    Mask as NumPy array.",
+      "parameters": [
+        {
+          "name": "rle",
+          "annotation": "dict[str, list[int] | bytes]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "np.ndarray",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 130
+    },
+    {
+      "name": "rle_to_polygons",
+      "docstring": "Encode mask from RLE to polygons.\n\nArgs:\n    rle: Mask as RLE.\n\nReturns:\n    Mask as polygons.",
+      "parameters": [
+        {
+          "name": "rle",
+          "annotation": "dict[str, list[int] | bytes]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "list[list]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 157
+    },
+    {
+      "name": "rle_to_urle",
+      "docstring": "Encode mask from RLE to uncompressed RLE.\n\nArgs:\n    rle: Mask as RLE.\n\nReturns:\n    Mask as uncompressed RLE.",
+      "parameters": [
+        {
+          "name": "rle",
+          "annotation": "dict[str, list[int] | bytes]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict[str, list[int]]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 235
+    },
+    {
+      "name": "urle_to_rle",
+      "docstring": "Encode mask from uncompressed RLE to RLE.\n\nArgs:\n    urle: Mask as uncompressed RLE.\n\nReturns:\n    Mask as RLE.",
+      "parameters": [
+        {
+          "name": "urle",
+          "annotation": "dict[str, list[int]]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword"
+        }
+      ],
+      "returns": "dict[str, list[int] | bytes]",
+      "is_async": false,
+      "decorators": [],
+      "lineno": 222
+    }
+  ],
+  "attributes": [],
+  "submodules": []
+}
