@@ -31,6 +31,7 @@ from pixano.inference.types import (
     VLMInput,
 )
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/inference", tags=["Inference"])
@@ -42,6 +43,8 @@ TRACKING_JOB_TERMINAL_STATES = {"completed", "failed", "canceled"}
 
 @dataclass
 class TrackingJobRecord:
+    """Record of a submitted tracking job."""
+
     provider_name: str
     provider_job_id: str
     resolved_frame_indexes: list[int]
@@ -52,17 +55,23 @@ TRACKING_JOB_REGISTRY: dict[str, TrackingJobRecord] = {}
 
 
 class ConnectedProviderResponse(BaseModel):
+    """Response schema for a connected inference provider."""
+
     name: str
     url: str | None = None
 
 
 class InferenceRegistryResponse(BaseModel):
+    """Response schema for the inference registry status."""
+
     connected: bool
     providers: list[ConnectedProviderResponse]
     default_provider: str | None = None
 
 
 class ModelInfoResponse(BaseModel):
+    """Response schema for model information."""
+
     name: str
     task: str
     provider_name: str
@@ -71,10 +80,14 @@ class ModelInfoResponse(BaseModel):
 
 
 class RegisterServerRequest(BaseModel):
+    """Request schema for registering an inference server."""
+
     url: str
 
 
 class VLMRequest(BaseModel):
+    """Request schema for VLM inference."""
+
     model: str
     provider_name: str | None = None
     prompt: str | list[dict[str, Any]]
@@ -84,6 +97,8 @@ class VLMRequest(BaseModel):
 
 
 class DetectionRequest(BaseModel):
+    """Request schema for object detection inference."""
+
     model: str
     provider_name: str | None = None
     image: str
@@ -93,11 +108,15 @@ class DetectionRequest(BaseModel):
 
 
 class NDArrayRequest(BaseModel):
+    """Request schema for an N-dimensional array."""
+
     values: list[float]
     shape: list[int]
 
 
 class ImageSegmentationRequest(BaseModel):
+    """Request schema for image segmentation inference."""
+
     model: str
     provider_name: str | None = None
     dataset_id: str
@@ -116,18 +135,24 @@ class ImageSegmentationRequest(BaseModel):
 
 
 class VideoTrackingIntervalRequest(BaseModel):
+    """Request schema for a video tracking frame interval."""
+
     start_frame: int = Field(ge=0)
     end_frame: int = Field(ge=0)
     direction: Literal["forward", "backward"] = "forward"
 
 
 class VideoTrackingPointPromptRequest(BaseModel):
+    """Request schema for a point prompt in video tracking."""
+
     x: int
     y: int
     label: int = Field(ge=0, le=1)
 
 
 class VideoTrackingBoxPromptRequest(BaseModel):
+    """Request schema for a bounding box prompt in video tracking."""
+
     x: int
     y: int
     width: int
@@ -135,11 +160,15 @@ class VideoTrackingBoxPromptRequest(BaseModel):
 
 
 class VideoTrackingMaskPromptRequest(BaseModel):
+    """Request schema for a mask prompt in video tracking."""
+
     size: list[int]
     counts: str | list[int]
 
 
 class VideoTrackingKeyframeRequest(BaseModel):
+    """Request schema for a keyframe with prompts in video tracking."""
+
     frame_index: int = Field(ge=0)
     points: list[VideoTrackingPointPromptRequest] | None = None
     box: VideoTrackingBoxPromptRequest | None = None
@@ -147,6 +176,8 @@ class VideoTrackingKeyframeRequest(BaseModel):
 
 
 class VideoTrackingRequest(BaseModel):
+    """Request schema for video object tracking inference."""
+
     model: str
     provider_name: str | None = None
     dataset_id: str
@@ -165,12 +196,16 @@ class VideoTrackingRequest(BaseModel):
 
 
 class VideoTrackingTaskOutputResponse(BaseModel):
+    """Response schema for video tracking task output."""
+
     objects_ids: list[int]
     frame_indexes: list[int]
     masks: list[VideoTrackingMaskPromptRequest]
 
 
 class VideoTrackingJobStatusResponse(BaseModel):
+    """Response schema for video tracking job status."""
+
     job_id: str
     status: Literal["queued", "running", "completed", "failed", "canceled"]
     detail: str | None = None
