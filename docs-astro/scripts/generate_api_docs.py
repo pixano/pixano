@@ -23,6 +23,7 @@ from typing import Any
 
 import griffe
 
+
 # Configuration
 SRC_PATH = Path(__file__).parent.parent.parent / "src" / "pixano"
 OUTPUT_DIR = Path(__file__).parent.parent / "src" / "data" / "api"
@@ -235,7 +236,6 @@ def main():
         has_content = data["classes"] or data["functions"] or data["attributes"]
         if has_content or depth == 0:
             # Create output filename from module path
-            slug = module.path.replace(".", "/")
             filename = module.path.replace(".", "_") + ".json"
             output_path = OUTPUT_DIR / filename
 
