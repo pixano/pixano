@@ -24,7 +24,7 @@ License: CECILL-C
     timelineFocusEntityIds,
     togglePinnedTimelineEntity,
   } from "$lib/stores/timelineInspectorStore.svelte";
-  import { isTracking, vosPendingInterval } from "$lib/stores/trackingStore.svelte";
+  import { activeTrackingTimelineState } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -173,20 +173,11 @@ License: CECILL-C
 
         <TimelineHeaderSurface entities={videoEntities} {onFrameClick} />
 
-        {#if vosPendingInterval.value}
-          {@const min = Math.min(vosPendingInterval.value[0], vosPendingInterval.value[1])}
-          {@const max = Math.max(vosPendingInterval.value[0], vosPendingInterval.value[1])}
-          <div
-            class="pointer-events-none absolute inset-y-0 top-6 z-10 bg-[repeating-linear-gradient(45deg,rgba(168,85,247,0.1),rgba(168,85,247,0.1)_10px,transparent_10px,transparent_20px)] border-x border-purple-500/50"
-            style={`left: ${(min / Math.max(totalFrameCount - 1, 1)) * 100}%; right: ${100 - (max / Math.max(totalFrameCount - 1, 1)) * 100}%`}
-          ></div>
-        {/if}
-
-        {#if isTracking.value}
+        {#if activeTrackingTimelineState.value}
           <div
             class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
           >
-            <TrackingTimelineRow />
+            <TrackingTimelineRow state={activeTrackingTimelineState.value} />
           </div>
         {/if}
 

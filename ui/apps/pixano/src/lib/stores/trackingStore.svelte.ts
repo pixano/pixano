@@ -27,6 +27,7 @@ import {
   type SequenceFrame,
 } from "$lib/types/dataset";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
+import type { TrackingTimelineState } from "$lib/trackingTimeline";
 
 export type {
   VosAnchorSourceKind,
@@ -70,6 +71,9 @@ export function startTrackingSession(
   imageWidth: number,
   imageHeight: number,
 ): void {
+  if (isVosSessionActiveState(vosSession.value)) {
+    resetVosSession();
+  }
   const tracker = new MultiSegmentTracker(viewName);
   trackingSession.value = {
     tracker,
@@ -322,6 +326,9 @@ export function resetVosSession(): void {
 }
 
 export function setVosAnchor(input: Parameters<typeof setVosAnchorState>[1]): void {
+  if (trackingSession.value.tracker !== null) {
+    cancelTrackingSession();
+  }
   vosSession.update((state) => setVosAnchorState(state, input));
 }
 
@@ -362,6 +369,10 @@ export const vosAnchorFrameIndex = reactiveDerived<number | null>(() => {
   return vosSession.value.anchor?.frameIndex ?? null;
 });
 
+export const vosAnchorFrameIndices = reactiveDerived<number[]>(() => {
+  return [...vosSession.value.anchorFrameIndices].sort((left, right) => left - right);
+});
+
 export const vosTrackedMasks = reactiveDerived<MaskSegmentationOutput[]>(() => {
   return vosSession.value.masks
     .slice()
@@ -374,4 +385,31 @@ export const vosSegmentRanges = reactiveDerived<Array<[number, number]>>(() => {
     .slice()
     .sort((left, right) => left.startFrame - right.startFrame)
     .map((segment) => [segment.startFrame, segment.endFrame]);
+});
+
+export const trackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  if (!isTracking.value) return null;
+  return {
+    variant: "bbox",
+    segments: trackingSegmentRanges.value,
+    keyframes: trackingKeyframeIndices.value,
+    pendingMarkerIndex: pendingKeyframeIndex.value,
+    pendingInterval: null,
+  };
+});
+
+export const vosTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  if (!isVosSessionActive.value) return null;
+  const pending = vosSession.value.pendingInterval;
+  return {
+    variant: "vos",
+    segments: vosSegmentRanges.value,
+    keyframes: vosAnchorFrameIndices.value,
+    pendingMarkerIndex: pending?.endFrame ?? null,
+    pendingInterval: pending ? [pending.startFrame, pending.endFrame] : null,
+  };
+});
+
+export const activeTrackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  return trackingTimelineState.value ?? vosTimelineState.value;
 });

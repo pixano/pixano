@@ -46,6 +46,7 @@ export interface VosPendingIntervalState {
 export interface VosSessionState {
   viewName: string | null;
   anchor: VosAnchorState | null;
+  anchorFrameIndices: number[];
   segments: VosSegmentState[];
   activeSegmentId: number | null;
   masks: VosTrackedMaskState[];
@@ -56,6 +57,7 @@ export interface VosSessionState {
 export const NULL_VOS_STATE: VosSessionState = {
   viewName: null,
   anchor: null,
+  anchorFrameIndices: [],
   segments: [],
   activeSegmentId: null,
   masks: [],
@@ -101,6 +103,13 @@ function upsertVosSegment(
   next[existingIndex] = nextSegment;
   next.sort((left, right) => left.startFrame - right.startFrame);
   return next;
+}
+
+function upsertFrameIndex(frameIndices: number[], frameIndex: number): number[] {
+  if (frameIndices.includes(frameIndex)) {
+    return [...frameIndices].sort((left, right) => left - right);
+  }
+  return [...frameIndices, frameIndex].sort((left, right) => left - right);
 }
 
 function ensureActiveVosSegment(
@@ -171,6 +180,7 @@ export function setVosAnchorState(
       prompt: cloneVosPrompt(input.prompt),
       mask: input.mask,
     },
+    anchorFrameIndices: upsertFrameIndex(nextState.anchorFrameIndices, input.frameIndex),
     masks: upsertVosMask(nextState.masks, {
       frameIndex: input.frameIndex,
       segmentId: nextState.activeSegmentId,
@@ -245,6 +255,10 @@ export function commitVosIntervalState(
       prompt: cloneVosPrompt(input.nextAnchor.prompt),
       mask: input.nextAnchor.mask,
     },
+    anchorFrameIndices: upsertFrameIndex(
+      nextState.anchorFrameIndices,
+      input.nextAnchor.frameIndex,
+    ),
     pendingInterval: null,
     masks: nextMasks,
     segments: widenedSegment

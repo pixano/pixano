@@ -94,6 +94,7 @@ describe("vosSession", () => {
       startFrame: 2,
       endFrame: 6,
     });
+    expect(state.anchorFrameIndices).toEqual([2, 4, 6]);
     expect(state.masks.map((mask) => mask.frameIndex)).toEqual([2, 3, 4, 5, 6]);
     expect(isVosSessionActiveState(state)).toBe(true);
   });
@@ -156,6 +157,7 @@ describe("vosSession", () => {
       [2, 4],
       [8, 9],
     ]);
+    expect(state.anchorFrameIndices).toEqual([2, 4, 8, 9]);
     expect(new Set(state.masks.map((mask) => mask.segmentId)).size).toBe(2);
   });
 
@@ -228,5 +230,25 @@ describe("vosSession", () => {
     expect((state.masks.find((mask) => mask.frameIndex === 3)?.output.data.counts as number[])[0]).toBe(
       30,
     );
+  });
+
+  it("deduplicates anchor history when refining on the same frame", () => {
+    state = setVosAnchorState(state, {
+      frameIndex: 2,
+      viewRef: { id: "frame-2", name: "camera" },
+      sourceKind: "prompt",
+      prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
+      mask: makeMask(2),
+    });
+
+    state = setVosAnchorState(state, {
+      frameIndex: 2,
+      viewRef: { id: "frame-2", name: "camera" },
+      sourceKind: "prompt",
+      prompt: { points: [{ x: 5, y: 5, label: 1 }], box: null },
+      mask: makeMask(2),
+    });
+
+    expect(state.anchorFrameIndices).toEqual([2]);
   });
 });

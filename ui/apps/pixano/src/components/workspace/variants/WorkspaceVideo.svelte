@@ -501,6 +501,9 @@ License: CECILL-C
     }
 
     const isVos = selectedTool.value?.type === ToolType.VOS;
+    if (isVos && !isVosSessionActive.value && isTracking.value) {
+      cancelTrackingSession();
+    }
     const modelSelection = selectedVideoSegmentationModel.value;
     if (!modelSelection) return;
 
@@ -623,6 +626,10 @@ License: CECILL-C
 
     // Intercept bbox saves to start/extend a tracking session
     if (shape.status === "saving" && shape.type === ShapeType.bbox) {
+      if (!isTracking.value && isVosSessionActive.value) {
+        resetSmartTracking();
+      }
+
       const saveShape = shape;
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
@@ -867,14 +874,6 @@ License: CECILL-C
   });
 
   $effect(() => {
-    const toolType = selectedTool.value?.type;
-    if (toolType === ToolType.InteractiveSegmenter || toolType === ToolType.VOS) return;
-    untrack(() => {
-      resetSmartTracking();
-    });
-  });
-
-  $effect(() => {
     void selectedVideoSegmentationModel.value;
     untrack(() => {
       resetSmartTracking();
@@ -988,16 +987,16 @@ License: CECILL-C
       {/if}
       {#if selectedTool.value?.type === ToolType.VOS}
         <div
-          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-sky-700/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
         >
           {#if smartSegmentationUiState.value.phase === "pending"}
-            Tracking interval...
+            Tracking interval... Scrub is locked until the request finishes
           {:else if vosAnchorFrameIndex.value === null}
-            Prompt an object to set anchor A &middot; T tracks forward &middot; N starts a later segment
-            &middot; Enter saves &middot; Escape resets
+            Prompt an object to set anchor A &middot; Scrub forward and press T &middot; N starts a
+            new segment &middot; Enter saves &middot; Escape resets
           {:else}
-            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T &middot; N
-            closes the current segment &middot; Enter saves
+            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T
+            &middot; N starts a new segment &middot; Enter saves &middot; Escape resets
           {/if}
         </div>
       {/if}
