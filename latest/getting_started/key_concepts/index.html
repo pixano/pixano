@@ -1287,8 +1287,8 @@
 </table>
 <div class="admonition info">
 <p class="admonition-title">Source provenance</p>
-<p>There is no separate <strong>Source</strong> table. Provenance is tracked directly on annotations via three fields: <code>source_type</code> (one of <code>model</code>, <code>human</code>, <code>ground_truth</code>, <code>other</code>), <code>source_name</code>, and <code>source_metadata</code> (a JSON string). These fields are available on <code>EntityAnnotation</code>, <code>EntityGroupAnnotation</code>, and <code>EntityDynamicState</code>.</p>
 </div>
+<p>There is no separate <strong>Source</strong> table. Provenance is tracked directly on annotations via three fields: <code>source_type</code> (one of <code>model</code>, <code>human</code>, <code>ground_truth</code>, <code>other</code>), <code>source_name</code>, and <code>source_metadata</code> (a JSON string). These fields are available on <code>EntityAnnotation</code>, <code>EntityGroupAnnotation</code>, and <code>EntityDynamicState</code>.</p>
 <p>Each group has a base class (e.g. <code>Record</code>, <code>View</code>, <code>Entity</code>, <code>EntityAnnotation</code>) that you can subclass to add domain-specific fields:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pixano.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
