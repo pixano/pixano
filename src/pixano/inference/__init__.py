@@ -25,6 +25,7 @@ Example:
 """
 
 # Core provider interface and registry
+from .detection import detection
 from .exceptions import (
     InferenceError,
     InferenceTimeoutError,
@@ -34,7 +35,6 @@ from .exceptions import (
     ProviderNotFoundError,
     TaskNotSupportedError,
 )
-from .detection import detection
 from .provider import InferenceProvider
 
 # Concrete providers (importing these registers them)

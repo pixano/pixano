@@ -6,16 +6,16 @@
 
 """Tests for the inference API router."""
 
-import json
 import io
+import json
 import tempfile
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from PIL import Image as PILImage
 from fastapi.testclient import TestClient
+from PIL import Image as PILImage
 
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
@@ -322,9 +322,7 @@ class TestImageSegmentation:
             },
             default_inference_provider=default_provider.name,
         )
-        dataset_id, _, view_id, expected_image_bytes = _create_dataset_with_embedded_views(
-            settings.library_dir
-        )
+        dataset_id, _, view_id, expected_image_bytes = _create_dataset_with_embedded_views(settings.library_dir)
 
         response = client.post(
             "/inference/segmentation",
@@ -429,9 +427,7 @@ class TestImageSegmentation:
         )
 
         assert response.status_code == 400
-        assert response.json() == {
-            "detail": "Model 'sam2-video' is tracking-only; use /inference/tracking"
-        }
+        assert response.json() == {"detail": "Model 'sam2-video' is tracking-only; use /inference/tracking"}
         provider.segmentation.assert_not_called()
 
 
