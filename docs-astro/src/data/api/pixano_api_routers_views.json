@@ -1,533 +1,533 @@
 {
-  "module": "pixano.api.routers.views",
-  "docstring": "Subtype-specific view routers.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/views.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "IMAGE_TABLE",
+      "value": "'images'"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "SFRAME_TABLE",
+      "value": "'sequence_frames'"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "TEXT_TABLE",
+      "value": "'texts'"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "router",
+      "value": "APIRouter(prefix='/datasets/{dataset_id}', tags=['Views'])"
+    }
+  ],
   "classes": [],
+  "docstring": "Subtype-specific view routers.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/routers/views.py",
   "functions": [
     {
-      "name": "get_image",
-      "docstring": "Fetch a single image view by ID.",
-      "parameters": [
-        {
-          "name": "id",
-          "annotation": "str",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset_id",
-          "annotation": "str",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset",
-          "annotation": "Dataset",
-          "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
-        }
-      ],
-      "returns": "ImageResponse",
-      "is_async": false,
       "decorators": [
         "router.get('/images/{id}', response_model=ImageResponse, operation_id='get_image')"
       ],
-      "lineno": 261
-    },
-    {
-      "name": "get_image_blob",
-      "docstring": "Stream the raw binary blob of an image.",
+      "docstring": "Fetch a single image view by ID.",
+      "is_async": false,
+      "lineno": 261,
+      "name": "get_image",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
+        },
+        {
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "StreamingResponse",
-      "is_async": false,
+      "returns": "ImageResponse"
+    },
+    {
       "decorators": [
         "router.get('/images/{id}/blob', operation_id='get_image_blob')"
       ],
-      "lineno": 267
-    },
-    {
-      "name": "get_image_preview",
-      "docstring": "Stream the preview thumbnail of an image.",
+      "docstring": "Stream the raw binary blob of an image.",
+      "is_async": false,
+      "lineno": 267,
+      "name": "get_image_blob",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "StreamingResponse",
-      "is_async": false,
+      "returns": "StreamingResponse"
+    },
+    {
       "decorators": [
         "router.get('/images/{id}/preview', operation_id='get_image_preview')"
       ],
-      "lineno": 273
-    },
-    {
-      "name": "get_record_sframe_batch",
-      "docstring": "Stream a batch of temporal frames as a multipart binary response.",
+      "docstring": "Stream the preview thumbnail of an image.",
+      "is_async": false,
+      "lineno": 273,
+      "name": "get_image_preview",
       "parameters": [
         {
-          "name": "record_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "view_name",
-          "annotation": "str | None",
-          "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "start_frame",
-          "annotation": "Annotated[int, Query(ge=0)]",
-          "default": "0",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "batch_size",
-          "annotation": "Annotated[int, Query(ge=1, le=1000)]",
-          "default": "100",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "StreamingResponse",
-      "is_async": false,
+      "returns": "StreamingResponse"
+    },
+    {
       "decorators": [
         "router.get('/records/{record_id}/sframes/batch', operation_id='get_record_sframe_batch', responses={200: {'description': 'Batch of temporal frames as a multipart binary stream.', 'content': {'multipart/x-mixed-replace': {'schema': {'type': 'string', 'format': 'binary'}}}}})"
       ],
-      "lineno": 411
-    },
-    {
-      "name": "get_sframe",
-      "docstring": "Fetch a single sequence frame by ID.",
+      "docstring": "Stream a batch of temporal frames as a multipart binary response.",
+      "is_async": false,
+      "lineno": 411,
+      "name": "get_record_sframe_batch",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "dataset_id",
-          "annotation": "str",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
+        },
+        {
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
+        },
+        {
+          "annotation": "Annotated[int, Query(ge=0)]",
+          "default": "0",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "start_frame"
+        },
+        {
+          "annotation": "Annotated[int, Query(ge=1, le=1000)]",
+          "default": "100",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "batch_size"
         }
       ],
-      "returns": "SFrameResponse",
-      "is_async": false,
+      "returns": "StreamingResponse"
+    },
+    {
       "decorators": [
         "router.get('/sframes/{id}', response_model=SFrameResponse, operation_id='get_sframe')"
       ],
-      "lineno": 323
-    },
-    {
-      "name": "get_sframe_blob",
-      "docstring": "Stream the raw binary blob of a sequence frame.",
+      "docstring": "Fetch a single sequence frame by ID.",
+      "is_async": false,
+      "lineno": 323,
+      "name": "get_sframe",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
+        },
+        {
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "StreamingResponse",
-      "is_async": false,
+      "returns": "SFrameResponse"
+    },
+    {
       "decorators": [
         "router.get('/sframes/{id}/blob', operation_id='get_sframe_blob')"
       ],
-      "lineno": 329
-    },
-    {
-      "name": "get_sframe_preview",
-      "docstring": "Stream the preview thumbnail of a sequence frame.",
+      "docstring": "Stream the raw binary blob of a sequence frame.",
+      "is_async": false,
+      "lineno": 329,
+      "name": "get_sframe_blob",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "StreamingResponse",
-      "is_async": false,
+      "returns": "StreamingResponse"
+    },
+    {
       "decorators": [
         "router.get('/sframes/{id}/preview', operation_id='get_sframe_preview')"
       ],
-      "lineno": 335
-    },
-    {
-      "name": "get_text",
-      "docstring": "Fetch a single text view by ID.",
+      "docstring": "Stream the preview thumbnail of a sequence frame.",
+      "is_async": false,
+      "lineno": 335,
+      "name": "get_sframe_preview",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "TextResponse",
-      "is_async": false,
+      "returns": "StreamingResponse"
+    },
+    {
       "decorators": [
         "router.get('/texts/{id}', response_model=TextResponse, operation_id='get_text')"
       ],
-      "lineno": 297
-    },
-    {
-      "name": "list_images",
-      "docstring": "List image views with optional filtering.",
+      "docstring": "Fetch a single text view by ID.",
+      "is_async": false,
+      "lineno": 297,
+      "name": "get_text",
       "parameters": [
         {
-          "name": "dataset_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "pagination",
-          "annotation": "PaginationParams",
-          "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "record_id",
-          "annotation": "str | None",
-          "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "view_name",
-          "annotation": "str | None",
-          "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "where",
-          "annotation": "str | None",
-          "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "PaginatedResponse[ImageResponse]",
-      "is_async": false,
+      "returns": "TextResponse"
+    },
+    {
       "decorators": [
         "router.get('/images', response_model=(PaginatedResponse[ImageResponse]), operation_id='list_images')"
       ],
-      "lineno": 241
-    },
-    {
-      "name": "list_record_images",
-      "docstring": "List images belonging to a specific record.",
+      "docstring": "List image views with optional filtering.",
+      "is_async": false,
+      "lineno": 241,
+      "name": "list_images",
       "parameters": [
         {
-          "name": "record_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
         },
         {
-          "name": "dataset_id",
-          "annotation": "str",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "pagination",
           "annotation": "PaginationParams",
           "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
         },
         {
-          "name": "view_name",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "where",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
+        },
+        {
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
         }
       ],
-      "returns": "PaginatedResponse[ImageResponse]",
-      "is_async": false,
+      "returns": "PaginatedResponse[ImageResponse]"
+    },
+    {
       "decorators": [
         "router.get('/records/{record_id}/images', response_model=(PaginatedResponse[ImageResponse]), operation_id='list_record_images')"
       ],
-      "lineno": 341
-    },
-    {
-      "name": "list_record_sframes",
-      "docstring": "List sequence frames belonging to a specific record.",
+      "docstring": "List images belonging to a specific record.",
+      "is_async": false,
+      "lineno": 341,
+      "name": "list_record_images",
       "parameters": [
         {
-          "name": "record_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "dataset_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "pagination",
           "annotation": "PaginationParams",
           "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
         },
         {
-          "name": "view_name",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
         },
         {
-          "name": "where",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
         }
       ],
-      "returns": "PaginatedResponse[SFrameResponse]",
-      "is_async": false,
+      "returns": "PaginatedResponse[ImageResponse]"
+    },
+    {
       "decorators": [
         "router.get('/records/{record_id}/sframes', response_model=(PaginatedResponse[SFrameResponse]), operation_id='list_record_sframes')"
       ],
-      "lineno": 387
-    },
-    {
-      "name": "list_record_texts",
-      "docstring": "List texts belonging to a specific record.",
+      "docstring": "List sequence frames belonging to a specific record.",
+      "is_async": false,
+      "lineno": 387,
+      "name": "list_record_sframes",
       "parameters": [
         {
-          "name": "record_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "dataset",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
+        },
+        {
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "pagination",
           "annotation": "PaginationParams",
           "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
         },
         {
-          "name": "view_name",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
         },
         {
-          "name": "where",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
         }
       ],
-      "returns": "PaginatedResponse[TextResponse]",
-      "is_async": false,
+      "returns": "PaginatedResponse[SFrameResponse]"
+    },
+    {
       "decorators": [
         "router.get('/records/{record_id}/texts', response_model=(PaginatedResponse[TextResponse]), operation_id='list_record_texts')"
       ],
-      "lineno": 365
-    },
-    {
-      "name": "list_sframes",
-      "docstring": "List sequence frame views with optional filtering.",
+      "docstring": "List texts belonging to a specific record.",
+      "is_async": false,
+      "lineno": 365,
+      "name": "list_record_texts",
       "parameters": [
         {
-          "name": "dataset_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "pagination",
           "annotation": "PaginationParams",
           "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
         },
         {
-          "name": "record_id",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
         },
         {
-          "name": "view_name",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "where",
-          "annotation": "str | None",
-          "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
         }
       ],
-      "returns": "PaginatedResponse[SFrameResponse]",
-      "is_async": false,
+      "returns": "PaginatedResponse[TextResponse]"
+    },
+    {
       "decorators": [
         "router.get('/sframes', response_model=(PaginatedResponse[SFrameResponse]), operation_id='list_sframes')"
       ],
-      "lineno": 303
-    },
-    {
-      "name": "list_texts",
-      "docstring": "List text views with optional filtering.",
+      "docstring": "List sequence frame views with optional filtering.",
+      "is_async": false,
+      "lineno": 303,
+      "name": "list_sframes",
       "parameters": [
         {
-          "name": "dataset",
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
+        },
+        {
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "pagination",
           "annotation": "PaginationParams",
           "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
         },
         {
-          "name": "record_id",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "view_name",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
         },
         {
-          "name": "where",
           "annotation": "str | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
         }
       ],
-      "returns": "PaginatedResponse[TextResponse]",
-      "is_async": false,
+      "returns": "PaginatedResponse[SFrameResponse]"
+    },
+    {
       "decorators": [
         "router.get('/texts', response_model=(PaginatedResponse[TextResponse]), operation_id='list_texts')"
       ],
-      "lineno": 279
+      "docstring": "List text views with optional filtering.",
+      "is_async": false,
+      "lineno": 279,
+      "name": "list_texts",
+      "parameters": [
+        {
+          "annotation": "Dataset",
+          "default": "Depends(get_dataset_dep)",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
+        },
+        {
+          "annotation": "PaginationParams",
+          "default": "Depends()",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
+        },
+        {
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
+        },
+        {
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_name"
+        },
+        {
+          "annotation": "str | None",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "where"
+        }
+      ],
+      "returns": "PaginatedResponse[TextResponse]"
     }
   ],
-  "attributes": [
-    {
-      "name": "IMAGE_TABLE",
-      "annotation": null,
-      "value": "'images'",
-      "docstring": ""
-    },
-    {
-      "name": "SFRAME_TABLE",
-      "annotation": null,
-      "value": "'sequence_frames'",
-      "docstring": ""
-    },
-    {
-      "name": "TEXT_TABLE",
-      "annotation": null,
-      "value": "'texts'",
-      "docstring": ""
-    },
-    {
-      "name": "router",
-      "annotation": null,
-      "value": "APIRouter(prefix='/datasets/{dataset_id}', tags=['Views'])",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.api.routers.views",
   "submodules": []
 }

@@ -1,159 +1,159 @@
 {
-  "module": "pixano.datasets.dataset_features_values",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/dataset_features_values.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "Dict of Constraint, by table.\n\nKeys are table names (`TableName`), and values are list of constraints (`Constraint`).",
+      "name": "ConstraintDict",
+      "value": "Dict[TableName, List[Constraint]]"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "TableName",
+      "value": "NewType('TableName', str)"
+    }
+  ],
   "classes": [
     {
-      "name": "Constraint",
-      "docstring": "Constraint values.\n\nAttributes:\n    name: name of the field.\n    restricted: whether allowed values are restricted to given values, or user may enter new values.\n    values: list of allowed values.",
-      "bases": [],
       "attributes": [
         {
-          "name": "name",
           "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "restricted",
-          "annotation": "bool",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "values",
-          "annotation": "List[Union[int, float, str, bool]]",
-          "value": null,
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "restricted",
-              "annotation": "bool",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "values",
-              "annotation": "List[Union[int, float, str, bool]]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "name",
+          "value": null
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "restricted",
+          "value": null
+        },
+        {
+          "annotation": "List[Union[int, float, str, bool]]",
+          "docstring": "",
+          "name": "values",
+          "value": null
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass"
       ],
-      "lineno": 18
+      "docstring": "Constraint values.\n\nAttributes:\n    name: name of the field.\n    restricted: whether allowed values are restricted to given values, or user may enter new values.\n    values: list of allowed values.",
+      "lineno": 18,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "name"
+            },
+            {
+              "annotation": "bool",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "restricted"
+            },
+            {
+              "annotation": "List[Union[int, float, str, bool]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "values"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "Constraint",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "DatasetFeaturesValues",
-      "docstring": "Constraints for the dataset features values.\n\nAttributes:\n    item: Constraints for the dataset item table.\n    views: Constraints for the dataset view tables.\n    entities: Constraints for the dataset entity tables.\n    annotations: Constraints for the dataset annotation tables.",
+      "attributes": [
+        {
+          "annotation": "ConstraintDict",
+          "docstring": "",
+          "name": "annotations",
+          "value": "{}"
+        },
+        {
+          "annotation": "ConstraintDict",
+          "docstring": "",
+          "name": "entities",
+          "value": "{}"
+        },
+        {
+          "annotation": "ConstraintDict",
+          "docstring": "",
+          "name": "item",
+          "value": "{}"
+        },
+        {
+          "annotation": "ConstraintDict",
+          "docstring": "",
+          "name": "views",
+          "value": "{}"
+        }
+      ],
       "bases": [
         "BaseModel"
       ],
-      "attributes": [
-        {
-          "name": "annotations",
-          "annotation": "ConstraintDict",
-          "value": "{}",
-          "docstring": ""
-        },
-        {
-          "name": "entities",
-          "annotation": "ConstraintDict",
-          "value": "{}",
-          "docstring": ""
-        },
-        {
-          "name": "item",
-          "annotation": "ConstraintDict",
-          "value": "{}",
-          "docstring": ""
-        },
-        {
-          "name": "views",
-          "annotation": "ConstraintDict",
-          "value": "{}",
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Constraints for the dataset features values.\n\nAttributes:\n    item: Constraints for the dataset item table.\n    views: Constraints for the dataset view tables.\n    entities: Constraints for the dataset entity tables.\n    annotations: Constraints for the dataset annotation tables.",
+      "lineno": 40,
       "methods": [
         {
-          "name": "from_json",
-          "docstring": "Load DatasetFeaturesValues from json file.",
-          "parameters": [
-            {
-              "name": "json_fp",
-              "annotation": "Path",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "DatasetFeaturesValues",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 59
-        },
-        {
-          "name": "to_json",
-          "docstring": "Save DatasetFeaturesValues to json file.",
+          "docstring": "Load DatasetFeaturesValues from json file.",
+          "is_async": false,
+          "lineno": 59,
+          "name": "from_json",
           "parameters": [
             {
-              "name": "json_fp",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "json_fp"
             }
           ],
-          "returns": "None",
-          "is_async": false,
+          "returns": "DatasetFeaturesValues"
+        },
+        {
           "decorators": [],
-          "lineno": 55
+          "docstring": "Save DatasetFeaturesValues to json file.",
+          "is_async": false,
+          "lineno": 55,
+          "name": "to_json",
+          "parameters": [
+            {
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "json_fp"
+            }
+          ],
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "DatasetFeaturesValues",
       "properties": [],
-      "decorators": [],
-      "lineno": 40
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/dataset_features_values.py",
   "functions": [],
-  "attributes": [
-    {
-      "name": "ConstraintDict",
-      "annotation": null,
-      "value": "Dict[TableName, List[Constraint]]",
-      "docstring": "Dict of Constraint, by table.\n\nKeys are table names (`TableName`), and values are list of constraints (`Constraint`)."
-    },
-    {
-      "name": "TableName",
-      "annotation": null,
-      "value": "NewType('TableName', str)",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.datasets.dataset_features_values",
   "submodules": []
 }

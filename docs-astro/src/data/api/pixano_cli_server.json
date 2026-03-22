@@ -1,77 +1,77 @@
 {
-  "module": "pixano.cli.server",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/cli/server.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "server_app",
+      "value": "typer.Typer(help='Pixano server commands.')"
+    }
+  ],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/cli/server.py",
   "functions": [
     {
-      "name": "run",
-      "docstring": "Launch the Pixano annotation server.",
-      "parameters": [
-        {
-          "name": "data_dir",
-          "annotation": "str",
-          "default": "typer.Argument(..., help='Path to data directory (contains library/ and models/).')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "aws_endpoint",
-          "annotation": "Optional[str]",
-          "default": "typer.Option(None, help=\"S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path.\")",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "aws_region",
-          "annotation": "Optional[str]",
-          "default": "typer.Option(None, help='S3 region name, not always required for private storages. Used if library_dir is an S3 path.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "aws_access_key",
-          "annotation": "Optional[str]",
-          "default": "typer.Option(None, help='S3 AWS access key. Used if library_dir is an S3 path.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "aws_secret_key",
-          "annotation": "Optional[str]",
-          "default": "typer.Option(None, help='S3 AWS secret key. Used if library_dir is an S3 path.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "host",
-          "annotation": "str",
-          "default": "typer.Option('127.0.0.1', help='Pixano app URL host.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "port",
-          "annotation": "int",
-          "default": "typer.Option(7492, help='Pixano app URL port.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "pixano_inference_url",
-          "annotation": "Optional[str]",
-          "default": "typer.Option(None, help='Pixano inference API url.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        }
-      ],
-      "returns": "None",
-      "is_async": false,
       "decorators": [
         "server_app.command()"
       ],
-      "lineno": 15
+      "docstring": "Launch the Pixano annotation server.",
+      "is_async": false,
+      "lineno": 15,
+      "name": "run",
+      "parameters": [
+        {
+          "annotation": "str",
+          "default": "typer.Argument(..., help='Path to data directory (contains library/ and models/).')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "data_dir"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "typer.Option(None, help=\"S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path.\")",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "aws_endpoint"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "typer.Option(None, help='S3 region name, not always required for private storages. Used if library_dir is an S3 path.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "aws_region"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "typer.Option(None, help='S3 AWS access key. Used if library_dir is an S3 path.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "aws_access_key"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "typer.Option(None, help='S3 AWS secret key. Used if library_dir is an S3 path.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "aws_secret_key"
+        },
+        {
+          "annotation": "str",
+          "default": "typer.Option('127.0.0.1', help='Pixano app URL host.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "host"
+        },
+        {
+          "annotation": "int",
+          "default": "typer.Option(7492, help='Pixano app URL port.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "port"
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": "typer.Option(None, help='Pixano inference API url.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pixano_inference_url"
+        }
+      ],
+      "returns": "None"
     }
   ],
-  "attributes": [
-    {
-      "name": "server_app",
-      "annotation": null,
-      "value": "typer.Typer(help='Pixano server commands.')",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.cli.server",
   "submodules": []
 }

@@ -1,313 +1,313 @@
 {
-  "module": "pixano.datasets.builders.folders.factories",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/factories.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "AnnotationSource",
-      "docstring": "Default source metadata attached to imported annotations.",
-      "bases": [],
       "attributes": [
         {
-          "name": "source_name",
           "annotation": "str",
-          "value": null,
-          "docstring": ""
+          "docstring": "",
+          "name": "source_name",
+          "value": null
         },
         {
-          "name": "source_type",
           "annotation": "str",
-          "value": null,
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "source_type",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "source_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "source_type",
+          "value": null
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass(frozen=True)"
       ],
-      "lineno": 37
-    },
-    {
-      "name": "FolderEntityFactory",
-      "docstring": "Create entity rows and attached annotations from folder metadata.",
-      "bases": [],
-      "attributes": [
-        {
-          "name": "annotation_alias_map",
-          "annotation": null,
-          "value": "{'bbox': canonical_table_name_for_slot('bbox'), 'mask': canonical_table_name_for_slot('mask'), 'keypoint': canonical_table_name_for_slot('keypoint'), 'text_span': canonical_table_name_for_slot('text_span')}",
-          "docstring": ""
-        },
-        {
-          "name": "normalize_view_name_alias",
-          "annotation": null,
-          "value": "normalize_view_name_alias",
-          "docstring": ""
-        },
-        {
-          "name": "schemas",
-          "annotation": null,
-          "value": "schemas",
-          "docstring": ""
-        },
-        {
-          "name": "source",
-          "annotation": null,
-          "value": "source",
-          "docstring": ""
-        }
-      ],
+      "docstring": "Default source metadata attached to imported annotations.",
+      "lineno": 37,
       "methods": [
         {
-          "name": "__init__",
-          "docstring": "Initialize the factory with schemas, source metadata, and view-name normalizer.",
-          "parameters": [
-            {
-              "name": "schemas",
-              "annotation": "dict[str, type]",
-              "default": null,
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "source",
-              "annotation": "AnnotationSource",
-              "default": null,
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "normalize_view_name_alias",
-              "annotation": null,
-              "default": null,
-              "kind": "ParameterKind.keyword_only"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
           "decorators": [],
-          "lineno": 215
-        },
-        {
-          "name": "create_objects_entities",
-          "docstring": "Create entity rows and attached annotations for one entity payload.",
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "record",
-              "annotation": "Record",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "views_data",
-              "annotation": "list[tuple[str, View]]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "entity_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source_type"
             },
             {
-              "name": "entity_schema",
-              "annotation": "type[Entity]",
+              "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "entities_data",
-              "annotation": "list[dict[str, Any]]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source_name"
             }
           ],
-          "returns": "tuple[dict[str, list[Entity]], dict[str, list[RecordComponent]]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 233
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "AnnotationSource",
       "properties": [],
-      "decorators": [],
-      "lineno": 212
+      "static_methods": []
     },
     {
-      "name": "FolderMessageFactory",
-      "docstring": "Create message annotations from folder metadata payloads.",
-      "bases": [],
       "attributes": [
         {
-          "name": "normalize_view_name_alias",
           "annotation": null,
-          "value": "normalize_view_name_alias",
-          "docstring": ""
+          "docstring": "",
+          "name": "annotation_alias_map",
+          "value": "{'bbox': canonical_table_name_for_slot('bbox'), 'mask': canonical_table_name_for_slot('mask'), 'keypoint': canonical_table_name_for_slot('keypoint'), 'text_span': canonical_table_name_for_slot('text_span')}"
         },
         {
-          "name": "source",
           "annotation": null,
-          "value": "source",
-          "docstring": ""
+          "docstring": "",
+          "name": "normalize_view_name_alias",
+          "value": "normalize_view_name_alias"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "schemas",
+          "value": "schemas"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "source",
+          "value": "source"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Create entity rows and attached annotations from folder metadata.",
+      "lineno": 212,
       "methods": [
         {
+          "decorators": [],
+          "docstring": "Initialize the factory with schemas, source metadata, and view-name normalizer.",
+          "is_async": false,
+          "lineno": 215,
           "name": "__init__",
-          "docstring": "Initialize the factory with source metadata and view-name normalizer.",
           "parameters": [
             {
-              "name": "source",
+              "annotation": "dict[str, type]",
+              "default": null,
+              "kind": "ParameterKind.keyword_only",
+              "name": "schemas"
+            },
+            {
               "annotation": "AnnotationSource",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.keyword_only",
+              "name": "source"
             },
             {
-              "name": "normalize_view_name_alias",
               "annotation": null,
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.keyword_only",
+              "name": "normalize_view_name_alias"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 69
+          "returns": "None"
         },
         {
-          "name": "create_messages",
-          "docstring": "Create message rows for conversations or flat message lists.",
+          "decorators": [],
+          "docstring": "Create entity rows and attached annotations for one entity payload.",
+          "is_async": false,
+          "lineno": 233,
+          "name": "create_objects_entities",
           "parameters": [
             {
-              "name": "record",
               "annotation": "Record",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record"
             },
             {
-              "name": "views_data",
               "annotation": "list[tuple[str, View]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "views_data"
             },
             {
-              "name": "raw_messages_data",
-              "annotation": "list[Any]",
+              "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entity_name"
+            },
+            {
+              "annotation": "type[Entity]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entity_schema"
+            },
+            {
+              "annotation": "list[dict[str, Any]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entities_data"
             }
           ],
-          "returns": "dict[str, list[RecordComponent]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 74
+          "returns": "tuple[dict[str, list[Entity]], dict[str, list[RecordComponent]]]"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "FolderEntityFactory",
       "properties": [],
-      "decorators": [],
-      "lineno": 66
+      "static_methods": []
     },
     {
-      "name": "FolderRecordFactory",
-      "docstring": "Create record rows and default record metadata for folder imports.",
-      "bases": [],
       "attributes": [
         {
-          "name": "record_schema",
           "annotation": null,
-          "value": "record_schema",
-          "docstring": ""
+          "docstring": "",
+          "name": "normalize_view_name_alias",
+          "value": "normalize_view_name_alias"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "source",
+          "value": "source"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Create message annotations from folder metadata payloads.",
+      "lineno": 66,
       "methods": [
         {
+          "decorators": [],
+          "docstring": "Initialize the factory with source metadata and view-name normalizer.",
+          "is_async": false,
+          "lineno": 69,
           "name": "__init__",
-          "docstring": "Initialize the factory with the record schema.",
           "parameters": [
             {
-              "name": "record_schema",
-              "annotation": "type[Record]",
+              "annotation": "AnnotationSource",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source"
+            },
+            {
+              "annotation": null,
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "normalize_view_name_alias"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 48
+          "returns": "None"
         },
         {
-          "name": "build_default_custom_metadata_record",
-          "docstring": "Build default values for record custom fields when metadata is absent.",
-          "parameters": [],
-          "returns": "dict[str, Any]",
-          "is_async": false,
           "decorators": [],
-          "lineno": 56
-        },
-        {
-          "name": "create_record",
-          "docstring": "Instantiate one record row.",
+          "docstring": "Create message rows for conversations or flat message lists.",
+          "is_async": false,
+          "lineno": 74,
+          "name": "create_messages",
           "parameters": [
             {
-              "name": "record_metadata",
-              "annotation": "Any",
-              "default": "{}",
-              "kind": "ParameterKind.var_keyword"
+              "annotation": "Record",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record"
+            },
+            {
+              "annotation": "list[tuple[str, View]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "views_data"
+            },
+            {
+              "annotation": "list[Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "raw_messages_data"
             }
           ],
-          "returns": "Record",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 52
+          "returns": "dict[str, list[RecordComponent]]"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "FolderMessageFactory",
       "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "record_schema",
+          "value": "record_schema"
+        }
+      ],
+      "bases": [],
+      "class_methods": [],
       "decorators": [],
-      "lineno": 45
+      "docstring": "Create record rows and default record metadata for folder imports.",
+      "lineno": 45,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "Initialize the factory with the record schema.",
+          "is_async": false,
+          "lineno": 48,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "type[Record]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_schema"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Build default values for record custom fields when metadata is absent.",
+          "is_async": false,
+          "lineno": 56,
+          "name": "build_default_custom_metadata_record",
+          "parameters": [],
+          "returns": "dict[str, Any]"
+        },
+        {
+          "decorators": [],
+          "docstring": "Instantiate one record row.",
+          "is_async": false,
+          "lineno": 52,
+          "name": "create_record",
+          "parameters": [
+            {
+              "annotation": "Any",
+              "default": "{}",
+              "kind": "ParameterKind.var_keyword",
+              "name": "record_metadata"
+            }
+          ],
+          "returns": "Record"
+        }
+      ],
+      "name": "FolderRecordFactory",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/factories.py",
   "functions": [
     {
-      "name": "is_annotation_schema",
-      "docstring": "Check whether a schema class is an annotation schema.",
-      "parameters": [],
-      "returns": "bool",
-      "is_async": false,
       "decorators": [],
-      "lineno": 32
+      "docstring": "Check whether a schema class is an annotation schema.",
+      "is_async": false,
+      "lineno": 32,
+      "name": "is_annotation_schema",
+      "parameters": [],
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.datasets.builders.folders.factories",
   "submodules": []
 }

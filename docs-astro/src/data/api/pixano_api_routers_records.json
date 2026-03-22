@@ -1,161 +1,161 @@
 {
-  "module": "pixano.api.routers.records",
-  "docstring": "Records router with optional explorer preview expansion.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/records.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "router",
+      "value": "APIRouter(prefix='/datasets/{dataset_id}/records', tags=['Records'])"
+    }
+  ],
   "classes": [],
+  "docstring": "Records router with optional explorer preview expansion.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/routers/records.py",
   "functions": [
     {
-      "name": "create_record",
-      "docstring": "Create a new record row in the dataset.",
-      "parameters": [
-        {
-          "name": "body",
-          "annotation": "RECORD_RESOURCE.create_model",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset",
-          "annotation": "Dataset",
-          "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
-        }
-      ],
-      "returns": "Any",
-      "is_async": false,
       "decorators": [
         "router.post('', response_model=RecordResponse, status_code=201, operation_id='create_record', summary='Create a record', description='Create a new record row in the dataset.')"
       ],
-      "lineno": 174
-    },
-    {
-      "name": "delete_record",
-      "docstring": "Delete a single record by ID.",
+      "docstring": "Create a new record row in the dataset.",
+      "is_async": false,
+      "lineno": 174,
+      "name": "create_record",
       "parameters": [
         {
-          "name": "id",
-          "annotation": "str",
+          "annotation": "RECORD_RESOURCE.create_model",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "body"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "None",
-      "is_async": false,
+      "returns": "Any"
+    },
+    {
       "decorators": [
         "router.delete('/{id}', status_code=204, operation_id='delete_record', summary='Delete a record', description='Delete a single record by id.')"
       ],
-      "lineno": 205
-    },
-    {
-      "name": "get_record",
-      "docstring": "Fetch a single record by ID.",
+      "docstring": "Delete a single record by ID.",
+      "is_async": false,
+      "lineno": 205,
+      "name": "delete_record",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "RecordResponse",
-      "is_async": false,
+      "returns": "None"
+    },
+    {
       "decorators": [
         "router.get('/{id}', response_model=RecordResponse, operation_id='get_record', summary='Get a record', description='Fetch a single record by id.')"
       ],
-      "lineno": 161
-    },
-    {
-      "name": "list_records",
-      "docstring": "List records with optional filters, pagination, and view previews.",
+      "docstring": "Fetch a single record by ID.",
+      "is_async": false,
+      "lineno": 161,
+      "name": "get_record",
       "parameters": [
         {
-          "name": "dataset_id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "pagination",
-          "annotation": "PaginationParams",
-          "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "filters",
-          "annotation": "FilterParams",
-          "default": "Depends()",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "include",
-          "annotation": "str | None",
-          "default": "Query(default=None)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "PaginatedResponse[RecordListResponse]",
-      "is_async": false,
+      "returns": "RecordResponse"
+    },
+    {
       "decorators": [
         "router.get('', response_model=(PaginatedResponse[RecordListResponse]), response_model_exclude_none=True, operation_id='list_records', summary='List records', description='List records in a dataset with optional filters, pagination, and explorer expansions.')"
       ],
-      "lineno": 122
-    },
-    {
-      "name": "update_record",
-      "docstring": "Replace mutable fields on an existing record.",
+      "docstring": "List records with optional filters, pagination, and view previews.",
+      "is_async": false,
+      "lineno": 122,
+      "name": "list_records",
       "parameters": [
         {
-          "name": "id",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset_id"
         },
         {
-          "name": "body",
-          "annotation": "RECORD_RESOURCE.update_model",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": "Depends(get_dataset_dep)",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
+        },
+        {
+          "annotation": "PaginationParams",
+          "default": "Depends()",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pagination"
+        },
+        {
+          "annotation": "FilterParams",
+          "default": "Depends()",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "filters"
+        },
+        {
+          "annotation": "str | None",
+          "default": "Query(default=None)",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "include"
         }
       ],
-      "returns": "Any",
-      "is_async": false,
+      "returns": "PaginatedResponse[RecordListResponse]"
+    },
+    {
       "decorators": [
         "router.put('/{id}', response_model=RecordResponse, operation_id='replace_record', summary='Update a record', description='Replace mutable fields on an existing record.')"
       ],
-      "lineno": 188
+      "docstring": "Replace mutable fields on an existing record.",
+      "is_async": false,
+      "lineno": 188,
+      "name": "update_record",
+      "parameters": [
+        {
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
+        },
+        {
+          "annotation": "RECORD_RESOURCE.update_model",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "body"
+        },
+        {
+          "annotation": "Dataset",
+          "default": "Depends(get_dataset_dep)",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
+        }
+      ],
+      "returns": "Any"
     }
   ],
-  "attributes": [
-    {
-      "name": "router",
-      "annotation": null,
-      "value": "APIRouter(prefix='/datasets/{dataset_id}/records', tags=['Records'])",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.api.routers.records",
   "submodules": []
 }

@@ -1,116 +1,116 @@
 {
-  "module": "pixano.schemas.views.pdf",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/pdf.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "PDF",
-      "docstring": "PDF view.\n\nAttributes:\n    num_pages: The number of pages in the PDF.",
+      "attributes": [
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "num_pages",
+          "value": "0"
+        }
+      ],
       "bases": [
         "View"
       ],
-      "attributes": [
-        {
-          "name": "num_pages",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "PDF view.\n\nAttributes:\n    num_pages: The number of pages in the PDF.",
+      "lineno": 16,
       "methods": [
         {
-          "name": "open",
-          "docstring": "Open the PDF and return its raw bytes.\n\nThe PDF data is read from the embedded ``raw_bytes`` field. If\n``raw_bytes`` is empty but ``uri`` is set, it is treated as an\nabsolute filesystem path or a remote URI.\n\nReturns:\n    The raw PDF bytes.",
-          "parameters": [],
-          "returns": "bytes",
-          "is_async": false,
           "decorators": [],
-          "lineno": 25
+          "docstring": "Open the PDF and return its raw bytes.\n\nThe PDF data is read from the embedded ``raw_bytes`` field. If\n``raw_bytes`` is empty but ``uri`` is set, it is treated as an\nabsolute filesystem path or a remote URI.\n\nReturns:\n    The raw PDF bytes.",
+          "is_async": false,
+          "lineno": 25,
+          "name": "open",
+          "parameters": [],
+          "returns": "bytes"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "PDF",
       "properties": [],
-      "decorators": [],
-      "lineno": 16
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/views/pdf.py",
   "functions": [
     {
-      "name": "create_pdf",
+      "decorators": [],
       "docstring": "Create a `PDF` instance.\n\nArgs:\n    uri: The PDF URI. Can be empty when using embedded raw_bytes.\n    id: PDF ID.\n    record_id: Record ID.\n    logical_name: Logical view name.\n    num_pages: The number of pages in the PDF.\n    raw_bytes: Raw PDF bytes.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").\n\nReturns:\n    The created `PDF` instance.",
+      "is_async": false,
+      "lineno": 50,
+      "name": "create_pdf",
       "parameters": [
         {
-          "name": "uri",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "uri"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "logical_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "logical_name"
         },
         {
-          "name": "num_pages",
           "annotation": "int",
           "default": "0",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "num_pages"
         },
         {
-          "name": "raw_bytes",
           "annotation": "bytes | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "raw_bytes"
         },
         {
-          "name": "preview",
           "annotation": "bytes",
           "default": "b''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "preview"
         },
         {
-          "name": "preview_format",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "preview_format"
         }
       ],
-      "returns": "PDF",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 50
+      "returns": "PDF"
     },
     {
-      "name": "is_pdf",
+      "decorators": [],
       "docstring": "Check if the given class is `PDF` or a subclass of `PDF`.",
+      "is_async": false,
+      "lineno": 45,
+      "name": "is_pdf",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 45
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.views.pdf",
   "submodules": []
 }

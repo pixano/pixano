@@ -1,783 +1,783 @@
 {
-  "module": "pixano.datasets.dataset",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/dataset.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Dataset",
-      "docstring": "The Pixano Dataset.\n\nIt is a collection of tables that can be queried and manipulated with LanceDB.\n\nTables are defined by the :class:`DatasetInfo` ``tables`` mapping, which maps\ntable names to :class:`LanceModel` schema classes.  The main table is always\nnamed ``\"record\"`` and its schema must inherit from :class:`Record`.  All\nauxiliary tables must have schemas that inherit from :class:`RecordComponent`.\n\nAttributes:\n    path: Path to the dataset.\n    info: Dataset info (including table\u2192schema mapping).\n    features_values: Dataset features values.\n    stats: Dataset statistics.\n    thumbnail: Dataset thumbnail base 64 URL.",
-      "bases": [],
       "attributes": [
         {
+          "annotation": null,
+          "docstring": "",
           "name": "features_values",
-          "annotation": null,
-          "value": "DatasetFeaturesValues.from_json(self._features_values_file)",
-          "docstring": ""
+          "value": "DatasetFeaturesValues.from_json(self._features_values_file)"
         },
         {
-          "name": "id",
           "annotation": "str",
-          "value": null,
-          "docstring": "Return the dataset ID."
+          "docstring": "Return the dataset ID.",
+          "name": "id",
+          "value": null
         },
         {
-          "name": "info",
           "annotation": "DatasetInfo",
-          "value": "DatasetInfo.from_json(self._info_file)",
-          "docstring": ""
+          "docstring": "",
+          "name": "info",
+          "value": "DatasetInfo.from_json(self._info_file)"
         },
         {
-          "name": "num_rows",
           "annotation": "int",
-          "value": null,
-          "docstring": "Return the number of rows in the record table.\n\nReturns:\n    Number of rows."
+          "docstring": "Return the number of rows in the record table.\n\nReturns:\n    Number of rows.",
+          "name": "num_rows",
+          "value": null
         },
         {
+          "annotation": "Path",
+          "docstring": "",
           "name": "path",
-          "annotation": "Path",
-          "value": "path",
-          "docstring": ""
+          "value": "path"
         },
         {
-          "name": "previews_path",
           "annotation": null,
-          "value": "self.path / self._PREVIEWS_PATH",
-          "docstring": ""
+          "docstring": "",
+          "name": "previews_path",
+          "value": "self.path / self._PREVIEWS_PATH"
         },
         {
-          "name": "stats",
           "annotation": "list[DatasetStatistic]",
-          "value": "DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []",
-          "docstring": ""
+          "docstring": "",
+          "name": "stats",
+          "value": "DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []"
         },
         {
-          "name": "thumbnail",
           "annotation": "Path",
-          "value": "self._thumb_file",
-          "docstring": ""
+          "docstring": "",
+          "name": "thumbnail",
+          "value": "self._thumb_file"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "The Pixano Dataset.\n\nIt is a collection of tables that can be queried and manipulated with LanceDB.\n\nTables are defined by the :class:`DatasetInfo` ``tables`` mapping, which maps\ntable names to :class:`LanceModel` schema classes.  The main table is always\nnamed ``\"record\"`` and its schema must inherit from :class:`Record`.  All\nauxiliary tables must have schemas that inherit from :class:`RecordComponent`.\n\nAttributes:\n    path: Path to the dataset.\n    info: Dataset info (including table\u2192schema mapping).\n    features_values: Dataset features values.\n    stats: Dataset statistics.\n    thumbnail: Dataset thumbnail base 64 URL.",
+      "lineno": 90,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the dataset.\n\nArgs:\n    path: Path to the dataset.",
+          "is_async": false,
+          "lineno": 120,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "path",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "path"
             }
           ],
-          "returns": null,
-          "is_async": false,
-          "decorators": [],
-          "lineno": 120
+          "returns": null
         },
         {
-          "name": "add_constraint",
+          "decorators": [],
           "docstring": "Add or replace a constraint.\n\nArgs:\n    table: Table name.\n    field_name: Name of the field to constrain.\n    values: List of allowed values.\n    restricted: True if no other values are allowed.",
+          "is_async": false,
+          "lineno": 1224,
+          "name": "add_constraint",
           "parameters": [
             {
-              "name": "table",
               "annotation": "TableName",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table"
             },
             {
-              "name": "field_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "field_name"
             },
             {
-              "name": "values",
               "annotation": "List[Union[int, float, str, bool]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "values"
             },
             {
-              "name": "restricted",
               "annotation": "bool",
               "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "restricted"
             }
           ],
-          "returns": null,
-          "is_async": false,
-          "decorators": [],
-          "lineno": 1224
+          "returns": null
         },
         {
-          "name": "add_data",
+          "decorators": [],
           "docstring": "Add data to a table.\n\nArgs:\n    table_name: Table name.\n    data: Data to add.\n    ignore_integrity_checks: List of integrity checks to ignore.\n    raise_or_warn: Whether to raise or warn on integrity errors.\n\nReturns:\n    The added data.",
+          "is_async": false,
+          "lineno": 822,
+          "name": "add_data",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "data",
               "annotation": "list[LanceModel]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data"
             },
             {
-              "name": "ignore_integrity_checks",
               "annotation": "list[IntegrityCheck] | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ignore_integrity_checks"
             },
             {
-              "name": "raise_or_warn",
               "annotation": "Literal['raise', 'warn', 'none']",
               "default": "'raise'",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "raise_or_warn"
             }
           ],
-          "returns": "list[LanceModel]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 822
+          "returns": "list[LanceModel]"
         },
         {
-          "name": "add_records",
+          "decorators": [],
           "docstring": "Insert rows into multiple tables in a single call.\n\nAccepts the same ``dict[str, LanceModel | list[LanceModel]]``\nformat yielded by :meth:`DatasetBuilder.generate_data`.  Tables\nare flushed in dependency order (source -> record -> view ->\nentity -> entity_dynamic_state -> annotation -> embedding) so\nthat foreign-key constraints are satisfied.\n\nArgs:\n    data: Mapping of table name to one or more rows to insert.\n        ``None`` or empty-list values are silently skipped.\n    check_integrity: Integrity-check mode.\n        ``\"raise\"`` (default) aborts on the first error,\n        ``\"warn\"`` emits warnings, ``\"none\"`` skips validation.",
+          "is_async": false,
+          "lineno": 896,
+          "name": "add_records",
           "parameters": [
             {
-              "name": "data",
               "annotation": "dict[str, LanceModel | list[LanceModel]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data"
             },
             {
-              "name": "check_integrity",
               "annotation": "Literal['raise', 'warn', 'none']",
               "default": "'raise'",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "check_integrity"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 896
+          "returns": "None"
         },
         {
-          "name": "compute_view_embeddings",
+          "decorators": [],
           "docstring": "Compute the view embeddings via the embedding function stored in the table metadata.\n\nArgs:\n    table_name: Table name containing the view embeddings.\n    data: Data to compute. Dictionary representing a view embedding without the vector field.",
+          "is_async": false,
+          "lineno": 800,
+          "name": "compute_view_embeddings",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "data",
               "annotation": "list[dict]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 800
+          "returns": "None"
         },
         {
-          "name": "count_rows_where",
+          "decorators": [],
           "docstring": "Count rows in a table, optionally filtered by a WHERE clause.\n\nUses LanceDB native count_rows() which avoids full table materialization.\n\nArgs:\n    table_name: Table name.\n    where: Optional WHERE clause to filter rows.\n\nReturns:\n    Number of matching rows.",
+          "is_async": false,
+          "lineno": 233,
+          "name": "count_rows_where",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": "SchemaGroup.RECORD.value",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "where",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "where"
             }
           ],
-          "returns": "int",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 233
+          "returns": "int"
         },
         {
-          "name": "create",
-          "docstring": "Create a new dataset on disk.\n\nThis initialises the directory structure, writes ``info.json`` and\n``features_values.json``, creates the LanceDB database with empty\ntables for every entry in ``info.tables`` and returns the opened\n:class:`Dataset`.\n\nArgs:\n    path: Directory where the dataset will be stored.  The directory\n        is created (with parents) and **must not already exist**.\n    info: Dataset information including the ``tables`` mapping.\n        If ``info.id`` is empty, a random ID is generated\n        automatically.\n\nReturns:\n    The newly created dataset.\n\nRaises:\n    FileExistsError: If ``path`` already exists.\n    ValueError: If ``info.tables`` is empty or invalid.",
-          "parameters": [
-            {
-              "name": "path",
-              "annotation": "Path",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "info",
-              "annotation": "DatasetInfo",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "'Dataset'",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 148
-        },
-        {
-          "name": "create_table",
-          "docstring": "Add a table to the dataset.\n\nArgs:\n    name: Table name.\n    schema: Table schema (must be a LanceModel subclass).\n    data: Table data.\n    mode: Table mode ('create', 'overwrite').\n    exist_ok: If True, do not raise an error if the table already exists.\n    on_bad_vectors: Raise an error, drop or fill bad vectors (\"error\", \"drop\", \"fill\").\n    fill_value: Value to fill bad vectors.\n\nReturns:\n    The table created.",
+          "docstring": "Create a new dataset on disk.\n\nThis initialises the directory structure, writes ``info.json`` and\n``features_values.json``, creates the LanceDB database with empty\ntables for every entry in ``info.tables`` and returns the opened\n:class:`Dataset`.\n\nArgs:\n    path: Directory where the dataset will be stored.  The directory\n        is created (with parents) and **must not already exist**.\n    info: Dataset information including the ``tables`` mapping.\n        If ``info.id`` is empty, a random ID is generated\n        automatically.\n\nReturns:\n    The newly created dataset.\n\nRaises:\n    FileExistsError: If ``path`` already exists.\n    ValueError: If ``info.tables`` is empty or invalid.",
+          "is_async": false,
+          "lineno": 148,
+          "name": "create",
           "parameters": [
             {
-              "name": "name",
-              "annotation": "str",
+              "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "path"
             },
             {
-              "name": "schema",
+              "annotation": "DatasetInfo",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "info"
+            }
+          ],
+          "returns": "'Dataset'"
+        },
+        {
+          "decorators": [],
+          "docstring": "Add a table to the dataset.\n\nArgs:\n    name: Table name.\n    schema: Table schema (must be a LanceModel subclass).\n    data: Table data.\n    mode: Table mode ('create', 'overwrite').\n    exist_ok: If True, do not raise an error if the table already exists.\n    on_bad_vectors: Raise an error, drop or fill bad vectors (\"error\", \"drop\", \"fill\").\n    fill_value: Value to fill bad vectors.\n\nReturns:\n    The table created.",
+          "is_async": false,
+          "lineno": 307,
+          "name": "create_table",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "name"
+            },
+            {
               "annotation": "type[LanceModel]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "schema"
             },
             {
-              "name": "data",
               "annotation": "DATA | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data"
             },
             {
-              "name": "mode",
               "annotation": "str",
               "default": "'create'",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "mode"
             },
             {
-              "name": "exist_ok",
               "annotation": "bool",
               "default": "False",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "exist_ok"
             },
             {
-              "name": "on_bad_vectors",
               "annotation": "str",
               "default": "'error'",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "on_bad_vectors"
             },
             {
-              "name": "fill_value",
               "annotation": "float",
               "default": "0.0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "fill_value"
             }
           ],
-          "returns": "LanceTable",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 307
+          "returns": "LanceTable"
         },
         {
-          "name": "delete_data",
+          "decorators": [],
           "docstring": "Delete data from a table.\n\nArgs:\n    table_name: Table name.\n    ids: Ids to delete.\n\nReturns:\n    The list of ids not found.",
+          "is_async": false,
+          "lineno": 973,
+          "name": "delete_data",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "ids",
               "annotation": "list[str]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ids"
             }
           ],
-          "returns": "list[str]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 973
+          "returns": "list[str]"
         },
         {
-          "name": "delete_records",
+          "decorators": [],
           "docstring": "Delete records and all associated data across all tables.\n\nCascading deletion: deletes from the record table first, then from all\nauxiliary tables where ``record_id`` matches the given ids.\n\nArgs:\n    ids: Record ids to delete.\n\nReturns:\n    The list of ids not found in the record table.",
+          "is_async": false,
+          "lineno": 1007,
+          "name": "delete_records",
           "parameters": [
             {
-              "name": "ids",
               "annotation": "list[str]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ids"
             }
           ],
-          "returns": "list[str]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 1007
+          "returns": "list[str]"
         },
         {
-          "name": "find",
-          "docstring": "Find a Dataset in a directory.\n\nArgs:\n    id: Dataset ID to find.\n    directory: Directory to search in.\n\nReturns:\n    The found dataset.",
-          "parameters": [
-            {
-              "name": "id",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "directory",
-              "annotation": "Path",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "'Dataset'",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 1134
-        },
-        {
-          "name": "find_ids_in_table",
-          "docstring": "Search ids in a table.\n\nArgs:\n    table_name: Table name.\n    ids: Ids to find.\n\nReturns:\n    Dictionary of ids found. Keys are the ids and values are True if found.",
+          "docstring": "Find a Dataset in a directory.\n\nArgs:\n    id: Dataset ID to find.\n    directory: Directory to search in.\n\nReturns:\n    The found dataset.",
+          "is_async": false,
+          "lineno": 1134,
+          "name": "find",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "id"
             },
             {
-              "name": "ids",
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "directory"
+            }
+          ],
+          "returns": "'Dataset'"
+        },
+        {
+          "decorators": [],
+          "docstring": "Search ids in a table.\n\nArgs:\n    table_name: Table name.\n    ids: Ids to find.\n\nReturns:\n    Dictionary of ids found. Keys are the ids and values are True if found.",
+          "is_async": false,
+          "lineno": 754,
+          "name": "find_ids_in_table",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
+            },
+            {
               "annotation": "set[str]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ids"
             }
           ],
-          "returns": "dict[str, bool]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 754
+          "returns": "dict[str, bool]"
         },
         {
-          "name": "generate_preview",
+          "decorators": [],
           "docstring": "Generate a preview for the dataset.\n\nIt samples images from the dataset, creates a mosaic and saves it to the previews directory.\nOnly images with embedded blob data are used.\n\nReturns:\n    The preview base64 string.",
-          "parameters": [],
-          "returns": "str",
           "is_async": false,
-          "decorators": [],
-          "lineno": 248
+          "lineno": 248,
+          "name": "generate_preview",
+          "parameters": [],
+          "returns": "str"
         },
         {
-          "name": "get_all_ids",
+          "decorators": [],
           "docstring": "Get all the ids from a table.\n\nArgs:\n    table_name: table to look for ids.\n    sortcol: column to order by.\n    order: sort order (asc or desc).\n    where: where clause to filter ids.\n\nReturns:\n    list of the ids.",
+          "is_async": false,
+          "lineno": 775,
+          "name": "get_all_ids",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": "SchemaGroup.RECORD.value",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "sortcol",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "sortcol"
             },
             {
-              "name": "order",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "order"
             },
             {
-              "name": "where",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "where"
             }
           ],
-          "returns": "list[str]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 775
+          "returns": "list[str]"
         },
         {
-          "name": "get_conversation",
+          "decorators": [],
           "docstring": "Read one conversation aggregate from a messages table.\n\nArgs:\n    table_name: The messages table name.\n    conversation_id: The conversation ID.\n\nReturns:\n    The conversation or None if not found.",
+          "is_async": false,
+          "lineno": 652,
+          "name": "get_conversation",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "conversation_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "conversation_id"
             }
           ],
-          "returns": "Conversation | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 652
+          "returns": "Conversation | None"
         },
         {
-          "name": "get_conversations",
+          "decorators": [],
           "docstring": "Read paginated conversation aggregates from a messages table.\n\nArgs:\n    table_name: The messages table name.\n    record_id: Filter by record ID.\n    entity_id: Filter by entity ID.\n    view_id: Filter by view ID.\n    source_type: Filter by source type.\n    where: Additional WHERE clause.\n    limit: Maximum conversations to return.\n    skip: Number of conversations to skip.\n\nReturns:\n    Tuple of (conversations, total_count).",
+          "is_async": false,
+          "lineno": 675,
+          "name": "get_conversations",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "record_id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
             },
             {
-              "name": "entity_id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entity_id"
             },
             {
-              "name": "view_id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "view_id"
             },
             {
-              "name": "source_type",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source_type"
             },
             {
-              "name": "where",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "where"
             },
             {
-              "name": "limit",
               "annotation": "int | None",
               "default": "100",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "limit"
             },
             {
-              "name": "skip",
               "annotation": "int",
               "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "skip"
             }
           ],
-          "returns": "tuple[list[Conversation], int]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 675
+          "returns": "tuple[list[Conversation], int]"
         },
         {
-          "name": "get_data",
+          "decorators": [],
           "docstring": "Read data from a table.\n\nData can be filtered by ids, record ids, where clause, or limit and skip.\n\nArgs:\n    table_name: Table name.\n    ids: ids to read.\n    limit: Amount of rows to read. If not set, will default to table size.\n    skip: The number of rows to skip.\n    where: Where clause.\n    record_ids: Record ids to filter by (filters on ``record_id`` column).\n    sortcol: column to order by.\n    order: sort order (asc or desc).\n\nReturns:\n    List of values.",
+          "is_async": false,
+          "lineno": 456,
+          "name": "get_data",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "ids",
               "annotation": "list[str] | str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ids"
             },
             {
-              "name": "limit",
               "annotation": "int | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "limit"
             },
             {
-              "name": "skip",
               "annotation": "int",
               "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "skip"
             },
             {
-              "name": "where",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "where"
             },
             {
-              "name": "record_ids",
               "annotation": "list[str] | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_ids"
             },
             {
-              "name": "sortcol",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "sortcol"
             },
             {
-              "name": "order",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "order"
             }
           ],
-          "returns": "list[LanceModel] | LanceModel | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 456
+          "returns": "list[LanceModel] | LanceModel | None"
         },
         {
-          "name": "get_records",
+          "decorators": [],
           "docstring": "Read records from the record table.\n\nArgs:\n    ids: Record ids to read.\n    limit: Amount of records to read.\n    skip: The number of records to skip.\n\nReturns:\n    List of records, a single record, or None.",
+          "is_async": false,
+          "lineno": 634,
+          "name": "get_records",
           "parameters": [
             {
-              "name": "ids",
               "annotation": "list[str] | str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ids"
             },
             {
-              "name": "limit",
               "annotation": "int | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "limit"
             },
             {
-              "name": "skip",
               "annotation": "int",
               "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "skip"
             }
           ],
-          "returns": "list[Record] | Record | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 634
+          "returns": "list[Record] | Record | None"
         },
         {
-          "name": "get_temporal_view_batch",
+          "decorators": [],
           "docstring": "Load one ordered batch of temporal view frames with their binary payloads.\n\nReturns a list of ``(frame_index, blob_bytes, format_string)`` tuples,\nreading from the embedded ``raw_bytes`` column.\n\nArgs:\n    table_name: View table name containing temporal frames.\n    record_id: The record ID to filter by.\n    view_name: Optional logical view name to filter by.\n    start_frame: Starting frame index.\n    batch_size: Number of frames to load.\n\nReturns:\n    List of (frame_index, blob_bytes, format) tuples.",
+          "is_async": false,
+          "lineno": 578,
+          "name": "get_temporal_view_batch",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "record_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
             },
             {
-              "name": "view_name",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "view_name"
             },
             {
-              "name": "start_frame",
               "annotation": "int",
               "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "start_frame"
             },
             {
-              "name": "batch_size",
               "annotation": "int",
               "default": "100",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "batch_size"
             }
           ],
-          "returns": "list[tuple[int, bytes, str]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 578
+          "returns": "list[tuple[int, bytes, str]]"
         },
         {
-          "name": "get_view_binary",
+          "decorators": [],
           "docstring": "Load binary content for a single view row.\n\nReturns the embedded blob data and inferred format.\n\nArgs:\n    table_name: View table name.\n    row_id: The row ID.\n\nReturns:\n    Tuple of (blob_bytes, format_string) or None if not found.",
+          "is_async": false,
+          "lineno": 547,
+          "name": "get_view_binary",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "row_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "row_id"
             }
           ],
-          "returns": "tuple[bytes, str] | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 547
+          "returns": "tuple[bytes, str] | None"
         },
         {
-          "name": "list",
-          "docstring": "List the datasets information in directory.\n\nArgs:\n    directory: Directory to search in.\n\nReturns:\n    List of dataset infos.",
-          "parameters": [
-            {
-              "name": "directory",
-              "annotation": "Path",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "list[DatasetInfo]",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 1209
-        },
-        {
-          "name": "open_table",
-          "docstring": "Open a dataset table with LanceDB.\n\nArgs:\n    name: Name of the table to open.\n\nReturns:\n    Dataset table.",
+          "docstring": "List the datasets information in directory.\n\nArgs:\n    directory: Directory to search in.\n\nReturns:\n    List of dataset infos.",
+          "is_async": false,
+          "lineno": 1209,
+          "name": "list",
           "parameters": [
             {
-              "name": "name",
-              "annotation": "str",
+              "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "directory"
             }
           ],
-          "returns": "LanceTable",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 408
+          "returns": "list[DatasetInfo]"
         },
         {
-          "name": "open_tables",
-          "docstring": "Open the dataset tables with LanceDB.\n\nArgs:\n    names: Table names to open. If None, open all tables.\n    exclude_embeddings: Whether to exclude embedding tables from the list.\n\nReturns:\n    Dataset tables.",
+          "decorators": [],
+          "docstring": "Open a dataset table with LanceDB.\n\nArgs:\n    name: Name of the table to open.\n\nReturns:\n    Dataset table.",
+          "is_async": false,
+          "lineno": 408,
+          "name": "open_table",
           "parameters": [
             {
-              "name": "names",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "name"
+            }
+          ],
+          "returns": "LanceTable"
+        },
+        {
+          "decorators": [],
+          "docstring": "Open the dataset tables with LanceDB.\n\nArgs:\n    names: Table names to open. If None, open all tables.\n    exclude_embeddings: Whether to exclude embedding tables from the list.\n\nReturns:\n    Dataset tables.",
+          "is_async": false,
+          "lineno": 388,
+          "name": "open_tables",
+          "parameters": [
+            {
               "annotation": "list[str] | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "names"
             },
             {
-              "name": "exclude_embeddings",
               "annotation": "bool",
               "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "exclude_embeddings"
             }
           ],
-          "returns": "dict[str, LanceTable]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 388
+          "returns": "dict[str, LanceTable]"
         },
         {
-          "name": "semantic_search",
+          "decorators": [],
           "docstring": "Perform a semantic search.\n\nIt searches for the closest records to the query in the table embeddings.\n\nArgs:\n    query: Text query for semantic search.\n    table_name: Table name for embeddings.\n    limit: Limit number of records.\n    skip: Skip number of records.\n\nReturns:\n    Tuple of records, distances, and full sorted list of record ids.",
+          "is_async": false,
+          "lineno": 1162,
+          "name": "semantic_search",
           "parameters": [
             {
-              "name": "query",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "query"
             },
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "limit",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "limit"
             },
             {
-              "name": "skip",
               "annotation": "int",
               "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "skip"
             }
           ],
-          "returns": "tuple[list[LanceModel], list[float], list[str]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 1162
+          "returns": "tuple[list[LanceModel], list[float], list[str]]"
         },
         {
-          "name": "update_data",
+          "decorators": [],
           "docstring": "Update data in a table (upsert).\n\nArgs:\n    table_name: Table name.\n    data: Data to update.\n    return_separately: Whether to return separately added and updated data.\n    ignore_integrity_checks: List of integrity checks to ignore.\n    raise_or_warn: Whether to raise or warn on integrity errors.\n\nReturns:\n    If ``return_separately`` is True, returns (updated_data, added_data).\n    Otherwise, returns the full data list.",
+          "is_async": false,
+          "lineno": 1059,
+          "name": "update_data",
           "parameters": [
             {
-              "name": "table_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
             },
             {
-              "name": "data",
               "annotation": "list[LanceModel]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data"
             },
             {
-              "name": "return_separately",
               "annotation": "bool",
               "default": "False",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "return_separately"
             },
             {
-              "name": "ignore_integrity_checks",
               "annotation": "list[IntegrityCheck] | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "ignore_integrity_checks"
             },
             {
-              "name": "raise_or_warn",
               "annotation": "Literal['raise', 'warn', 'none']",
               "default": "'raise'",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "raise_or_warn"
             }
           ],
-          "returns": "list[LanceModel] | tuple[list[LanceModel], list[LanceModel]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 1059
+          "returns": "list[LanceModel] | tuple[list[LanceModel], list[LanceModel]]"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "Dataset",
       "properties": [],
-      "decorators": [],
-      "lineno": 90
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/dataset.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.dataset",
   "submodules": []
 }

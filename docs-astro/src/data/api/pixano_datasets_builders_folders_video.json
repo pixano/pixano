@@ -1,44 +1,44 @@
 {
-  "module": "pixano.datasets.builders.folders.video",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/video.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "VIDEO_EXTENSIONS",
+      "value": "['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.vob']"
+    }
+  ],
   "classes": [
     {
-      "name": "VideoFolderBuilder",
-      "docstring": "Builder for video datasets stored in a folder.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "DEFAULT_INFO",
+          "value": "DatasetInfo(workspace=(WorkspaceType.VIDEO), record=Record, entity=Entity, entity_dynamic_state=EntityDynamicState, bbox=BBox, keypoint=KeyPoints, tracklet=Tracklet, views={'image': SequenceFrame})"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "EXTENSIONS",
+          "value": "VIDEO_EXTENSIONS + IMAGE_EXTENSIONS"
+        }
+      ],
       "bases": [
         "FolderBaseBuilder"
       ],
-      "attributes": [
-        {
-          "name": "DEFAULT_INFO",
-          "annotation": null,
-          "value": "DatasetInfo(workspace=(WorkspaceType.VIDEO), record=Record, entity=Entity, entity_dynamic_state=EntityDynamicState, bbox=BBox, keypoint=KeyPoints, tracklet=Tracklet, views={'image': SequenceFrame})",
-          "docstring": ""
-        },
-        {
-          "name": "EXTENSIONS",
-          "annotation": null,
-          "value": "VIDEO_EXTENSIONS + IMAGE_EXTENSIONS",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 27
+      "docstring": "Builder for video datasets stored in a folder.",
+      "lineno": 27,
+      "methods": [],
+      "name": "VideoFolderBuilder",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/video.py",
   "functions": [],
-  "attributes": [
-    {
-      "name": "VIDEO_EXTENSIONS",
-      "annotation": null,
-      "value": "['.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv', '.vob']",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.datasets.builders.folders.video",
   "submodules": []
 }

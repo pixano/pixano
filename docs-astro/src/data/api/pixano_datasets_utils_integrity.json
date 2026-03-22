@@ -1,190 +1,190 @@
 {
-  "module": "pixano.datasets.utils.integrity",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/utils/integrity.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "IntegrityCheck",
-      "docstring": "Integrity check types.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "DEFINED_ID",
+          "value": "0"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "FK_ID",
+          "value": "2"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "UNIQUE_ID",
+          "value": "1"
+        }
+      ],
       "bases": [
         "Enum"
       ],
-      "attributes": [
-        {
-          "name": "DEFINED_ID",
-          "annotation": null,
-          "value": "0",
-          "docstring": ""
-        },
-        {
-          "name": "FK_ID",
-          "annotation": null,
-          "value": "2",
-          "docstring": ""
-        },
-        {
-          "name": "UNIQUE_ID",
-          "annotation": null,
-          "value": "1",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 21
+      "docstring": "Integrity check types.",
+      "lineno": 21,
+      "methods": [],
+      "name": "IntegrityCheck",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/utils/integrity.py",
   "functions": [
     {
-      "name": "check_dataset_integrity",
+      "decorators": [],
       "docstring": "Check integrity for all dataset tables.",
+      "is_async": false,
+      "lineno": 152,
+      "name": "check_dataset_integrity",
       "parameters": [
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         }
       ],
-      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 152
+      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]"
     },
     {
-      "name": "check_table_integrity",
+      "decorators": [],
       "docstring": "Check table-level integrity against ID and FK constraints.",
+      "is_async": false,
+      "lineno": 83,
+      "name": "check_table_integrity",
       "parameters": [
         {
-          "name": "table_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "table_name"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "schemas",
           "annotation": "list[LanceModel] | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schemas"
         },
         {
-          "name": "updating",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "updating"
         },
         {
-          "name": "ignore_checks",
           "annotation": "list[IntegrityCheck] | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "ignore_checks"
         }
       ],
-      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 83
+      "returns": "list[tuple[IntegrityCheck, str, str, str, Any]]"
     },
     {
-      "name": "get_integry_checks_from_schemas",
+      "decorators": [],
       "docstring": "Expose normalized check candidates grouped by check type.",
+      "is_async": false,
+      "lineno": 70,
+      "name": "get_integry_checks_from_schemas",
       "parameters": [
         {
-          "name": "schemas",
           "annotation": "list[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schemas"
         },
         {
-          "name": "table_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "table_name"
         }
       ],
-      "returns": "list[list[tuple[str, str, str, str, Any]]]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 70
+      "returns": "list[list[tuple[str, str, str, str, Any]]]"
     },
     {
-      "name": "handle_integrity_errors",
+      "decorators": [],
       "docstring": "Handle integrity check errors.",
+      "is_async": false,
+      "lineno": 160,
+      "name": "handle_integrity_errors",
       "parameters": [
         {
-          "name": "check_errors",
           "annotation": "list[tuple[IntegrityCheck, str, str, str, Any]]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "check_errors"
         },
         {
-          "name": "raise_or_warn",
           "annotation": "str",
           "default": "'raise'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "raise_or_warn"
         }
       ],
-      "returns": "None",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 160
+      "returns": "None"
     },
     {
-      "name": "validate_batch",
+      "decorators": [],
       "docstring": "Validate a batch of schemas before insertion using in-memory ID tracking.\n\nInstead of per-row DB queries, this checks IDs in-memory and does at most one\nbulk DB query per FK target table per batch.\n\nArgs:\n    table_name: The table the batch will be inserted into.\n    schemas: The batch of schema instances to validate.\n    known_ids: Mapping of table_name -> set of known IDs (accumulated across flushes).\n    dataset: The dataset (used for bulk FK lookups against already-flushed data).\n    raise_or_warn: How to handle errors: \"raise\", \"warn\", or \"none\".\n    pending_ids: Mapping of table_name -> set of IDs that are buffered for insertion\n        in this flush cycle. Used only for FK checks so sibling tables that haven't\n        been flushed yet can be resolved.",
+      "is_async": false,
+      "lineno": 184,
+      "name": "validate_batch",
       "parameters": [
         {
-          "name": "table_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "table_name"
         },
         {
-          "name": "schemas",
           "annotation": "list[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schemas"
         },
         {
-          "name": "known_ids",
           "annotation": "dict[str, set[str]]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "known_ids"
         },
         {
-          "name": "dataset",
           "annotation": "Dataset",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dataset"
         },
         {
-          "name": "raise_or_warn",
           "annotation": "Literal['raise', 'warn', 'none']",
           "default": "'raise'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "raise_or_warn"
         },
         {
-          "name": "pending_ids",
           "annotation": "dict[str, set[str]] | None",
           "default": "None",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pending_ids"
         }
       ],
-      "returns": "None",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 184
+      "returns": "None"
     }
   ],
-  "attributes": [],
+  "module": "pixano.datasets.utils.integrity",
   "submodules": []
 }

@@ -1,97 +1,97 @@
 {
-  "module": "pixano.datasets.exporters.default_jsonl_dataset_exporter",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/exporters/default_jsonl_dataset_exporter.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "DefaultJSONLDatasetExporter",
-      "docstring": "Default JSON Lines dataset exporter.",
+      "attributes": [],
       "bases": [
         "DatasetExporter"
       ],
-      "attributes": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Default JSON Lines dataset exporter.",
+      "lineno": 22,
       "methods": [
         {
-          "name": "export_record",
+          "decorators": [],
           "docstring": "Store the record data in the `export_data` list of dictionaries.\n\nArgs:\n    export_data: A list of dictionaries containing the records to be exported.\n    record_data: Dict of table_name \u2192 row(s) for this record.\n\nReturns:\n    A list of dictionaries containing the records to be exported.",
+          "is_async": false,
+          "lineno": 43,
+          "name": "export_record",
           "parameters": [
             {
-              "name": "export_data",
               "annotation": "list[dict[str, Any]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "export_data"
             },
             {
-              "name": "record_data",
               "annotation": "dict[str, LanceModel | list[LanceModel] | None]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_data"
             }
           ],
-          "returns": "list[dict[str, Any]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 43
+          "returns": "list[dict[str, Any]]"
         },
         {
-          "name": "initialize_export_data",
+          "decorators": [],
           "docstring": "Initialize a list of dictionaries to be exported.\n\nThe first line contains the dataset info.\n\nArgs:\n    info: The dataset information.\n\nReturns:\n    A list of dictionaries containing the data to be exported.",
+          "is_async": false,
+          "lineno": 25,
+          "name": "initialize_export_data",
           "parameters": [
             {
-              "name": "info",
               "annotation": "DatasetInfo",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "info"
             }
           ],
-          "returns": "list[dict[str, Any]]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 25
+          "returns": "list[dict[str, Any]]"
         },
         {
-          "name": "save_data",
+          "decorators": [],
           "docstring": "Save data to the specified directory.\n\nThe saved directory has the following structure:\n    export_dir/{split}_{file_name}_0.jsonl\n              /...\n              /{split}_{file_name}_{file_num}.jsonl\n              /...\n              /{split}_{file_name}_n.jsonl\n\n\nArgs:\n    export_data: The list of dictionaries containing the data to be saved.\n    split: The split of the dataset item being saved.\n    file_name: The name of the file to save the data in.\n    file_num: The number of the file to save the data in.",
+          "is_async": false,
+          "lineno": 73,
+          "name": "save_data",
           "parameters": [
             {
-              "name": "export_data",
               "annotation": "list[dict[str, Any]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "export_data"
             },
             {
-              "name": "split",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "split"
             },
             {
-              "name": "file_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "file_name"
             },
             {
-              "name": "file_num",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "file_num"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 73
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "DefaultJSONLDatasetExporter",
       "properties": [],
-      "decorators": [],
-      "lineno": 22
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/exporters/default_jsonl_dataset_exporter.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.exporters.default_jsonl_dataset_exporter",
   "submodules": []
 }

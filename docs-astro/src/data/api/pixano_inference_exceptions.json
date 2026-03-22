@@ -1,108 +1,108 @@
 {
-  "module": "pixano.inference.exceptions",
-  "docstring": "Inference-specific exceptions.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/exceptions.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "InferenceError",
-      "docstring": "Base exception for inference errors.",
+      "attributes": [],
       "bases": [
         "Exception"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 10
+      "docstring": "Base exception for inference errors.",
+      "lineno": 10,
+      "methods": [],
+      "name": "InferenceError",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "InferenceTimeoutError",
+      "attributes": [],
+      "bases": [
+        "InferenceError"
+      ],
+      "class_methods": [],
+      "decorators": [],
       "docstring": "Raised when inference takes too long.",
+      "lineno": 28,
+      "methods": [],
+      "name": "InferenceTimeoutError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "InferenceError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 28
-    },
-    {
-      "name": "InvalidRequestError",
       "docstring": "Raised when the request is invalid.",
+      "lineno": 46,
+      "methods": [],
+      "name": "InvalidRequestError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "InferenceError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 46
-    },
-    {
-      "name": "ModelNotFoundError",
       "docstring": "Raised when a requested model is not available.",
+      "lineno": 34,
+      "methods": [],
+      "name": "ModelNotFoundError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "InferenceError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 34
-    },
-    {
-      "name": "ProviderConnectionError",
       "docstring": "Raised when connection to a provider fails.",
+      "lineno": 22,
+      "methods": [],
+      "name": "ProviderConnectionError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "InferenceError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 22
-    },
-    {
-      "name": "ProviderNotFoundError",
       "docstring": "Raised when a requested provider is not found.",
-      "bases": [
-        "InferenceError"
-      ],
-      "attributes": [],
+      "lineno": 16,
       "methods": [],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "ProviderNotFoundError",
       "properties": [],
-      "decorators": [],
-      "lineno": 16
+      "static_methods": []
     },
     {
-      "name": "TaskNotSupportedError",
-      "docstring": "Raised when a task is not supported by the provider.",
+      "attributes": [],
       "bases": [
         "InferenceError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 40
+      "docstring": "Raised when a task is not supported by the provider.",
+      "lineno": 40,
+      "methods": [],
+      "name": "TaskNotSupportedError",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "Inference-specific exceptions.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/inference/exceptions.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.inference.exceptions",
   "submodules": []
 }

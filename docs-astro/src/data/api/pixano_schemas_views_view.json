@@ -1,72 +1,72 @@
 {
-  "module": "pixano.schemas.views.view",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/view.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "View",
-      "docstring": "View base class.\n\nViews are used to define a view in a dataset such as an image, a point cloud, a text.\n\nAttributes:\n    logical_name: Logical view name (sensor/modality identifier, e.g. \"front_camera\", \"thermal\", \"lidar\").\n    uri: Resource locator (path, URL, or data URI). Empty when using embedded raw_bytes.\n    raw_bytes: Embedded binary content. Empty when using URI.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "logical_name",
+          "value": "''"
+        },
+        {
+          "annotation": "bytes",
+          "docstring": "",
+          "name": "preview",
+          "value": "b''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "preview_format",
+          "value": "''"
+        },
+        {
+          "annotation": "bytes",
+          "docstring": "",
+          "name": "raw_bytes",
+          "value": "b''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "uri",
+          "value": "''"
+        }
+      ],
       "bases": [
         "RecordComponent"
       ],
-      "attributes": [
-        {
-          "name": "logical_name",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "preview",
-          "annotation": "bytes",
-          "value": "b''",
-          "docstring": ""
-        },
-        {
-          "name": "preview_format",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "raw_bytes",
-          "annotation": "bytes",
-          "value": "b''",
-          "docstring": ""
-        },
-        {
-          "name": "uri",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 22
+      "docstring": "View base class.\n\nViews are used to define a view in a dataset such as an image, a point cloud, a text.\n\nAttributes:\n    logical_name: Logical view name (sensor/modality identifier, e.g. \"front_camera\", \"thermal\", \"lidar\").\n    uri: Resource locator (path, URL, or data URI). Empty when using embedded raw_bytes.\n    raw_bytes: Embedded binary content. Empty when using URI.\n    preview: Thumbnail/preview bytes.\n    preview_format: Preview format (e.g. \"jpeg\", \"png\").",
+      "lineno": 22,
+      "methods": [],
+      "name": "View",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/views/view.py",
   "functions": [
     {
-      "name": "is_view",
+      "decorators": [],
       "docstring": "Check if a class is a `View` or subclass of `View`.",
+      "is_async": false,
+      "lineno": 48,
+      "name": "is_view",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 48
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.views.view",
   "submodules": []
 }

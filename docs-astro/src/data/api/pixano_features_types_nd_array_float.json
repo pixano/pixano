@@ -1,140 +1,140 @@
 {
-  "module": "pixano.features.types.nd_array_float",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/types/nd_array_float.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "T",
+      "value": "TypeVar('T')"
+    }
+  ],
   "classes": [
     {
-      "name": "NDArray",
-      "docstring": "Represents an N-dimensional array.\n\nAttributes:\n    values: The list of values.\n    shape: The shape of the array, represented as a list of integers.\n    np_dtype: The NumPy data type of the array.",
+      "attributes": [
+        {
+          "annotation": "np.dtype",
+          "docstring": "",
+          "name": "np_dtype",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "shape",
+          "value": null
+        },
+        {
+          "annotation": "list[T]",
+          "docstring": "",
+          "name": "values",
+          "value": null
+        }
+      ],
       "bases": [
         "BaseModel",
         "Generic[T]",
         "ABC"
       ],
-      "attributes": [
-        {
-          "name": "np_dtype",
-          "annotation": "np.dtype",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "shape",
-          "annotation": "list[int]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "values",
-          "annotation": "list[T]",
-          "value": null,
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Represents an N-dimensional array.\n\nAttributes:\n    values: The list of values.\n    shape: The shape of the array, represented as a list of integers.\n    np_dtype: The NumPy data type of the array.",
+      "lineno": 20,
       "methods": [
         {
-          "name": "from_numpy",
-          "docstring": "Create an instance from a NumPy array.",
-          "parameters": [
-            {
-              "name": "arr",
-              "annotation": "np.ndarray",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "Self",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 42
+          "docstring": "Create an instance from a NumPy array.",
+          "is_async": false,
+          "lineno": 42,
+          "name": "from_numpy",
+          "parameters": [
+            {
+              "annotation": "np.ndarray",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "arr"
+            }
+          ],
+          "returns": "Self"
         },
         {
-          "name": "to_numpy",
-          "docstring": "Convert to a NumPy array.",
-          "parameters": [],
-          "returns": "np.ndarray",
-          "is_async": false,
           "decorators": [],
-          "lineno": 49
+          "docstring": "Convert to a NumPy array.",
+          "is_async": false,
+          "lineno": 49,
+          "name": "to_numpy",
+          "parameters": [],
+          "returns": "np.ndarray"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "NDArray",
       "properties": [],
-      "decorators": [],
-      "lineno": 20
+      "static_methods": []
     },
     {
-      "name": "NDArrayFloat",
-      "docstring": "N-dimensional array of 32-bit floating-point values.",
+      "attributes": [
+        {
+          "annotation": "np.dtype",
+          "docstring": "",
+          "name": "np_dtype",
+          "value": "np.float32"
+        }
+      ],
       "bases": [
         "NDArray[float]"
       ],
-      "attributes": [
-        {
-          "name": "np_dtype",
-          "annotation": "np.dtype",
-          "value": "np.float32",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 54
+      "docstring": "N-dimensional array of 32-bit floating-point values.",
+      "lineno": 54,
+      "methods": [],
+      "name": "NDArrayFloat",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/features/types/nd_array_float.py",
   "functions": [
     {
-      "name": "create_ndarray_float",
+      "decorators": [],
       "docstring": "Create a `NDArrayFloat` instance.\n\nArgs:\n    values: The list of floating-point values in the array.\n    shape: The shape of the array, represented as a list of integers.\n\nReturns:\n    The created `NDArrayFloat` instance.",
+      "is_async": false,
+      "lineno": 65,
+      "name": "create_ndarray_float",
       "parameters": [
         {
-          "name": "values",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "values"
         },
         {
-          "name": "shape",
           "annotation": "list[int]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "shape"
         }
       ],
-      "returns": "NDArrayFloat",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 65
+      "returns": "NDArrayFloat"
     },
     {
-      "name": "is_ndarray_float",
+      "decorators": [],
       "docstring": "Check if a class is a `NDArrayFloat` or a subclass of `NDArrayFloat`.",
+      "is_async": false,
+      "lineno": 60,
+      "name": "is_ndarray_float",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 60
+      "returns": "bool"
     }
   ],
-  "attributes": [
-    {
-      "name": "T",
-      "annotation": null,
-      "value": "TypeVar('T')",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.features.types.nd_array_float",
   "submodules": []
 }

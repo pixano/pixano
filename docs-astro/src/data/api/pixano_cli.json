@@ -1,27 +1,27 @@
 {
-  "module": "pixano.cli",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/cli/__init__.py",
-  "classes": [],
-  "functions": [
-    {
-      "name": "main",
-      "docstring": "Entry point for the ``pixano`` console script.",
-      "parameters": [],
-      "returns": "None",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 21
-    }
-  ],
   "attributes": [
     {
-      "name": "app",
       "annotation": null,
-      "value": "typer.Typer(no_args_is_help=True, help='Pixano CLI')",
-      "docstring": ""
+      "docstring": "",
+      "name": "app",
+      "value": "typer.Typer(no_args_is_help=True, help='Pixano CLI')"
     }
   ],
+  "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/cli/__init__.py",
+  "functions": [
+    {
+      "decorators": [],
+      "docstring": "Entry point for the ``pixano`` console script.",
+      "is_async": false,
+      "lineno": 21,
+      "name": "main",
+      "parameters": [],
+      "returns": "None"
+    }
+  ],
+  "module": "pixano.cli",
   "submodules": [
     "data",
     "init",

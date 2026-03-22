@@ -1,37 +1,37 @@
 {
-  "module": "pixano.datasets.workspaces.dataset_items",
-  "docstring": "Default table configurations for common dataset workspaces.\n\nThese functions return pre-configured ``tables`` dicts suitable for passing\nto :class:`DatasetInfo`.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/workspaces/dataset_items.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "Default table configurations for common dataset workspaces.\n\nThese functions return pre-configured ``tables`` dicts suitable for passing\nto :class:`DatasetInfo`.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/workspaces/dataset_items.py",
   "functions": [
     {
-      "name": "default_image_tables",
+      "decorators": [],
       "docstring": "Return default tables for an image dataset.",
-      "parameters": [],
-      "returns": "dict[str, type[LanceModel]]",
       "is_async": false,
-      "decorators": [],
-      "lineno": 56
+      "lineno": 56,
+      "name": "default_image_tables",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]"
     },
     {
-      "name": "default_video_tables",
+      "decorators": [],
       "docstring": "Return default tables for a video dataset.",
-      "parameters": [],
-      "returns": "dict[str, type[LanceModel]]",
       "is_async": false,
-      "decorators": [],
-      "lineno": 42
+      "lineno": 42,
+      "name": "default_video_tables",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]"
     },
     {
-      "name": "default_vqa_tables",
-      "docstring": "Return default tables for a VQA dataset.",
-      "parameters": [],
-      "returns": "dict[str, type[LanceModel]]",
-      "is_async": false,
       "decorators": [],
-      "lineno": 29
+      "docstring": "Return default tables for a VQA dataset.",
+      "is_async": false,
+      "lineno": 29,
+      "name": "default_vqa_tables",
+      "parameters": [],
+      "returns": "dict[str, type[LanceModel]]"
     }
   ],
-  "attributes": [],
+  "module": "pixano.datasets.workspaces.dataset_items",
   "submodules": []
 }

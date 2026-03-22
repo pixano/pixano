@@ -1,0 +1,1088 @@
+{
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "IMAGE_TABLE",
+      "value": "'images'"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "SFRAME_TABLE",
+      "value": "'sequence_frames'"
+    },
+    {
+      "annotation": "dict[str, TrackingJobRecord]",
+      "docstring": "",
+      "name": "TRACKING_JOB_REGISTRY",
+      "value": "{}"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "TRACKING_JOB_TERMINAL_STATES",
+      "value": "{'completed', 'failed', 'canceled'}"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "app_router",
+      "value": "APIRouter(prefix='/app/inference', tags=['Inference'])"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "logger",
+      "value": "logging.getLogger(__name__)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "router",
+      "value": "APIRouter(prefix='/inference', tags=['Inference'])"
+    }
+  ],
+  "classes": [
+    {
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "name",
+          "value": null
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "url",
+          "value": "None"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Response schema for a connected inference provider.",
+      "lineno": 57,
+      "methods": [],
+      "name": "ConnectedProviderResponse",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "box_threshold",
+          "value": "0.5"
+        },
+        {
+          "annotation": "list[str] | str",
+          "docstring": "",
+          "name": "classes",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "image",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "model",
+          "value": null
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "provider_name",
+          "value": "None"
+        },
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "text_threshold",
+          "value": "0.5"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for object detection inference.",
+      "lineno": 99,
+      "methods": [],
+      "name": "DetectionRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "list[list[int]] | None",
+          "docstring": "",
+          "name": "boxes",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "dataset_id",
+          "value": null
+        },
+        {
+          "annotation": "list[NDArrayRequest] | None",
+          "docstring": "",
+          "name": "high_resolution_features",
+          "value": "None"
+        },
+        {
+          "annotation": "NDArrayRequest | None",
+          "docstring": "",
+          "name": "image_embedding",
+          "value": "None"
+        },
+        {
+          "annotation": "list[list[int]] | None",
+          "docstring": "",
+          "name": "labels",
+          "value": "None"
+        },
+        {
+          "annotation": "NDArrayRequest | None",
+          "docstring": "",
+          "name": "mask_input",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "model",
+          "value": null
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "multimask_output",
+          "value": "False"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "num_multimask_outputs",
+          "value": "1"
+        },
+        {
+          "annotation": "list[list[list[int]]] | None",
+          "docstring": "",
+          "name": "points",
+          "value": "None"
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "provider_name",
+          "value": "None"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "reset_predictor",
+          "value": "True"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "return_image_embedding",
+          "value": "False"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "return_logits",
+          "value": "False"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "view_id",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for image segmentation inference.",
+      "lineno": 117,
+      "methods": [],
+      "name": "ImageSegmentationRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "connected",
+          "value": null
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "default_provider",
+          "value": "None"
+        },
+        {
+          "annotation": "list[ConnectedProviderResponse]",
+          "docstring": "",
+          "name": "providers",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Response schema for the inference registry status.",
+      "lineno": 64,
+      "methods": [],
+      "name": "InferenceRegistryResponse",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "model_class",
+          "value": "None"
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "model_path",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "name",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "provider_name",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "task",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Response schema for model information.",
+      "lineno": 72,
+      "methods": [],
+      "name": "ModelInfoResponse",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "shape",
+          "value": null
+        },
+        {
+          "annotation": "list[float]",
+          "docstring": "",
+          "name": "values",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for an N-dimensional array.",
+      "lineno": 110,
+      "methods": [],
+      "name": "NDArrayRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "url",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for registering an inference server.",
+      "lineno": 82,
+      "methods": [],
+      "name": "RegisterServerRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "provider_job_id",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "provider_name",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "resolved_frame_indexes",
+          "value": null
+        },
+        {
+          "annotation": "dict[str, Any] | None",
+          "docstring": "",
+          "name": "terminal_payload",
+          "value": "None"
+        }
+      ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [
+        "dataclass"
+      ],
+      "docstring": "Record of a submitted tracking job.",
+      "lineno": 44,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "provider_name"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "provider_job_id"
+            },
+            {
+              "annotation": "list[int]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "resolved_frame_indexes"
+            },
+            {
+              "annotation": "dict[str, Any] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "terminal_payload"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "TrackingJobRecord",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "list[str] | None",
+          "docstring": "",
+          "name": "images",
+          "value": "None"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "max_new_tokens",
+          "value": "100"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "model",
+          "value": null
+        },
+        {
+          "annotation": "str | list[dict[str, Any]]",
+          "docstring": "",
+          "name": "prompt",
+          "value": null
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "provider_name",
+          "value": "None"
+        },
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "temperature",
+          "value": "1.0"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for VLM inference.",
+      "lineno": 88,
+      "methods": [],
+      "name": "VLMRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "height",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "width",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "x",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "y",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for a bounding box prompt in video tracking.",
+      "lineno": 153,
+      "methods": [],
+      "name": "VideoTrackingBoxPromptRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "Literal['forward', 'backward']",
+          "docstring": "",
+          "name": "direction",
+          "value": "'forward'"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "end_frame",
+          "value": "Field(ge=0)"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "start_frame",
+          "value": "Field(ge=0)"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for a video tracking frame interval.",
+      "lineno": 137,
+      "methods": [],
+      "name": "VideoTrackingIntervalRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "VideoTrackingTaskOutputResponse | None",
+          "docstring": "",
+          "name": "data",
+          "value": "None"
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "detail",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "job_id",
+          "value": null
+        },
+        {
+          "annotation": "dict[str, Any]",
+          "docstring": "",
+          "name": "metadata",
+          "value": "Field(default_factory=dict)"
+        },
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "processing_time",
+          "value": "0.0"
+        },
+        {
+          "annotation": "Literal['queued', 'running', 'completed', 'failed', 'canceled']",
+          "docstring": "",
+          "name": "status",
+          "value": null
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "timestamp",
+          "value": "None"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Response schema for video tracking job status.",
+      "lineno": 206,
+      "methods": [],
+      "name": "VideoTrackingJobStatusResponse",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "VideoTrackingBoxPromptRequest | None",
+          "docstring": "",
+          "name": "box",
+          "value": "None"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "frame_index",
+          "value": "Field(ge=0)"
+        },
+        {
+          "annotation": "VideoTrackingMaskPromptRequest | None",
+          "docstring": "",
+          "name": "mask",
+          "value": "None"
+        },
+        {
+          "annotation": "list[VideoTrackingPointPromptRequest] | None",
+          "docstring": "",
+          "name": "points",
+          "value": "None"
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for a keyframe with prompts in video tracking.",
+      "lineno": 169,
+      "methods": [],
+      "name": "VideoTrackingKeyframeRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "str | list[int]",
+          "docstring": "",
+          "name": "counts",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "size",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for a mask prompt in video tracking.",
+      "lineno": 162,
+      "methods": [],
+      "name": "VideoTrackingMaskPromptRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "label",
+          "value": "Field(ge=0, le=1)"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "x",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "y",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for a point prompt in video tracking.",
+      "lineno": 145,
+      "methods": [],
+      "name": "VideoTrackingPointPromptRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "list[list[int]] | None",
+          "docstring": "",
+          "name": "boxes",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "dataset_id",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "frame_count",
+          "value": "Field(ge=1)"
+        },
+        {
+          "annotation": "VideoTrackingIntervalRequest | None",
+          "docstring": "",
+          "name": "interval",
+          "value": "None"
+        },
+        {
+          "annotation": "list[VideoTrackingKeyframeRequest] | None",
+          "docstring": "",
+          "name": "keyframes",
+          "value": "None"
+        },
+        {
+          "annotation": "list[list[int]] | None",
+          "docstring": "",
+          "name": "labels",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "model",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "objects_ids",
+          "value": null
+        },
+        {
+          "annotation": "list[list[list[int]]] | None",
+          "docstring": "",
+          "name": "points",
+          "value": "None"
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "prompt_frame_indexes",
+          "value": "Field(default_factory=list)"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "propagate",
+          "value": "True"
+        },
+        {
+          "annotation": "str | None",
+          "docstring": "",
+          "name": "provider_name",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "record_id",
+          "value": null
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "start_frame_index",
+          "value": "Field(ge=0)"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "view_name",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Request schema for video object tracking inference.",
+      "lineno": 178,
+      "methods": [],
+      "name": "VideoTrackingRequest",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "frame_indexes",
+          "value": null
+        },
+        {
+          "annotation": "list[VideoTrackingMaskPromptRequest]",
+          "docstring": "",
+          "name": "masks",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "objects_ids",
+          "value": null
+        }
+      ],
+      "bases": [
+        "BaseModel"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Response schema for video tracking task output.",
+      "lineno": 198,
+      "methods": [],
+      "name": "VideoTrackingTaskOutputResponse",
+      "properties": [],
+      "static_methods": []
+    }
+  ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/routers/inference.py",
+  "functions": [
+    {
+      "decorators": [
+        "router.delete('/tracking/jobs/{job_id}', response_model=VideoTrackingJobStatusResponse, operation_id='cancel_tracking_job')"
+      ],
+      "docstring": "Cancel a tracking job.",
+      "is_async": false,
+      "lineno": 853,
+      "name": "cancel_tracking_job_status",
+      "parameters": [
+        {
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "job_id"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.post('/detection', operation_id='detect')"
+      ],
+      "docstring": "Run object detection inference.",
+      "is_async": false,
+      "lineno": 714,
+      "name": "detect",
+      "parameters": [
+        {
+          "annotation": "DetectionRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.get('/tracking/jobs/{job_id}', response_model=VideoTrackingJobStatusResponse, operation_id='get_tracking_job')"
+      ],
+      "docstring": "Get the status of a tracking job.",
+      "is_async": false,
+      "lineno": 820,
+      "name": "get_tracking_job_status",
+      "parameters": [
+        {
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "job_id"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "app_router.get('/models/', response_model=(list[ModelInfoResponse]), operation_id='list_inference_models')"
+      ],
+      "docstring": "List available inference models across all providers.",
+      "is_async": false,
+      "lineno": 668,
+      "name": "list_inference_models",
+      "parameters": [
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        },
+        {
+          "annotation": "Annotated[str | None, Query()]",
+          "default": "None",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "task"
+        }
+      ],
+      "returns": "list[dict[str, Any]]"
+    },
+    {
+      "decorators": [
+        "app_router.get('/servers/', response_model=InferenceRegistryResponse, operation_id='list_inference_servers')"
+      ],
+      "docstring": "List all connected inference servers.",
+      "is_async": false,
+      "lineno": 631,
+      "name": "list_inference_servers",
+      "parameters": [
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "InferenceRegistryResponse"
+    },
+    {
+      "decorators": [
+        "app_router.post('/servers/', operation_id='register_inference_server')"
+      ],
+      "docstring": "Register a new inference server.",
+      "is_async": false,
+      "lineno": 644,
+      "name": "register_inference_server",
+      "parameters": [
+        {
+          "annotation": "RegisterServerRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.post('/segmentation', operation_id='segment_image')"
+      ],
+      "docstring": "Run image segmentation inference.",
+      "is_async": false,
+      "lineno": 732,
+      "name": "segment_image",
+      "parameters": [
+        {
+          "annotation": "ImageSegmentationRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.post('/tracking/jobs', response_model=VideoTrackingJobStatusResponse, operation_id='submit_tracking_job')"
+      ],
+      "docstring": "Submit a new video tracking job.",
+      "is_async": false,
+      "lineno": 784,
+      "name": "submit_tracking_job",
+      "parameters": [
+        {
+          "annotation": "VideoTrackingRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.post('/tracking', operation_id='track_video')"
+      ],
+      "docstring": "Run video object tracking inference.",
+      "is_async": false,
+      "lineno": 764,
+      "name": "track_video",
+      "parameters": [
+        {
+          "annotation": "VideoTrackingRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    },
+    {
+      "decorators": [
+        "router.post('/vlm', operation_id='vlm')"
+      ],
+      "docstring": "Run vision-language model inference.",
+      "is_async": false,
+      "lineno": 696,
+      "name": "vlm",
+      "parameters": [
+        {
+          "annotation": "VLMRequest",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "request"
+        },
+        {
+          "annotation": "Annotated[Settings, Depends(get_settings)]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "settings"
+        }
+      ],
+      "returns": "dict[str, Any]"
+    }
+  ],
+  "module": "pixano.api.routers.inference",
+  "submodules": []
+}

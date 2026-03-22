@@ -1,466 +1,466 @@
 {
-  "module": "pixano.datasets.builders.folders.processors",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/processors.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "BBoxTrackProcessor",
-      "docstring": "Import bbox tracks from per-frame JSON files.",
-      "bases": [],
       "attributes": [
         {
+          "annotation": null,
+          "docstring": "",
           "name": "annotations_schema",
-          "annotation": null,
-          "value": "annotations_schema",
-          "docstring": ""
+          "value": "annotations_schema"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "normalize_view_name_alias",
-          "annotation": null,
-          "value": "normalize_view_name_alias",
-          "docstring": ""
+          "value": "normalize_view_name_alias"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "row_factory",
-          "annotation": null,
-          "value": "row_factory",
-          "docstring": ""
+          "value": "row_factory"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "schema_resolver",
-          "annotation": null,
-          "value": "schema_resolver",
-          "docstring": ""
+          "value": "schema_resolver"
         },
         {
-          "name": "source_dir",
           "annotation": null,
-          "value": "source_dir",
-          "docstring": ""
+          "docstring": "",
+          "name": "source_dir",
+          "value": "source_dir"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Import bbox tracks from per-frame JSON files.",
+      "lineno": 270,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the bbox track processor with source directory and schemas.",
+          "is_async": false,
+          "lineno": 273,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "source_dir",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "source_dir"
             },
             {
-              "name": "annotations_schema",
               "annotation": "dict[str, type[RecordComponent]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "annotations_schema"
             },
             {
-              "name": "schema_resolver",
               "annotation": "TemporalSchemaResolver",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "schema_resolver"
             },
             {
-              "name": "row_factory",
               "annotation": "TemporalRowFactory",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "row_factory"
             },
             {
-              "name": "normalize_view_name_alias",
               "annotation": null,
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "normalize_view_name_alias"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 273
+          "returns": "None"
         },
         {
-          "name": "process",
+          "decorators": [],
           "docstring": "Populate temporal rows from bbox track JSON annotations.",
+          "is_async": false,
+          "lineno": 289,
+          "name": "process",
           "parameters": [
             {
-              "name": "record",
               "annotation": "Record",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "record"
             },
             {
-              "name": "dataset_piece",
               "annotation": "dict[str, Any]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "dataset_piece"
             },
             {
-              "name": "split_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "split_name"
             },
             {
-              "name": "frame_views_by_stem",
               "annotation": "dict[str, tuple[str, View, int, float]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "frame_views_by_stem"
             },
             {
-              "name": "views_data",
               "annotation": "list[tuple[str, View]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "views_data"
             },
             {
-              "name": "all_entities_data",
               "annotation": "dict[str, list[Entity]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_entities_data"
             },
             {
-              "name": "all_entity_dynamic_states_data",
               "annotation": "dict[str, list[EntityDynamicState]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_entity_dynamic_states_data"
             },
             {
-              "name": "all_annotations_data",
               "annotation": "dict[str, list[RecordComponent]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_annotations_data"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 289
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "BBoxTrackProcessor",
       "properties": [],
-      "decorators": [],
-      "lineno": 270
+      "static_methods": []
     },
     {
-      "name": "MaskTrackProcessor",
-      "docstring": "Import compressed-RLE masks from per-frame indexed mask files.",
-      "bases": [],
       "attributes": [
         {
+          "annotation": null,
+          "docstring": "",
           "name": "annotations_schema",
-          "annotation": null,
-          "value": "annotations_schema",
-          "docstring": ""
+          "value": "annotations_schema"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "row_factory",
-          "annotation": null,
-          "value": "row_factory",
-          "docstring": ""
+          "value": "row_factory"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "schema_resolver",
-          "annotation": null,
-          "value": "schema_resolver",
-          "docstring": ""
+          "value": "schema_resolver"
         },
         {
-          "name": "source_dir",
           "annotation": null,
-          "value": "source_dir",
-          "docstring": ""
+          "docstring": "",
+          "name": "source_dir",
+          "value": "source_dir"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Import compressed-RLE masks from per-frame indexed mask files.",
+      "lineno": 120,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the mask track processor with source directory and schemas.",
+          "is_async": false,
+          "lineno": 123,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "source_dir",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "source_dir"
             },
             {
-              "name": "annotations_schema",
               "annotation": "dict[str, type[RecordComponent]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "annotations_schema"
             },
             {
-              "name": "schema_resolver",
               "annotation": "TemporalSchemaResolver",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "schema_resolver"
             },
             {
-              "name": "row_factory",
               "annotation": "TemporalRowFactory",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "row_factory"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 123
+          "returns": "None"
         },
         {
-          "name": "process",
+          "decorators": [],
           "docstring": "Populate temporal rows from mask glob annotations.",
+          "is_async": false,
+          "lineno": 137,
+          "name": "process",
           "parameters": [
             {
-              "name": "record",
               "annotation": "Record",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "record"
             },
             {
-              "name": "dataset_piece",
               "annotation": "dict[str, Any]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "dataset_piece"
             },
             {
-              "name": "split_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "split_name"
             },
             {
-              "name": "frame_views_by_stem",
               "annotation": "dict[str, tuple[str, View, int, float]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "frame_views_by_stem"
             },
             {
-              "name": "all_entities_data",
               "annotation": "dict[str, list[Entity]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_entities_data"
             },
             {
-              "name": "all_entity_dynamic_states_data",
               "annotation": "dict[str, list[EntityDynamicState]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_entity_dynamic_states_data"
             },
             {
-              "name": "all_annotations_data",
               "annotation": "dict[str, list[RecordComponent]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "all_annotations_data"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 137
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "MaskTrackProcessor",
       "properties": [],
-      "decorators": [],
-      "lineno": 120
+      "static_methods": []
     },
     {
-      "name": "TemporalRowFactory",
-      "docstring": "Create temporal entities and states for folder processors.",
-      "bases": [],
       "attributes": [
         {
-          "name": "source",
           "annotation": null,
-          "value": "source",
-          "docstring": ""
+          "docstring": "",
+          "name": "source",
+          "value": "source"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Create temporal entities and states for folder processors.",
+      "lineno": 70,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the factory with annotation source metadata.",
+          "is_async": false,
+          "lineno": 73,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "source",
               "annotation": "AnnotationSource",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 73
+          "returns": "None"
         },
         {
-          "name": "create_entity_dynamic_state",
+          "decorators": [],
           "docstring": "Create one dynamic state row linked to an entity/frame.",
+          "is_async": false,
+          "lineno": 95,
+          "name": "create_entity_dynamic_state",
           "parameters": [
             {
-              "name": "state_schema",
               "annotation": "type[EntityDynamicState]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "state_schema"
             },
             {
-              "name": "record_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "record_id"
             },
             {
-              "name": "entity_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "entity_id"
             },
             {
-              "name": "tracklet_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "tracklet_id"
             },
             {
-              "name": "view_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "view_id"
             },
             {
-              "name": "frame_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "frame_id"
             },
             {
-              "name": "frame_index",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "frame_index"
             }
           ],
-          "returns": "EntityDynamicState",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 95
+          "returns": "EntityDynamicState"
         },
         {
-          "name": "create_tracking_entity",
+          "decorators": [],
           "docstring": "Create one entity row for a tracked object ID.",
+          "is_async": false,
+          "lineno": 77,
+          "name": "create_tracking_entity",
           "parameters": [
             {
-              "name": "record",
               "annotation": "Record",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record"
             },
             {
-              "name": "entity_schema",
               "annotation": "type[Entity]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entity_schema"
             },
             {
-              "name": "object_id",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "object_id"
             },
             {
-              "name": "category",
               "annotation": "str",
               "default": "''",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "category"
             }
           ],
-          "returns": "Entity",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 77
+          "returns": "Entity"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "TemporalRowFactory",
       "properties": [],
-      "decorators": [],
-      "lineno": 70
+      "static_methods": []
     },
     {
-      "name": "TemporalSchemaResolver",
-      "docstring": "Resolve schemas used by temporal annotation processors.",
-      "bases": [],
       "attributes": [
         {
-          "name": "entities_schema",
           "annotation": "dict[str, type[Entity]]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "entity_dynamic_states_schema",
-          "annotation": "dict[str, type[EntityDynamicState]]",
-          "value": null,
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "entities_schema",
-              "annotation": "dict[str, type[Entity]]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "entity_dynamic_states_schema",
-              "annotation": "dict[str, type[EntityDynamicState]]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "entities_schema",
+          "value": null
         },
         {
-          "name": "resolve_entity_dynamic_state_schema",
-          "docstring": "Resolve the dynamic state schema used for generated temporal states.",
-          "parameters": [],
-          "returns": "tuple[str | None, type[EntityDynamicState] | None]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 56
-        },
-        {
-          "name": "resolve_tracking_entity_schema",
-          "docstring": "Resolve the entity schema used for auto-generated temporal objects.",
-          "parameters": [],
-          "returns": "tuple[str | None, type[Entity] | None]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 43
+          "annotation": "dict[str, type[EntityDynamicState]]",
+          "docstring": "",
+          "name": "entity_dynamic_states_schema",
+          "value": null
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass(frozen=True)"
       ],
-      "lineno": 36
+      "docstring": "Resolve schemas used by temporal annotation processors.",
+      "lineno": 36,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "dict[str, type[Entity]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entities_schema"
+            },
+            {
+              "annotation": "dict[str, type[EntityDynamicState]]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "entity_dynamic_states_schema"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Resolve the dynamic state schema used for generated temporal states.",
+          "is_async": false,
+          "lineno": 56,
+          "name": "resolve_entity_dynamic_state_schema",
+          "parameters": [],
+          "returns": "tuple[str | None, type[EntityDynamicState] | None]"
+        },
+        {
+          "decorators": [],
+          "docstring": "Resolve the entity schema used for auto-generated temporal objects.",
+          "is_async": false,
+          "lineno": 43,
+          "name": "resolve_tracking_entity_schema",
+          "parameters": [],
+          "returns": "tuple[str | None, type[Entity] | None]"
+        }
+      ],
+      "name": "TemporalSchemaResolver",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/processors.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.builders.folders.processors",
   "submodules": []
 }

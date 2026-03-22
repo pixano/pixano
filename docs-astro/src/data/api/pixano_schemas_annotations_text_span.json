@@ -1,154 +1,154 @@
 {
-  "module": "pixano.schemas.annotations.text_span",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/text_span.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "TextSpan",
-      "docstring": "Designation of a text span in a text view.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "mention",
+          "value": null
+        },
+        {
+          "annotation": "list[tuple[int, int]]",
+          "docstring": "Get the list of zipped spans offsets.",
+          "name": "spans",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "spans_end",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "Get the computed list of spans lengths.",
+          "name": "spans_length",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "spans_start",
+          "value": null
+        }
+      ],
       "bases": [
         "EntityAnnotation"
       ],
-      "attributes": [
-        {
-          "name": "mention",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "spans",
-          "annotation": "list[tuple[int, int]]",
-          "value": null,
-          "docstring": "Get the list of zipped spans offsets."
-        },
-        {
-          "name": "spans_end",
-          "annotation": "list[int]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "spans_length",
-          "annotation": "list[int]",
-          "value": null,
-          "docstring": "Get the computed list of spans lengths."
-        },
-        {
-          "name": "spans_start",
-          "annotation": "list[int]",
-          "value": null,
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Designation of a text span in a text view.",
+      "lineno": 17,
       "methods": [
         {
-          "name": "none",
-          "docstring": "Return a Lance-compatible empty text span.",
-          "parameters": [],
-          "returns": "Self",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 36
+          "docstring": "Return a Lance-compatible empty text span.",
+          "is_async": false,
+          "lineno": 36,
+          "name": "none",
+          "parameters": [],
+          "returns": "Self"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "TextSpan",
       "properties": [],
-      "decorators": [],
-      "lineno": 17
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/text_span.py",
   "functions": [
     {
-      "name": "create_text_span",
+      "decorators": [],
       "docstring": "Create a ``TextSpan`` instance.",
+      "is_async": false,
+      "lineno": 62,
+      "name": "create_text_span",
       "parameters": [
         {
-          "name": "mention",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "mention"
         },
         {
-          "name": "spans_start",
           "annotation": "list[int]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "spans_start"
         },
         {
-          "name": "spans_end",
           "annotation": "list[int]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "spans_end"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "view_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_id"
         },
         {
-          "name": "entity_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity_id"
         },
         {
-          "name": "source_type",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_type"
         },
         {
-          "name": "source_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_name"
         },
         {
-          "name": "source_metadata",
           "annotation": "str",
           "default": "'{}'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_metadata"
         }
       ],
-      "returns": "TextSpan",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 62
+      "returns": "TextSpan"
     },
     {
-      "name": "is_text_span",
+      "decorators": [],
       "docstring": "Check if a class is a ``TextSpan`` or subclass of ``TextSpan``.",
+      "is_async": false,
+      "lineno": 57,
+      "name": "is_text_span",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 57
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.text_span",
   "submodules": []
 }

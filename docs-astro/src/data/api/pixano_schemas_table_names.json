@@ -1,315 +1,315 @@
 {
-  "module": "pixano.schemas.table_names",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/table_names.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "CanonicalResourceFamily",
-      "docstring": "Descriptor for one canonical resource family in the dataset schema.",
-      "bases": [],
       "attributes": [
         {
-          "name": "base_schema",
           "annotation": "type[LanceModel]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "public_api",
-          "annotation": "bool",
-          "value": "True",
-          "docstring": ""
-        },
-        {
-          "name": "resource_name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "schema_group",
-          "annotation": "SchemaGroup",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "slot_name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "table_name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "unique_per_dataset",
-          "annotation": "bool",
-          "value": "True",
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "slot_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "resource_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "table_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "schema_group",
-              "annotation": "SchemaGroup",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "base_schema",
-              "annotation": "type[LanceModel]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "public_api",
-              "annotation": "bool",
-              "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "unique_per_dataset",
-              "annotation": "bool",
-              "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "base_schema",
+          "value": null
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "public_api",
+          "value": "True"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "resource_name",
+          "value": null
+        },
+        {
+          "annotation": "SchemaGroup",
+          "docstring": "",
+          "name": "schema_group",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "slot_name",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "table_name",
+          "value": null
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "unique_per_dataset",
+          "value": "True"
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass(frozen=True, slots=True)"
       ],
-      "lineno": 21
+      "docstring": "Descriptor for one canonical resource family in the dataset schema.",
+      "lineno": 21,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "slot_name"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "resource_name"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "table_name"
+            },
+            {
+              "annotation": "SchemaGroup",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "schema_group"
+            },
+            {
+              "annotation": "type[LanceModel]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "base_schema"
+            },
+            {
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "public_api"
+            },
+            {
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "unique_per_dataset"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "CanonicalResourceFamily",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/table_names.py",
   "functions": [
     {
-      "name": "canonical_base_schema_for_schema",
+      "decorators": [],
       "docstring": "Return the canonical base schema for the given schema class.",
+      "is_async": false,
+      "lineno": 112,
+      "name": "canonical_base_schema_for_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "type[LanceModel]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 112
+      "returns": "type[LanceModel]"
     },
     {
-      "name": "canonical_family_spec_for_resource",
+      "decorators": [],
       "docstring": "Look up a resource family by its API resource name.",
+      "is_async": false,
+      "lineno": 104,
+      "name": "canonical_family_spec_for_resource",
       "parameters": [
         {
-          "name": "resource_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "resource_name"
         }
       ],
-      "returns": "CanonicalResourceFamily",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 104
+      "returns": "CanonicalResourceFamily"
     },
     {
-      "name": "canonical_family_spec_for_schema",
+      "decorators": [],
       "docstring": "Look up a resource family by its schema class.",
+      "is_async": false,
+      "lineno": 127,
+      "name": "canonical_family_spec_for_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "CanonicalResourceFamily",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 127
+      "returns": "CanonicalResourceFamily"
     },
     {
-      "name": "canonical_family_spec_for_slot",
+      "decorators": [],
       "docstring": "Look up a resource family by its DatasetInfo slot name.",
+      "is_async": false,
+      "lineno": 96,
+      "name": "canonical_family_spec_for_slot",
       "parameters": [
         {
-          "name": "slot_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "slot_name"
         }
       ],
-      "returns": "CanonicalResourceFamily",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 96
+      "returns": "CanonicalResourceFamily"
     },
     {
-      "name": "canonical_resource_name_for_schema",
+      "decorators": [],
       "docstring": "Return the canonical API resource name for the given schema class.",
+      "is_async": false,
+      "lineno": 151,
+      "name": "canonical_resource_name_for_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 151
+      "returns": "str"
     },
     {
-      "name": "canonical_table_name_for_schema",
+      "decorators": [],
       "docstring": "Return the canonical table name for the given schema class.",
+      "is_async": false,
+      "lineno": 141,
+      "name": "canonical_table_name_for_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 141
+      "returns": "str"
     },
     {
-      "name": "canonical_table_name_for_slot",
+      "decorators": [],
       "docstring": "Return the canonical table name for a DatasetInfo slot.",
+      "is_async": false,
+      "lineno": 136,
+      "name": "canonical_table_name_for_slot",
       "parameters": [
         {
-          "name": "slot_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "slot_name"
         }
       ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 136
+      "returns": "str"
     },
     {
-      "name": "canonical_table_name_for_view_schema",
+      "decorators": [],
       "docstring": "Return the canonical table name for a View schema class.",
+      "is_async": false,
+      "lineno": 146,
+      "name": "canonical_table_name_for_view_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[View]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 146
+      "returns": "str"
     },
     {
-      "name": "is_supported_view_schema",
+      "decorators": [],
       "docstring": "Check whether a schema class is a supported view schema.",
+      "is_async": false,
+      "lineno": 156,
+      "name": "is_supported_view_schema",
       "parameters": [
         {
-          "name": "schema_cls",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_cls"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 156
+      "returns": "bool"
     },
     {
-      "name": "public_resource_families",
+      "decorators": [],
       "docstring": "Return all resource families exposed through the public API.",
-      "parameters": [],
-      "returns": "tuple[CanonicalResourceFamily, ...]",
       "is_async": false,
-      "decorators": [],
-      "lineno": 70
+      "lineno": 70,
+      "name": "public_resource_families",
+      "parameters": [],
+      "returns": "tuple[CanonicalResourceFamily, ...]"
     },
     {
-      "name": "supported_dataset_info_slots",
+      "decorators": [],
       "docstring": "Return slot names that are supported in DatasetInfo.",
-      "parameters": [],
-      "returns": "tuple[str, ...]",
       "is_async": false,
-      "decorators": [],
-      "lineno": 75
+      "lineno": 75,
+      "name": "supported_dataset_info_slots",
+      "parameters": [],
+      "returns": "tuple[str, ...]"
     },
     {
-      "name": "supported_slot_schema",
+      "decorators": [],
       "docstring": "Return the base schema class for the given DatasetInfo slot name.",
+      "is_async": false,
+      "lineno": 165,
+      "name": "supported_slot_schema",
       "parameters": [
         {
-          "name": "slot_name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "slot_name"
         }
       ],
-      "returns": "type[LanceModel]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 165
+      "returns": "type[LanceModel]"
     },
     {
-      "name": "validate_canonical_table_map",
+      "decorators": [],
       "docstring": "Validate that all table names and schema classes are canonical and unique.",
+      "is_async": false,
+      "lineno": 170,
+      "name": "validate_canonical_table_map",
       "parameters": [
         {
-          "name": "tables",
           "annotation": "dict[str, type[LanceModel]]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "tables"
         }
       ],
-      "returns": "None",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 170
+      "returns": "None"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.table_names",
   "submodules": []
 }

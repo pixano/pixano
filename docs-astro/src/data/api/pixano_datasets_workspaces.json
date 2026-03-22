@@ -1,56 +1,56 @@
 {
-  "module": "pixano.datasets.workspaces",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/workspaces/__init__.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "WorkspaceType",
-      "docstring": "Workspace type.\n\nA workspace is a specific environment where the dataset is used.\n\nAttributes:\n    IMAGE: Image workspace.\n    VIDEO: Video workspace.\n    IMAGE_VQA: Image VQA workspace.\n    IMAGE_TEXT_ENTITY_LINKING: Image text entity linking workspace.\n    UNDEFINED: Undefined workspace.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "IMAGE",
+          "value": "'image'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "IMAGE_TEXT_ENTITY_LINKING",
+          "value": "'image_text_entity_linking'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "IMAGE_VQA",
+          "value": "'image_vqa'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "UNDEFINED",
+          "value": "'undefined'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "VIDEO",
+          "value": "'video'"
+        }
+      ],
       "bases": [
         "Enum"
       ],
-      "attributes": [
-        {
-          "name": "IMAGE",
-          "annotation": null,
-          "value": "'image'",
-          "docstring": ""
-        },
-        {
-          "name": "IMAGE_TEXT_ENTITY_LINKING",
-          "annotation": null,
-          "value": "'image_text_entity_linking'",
-          "docstring": ""
-        },
-        {
-          "name": "IMAGE_VQA",
-          "annotation": null,
-          "value": "'image_vqa'",
-          "docstring": ""
-        },
-        {
-          "name": "UNDEFINED",
-          "annotation": null,
-          "value": "'undefined'",
-          "docstring": ""
-        },
-        {
-          "name": "VIDEO",
-          "annotation": null,
-          "value": "'video'",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 12
+      "docstring": "Workspace type.\n\nA workspace is a specific environment where the dataset is used.\n\nAttributes:\n    IMAGE: Image workspace.\n    VIDEO: Video workspace.\n    IMAGE_VQA: Image VQA workspace.\n    IMAGE_TEXT_ENTITY_LINKING: Image text entity linking workspace.\n    UNDEFINED: Undefined workspace.",
+      "lineno": 12,
+      "methods": [],
+      "name": "WorkspaceType",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/workspaces/__init__.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.workspaces",
   "submodules": [
     "dataset_items"
   ]

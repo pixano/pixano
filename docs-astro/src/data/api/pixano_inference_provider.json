@@ -1,212 +1,284 @@
 {
-  "module": "pixano.inference.provider",
-  "docstring": "Abstract inference provider interface.\n\nThis module defines the abstract interface that all inference providers must implement.\nPixano uses this interface to communicate with different backends (pixano-inference,\nOpenAI, Gemini, local models, etc.) in a uniform way.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/provider.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "InferenceProvider",
-      "docstring": "Abstract interface for inference backends.\n\nThis is the base class that all inference providers must implement.\nIt defines a common interface for interacting with different inference\nbackends, allowing Pixano to be agnostic to the specific backend used.\n\nExample:\n    ```python\n    from pixano.inference import get_provider\n\n    # Get a provider instance\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n\n    # List available models\n    models = await provider.list_models()\n\n    # Generate masks\n    result = await provider.generate_masks(input_data)\n    ```",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "Provider name (e.g., 'pixano-inference', 'openai', 'gemini').",
+          "name": "name",
+          "value": null
+        }
+      ],
       "bases": [
         "ABC"
       ],
-      "attributes": [
-        {
-          "name": "name",
-          "annotation": "str",
-          "value": null,
-          "docstring": "Provider name (e.g., 'pixano-inference', 'openai', 'gemini')."
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Abstract interface for inference backends.\n\nThis is the base class that all inference providers must implement.\nIt defines a common interface for interacting with different inference\nbackends, allowing Pixano to be agnostic to the specific backend used.\n\nExample:\n    ```python\n    from pixano.inference import get_provider\n\n    # Get a provider instance\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n\n    # List available models\n    models = await provider.list_models()\n\n    # Generate masks\n    result = await provider.segmentation(input_data)\n    ```",
+      "lineno": 35,
       "methods": [
         {
-          "name": "delete_model",
-          "docstring": "Delete (unload) a model.\n\nArgs:\n    model_name: Name of the model to delete.\n\nRaises:\n    TaskNotSupportedError: Model deployment is managed by the server administrator.",
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Cancel an asynchronous tracking job.",
+          "is_async": false,
+          "lineno": 171,
+          "name": "cancel_tracking_job",
           "parameters": [
             {
-              "name": "model_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "job_id"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
             }
           ],
-          "returns": "None",
-          "is_async": false,
+          "returns": "TrackingJobStatus"
+        },
+        {
           "decorators": [],
-          "lineno": 96
-        },
-        {
-          "name": "get_capabilities",
-          "docstring": "Return what this provider can do.\n\nReturns:\n    ProviderCapabilities describing supported tasks and features.",
-          "parameters": [],
-          "returns": "ProviderCapabilities",
+          "docstring": "Delete (unload) a model.\n\nArgs:\n    model_name: Name of the model to delete.\n\nRaises:\n    TaskNotSupportedError: Model deployment is managed by the server administrator.",
           "is_async": false,
-          "decorators": [
-            "abstractmethod"
-          ],
-          "lineno": 62
-        },
-        {
-          "name": "get_server_info",
-          "docstring": "Get server information.\n\nReturns:\n    ServerInfo with version, GPU info, models, readiness.",
-          "parameters": [],
-          "returns": "ServerInfo",
-          "is_async": false,
-          "decorators": [
-            "abstractmethod"
-          ],
-          "lineno": 107
-        },
-        {
-          "name": "image_mask_generation",
-          "docstring": "Generate masks for an image.\n\nArgs:\n    input_data: Input data for mask generation.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Mask generation result.",
+          "lineno": 97,
+          "name": "delete_model",
           "parameters": [
             {
-              "name": "input_data",
-              "annotation": "ImageMaskGenerationInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "ImageMaskGenerationResult",
-          "is_async": false,
-          "decorators": [
-            "abstractmethod"
-          ],
-          "lineno": 118
-        },
-        {
-          "name": "image_zero_shot_detection",
-          "docstring": "Detect objects in an image using zero-shot detection.\n\nArgs:\n    input_data: Input data for detection.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Detection result.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "ImageZeroShotDetectionInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "ImageZeroShotDetectionResult",
-          "is_async": false,
-          "decorators": [
-            "abstractmethod"
-          ],
-          "lineno": 154
-        },
-        {
-          "name": "instantiate_model",
-          "docstring": "Instantiate (load) a model.\n\nArgs:\n    provider: The model provider name (e.g., \"sam2\", \"transformers\").\n    config: Configuration for the model.\n    timeout: Timeout in seconds for model loading.\n\nRaises:\n    TaskNotSupportedError: Model deployment is managed by the server administrator.",
-          "parameters": [
-            {
-              "name": "provider",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "model_name"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Detect objects in an image using zero-shot detection.\n\nArgs:\n    input_data: Input data for detection.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Detection result.",
+          "is_async": false,
+          "lineno": 182,
+          "name": "detection",
+          "parameters": [
+            {
+              "annotation": "DetectionInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
             },
             {
-              "name": "config",
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "DetectionResult"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Return what this provider can do.\n\nReturns:\n    ProviderCapabilities describing supported tasks and features.",
+          "is_async": false,
+          "lineno": 63,
+          "name": "get_capabilities",
+          "parameters": [],
+          "returns": "ProviderCapabilities"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Get server information.\n\nReturns:\n    ServerInfo with version, GPU info, models, readiness.",
+          "is_async": false,
+          "lineno": 108,
+          "name": "get_server_info",
+          "parameters": [],
+          "returns": "ServerInfo"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Fetch the current status of an asynchronous tracking job.",
+          "is_async": false,
+          "lineno": 162,
+          "name": "get_tracking_job",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "job_id"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingJobStatus"
+        },
+        {
+          "decorators": [],
+          "docstring": "Instantiate (load) a model.\n\nArgs:\n    provider: The model provider name (e.g., \"sam2\", \"transformers\").\n    config: Configuration for the model.\n    timeout: Timeout in seconds for model loading.\n\nRaises:\n    TaskNotSupportedError: Model deployment is managed by the server administrator.",
+          "is_async": false,
+          "lineno": 84,
+          "name": "instantiate_model",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "provider"
+            },
+            {
               "annotation": "ModelConfig",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "config"
             },
             {
-              "name": "timeout",
               "annotation": "int",
               "default": "60",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 83
+          "returns": "None"
         },
         {
-          "name": "list_models",
+          "decorators": [
+            "abstractmethod"
+          ],
           "docstring": "List available models, optionally filtered by task.\n\nArgs:\n    task: Optional task to filter models by.\n\nReturns:\n    List of available models.",
+          "is_async": false,
+          "lineno": 72,
+          "name": "list_models",
           "parameters": [
             {
-              "name": "task",
               "annotation": "InferenceTask | None",
               "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "task"
             }
           ],
-          "returns": "list[ModelInfo]",
-          "is_async": false,
+          "returns": "list[ModelInfo]"
+        },
+        {
           "decorators": [
             "abstractmethod"
           ],
-          "lineno": 71
-        },
-        {
-          "name": "text_image_conditional_generation",
-          "docstring": "Generate text conditioned on images.\n\nArgs:\n    input_data: Input data for text generation.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Text generation result.",
+          "docstring": "Generate masks for an image.\n\nArgs:\n    input_data: Input data for segmentation.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Segmentation result.",
+          "is_async": false,
+          "lineno": 119,
+          "name": "segmentation",
           "parameters": [
             {
-              "name": "input_data",
-              "annotation": "TextImageConditionalGenerationInput",
+              "annotation": "SegmentationInput",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
             },
             {
-              "name": "timeout",
               "annotation": "float",
               "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
             }
           ],
-          "returns": "TextImageConditionalGenerationResult",
-          "is_async": false,
-          "decorators": [
-            "abstractmethod"
-          ],
-          "lineno": 173
+          "returns": "SegmentationResult"
         },
         {
-          "name": "video_mask_generation",
-          "docstring": "Generate masks for video frames.\n\nArgs:\n    input_data: Input data for video mask generation.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Video mask generation result.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "VideoMaskGenerationInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "120.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "VideoMaskGenerationResult",
-          "is_async": false,
           "decorators": [
             "abstractmethod"
           ],
-          "lineno": 135
+          "docstring": "Submit an asynchronous tracking job.",
+          "is_async": false,
+          "lineno": 153,
+          "name": "submit_tracking_job",
+          "parameters": [
+            {
+              "annotation": "TrackingInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingJobStatus"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Generate masks for video frames.\n\nArgs:\n    input_data: Input data for tracking.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    Tracking result.",
+          "is_async": false,
+          "lineno": 136,
+          "name": "tracking",
+          "parameters": [
+            {
+              "annotation": "TrackingInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "120.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingResult"
+        },
+        {
+          "decorators": [
+            "abstractmethod"
+          ],
+          "docstring": "Generate text conditioned on images.\n\nArgs:\n    input_data: Input data for VLM inference.\n    timeout: Maximum time to wait for result.\n\nReturns:\n    VLM result.",
+          "is_async": false,
+          "lineno": 201,
+          "name": "vlm",
+          "parameters": [
+            {
+              "annotation": "VLMInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "VLMResult"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "InferenceProvider",
       "properties": [],
-      "decorators": [],
-      "lineno": 34
+      "static_methods": []
     }
   ],
+  "docstring": "Abstract inference provider interface.\n\nThis module defines the abstract interface that all inference providers must implement.\nPixano uses this interface to communicate with different backends (pixano-inference,\nOpenAI, Gemini, local models, etc.) in a uniform way.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/inference/provider.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.inference.provider",
   "submodules": []
 }

@@ -1,134 +1,134 @@
 {
-  "module": "pixano.cli.data",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/cli/data.py",
-  "classes": [
+  "attributes": [
     {
-      "name": "ImportMode",
-      "docstring": "Import modes controlling dataset creation behavior.",
-      "bases": [
-        "str",
-        "Enum"
-      ],
-      "attributes": [
-        {
-          "name": "add",
-          "annotation": null,
-          "value": "'add'",
-          "docstring": ""
-        },
-        {
-          "name": "create",
-          "annotation": null,
-          "value": "'create'",
-          "docstring": ""
-        },
-        {
-          "name": "overwrite",
-          "annotation": null,
-          "value": "'overwrite'",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
-      "class_methods": [],
-      "static_methods": [],
-      "properties": [],
-      "decorators": [],
-      "lineno": 17
-    },
-    {
-      "name": "MetadataValidationMode",
-      "docstring": "Validation strictness for folder metadata during import.",
-      "bases": [
-        "str",
-        "Enum"
-      ],
-      "attributes": [
-        {
-          "name": "default",
-          "annotation": null,
-          "value": "'default'",
-          "docstring": ""
-        },
-        {
-          "name": "strict",
-          "annotation": null,
-          "value": "'strict'",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
-      "class_methods": [],
-      "static_methods": [],
-      "properties": [],
-      "decorators": [],
-      "lineno": 25
+      "annotation": null,
+      "docstring": "",
+      "name": "data_app",
+      "value": "typer.Typer(help='Pixano dataset commands.')"
     }
   ],
-  "functions": [
+  "classes": [
     {
-      "name": "import_data",
-      "docstring": "Import a dataset from an external source directory.\n\nReads media from SOURCE_DIR and embeds it directly in the LanceDB database.",
-      "parameters": [
+      "attributes": [
         {
-          "name": "data_dir",
-          "annotation": "Path",
-          "default": "typer.Argument(..., exists=True, dir_okay=True, help='Path to data directory.')",
-          "kind": "ParameterKind.positional_or_keyword"
+          "annotation": null,
+          "docstring": "",
+          "name": "add",
+          "value": "'add'"
         },
         {
-          "name": "source_dir",
-          "annotation": "Path",
-          "default": "typer.Argument(..., exists=True, file_okay=False, dir_okay=True, help='Path to source dataset directory containing split folders.')",
-          "kind": "ParameterKind.positional_or_keyword"
+          "annotation": null,
+          "docstring": "",
+          "name": "create",
+          "value": "'create'"
         },
         {
-          "name": "info_spec",
-          "annotation": "str",
-          "default": "typer.Option(..., '--info', help=\"DatasetInfo in 'path/to/file.py:attribute' format. Folder import requires it as the dataset specification source of truth.\")",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "mode",
-          "annotation": "ImportMode",
-          "default": "typer.Option(ImportMode.create, help='Import mode: create, overwrite, or add.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "metadata_validation",
-          "annotation": "MetadataValidationMode",
-          "default": "typer.Option(MetadataValidationMode.default, '--metadata-validation', help='Metadata validation mode: default or strict.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "dry_run",
-          "annotation": "bool",
-          "default": "typer.Option(False, '--dry-run', help='Validate metadata and exit without importing.')",
-          "kind": "ParameterKind.positional_or_keyword"
-        },
-        {
-          "name": "use_image_name_as_id",
-          "annotation": "bool",
-          "default": "typer.Option(False, help='Use image file name as record ID.')",
-          "kind": "ParameterKind.positional_or_keyword"
+          "annotation": null,
+          "docstring": "",
+          "name": "overwrite",
+          "value": "'overwrite'"
         }
       ],
-      "returns": "None",
-      "is_async": false,
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Import modes controlling dataset creation behavior.",
+      "lineno": 17,
+      "methods": [],
+      "name": "ImportMode",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "default",
+          "value": "'default'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "strict",
+          "value": "'strict'"
+        }
+      ],
+      "bases": [
+        "str",
+        "Enum"
+      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Validation strictness for folder metadata during import.",
+      "lineno": 25,
+      "methods": [],
+      "name": "MetadataValidationMode",
+      "properties": [],
+      "static_methods": []
+    }
+  ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/cli/data.py",
+  "functions": [
+    {
       "decorators": [
         "data_app.command(name='import')"
       ],
-      "lineno": 56
+      "docstring": "Import a dataset from an external source directory.\n\nReads media from SOURCE_DIR and embeds it directly in the LanceDB database.",
+      "is_async": false,
+      "lineno": 56,
+      "name": "import_data",
+      "parameters": [
+        {
+          "annotation": "Path",
+          "default": "typer.Argument(..., exists=True, dir_okay=True, help='Path to data directory.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "data_dir"
+        },
+        {
+          "annotation": "Path",
+          "default": "typer.Argument(..., exists=True, file_okay=False, dir_okay=True, help='Path to source dataset directory containing split folders.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_dir"
+        },
+        {
+          "annotation": "str",
+          "default": "typer.Option(..., '--info', help=\"DatasetInfo in 'path/to/file.py:attribute' format. Folder import requires it as the dataset specification source of truth.\")",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "info_spec"
+        },
+        {
+          "annotation": "ImportMode",
+          "default": "typer.Option(ImportMode.create, help='Import mode: create, overwrite, or add.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "mode"
+        },
+        {
+          "annotation": "MetadataValidationMode",
+          "default": "typer.Option(MetadataValidationMode.default, '--metadata-validation', help='Metadata validation mode: default or strict.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "metadata_validation"
+        },
+        {
+          "annotation": "bool",
+          "default": "typer.Option(False, '--dry-run', help='Validate metadata and exit without importing.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "dry_run"
+        },
+        {
+          "annotation": "bool",
+          "default": "typer.Option(False, help='Use image file name as record ID.')",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "use_image_name_as_id"
+        }
+      ],
+      "returns": "None"
     }
   ],
-  "attributes": [
-    {
-      "name": "data_app",
-      "annotation": null,
-      "value": "typer.Typer(help='Pixano dataset commands.')",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.cli.data",
   "submodules": []
 }

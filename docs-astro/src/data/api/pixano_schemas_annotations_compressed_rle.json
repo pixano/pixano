@@ -1,307 +1,307 @@
 {
-  "module": "pixano.schemas.annotations.compressed_rle",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/compressed_rle.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "CompressedRLE",
-      "docstring": "Compressed RLE mask type.\n\nAttributes:\n    size: Mask size.\n    counts: Mask RLE encoding.",
+      "attributes": [
+        {
+          "annotation": "float",
+          "docstring": "Return mask area.\n\nReturns:\n    Mask area",
+          "name": "area",
+          "value": null
+        },
+        {
+          "annotation": "bytes",
+          "docstring": "",
+          "name": "counts",
+          "value": null
+        },
+        {
+          "annotation": "list[int]",
+          "docstring": "",
+          "name": "size",
+          "value": null
+        }
+      ],
       "bases": [
         "PerFrameAnnotation"
       ],
-      "attributes": [
-        {
-          "name": "area",
-          "annotation": "float",
-          "value": null,
-          "docstring": "Return mask area.\n\nReturns:\n    Mask area"
-        },
-        {
-          "name": "counts",
-          "annotation": "bytes",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "size",
-          "annotation": "list[int]",
-          "value": null,
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Compressed RLE mask type.\n\nAttributes:\n    size: Mask size.\n    counts: Mask RLE encoding.",
+      "lineno": 20,
       "methods": [
         {
-          "name": "encode",
+          "decorators": [
+            "staticmethod"
+          ],
           "docstring": "Create a compressed RLE mask from polygons / uncompressed RLE / compressed RLE.\n\nArgs:\n    mask: Mask as polygons / uncompressed RLE / compressed RLE.\n    height: Image height.\n    width: Image width.\n    kwargs: Additional arguments.\n\nReturns:\n    The compressed RLE mask.",
+          "is_async": false,
+          "lineno": 146,
+          "name": "encode",
           "parameters": [
             {
-              "name": "mask",
               "annotation": "list[list] | dict[str, list[int]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "mask"
             },
             {
-              "name": "height",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "height"
             },
             {
-              "name": "width",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "width"
             },
             {
-              "name": "kwargs",
               "annotation": "Any",
               "default": "{}",
-              "kind": "ParameterKind.var_keyword"
+              "kind": "ParameterKind.var_keyword",
+              "name": "kwargs"
             }
           ],
-          "returns": "CompressedRLE",
-          "is_async": false,
+          "returns": "CompressedRLE"
+        },
+        {
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 146
-        },
-        {
-          "name": "from_mask",
           "docstring": "Create a compressed RLE mask from a NumPy array.\n\nArgs:\n    mask: The mask as a NumPy array.\n    kwargs: Additional arguments.\n\nReturns:\n    The compressed RLE mask.",
+          "is_async": false,
+          "lineno": 99,
+          "name": "from_mask",
           "parameters": [
             {
-              "name": "mask",
               "annotation": "pil_image.Image | np.ndarray",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "mask"
             },
             {
-              "name": "kwargs",
               "annotation": "Any",
               "default": "{}",
-              "kind": "ParameterKind.var_keyword"
+              "kind": "ParameterKind.var_keyword",
+              "name": "kwargs"
             }
           ],
-          "returns": "CompressedRLE",
-          "is_async": false,
+          "returns": "CompressedRLE"
+        },
+        {
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 99
-        },
-        {
-          "name": "from_polygons",
           "docstring": "Create a compressed RLE mask from polygons.\n\nArgs:\n    polygons: The mask as polygons.\n    height: Image height.\n    width: Image width.\n    kwargs: Additional arguments.\n\nReturns:\n    The compressed RLE mask.",
+          "is_async": false,
+          "lineno": 126,
+          "name": "from_polygons",
           "parameters": [
             {
-              "name": "polygons",
               "annotation": "list[list]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "polygons"
             },
             {
-              "name": "height",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "height"
             },
             {
-              "name": "width",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "width"
             },
             {
-              "name": "kwargs",
               "annotation": "Any",
               "default": "{}",
-              "kind": "ParameterKind.var_keyword"
+              "kind": "ParameterKind.var_keyword",
+              "name": "kwargs"
             }
           ],
-          "returns": "CompressedRLE",
-          "is_async": false,
+          "returns": "CompressedRLE"
+        },
+        {
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 126
-        },
-        {
-          "name": "from_urle",
           "docstring": "Create a compressed RLE mask from an uncompressed RLE.\n\nArgs:\n    urle: The mask as an uncompressed RLE.\n    kwargs: Additional arguments.\n\nReturns:\n    The compressed RLE mask.",
+          "is_async": false,
+          "lineno": 113,
+          "name": "from_urle",
           "parameters": [
             {
-              "name": "urle",
               "annotation": "dict[str, list[int]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "urle"
             },
             {
-              "name": "kwargs",
               "annotation": "Any",
               "default": "{}",
-              "kind": "ParameterKind.var_keyword"
+              "kind": "ParameterKind.var_keyword",
+              "name": "kwargs"
             }
           ],
-          "returns": "CompressedRLE",
-          "is_async": false,
-          "decorators": [
-            "staticmethod"
-          ],
-          "lineno": 113
+          "returns": "CompressedRLE"
         },
         {
-          "name": "none",
-          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" `CompressedRLE`.",
-          "parameters": [],
-          "returns": "Self",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 52
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" `CompressedRLE`.",
+          "is_async": false,
+          "lineno": 52,
+          "name": "none",
+          "parameters": [],
+          "returns": "Self"
         },
         {
-          "name": "to_mask",
+          "decorators": [],
           "docstring": "Convert the compressed RLE mask to a NumPy array.\n\nReturns:\n    The mask as a NumPy array.",
-          "parameters": [],
-          "returns": "np.ndarray",
           "is_async": false,
-          "decorators": [],
-          "lineno": 75
+          "lineno": 75,
+          "name": "to_mask",
+          "parameters": [],
+          "returns": "np.ndarray"
         },
         {
-          "name": "to_polygons",
+          "decorators": [],
           "docstring": "Convert the compressed RLE mask to poylgons.\n\nReturns:\n    The mask as polygons.",
-          "parameters": [],
-          "returns": "list[list]",
           "is_async": false,
-          "decorators": [],
-          "lineno": 91
+          "lineno": 91,
+          "name": "to_polygons",
+          "parameters": [],
+          "returns": "list[list]"
         },
         {
-          "name": "to_urle",
-          "docstring": "Convert compressed RLE mask to uncompressed RLE.\n\nReturns:\n    The mask as an uncompressed RLE.",
-          "parameters": [],
-          "returns": "dict[str, list[int]]",
-          "is_async": false,
           "decorators": [],
-          "lineno": 83
+          "docstring": "Convert compressed RLE mask to uncompressed RLE.\n\nReturns:\n    The mask as an uncompressed RLE.",
+          "is_async": false,
+          "lineno": 83,
+          "name": "to_urle",
+          "parameters": [],
+          "returns": "dict[str, list[int]]"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "CompressedRLE",
       "properties": [],
-      "decorators": [],
-      "lineno": 20
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/compressed_rle.py",
   "functions": [
     {
-      "name": "create_compressed_rle",
+      "decorators": [],
       "docstring": "Create a `CompressedRLE` instance.\n\nArgs:\n    size: Mask size.\n    counts: Mask RLE encoding.\n    id: `CompressedRLE` ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n    tracklet_id: Tracklet ID.\n    entity_dynamic_state_id: Entity dynamic state ID.\n    frame_id: Frame/view row ID.\n    frame_index: Frame index.\n\nReturns:\n    The compressed RLE instance.",
+      "is_async": false,
+      "lineno": 167,
+      "name": "create_compressed_rle",
       "parameters": [
         {
-          "name": "size",
           "annotation": "list[int]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "size"
         },
         {
-          "name": "counts",
           "annotation": "bytes",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "counts"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "view_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_id"
         },
         {
-          "name": "entity_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity_id"
         },
         {
-          "name": "source_type",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_type"
         },
         {
-          "name": "source_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_name"
         },
         {
-          "name": "source_metadata",
           "annotation": "str",
           "default": "'{}'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_metadata"
         },
         {
-          "name": "tracklet_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "tracklet_id"
         },
         {
-          "name": "entity_dynamic_state_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity_dynamic_state_id"
         },
         {
-          "name": "frame_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "frame_id"
         },
         {
-          "name": "frame_index",
           "annotation": "int",
           "default": "-1",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "frame_index"
         }
       ],
-      "returns": "CompressedRLE",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 167
+      "returns": "CompressedRLE"
     },
     {
-      "name": "is_compressed_rle",
+      "decorators": [],
       "docstring": "Check if the given class is a subclass of `CompressedRLE`.",
+      "is_async": false,
+      "lineno": 162,
+      "name": "is_compressed_rle",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 162
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.compressed_rle",
   "submodules": []
 }

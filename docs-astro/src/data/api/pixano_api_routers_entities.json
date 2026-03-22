@@ -1,16 +1,16 @@
 {
-  "module": "pixano.api.routers.entities",
-  "docstring": "Entities router.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/entities.py",
-  "classes": [],
-  "functions": [],
   "attributes": [
     {
-      "name": "router",
       "annotation": null,
-      "value": "create_resource_router(ENTITY_RESOURCE)",
-      "docstring": ""
+      "docstring": "",
+      "name": "router",
+      "value": "create_resource_router(ENTITY_RESOURCE)"
     }
   ],
+  "classes": [],
+  "docstring": "Entities router.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/routers/entities.py",
+  "functions": [],
+  "module": "pixano.api.routers.entities",
   "submodules": []
 }

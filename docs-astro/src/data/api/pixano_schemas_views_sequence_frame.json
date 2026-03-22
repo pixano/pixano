@@ -1,151 +1,151 @@
 {
-  "module": "pixano.schemas.views.sequence_frame",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/sequence_frame.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "SequenceFrame",
-      "docstring": "Sequence of image. Used to store video frames.\n\nAttributes:\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.",
+      "attributes": [
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "frame_index",
+          "value": null
+        },
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "timestamp",
+          "value": null
+        }
+      ],
       "bases": [
         "Image"
       ],
-      "attributes": [
-        {
-          "name": "frame_index",
-          "annotation": "int",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "timestamp",
-          "annotation": "float",
-          "value": null,
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Sequence of image. Used to store video frames.\n\nAttributes:\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.",
+      "lineno": 22,
       "methods": [
         {
-          "name": "from_bytes",
+          "decorators": [
+            "classmethod"
+          ],
           "docstring": "Create a ``SequenceFrame`` from raw bytes.\n\nThe bytes are decoded to extract *width*, *height* and *format*, and a\n64 x 64 PNG preview thumbnail is generated automatically.\n\nArgs:\n    record_id: Record ID that owns this view.\n    logical_name: Logical view name (e.g. ``\"front_camera\"``).\n    raw_bytes: Image file content as raw bytes.\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.\n    id: Optional explicit ID.  Auto-generated with :func:`shortuuid.uuid`\n        when *None*.\n\nReturns:\n    A fully-populated ``SequenceFrame`` instance.",
+          "is_async": false,
+          "lineno": 90,
+          "name": "from_bytes",
           "parameters": [
             {
-              "name": "record_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
             },
             {
-              "name": "logical_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "logical_name"
             },
             {
-              "name": "raw_bytes",
               "annotation": "bytes",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "raw_bytes"
             },
             {
-              "name": "timestamp",
               "annotation": "float",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timestamp"
             },
             {
-              "name": "frame_index",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "frame_index"
             },
             {
-              "name": "id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "id"
             }
           ],
-          "returns": "SequenceFrame",
-          "is_async": false,
-          "decorators": [
-            "classmethod"
-          ],
-          "lineno": 90
+          "returns": "SequenceFrame"
         },
         {
-          "name": "from_uri",
-          "docstring": "Create a ``SequenceFrame`` from a URI (local path or remote URL).\n\nThe file is opened to extract *width*, *height* and *format*, and a\n64 x 64 PNG preview thumbnail is generated automatically.\n\nArgs:\n    record_id: Record ID that owns this view.\n    logical_name: Logical view name (e.g. ``\"front_camera\"``).\n    uri: Absolute file path or remote ``http(s)`` URL.\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.\n    id: Optional explicit ID.  Auto-generated with :func:`shortuuid.uuid`\n        when *None*.\n\nReturns:\n    A fully-populated ``SequenceFrame`` instance.",
-          "parameters": [
-            {
-              "name": "record_id",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "logical_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "uri",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timestamp",
-              "annotation": "float",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "frame_index",
-              "annotation": "int",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "id",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            }
-          ],
-          "returns": "SequenceFrame",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 33
+          "docstring": "Create a ``SequenceFrame`` from a URI (local path or remote URL).\n\nThe file is opened to extract *width*, *height* and *format*, and a\n64 x 64 PNG preview thumbnail is generated automatically.\n\nArgs:\n    record_id: Record ID that owns this view.\n    logical_name: Logical view name (e.g. ``\"front_camera\"``).\n    uri: Absolute file path or remote ``http(s)`` URL.\n    timestamp: The timestamp of the frame.\n    frame_index: The index of the frame in the sequence.\n    id: Optional explicit ID.  Auto-generated with :func:`shortuuid.uuid`\n        when *None*.\n\nReturns:\n    A fully-populated ``SequenceFrame`` instance.",
+          "is_async": false,
+          "lineno": 33,
+          "name": "from_uri",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "logical_name"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "uri"
+            },
+            {
+              "annotation": "float",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timestamp"
+            },
+            {
+              "annotation": "int",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "frame_index"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "id"
+            }
+          ],
+          "returns": "SequenceFrame"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "SequenceFrame",
       "properties": [],
-      "decorators": [],
-      "lineno": 22
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/views/sequence_frame.py",
   "functions": [
     {
-      "name": "is_sequence_frame",
+      "decorators": [],
       "docstring": "Check if the given class is a subclass of ``SequenceFrame``.",
+      "is_async": false,
+      "lineno": 143,
+      "name": "is_sequence_frame",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 143
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.views.sequence_frame",
   "submodules": []
 }

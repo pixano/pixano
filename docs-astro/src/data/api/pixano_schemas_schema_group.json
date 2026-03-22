@@ -1,113 +1,113 @@
 {
-  "module": "pixano.schemas.schema_group",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/schema_group.py",
+  "attributes": [
+    {
+      "annotation": "dict[str, type[LanceModel]]",
+      "docstring": "",
+      "name": "CANONICAL_SCHEMA_MAP",
+      "value": "{(schema_type.__name__): schema_type for schema_type in CANONICAL_SCHEMA_TYPES}"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "CANONICAL_SCHEMA_TYPES",
+      "value": "(Record, View, CamCalibration, Image, PDF, PointCloud, PointCloudFrame, SequenceFrame, Text, Video, Entity, EntityDynamicState, EntityAnnotation, EntityGroupAnnotation, BBox, BBox3D, Classification, CompressedRLE, KeyPoints, KeyPoints3D, Message, MultiPath, Relation, TextSpan, Tracklet, Embedding, ViewEmbedding)"
+    }
+  ],
   "classes": [
     {
-      "name": "SchemaGroup",
-      "docstring": "High-level groups used by datasets and the API layer.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "ANNOTATION",
+          "value": "'annotations'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "EMBEDDING",
+          "value": "'embeddings'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "ENTITY",
+          "value": "'entities'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "ENTITY_DYNAMIC_STATE",
+          "value": "'entity_dynamic_states'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "RECORD",
+          "value": "'records'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "VIEW",
+          "value": "'views'"
+        }
+      ],
       "bases": [
         "Enum"
       ],
-      "attributes": [
-        {
-          "name": "ANNOTATION",
-          "annotation": null,
-          "value": "'annotations'",
-          "docstring": ""
-        },
-        {
-          "name": "EMBEDDING",
-          "annotation": null,
-          "value": "'embeddings'",
-          "docstring": ""
-        },
-        {
-          "name": "ENTITY",
-          "annotation": null,
-          "value": "'entities'",
-          "docstring": ""
-        },
-        {
-          "name": "ENTITY_DYNAMIC_STATE",
-          "annotation": null,
-          "value": "'entity_dynamic_states'",
-          "docstring": ""
-        },
-        {
-          "name": "RECORD",
-          "annotation": null,
-          "value": "'records'",
-          "docstring": ""
-        },
-        {
-          "name": "VIEW",
-          "annotation": null,
-          "value": "'views'",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 32
+      "docstring": "High-level groups used by datasets and the API layer.",
+      "lineno": 32,
+      "methods": [],
+      "name": "SchemaGroup",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/schema_group.py",
   "functions": [
     {
-      "name": "group_to_str",
+      "decorators": [],
       "docstring": "Convert a schema group to its API/storage string.",
+      "is_async": false,
+      "lineno": 122,
+      "name": "group_to_str",
       "parameters": [
         {
-          "name": "group",
           "annotation": "SchemaGroup",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "group"
         },
         {
-          "name": "plural",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "plural"
         }
       ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 122
+      "returns": "str"
     },
     {
-      "name": "schema_to_group",
+      "decorators": [],
       "docstring": "Get the schema group of a given schema type.",
+      "is_async": false,
+      "lineno": 95,
+      "name": "schema_to_group",
       "parameters": [
         {
-          "name": "schema_type",
           "annotation": "LanceModel | type",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema_type"
         }
       ],
-      "returns": "SchemaGroup",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 95
+      "returns": "SchemaGroup"
     }
   ],
-  "attributes": [
-    {
-      "name": "CANONICAL_SCHEMA_MAP",
-      "annotation": "dict[str, type[LanceModel]]",
-      "value": "{(schema_type.__name__): schema_type for schema_type in CANONICAL_SCHEMA_TYPES}",
-      "docstring": ""
-    },
-    {
-      "name": "CANONICAL_SCHEMA_TYPES",
-      "annotation": null,
-      "value": "(Record, View, CamCalibration, Image, PDF, PointCloud, PointCloudFrame, SequenceFrame, Text, Video, Entity, EntityDynamicState, EntityAnnotation, EntityGroupAnnotation, BBox, BBox3D, Classification, CompressedRLE, KeyPoints, KeyPoints3D, Message, MultiPath, Relation, TextSpan, Tracklet, Embedding, ViewEmbedding)",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.schemas.schema_group",
   "submodules": []
 }

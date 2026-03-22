@@ -1,174 +1,174 @@
 {
-  "module": "pixano.api.serve",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/serve.py",
-  "classes": [
-    {
-      "name": "App",
-      "docstring": "The Pixano app.\n\nAttributes:\n    app: FastAPI App.\n    config: App config.\n    server: App server.",
-      "bases": [],
-      "attributes": [
-        {
-          "name": "app",
-          "annotation": "fastapi.FastAPI",
-          "value": "create_app(settings=settings)",
-          "docstring": ""
-        },
-        {
-          "name": "config",
-          "annotation": "uvicorn.Config",
-          "value": "uvicorn.Config(self.app, host=host, port=port)",
-          "docstring": ""
-        },
-        {
-          "name": "server",
-          "annotation": "uvicorn.Server",
-          "value": "uvicorn.Server(self.config)",
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
-          "docstring": "Initialize and serve the Pixano app.\n\nArgs:\n    data_dir: Root data directory containing library/ and\n        models/ subdirectories.\n    library_dir: Override for the library directory. If not\n        provided, defaults to data_dir/library.\n    models_dir: Override for the models directory. If not\n        provided, defaults to data_dir/models.\n    aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.\n        Used if library_dir is an S3 path.\n    aws_region: S3 region name, not always required for\n        private storages. Used if library_dir is an S3 path.\n    aws_access_key: S3 AWS access key. Used if library_dir is\n        an S3 path.\n    aws_secret_key: S3 AWS secret key. Used if library_dir\n        is an S3 path.\n    host: App host.\n    port: App port.\n    pixano_inference_url: Pixano inference URL if any.",
-          "parameters": [
-            {
-              "name": "data_dir",
-              "annotation": "str",
-              "default": "'.'",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "library_dir",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "models_dir",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "aws_endpoint",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "aws_region",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "aws_access_key",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "aws_secret_key",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "host",
-              "annotation": "str",
-              "default": "'127.0.0.1'",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "port",
-              "annotation": "int",
-              "default": "7492",
-              "kind": "ParameterKind.keyword_only"
-            },
-            {
-              "name": "pixano_inference_url",
-              "annotation": "str | None",
-              "default": "None",
-              "kind": "ParameterKind.keyword_only"
-            }
-          ],
-          "returns": null,
-          "is_async": false,
-          "decorators": [],
-          "lineno": 80
-        },
-        {
-          "name": "display",
-          "docstring": "Display the Pixano app.\n\nArgs:\n    height: Frame height.",
-          "parameters": [
-            {
-              "name": "height",
-              "annotation": "int",
-              "default": "1000",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 180
-        },
-        {
-          "name": "get_env",
-          "docstring": "Get the app's current running environment.\n\nReturns:\n    Running environment.",
-          "parameters": [],
-          "returns": "str",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 196
-        }
-      ],
-      "class_methods": [],
-      "static_methods": [],
-      "properties": [],
-      "decorators": [],
-      "lineno": 67
-    }
-  ],
-  "functions": [],
   "attributes": [
     {
+      "annotation": null,
+      "docstring": "",
       "name": "ASSETS_PATH",
-      "annotation": null,
-      "value": "str(files('pixano').joinpath('api/dist/_app'))",
-      "docstring": ""
+      "value": "str(files('pixano').joinpath('api/dist/_app'))"
     },
     {
+      "annotation": null,
+      "docstring": "",
       "name": "LOGO",
-      "annotation": null,
-      "value": "'\\n                             \u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2592\\n                           \u2592\u2593\u2592                                       \u2593\\n              \u2588\u2593          \u2593\u2593                                         \u2593\\n                        \u2592\u2593\u2592   \u2592\u2593\u2593\u2593\u2593\u2593 \u2592\u2593   \u2593\u2592\u2592\u2593\u2593\u2593\u2593\u2592     \u2592\u2593\u2593\u2593\u2593\u2593\u2592       \u2593\\n\u2593\u2593 \u2593\u2593\u2593\u2593\u2593\u2593\u2592    \u2593\u2592  \u2592\u2593   \u2593\u2592   \u2592\u2593      \u2593\u2588\u2588   \u2588\u2588     \u2593\u2592  \u2592\u2588\u2593     \u2592\u2588\u2593     \u2593\\n\u2588\u2588\u2588      \u2593\u2593   \u2588\u2592   \u2593\u2588      \u2592\u2588\u2592       \u2588\u2588   \u2588\u2592     \u2592\u2588  \u2593\u2592        \u2588     \u2593\\n\u2588\u2588        \u2588\u2592  \u2588\u2592    \u2592\u2588\u2593     \u2588\u2592       \u2588\u2588   \u2588\u2592     \u2592\u2588  \u2593\u2593        \u2588     \u2593\\n\u2588\u2588        \u2588\u2592  \u2588\u2592    \u2593\u2588\u2593\u2588     \u2588\u2592     \u2593\u2588\u2588   \u2588\u2592     \u2592\u2588   \u2588\u2588     \u2593\u2588\u2592     \u2593\\n\u2588\u2588\u2593\u2592    \u2592\u2593\u2592   \u2588\u2592   \u2593\u2592  \u2592\u2588\u2593    \u2592\u2593\u2593\u2593\u2593\u2593 \u2592\u2593   \u2593      \u2592\u2593    \u2592\u2593\u2593\u2593\u2593\u2593\u2592       \u2593\\n\u2588\u2588  \u2592\u2593\u2593\u2592\u2592     \u2592   \u2592      \u2592\u2593\u2592                                         \u2593\\n\u2588\u2588                         \u2588\u2593                                        \u2593\\n'",
-      "docstring": ""
+      "value": "'\\n                             \u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2592\\n                           \u2592\u2593\u2592                                       \u2593\\n              \u2588\u2593          \u2593\u2593                                         \u2593\\n                        \u2592\u2593\u2592   \u2592\u2593\u2593\u2593\u2593\u2593 \u2592\u2593   \u2593\u2592\u2592\u2593\u2593\u2593\u2593\u2592     \u2592\u2593\u2593\u2593\u2593\u2593\u2592       \u2593\\n\u2593\u2593 \u2593\u2593\u2593\u2593\u2593\u2593\u2592    \u2593\u2592  \u2592\u2593   \u2593\u2592   \u2592\u2593      \u2593\u2588\u2588   \u2588\u2588     \u2593\u2592  \u2592\u2588\u2593     \u2592\u2588\u2593     \u2593\\n\u2588\u2588\u2588      \u2593\u2593   \u2588\u2592   \u2593\u2588      \u2592\u2588\u2592       \u2588\u2588   \u2588\u2592     \u2592\u2588  \u2593\u2592        \u2588     \u2593\\n\u2588\u2588        \u2588\u2592  \u2588\u2592    \u2592\u2588\u2593     \u2588\u2592       \u2588\u2588   \u2588\u2592     \u2592\u2588  \u2593\u2593        \u2588     \u2593\\n\u2588\u2588        \u2588\u2592  \u2588\u2592    \u2593\u2588\u2593\u2588     \u2588\u2592     \u2593\u2588\u2588   \u2588\u2592     \u2592\u2588   \u2588\u2588     \u2593\u2588\u2592     \u2593\\n\u2588\u2588\u2593\u2592    \u2592\u2593\u2592   \u2588\u2592   \u2593\u2592  \u2592\u2588\u2593    \u2592\u2593\u2593\u2593\u2593\u2593 \u2592\u2593   \u2593      \u2592\u2593    \u2592\u2593\u2593\u2593\u2593\u2593\u2592       \u2593\\n\u2588\u2588  \u2592\u2593\u2593\u2592\u2592     \u2592   \u2592      \u2592\u2593\u2592                                         \u2593\\n\u2588\u2588                         \u2588\u2593                                        \u2593\\n'"
     },
     {
+      "annotation": null,
+      "docstring": "",
       "name": "NON_SPA_PREFIXES",
-      "annotation": null,
-      "value": "(*API_PREFIXES, '/_app', '/app_models', '/health', '/docs', '/redoc', '/openapi.json')",
-      "docstring": ""
+      "value": "(*API_PREFIXES, '/_app', '/app_models', '/health', '/docs', '/redoc', '/openapi.json')"
     },
     {
+      "annotation": null,
+      "docstring": "",
       "name": "TEMPLATE_PATH",
-      "annotation": null,
-      "value": "str(files('pixano').joinpath('api/dist'))",
-      "docstring": ""
+      "value": "str(files('pixano').joinpath('api/dist'))"
     },
     {
+      "annotation": null,
+      "docstring": "",
       "name": "display_functions",
-      "annotation": null,
-      "value": "{'colab': display_colab, 'ipython': display_ipython, 'none': display_cli}",
-      "docstring": ""
+      "value": "{'colab': display_colab, 'ipython': display_ipython, 'none': display_cli}"
     },
     {
-      "name": "task_functions",
       "annotation": null,
-      "value": "{'colab': _create_notebook_task, 'ipython': _create_notebook_task, 'none': asyncio.run}",
-      "docstring": ""
+      "docstring": "",
+      "name": "task_functions",
+      "value": "{'colab': _create_notebook_task, 'ipython': _create_notebook_task, 'none': asyncio.run}"
     }
   ],
+  "classes": [
+    {
+      "attributes": [
+        {
+          "annotation": "fastapi.FastAPI",
+          "docstring": "",
+          "name": "app",
+          "value": "create_app(settings=settings)"
+        },
+        {
+          "annotation": "uvicorn.Config",
+          "docstring": "",
+          "name": "config",
+          "value": "uvicorn.Config(self.app, host=host, port=port)"
+        },
+        {
+          "annotation": "uvicorn.Server",
+          "docstring": "",
+          "name": "server",
+          "value": "uvicorn.Server(self.config)"
+        }
+      ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "The Pixano app.\n\nAttributes:\n    app: FastAPI App.\n    config: App config.\n    server: App server.",
+      "lineno": 67,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "Initialize and serve the Pixano app.\n\nArgs:\n    data_dir: Root data directory containing library/ and\n        models/ subdirectories.\n    library_dir: Override for the library directory. If not\n        provided, defaults to data_dir/library.\n    models_dir: Override for the models directory. If not\n        provided, defaults to data_dir/models.\n    aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.\n        Used if library_dir is an S3 path.\n    aws_region: S3 region name, not always required for\n        private storages. Used if library_dir is an S3 path.\n    aws_access_key: S3 AWS access key. Used if library_dir is\n        an S3 path.\n    aws_secret_key: S3 AWS secret key. Used if library_dir\n        is an S3 path.\n    host: App host.\n    port: App port.\n    pixano_inference_url: Pixano inference URL if any.",
+          "is_async": false,
+          "lineno": 80,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": "'.'",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "data_dir"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "library_dir"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "models_dir"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "aws_endpoint"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "aws_region"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "aws_access_key"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "aws_secret_key"
+            },
+            {
+              "annotation": "str",
+              "default": "'127.0.0.1'",
+              "kind": "ParameterKind.keyword_only",
+              "name": "host"
+            },
+            {
+              "annotation": "int",
+              "default": "7492",
+              "kind": "ParameterKind.keyword_only",
+              "name": "port"
+            },
+            {
+              "annotation": "str | None",
+              "default": "None",
+              "kind": "ParameterKind.keyword_only",
+              "name": "pixano_inference_url"
+            }
+          ],
+          "returns": null
+        },
+        {
+          "decorators": [],
+          "docstring": "Display the Pixano app.\n\nArgs:\n    height: Frame height.",
+          "is_async": false,
+          "lineno": 180,
+          "name": "display",
+          "parameters": [
+            {
+              "annotation": "int",
+              "default": "1000",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "height"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Get the app's current running environment.\n\nReturns:\n    Running environment.",
+          "is_async": false,
+          "lineno": 196,
+          "name": "get_env",
+          "parameters": [],
+          "returns": "str"
+        }
+      ],
+      "name": "App",
+      "properties": [],
+      "static_methods": []
+    }
+  ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/serve.py",
+  "functions": [],
+  "module": "pixano.api.serve",
   "submodules": []
 }

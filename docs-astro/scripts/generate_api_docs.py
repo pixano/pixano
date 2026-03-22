@@ -239,7 +239,7 @@ def main():
             filename = module.path.replace(".", "_") + ".json"
             output_path = OUTPUT_DIR / filename
 
-            output_path.write_text(json.dumps(data, indent=2, default=str))
+            output_path.write_text(json.dumps(data, indent=2, default=str, sort_keys=True) + "\n")
             all_modules.append(data)
             module_count += 1
             print(
@@ -258,7 +258,7 @@ def main():
     # Write navigation index
     nav_tree = build_nav_tree(all_modules)
     nav_path = OUTPUT_DIR / "_nav.json"
-    nav_path.write_text(json.dumps(nav_tree, indent=2))
+    nav_path.write_text(json.dumps(nav_tree, indent=2, sort_keys=True) + "\n")
     print(f"\nNavigation tree written to: {nav_path}")
 
     # Write module index
@@ -272,7 +272,7 @@ def main():
         }
         for m in all_modules
     ]
-    index_path.write_text(json.dumps(index_data, indent=2))
+    index_path.write_text(json.dumps(index_data, indent=2, sort_keys=True) + "\n")
 
     print(f"\nDone! Generated {module_count} module files.")
     print(f"Index written to: {index_path}")

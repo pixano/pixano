@@ -1,136 +1,136 @@
 {
-  "module": "pixano.features.utils.boxes",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/utils/boxes.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/features/utils/boxes.py",
   "functions": [
     {
-      "name": "denormalize_coords",
+      "decorators": [],
       "docstring": "Denormalize coordinates.\n\nArgs:\n    coord: Normalized coordinates.\n    height: Height.\n    width: Width.\n    rounded_int: True to round denormalized float to nearest integer.\n\nReturns:\n    Unnormalized coordinates.",
+      "is_async": false,
+      "lineno": 12,
+      "name": "denormalize_coords",
       "parameters": [
         {
-          "name": "coord",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "coord"
         },
         {
-          "name": "height",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "height"
         },
         {
-          "name": "width",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "width"
         },
         {
-          "name": "rounded_int",
           "annotation": "bool",
           "default": "True",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "rounded_int"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 12
+      "returns": "list[float]"
     },
     {
-      "name": "mask_to_bbox",
+      "decorators": [],
       "docstring": "Return the smallest bounding box containing all the mask pixels.\n\nArgs:\n    mask: Mask as NumPy Array.\n\nReturns:\n    Normalized xywh bounding box.",
+      "is_async": false,
+      "lineno": 57,
+      "name": "mask_to_bbox",
       "parameters": [
         {
-          "name": "mask",
           "annotation": "np.ndarray",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "mask"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 57
+      "returns": "list[float]"
     },
     {
-      "name": "normalize_coords",
+      "decorators": [],
       "docstring": "Normalize coordinates.\n\nArgs:\n    coord: Unnormalized coordinates.\n    height: Height.\n    width: Width.\n\nReturns:\n    Normalized coordinates.",
+      "is_async": false,
+      "lineno": 35,
+      "name": "normalize_coords",
       "parameters": [
         {
-          "name": "coord",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "coord"
         },
         {
-          "name": "height",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "height"
         },
         {
-          "name": "width",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "width"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 35
+      "returns": "list[float]"
     },
     {
-      "name": "urle_to_bbox",
+      "decorators": [],
       "docstring": "Return the smallest bounding box containing all the mask pixels.\n\nArgs:\n    urle: Mask as uncompressed RLE.\n\nReturns:\n    Normalized xywh bounding box.",
+      "is_async": false,
+      "lineno": 84,
+      "name": "urle_to_bbox",
       "parameters": [
         {
-          "name": "urle",
           "annotation": "dict",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "urle"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 84
+      "returns": "list[float]"
     },
     {
-      "name": "xywh_to_xyxy",
+      "decorators": [],
       "docstring": "Convert bounding box coordinates from xywh\n(using top left point as reference) to xyxy.\n\nArgs:\n    xywh: xywh coordinates.\n\nReturns:\n    xyxy coordinates.",
+      "is_async": false,
+      "lineno": 96,
+      "name": "xywh_to_xyxy",
       "parameters": [
         {
-          "name": "xywh",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "xywh"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 96
+      "returns": "list[float]"
     },
     {
-      "name": "xyxy_to_xywh",
+      "decorators": [],
       "docstring": "Convert bounding box coordinates from xyxy to xywh\n(using top left point as reference).\n\nArgs:\n    xyxy: xyxy coordinates.\n\nReturns:\n    xywh coordinates.",
+      "is_async": false,
+      "lineno": 114,
+      "name": "xyxy_to_xywh",
       "parameters": [
         {
-          "name": "xyxy",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "xyxy"
         }
       ],
-      "returns": "list[float]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 114
+      "returns": "list[float]"
     }
   ],
-  "attributes": [],
+  "module": "pixano.features.utils.boxes",
   "submodules": []
 }
