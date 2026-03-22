@@ -76,8 +76,8 @@ class Sam2VideoTracker {
   // ... existing code ...
 
   async propagateInterval(
-    startFrame: number, 
-    endFrame: number, 
+    startFrame: number,
+    endFrame: number,
     keyframes: VOSKeyframe[]
   ): Promise<TrackingOutput[]> {
     // 1. Construct VOSTrackIntervalRequest
