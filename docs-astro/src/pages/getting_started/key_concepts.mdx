@@ -52,7 +52,7 @@ Every dataset is composed of **tables** grouped by purpose. Pixano defines six s
 
 | Group | What it stores | Examples |
 |-------|---------------|----------|
-| **Record** | One row per dataset sample (metadata, split) | `Record` (subclass with your fields) |
+| **Record** | One row per dataset sample (metadata, split, workflow status) | `Record` (subclass with your fields) |
 | **View** | Media files attached to a record | `Image`, `Video`, `SequenceFrame`, `Text` |
 | **Entity** | A physical object observable in one or several views | `Entity` (subclass with your fields) |
 | **EntityDynamicState** | Per-frame state of an entity (e.g. visibility) | `EntityDynamicState` |
@@ -61,11 +61,28 @@ Every dataset is composed of **tables** grouped by purpose. Pixano defines six s
 
 ### A concrete scenario
 
-Imagine an image dataset for object detection. Each **record** is one dataset sample. The record has one **view** (the image file). The image contains several **entities** — physical objects observable in the view (a car, a pedestrian, a bicycle). Each entity has an **annotation** (a bounding box with coordinates). Later you run YOLO to add model predictions — each prediction carries built-in provenance fields (`source_type`, `source_name`, `source_metadata`) directly on the annotation, so you can distinguish human annotations from model outputs without a separate table. You also compute OpenCLIP embeddings so the dataset becomes searchable — those are **embeddings**.
+Imagine an image dataset for object detection. Each **record** is one dataset sample. The record has one **view** (the image file). The image contains several **entities** — physical objects observable in the view (a car, a pedestrian, a bicycle). Each entity has an **annotation** (a bounding box with coordinates). Later you run YOLO to add model predictions — each prediction carries built-in provenance fields (`source_type`, `source_name`, `source_metadata`) directly on the annotation, so you can distinguish human annotations from model outputs without a separate table. You also compute OpenCLIP embeddings so the dataset becomes searchable — those are **embeddings**. Each record carries a `status` field to track annotation progress (`new`, `inProgress`, `inReview`, `validated`), enabling campaign monitoring across multiple annotators.
 
 <Callout type="info" title="Source provenance">
 There is no separate **Source** table. Provenance is tracked directly on annotations via three fields: `source_type` (one of `model`, `human`, `ground_truth`, `other`), `source_name`, and `source_metadata` (a JSON string). These fields are available on `EntityAnnotation`, `EntityGroupAnnotation`, and `EntityDynamicState`.
 </Callout>
+
+### Record built-in fields
+
+The base `Record` class provides these fields out of the box:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `id` | `str` | `""` | Unique identifier for the record |
+| `split` | `str` | `"default"` | Dataset split (e.g. `train`, `val`, `test`) |
+| `status` | `str` | `"new"` | Workflow status: `new`, `inProgress`, `inReview`, `validated` |
+| `comment` | `str` | `""` | Free-text note from the annotator |
+| `created_at` | `datetime` | now | Creation timestamp |
+| `updated_at` | `datetime` | now | Last modification timestamp |
+
+The `status` field helps monitor annotation campaigns: filter the dataset explorer by status to see which items still need work, and use the dashboard to track overall progress.
+
+You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for pre-annotated ground truth). Items without a `status` field default to `"new"`.
 
 Each group maps to a Pydantic base class you can subclass to add your own fields:
 

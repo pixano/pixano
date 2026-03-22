@@ -76,7 +76,7 @@ def export_split(output_dir: Path, num_samples: int, seed: int) -> int:
             "responses": [{"content": entry["multiple_choice_answer"]}],
         }
 
-        metadata_entry = {"views": {"image": filename}, "messages": [conversation]}
+        metadata_entry = {"status": "validated", "views": {"image": filename}, "messages": [conversation]}
         metadata_lines.append(json.dumps(metadata_entry, ensure_ascii=False))
 
     # Write metadata.jsonl

@@ -22,12 +22,16 @@ class Record(LanceModel):
         split: The record's split.
         created_at: The record's creation date.
         updated_at: The record's last modification date.
+        status: Workflow status of the record, e.g. 'new', 'inProgress', 'inReview', 'validated'.
+        comment: Free-text note added by the annotator.
     """
 
     id: str = ""
     split: str = "default"
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    status: str = "new"
+    comment: str = ""
 
 
 class RecordComponent(LanceModel):

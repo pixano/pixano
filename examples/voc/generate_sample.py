@@ -220,7 +220,7 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, voc_
             )
 
         # Build metadata line
-        entry: dict = {"views": {"image": filename}}
+        entry: dict = {"status": "validated", "views": {"image": filename}}
         if entities:
             entry["entities"] = entities
         metadata_lines.append(json.dumps(entry, ensure_ascii=False))

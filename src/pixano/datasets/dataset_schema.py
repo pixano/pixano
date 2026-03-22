@@ -55,6 +55,8 @@ class DatasetItem(BaseModel):
     split: str = "default"
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    status: str = "new"
+    comment: str = ""
 
     @classmethod
     def to_dataset_schema(cls):

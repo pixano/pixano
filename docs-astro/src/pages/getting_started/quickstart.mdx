@@ -63,6 +63,7 @@ Each line in `metadata.jsonl` follows this format:
 
 ```json
 {
+  "status": "validated",
   "views": { "image": "000032.jpg" },
   "entities": [
     {
@@ -206,7 +207,7 @@ from pixano.datasets import Dataset
 dataset = Dataset(Path("./my_data/library/voc_2007_sample"), media_dir=Path("./my_data/media"))
 items = dataset.get_dataset_items(limit=3)
 for item in items:
-    print(f"Item {item.id} | split={item.split}")
+    print(f"Item {item.id} | split={item.split} | status={item.status}")
 ```
 
 </Callout>
