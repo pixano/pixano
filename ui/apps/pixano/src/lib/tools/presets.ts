@@ -8,6 +8,7 @@ import {
   ToolType,
   type BrushSelectionTool,
   type InteractiveSegmenterSelectionTool,
+  type VOSSelectionTool,
   type PolygonSelectionTool,
   type PolylineSelectionTool,
   type SelectionTool,
@@ -29,6 +30,13 @@ export const rectangleTool: SelectionTool = {
 export const interactiveSegmenterTool: InteractiveSegmenterSelectionTool = {
   name: "Interactive smart segmentation",
   type: ToolType.InteractiveSegmenter,
+  cursor: "crosshair",
+  promptMode: "positive",
+};
+
+export const vosTool: VOSSelectionTool = {
+  name: "Video Object Segmentation (Smart Track)",
+  type: ToolType.VOS,
   cursor: "crosshair",
   promptMode: "positive",
 };

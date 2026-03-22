@@ -8,6 +8,7 @@ import {
   brushDrawTool,
   brushEraseTool,
   interactiveSegmenterTool,
+  vosTool,
   panTool,
   polygonTool,
   polylineTool,
@@ -23,6 +24,7 @@ export function isSupportedCanvasTool(tool: SelectionTool | undefined): boolean 
     tool.type === ToolType.Pan ||
     (tool.type === ToolType.Rectangle && !tool.isSmart) ||
     tool.type === ToolType.InteractiveSegmenter ||
+    tool.type === ToolType.VOS ||
     tool.type === ToolType.Polygon ||
     tool.type === ToolType.Polyline ||
     tool.type === ToolType.Brush
@@ -67,7 +69,7 @@ export function handleToolShortcuts(
   }
 
   if (event.key === "r" || event.key === "R") {
-    if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+    if (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) {
       actions.setInteractiveBoxPrompt();
       return true;
     }
@@ -95,7 +97,7 @@ export function handleToolShortcuts(
       actions.toggleBrushMode();
       return true;
     }
-    if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+    if (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) {
       actions.toggleInteractivePromptMode();
       return true;
     }
@@ -133,6 +135,7 @@ export {
   brushDrawTool,
   brushEraseTool,
   interactiveSegmenterTool,
+  vosTool,
   panTool,
   polygonTool,
   polylineTool,

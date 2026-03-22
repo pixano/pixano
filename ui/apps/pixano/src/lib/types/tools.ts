@@ -259,6 +259,7 @@ export enum ToolType {
   Fusion = "FUSION",
   Classification = "CLASSIFICATION",
   Brush = "BRUSH",
+  VOS = "VOS",
 }
 
 export interface ToolPostProcessor {
@@ -286,6 +287,10 @@ export type InteractiveSegmenterSelectionTool = BaseTool<ToolType.InteractiveSeg
   promptMode: InteractivePromptMode;
 };
 
+export type VOSSelectionTool = BaseTool<ToolType.VOS> & {
+  promptMode: InteractivePromptMode;
+};
+
 export type LabeledPointTool = BaseTool<ToolType.PointSelection> & {
   label: number;
 };
@@ -305,5 +310,6 @@ export type SelectionTool =
   | LabeledPointTool
   | BrushSelectionTool
   | InteractiveSegmenterSelectionTool
+  | VOSSelectionTool
   | PolygonSelectionTool
   | PolylineSelectionTool;

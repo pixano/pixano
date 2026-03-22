@@ -22,6 +22,9 @@ def simple_inference_provider() -> InferenceProvider:
     # Setup async methods
     provider.segmentation = AsyncMock()
     provider.tracking = AsyncMock()
+    provider.submit_tracking_job = AsyncMock()
+    provider.get_tracking_job = AsyncMock()
+    provider.cancel_tracking_job = AsyncMock()
     provider.detection = AsyncMock()
     provider.vlm = AsyncMock()
     provider.list_models = AsyncMock(return_value=[])
@@ -54,6 +57,9 @@ def simple_inference_provider_fn_scope() -> InferenceProvider:
     # Setup async methods
     provider.segmentation = AsyncMock()
     provider.tracking = AsyncMock()
+    provider.submit_tracking_job = AsyncMock()
+    provider.get_tracking_job = AsyncMock()
+    provider.cancel_tracking_job = AsyncMock()
     provider.detection = AsyncMock()
     provider.vlm = AsyncMock()
     provider.list_models = AsyncMock(return_value=[])

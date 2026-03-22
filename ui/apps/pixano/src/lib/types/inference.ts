@@ -163,6 +163,18 @@ export interface VideoTrackingTaskInput {
   points?: number[][][] | null;
   labels?: number[][] | null;
   boxes?: number[][] | null;
+  propagate?: boolean;
+  interval?: {
+    start_frame: number;
+    end_frame: number;
+    direction: "forward" | "backward";
+  } | null;
+  keyframes?: Array<{
+    frame_index: number;
+    points?: Array<{ x: number; y: number; label: 0 | 1 }> | null;
+    box?: { x: number; y: number; width: number; height: number } | null;
+    mask?: CompressedRLEPayload | null;
+  }> | null;
 }
 
 export interface VideoTrackingTaskOutput {
@@ -178,6 +190,20 @@ export interface VideoTrackingTaskResult {
   metadata: Record<string, unknown>;
   id: string;
   status: string;
+}
+
+export type VideoTrackingJobState =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "canceled";
+
+export interface VideoTrackingJobStatus {
+  job_id: string;
+  status: VideoTrackingJobState;
+  detail?: string | null;
+  data?: VideoTrackingTaskOutput | null;
 }
 
 export function getInferenceModelKey(model: InferenceModelSelection): string {

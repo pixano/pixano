@@ -34,6 +34,7 @@ License: CECILL-C
     brushDrawTool,
     brushEraseTool,
     interactiveSegmenterTool,
+    vosTool,
     panTool,
     polygonTool,
     polylineTool,
@@ -58,8 +59,12 @@ License: CECILL-C
   };
 
   const selectInteractiveSegmenterTool = () => {
-    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter) {
-      selectedTool.value = interactiveSegmenterTool;
+    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter && selectedTool.value?.type !== ToolType.VOS) {
+      if (itemMetas.value?.type === WorkspaceType.VIDEO) {
+        selectedTool.value = vosTool;
+      } else {
+        selectedTool.value = interactiveSegmenterTool;
+      }
     }
   };
 
@@ -82,11 +87,12 @@ License: CECILL-C
   };
 
   const setInteractivePromptMode = (promptMode: (typeof interactiveSegmenterTool)["promptMode"]) => {
-    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter) {
-      selectedTool.value = {
-        ...interactiveSegmenterTool,
-        promptMode,
-      };
+    if (selectedTool.value?.type !== ToolType.InteractiveSegmenter && selectedTool.value?.type !== ToolType.VOS) {
+      if (itemMetas.value?.type === WorkspaceType.VIDEO) {
+        selectedTool.value = { ...vosTool, promptMode };
+      } else {
+        selectedTool.value = { ...interactiveSegmenterTool, promptMode };
+      }
       return;
     }
 
@@ -132,7 +138,7 @@ License: CECILL-C
 
   let showBrushTools = $derived(selectedTool.value?.type === ToolType.Brush);
   let showInteractiveSegmenterTools = $derived(
-    selectedTool.value?.type === ToolType.InteractiveSegmenter,
+    selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS,
   );
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);
   let smartInferencePending = $derived(smartSegmentationUiState.value.phase === "pending");
@@ -230,7 +236,7 @@ License: CECILL-C
     <IconButton
       tooltipContent="Interactive Smart Segmentation (W)"
       onclick={selectInteractiveSegmenterTool}
-      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter}
+      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS}
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
@@ -244,7 +250,7 @@ License: CECILL-C
         <IconButton
           tooltipContent="Positive Point Prompt (X toggles +/-)"
           onclick={() => setInteractivePromptMode("positive")}
-          selected={selectedTool.value?.type === ToolType.InteractiveSegmenter &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "positive"}
           disabled={smartInferencePending}
           class="h-8 w-8"
@@ -254,7 +260,7 @@ License: CECILL-C
         <IconButton
           tooltipContent="Negative Point Prompt (X toggles +/-)"
           onclick={() => setInteractivePromptMode("negative")}
-          selected={selectedTool.value?.type === ToolType.InteractiveSegmenter &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "negative"}
           disabled={smartInferencePending}
           class="h-8 w-8"
@@ -264,7 +270,7 @@ License: CECILL-C
         <IconButton
           tooltipContent="Bounding Box Prompt (R)"
           onclick={() => setInteractivePromptMode("box")}
-          selected={selectedTool.value?.type === ToolType.InteractiveSegmenter &&
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter || selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "box"}
           disabled={smartInferencePending}
           class="h-8 w-8"

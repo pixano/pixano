@@ -27,7 +27,7 @@ export function getToolSwitchSignature(tool: SelectionTool): string {
   if (tool.type === ToolType.Rectangle) {
     return `${tool.type}:${tool.isSmart ? "smart" : "regular"}`;
   }
-  if (tool.type === ToolType.InteractiveSegmenter) {
+  if (tool.type === ToolType.InteractiveSegmenter || tool.type === ToolType.VOS) {
     return tool.type;
   }
   return tool.type;
@@ -67,7 +67,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cleanupPolygonPreview: true,
     };
   }
-  if (tool?.type === ToolType.InteractiveSegmenter) {
+  if (tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS) {
     return {
       cursor: interactiveSegmenterTool.cursor,
       clearCrosshair: false,
@@ -129,7 +129,7 @@ export interface CursorFlushAction {
 export function computeCursorFlushAction(tool: SelectionTool | undefined): CursorFlushAction {
   const isDrawTool =
     tool?.type === ToolType.Rectangle ||
-    tool?.type === ToolType.InteractiveSegmenter ||
+    tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS ||
     tool?.type === ToolType.Polygon ||
     tool?.type === ToolType.Polyline ||
     tool?.type === ToolType.Brush;
@@ -137,7 +137,7 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
   return {
     showCrosshair: isDrawTool,
     showBrushCursor: tool?.type === ToolType.Brush,
-    showSmartPromptCursor: tool?.type === ToolType.InteractiveSegmenter,
+    showSmartPromptCursor: tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS,
   };
 }
 
@@ -197,7 +197,7 @@ export function classifyKeyDown(
   if (
     (event.key === "Enter" || event.key === "Backspace") &&
     (tool?.type === ToolType.Rectangle ||
-      tool?.type === ToolType.InteractiveSegmenter ||
+      tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS ||
       tool?.type === ToolType.Polygon ||
       tool?.type === ToolType.Polyline)
   ) {

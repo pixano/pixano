@@ -51,12 +51,13 @@ export function createIdleSmartSegmentationUiState(): SmartSegmentationUiState {
 export function createPendingSmartSegmentationUiState(
   requestId: string,
   viewName: string,
+  message = "Running segmentation...",
 ): SmartSegmentationUiState {
   return {
     phase: "pending",
     requestId,
     viewName,
-    message: "Running segmentation...",
+    message,
   };
 }
 

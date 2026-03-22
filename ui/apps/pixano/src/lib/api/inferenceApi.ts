@@ -12,6 +12,7 @@ import type {
   ImageSegmentationTaskResult,
   InferenceModel,
   InferenceProviderRegistry,
+  VideoTrackingJobStatus,
   VideoTrackingTaskInput,
   VideoTrackingTaskResult,
   VLMResult,
@@ -125,22 +126,50 @@ export async function segmentImage(
 
 export async function trackVideo(
   input: VideoTrackingTaskInput,
-): Promise<VideoTrackingTaskResult | null> {
-  try {
-    const response = await fetch("/inference/tracking", {
+): Promise<VideoTrackingTaskResult> {
+  return requestJson<VideoTrackingTaskResult>(
+    "/inference/tracking",
+    {
       headers: JSON_HEADERS,
       method: "POST",
       body: JSON.stringify(input),
-    });
+    },
+    "trackVideo",
+  );
+}
 
-    if (!response.ok) {
-      console.error("api.trackVideo -", response.status, response.statusText);
-      return null;
-    }
+export async function submitTrackingJob(
+  input: VideoTrackingTaskInput,
+): Promise<VideoTrackingJobStatus> {
+  return requestJson<VideoTrackingJobStatus>(
+    "/inference/tracking/jobs",
+    {
+      headers: JSON_HEADERS,
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    "submitTrackingJob",
+  );
+}
 
-    return (await response.json()) as VideoTrackingTaskResult;
-  } catch (e) {
-    console.error("api.trackVideo -", e);
-    return null;
-  }
+export async function getTrackingJob(jobId: string): Promise<VideoTrackingJobStatus> {
+  return requestJson<VideoTrackingJobStatus>(
+    `/inference/tracking/jobs/${jobId}`,
+    {
+      headers: { Accept: "application/json" },
+      method: "GET",
+    },
+    "getTrackingJob",
+  );
+}
+
+export async function cancelTrackingJob(jobId: string): Promise<VideoTrackingJobStatus> {
+  return requestJson<VideoTrackingJobStatus>(
+    `/inference/tracking/jobs/${jobId}`,
+    {
+      headers: { Accept: "application/json" },
+      method: "DELETE",
+    },
+    "cancelTrackingJob",
+  );
 }

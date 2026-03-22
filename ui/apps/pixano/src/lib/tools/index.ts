@@ -41,6 +41,7 @@ export {
   brushEraseTool,
   fusionTool,
   interactiveSegmenterTool,
+  vosTool,
   keyPointTool,
   panTool,
   polygonTool,

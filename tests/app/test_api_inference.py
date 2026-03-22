@@ -6,6 +6,7 @@
 
 """Tests for the inference API router."""
 
+import json
 import io
 import tempfile
 from datetime import datetime
@@ -34,6 +35,7 @@ from pixano.inference.types import (
     SegmentationResult,
     ServerInfo,
     TrackingInput,
+    TrackingJobStatus,
     TrackingOutput,
     TrackingResult,
     UsageInfo,
@@ -57,14 +59,17 @@ def _make_mock_provider(name: str, url: str) -> MagicMock:
             num_nodes=1,
             gpus_used=1.0,
             gpu_to_model={"0": "sam2"},
-            models=["sam2", "qwen-vl"],
-            models_to_capability={"sam2": "segmentation", "qwen-vl": "vlm"},
+            models=["sam2", "sam2-video", "qwen-vl"],
+            models_to_capability={"sam2": "segmentation", "sam2-video": "tracking", "qwen-vl": "vlm"},
         )
     )
     provider.list_models = AsyncMock(return_value=[])
     provider.vlm = AsyncMock()
     provider.segmentation = AsyncMock()
     provider.tracking = AsyncMock()
+    provider.submit_tracking_job = AsyncMock()
+    provider.get_tracking_job = AsyncMock()
+    provider.cancel_tracking_job = AsyncMock()
     provider.detection = AsyncMock()
     return provider
 
@@ -135,6 +140,22 @@ def _create_dataset_with_embedded_views(library_dir: Path) -> tuple[str, str, st
             timestamp=1.0,
             frame_index=1,
             id="frame-view-1",
+        ),
+        SequenceFrame.from_bytes(
+            record_id=record.id,
+            logical_name="camera",
+            raw_bytes=_png_bytes((255, 255, 0)),
+            timestamp=2.0,
+            frame_index=2,
+            id="frame-view-2",
+        ),
+        SequenceFrame.from_bytes(
+            record_id=record.id,
+            logical_name="camera",
+            raw_bytes=_png_bytes((255, 0, 255)),
+            timestamp=3.0,
+            frame_index=3,
+            id="frame-view-3",
         ),
     ]
     dataset.add_records({"records": record, "images": image, "sequence_frames": frames})
@@ -380,6 +401,39 @@ class TestImageSegmentation:
         assert response.status_code == 400
         assert response.json() == {"detail": "Part exceeded maximum size of 1024KB."}
 
+    def test_segment_image_rejects_tracking_only_model(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.list_models = AsyncMock(
+            return_value=[
+                ModelInfo(
+                    name="sam2-video",
+                    capability="tracking",
+                    model_path="facebook/sam2-hiera-tiny",
+                    model_class="SAM2Video",
+                )
+            ]
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, _, view_id, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        response = client.post(
+            "/inference/segmentation",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "view_id": view_id,
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": "Model 'sam2-video' is tracking-only; use /inference/tracking"
+        }
+        provider.segmentation.assert_not_called()
+
 
 class TestVideoTracking:
     def test_track_video_uses_default_provider(self):
@@ -410,7 +464,7 @@ class TestVideoTracking:
         response = client.post(
             "/inference/tracking",
             json={
-                "model": "sam2",
+                "model": "sam2-video",
                 "dataset_id": dataset_id,
                 "record_id": record_id,
                 "view_name": "camera",
@@ -441,7 +495,7 @@ class TestVideoTracking:
         response = client.post(
             "/inference/tracking",
             json={
-                "model": "sam2",
+                "model": "sam2-video",
                 "dataset_id": dataset_id,
                 "record_id": record_id,
                 "view_name": "camera",
@@ -455,6 +509,231 @@ class TestVideoTracking:
         assert response.status_code == 400
         provider.tracking.assert_not_called()
 
+    def test_track_video_serializes_interval_keyframes(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.tracking = AsyncMock(
+            return_value=TrackingResult(
+                data=TrackingOutput(
+                    objects_ids=[7],
+                    frame_indexes=[0, 1],
+                    masks=[
+                        CompressedRLEData(size=[8, 8], counts=b"abc"),
+                        CompressedRLEData(size=[8, 8], counts=b"xyz"),
+                    ],
+                ),
+                timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
+                processing_time=0.45,
+                metadata={"backend": "mock"},
+                id="track-interval-1",
+                status="SUCCESS",
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        response = client.post(
+            "/inference/tracking",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 1,
+                "frame_count": 3,
+                "objects_ids": [7],
+                "interval": {
+                    "start_frame": 2,
+                    "end_frame": 3,
+                    "direction": "forward",
+                },
+                "keyframes": [
+                    {
+                        "frame_index": 2,
+                        "mask": {
+                            "size": [8, 8],
+                            "counts": [4, 8, 52],
+                        },
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+        provider.tracking.assert_called_once()
+        input_data = provider.tracking.await_args.kwargs["input_data"]
+        assert input_data.frame_indexes == [1]
+        assert input_data.interval == {"start_frame": 1, "end_frame": 2, "direction": "forward"}
+        assert input_data.propagate is True
+        assert input_data.keyframes == [
+            {
+                "frame_index": 1,
+                "mask": {
+                    "size": [8, 8],
+                    "counts": [4, 8, 52],
+                },
+            }
+        ]
+
+    def test_track_video_serializes_non_propagating_single_frame_prompt(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.tracking = AsyncMock(
+            return_value=TrackingResult(
+                data=TrackingOutput(
+                    objects_ids=[7],
+                    frame_indexes=[0],
+                    masks=[CompressedRLEData(size=[8, 8], counts=b"abc")],
+                ),
+                timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
+                processing_time=0.45,
+                metadata={"backend": "mock"},
+                id="track-single-1",
+                status="SUCCESS",
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        response = client.post(
+            "/inference/tracking",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 2,
+                "frame_count": 1,
+                "objects_ids": [7],
+                "prompt_frame_indexes": [2],
+                "points": [[[4, 4]]],
+                "labels": [[1]],
+                "propagate": False,
+            },
+        )
+
+        assert response.status_code == 200
+        provider.tracking.assert_called_once()
+        input_data = provider.tracking.await_args.kwargs["input_data"]
+        assert input_data.frame_indexes == [0]
+        assert input_data.propagate is False
+        assert len(input_data.video) == 1
+
+    def test_submit_tracking_job_stores_local_job_and_remaps_completed_frames(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.submit_tracking_job = AsyncMock(
+            return_value=TrackingJobStatus(
+                job_id="provider-job-1",
+                status="running",
+            )
+        )
+        provider.get_tracking_job = AsyncMock(
+            return_value=TrackingJobStatus(
+                job_id="provider-job-1",
+                status="completed",
+                data=TrackingOutput(
+                    objects_ids=[7],
+                    frame_indexes=[0, 1],
+                    masks=[
+                        CompressedRLEData(size=[8, 8], counts=b"abc"),
+                        CompressedRLEData(size=[8, 8], counts=b"xyz"),
+                    ],
+                ),
+                metadata={"backend": "mock"},
+                timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
+                processing_time=0.45,
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        submit_response = client.post(
+            "/inference/tracking/jobs",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 2,
+                "frame_count": 2,
+                "objects_ids": [7],
+                "prompt_frame_indexes": [2],
+                "points": [[[4, 4]]],
+                "labels": [[1]],
+                "propagate": False,
+            },
+        )
+
+        assert submit_response.status_code == 200
+        assert submit_response.json()["status"] == "running"
+        provider.submit_tracking_job.assert_called_once()
+        input_data = provider.submit_tracking_job.await_args.kwargs["input_data"]
+        assert input_data.frame_indexes == [0]
+        assert input_data.propagate is False
+
+        local_job_id = submit_response.json()["job_id"]
+        poll_response = client.get(f"/inference/tracking/jobs/{local_job_id}")
+        assert poll_response.status_code == 200
+        assert poll_response.json()["status"] == "completed"
+        assert poll_response.json()["data"]["frame_indexes"] == [2, 3]
+        provider.get_tracking_job.assert_awaited_once_with("provider-job-1")
+
+    def test_cancel_tracking_job_marks_job_canceled(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.submit_tracking_job = AsyncMock(
+            return_value=TrackingJobStatus(
+                job_id="provider-job-2",
+                status="running",
+            )
+        )
+        provider.cancel_tracking_job = AsyncMock(
+            return_value=TrackingJobStatus(
+                job_id="provider-job-2",
+                status="canceled",
+                detail="Tracking job canceled.",
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        submit_response = client.post(
+            "/inference/tracking/jobs",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 0,
+                "frame_count": 1,
+                "objects_ids": [7],
+                "prompt_frame_indexes": [0],
+                "points": [[[4, 4]]],
+                "labels": [[1]],
+                "propagate": False,
+            },
+        )
+
+        local_job_id = submit_response.json()["job_id"]
+        cancel_response = client.delete(f"/inference/tracking/jobs/{local_job_id}")
+        assert cancel_response.status_code == 200
+        assert cancel_response.json()["status"] == "canceled"
+        provider.cancel_tracking_job.assert_awaited_once_with("provider-job-2")
+
+        poll_response = client.get(f"/inference/tracking/jobs/{local_job_id}")
+        assert poll_response.status_code == 200
+        assert poll_response.json()["status"] == "canceled"
+        provider.get_tracking_job.assert_not_called()
+
     def test_track_video_preserves_upstream_client_error(self):
         provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
         provider.tracking = AsyncMock(side_effect=InferenceError("HTTP 400: Bad Request - Invalid binary metadata"))
@@ -467,7 +746,7 @@ class TestVideoTracking:
         response = client.post(
             "/inference/tracking",
             json={
-                "model": "sam2",
+                "model": "sam2-video",
                 "dataset_id": dataset_id,
                 "record_id": record_id,
                 "view_name": "camera",
@@ -510,6 +789,7 @@ class TestPixanoInferenceProviderBinaryRequests:
                 video=[b"frame-0", b"frame-1"],
                 objects_ids=[1],
                 frame_indexes=[0],
+                propagate=False,
             )
         )
 
@@ -517,6 +797,7 @@ class TestPixanoInferenceProviderBinaryRequests:
         assert metadata_part[0] == "metadata"
         assert metadata_part[1][0] == "metadata.json"
         assert metadata_part[1][2] == "application/json"
+        assert json.loads(metadata_part[1][1])["propagate"] is False
 
 
 class TestVLM:

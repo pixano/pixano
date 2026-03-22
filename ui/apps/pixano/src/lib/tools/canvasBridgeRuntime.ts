@@ -58,6 +58,7 @@ export function createToolFSMForSelection(tool: SelectionTool): ToolFSM | null {
     case ToolType.Rectangle:
       return new RectangleToolFSM({ isSmart: !!tool.isSmart });
     case ToolType.InteractiveSegmenter:
+    case ToolType.VOS:
       return new InteractiveSegmenterToolFSM(tool.promptMode);
     case ToolType.Polygon:
       return new PolygonToolFSM({ defaultOutputMode: tool.outputMode });

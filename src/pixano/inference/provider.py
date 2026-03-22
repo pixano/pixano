@@ -25,6 +25,7 @@ from .types import (
     SegmentationResult,
     ServerInfo,
     TrackingInput,
+    TrackingJobStatus,
     TrackingResult,
     VLMInput,
     VLMResult,
@@ -147,6 +148,33 @@ class InferenceProvider(ABC):
         Returns:
             Tracking result.
         """
+        ...
+
+    @abstractmethod
+    async def submit_tracking_job(
+        self,
+        input_data: TrackingInput,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Submit an asynchronous tracking job."""
+        ...
+
+    @abstractmethod
+    async def get_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Fetch the current status of an asynchronous tracking job."""
+        ...
+
+    @abstractmethod
+    async def cancel_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Cancel an asynchronous tracking job."""
         ...
 
     # --- Detection ---

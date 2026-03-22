@@ -270,6 +270,9 @@ class TrackingInput:
     points: list[list[list[int]]] | None = None
     labels: list[list[int]] | None = None
     boxes: list[list[int]] | None = None
+    propagate: bool = True
+    interval: dict[str, Any] | None = None
+    keyframes: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -306,6 +309,19 @@ class TrackingResult:
     processing_time: float
     metadata: dict[str, Any]
     id: str = ""
+
+
+@dataclass
+class TrackingJobStatus:
+    """Status of an asynchronous tracking job."""
+
+    job_id: str
+    status: str
+    detail: str | None = None
+    data: TrackingOutput | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime | None = None
+    processing_time: float = 0.0
 
 
 # --- Detection Types ---

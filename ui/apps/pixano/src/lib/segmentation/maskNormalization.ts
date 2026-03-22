@@ -26,8 +26,121 @@ export interface MaskNormalizationInput {
   imageHeight: number;
 }
 
+export interface TrackingMaskSourceInput {
+  modelName?: string | null;
+  providerName?: string | null;
+}
+
+export interface TrackingMaskSourceFields {
+  source_type: "model";
+  source_name: string;
+  source_metadata: string;
+}
+
+const DEFAULT_TRACKING_SOURCE_NAME = "smart-segmentation";
+
 function normalizeCounts(counts: CompressedRLEPayload["counts"]): number[] {
   return typeof counts === "string" ? rleFrString(counts) : counts;
+}
+
+function cloneMaskCounts(counts: number[] | string): number[] | string {
+  return Array.isArray(counts) ? [...counts] : counts;
+}
+
+function cloneMaskSize(size: number[]): number[] {
+  return [...size];
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function parseProviderName(sourceMetadata: unknown): string | null {
+  if (!isNonEmptyString(sourceMetadata)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(sourceMetadata) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "provider_name" in parsed &&
+      isNonEmptyString((parsed as { provider_name?: unknown }).provider_name)
+    ) {
+      return (parsed as { provider_name: string }).provider_name;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function buildTrackingMaskSourceFields(
+  source?: TrackingMaskSourceInput,
+): TrackingMaskSourceFields {
+  const sourceName =
+    source?.modelName && source.modelName.trim().length > 0
+      ? source.modelName
+      : DEFAULT_TRACKING_SOURCE_NAME;
+  const sourceMetadata =
+    source?.providerName && source.providerName.trim().length > 0
+      ? JSON.stringify({ provider_name: source.providerName })
+      : "{}";
+
+  return {
+    source_type: "model",
+    source_name: sourceName,
+    source_metadata: sourceMetadata,
+  };
+}
+
+export function normalizeTrackingMaskSourceFields(
+  source: {
+    source_type?: unknown;
+    source_name?: unknown;
+    source_metadata?: unknown;
+  } | null | undefined,
+  fallback?: TrackingMaskSourceInput,
+): TrackingMaskSourceFields {
+  const sourceIsModel = source?.source_type === "model";
+  const providerName = fallback?.providerName ?? parseProviderName(source?.source_metadata);
+  const modelName =
+    fallback?.modelName ??
+    (sourceIsModel && isNonEmptyString(source?.source_name)
+      ? source.source_name
+      : DEFAULT_TRACKING_SOURCE_NAME);
+
+  return buildTrackingMaskSourceFields({
+    modelName,
+    providerName,
+  });
+}
+
+export function normalizeTrackingMaskOutputForPersistence(
+  output: MaskSegmentationOutput,
+  fallback?: TrackingMaskSourceInput,
+): MaskSegmentationOutput {
+  const clonedOutput = cloneTrackingMaskOutput(output);
+  return {
+    ...clonedOutput,
+    data: {
+      ...clonedOutput.data,
+      ...normalizeTrackingMaskSourceFields(clonedOutput.data, fallback),
+    },
+  };
+}
+
+export function cloneTrackingMaskOutput(output: MaskSegmentationOutput): MaskSegmentationOutput {
+  return {
+    ...output,
+    data: {
+      ...output.data,
+      size: cloneMaskSize(output.data.size),
+      counts: cloneMaskCounts(output.data.counts),
+    },
+  };
 }
 
 function createBitmapDataUrl(
@@ -72,7 +185,7 @@ function createBitmapDataUrl(
 }
 
 export function normalizeMaskToSaveShape(input: MaskNormalizationInput): SaveMaskShape {
-  const normalizedCounts = normalizeCounts(input.mask.counts);
+  const normalizedCounts = [...normalizeCounts(input.mask.counts)];
   const height = Number(input.mask.size[0]) || input.imageHeight;
   const width = Number(input.mask.size[1]) || input.imageWidth;
   const size: [number, number] = [height, width];
@@ -91,7 +204,7 @@ export function normalizeMaskToSaveShape(input: MaskNormalizationInput): SaveMas
     maskBounds: bitmap.bounds,
     rle: {
       counts: normalizedCounts,
-      size,
+      size: [...size] as [number, number],
     },
   };
 }
@@ -99,8 +212,10 @@ export function normalizeMaskToSaveShape(input: MaskNormalizationInput): SaveMas
 export function saveMaskShapeToTrackingOutput(
   shape: SaveMaskShape,
   frameIndex: number,
+  source?: TrackingMaskSourceInput,
 ): MaskSegmentationOutput {
   const timestamp = new Date().toISOString().replace(/Z$/, "+00:00");
+  const sourceFields = buildTrackingMaskSourceFields(source);
 
   return {
     id: nanoid(10),
@@ -112,8 +227,8 @@ export function saveMaskShapeToTrackingOutput(
       base_schema: BaseSchema.Mask,
     },
     data: {
-      size: shape.rle?.size ?? [shape.imageHeight, shape.imageWidth],
-      counts: shape.rle?.counts ?? [shape.imageWidth * shape.imageHeight],
+      size: cloneMaskSize(shape.rle?.size ?? [shape.imageHeight, shape.imageWidth]),
+      counts: cloneMaskCounts(shape.rle?.counts ?? [shape.imageWidth * shape.imageHeight]),
       item_id: shape.itemId,
       view_name: shape.viewRef.name,
       frame_id: shape.viewRef.id,
@@ -121,9 +236,9 @@ export function saveMaskShapeToTrackingOutput(
       tracklet_id: "",
       entity_dynamic_state_id: "",
       entity_id: "",
-      source_type: "pixano",
-      source_name: "smart-segmentation",
-      source_metadata: "{}",
+      source_type: sourceFields.source_type,
+      source_name: sourceFields.source_name,
+      source_metadata: sourceFields.source_metadata,
       inference_metadata: {},
     },
   };

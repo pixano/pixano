@@ -24,6 +24,7 @@ from ..types import (
     SegmentationResult,
     ServerInfo,
     TrackingInput,
+    TrackingJobStatus,
     TrackingOutput,
     TrackingResult,
     UsageInfo,
@@ -248,6 +249,7 @@ class PixanoInferenceProvider(HTTPProvider):
             "video": input_data.video,
             "objects_ids": list(input_data.objects_ids),
             "frame_indexes": list(input_data.frame_indexes),
+            "propagate": input_data.propagate,
         }
 
         if input_data.points is not None:
@@ -258,6 +260,12 @@ class PixanoInferenceProvider(HTTPProvider):
 
         if input_data.boxes is not None:
             request["boxes"] = input_data.boxes
+
+        if input_data.interval is not None:
+            request["interval"] = input_data.interval
+
+        if input_data.keyframes is not None:
+            request["keyframes"] = input_data.keyframes
 
         return request
 
@@ -303,6 +311,29 @@ class PixanoInferenceProvider(HTTPProvider):
             id=response.get("id", ""),
         )
 
+    def _parse_tracking_job_status(self, response: dict[str, Any]) -> TrackingJobStatus:
+        data_payload = response.get("data")
+        data = None
+        if data_payload is not None:
+            data = TrackingOutput(
+                objects_ids=data_payload["objects_ids"],
+                frame_indexes=data_payload["frame_indexes"],
+                masks=[CompressedRLEData.from_dict(mask) for mask in data_payload["masks"]],
+            )
+
+        timestamp_value = response.get("timestamp")
+        timestamp = datetime.fromisoformat(timestamp_value) if timestamp_value else None
+
+        return TrackingJobStatus(
+            job_id=response["job_id"],
+            status=response["status"],
+            detail=response.get("detail"),
+            data=data,
+            metadata=response.get("metadata", {}),
+            timestamp=timestamp,
+            processing_time=response.get("processing_time", 0.0),
+        )
+
     async def tracking(
         self,
         input_data: TrackingInput,
@@ -319,6 +350,41 @@ class PixanoInferenceProvider(HTTPProvider):
             request_data = self._build_tracking_request(input_data)
             response = await self.post("inference/tracking/", json=request_data, timeout=timeout)
         return self._parse_tracking_response(response.json())
+
+    async def submit_tracking_job(
+        self,
+        input_data: TrackingInput,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Submit an asynchronous tracking job."""
+        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
+            response = await self.post(
+                "inference/tracking/jobs/binary",
+                files=self._build_binary_tracking_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_tracking_request(input_data)
+            response = await self.post("inference/tracking/jobs/", json=request_data, timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
+
+    async def get_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Fetch asynchronous tracking job status."""
+        response = await self.get(f"inference/tracking/jobs/{job_id}", timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
+
+    async def cancel_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Cancel an asynchronous tracking job."""
+        response = await self.delete(f"inference/tracking/jobs/{job_id}", timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
 
     # --- Detection ---
 

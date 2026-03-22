@@ -13,8 +13,12 @@ License: CECILL-C
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
-  import { pixanoInferenceToValidateTrackingMasks } from "$lib/stores/inferenceStores.svelte";
-  import { cancelTrackingSession, trackingSession } from "$lib/stores/trackingStore.svelte";
+  import {
+    pixanoInferenceToValidateTrackingMasks,
+    selectedVideoSegmentationModel,
+  } from "$lib/stores/inferenceStores.svelte";
+  import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
+  import { cancelTrackingSession, trackingSession, vosSession } from "$lib/stores/trackingStore.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -77,6 +81,23 @@ License: CECILL-C
     } as const;
   }
 
+  function getVosFallbackSource() {
+    const modelSelection = selectedVideoSegmentationModel.value;
+    return {
+      modelName: modelSelection?.name ?? null,
+      providerName: modelSelection?.provider_name ?? null,
+    };
+  }
+
+  function hydrateMaskBitmap(mask: Mask): void {
+    if (!Array.isArray(mask.data.counts)) {
+      return;
+    }
+
+    mask.ui.bitmapCanvas = rleToBitmapCanvas(mask.data.counts, mask.data.size as [number, number]);
+    mask.ui.bounds = getAlphaBoundingBox(mask.ui.bitmapCanvas) ?? undefined;
+  }
+
   const handleFormSubmit = () => {
     removeTemporaryTextSpan();
     currentTab = "objects";
@@ -90,7 +111,13 @@ License: CECILL-C
     let newTracks: Annotation[] = [];
 
     const isVideo = itemMetas.value?.type === WorkspaceType.VIDEO;
-    const isFromTracking = isVideo && pixanoInferenceToValidateTrackingMasks.value.length > 1;
+    const shapeFrameIndex =
+      isVideo && "viewRef" in newShape.value
+        ? getFrameIndex(newShape.value.viewRef.name, newShape.value.viewRef.id)
+        : currentFrameIndex.value;
+    const isFromVOS =
+      isVideo && newShape.value.type === ShapeType.mask && vosSession.value.masks.length > 0;
+    const isFromTracking = !isFromVOS && isVideo && pixanoInferenceToValidateTrackingMasks.value.length > 1;
 
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
 
@@ -103,7 +130,7 @@ License: CECILL-C
       newShape.value.viewRef,
       manifest,
       isVideo,
-      currentFrameIndex.value,
+      shapeFrameIndex,
     );
 
     if (!newAnnotation) return;
@@ -113,14 +140,7 @@ License: CECILL-C
 
     // Populate bitmapCanvas on new Mask so it renders immediately after save
     if (newAnnotation.is_type(BaseSchema.Mask)) {
-      const maskAnn = newAnnotation as Mask;
-      if (Array.isArray(maskAnn.data.counts)) {
-        maskAnn.ui.bitmapCanvas = rleToBitmapCanvas(
-          maskAnn.data.counts,
-          maskAnn.data.size as [number, number],
-        );
-        maskAnn.ui.bounds = getAlphaBoundingBox(maskAnn.ui.bitmapCanvas) ?? undefined;
-      }
+      hydrateMaskBitmap(newAnnotation as Mask);
     }
 
     entity.ui.childs?.push(newAnnotation);
@@ -143,7 +163,7 @@ License: CECILL-C
           newShape.value.viewRef,
           manifest,
           isVideo,
-          currentFrameIndex.value,
+          shapeFrameIndex,
         );
         if (newBBox) {
           newBBox.ui.displayControl = { hidden: false, editing: false, highlighted: "none" };
@@ -158,26 +178,111 @@ License: CECILL-C
     if (isVideo) {
       const tracker = trackingSession.value.tracker;
       const isMultiKeyframe = tracker !== null && tracker.keyframeCount > 1;
-
-      let lastFrameIndex = currentFrameIndex.value;
-      if (isFromTracking) {
-        for (const tr_mask of pixanoInferenceToValidateTrackingMasks.value.slice(1)) {
-          // really create Mask instance (before it's just a cast)
-          tracking_masks.push(new Mask({ ...tr_mask }));
-        }
-        for (const tr_mask of tracking_masks) {
-          //fill some missing info in tracking masks
-          tr_mask.data.entity_id = newAnnotation.data.entity_id;
-          tr_mask.table_info = newAnnotation.table_info;
-          const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
-          tr_mask.ui = { ...newAnnotation.ui, frame_index: tr_frame_idx };
-          entity.ui.childs?.push(tr_mask);
-          //get lastFrameIndex from tracking masks
-          lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
-        }
-      }
+      let lastFrameIndex = shapeFrameIndex;
       // Multi-keyframe tracking: create BBox annotations and tracklets per segment
       const trackingKeyframeBBoxes: BBox[] = [];
+      if (isFromVOS && newAnnotation.is_type(BaseSchema.Mask)) {
+        const primaryMask = newAnnotation as Mask;
+        const sessionMasks = vosSession.value.masks
+          .slice()
+          .sort((left, right) => left.frameIndex - right.frameIndex);
+        const sessionSegments = vosSession.value.segments
+          .slice()
+          .sort((left, right) => left.startFrame - right.startFrame);
+        const persistedVosMasks = buildPersistedVosMasks({
+          sessionMasks,
+          currentFrameIndex: shapeFrameIndex,
+          entityId: primaryMask.data.entity_id,
+          tableInfo: primaryMask.table_info,
+          uiTemplate: primaryMask.ui,
+          fallbackSource: getVosFallbackSource(),
+        });
+
+        if (!persistedVosMasks.currentMask) {
+          return;
+        }
+
+        const entityChildIndex = entity.ui.childs?.indexOf(primaryMask) ?? -1;
+        if (entityChildIndex >= 0 && entity.ui.childs) {
+          entity.ui.childs[entityChildIndex] = persistedVosMasks.currentMask;
+        } else {
+          entity.ui.childs?.push(persistedVosMasks.currentMask);
+        }
+        hydrateMaskBitmap(persistedVosMasks.currentMask);
+
+        newAnnotation = persistedVosMasks.currentMask;
+        addedAnnotations[0] = persistedVosMasks.currentMask;
+        tracking_masks = persistedVosMasks.trackingMasks;
+        for (const persistedMask of tracking_masks) {
+          entity.ui.childs?.push(persistedMask);
+        }
+        lastFrameIndex = Math.max(lastFrameIndex, persistedVosMasks.lastFrameIndex);
+
+        for (const segment of sessionSegments) {
+          const segMasks = persistedVosMasks.masksBySegment.get(segment.id) ?? [];
+          if (segMasks.length === 0) continue;
+
+          const candidate_tracks = entity.ui.childs?.filter(
+            (ann) =>
+              ann.is_type(BaseSchema.Tracklet) &&
+              ann.data.view_name === newAnnotation.data.view_name &&
+              (ann as Tracklet).data.start_frame <= segment.startFrame &&
+              (ann as Tracklet).data.end_frame >= segment.endFrame,
+          );
+          if (candidate_tracks && candidate_tracks.length === 1) {
+            const candidate_track = candidate_tracks[0] as Tracklet;
+            for (const mask of segMasks) candidate_track.ui.childs.push(mask);
+            candidate_track.ui.childs.sort(sortByFrameIndex);
+          } else {
+            const trackShape: SaveTrackShape = {
+              type: ShapeType.track,
+              status: newShape.value.status,
+              itemId: "",
+              imageWidth: 0,
+              imageHeight: 0,
+              viewRef: { id: "", name: newAnnotation.data.view_name },
+              attrs: {
+                start_frame: segment.startFrame,
+                end_frame: segment.endFrame,
+                start_timestamp: segment.startFrame,
+                end_timestamp: segment.endFrame,
+              },
+            };
+            const segTrack = defineCreatedAnnotation(
+              entity,
+              features,
+              trackShape,
+              trackShape.viewRef,
+              manifest,
+              isVideo,
+              shapeFrameIndex,
+            );
+            if (!segTrack) return;
+            segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
+            (segTrack as Tracklet).ui.childs = [...segMasks];
+            (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
+            saveTo("add", segTrack);
+            entity.ui.childs?.push(segTrack);
+            newTracks.push(segTrack);
+          }
+        }
+      } else {
+        if (isFromTracking) {
+          for (const tr_mask of pixanoInferenceToValidateTrackingMasks.value.slice(1)) {
+            // really create Mask instance (before it's just a cast)
+            tracking_masks.push(new Mask({ ...tr_mask }));
+          }
+          for (const tr_mask of tracking_masks) {
+            //fill some missing info in tracking masks
+            tr_mask.data.entity_id = newAnnotation.data.entity_id;
+            tr_mask.table_info = newAnnotation.table_info;
+            const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
+            tr_mask.ui = { ...newAnnotation.ui, frame_index: tr_frame_idx };
+            entity.ui.childs?.push(tr_mask);
+            //get lastFrameIndex from tracking masks
+            lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
+          }
+        }
       if (isMultiKeyframe && newAnnotation.is_type(BaseSchema.BBox)) {
         const segKeyframeArrays = tracker.segmentKeyframes;
         const viewName = tracker.viewName;
@@ -256,7 +361,7 @@ License: CECILL-C
                 trackShape.viewRef,
                 manifest,
                 isVideo,
-                currentFrameIndex.value,
+                shapeFrameIndex,
               );
               if (!segTrack) return;
               segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
@@ -270,7 +375,7 @@ License: CECILL-C
         }
       } else {
         // Single keyframe or no tracker: create a single tracklet
-        const trackStartFrame = currentFrameIndex.value;
+        const trackStartFrame = shapeFrameIndex;
         const candidate_tracks = entity.ui.childs?.filter(
           (ann) =>
             ann.is_type(BaseSchema.Tracklet) &&
@@ -281,7 +386,7 @@ License: CECILL-C
         if (candidate_tracks && candidate_tracks.length === 1) {
           const candidate_track = candidate_tracks[0] as Tracklet;
           candidate_track.ui.childs.push(newAnnotation);
-          if (isFromTracking) {
+          if (isFromTracking || isFromVOS) {
             for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
           }
           candidate_track.ui.childs.sort(sortByFrameIndex);
@@ -307,18 +412,19 @@ License: CECILL-C
             trackShape.viewRef,
             manifest,
             isVideo,
-            currentFrameIndex.value,
+            shapeFrameIndex,
           );
           if (!newTrack) return;
           newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
           (newTrack as Tracklet).ui.childs = [newAnnotation];
-          if (isFromTracking) {
+          if (isFromTracking || isFromVOS) {
             for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
           }
           (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
           saveTo("add", newTrack);
           entity.ui.childs?.push(newTrack);
         }
+      }
       }
 
       // Save each tracking keyframe BBox
@@ -338,7 +444,7 @@ License: CECILL-C
 
     saveTo("add", newAnnotation);
 
-    if (isFromTracking) {
+    if (isFromTracking || isFromVOS) {
       for (const tr_mask of tracking_masks) {
         saveTo("add", tr_mask);
       }
@@ -360,7 +466,7 @@ License: CECILL-C
       return [
         ...objectsWithoutHighlighted,
         ...addedAnnotations,
-        ...(isFromTracking ? tracking_masks : []),
+        ...((isFromTracking || isFromVOS) ? tracking_masks : []),
         ...(newTrack ? [newTrack] : []),
         ...newTracks,
       ];

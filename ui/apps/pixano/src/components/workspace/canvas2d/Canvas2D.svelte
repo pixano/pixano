@@ -19,6 +19,7 @@ License: CECILL-C
     getToolSwitchSignature,
   } from "./canvasEventHandlers";
   import { zoomViewTransform } from "./canvasGeometry";
+  import { resolveCanvasViewRef } from "./canvasViewRefs";
   import CreateMultiPath from "./CreateMultiPath.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
@@ -129,6 +130,7 @@ License: CECILL-C
     smartPreviewMasks?: Record<string, SaveMaskShape | null>;
     smartInferenceStatus?: SmartSegmentationUiState;
     showSmartPromptCursorOverlay?: boolean;
+    currentSequenceFrameRefsByView?: Record<string, Reference>;
     toolBridge?: ToolBridge | undefined;
     // Image settings
     filters?: ImageFilters;
@@ -158,6 +160,7 @@ License: CECILL-C
     smartPreviewMasks = {},
     smartInferenceStatus = createIdleSmartSegmentationUiState(),
     showSmartPromptCursorOverlay = false,
+    currentSequenceFrameRefsByView = undefined,
     toolBridge = undefined,
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
@@ -764,7 +767,7 @@ License: CECILL-C
   }
 
   function updateSmartPromptCursor(mousePos: Konva.Vector2d) {
-    if (selectedTool?.type !== ToolType.InteractiveSegmenter) return;
+    if ((selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)) return;
     smartPromptCursorState = {
       x: mousePos.x,
       y: mousePos.y,
@@ -783,7 +786,7 @@ License: CECILL-C
   });
 
   $effect(() => {
-    const promptMode = selectedTool?.type === ToolType.InteractiveSegmenter ? selectedTool.promptMode : null;
+    const promptMode = (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ? selectedTool.promptMode : null;
     const current = untrack(() => smartPromptCursorState);
     if (current && promptMode) {
       smartPromptCursorState = { ...current, promptMode };
@@ -1053,7 +1056,7 @@ License: CECILL-C
       (interactionShape.status === "none" || interactionShape.status === "editing") &&
       selectedTool?.type !== ToolType.Pan &&
       selectedTool?.type !== ToolType.Brush &&
-      selectedTool?.type !== ToolType.InteractiveSegmenter &&
+      (selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS) &&
       selectedTool?.type !== ToolType.Polygon &&
       selectedTool?.type !== ToolType.Polyline
     ) {
@@ -1082,7 +1085,7 @@ License: CECILL-C
       handleBrushPointerDown(viewRef);
     } else if (
       (selectedTool?.type === ToolType.Rectangle && !bboxEditable) ||
-      selectedTool?.type === ToolType.InteractiveSegmenter
+      (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)
     ) {
       const bridge = activeToolBridge;
       if (!bridge) return;
@@ -1311,6 +1314,18 @@ License: CECILL-C
       return;
     }
 
+    if (
+      selectedTool?.type === ToolType.VOS &&
+      (event.key === "Escape" ||
+        event.key === "Enter" ||
+        event.key === "t" ||
+        event.key === "T" ||
+        event.key === "n" ||
+        event.key === "N")
+    ) {
+      return;
+    }
+
     if (event.key === "Escape") {
       const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
@@ -1323,7 +1338,7 @@ License: CECILL-C
 
       if (
         selectedTool?.type === ToolType.Rectangle ||
-        selectedTool?.type === ToolType.InteractiveSegmenter ||
+        (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline
       ) {
@@ -1358,7 +1373,7 @@ License: CECILL-C
         }
       },
       toggleInteractivePromptMode: () => {
-        if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+        if ((selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)) {
           onSelectedToolChange?.({
             ...selectedTool,
             promptMode: selectedTool.promptMode === "negative" ? "positive" : "negative",
@@ -1367,7 +1382,7 @@ License: CECILL-C
         }
       },
       setInteractiveBoxPrompt: () => {
-        if (selectedTool?.type === ToolType.InteractiveSegmenter) {
+        if ((selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS)) {
           onSelectedToolChange?.({
             ...selectedTool,
             promptMode: "box",
@@ -1396,7 +1411,7 @@ License: CECILL-C
     if (
       (isConfirmKey || event.key === "Backspace") &&
       (selectedTool?.type === ToolType.Rectangle ||
-        selectedTool?.type === ToolType.InteractiveSegmenter ||
+        (selectedTool?.type === ToolType.InteractiveSegmenter || selectedTool?.type === ToolType.VOS) ||
         selectedTool?.type === ToolType.Polygon ||
         selectedTool?.type === ToolType.Polyline)
     ) {
@@ -1442,11 +1457,11 @@ License: CECILL-C
     const preserveSmartPromptPreview =
       resetReason === "save-cancelled" &&
       resetShapeType === ShapeType.mask &&
-      currentTool?.type === ToolType.InteractiveSegmenter;
+      (currentTool?.type === ToolType.InteractiveSegmenter || currentTool?.type === ToolType.VOS);
     const shouldClearInteractiveSession =
       resetReason === "save-confirmed" &&
       resetShapeType === ShapeType.mask &&
-      currentTool?.type === ToolType.InteractiveSegmenter;
+      (currentTool?.type === ToolType.InteractiveSegmenter || currentTool?.type === ToolType.VOS);
 
     // Fallback unsupported tools
     if (currentTool && !isSupportedCanvasTool(currentTool)) {
@@ -1538,7 +1553,7 @@ License: CECILL-C
     }
   });
   $effect(() => {
-    if (selectedTool?.type !== ToolType.InteractiveSegmenter) return;
+    if ((selectedTool?.type !== ToolType.InteractiveSegmenter && selectedTool?.type !== ToolType.VOS)) return;
     activeToolBridge?.dispatchEvent({
       type: "setInteractivePromptMode",
       promptMode: selectedTool.promptMode,
@@ -1649,7 +1664,11 @@ License: CECILL-C
       {#each Object.entries(imagesPerView) as [view_name, images]}
         {@const currentLoadedImage = images[images.length - 1]}
         {@const currentImage = currentLoadedImage?.element}
-        {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
+        {@const viewRef = resolveCanvasViewRef(
+          view_name,
+          currentLoadedImage?.id,
+          currentSequenceFrameRefsByView,
+        )}
         <Group id={`static-${view_name}`} bind:this={viewRefs.staticViewRefs[view_name]}>
           {#if !isActivePaintingTool}
             {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
@@ -1722,7 +1741,11 @@ License: CECILL-C
       {#each Object.entries(imagesPerView) as [view_name, images]}
         {@const currentLoadedImage = images[images.length - 1]}
         {@const currentImage = currentLoadedImage?.element}
-        {@const viewRef = { id: currentLoadedImage?.id ?? "", name: view_name }}
+        {@const viewRef = resolveCanvasViewRef(
+          view_name,
+          currentLoadedImage?.id,
+          currentSequenceFrameRefsByView,
+        )}
         <Group
           id={`active-${view_name}`}
           bind:this={viewRefs.activeViewRefs[view_name]}

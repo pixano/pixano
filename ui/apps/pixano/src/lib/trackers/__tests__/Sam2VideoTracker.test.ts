@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
+import * as maskNormalization from "$lib/segmentation/maskNormalization";
 import { Sam2VideoTracker } from "$lib/trackers";
 import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
 
@@ -36,6 +37,7 @@ describe("Sam2VideoTracker", () => {
       objectId: 1,
       model: "sam2",
       providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
       prompt: { points: [], box: null },
       mask: makeMask(2),
     });
@@ -45,6 +47,7 @@ describe("Sam2VideoTracker", () => {
       objectId: 1,
       model: "sam2",
       providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
       prompt: { points: [], box: null },
       mask: makeMask(8),
     });
@@ -103,6 +106,7 @@ describe("Sam2VideoTracker", () => {
       objectId: 1,
       model: "sam2",
       providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
       prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
       mask: makeMask(1),
     });
@@ -120,6 +124,247 @@ describe("Sam2VideoTracker", () => {
       points: [[[4, 4]]],
       labels: [[1]],
       boxes: null,
+      propagate: true,
+      interval: null,
+      keyframes: [
+        {
+          frame_index: 1,
+          points: [{ x: 4, y: 4, label: 1 }],
+          box: null,
+          mask: null,
+        },
+      ],
     });
+  });
+
+  it("serializes interval keyframes with a mask anchor", async () => {
+    const trackingClient = vi.fn().mockResolvedValue({
+      data: {
+        objects_ids: [1],
+        frame_indexes: [],
+        masks: [],
+      },
+    });
+    const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient);
+    tracker.setFrameSources([
+      {
+        frameIndex: 2,
+        viewRef: { id: "frame-2", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+      {
+        frameIndex: 3,
+        viewRef: { id: "frame-3", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+      {
+        frameIndex: 4,
+        viewRef: { id: "frame-4", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+    ]);
+
+    await tracker.propagateInterval(2, 4, {
+      frameIndex: 2,
+      viewRef: { id: "frame-2", name: "camera" },
+      objectId: 1,
+      model: "sam2",
+      providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
+      prompt: { points: [], box: null, mask: makeMask(2) },
+      mask: makeMask(2),
+    });
+
+    expect(trackingClient).toHaveBeenCalledWith({
+      model: "sam2",
+      provider_name: "pixano-inference@127.0.0.1:7463",
+      dataset_id: "dataset-1",
+      record_id: "record-1",
+      view_name: "camera",
+      start_frame_index: 2,
+      frame_count: 3,
+      objects_ids: [1],
+      prompt_frame_indexes: [2],
+      points: null,
+      labels: null,
+      boxes: null,
+      propagate: true,
+      interval: {
+        start_frame: 2,
+        end_frame: 4,
+        direction: "forward",
+      },
+      keyframes: [
+        {
+          frame_index: 2,
+          points: [],
+          box: null,
+          mask: {
+            counts: [4, 8, 52],
+            size: [8, 8],
+          },
+        },
+      ],
+    });
+  });
+
+  it("uses a single-frame non-propagating request for prompted-frame previews", async () => {
+    const trackingClient = vi.fn().mockResolvedValue({
+      data: {
+        objects_ids: [1],
+        frame_indexes: [],
+        masks: [],
+      },
+    });
+    const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient);
+    tracker.setFrameSources([
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+      {
+        frameIndex: 6,
+        viewRef: { id: "frame-6", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+    ]);
+
+    await tracker.predictKeyframe({
+      frameIndex: 5,
+      viewRef: { id: "frame-5", name: "camera" },
+      objectId: 1,
+      model: "sam2",
+      providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
+      prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
+    });
+
+    expect(trackingClient).toHaveBeenCalledWith({
+      model: "sam2",
+      provider_name: "pixano-inference@127.0.0.1:7463",
+      dataset_id: "dataset-1",
+      record_id: "record-1",
+      view_name: "camera",
+      start_frame_index: 5,
+      frame_count: 1,
+      objects_ids: [1],
+      prompt_frame_indexes: [5],
+      points: [[[4, 4]]],
+      labels: [[1]],
+      boxes: null,
+      propagate: false,
+      interval: null,
+      keyframes: [
+        {
+          frame_index: 5,
+          points: [{ x: 4, y: 4, label: 1 }],
+          box: null,
+          mask: null,
+        },
+      ],
+    });
+  });
+
+  it("submits async tracking jobs with the same serialized request contract", async () => {
+    const trackingClient = vi.fn();
+    const submitTrackingJobClient = vi.fn().mockResolvedValue({
+      job_id: "tracking-job-1",
+      status: "running",
+      detail: null,
+      data: null,
+    });
+    const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient, {
+      submitTrackingJobClient,
+    });
+    tracker.setFrameSources([
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+      {
+        frameIndex: 6,
+        viewRef: { id: "frame-6", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+    ]);
+
+    await tracker.submitPredictKeyframeJob({
+      frameIndex: 5,
+      viewRef: { id: "frame-5", name: "camera" },
+      objectId: 1,
+      model: "sam2",
+      providerName: "pixano-inference@127.0.0.1:7463",
+      itemId: "item-1",
+      prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
+    });
+
+    expect(submitTrackingJobClient).toHaveBeenCalledWith({
+      model: "sam2",
+      provider_name: "pixano-inference@127.0.0.1:7463",
+      dataset_id: "dataset-1",
+      record_id: "record-1",
+      view_name: "camera",
+      start_frame_index: 5,
+      frame_count: 1,
+      objects_ids: [1],
+      prompt_frame_indexes: [5],
+      points: [[[4, 4]]],
+      labels: [[1]],
+      boxes: null,
+      propagate: false,
+      interval: null,
+      keyframes: [
+        {
+          frame_index: 5,
+          points: [{ x: 4, y: 4, label: 1 }],
+          box: null,
+          mask: null,
+        },
+      ],
+    });
+  });
+
+  it("applies completed async tracking results to propagated masks", () => {
+    vi.spyOn(maskNormalization, "normalizeMaskToSaveShape").mockReturnValue(makeMask(5));
+    const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera");
+    tracker.setFrameSources([
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+    ]);
+
+    const masks = tracker.applyTrackingResult(
+      {
+        objects_ids: [1],
+        frame_indexes: [5],
+        masks: [{ size: [8, 8], counts: [4, 8, 52] }],
+      },
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        objectId: 1,
+        model: "sam2",
+        providerName: "pixano-inference@127.0.0.1:7463",
+        itemId: "item-1",
+        prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
+      },
+    );
+
+    expect(masks).toHaveLength(1);
+    expect(tracker.getPropagatedMask(5)?.viewRef.id).toBe("frame-5");
+    expect(tracker.getTrackingOutputsInRange(5, 5)[0]?.data.source_type).toBe("model");
+    expect(tracker.getTrackingOutputsInRange(5, 5)[0]?.data.source_name).toBe("sam2");
   });
 });
