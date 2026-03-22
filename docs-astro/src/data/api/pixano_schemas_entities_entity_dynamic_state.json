@@ -1,90 +1,90 @@
 {
-  "module": "pixano.schemas.entities.entity_dynamic_state",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/entities/entity_dynamic_state.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "EntityDynamicState",
-      "docstring": "Per-frame dynamic state for an entity.\nThis table stores dynamic attributes (occlusion, visibility, pose, ...)\ndecoupled from geometric annotations so a single state can be shared by\nBBoxes, masks and keypoints for the same frame.\n\nAttributes:\n    entity_id: ID of the entity.\n    tracklet_id: ID of the tracklet for temporal linkage.\n    source_type: Kind of annotation source (model, human, ground_truth, other).\n    source_name: Name of the annotation source.\n    source_metadata: Metadata of the annotation source (JSON string).\n    view_id: ID of the view from which the state is derived.\n    frame_id: ID of the referenced media row.\n    frame_index: Frame index (denormalized for temporal queries).",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "entity_id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "frame_id",
+          "value": "''"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "frame_index",
+          "value": "-1"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_metadata",
+          "value": "json.dumps({})"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_name",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_type",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "tracklet_id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "view_id",
+          "value": "''"
+        }
+      ],
       "bases": [
         "RecordComponent"
       ],
-      "attributes": [
-        {
-          "name": "entity_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "frame_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "frame_index",
-          "annotation": "int",
-          "value": "-1",
-          "docstring": ""
-        },
-        {
-          "name": "source_metadata",
-          "annotation": "str",
-          "value": "json.dumps({})",
-          "docstring": ""
-        },
-        {
-          "name": "source_name",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "source_type",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "tracklet_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "view_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 18
+      "docstring": "Per-frame dynamic state for an entity.\nThis table stores dynamic attributes (occlusion, visibility, pose, ...)\ndecoupled from geometric annotations so a single state can be shared by\nBBoxes, masks and keypoints for the same frame.\n\nAttributes:\n    entity_id: ID of the entity.\n    tracklet_id: ID of the tracklet for temporal linkage.\n    source_type: Kind of annotation source (model, human, ground_truth, other).\n    source_name: Name of the annotation source.\n    source_metadata: Metadata of the annotation source (JSON string).\n    view_id: ID of the view from which the state is derived.\n    frame_id: ID of the referenced media row.\n    frame_index: Frame index (denormalized for temporal queries).",
+      "lineno": 18,
+      "methods": [],
+      "name": "EntityDynamicState",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/entities/entity_dynamic_state.py",
   "functions": [
     {
-      "name": "is_entity_dynamic_state",
+      "decorators": [],
       "docstring": "Check if a class is an EntityDynamicState or subclass.",
+      "is_async": false,
+      "lineno": 80,
+      "name": "is_entity_dynamic_state",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 80
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.entities.entity_dynamic_state",
   "submodules": []
 }

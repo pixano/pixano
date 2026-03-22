@@ -40,6 +40,29 @@ export interface AIResult {
   readonly output: unknown;
 }
 
+export type InteractivePromptMode = "positive" | "negative" | "box";
+
+export interface InteractiveSegmenterBoxPrompt {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface InteractiveSegmenterAIInput {
+  readonly type: "interactive-segmenter";
+  readonly action: "predict" | "confirm" | "clear";
+  readonly viewRef: {
+    readonly id: string;
+    readonly name: string;
+  };
+  readonly promptMode: InteractivePromptMode;
+  readonly prompt: {
+    readonly points: readonly LabeledClick[];
+    readonly box: InteractiveSegmenterBoxPrompt | null;
+  };
+}
+
 // --------------- Preview ---------------
 
 export type PreviewShape =
@@ -68,7 +91,17 @@ export type PreviewShape =
   | { readonly type: "mask"; readonly data: ImageData }
   | { readonly type: "point"; readonly position: Point2D; readonly label: number }
   | { readonly type: "keypoints"; readonly points: readonly Point2D[] }
-  | { readonly type: "brush"; readonly path: readonly Point2D[]; readonly radius: number };
+  | { readonly type: "brush"; readonly path: readonly Point2D[]; readonly radius: number }
+  | {
+      readonly type: "interactive-segmenter";
+      readonly promptMode: InteractivePromptMode;
+      readonly points: readonly LabeledClick[];
+      readonly box: InteractiveSegmenterBoxPrompt | null;
+      readonly draftBox: {
+        readonly origin: Point2D;
+        readonly current: Point2D;
+      } | null;
+    };
 
 // --------------- Tool States ---------------
 
@@ -107,6 +140,7 @@ export type ToolEvent =
   | { readonly type: "pointerDown"; readonly position: Point2D; readonly button: number }
   | { readonly type: "pointerMove"; readonly position: Point2D }
   | { readonly type: "pointerUp"; readonly position: Point2D }
+  | { readonly type: "setInteractivePromptMode"; readonly promptMode: InteractivePromptMode }
   | {
       readonly type: "polygonMoveVertex";
       readonly polygonIndex: number;
@@ -168,6 +202,7 @@ export interface ToolContext {
   readonly document: Document;
   readonly selectedIds: ReadonlySet<NodeId>;
   readonly viewName: string;
+  readonly viewId: string;
   readonly canvasWidth: number;
   readonly canvasHeight: number;
 }
@@ -213,6 +248,7 @@ export interface ToolRegistry {
 export enum ToolType {
   PointSelection = "POINT_SELECTION",
   Rectangle = "RECTANGLE",
+  InteractiveSegmenter = "INTERACTIVE_SEGMENTER",
   Polygon = "POLYGON",
   Polyline = "POLYLINE",
   Keypoint = "KEY_POINT",
@@ -221,6 +257,7 @@ export enum ToolType {
   Fusion = "FUSION",
   Classification = "CLASSIFICATION",
   Brush = "BRUSH",
+  VOS = "VOS",
 }
 
 export interface ToolPostProcessor {
@@ -244,6 +281,14 @@ export type AllTool = BaseTool<
   | ToolType.Fusion
 >;
 
+export type InteractiveSegmenterSelectionTool = BaseTool<ToolType.InteractiveSegmenter> & {
+  promptMode: InteractivePromptMode;
+};
+
+export type VOSSelectionTool = BaseTool<ToolType.VOS> & {
+  promptMode: InteractivePromptMode;
+};
+
 export type LabeledPointTool = BaseTool<ToolType.PointSelection> & {
   label: number;
 };
@@ -262,5 +307,7 @@ export type SelectionTool =
   | AllTool
   | LabeledPointTool
   | BrushSelectionTool
+  | InteractiveSegmenterSelectionTool
+  | VOSSelectionTool
   | PolygonSelectionTool
   | PolylineSelectionTool;

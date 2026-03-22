@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Message, QuestionTypeEnum } from "$lib/types/dataset";
+import type { InferenceModelSelection } from "$lib/types/inference";
 
 // --- TextCanvas types ---
 
@@ -54,7 +55,7 @@ export type DeleteQuestionEvent = { questionId: string };
 
 export interface GenerateAnswerEvent {
   questionId: string;
-  completionModel: string;
+  completionModel: InferenceModelSelection;
 }
 
 export interface VqaMessageContext {

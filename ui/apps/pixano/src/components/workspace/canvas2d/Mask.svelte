@@ -14,7 +14,7 @@ License: CECILL-C
   import { ToolType, type SelectionTool } from "$lib/tools";
   import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
-  import { ShapeType, type Shape } from "$lib/types/shapeTypes";
+  import { ShapeType, type SaveMaskShape, type Shape } from "$lib/types/shapeTypes";
   import {
     canvasAlphaToRle,
     dataUrlToBlob,
@@ -35,6 +35,7 @@ License: CECILL-C
     viewRef: Reference;
     currentImage: HTMLImageElement | ImageBitmap;
     masks?: DatasetMask[];
+    previewMask?: SaveMaskShape | null;
     colorScale: (value: string) => string;
     selectedTool: SelectionTool;
     zoomFactor: number;
@@ -46,6 +47,7 @@ License: CECILL-C
     viewRef,
     currentImage,
     masks = [],
+    previewMask = null,
     colorScale,
     selectedTool,
     zoomFactor,
@@ -208,8 +210,27 @@ License: CECILL-C
       const hasCanvas = mask.ui.bitmapCanvas ? "C" : "";
       fp += `${mask.id}:${hasCanvas}${source}:${bounds?.x ?? 0},${bounds?.y ?? 0},${bounds?.width ?? 0},${bounds?.height ?? 0}:${colorId}:${mask.ui.displayControl.hidden}:${mask.ui.displayControl.highlighted};`;
     }
+    if (previewMask?.rle) {
+      const previewCounts = Array.isArray(previewMask.rle.counts)
+        ? previewMask.rle.counts.length
+        : previewMask.rle.counts;
+      fp += `preview:${previewMask.viewRef.id}:${previewCounts}:${previewMask.maskBounds?.x ?? 0},${previewMask.maskBounds?.y ?? 0},${previewMask.maskBounds?.width ?? 0},${previewMask.maskBounds?.height ?? 0};`;
+    }
     return fp;
   });
+
+  function drawPreviewMask(preview: SaveMaskShape | null): OffscreenCanvas | null {
+    if (!preview?.rle) return null;
+    const counts = Array.isArray(preview.rle.counts)
+      ? preview.rle.counts
+      : rleFrString(preview.rle.counts);
+
+    try {
+      return rleToBitmapCanvas(counts, preview.rle.size as [number, number]);
+    } catch {
+      return null;
+    }
+  }
 
   function copyBaseToShared(): void {
     const { baseCtx, sharedCtx, baseCanvas, draftCanvas, tintCanvas, tintCtx } = canvasInfra;
@@ -279,6 +300,7 @@ License: CECILL-C
   async function redrawBaseLayerWith(
     infra: CanvasInfra,
     masksToRender: DatasetMask[],
+    preview: SaveMaskShape | null,
     image: HTMLImageElement | ImageBitmap,
     colorScaleFn: (id: string) => string,
     cycle: number,
@@ -365,6 +387,19 @@ License: CECILL-C
       baseCtx.drawImage(scratchCanvas, 0, 0);
     }
 
+    const previewCanvas = drawPreviewMask(preview);
+    if (previewCanvas) {
+      scratchCtx.clearRect(0, 0, image.width, image.height);
+      scratchCtx.drawImage(previewCanvas, 0, 0);
+      scratchCtx.globalCompositeOperation = "source-in";
+      scratchCtx.fillStyle = BRUSH_MASK_COLOR;
+      scratchCtx.globalAlpha = 0.55;
+      scratchCtx.fillRect(0, 0, image.width, image.height);
+      scratchCtx.globalAlpha = 1.0;
+      scratchCtx.globalCompositeOperation = "source-over";
+      baseCtx.drawImage(scratchCanvas, 0, 0);
+    }
+
     copyBaseToShared();
   }
 
@@ -411,6 +446,7 @@ License: CECILL-C
     if (!fingerprint || !infra.baseCtx) return;
 
     const currentMasks = masks;
+    const currentPreview = previewMask;
     const img = currentImage;
     const scale = colorScale;
     const cycle = ++renderCycle;
@@ -418,7 +454,7 @@ License: CECILL-C
     const rafId = requestAnimationFrame(() => {
       if (cycle !== renderCycle) return;
       untrack(() => {
-        void redrawBaseLayerWith(infra, currentMasks, img, scale, cycle);
+        void redrawBaseLayerWith(infra, currentMasks, currentPreview, img, scale, cycle);
       });
     });
 
@@ -482,6 +518,23 @@ License: CECILL-C
     bakeActiveStroke();
   }
 
+  export function loadDraftFromMask(mask: SaveMaskShape): void {
+    const previewCanvas = drawPreviewMask(mask);
+    if (!previewCanvas) return;
+
+    const { draftCtx, draftCanvas } = canvasInfra;
+    if (!draftCtx) return;
+
+    draftCtx.globalCompositeOperation = "source-over";
+    draftCtx.clearRect(0, 0, draftCanvas.width, draftCanvas.height);
+    draftCtx.drawImage(previewCanvas, 0, 0);
+
+    isPainting = false;
+    lastBrushPos = null;
+    hasDraftContent = true;
+    copyBaseToShared();
+  }
+
   export function getMaskData(): Shape | null {
     const { draftCanvas } = canvasInfra;
     if (!draftCanvas || !hasDraftContent) return null;
@@ -510,6 +563,8 @@ License: CECILL-C
     const { draftCtx } = canvasInfra;
     if (!draftCtx) return;
     draftCtx.clearRect(0, 0, canvasInfra.draftCanvas.width, canvasInfra.draftCanvas.height);
+    isPainting = false;
+    lastBrushPos = null;
     hasDraftContent = false;
     copyBaseToShared();
   }

@@ -19,17 +19,17 @@ Pixano has **three** layers:
 
 Every dataset is composed of tables grouped by purpose. Pixano defines six **schema groups**:
 
-| Group                    | Description                                      | Example                              |
-| ------------------------ | ------------------------------------------------ | ------------------------------------ |
-| **Record**               | One row per dataset sample (metadata, split)     | `Record`                             |
-| **View**                 | Media attached to a record                       | `Image`, `Video`                     |
-| **Entity**               | A physical object observable in one or several views | `Entity`                         |
-| **EntityDynamicState**   | Per-frame state of an entity (e.g. visibility)   | `EntityDynamicState`                 |
-| **Annotation**           | Labels attached to entities                      | `BBox`, `KeyPoints`, `CompressedRLE` |
-| **Embedding**            | Vectors for semantic search                      | `Embedding`                          |
+| Group                  | Description                                          | Example                              |
+| ---------------------- | ---------------------------------------------------- | ------------------------------------ |
+| **Record**             | One row per dataset sample (metadata, split)         | `Record`                             |
+| **View**               | Media attached to a record                           | `Image`, `Video`                     |
+| **Entity**             | A physical object observable in one or several views | `Entity`                             |
+| **EntityDynamicState** | Per-frame state of an entity (e.g. visibility)       | `EntityDynamicState`                 |
+| **Annotation**         | Labels attached to entities                          | `BBox`, `KeyPoints`, `CompressedRLE` |
+| **Embedding**          | Vectors for semantic search                          | `Embedding`                          |
 
 !!! info "Source provenance"
-    There is no separate **Source** table. Provenance is tracked directly on annotations via three fields: `source_type` (one of `model`, `human`, `ground_truth`, `other`), `source_name`, and `source_metadata` (a JSON string). These fields are available on `EntityAnnotation`, `EntityGroupAnnotation`, and `EntityDynamicState`.
+There is no separate **Source** table. Provenance is tracked directly on annotations via three fields: `source_type` (one of `model`, `human`, `ground_truth`, `other`), `source_name`, and `source_metadata` (a JSON string). These fields are available on `EntityAnnotation`, `EntityGroupAnnotation`, and `EntityDynamicState`.
 
 Each group has a base class (e.g. `Record`, `View`, `Entity`, `EntityAnnotation`) that you can subclass to add domain-specific fields:
 

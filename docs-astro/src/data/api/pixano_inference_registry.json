@@ -1,73 +1,73 @@
 {
-  "module": "pixano.inference.registry",
-  "docstring": "Provider registration and lookup.\n\nThis module provides a registry for inference providers, allowing them to be\nregistered and retrieved by name.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/registry.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "Provider registration and lookup.\n\nThis module provides a registry for inference providers, allowing them to be\nregistered and retrieved by name.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/inference/registry.py",
   "functions": [
     {
-      "name": "get_provider",
+      "decorators": [],
       "docstring": "Get a provider instance by name.\n\nArgs:\n    name: The name of the provider to retrieve.\n    **kwargs: Arguments to pass to the provider constructor.\n\nReturns:\n    An instance of the requested provider.\n\nRaises:\n    ProviderNotFoundError: If the provider is not registered.\n\nExample:\n    ```python\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n    ```",
+      "is_async": false,
+      "lineno": 49,
+      "name": "get_provider",
       "parameters": [
         {
-          "name": "name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "name"
         },
         {
-          "name": "kwargs",
           "annotation": "Any",
           "default": "{}",
-          "kind": "ParameterKind.var_keyword"
+          "kind": "ParameterKind.var_keyword",
+          "name": "kwargs"
         }
       ],
-      "returns": "InferenceProvider",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 49
+      "returns": "InferenceProvider"
     },
     {
-      "name": "is_provider_registered",
+      "decorators": [],
       "docstring": "Check if a provider is registered.\n\nArgs:\n    name: The provider name to check.\n\nReturns:\n    True if the provider is registered, False otherwise.",
+      "is_async": false,
+      "lineno": 82,
+      "name": "is_provider_registered",
       "parameters": [
         {
-          "name": "name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "name"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 82
+      "returns": "bool"
     },
     {
-      "name": "list_providers",
+      "decorators": [],
       "docstring": "List all registered provider names.\n\nReturns:\n    List of registered provider names.",
-      "parameters": [],
-      "returns": "list[str]",
       "is_async": false,
-      "decorators": [],
-      "lineno": 73
+      "lineno": 73,
+      "name": "list_providers",
+      "parameters": [],
+      "returns": "list[str]"
     },
     {
-      "name": "register_provider",
+      "decorators": [],
       "docstring": "Decorator to register a provider class.\n\nArgs:\n    name: The name to register the provider under.\n\nReturns:\n    A decorator that registers the class.\n\nExample:\n    ```python\n    @register_provider(\"my-provider\")\n    class MyProvider(InferenceProvider):\n        ...\n    ```",
+      "is_async": false,
+      "lineno": 23,
+      "name": "register_provider",
       "parameters": [
         {
-          "name": "name",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "name"
         }
       ],
-      "returns": null,
-      "is_async": false,
-      "decorators": [],
-      "lineno": 23
+      "returns": null
     }
   ],
-  "attributes": [],
+  "module": "pixano.inference.registry",
   "submodules": []
 }

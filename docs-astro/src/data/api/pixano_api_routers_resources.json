@@ -1,26 +1,26 @@
 {
-  "module": "pixano.api.routers.resources",
-  "docstring": "Generic resource routers.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/routers/resources.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "Generic resource routers.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/routers/resources.py",
   "functions": [
     {
-      "name": "create_resource_router",
+      "decorators": [],
       "docstring": "Build one CRUD router from a static resource definition.",
+      "is_async": false,
+      "lineno": 27,
+      "name": "create_resource_router",
       "parameters": [
         {
-          "name": "resource",
           "annotation": "ResourceSpec",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "resource"
         }
       ],
-      "returns": "APIRouter",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 27
+      "returns": "APIRouter"
     }
   ],
-  "attributes": [],
+  "module": "pixano.api.routers.resources",
   "submodules": []
 }

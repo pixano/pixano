@@ -8,19 +8,23 @@ import type {
   MessageGenerationPrompts,
   PixanoInferenceCompletionModel,
 } from "$lib/stores/vqaStores.svelte";
+import type { InferenceModelSelection } from "$lib/types/inference";
+import { getInferenceModelKey } from "$lib/types/inference";
 
 export function mergeModelLists(
-  newModelsName: string[],
+  newModels: InferenceModelSelection[],
   existingModels: PixanoInferenceCompletionModel[],
   defaultPrompts: MessageGenerationPrompts,
   default_temperature: number,
 ): PixanoInferenceCompletionModel[] {
-  const existingModelsMap = new Map(existingModels.map((model) => [model.name, model]));
+  const existingModelsMap = new Map(
+    existingModels.map((model) => [getInferenceModelKey(model), model]),
+  );
 
-  return newModelsName.map(
+  return newModels.map(
     (model) =>
-      existingModelsMap.get(model) ?? {
-        name: model,
+      existingModelsMap.get(getInferenceModelKey(model)) ?? {
+        ...model,
         selected: false,
         prompts: defaultPrompts,
         temperature: default_temperature,

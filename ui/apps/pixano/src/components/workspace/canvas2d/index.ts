@@ -11,3 +11,4 @@ export { default as PolygonVertices } from "./PolygonVertices.svelte";
 export { default as Mask } from "./Mask.svelte";
 export { default as Crosshair } from "./Crosshair.svelte";
 export { default as BrushCursor } from "./BrushCursor.svelte";
+export { default as SmartPromptCursor } from "./SmartPromptCursor.svelte";

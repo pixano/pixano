@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 from datetime import datetime
 from typing import Any
 
@@ -11,24 +12,25 @@ from ..exceptions import ProviderConnectionError
 from ..registry import register_provider
 from ..types import (
     CompressedRLEData,
-    ImageMaskGenerationInput,
-    ImageMaskGenerationOutput,
-    ImageMaskGenerationResult,
-    ImageZeroShotDetectionInput,
-    ImageZeroShotDetectionOutput,
-    ImageZeroShotDetectionResult,
+    DetectionInput,
+    DetectionOutput,
+    DetectionResult,
     InferenceTask,
     ModelInfo,
     NDArrayData,
     ProviderCapabilities,
+    SegmentationInput,
+    SegmentationOutput,
+    SegmentationResult,
     ServerInfo,
-    TextImageConditionalGenerationInput,
-    TextImageConditionalGenerationOutput,
-    TextImageConditionalGenerationResult,
+    TrackingInput,
+    TrackingJobStatus,
+    TrackingOutput,
+    TrackingResult,
     UsageInfo,
-    VideoMaskGenerationInput,
-    VideoMaskGenerationOutput,
-    VideoMaskGenerationResult,
+    VLMInput,
+    VLMOutput,
+    VLMResult,
 )
 from .base import HTTPProvider
 
@@ -84,10 +86,10 @@ class PixanoInferenceProvider(HTTPProvider):
         """Return provider capabilities."""
         return ProviderCapabilities(
             tasks=[
-                InferenceTask.MASK_GENERATION,
-                InferenceTask.VIDEO_MASK_GENERATION,
-                InferenceTask.OBJECT_DETECTION,
-                InferenceTask.TEXT_GENERATION,
+                InferenceTask.SEGMENTATION,
+                InferenceTask.TRACKING,
+                InferenceTask.DETECTION,
+                InferenceTask.VLM,
             ],
             supports_batching=True,
             supports_streaming=False,
@@ -100,16 +102,15 @@ class PixanoInferenceProvider(HTTPProvider):
         models = [
             ModelInfo(
                 name=m["name"],
-                task=m["task"],
+                capability=m["capability"],
                 model_path=m.get("model_path"),
                 model_class=m.get("model_class"),
-                provider=m.get("provider"),
             )
             for m in models_data
         ]
 
         if task is not None:
-            models = [m for m in models if m.task == task.value]
+            models = [m for m in models if m.capability == task.value]
 
         return models
 
@@ -124,17 +125,17 @@ class PixanoInferenceProvider(HTTPProvider):
             num_cpus=data.get("num_cpus"),
             num_gpus=data.get("num_gpus", 0),
             num_nodes=data.get("num_nodes", 1),
-            gpus_used=data.get("gpus_used", []),
+            gpus_used=data.get("gpus_used", 0.0),
             gpu_to_model=data.get("gpu_to_model", {}),
             models=data.get("models", []),
-            models_to_task=data.get("models_to_task", {}),
+            models_to_capability=data.get("models_to_capability", {}),
         )
 
-    # --- Mask Generation ---
+    # --- Segmentation ---
 
-    def _build_mask_request(self, input_data: ImageMaskGenerationInput) -> dict[str, Any]:
-        """Build request data for mask generation."""
-        request = {
+    def _build_segmentation_request(self, input_data: SegmentationInput) -> dict[str, Any]:
+        """Build request data for segmentation."""
+        request: dict[str, Any] = {
             "model": input_data.model,
             "image": input_data.image,
             "reset_predictor": input_data.reset_predictor,
@@ -149,6 +150,9 @@ class PixanoInferenceProvider(HTTPProvider):
         if input_data.high_resolution_features is not None:
             request["high_resolution_features"] = [f.to_dict() for f in input_data.high_resolution_features]
 
+        if input_data.mask_input is not None:
+            request["mask_input"] = input_data.mask_input.to_dict()
+
         if input_data.points is not None:
             request["points"] = input_data.points
 
@@ -158,10 +162,27 @@ class PixanoInferenceProvider(HTTPProvider):
         if input_data.boxes is not None:
             request["boxes"] = input_data.boxes
 
+        if input_data.return_logits:
+            request["return_logits"] = input_data.return_logits
+
         return request
 
-    def _parse_mask_response(self, response: dict[str, Any]) -> ImageMaskGenerationResult:
-        """Parse mask generation response."""
+    def _build_binary_segmentation_request(
+        self,
+        input_data: SegmentationInput,
+    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
+        request = self._build_segmentation_request(input_data)
+        image = request.pop("image")
+        if not isinstance(image, bytes):
+            raise TypeError("Binary segmentation requests require image bytes.")
+
+        return [
+            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
+            ("image", ("image.bin", image, "application/octet-stream")),
+        ]
+
+    def _parse_segmentation_response(self, response: dict[str, Any]) -> SegmentationResult:
+        """Parse segmentation response."""
         data = response["data"]
 
         # Parse masks
@@ -181,14 +202,19 @@ class PixanoInferenceProvider(HTTPProvider):
         if data.get("high_resolution_features"):
             high_resolution_features = [NDArrayData.from_dict(f) for f in data["high_resolution_features"]]
 
-        output = ImageMaskGenerationOutput(
+        mask_logits = None
+        if data.get("mask_logits"):
+            mask_logits = NDArrayData.from_dict(data["mask_logits"])
+
+        output = SegmentationOutput(
             masks=masks,
             scores=scores,
             image_embedding=image_embedding,
             high_resolution_features=high_resolution_features,
+            mask_logits=mask_logits,
         )
 
-        return ImageMaskGenerationResult(
+        return SegmentationResult(
             data=output,
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
@@ -197,25 +223,33 @@ class PixanoInferenceProvider(HTTPProvider):
             status=response.get("status", "SUCCESS"),
         )
 
-    async def image_mask_generation(
+    async def segmentation(
         self,
-        input_data: ImageMaskGenerationInput,
+        input_data: SegmentationInput,
         timeout: float = 60.0,
-    ) -> ImageMaskGenerationResult:
+    ) -> SegmentationResult:
         """Generate masks for an image."""
-        request_data = self._build_mask_request(input_data)
-        response = await self.post("tasks/image/mask_generation/", json=request_data, timeout=timeout)
-        return self._parse_mask_response(response.json())
+        if isinstance(input_data.image, bytes):
+            response = await self.post(
+                "inference/segmentation/binary",
+                files=self._build_binary_segmentation_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_segmentation_request(input_data)
+            response = await self.post("inference/segmentation/", json=request_data, timeout=timeout)
+        return self._parse_segmentation_response(response.json())
 
-    # --- Video Mask Generation ---
+    # --- Tracking ---
 
-    def _build_video_mask_request(self, input_data: VideoMaskGenerationInput) -> dict[str, Any]:
-        """Build request data for video mask generation."""
-        request = {
+    def _build_tracking_request(self, input_data: TrackingInput) -> dict[str, Any]:
+        """Build request data for tracking."""
+        request: dict[str, Any] = {
             "model": input_data.model,
             "video": input_data.video,
             "objects_ids": list(input_data.objects_ids),
             "frame_indexes": list(input_data.frame_indexes),
+            "propagate": input_data.propagate,
         }
 
         if input_data.points is not None:
@@ -227,21 +261,48 @@ class PixanoInferenceProvider(HTTPProvider):
         if input_data.boxes is not None:
             request["boxes"] = input_data.boxes
 
+        if input_data.interval is not None:
+            request["interval"] = input_data.interval
+
+        if input_data.keyframes is not None:
+            request["keyframes"] = input_data.keyframes
+
         return request
 
-    def _parse_video_mask_response(self, response: dict[str, Any]) -> VideoMaskGenerationResult:
-        """Parse video mask generation response."""
+    def _build_binary_tracking_request(
+        self,
+        input_data: TrackingInput,
+    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
+        request = self._build_tracking_request(input_data)
+        video = request.pop("video")
+        if not isinstance(video, list) or not all(isinstance(frame, bytes) for frame in video):
+            raise TypeError("Binary tracking requests require a list of frame bytes.")
+
+        files: list[tuple[str, tuple[str | None, bytes | str, str]]] = [
+            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
+        ]
+        for index, frame in enumerate(video):
+            files.append(
+                (
+                    "frames",
+                    (f"frame-{index:06d}.bin", frame, "application/octet-stream"),
+                )
+            )
+        return files
+
+    def _parse_tracking_response(self, response: dict[str, Any]) -> TrackingResult:
+        """Parse tracking response."""
         data = response["data"]
 
         masks = [CompressedRLEData.from_dict(m) for m in data["masks"]]
 
-        output = VideoMaskGenerationOutput(
+        output = TrackingOutput(
             objects_ids=data["objects_ids"],
             frame_indexes=data["frame_indexes"],
             masks=masks,
         )
 
-        return VideoMaskGenerationResult(
+        return TrackingResult(
             data=output,
             status=response["status"],
             timestamp=datetime.fromisoformat(response["timestamp"]),
@@ -250,19 +311,84 @@ class PixanoInferenceProvider(HTTPProvider):
             id=response.get("id", ""),
         )
 
-    async def video_mask_generation(
+    def _parse_tracking_job_status(self, response: dict[str, Any]) -> TrackingJobStatus:
+        data_payload = response.get("data")
+        data = None
+        if data_payload is not None:
+            data = TrackingOutput(
+                objects_ids=data_payload["objects_ids"],
+                frame_indexes=data_payload["frame_indexes"],
+                masks=[CompressedRLEData.from_dict(mask) for mask in data_payload["masks"]],
+            )
+
+        timestamp_value = response.get("timestamp")
+        timestamp = datetime.fromisoformat(timestamp_value) if timestamp_value else None
+
+        return TrackingJobStatus(
+            job_id=response["job_id"],
+            status=response["status"],
+            detail=response.get("detail"),
+            data=data,
+            metadata=response.get("metadata", {}),
+            timestamp=timestamp,
+            processing_time=response.get("processing_time", 0.0),
+        )
+
+    async def tracking(
         self,
-        input_data: VideoMaskGenerationInput,
+        input_data: TrackingInput,
         timeout: float = 120.0,
-    ) -> VideoMaskGenerationResult:
+    ) -> TrackingResult:
         """Generate masks for video frames."""
-        request_data = self._build_video_mask_request(input_data)
-        response = await self.post("tasks/video/mask_generation/", json=request_data, timeout=timeout)
-        return self._parse_video_mask_response(response.json())
+        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
+            response = await self.post(
+                "inference/tracking/binary",
+                files=self._build_binary_tracking_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_tracking_request(input_data)
+            response = await self.post("inference/tracking/", json=request_data, timeout=timeout)
+        return self._parse_tracking_response(response.json())
 
-    # --- Zero-Shot Detection ---
+    async def submit_tracking_job(
+        self,
+        input_data: TrackingInput,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Submit an asynchronous tracking job."""
+        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
+            response = await self.post(
+                "inference/tracking/jobs/binary",
+                files=self._build_binary_tracking_request(input_data),
+                timeout=timeout,
+            )
+        else:
+            request_data = self._build_tracking_request(input_data)
+            response = await self.post("inference/tracking/jobs/", json=request_data, timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
 
-    def _build_detection_request(self, input_data: ImageZeroShotDetectionInput) -> dict[str, Any]:
+    async def get_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Fetch asynchronous tracking job status."""
+        response = await self.get(f"inference/tracking/jobs/{job_id}", timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
+
+    async def cancel_tracking_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> TrackingJobStatus:
+        """Cancel an asynchronous tracking job."""
+        response = await self.delete(f"inference/tracking/jobs/{job_id}", timeout=timeout)
+        return self._parse_tracking_job_status(response.json())
+
+    # --- Detection ---
+
+    def _build_detection_request(self, input_data: DetectionInput) -> dict[str, Any]:
         """Build request data for zero-shot detection."""
         return {
             "model": input_data.model,
@@ -272,17 +398,17 @@ class PixanoInferenceProvider(HTTPProvider):
             "text_threshold": input_data.text_threshold,
         }
 
-    def _parse_detection_response(self, response: dict[str, Any]) -> ImageZeroShotDetectionResult:
+    def _parse_detection_response(self, response: dict[str, Any]) -> DetectionResult:
         """Parse zero-shot detection response."""
         data = response["data"]
 
-        output = ImageZeroShotDetectionOutput(
+        output = DetectionOutput(
             boxes=data["boxes"],
             scores=data["scores"],
             classes=data["classes"],
         )
 
-        return ImageZeroShotDetectionResult(
+        return DetectionResult(
             data=output,
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
@@ -291,20 +417,20 @@ class PixanoInferenceProvider(HTTPProvider):
             status=response.get("status", "SUCCESS"),
         )
 
-    async def image_zero_shot_detection(
+    async def detection(
         self,
-        input_data: ImageZeroShotDetectionInput,
+        input_data: DetectionInput,
         timeout: float = 60.0,
-    ) -> ImageZeroShotDetectionResult:
+    ) -> DetectionResult:
         """Detect objects using zero-shot detection."""
         request_data = self._build_detection_request(input_data)
-        response = await self.post("tasks/image/zero_shot_detection/", json=request_data, timeout=timeout)
+        response = await self.post("inference/detection/", json=request_data, timeout=timeout)
         return self._parse_detection_response(response.json())
 
-    # --- Text-Image Conditional Generation ---
+    # --- VLM ---
 
-    def _build_text_generation_request(self, input_data: TextImageConditionalGenerationInput) -> dict[str, Any]:
-        """Build request data for text generation."""
+    def _build_vlm_request(self, input_data: VLMInput) -> dict[str, Any]:
+        """Build request data for VLM inference."""
         request: dict[str, Any] = {
             "model": input_data.model,
             "prompt": input_data.prompt,
@@ -319,8 +445,8 @@ class PixanoInferenceProvider(HTTPProvider):
 
         return request
 
-    def _parse_text_generation_response(self, response: dict[str, Any]) -> TextImageConditionalGenerationResult:
-        """Parse text generation response."""
+    def _parse_vlm_response(self, response: dict[str, Any]) -> VLMResult:
+        """Parse VLM response."""
         data = response["data"]
 
         usage = UsageInfo(
@@ -329,13 +455,13 @@ class PixanoInferenceProvider(HTTPProvider):
             total_tokens=data["usage"]["total_tokens"],
         )
 
-        output = TextImageConditionalGenerationOutput(
+        output = VLMOutput(
             generated_text=data["generated_text"],
             usage=usage,
             generation_config=data.get("generation_config", {}),
         )
 
-        return TextImageConditionalGenerationResult(
+        return VLMResult(
             data=output,
             timestamp=datetime.fromisoformat(response["timestamp"]),
             processing_time=response["processing_time"],
@@ -344,14 +470,12 @@ class PixanoInferenceProvider(HTTPProvider):
             status=response.get("status", "SUCCESS"),
         )
 
-    async def text_image_conditional_generation(
+    async def vlm(
         self,
-        input_data: TextImageConditionalGenerationInput,
+        input_data: VLMInput,
         timeout: float = 60.0,
-    ) -> TextImageConditionalGenerationResult:
+    ) -> VLMResult:
         """Generate text conditioned on images."""
-        request_data = self._build_text_generation_request(input_data)
-        response = await self.post(
-            "tasks/multimodal/text-image/conditional_generation/", json=request_data, timeout=timeout
-        )
-        return self._parse_text_generation_response(response.json())
+        request_data = self._build_vlm_request(input_data)
+        response = await self.post("inference/vlm/", json=request_data, timeout=timeout)
+        return self._parse_vlm_response(response.json())

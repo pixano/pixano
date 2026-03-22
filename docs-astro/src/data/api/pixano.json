@@ -1,10 +1,10 @@
 {
-  "module": "pixano",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/__init__.py",
-  "classes": [],
-  "functions": [],
   "attributes": [],
+  "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/__init__.py",
+  "functions": [],
+  "module": "pixano",
   "submodules": [
     "api",
     "cli",

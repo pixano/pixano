@@ -1,174 +1,240 @@
 {
-  "module": "pixano.inference.providers.pixano_inference",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/inference/providers/pixano_inference.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "PixanoInferenceProvider",
-      "docstring": "Provider for pixano-inference server.\n\nThis provider communicates with a pixano-inference server using its HTTP API.\nIt translates between Pixano's types and the pixano-inference API format.\n\nExample:\n    ```python\n    from pixano.inference import get_provider\n\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n    models = await provider.list_models()\n    ```",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "Provider name.",
+          "name": "name",
+          "value": null
+        }
+      ],
       "bases": [
         "HTTPProvider"
       ],
-      "attributes": [
-        {
-          "name": "name",
-          "annotation": "str",
-          "value": null,
-          "docstring": "Provider name."
-        }
-      ],
-      "methods": [
-        {
-          "name": "connect",
-          "docstring": "Connect to a pixano-inference server.\n\nArgs:\n    url: The URL of the pixano-inference server.\n\nReturns:\n    A connected PixanoInferenceProvider instance.\n\nRaises:\n    ProviderConnectionError: If connection fails.",
-          "parameters": [
-            {
-              "name": "url",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "PixanoInferenceProvider",
-          "is_async": false,
-          "decorators": [
-            "classmethod"
-          ],
-          "lineno": 57
-        },
-        {
-          "name": "get_capabilities",
-          "docstring": "Return provider capabilities.",
-          "parameters": [],
-          "returns": "ProviderCapabilities",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 83
-        },
-        {
-          "name": "get_server_info",
-          "docstring": "Get server information.",
-          "parameters": [],
-          "returns": "ServerInfo",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 116
-        },
-        {
-          "name": "image_mask_generation",
-          "docstring": "Generate masks for an image.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "ImageMaskGenerationInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "ImageMaskGenerationResult",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 200
-        },
-        {
-          "name": "image_zero_shot_detection",
-          "docstring": "Detect objects using zero-shot detection.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "ImageZeroShotDetectionInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "ImageZeroShotDetectionResult",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 294
-        },
-        {
-          "name": "list_models",
-          "docstring": "List available models.",
-          "parameters": [
-            {
-              "name": "task",
-              "annotation": "InferenceTask | None",
-              "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "list[ModelInfo]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 96
-        },
-        {
-          "name": "text_image_conditional_generation",
-          "docstring": "Generate text conditioned on images.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "TextImageConditionalGenerationInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "60.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "TextImageConditionalGenerationResult",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 347
-        },
-        {
-          "name": "video_mask_generation",
-          "docstring": "Generate masks for video frames.",
-          "parameters": [
-            {
-              "name": "input_data",
-              "annotation": "VideoMaskGenerationInput",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "timeout",
-              "annotation": "float",
-              "default": "120.0",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "VideoMaskGenerationResult",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 253
-        }
-      ],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "register_provider('pixano-inference')"
       ],
-      "lineno": 36
+      "docstring": "Provider for pixano-inference server.\n\nThis provider communicates with a pixano-inference server using its HTTP API.\nIt translates between Pixano's types and the pixano-inference API format.\n\nExample:\n    ```python\n    from pixano.inference import get_provider\n\n    provider = get_provider(\"pixano-inference\", url=\"http://localhost:8000\")\n    models = await provider.list_models()\n    ```",
+      "lineno": 38,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "Cancel an asynchronous tracking job.",
+          "is_async": false,
+          "lineno": 380,
+          "name": "cancel_tracking_job",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "job_id"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingJobStatus"
+        },
+        {
+          "decorators": [
+            "classmethod"
+          ],
+          "docstring": "Connect to a pixano-inference server.\n\nArgs:\n    url: The URL of the pixano-inference server.\n\nReturns:\n    A connected PixanoInferenceProvider instance.\n\nRaises:\n    ProviderConnectionError: If connection fails.",
+          "is_async": false,
+          "lineno": 59,
+          "name": "connect",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "url"
+            }
+          ],
+          "returns": "PixanoInferenceProvider"
+        },
+        {
+          "decorators": [],
+          "docstring": "Detect objects using zero-shot detection.",
+          "is_async": false,
+          "lineno": 420,
+          "name": "detection",
+          "parameters": [
+            {
+              "annotation": "DetectionInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "DetectionResult"
+        },
+        {
+          "decorators": [],
+          "docstring": "Return provider capabilities.",
+          "is_async": false,
+          "lineno": 85,
+          "name": "get_capabilities",
+          "parameters": [],
+          "returns": "ProviderCapabilities"
+        },
+        {
+          "decorators": [],
+          "docstring": "Get server information.",
+          "is_async": false,
+          "lineno": 117,
+          "name": "get_server_info",
+          "parameters": [],
+          "returns": "ServerInfo"
+        },
+        {
+          "decorators": [],
+          "docstring": "Fetch asynchronous tracking job status.",
+          "is_async": false,
+          "lineno": 371,
+          "name": "get_tracking_job",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "job_id"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingJobStatus"
+        },
+        {
+          "decorators": [],
+          "docstring": "List available models.",
+          "is_async": false,
+          "lineno": 98,
+          "name": "list_models",
+          "parameters": [
+            {
+              "annotation": "InferenceTask | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "task"
+            }
+          ],
+          "returns": "list[ModelInfo]"
+        },
+        {
+          "decorators": [],
+          "docstring": "Generate masks for an image.",
+          "is_async": false,
+          "lineno": 226,
+          "name": "segmentation",
+          "parameters": [
+            {
+              "annotation": "SegmentationInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "SegmentationResult"
+        },
+        {
+          "decorators": [],
+          "docstring": "Submit an asynchronous tracking job.",
+          "is_async": false,
+          "lineno": 354,
+          "name": "submit_tracking_job",
+          "parameters": [
+            {
+              "annotation": "TrackingInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "30.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingJobStatus"
+        },
+        {
+          "decorators": [],
+          "docstring": "Generate masks for video frames.",
+          "is_async": false,
+          "lineno": 337,
+          "name": "tracking",
+          "parameters": [
+            {
+              "annotation": "TrackingInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "120.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "TrackingResult"
+        },
+        {
+          "decorators": [],
+          "docstring": "Generate text conditioned on images.",
+          "is_async": false,
+          "lineno": 473,
+          "name": "vlm",
+          "parameters": [
+            {
+              "annotation": "VLMInput",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "input_data"
+            },
+            {
+              "annotation": "float",
+              "default": "60.0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "timeout"
+            }
+          ],
+          "returns": "VLMResult"
+        }
+      ],
+      "name": "PixanoInferenceProvider",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/inference/providers/pixano_inference.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.inference.providers.pixano_inference",
   "submodules": []
 }

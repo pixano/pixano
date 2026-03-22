@@ -1,295 +1,295 @@
 {
-  "module": "pixano.api.resources",
-  "docstring": "Canonical API resource definitions.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/resources.py",
+  "attributes": [
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "BBOX_RESOURCE",
+      "value": "ResourceSpec(name='bbox', path='bboxes', tag='BBoxes', schema_group=(SchemaGroup.ANNOTATION), schema_cls=BBox, canonical_table_name=(canonical_table_name_for_schema(BBox)), create_model=BBoxCreate, update_model=BBoxUpdate, response_model=BBoxResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "CreateValidator",
+      "value": "Callable[[Any, dict[str, Any]], None]"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "EMBEDDING_RESOURCE",
+      "value": "ResourceSpec(name='embedding', path='embeddings', tag='Embeddings', schema_group=(SchemaGroup.EMBEDDING), schema_cls=Embedding, canonical_table_name=(canonical_table_name_for_schema(Embedding)), create_model=EmbeddingCreate, response_model=EmbeddingResponse, response_exclude_fields=(frozenset({'vector'})), list_filters=('record_id', 'view_name', 'where'), allow_update=False, allow_delete=False)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "ENTITY_DYNAMIC_STATE_RESOURCE",
+      "value": "ResourceSpec(name='entity_dynamic_state', path='entity-dynamic-states', tag='Entity Dynamic States', schema_group=(SchemaGroup.ENTITY_DYNAMIC_STATE), schema_cls=EntityDynamicState, canonical_table_name=(canonical_table_name_for_schema(EntityDynamicState)), create_model=EntityDynamicStateCreate, update_model=EntityDynamicStateUpdate, response_model=EntityDynamicStateResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_entity_dynamic_state_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "ENTITY_RESOURCE",
+      "value": "ResourceSpec(name='entity', path='entities', tag='Entities', schema_group=(SchemaGroup.ENTITY), schema_cls=Entity, canonical_table_name=(canonical_table_name_for_schema(Entity)), create_model=EntityCreate, update_model=EntityUpdate, response_model=EntityResponse, list_filters=('record_id', 'where'), validate_create=_validate_entity_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "KEYPOINTS_RESOURCE",
+      "value": "ResourceSpec(name='keypoints', path='keypoints', tag='KeyPoints', schema_group=(SchemaGroup.ANNOTATION), schema_cls=KeyPoints, canonical_table_name=(canonical_table_name_for_schema(KeyPoints)), create_model=KeyPointsCreate, update_model=KeyPointsUpdate, response_model=KeyPointsResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "MASK_RESOURCE",
+      "value": "ResourceSpec(name='mask', path='masks', tag='Masks', schema_group=(SchemaGroup.ANNOTATION), schema_cls=CompressedRLE, canonical_table_name=(canonical_table_name_for_schema(CompressedRLE)), create_model=MaskCreate, update_model=MaskUpdate, response_model=MaskResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "MESSAGE_RESOURCE",
+      "value": "ResourceSpec(name='message', path='messages', tag='Messages', schema_group=(SchemaGroup.ANNOTATION), schema_cls=Message, canonical_table_name=(canonical_table_name_for_schema(Message)), create_model=MessageCreate, update_model=MessageUpdate, response_model=MessageResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_message_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "MULTI_PATH_RESOURCE",
+      "value": "ResourceSpec(name='multi_path', path='multi-paths', tag='Multi-Paths', schema_group=(SchemaGroup.ANNOTATION), schema_cls=MultiPath, canonical_table_name=(canonical_table_name_for_schema(MultiPath)), create_model=MultiPathCreate, update_model=MultiPathUpdate, response_model=MultiPathResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "RECORD_RESOURCE",
+      "value": "ResourceSpec(name='record', path='records', tag='Records', schema_group=(SchemaGroup.RECORD), schema_cls=Record, canonical_table_name=(canonical_table_name_for_schema(Record)), create_model=RecordCreate, update_model=RecordUpdate, response_model=RecordResponse)"
+    },
+    {
+      "annotation": "tuple[ResourceSpec, ...]",
+      "docstring": "",
+      "name": "RESOURCE_SPECS",
+      "value": "(RECORD_RESOURCE, ENTITY_RESOURCE, ENTITY_DYNAMIC_STATE_RESOURCE, TRACKLET_RESOURCE, BBOX_RESOURCE, MASK_RESOURCE, MULTI_PATH_RESOURCE, KEYPOINTS_RESOURCE, MESSAGE_RESOURCE, TEXT_SPAN_RESOURCE, EMBEDDING_RESOURCE)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "TEXT_SPAN_RESOURCE",
+      "value": "ResourceSpec(name='text_span', path='text-spans', tag='Text Spans', schema_group=(SchemaGroup.ANNOTATION), schema_cls=TextSpan, canonical_table_name=(canonical_table_name_for_schema(TextSpan)), create_model=TextSpanCreate, update_model=TextSpanUpdate, response_model=TextSpanResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_text_span_create)"
+    },
+    {
+      "annotation": null,
+      "docstring": "",
+      "name": "TRACKLET_RESOURCE",
+      "value": "ResourceSpec(name='tracklet', path='tracklets', tag='Tracklets', schema_group=(SchemaGroup.ANNOTATION), schema_cls=Tracklet, canonical_table_name=(canonical_table_name_for_schema(Tracklet)), create_model=TrackletCreate, update_model=TrackletUpdate, response_model=TrackletResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_tracklet_create)"
+    }
+  ],
   "classes": [
     {
-      "name": "ResourceSpec",
-      "docstring": "Static API metadata for one resource family.",
-      "bases": [],
       "attributes": [
         {
-          "name": "allow_create",
           "annotation": "bool",
-          "value": "True",
-          "docstring": ""
-        },
-        {
-          "name": "allow_delete",
-          "annotation": "bool",
-          "value": "True",
-          "docstring": ""
-        },
-        {
-          "name": "allow_update",
-          "annotation": "bool",
-          "value": "True",
-          "docstring": ""
-        },
-        {
-          "name": "canonical_table_name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "create_model",
-          "annotation": "type[BaseModel] | None",
-          "value": "None",
-          "docstring": ""
-        },
-        {
-          "name": "list_filters",
-          "annotation": "tuple[str, ...]",
-          "value": "('where',)",
-          "docstring": ""
-        },
-        {
-          "name": "name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "path",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "response_exclude_fields",
-          "annotation": "frozenset[str]",
-          "value": "frozenset()",
-          "docstring": ""
-        },
-        {
-          "name": "response_model",
-          "annotation": "type[BaseModel]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "schema_cls",
-          "annotation": "type[LanceModel]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "schema_group",
-          "annotation": "SchemaGroup",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "tag",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "update_model",
-          "annotation": "type[BaseModel] | None",
-          "value": "None",
-          "docstring": ""
-        },
-        {
-          "name": "validate_create",
-          "annotation": "CreateValidator | None",
-          "value": "None",
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "path",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "tag",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "schema_group",
-              "annotation": "SchemaGroup",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "schema_cls",
-              "annotation": "type[LanceModel]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "canonical_table_name",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "response_model",
-              "annotation": "type[BaseModel]",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "create_model",
-              "annotation": "type[BaseModel] | None",
-              "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "update_model",
-              "annotation": "type[BaseModel] | None",
-              "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "response_exclude_fields",
-              "annotation": "frozenset[str]",
-              "default": "frozenset()",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "list_filters",
-              "annotation": "tuple[str, ...]",
-              "default": "('where',)",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "allow_create",
-              "annotation": "bool",
-              "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "allow_update",
-              "annotation": "bool",
-              "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "allow_delete",
-              "annotation": "bool",
-              "default": "True",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "validate_create",
-              "annotation": "CreateValidator | None",
-              "default": "None",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "allow_create",
+          "value": "True"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "allow_delete",
+          "value": "True"
+        },
+        {
+          "annotation": "bool",
+          "docstring": "",
+          "name": "allow_update",
+          "value": "True"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "canonical_table_name",
+          "value": null
+        },
+        {
+          "annotation": "type[BaseModel] | None",
+          "docstring": "",
+          "name": "create_model",
+          "value": "None"
+        },
+        {
+          "annotation": "tuple[str, ...]",
+          "docstring": "",
+          "name": "list_filters",
+          "value": "('where',)"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "name",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "path",
+          "value": null
+        },
+        {
+          "annotation": "frozenset[str]",
+          "docstring": "",
+          "name": "response_exclude_fields",
+          "value": "frozenset()"
+        },
+        {
+          "annotation": "type[BaseModel]",
+          "docstring": "",
+          "name": "response_model",
+          "value": null
+        },
+        {
+          "annotation": "type[LanceModel]",
+          "docstring": "",
+          "name": "schema_cls",
+          "value": null
+        },
+        {
+          "annotation": "SchemaGroup",
+          "docstring": "",
+          "name": "schema_group",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "tag",
+          "value": null
+        },
+        {
+          "annotation": "type[BaseModel] | None",
+          "docstring": "",
+          "name": "update_model",
+          "value": "None"
+        },
+        {
+          "annotation": "CreateValidator | None",
+          "docstring": "",
+          "name": "validate_create",
+          "value": "None"
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass(frozen=True, slots=True)"
       ],
-      "lineno": 70
+      "docstring": "Static API metadata for one resource family.",
+      "lineno": 70,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "name"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "path"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "tag"
+            },
+            {
+              "annotation": "SchemaGroup",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "schema_group"
+            },
+            {
+              "annotation": "type[LanceModel]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "schema_cls"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "canonical_table_name"
+            },
+            {
+              "annotation": "type[BaseModel]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "response_model"
+            },
+            {
+              "annotation": "type[BaseModel] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "create_model"
+            },
+            {
+              "annotation": "type[BaseModel] | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "update_model"
+            },
+            {
+              "annotation": "frozenset[str]",
+              "default": "frozenset()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "response_exclude_fields"
+            },
+            {
+              "annotation": "tuple[str, ...]",
+              "default": "('where',)",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "list_filters"
+            },
+            {
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "allow_create"
+            },
+            {
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "allow_update"
+            },
+            {
+              "annotation": "bool",
+              "default": "True",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "allow_delete"
+            },
+            {
+              "annotation": "CreateValidator | None",
+              "default": "None",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "validate_create"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "ResourceSpec",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "Canonical API resource definitions.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/resources.py",
   "functions": [],
-  "attributes": [
-    {
-      "name": "BBOX_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='bbox', path='bboxes', tag='BBoxes', schema_group=(SchemaGroup.ANNOTATION), schema_cls=BBox, canonical_table_name=(canonical_table_name_for_schema(BBox)), create_model=BBoxCreate, update_model=BBoxUpdate, response_model=BBoxResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)",
-      "docstring": ""
-    },
-    {
-      "name": "CreateValidator",
-      "annotation": null,
-      "value": "Callable[[Any, dict[str, Any]], None]",
-      "docstring": ""
-    },
-    {
-      "name": "EMBEDDING_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='embedding', path='embeddings', tag='Embeddings', schema_group=(SchemaGroup.EMBEDDING), schema_cls=Embedding, canonical_table_name=(canonical_table_name_for_schema(Embedding)), create_model=EmbeddingCreate, response_model=EmbeddingResponse, response_exclude_fields=(frozenset({'vector'})), list_filters=('record_id', 'view_name', 'where'), allow_update=False, allow_delete=False)",
-      "docstring": ""
-    },
-    {
-      "name": "ENTITY_DYNAMIC_STATE_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='entity_dynamic_state', path='entity-dynamic-states', tag='Entity Dynamic States', schema_group=(SchemaGroup.ENTITY_DYNAMIC_STATE), schema_cls=EntityDynamicState, canonical_table_name=(canonical_table_name_for_schema(EntityDynamicState)), create_model=EntityDynamicStateCreate, update_model=EntityDynamicStateUpdate, response_model=EntityDynamicStateResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_entity_dynamic_state_create)",
-      "docstring": ""
-    },
-    {
-      "name": "ENTITY_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='entity', path='entities', tag='Entities', schema_group=(SchemaGroup.ENTITY), schema_cls=Entity, canonical_table_name=(canonical_table_name_for_schema(Entity)), create_model=EntityCreate, update_model=EntityUpdate, response_model=EntityResponse, list_filters=('record_id', 'where'), validate_create=_validate_entity_create)",
-      "docstring": ""
-    },
-    {
-      "name": "KEYPOINTS_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='keypoints', path='keypoints', tag='KeyPoints', schema_group=(SchemaGroup.ANNOTATION), schema_cls=KeyPoints, canonical_table_name=(canonical_table_name_for_schema(KeyPoints)), create_model=KeyPointsCreate, update_model=KeyPointsUpdate, response_model=KeyPointsResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)",
-      "docstring": ""
-    },
-    {
-      "name": "MASK_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='mask', path='masks', tag='Masks', schema_group=(SchemaGroup.ANNOTATION), schema_cls=CompressedRLE, canonical_table_name=(canonical_table_name_for_schema(CompressedRLE)), create_model=MaskCreate, update_model=MaskUpdate, response_model=MaskResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)",
-      "docstring": ""
-    },
-    {
-      "name": "MESSAGE_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='message', path='messages', tag='Messages', schema_group=(SchemaGroup.ANNOTATION), schema_cls=Message, canonical_table_name=(canonical_table_name_for_schema(Message)), create_model=MessageCreate, update_model=MessageUpdate, response_model=MessageResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_message_create)",
-      "docstring": ""
-    },
-    {
-      "name": "MULTI_PATH_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='multi_path', path='multi-paths', tag='Multi-Paths', schema_group=(SchemaGroup.ANNOTATION), schema_cls=MultiPath, canonical_table_name=(canonical_table_name_for_schema(MultiPath)), create_model=MultiPathCreate, update_model=MultiPathUpdate, response_model=MultiPathResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'tracklet_id', 'frame_index', 'where'), validate_create=_validate_per_frame_annotation_create)",
-      "docstring": ""
-    },
-    {
-      "name": "RECORD_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='record', path='records', tag='Records', schema_group=(SchemaGroup.RECORD), schema_cls=Record, canonical_table_name=(canonical_table_name_for_schema(Record)), create_model=RecordCreate, update_model=RecordUpdate, response_model=RecordResponse)",
-      "docstring": ""
-    },
-    {
-      "name": "RESOURCE_SPECS",
-      "annotation": "tuple[ResourceSpec, ...]",
-      "value": "(RECORD_RESOURCE, ENTITY_RESOURCE, ENTITY_DYNAMIC_STATE_RESOURCE, TRACKLET_RESOURCE, BBOX_RESOURCE, MASK_RESOURCE, MULTI_PATH_RESOURCE, KEYPOINTS_RESOURCE, MESSAGE_RESOURCE, TEXT_SPAN_RESOURCE, EMBEDDING_RESOURCE)",
-      "docstring": ""
-    },
-    {
-      "name": "TEXT_SPAN_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='text_span', path='text-spans', tag='Text Spans', schema_group=(SchemaGroup.ANNOTATION), schema_cls=TextSpan, canonical_table_name=(canonical_table_name_for_schema(TextSpan)), create_model=TextSpanCreate, update_model=TextSpanUpdate, response_model=TextSpanResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_text_span_create)",
-      "docstring": ""
-    },
-    {
-      "name": "TRACKLET_RESOURCE",
-      "annotation": null,
-      "value": "ResourceSpec(name='tracklet', path='tracklets', tag='Tracklets', schema_group=(SchemaGroup.ANNOTATION), schema_cls=Tracklet, canonical_table_name=(canonical_table_name_for_schema(Tracklet)), create_model=TrackletCreate, update_model=TrackletUpdate, response_model=TrackletResponse, list_filters=('record_id', 'entity_id', 'view_name', 'source_type', 'where'), validate_create=_validate_tracklet_create)",
-      "docstring": ""
-    }
-  ],
+  "module": "pixano.api.resources",
   "submodules": []
 }

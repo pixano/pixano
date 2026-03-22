@@ -1,66 +1,66 @@
 {
-  "module": "pixano.schemas.annotations.tracklet",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/tracklet.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Tracklet",
-      "docstring": "A Tracklet is a temporal segment representing the trajectory of an entity across a video sequence.\n\nAttributes:\n    start_frame: The start frame of the tracklet.\n    end_frame: The end frame of the tracklet.\n    start_timestamp: The start timestamp of the tracklet.\n    end_timestamp: The end timestamp of the tracklet.",
+      "attributes": [
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "end_timestamp",
+          "value": "-1.0"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "end_timestep",
+          "value": "-1"
+        },
+        {
+          "annotation": "float",
+          "docstring": "",
+          "name": "start_timestamp",
+          "value": "-1.0"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "start_timestep",
+          "value": "-1"
+        }
+      ],
       "bases": [
         "EntityAnnotation"
       ],
-      "attributes": [
-        {
-          "name": "end_timestamp",
-          "annotation": "float",
-          "value": "-1.0",
-          "docstring": ""
-        },
-        {
-          "name": "end_timestep",
-          "annotation": "int",
-          "value": "-1",
-          "docstring": ""
-        },
-        {
-          "name": "start_timestamp",
-          "annotation": "float",
-          "value": "-1.0",
-          "docstring": ""
-        },
-        {
-          "name": "start_timestep",
-          "annotation": "int",
-          "value": "-1",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 15
+      "docstring": "A Tracklet is a temporal segment representing the trajectory of an entity across a video sequence.\n\nAttributes:\n    start_frame: The start frame of the tracklet.\n    end_frame: The end frame of the tracklet.\n    start_timestamp: The start timestamp of the tracklet.\n    end_timestamp: The end timestamp of the tracklet.",
+      "lineno": 15,
+      "methods": [],
+      "name": "Tracklet",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/tracklet.py",
   "functions": [
     {
-      "name": "is_tracklet",
+      "decorators": [],
       "docstring": "Check if the given class is a Tracklet or subclass of Tracklet.",
+      "is_async": false,
+      "lineno": 60,
+      "name": "is_tracklet",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 60
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.tracklet",
   "submodules": []
 }

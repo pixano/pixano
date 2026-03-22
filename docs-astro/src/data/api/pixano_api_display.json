@@ -1,88 +1,88 @@
 {
-  "module": "pixano.api.display",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/display.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/display.py",
   "functions": [
     {
-      "name": "display_cli",
+      "decorators": [],
       "docstring": "Display a Pixano app inside a command line interface.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.",
+      "is_async": false,
+      "lineno": 95,
+      "name": "display_cli",
       "parameters": [
         {
-          "name": "url",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "url"
         },
         {
-          "name": "port",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "port"
         }
       ],
-      "returns": null,
-      "is_async": false,
-      "decorators": [],
-      "lineno": 95
+      "returns": null
     },
     {
-      "name": "display_colab",
+      "decorators": [],
       "docstring": "Display a Pixano app inside a Google Colab.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.\n    height: Frame height.",
+      "is_async": false,
+      "lineno": 14,
+      "name": "display_colab",
       "parameters": [
         {
-          "name": "url",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "url"
         },
         {
-          "name": "port",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "port"
         },
         {
-          "name": "height",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "height"
         }
       ],
-      "returns": null,
-      "is_async": false,
-      "decorators": [],
-      "lineno": 14
+      "returns": null
     },
     {
-      "name": "display_ipython",
+      "decorators": [],
       "docstring": "Display a Pixano app inside a Jupyter notebook.\n\nArgs:\n    url: Pixano app URL.\n    port: Pixano app port.\n    height: Frame height.",
+      "is_async": false,
+      "lineno": 53,
+      "name": "display_ipython",
       "parameters": [
         {
-          "name": "url",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "url"
         },
         {
-          "name": "port",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "port"
         },
         {
-          "name": "height",
           "annotation": "int",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "height"
         }
       ],
-      "returns": null,
-      "is_async": false,
-      "decorators": [],
-      "lineno": 53
+      "returns": null
     }
   ],
-  "attributes": [],
+  "module": "pixano.api.display",
   "submodules": []
 }

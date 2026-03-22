@@ -1,54 +1,54 @@
 {
-  "module": "pixano.features.utils.creators",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/features/utils/creators.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/features/utils/creators.py",
   "functions": [
     {
-      "name": "create_instance_of_pixano_type",
+      "decorators": [],
       "docstring": "Create a pixano object.",
+      "is_async": false,
+      "lineno": 80,
+      "name": "create_instance_of_pixano_type",
       "parameters": [
         {
-          "name": "pix_type",
           "annotation": "type[BaseModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "pix_type"
         },
         {
-          "name": "data",
           "annotation": null,
           "default": "{}",
-          "kind": "ParameterKind.var_keyword"
+          "kind": "ParameterKind.var_keyword",
+          "name": "data"
         }
       ],
-      "returns": "BaseModel",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 80
+      "returns": "BaseModel"
     },
     {
-      "name": "create_instance_of_schema",
+      "decorators": [],
       "docstring": "Create a row in a Schema.",
+      "is_async": false,
+      "lineno": 11,
+      "name": "create_instance_of_schema",
       "parameters": [
         {
-          "name": "schema",
           "annotation": "type[LanceModel]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "schema"
         },
         {
-          "name": "data",
           "annotation": null,
           "default": "{}",
-          "kind": "ParameterKind.var_keyword"
+          "kind": "ParameterKind.var_keyword",
+          "name": "data"
         }
       ],
-      "returns": "LanceModel",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 11
+      "returns": "LanceModel"
     }
   ],
-  "attributes": [],
+  "module": "pixano.features.utils.creators",
   "submodules": []
 }

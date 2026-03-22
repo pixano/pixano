@@ -1,149 +1,149 @@
 {
-  "module": "pixano.schemas.views.image",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/image.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Image",
-      "docstring": "Image record modality.\n\nAttributes:\n    width: The image width.\n    height: The image height.\n    format: The image format.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "format",
+          "value": "''"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "height",
+          "value": "0"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "width",
+          "value": "0"
+        }
+      ],
       "bases": [
         "View"
       ],
-      "attributes": [
-        {
-          "name": "format",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "height",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
-        },
-        {
-          "name": "width",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Image record modality.\n\nAttributes:\n    width: The image width.\n    height: The image height.\n    format: The image format.",
+      "lineno": 40,
       "methods": [
         {
-          "name": "from_bytes",
+          "decorators": [
+            "classmethod"
+          ],
           "docstring": "Create an ``Image`` from raw bytes.\n\nArgs:\n    record_id: Record ID that owns this view.\n    logical_name: Logical view name (e.g. ``\"front_camera\"``).\n    raw_bytes: Image file content as raw bytes.\n    id: Optional explicit ID.  Auto-generated when `None`.\n\nReturns:\n    A fully-populated ``Image`` instance.",
+          "is_async": false,
+          "lineno": 136,
+          "name": "from_bytes",
           "parameters": [
             {
-              "name": "record_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
             },
             {
-              "name": "logical_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "logical_name"
             },
             {
-              "name": "raw_bytes",
               "annotation": "bytes",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "raw_bytes"
             },
             {
-              "name": "id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "id"
             }
           ],
-          "returns": "Image",
-          "is_async": false,
+          "returns": "Image"
+        },
+        {
           "decorators": [
             "classmethod"
           ],
-          "lineno": 136
-        },
-        {
-          "name": "from_uri",
           "docstring": "Create an ``Image`` from a URI (local path or remote URL).\n\nArgs:\n    record_id: Record ID that owns this view.\n    logical_name: Logical view name (e.g. ``\"front_camera\"``).\n    uri: Absolute file path or remote ``http(s)`` URL.\n    id: Optional explicit ID.  Auto-generated when `None`.\n\nReturns:\n    A fully-populated ``Image`` instance.",
+          "is_async": false,
+          "lineno": 89,
+          "name": "from_uri",
           "parameters": [
             {
-              "name": "record_id",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "record_id"
             },
             {
-              "name": "logical_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "logical_name"
             },
             {
-              "name": "uri",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "uri"
             },
             {
-              "name": "id",
               "annotation": "str | None",
               "default": "None",
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "id"
             }
           ],
-          "returns": "Image",
-          "is_async": false,
-          "decorators": [
-            "classmethod"
-          ],
-          "lineno": 89
+          "returns": "Image"
         },
         {
-          "name": "open",
+          "decorators": [],
           "docstring": "Open the image.\n\nNote:\n    If `as_base64` is True, the image is returned as a base64 string formatted as\n    \"data:image/{image_format};base64,{base64}\".\n\nArgs:\n    as_base64: Whether to return the opened image as a base64 data URI instead of a PIL image.\n\nReturns:\n    The opened image as a `PIL.Image.Image`, or a base64 data URI string when `as_base64` is True.",
+          "is_async": false,
+          "lineno": 53,
+          "name": "open",
           "parameters": [
             {
-              "name": "as_base64",
               "annotation": "bool",
               "default": "False",
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "as_base64"
             }
           ],
-          "returns": "str | PILImage",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 53
+          "returns": "str | PILImage"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "Image",
       "properties": [],
-      "decorators": [],
-      "lineno": 40
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/views/image.py",
   "functions": [
     {
-      "name": "is_image",
+      "decorators": [],
       "docstring": "Check if the given class is ``Image`` or a subclass of ``Image``.",
+      "is_async": false,
+      "lineno": 179,
+      "name": "is_image",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 179
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.views.image",
   "submodules": []
 }

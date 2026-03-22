@@ -1,136 +1,136 @@
 {
-  "module": "pixano.schemas.annotations.classification",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/classification.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Classification",
-      "docstring": "Classification at the media level (Image or Text).\n\nAttributes:\n    labels: List of class names.\n    confidences: List of prediction confidences.",
+      "attributes": [
+        {
+          "annotation": "list[float]",
+          "docstring": "",
+          "name": "confidences",
+          "value": null
+        },
+        {
+          "annotation": "list[str]",
+          "docstring": "",
+          "name": "labels",
+          "value": null
+        },
+        {
+          "annotation": "list[tuple[str, float]]",
+          "docstring": "Get list of zipped predictions (labels and confidences).",
+          "name": "predictions",
+          "value": null
+        }
+      ],
       "bases": [
         "EntityAnnotation"
       ],
-      "attributes": [
-        {
-          "name": "confidences",
-          "annotation": "list[float]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "labels",
-          "annotation": "list[str]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "predictions",
-          "annotation": "list[tuple[str, float]]",
-          "value": null,
-          "docstring": "Get list of zipped predictions (labels and confidences)."
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Classification at the media level (Image or Text).\n\nAttributes:\n    labels: List of class names.\n    confidences: List of prediction confidences.",
+      "lineno": 14,
       "methods": [
         {
-          "name": "none",
-          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" Classification.",
-          "parameters": [],
-          "returns": "Classification",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 31
+          "docstring": "Utility function to get a `None` equivalent.\nShould be removed as soon as Lance manages `None` value.\n\nReturns:\n    \"None\" Classification.",
+          "is_async": false,
+          "lineno": 31,
+          "name": "none",
+          "parameters": [],
+          "returns": "Classification"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "Classification",
       "properties": [],
-      "decorators": [],
-      "lineno": 14
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/classification.py",
   "functions": [
     {
-      "name": "create_classification",
+      "decorators": [],
       "docstring": "Create a `Classification` instance.\n\nArgs:\n    labels: List of class names.\n    confidences: List of prediction confidences.\n    id: `Classification` ID.\n    record_id: Record ID.\n    view_id: View ID.\n    entity_id: Entity ID.\n    source_type: Source type.\n    source_name: Source name.\n    source_metadata: Source metadata (JSON string).\n\nReturns:\n    The created `Classification` instance.",
+      "is_async": false,
+      "lineno": 56,
+      "name": "create_classification",
       "parameters": [
         {
-          "name": "labels",
           "annotation": "list[str]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "labels"
         },
         {
-          "name": "confidences",
           "annotation": "list[float]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "confidences"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "view_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_id"
         },
         {
-          "name": "entity_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity_id"
         },
         {
-          "name": "source_type",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_type"
         },
         {
-          "name": "source_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_name"
         },
         {
-          "name": "source_metadata",
           "annotation": "str",
           "default": "'{}'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_metadata"
         }
       ],
-      "returns": "Classification",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 56
+      "returns": "Classification"
     },
     {
-      "name": "is_classification",
+      "decorators": [],
       "docstring": "Check if a class is a `Classification` or subclass of `Classification`.",
+      "is_async": false,
+      "lineno": 51,
+      "name": "is_classification",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 51
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.classification",
   "submodules": []
 }

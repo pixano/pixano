@@ -24,7 +24,7 @@ License: CECILL-C
     timelineFocusEntityIds,
     togglePinnedTimelineEntity,
   } from "$lib/stores/timelineInspectorStore.svelte";
-  import { isTracking } from "$lib/stores/trackingStore.svelte";
+  import { activeTrackingTimelineState } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
     lastFrameIndex,
@@ -173,11 +173,11 @@ License: CECILL-C
 
         <TimelineHeaderSurface entities={videoEntities} {onFrameClick} />
 
-        {#if isTracking.value}
+        {#if activeTrackingTimelineState.value}
           <div
             class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
           >
-            <TrackingTimelineRow />
+            <TrackingTimelineRow state={activeTrackingTimelineState.value} />
           </div>
         {/if}
 

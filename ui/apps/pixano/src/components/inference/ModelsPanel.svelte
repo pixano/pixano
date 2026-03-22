@@ -5,12 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { ArrowsClockwise, HardDrives, Sparkle, X } from "phosphor-svelte";
+  import { ArrowsClockwise, HardDrives, Plus, Sparkle } from "phosphor-svelte";
 
   import ConnectToServerModal from "./ConnectToServerModal.svelte";
-  import { disconnectFromProvider, refreshInferenceModels } from "$lib/services/inferenceService";
+  import {
+    ensureInferenceRegistryLoaded,
+    refreshInferenceModels,
+  } from "$lib/services/inferenceService";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
-  import { IconButton, PrimaryButton, type InferenceModel } from "$lib/ui";
+  import { formatInferenceProviderName, type InferenceModel } from "$lib/types/inference";
+  import { IconButton, PrimaryButton } from "$lib/ui";
 
   let showConnectModal = $state(false);
 
@@ -23,20 +27,18 @@ License: CECILL-C
       if (!groups[label]) groups[label] = [];
       groups[label].push(model);
     }
-    return Object.entries(groups).map(([label, models]) => ({ label, models }));
+    return Object.entries(groups).map(([label, groupModels]) => ({ label, models: groupModels }));
   }
 
   function formatTaskLabel(task: string): string {
     return task.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  function formatProviderName(name: string): string {
-    // Extract the host:port portion from "pixano-inference@host:port"
-    const atIndex = name.indexOf("@");
-    return atIndex >= 0 ? name.substring(atIndex + 1) : name;
-  }
+  const modelGroups = $derived(groupModelsByTask(inferenceServerStore.value.models));
 
-  let modelGroups = $derived(groupModelsByTask(inferenceServerStore.value.models));
+  $effect(() => {
+    void ensureInferenceRegistryLoaded();
+  });
 </script>
 
 <div class="flex flex-col h-full bg-card p-6 gap-6">
@@ -47,25 +49,22 @@ License: CECILL-C
       </div>
       <h2 class="text-xs font-bold text-foreground uppercase tracking-[0.1em]">Inference</h2>
     </div>
-    <div class="flex items-center gap-1">
-      {#if inferenceServerStore.value.connected}
-        <IconButton
-          tooltipContent="Refresh models"
-          onclick={() => void refreshInferenceModels()}
-          class="h-8 w-8"
-        >
-          <ArrowsClockwise weight="regular" size={18} />
-        </IconButton>
-      {/if}
-    </div>
+    {#if inferenceServerStore.value.connected}
+      <IconButton
+        tooltipContent="Refresh servers and models"
+        onclick={() => void refreshInferenceModels()}
+        class="h-8 w-8"
+      >
+        <ArrowsClockwise weight="regular" size={18} />
+      </IconButton>
+    {/if}
   </div>
 
-  <!-- Connection Status -->
   <div class="space-y-3">
     <h3
       class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 opacity-60"
     >
-      Status
+      Servers
     </h3>
     {#if inferenceServerStore.value.providers.length > 0}
       <div class="flex flex-col gap-2">
@@ -76,16 +75,16 @@ License: CECILL-C
             <div
               class="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] shrink-0"
             ></div>
-            <span class="text-[13px] text-foreground font-semibold truncate flex-1">
-              {provider.url ?? provider.name}
-            </span>
-            <button
-              class="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all shrink-0 p-1"
-              onclick={() => void disconnectFromProvider(provider.name)}
-              title="Disconnect"
-            >
-              <X size={14} />
-            </button>
+            <div class="min-w-0 flex-1">
+              <p class="text-[13px] text-foreground font-semibold truncate">
+                {provider.url ?? provider.name}
+              </p>
+              <p class="text-[10px] text-muted-foreground truncate">
+                {provider.name === inferenceServerStore.value.defaultProvider
+                  ? "Default server"
+                  : provider.name}
+              </p>
+            </div>
           </div>
         {/each}
       </div>
@@ -111,21 +110,19 @@ License: CECILL-C
         <HardDrives weight="regular" size={28} class="text-muted-foreground/40" />
       </div>
       <div class="space-y-1.5">
-        <p class="text-sm font-bold text-foreground">Connect to server</p>
+        <p class="text-sm font-bold text-foreground">No server connected</p>
         <p class="text-[12px] text-muted-foreground leading-relaxed px-2">
-          Add an inference server to enable AI-powered annotation tools.
+          Connect one or more inference servers to enable AI-powered annotation tools.
         </p>
       </div>
-      <PrimaryButton onclick={() => (showConnectModal = true)} isSelected class="w-full">
-        Connect Server
-      </PrimaryButton>
+      <PrimaryButton onclick={() => (showConnectModal = true)}>Connect Server</PrimaryButton>
     </div>
   {:else if inferenceServerStore.value.models.length === 0}
     <div
       class="flex flex-col items-center gap-2 py-8 text-center bg-muted/10 rounded-2xl border border-dashed border-border mt-2"
     >
       <p class="text-[13px] text-muted-foreground font-medium px-6">
-        Connected, but no models found on the server.
+        Connected, but no deployed models were reported by the registered servers.
       </p>
     </div>
   {:else}
@@ -151,7 +148,7 @@ License: CECILL-C
                   class="text-[10px] text-muted-foreground font-medium flex items-center gap-1.5"
                 >
                   <span class="opacity-50 italic">Provider:</span>
-                  {formatProviderName(model.provider_name)}
+                  {formatInferenceProviderName(model.provider_name)}
                 </span>
               </div>
             {/each}
@@ -163,14 +160,10 @@ License: CECILL-C
 
   {#if inferenceServerStore.value.connected}
     <button
-      class="mt-auto group flex items-center gap-2 py-3 px-1 text-[11px] font-bold text-muted-foreground hover:text-primary transition-all duration-200 uppercase tracking-widest border-t border-border/30"
+      class="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-primary font-medium transition-colors px-1 mt-auto"
       onclick={() => (showConnectModal = true)}
     >
-      <span
-        class="w-4 h-4 rounded bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors"
-      >
-        +
-      </span>
+      <Plus weight="bold" size={14} />
       Add another server
     </button>
   {/if}
@@ -178,7 +171,6 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectToServerModal
-    defaultUrl=""
     onClose={() => (showConnectModal = false)}
     onConnected={() => (showConnectModal = false)}
   />

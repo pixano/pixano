@@ -1,44 +1,44 @@
 {
-  "module": "pixano.datasets.utils.video",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/utils/video.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/utils/video.py",
   "functions": [
     {
-      "name": "create_video_preview",
+      "decorators": [],
       "docstring": "Create a video preview by writing a sequence of frames to a video file.\n\nArgs:\n    path: The path to the output video file.\n    frame_urls: URLs pointing to the frames of the video.\n    fps: The frames per second of the output video.\n    scale: The scale factor to resize the frames.",
+      "is_async": false,
+      "lineno": 11,
+      "name": "create_video_preview",
       "parameters": [
         {
-          "name": "path",
           "annotation": "Path",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "path"
         },
         {
-          "name": "frame_urls",
           "annotation": "Iterable[str]",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "frame_urls"
         },
         {
-          "name": "fps",
           "annotation": "int",
           "default": "25",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "fps"
         },
         {
-          "name": "scale",
           "annotation": "float",
           "default": "0.5",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "scale"
         }
       ],
-      "returns": null,
-      "is_async": false,
-      "decorators": [],
-      "lineno": 11
+      "returns": null
     }
   ],
-  "attributes": [],
+  "module": "pixano.datasets.utils.video",
   "submodules": []
 }

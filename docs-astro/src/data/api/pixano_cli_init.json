@@ -1,26 +1,26 @@
 {
-  "module": "pixano.cli.init",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/cli/init.py",
+  "attributes": [],
   "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/cli/init.py",
   "functions": [
     {
-      "name": "init",
+      "decorators": [],
       "docstring": "Initialize a Pixano data directory.",
+      "is_async": false,
+      "lineno": 12,
+      "name": "init",
       "parameters": [
         {
-          "name": "data_dir",
           "annotation": "Path",
           "default": "typer.Argument(..., help='Path to initialize.')",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "data_dir"
         }
       ],
-      "returns": "None",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 12
+      "returns": "None"
     }
   ],
-  "attributes": [],
+  "module": "pixano.cli.init",
   "submodules": []
 }

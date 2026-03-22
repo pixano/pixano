@@ -4,10 +4,23 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
+
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
+import {
+  beginVosPendingIntervalState,
+  commitVosIntervalState,
+  failVosPendingIntervalState,
+  isVosSessionActiveState,
+  NULL_VOS_STATE,
+  setVosAnchorState,
+  startNewVosSegmentState,
+  type VosSessionState,
+} from "./vosSession";
 import { views } from "./workspaceBaseStores.svelte";
 import { MultiSegmentTracker, type BBoxKeyframe } from "$lib/trackers";
+import type { TrackingTimelineState } from "$lib/trackingTimeline";
 import {
   BaseSchema,
   BBox,
@@ -16,6 +29,15 @@ import {
   type SequenceFrame,
 } from "$lib/types/dataset";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
+
+export type {
+  VosAnchorSourceKind,
+  VosAnchorState,
+  VosPendingIntervalState,
+  VosSegmentState,
+  VosSessionState,
+  VosTrackedMaskState,
+} from "./vosSession";
 
 // ─── Session state ──────────────────────────────────────────────────────────
 
@@ -50,6 +72,9 @@ export function startTrackingSession(
   imageWidth: number,
   imageHeight: number,
 ): void {
+  if (isVosSessionActiveState(vosSession.value)) {
+    resetVosSession();
+  }
   const tracker = new MultiSegmentTracker(viewName);
   trackingSession.value = {
     tracker,
@@ -292,3 +317,100 @@ function buildTrackingPreviewBBox(
 
   return bbox;
 }
+
+// ─── VOS Tracking State ───────────────────────────────────────────────────
+
+export const vosSession = reactiveStore<VosSessionState>({ ...NULL_VOS_STATE });
+
+export function resetVosSession(): void {
+  vosSession.value = { ...NULL_VOS_STATE };
+}
+
+export function setVosAnchor(input: Parameters<typeof setVosAnchorState>[1]): void {
+  if (trackingSession.value.tracker !== null) {
+    cancelTrackingSession();
+  }
+  vosSession.update((state) => setVosAnchorState(state, input));
+}
+
+export function beginVosPendingInterval(
+  input: Parameters<typeof beginVosPendingIntervalState>[1],
+): void {
+  vosSession.update((state) => beginVosPendingIntervalState(state, input));
+}
+
+export function commitVosInterval(input: Parameters<typeof commitVosIntervalState>[1]): void {
+  vosSession.update((state) => commitVosIntervalState(state, input));
+}
+
+export function failVosPendingInterval(requestId: string): void {
+  vosSession.update((state) => failVosPendingIntervalState(state, requestId));
+}
+
+export function startNewVosSegment(): boolean {
+  const nextState = startNewVosSegmentState(vosSession.value);
+  if (nextState === vosSession.value) {
+    return false;
+  }
+  vosSession.value = nextState;
+  return true;
+}
+
+export const isVosSessionActive = reactiveDerived(() => {
+  return isVosSessionActiveState(vosSession.value);
+});
+
+export const vosPendingInterval = reactiveDerived<[number, number] | null>(() => {
+  const pending = vosSession.value.pendingInterval;
+  if (!pending) return null;
+  return [pending.startFrame, pending.endFrame];
+});
+
+export const vosAnchorFrameIndex = reactiveDerived<number | null>(() => {
+  return vosSession.value.anchor?.frameIndex ?? null;
+});
+
+export const vosAnchorFrameIndices = reactiveDerived<number[]>(() => {
+  return [...vosSession.value.anchorFrameIndices].sort((left, right) => left - right);
+});
+
+export const vosTrackedMasks = reactiveDerived<MaskSegmentationOutput[]>(() => {
+  return vosSession.value.masks
+    .slice()
+    .sort((left, right) => left.frameIndex - right.frameIndex)
+    .map((mask) => mask.output);
+});
+
+export const vosSegmentRanges = reactiveDerived<Array<[number, number]>>(() => {
+  return vosSession.value.segments
+    .slice()
+    .sort((left, right) => left.startFrame - right.startFrame)
+    .map((segment) => [segment.startFrame, segment.endFrame]);
+});
+
+export const trackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  if (!isTracking.value) return null;
+  return {
+    variant: "bbox",
+    segments: trackingSegmentRanges.value,
+    keyframes: trackingKeyframeIndices.value,
+    pendingMarkerIndex: pendingKeyframeIndex.value,
+    pendingInterval: null,
+  };
+});
+
+export const vosTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  if (!isVosSessionActive.value) return null;
+  const pending = vosSession.value.pendingInterval;
+  return {
+    variant: "vos",
+    segments: vosSegmentRanges.value,
+    keyframes: vosAnchorFrameIndices.value,
+    pendingMarkerIndex: pending?.endFrame ?? null,
+    pendingInterval: pending ? [pending.startFrame, pending.endFrame] : null,
+  };
+});
+
+export const activeTrackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
+  return trackingTimelineState.value ?? vosTimelineState.value;
+});

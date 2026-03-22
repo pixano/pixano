@@ -1,109 +1,109 @@
 {
-  "module": "pixano.schemas.records",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/records.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Record",
-      "docstring": "Record base class.\nRecords are top level objects to represent dataset samples.\nThey are stored in the main table of the database.\n\nAttributes:\n    id: The record's ID.\n    split: The record's split.\n    created_at: The record's creation date.\n    updated_at: The record's last modification date.",
+      "attributes": [
+        {
+          "annotation": "datetime",
+          "docstring": "",
+          "name": "created_at",
+          "value": "Field(default_factory=(datetime.now))"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "split",
+          "value": "'default'"
+        },
+        {
+          "annotation": "datetime",
+          "docstring": "",
+          "name": "updated_at",
+          "value": "Field(default_factory=(datetime.now))"
+        }
+      ],
       "bases": [
         "LanceModel"
       ],
-      "attributes": [
-        {
-          "name": "created_at",
-          "annotation": "datetime",
-          "value": "Field(default_factory=(datetime.now))",
-          "docstring": ""
-        },
-        {
-          "name": "id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "split",
-          "annotation": "str",
-          "value": "'default'",
-          "docstring": ""
-        },
-        {
-          "name": "updated_at",
-          "annotation": "datetime",
-          "value": "Field(default_factory=(datetime.now))",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 15
+      "docstring": "Record base class.\nRecords are top level objects to represent dataset samples.\nThey are stored in the main table of the database.\n\nAttributes:\n    id: The record's ID.\n    split: The record's split.\n    created_at: The record's creation date.\n    updated_at: The record's last modification date.",
+      "lineno": 15,
+      "methods": [],
+      "name": "Record",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "RecordComponent",
-      "docstring": "Record component.\nRecord components are used to store all other objects that are part of a record. That cannot be stored in\nthe main table of the database. Otherwise, the main table would be too big and have a deep structure.\nRecords components are stored in their corresponding auxiliary tables and referenced by the record's id.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "record_id",
+          "value": "''"
+        }
+      ],
       "bases": [
         "LanceModel"
       ],
-      "attributes": [
-        {
-          "name": "id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "record_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 33
+      "docstring": "Record component.\nRecord components are used to store all other objects that are part of a record. That cannot be stored in\nthe main table of the database. Otherwise, the main table would be too big and have a deep structure.\nRecords components are stored in their corresponding auxiliary tables and referenced by the record's id.",
+      "lineno": 33,
+      "methods": [],
+      "name": "RecordComponent",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/records.py",
   "functions": [
     {
-      "name": "is_record",
+      "decorators": [],
       "docstring": "Check if a class is a `Record` or subclass of `Record`.",
+      "is_async": false,
+      "lineno": 44,
+      "name": "is_record",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 44
+      "returns": "bool"
     },
     {
-      "name": "is_record_component",
+      "decorators": [],
       "docstring": "Check if a class is a `RecordComponent` or subclass of `RecordComponent`.",
+      "is_async": false,
+      "lineno": 49,
+      "name": "is_record_component",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 49
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.records",
   "submodules": []
 }

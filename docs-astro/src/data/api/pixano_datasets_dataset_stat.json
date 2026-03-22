@@ -1,84 +1,84 @@
 {
-  "module": "pixano.datasets.dataset_stat",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/dataset_stat.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "DatasetStatistic",
-      "docstring": "A statistic of a dataset.\n\nAttributes:\n    name: The name of the statistic.\n    type: The type ('numerical' or 'categorical') of the statistic.\n    histogram: The histogram of the statistic.\n    range: The range of the statistic.",
+      "attributes": [
+        {
+          "annotation": "list[dict[str, float | int | str]]",
+          "docstring": "",
+          "name": "histogram",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "name",
+          "value": null
+        },
+        {
+          "annotation": "list[int | float] | None",
+          "docstring": "",
+          "name": "range",
+          "value": "None"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "type",
+          "value": null
+        }
+      ],
       "bases": [
         "BaseModel"
       ],
-      "attributes": [
-        {
-          "name": "histogram",
-          "annotation": "list[dict[str, float | int | str]]",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "name",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "range",
-          "annotation": "list[int | float] | None",
-          "value": "None",
-          "docstring": ""
-        },
-        {
-          "name": "type",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "A statistic of a dataset.\n\nAttributes:\n    name: The name of the statistic.\n    type: The type ('numerical' or 'categorical') of the statistic.\n    histogram: The histogram of the statistic.\n    range: The range of the statistic.",
+      "lineno": 13,
       "methods": [
         {
-          "name": "from_json",
-          "docstring": "Read list of `DatasetStatistic` from a JSON file.\n\nArgs:\n    json_fp: JSON file path.\n\nReturns:\n    A list of `DatasetStat`.",
-          "parameters": [
-            {
-              "name": "json_fp",
-              "annotation": "Path",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "list[DatasetStatistic]",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 28
-        },
-        {
-          "name": "to_json",
-          "docstring": "Save `DatasetStatistic` to a json file.\n\nReplace the existing histogram in `json_fp`.\n\nArgs:\n    json_fp: Save directory.",
+          "docstring": "Read list of `DatasetStatistic` from a JSON file.\n\nArgs:\n    json_fp: JSON file path.\n\nReturns:\n    A list of `DatasetStat`.",
+          "is_async": false,
+          "lineno": 28,
+          "name": "from_json",
           "parameters": [
             {
-              "name": "json_fp",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "json_fp"
             }
           ],
-          "returns": "None",
-          "is_async": false,
+          "returns": "list[DatasetStatistic]"
+        },
+        {
           "decorators": [],
-          "lineno": 42
+          "docstring": "Save `DatasetStatistic` to a json file.\n\nReplace the existing histogram in `json_fp`.\n\nArgs:\n    json_fp: Save directory.",
+          "is_async": false,
+          "lineno": 42,
+          "name": "to_json",
+          "parameters": [
+            {
+              "annotation": "Path",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "json_fp"
+            }
+          ],
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "DatasetStatistic",
       "properties": [],
-      "decorators": [],
-      "lineno": 13
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/dataset_stat.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.dataset_stat",
   "submodules": []
 }

@@ -18,6 +18,7 @@ License: CECILL-C
   import { serializeMessageContent } from "./utils/serializeMessageContent";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
+  import type { InferenceModelSelection } from "$lib/types/inference";
   import type { LabelFormat, StoreQuestionEvent } from "$lib/types/vqa";
   import {
     ContentChangeEventType,
@@ -33,7 +34,7 @@ License: CECILL-C
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
     onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
     onGenerateQuestion?: (
-      completionModel: string,
+      completionModel: InferenceModelSelection,
     ) => Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null>;
   }
 
@@ -49,7 +50,7 @@ License: CECILL-C
   let questionType = $state(QuestionTypeEnum.OPEN);
   let isGenerating = $state(false);
 
-  let completionModel = $derived(completionModels.find((m) => m.selected)?.name);
+  let completionModel = $derived(completionModels.find((m) => m.selected));
   let isAnswering = $derived(!!pendingQuestion);
 
   const allowedTypes = [

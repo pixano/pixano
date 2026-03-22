@@ -1,617 +1,617 @@
 {
-  "module": "pixano.datasets.builders.folders.metadata",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/metadata.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "FolderMetadataService",
-      "docstring": "Normalizes and validates ``metadata.jsonl`` rows for folder imports.",
-      "bases": [],
       "attributes": [
         {
+          "annotation": null,
+          "docstring": "",
           "name": "annotations_schema",
-          "annotation": null,
-          "value": "annotations_schema",
-          "docstring": ""
+          "value": "annotations_schema"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "entities_schema",
-          "annotation": null,
-          "value": "entities_schema",
-          "docstring": ""
+          "value": "entities_schema"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "entity_dynamic_states_schema",
-          "annotation": null,
-          "value": "entity_dynamic_states_schema",
-          "docstring": ""
+          "value": "entity_dynamic_states_schema"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "metadata_filename",
-          "annotation": null,
-          "value": "metadata_filename",
-          "docstring": ""
+          "value": "metadata_filename"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "record_field_names",
-          "annotation": null,
-          "value": "record_field_names",
-          "docstring": ""
+          "value": "record_field_names"
         },
         {
+          "annotation": null,
+          "docstring": "",
           "name": "source_dir",
-          "annotation": null,
-          "value": "source_dir",
-          "docstring": ""
+          "value": "source_dir"
         },
         {
-          "name": "views_schema",
           "annotation": null,
-          "value": "views_schema",
-          "docstring": ""
+          "docstring": "",
+          "name": "views_schema",
+          "value": "views_schema"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Normalizes and validates ``metadata.jsonl`` rows for folder imports.",
+      "lineno": 85,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the metadata service with schema definitions and source directory.",
+          "is_async": false,
+          "lineno": 88,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "source_dir",
               "annotation": "Path",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "source_dir"
             },
             {
-              "name": "metadata_filename",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "metadata_filename"
             },
             {
-              "name": "record_field_names",
               "annotation": "set[str]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "record_field_names"
             },
             {
-              "name": "views_schema",
               "annotation": "dict[str, type]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "views_schema"
             },
             {
-              "name": "entities_schema",
               "annotation": "dict[str, type]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "entities_schema"
             },
             {
-              "name": "entity_dynamic_states_schema",
               "annotation": "dict[str, type]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "entity_dynamic_states_schema"
             },
             {
-              "name": "annotations_schema",
               "annotation": "dict[str, type]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "annotations_schema"
             },
             {
-              "name": "resolve_view_files",
               "annotation": "Callable[[str, Any, type], list[Path]]",
               "default": null,
-              "kind": "ParameterKind.keyword_only"
+              "kind": "ParameterKind.keyword_only",
+              "name": "resolve_view_files"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 88
+          "returns": "None"
         },
         {
-          "name": "is_media_path_token",
-          "docstring": "Return ``True`` when the value looks like a media path or glob.",
-          "parameters": [
-            {
-              "name": "value",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "bool",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 115
-        },
-        {
-          "name": "metadata_alias_map",
-          "docstring": "Build accepted metadata aliases from the declared schema.",
-          "parameters": [],
-          "returns": "dict[str, str]",
+          "docstring": "Return ``True`` when the value looks like a media path or glob.",
           "is_async": false,
-          "decorators": [],
-          "lineno": 134
-        },
-        {
-          "name": "normalize_dataset_piece",
-          "docstring": "Normalize one metadata row without collecting a report.",
+          "lineno": 115,
+          "name": "is_media_path_token",
           "parameters": [
             {
-              "name": "dataset_piece",
-              "annotation": "dict[str, Any]",
+              "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "value"
             }
           ],
-          "returns": "dict[str, Any]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 187
+          "returns": "bool"
         },
         {
-          "name": "normalize_dataset_piece_with_report",
-          "docstring": "Normalize one metadata row and record normalization events.",
+          "decorators": [],
+          "docstring": "Build accepted metadata aliases from the declared schema.",
+          "is_async": false,
+          "lineno": 134,
+          "name": "metadata_alias_map",
+          "parameters": [],
+          "returns": "dict[str, str]"
+        },
+        {
+          "decorators": [],
+          "docstring": "Normalize one metadata row without collecting a report.",
+          "is_async": false,
+          "lineno": 187,
+          "name": "normalize_dataset_piece",
           "parameters": [
             {
-              "name": "dataset_piece",
               "annotation": "dict[str, Any]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "dataset_piece"
+            }
+          ],
+          "returns": "dict[str, Any]"
+        },
+        {
+          "decorators": [],
+          "docstring": "Normalize one metadata row and record normalization events.",
+          "is_async": false,
+          "lineno": 191,
+          "name": "normalize_dataset_piece_with_report",
+          "parameters": [
+            {
+              "annotation": "dict[str, Any]",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "dataset_piece"
             },
             {
-              "name": "report",
               "annotation": "MetadataValidationReport | None",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "report"
             },
             {
-              "name": "split_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "split_name"
             },
             {
-              "name": "line_number",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "line_number"
             },
             {
-              "name": "validation_mode",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "validation_mode"
             }
           ],
-          "returns": "dict[str, Any]",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 191
+          "returns": "dict[str, Any]"
         },
         {
-          "name": "normalize_metadata_key",
-          "docstring": "Normalize a metadata key for case-insensitive matching.",
-          "parameters": [
-            {
-              "name": "key",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "str",
-          "is_async": false,
           "decorators": [
             "staticmethod"
           ],
-          "lineno": 110
-        },
-        {
-          "name": "normalize_view_name_alias",
-          "docstring": "Resolve a metadata view alias to its declared logical name.",
+          "docstring": "Normalize a metadata key for case-insensitive matching.",
+          "is_async": false,
+          "lineno": 110,
+          "name": "normalize_metadata_key",
           "parameters": [
             {
-              "name": "view_name",
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "key"
+            }
+          ],
+          "returns": "str"
+        },
+        {
+          "decorators": [],
+          "docstring": "Resolve a metadata view alias to its declared logical name.",
+          "is_async": false,
+          "lineno": 128,
+          "name": "normalize_view_name_alias",
+          "parameters": [
+            {
               "annotation": "str | None",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "view_name"
             }
           ],
-          "returns": "str | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 128
+          "returns": "str | None"
         },
         {
-          "name": "preflight_metadata",
+          "decorators": [],
           "docstring": "Validate every metadata row found in the source directory.",
+          "is_async": false,
+          "lineno": 295,
+          "name": "preflight_metadata",
           "parameters": [
             {
-              "name": "validation_mode",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "validation_mode"
             }
           ],
-          "returns": "MetadataValidationReport",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 295
+          "returns": "MetadataValidationReport"
         },
         {
-          "name": "resolve_schema_key_from_value",
+          "decorators": [],
           "docstring": "Resolve an unknown metadata key from payload shape when unambiguous.",
+          "is_async": false,
+          "lineno": 166,
+          "name": "resolve_schema_key_from_value",
           "parameters": [
             {
-              "name": "value",
               "annotation": "Any",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "value"
             }
           ],
-          "returns": "str | None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 166
+          "returns": "str | None"
         },
         {
-          "name": "validate_dataset_piece",
+          "decorators": [],
           "docstring": "Validate one metadata row against the declared schema.",
+          "is_async": false,
+          "lineno": 254,
+          "name": "validate_dataset_piece",
           "parameters": [
             {
-              "name": "dataset_piece",
               "annotation": "dict[str, Any]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "dataset_piece"
             },
             {
-              "name": "split_name",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "split_name"
             },
             {
-              "name": "line_number",
               "annotation": "int",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "line_number"
             },
             {
-              "name": "report",
               "annotation": "MetadataValidationReport",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "report"
             },
             {
-              "name": "validation_mode",
               "annotation": "str",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "validation_mode"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 254
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "FolderMetadataService",
       "properties": [],
-      "decorators": [],
-      "lineno": 85
+      "static_methods": []
     },
     {
-      "name": "MetadataIssueAggregate",
-      "docstring": "Aggregates repeated metadata issues with sample locations.",
-      "bases": [],
       "attributes": [
         {
+          "annotation": "int",
+          "docstring": "",
           "name": "count",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
+          "value": "0"
         },
         {
-          "name": "samples",
           "annotation": "list[str]",
-          "value": "field(default_factory=list)",
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "count",
-              "annotation": "int",
-              "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "samples",
-              "annotation": "list[str]",
-              "default": "list()",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
-        },
-        {
-          "name": "add",
-          "docstring": "Record one occurrence of an issue at the given location.",
-          "parameters": [
-            {
-              "name": "location",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 25
+          "name": "samples",
+          "value": "field(default_factory=list)"
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass"
       ],
-      "lineno": 18
+      "docstring": "Aggregates repeated metadata issues with sample locations.",
+      "lineno": 18,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "int",
+              "default": "0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "count"
+            },
+            {
+              "annotation": "list[str]",
+              "default": "list()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "samples"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Record one occurrence of an issue at the given location.",
+          "is_async": false,
+          "lineno": 25,
+          "name": "add",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "location"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "MetadataIssueAggregate",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "MetadataValidationReport",
-      "docstring": "Validation summary for folder metadata preflight.",
-      "bases": [],
       "attributes": [
         {
-          "name": "aliases",
           "annotation": "dict[str, MetadataIssueAggregate]",
-          "value": "field(default_factory=dict)",
-          "docstring": ""
-        },
-        {
-          "name": "error_count",
-          "annotation": "int",
-          "value": null,
-          "docstring": "Return the total number of errors."
-        },
-        {
-          "name": "errors",
-          "annotation": "dict[str, MetadataIssueAggregate]",
-          "value": "field(default_factory=dict)",
-          "docstring": ""
-        },
-        {
-          "name": "inferred",
-          "annotation": "dict[str, MetadataIssueAggregate]",
-          "value": "field(default_factory=dict)",
-          "docstring": ""
-        },
-        {
-          "name": "is_valid",
-          "annotation": "bool",
-          "value": null,
-          "docstring": "Return True if no errors were recorded."
-        },
-        {
-          "name": "normalized_examples",
-          "annotation": "list[str]",
-          "value": "field(default_factory=list)",
-          "docstring": ""
-        },
-        {
-          "name": "row_count",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
-        },
-        {
-          "name": "split_count",
-          "annotation": "int",
-          "value": "0",
-          "docstring": ""
-        },
-        {
-          "name": "warning_count",
-          "annotation": "int",
-          "value": null,
-          "docstring": "Return the total number of warnings, aliases, and inferred issues."
-        },
-        {
-          "name": "warnings",
-          "annotation": "dict[str, MetadataIssueAggregate]",
-          "value": "field(default_factory=dict)",
-          "docstring": ""
-        }
-      ],
-      "methods": [
-        {
-          "name": "__init__",
           "docstring": "",
-          "parameters": [
-            {
-              "name": "split_count",
-              "annotation": "int",
-              "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "row_count",
-              "annotation": "int",
-              "default": "0",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "warnings",
-              "annotation": "dict[str, MetadataIssueAggregate]",
-              "default": "dict()",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "errors",
-              "annotation": "dict[str, MetadataIssueAggregate]",
-              "default": "dict()",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "aliases",
-              "annotation": "dict[str, MetadataIssueAggregate]",
-              "default": "dict()",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "inferred",
-              "annotation": "dict[str, MetadataIssueAggregate]",
-              "default": "dict()",
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "normalized_examples",
-              "annotation": "list[str]",
-              "default": "list()",
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 0
+          "name": "aliases",
+          "value": "field(default_factory=dict)"
         },
         {
-          "name": "add_alias",
-          "docstring": "Record a key alias mapping from source_key to target_key.",
-          "parameters": [
-            {
-              "name": "source_key",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "target_key",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "location",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 71
+          "annotation": "int",
+          "docstring": "Return the total number of errors.",
+          "name": "error_count",
+          "value": null
         },
         {
-          "name": "add_error",
-          "docstring": "Add an error issue for the given code and location.",
-          "parameters": [
-            {
-              "name": "code",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "location",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 67
+          "annotation": "dict[str, MetadataIssueAggregate]",
+          "docstring": "",
+          "name": "errors",
+          "value": "field(default_factory=dict)"
         },
         {
-          "name": "add_inferred",
-          "docstring": "Record an inferred value for the given description and location.",
-          "parameters": [
-            {
-              "name": "description",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "location",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 75
+          "annotation": "dict[str, MetadataIssueAggregate]",
+          "docstring": "",
+          "name": "inferred",
+          "value": "field(default_factory=dict)"
         },
         {
-          "name": "add_normalized_example",
-          "docstring": "Record a sample normalized-key transformation for the report.",
-          "parameters": [
-            {
-              "name": "description",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 79
+          "annotation": "bool",
+          "docstring": "Return True if no errors were recorded.",
+          "name": "is_valid",
+          "value": null
         },
         {
-          "name": "add_warning",
-          "docstring": "Add a warning issue for the given code and location.",
-          "parameters": [
-            {
-              "name": "code",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            },
-            {
-              "name": "location",
-              "annotation": "str",
-              "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
-            }
-          ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 63
+          "annotation": "list[str]",
+          "docstring": "",
+          "name": "normalized_examples",
+          "value": "field(default_factory=list)"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "row_count",
+          "value": "0"
+        },
+        {
+          "annotation": "int",
+          "docstring": "",
+          "name": "split_count",
+          "value": "0"
+        },
+        {
+          "annotation": "int",
+          "docstring": "Return the total number of warnings, aliases, and inferred issues.",
+          "name": "warning_count",
+          "value": null
+        },
+        {
+          "annotation": "dict[str, MetadataIssueAggregate]",
+          "docstring": "",
+          "name": "warnings",
+          "value": "field(default_factory=dict)"
         }
       ],
+      "bases": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [
         "dataclass"
       ],
-      "lineno": 32
+      "docstring": "Validation summary for folder metadata preflight.",
+      "lineno": 32,
+      "methods": [
+        {
+          "decorators": [],
+          "docstring": "",
+          "is_async": false,
+          "lineno": 0,
+          "name": "__init__",
+          "parameters": [
+            {
+              "annotation": "int",
+              "default": "0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "split_count"
+            },
+            {
+              "annotation": "int",
+              "default": "0",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "row_count"
+            },
+            {
+              "annotation": "dict[str, MetadataIssueAggregate]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "warnings"
+            },
+            {
+              "annotation": "dict[str, MetadataIssueAggregate]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "errors"
+            },
+            {
+              "annotation": "dict[str, MetadataIssueAggregate]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "aliases"
+            },
+            {
+              "annotation": "dict[str, MetadataIssueAggregate]",
+              "default": "dict()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "inferred"
+            },
+            {
+              "annotation": "list[str]",
+              "default": "list()",
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "normalized_examples"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Record a key alias mapping from source_key to target_key.",
+          "is_async": false,
+          "lineno": 71,
+          "name": "add_alias",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "source_key"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "target_key"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "location"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Add an error issue for the given code and location.",
+          "is_async": false,
+          "lineno": 67,
+          "name": "add_error",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "code"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "location"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Record an inferred value for the given description and location.",
+          "is_async": false,
+          "lineno": 75,
+          "name": "add_inferred",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "description"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "location"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Record a sample normalized-key transformation for the report.",
+          "is_async": false,
+          "lineno": 79,
+          "name": "add_normalized_example",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "description"
+            }
+          ],
+          "returns": "None"
+        },
+        {
+          "decorators": [],
+          "docstring": "Add a warning issue for the given code and location.",
+          "is_async": false,
+          "lineno": 63,
+          "name": "add_warning",
+          "parameters": [
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "code"
+            },
+            {
+              "annotation": "str",
+              "default": null,
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "location"
+            }
+          ],
+          "returns": "None"
+        }
+      ],
+      "name": "MetadataValidationReport",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/metadata.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.builders.folders.metadata",
   "submodules": []
 }

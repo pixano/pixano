@@ -5,7 +5,13 @@ License: CECILL-C
 -------------------------------------*/
 
 import { ToolType, type SelectionTool } from "$lib/tools";
-import { panTool, polygonTool, polylineTool, rectangleTool } from "$lib/tools/canvasToolPolicy";
+import {
+  interactiveSegmenterTool,
+  panTool,
+  polygonTool,
+  polylineTool,
+  rectangleTool,
+} from "$lib/tools/canvasToolPolicy";
 
 /**
  * Computes a stable signature for a tool configuration.
@@ -21,6 +27,9 @@ export function getToolSwitchSignature(tool: SelectionTool): string {
   if (tool.type === ToolType.Rectangle) {
     return `${tool.type}:${tool.isSmart ? "smart" : "regular"}`;
   }
+  if (tool.type === ToolType.InteractiveSegmenter || tool.type === ToolType.VOS) {
+    return tool.type;
+  }
   return tool.type;
 }
 
@@ -31,6 +40,7 @@ export interface ToolChangeAction {
   cursor: string;
   clearCrosshair: boolean;
   clearBrushCursor: boolean;
+  clearSmartPromptCursor: boolean;
   cleanupPolygonPreview: boolean;
 }
 
@@ -44,6 +54,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: panTool.cursor,
       clearCrosshair: true,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: true,
     };
   }
@@ -52,6 +63,16 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: rectangleTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
+      cleanupPolygonPreview: true,
+    };
+  }
+  if (tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS) {
+    return {
+      cursor: interactiveSegmenterTool.cursor,
+      clearCrosshair: false,
+      clearBrushCursor: true,
+      clearSmartPromptCursor: false,
       cleanupPolygonPreview: true,
     };
   }
@@ -60,6 +81,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: polygonTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: false,
     };
   }
@@ -68,6 +90,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: polylineTool.cursor,
       clearCrosshair: false,
       clearBrushCursor: true,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: false,
     };
   }
@@ -76,6 +99,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
       cursor: "none",
       clearCrosshair: true,
       clearBrushCursor: false,
+      clearSmartPromptCursor: true,
       cleanupPolygonPreview: true,
     };
   }
@@ -84,6 +108,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
     cursor: "default",
     clearCrosshair: true,
     clearBrushCursor: true,
+    clearSmartPromptCursor: true,
     cleanupPolygonPreview: true,
   };
 }
@@ -94,6 +119,7 @@ export function computeToolChangeAction(tool: SelectionTool | undefined): ToolCh
 export interface CursorFlushAction {
   showCrosshair: boolean;
   showBrushCursor: boolean;
+  showSmartPromptCursor: boolean;
 }
 
 /**
@@ -103,6 +129,8 @@ export interface CursorFlushAction {
 export function computeCursorFlushAction(tool: SelectionTool | undefined): CursorFlushAction {
   const isDrawTool =
     tool?.type === ToolType.Rectangle ||
+    tool?.type === ToolType.InteractiveSegmenter ||
+    tool?.type === ToolType.VOS ||
     tool?.type === ToolType.Polygon ||
     tool?.type === ToolType.Polyline ||
     tool?.type === ToolType.Brush;
@@ -110,6 +138,8 @@ export function computeCursorFlushAction(tool: SelectionTool | undefined): Curso
   return {
     showCrosshair: isDrawTool,
     showBrushCursor: tool?.type === ToolType.Brush,
+    showSmartPromptCursor:
+      tool?.type === ToolType.InteractiveSegmenter || tool?.type === ToolType.VOS,
   };
 }
 
@@ -169,6 +199,8 @@ export function classifyKeyDown(
   if (
     (event.key === "Enter" || event.key === "Backspace") &&
     (tool?.type === ToolType.Rectangle ||
+      tool?.type === ToolType.InteractiveSegmenter ||
+      tool?.type === ToolType.VOS ||
       tool?.type === ToolType.Polygon ||
       tool?.type === ToolType.Polyline)
   ) {

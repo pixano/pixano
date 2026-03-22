@@ -1,55 +1,55 @@
 {
-  "module": "pixano.api.media",
-  "docstring": "Binary media helpers for API routes.",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/api/media.py",
-  "classes": [],
-  "functions": [
-    {
-      "name": "iter_multipart_frames",
-      "docstring": "Yield a multipart stream for temporal frame binaries.",
-      "parameters": [
-        {
-          "name": "frames",
-          "annotation": "Iterable[tuple[int, bytes, str]]",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        }
-      ],
-      "returns": "Iterator[bytes]",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 42
-    },
-    {
-      "name": "media_type_from_format",
-      "docstring": "Map a media format string to a MIME type.",
-      "parameters": [
-        {
-          "name": "media_format",
-          "annotation": "str | None",
-          "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
-        }
-      ],
-      "returns": "str",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 35
-    }
-  ],
   "attributes": [
     {
-      "name": "FORMAT_TO_MIME",
       "annotation": "dict[str, str]",
-      "value": "{'JPEG': 'image/jpeg', 'jpeg': 'image/jpeg', 'jpg': 'image/jpeg', 'PNG': 'image/png', 'png': 'image/png', 'WEBP': 'image/webp', 'webp': 'image/webp', 'TIFF': 'image/tiff', 'tiff': 'image/tiff', 'BMP': 'image/bmp', 'bmp': 'image/bmp', 'GIF': 'image/gif', 'gif': 'image/gif', 'pdf': 'application/pdf', 'PDF': 'application/pdf', 'ply': 'application/x-ply', 'pcd': 'application/x-pcd'}",
-      "docstring": ""
+      "docstring": "",
+      "name": "FORMAT_TO_MIME",
+      "value": "{'JPEG': 'image/jpeg', 'jpeg': 'image/jpeg', 'jpg': 'image/jpeg', 'PNG': 'image/png', 'png': 'image/png', 'WEBP': 'image/webp', 'webp': 'image/webp', 'TIFF': 'image/tiff', 'tiff': 'image/tiff', 'BMP': 'image/bmp', 'bmp': 'image/bmp', 'GIF': 'image/gif', 'gif': 'image/gif', 'pdf': 'application/pdf', 'PDF': 'application/pdf', 'ply': 'application/x-ply', 'pcd': 'application/x-pcd'}"
     },
     {
-      "name": "MULTIPART_BOUNDARY",
       "annotation": null,
-      "value": "b'frame_boundary'",
-      "docstring": ""
+      "docstring": "",
+      "name": "MULTIPART_BOUNDARY",
+      "value": "b'frame_boundary'"
     }
   ],
+  "classes": [],
+  "docstring": "Binary media helpers for API routes.",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/api/media.py",
+  "functions": [
+    {
+      "decorators": [],
+      "docstring": "Yield a multipart stream for temporal frame binaries.",
+      "is_async": false,
+      "lineno": 42,
+      "name": "iter_multipart_frames",
+      "parameters": [
+        {
+          "annotation": "Iterable[tuple[int, bytes, str]]",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "frames"
+        }
+      ],
+      "returns": "Iterator[bytes]"
+    },
+    {
+      "decorators": [],
+      "docstring": "Map a media format string to a MIME type.",
+      "is_async": false,
+      "lineno": 35,
+      "name": "media_type_from_format",
+      "parameters": [
+        {
+          "annotation": "str | None",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "media_format"
+        }
+      ],
+      "returns": "str"
+    }
+  ],
+  "module": "pixano.api.media",
   "submodules": []
 }

@@ -46,6 +46,7 @@ export class ToolBridgeImpl implements ToolBridge {
   private trackerService: any = null;
 
   private canvasViewName = "";
+  private canvasViewId = "";
   private canvasWidth = 0;
   private canvasHeight = 0;
 
@@ -90,8 +91,14 @@ export class ToolBridgeImpl implements ToolBridge {
     };
   }
 
-  setCanvasContext(viewName: string, canvasWidth: number, canvasHeight: number): void {
+  setCanvasContext(
+    viewName: string,
+    viewId: string,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): void {
     this.canvasViewName = viewName;
+    this.canvasViewId = viewId;
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
   }
@@ -120,6 +127,7 @@ export class ToolBridgeImpl implements ToolBridge {
       document: this.documentStore.getCurrentDocument(),
       selectedIds: this.documentStore.selectedIds.value,
       viewName: this.canvasViewName,
+      viewId: this.canvasViewId,
       canvasWidth: this.canvasWidth,
       canvasHeight: this.canvasHeight,
     };

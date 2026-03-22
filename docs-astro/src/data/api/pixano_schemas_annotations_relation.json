@@ -1,142 +1,142 @@
 {
-  "module": "pixano.schemas.annotations.relation",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/relation.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Relation",
-      "docstring": "Observation of a relation between two annotations.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "object_id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "predicate",
+          "value": null
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "subject_id",
+          "value": "''"
+        }
+      ],
       "bases": [
         "EntityAnnotation"
       ],
-      "attributes": [
-        {
-          "name": "object_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "predicate",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        },
-        {
-          "name": "subject_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Observation of a relation between two annotations.",
+      "lineno": 14,
       "methods": [
         {
-          "name": "none",
-          "docstring": "Return a Lance-compatible empty relation.",
-          "parameters": [],
-          "returns": "Self",
-          "is_async": false,
           "decorators": [
             "classmethod"
           ],
-          "lineno": 21
+          "docstring": "Return a Lance-compatible empty relation.",
+          "is_async": false,
+          "lineno": 21,
+          "name": "none",
+          "parameters": [],
+          "returns": "Self"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "Relation",
       "properties": [],
-      "decorators": [],
-      "lineno": 14
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/relation.py",
   "functions": [
     {
-      "name": "create_relation",
+      "decorators": [],
       "docstring": "Create a ``Relation`` instance.",
+      "is_async": false,
+      "lineno": 37,
+      "name": "create_relation",
       "parameters": [
         {
-          "name": "predicate",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "predicate"
         },
         {
-          "name": "subject_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "subject_id"
         },
         {
-          "name": "object_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "object_id"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "view_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "view_id"
         },
         {
-          "name": "entity_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity_id"
         },
         {
-          "name": "source_type",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_type"
         },
         {
-          "name": "source_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_name"
         },
         {
-          "name": "source_metadata",
           "annotation": "str",
           "default": "'{}'",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_metadata"
         }
       ],
-      "returns": "Relation",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 37
+      "returns": "Relation"
     },
     {
-      "name": "is_relation",
+      "decorators": [],
       "docstring": "Check if a class is a ``Relation`` or subclass of ``Relation``.",
+      "is_async": false,
+      "lineno": 32,
+      "name": "is_relation",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 32
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.relation",
   "submodules": []
 }

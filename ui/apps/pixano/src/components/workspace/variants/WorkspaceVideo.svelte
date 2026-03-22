@@ -11,21 +11,42 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
+  import { buildCurrentSequenceFrameRefsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
+  import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
+  import {
+    createErrorSmartSegmentationUiState,
+    createIdleSmartSegmentationUiState,
+    createPendingSmartSegmentationUiState,
+  } from "$lib/segmentation/smartInferenceStatus";
+  import {
+    pixanoInferenceToValidateTrackingMasks,
+    selectedVideoSegmentationModel,
+  } from "$lib/stores/inferenceStores.svelte";
   import {
     addTrackingKeyframe,
+    beginVosPendingInterval,
     cancelTrackingSession,
+    commitVosInterval,
     confirmPendingKeyframe,
     discardPendingKeyframe,
+    failVosPendingInterval,
     finalizeTrackingSession,
     hasPendingKeyframe,
     isAwaitingNewSegmentKeyframe,
     isTracking,
+    isVosSessionActive,
     pendingKeyframeIndex,
+    resetVosSession,
     setPendingKeyframe,
+    setVosAnchor,
     startNewTrackingSegment,
+    startNewVosSegment,
     startTrackingSession,
     trackingPreviewBBoxes,
+    vosAnchorFrameIndex,
+    vosSession,
+    vosTrackedMasks,
   } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
@@ -47,10 +68,18 @@ License: CECILL-C
     imageSmoothing,
     newShape,
     selectedTool,
+    smartSegmentationUiState,
   } from "$lib/stores/workspaceStores.svelte";
-  import { ToolType, type SelectionTool } from "$lib/tools";
+  import {
+    ToolType,
+    vosTool,
+    type InteractiveSegmenterAIInput,
+    type SelectionTool,
+  } from "$lib/tools";
+  import { Sam2VideoTracker } from "$lib/trackers";
+  import type { VideoTrackingJobStatus } from "$lib/types/inference";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { SequenceFrame, ShapeType, type EditShape } from "$lib/ui";
+  import { SequenceFrame, ShapeType, type EditShape, type SaveMaskShape } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -85,7 +114,17 @@ License: CECILL-C
   let isLoaded = $state(false);
   let loadingCycle = 0;
   let lastLoadedVideoKey = "";
+  let sam2Tracker = $state<Sam2VideoTracker | null>(null);
+  let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
+  let activeVosJob = $state<{
+    requestId: string;
+    jobId: string | null;
+    kind: "preview" | "interval";
+    viewName: string;
+    tracker: Sam2VideoTracker;
+  } | null>(null);
   const isRouteLoading = $derived(navigating.from !== null);
+  const TRACKING_JOB_POLL_MS = 500;
 
   function getSequenceFrameViews(item: WorkspaceViewerItem): Record<string, SequenceFrame[]> {
     const entries = Object.entries(item.views).flatMap(([viewName, view]) => {
@@ -97,12 +136,496 @@ License: CECILL-C
     return Object.fromEntries(entries);
   }
 
+  function clearSmartPreview(viewName?: string): void {
+    untrack(() => {
+      if (viewName) {
+        if (!(viewName in smartPreviewMasks)) return;
+        const next = { ...smartPreviewMasks };
+        delete next[viewName];
+        smartPreviewMasks = next;
+        return;
+      }
+
+      if (Object.keys(smartPreviewMasks).length === 0) return;
+      smartPreviewMasks = {};
+    });
+  }
+
+  function setSmartPreview(viewName: string, mask: SaveMaskShape): void {
+    untrack(() => {
+      if (smartPreviewMasks[viewName] === mask) return;
+      smartPreviewMasks = {
+        ...smartPreviewMasks,
+        [viewName]: mask,
+      };
+    });
+  }
+
+  function resetSmartTracking(): void {
+    void cancelActiveVosJob();
+    clearSmartPreview();
+    sam2Tracker?.clear();
+    sam2Tracker = null;
+    resetVosSession();
+    smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
+    pixanoInferenceToValidateTrackingMasks.value = [];
+  }
+
+  function resetSmartSegmentationFeedback(): void {
+    smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
+  }
+
+  function resolveFrameSources(viewName: string) {
+    const frames = selectedItem.views?.[viewName] as SequenceFrame[] | undefined;
+    if (!Array.isArray(frames)) return [];
+    return frames.map((frame) => ({
+      frameIndex: Number(frame.data.frame_index),
+      viewRef: { id: frame.id, name: viewName },
+      width: Number(frame.data.width),
+      height: Number(frame.data.height),
+    }));
+  }
+
+  function resolveFrameIndex(viewRef: { id: string; name: string }): number | null {
+    const frames = selectedItem.views?.[viewRef.name] as SequenceFrame[] | undefined;
+    if (!Array.isArray(frames)) return null;
+    const frame = frames.find((candidate) => candidate.id === viewRef.id);
+    return frame ? Number(frame.data.frame_index) : null;
+  }
+
+  function resolveViewRefByFrameIndex(
+    viewName: string,
+    frameIndex: number,
+  ): { id: string; name: string } | null {
+    const frames = selectedItem.views?.[viewName] as SequenceFrame[] | undefined;
+    if (!Array.isArray(frames)) return null;
+    const frame = frames.find((candidate) => Number(candidate.data.frame_index) === frameIndex);
+    return frame ? { id: frame.id, name: viewName } : null;
+  }
+
+  const currentSequenceFrameRefsByView = $derived.by(() => {
+    const frameIndex = currentFrameIndex.value;
+    return buildCurrentSequenceFrameRefsByView(getSequenceFrameViews(selectedItem), frameIndex);
+  });
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function cancelActiveVosJob(): Promise<void> {
+    const job = activeVosJob;
+    if (!job) {
+      return;
+    }
+
+    activeVosJob = null;
+    if (!job.jobId) {
+      return;
+    }
+
+    try {
+      await job.tracker.cancelTrackingJob(job.jobId);
+    } catch (error) {
+      console.warn("Failed to cancel tracking job", error);
+    }
+  }
+
+  async function runVosTrackingJob({
+    requestId,
+    viewName,
+    tracker,
+    kind,
+    submit,
+  }: {
+    requestId: string;
+    viewName: string;
+    tracker: Sam2VideoTracker;
+    kind: "preview" | "interval";
+    submit: () => Promise<VideoTrackingJobStatus | null>;
+  }): Promise<VideoTrackingJobStatus | null> {
+    await cancelActiveVosJob();
+    activeVosJob = {
+      requestId,
+      jobId: null,
+      kind,
+      viewName,
+      tracker,
+    };
+
+    try {
+      const submittedJob = await submit();
+      if (!submittedJob) {
+        if (activeVosJob?.requestId === requestId) {
+          activeVosJob = null;
+        }
+        return null;
+      }
+
+      if (activeVosJob?.requestId !== requestId) {
+        try {
+          await tracker.cancelTrackingJob(submittedJob.job_id);
+        } catch (error) {
+          console.warn("Failed to cancel stale tracking job", error);
+        }
+        return null;
+      }
+
+      activeVosJob = {
+        requestId,
+        jobId: submittedJob.job_id,
+        kind,
+        viewName,
+        tracker,
+      };
+
+      if (
+        submittedJob.status === "completed" ||
+        submittedJob.status === "failed" ||
+        submittedJob.status === "canceled"
+      ) {
+        if (activeVosJob?.requestId === requestId) {
+          activeVosJob = null;
+        }
+        return submittedJob;
+      }
+
+      while (activeVosJob?.requestId === requestId && activeVosJob?.jobId === submittedJob.job_id) {
+        await sleep(TRACKING_JOB_POLL_MS);
+        if (activeVosJob?.requestId !== requestId || activeVosJob?.jobId !== submittedJob.job_id) {
+          return null;
+        }
+
+        const polledJob = await tracker.getTrackingJobStatus(submittedJob.job_id);
+        if (activeVosJob?.requestId !== requestId || activeVosJob?.jobId !== submittedJob.job_id) {
+          return null;
+        }
+
+        if (polledJob.status === "queued" || polledJob.status === "running") {
+          continue;
+        }
+
+        activeVosJob = null;
+        return polledJob;
+      }
+
+      return null;
+    } catch (error) {
+      if (activeVosJob?.requestId === requestId) {
+        activeVosJob = null;
+      }
+      throw error;
+    }
+  }
+
+  function getOrCreateTracker(viewName: string): Sam2VideoTracker | null {
+    const frameSources = resolveFrameSources(viewName);
+    if (frameSources.length === 0) {
+      return null;
+    }
+
+    const tracker =
+      sam2Tracker && sam2Tracker.viewName === viewName
+        ? sam2Tracker
+        : new Sam2VideoTracker(selectedItem.ui.datasetId, selectedItem.item.id, viewName);
+    tracker.setFrameSources(frameSources);
+    sam2Tracker = tracker;
+    return tracker;
+  }
+
+  function buildTrackerPrompt(
+    prompt: InteractiveSegmenterAIInput["prompt"] | null,
+    mask: SaveMaskShape | null,
+  ) {
+    return {
+      points:
+        prompt?.points.map((point) => ({
+          x: point.x,
+          y: point.y,
+          label: point.label as 0 | 1,
+        })) ?? [],
+      box: prompt?.box
+        ? {
+            x: prompt.box.x,
+            y: prompt.box.y,
+            width: prompt.box.width,
+            height: prompt.box.height,
+          }
+        : null,
+      mask,
+    };
+  }
+
+  function syncVosTrackingOutputs(): void {
+    pixanoInferenceToValidateTrackingMasks.value = vosTrackedMasks.value;
+  }
+
+  function getCurrentVosSaveMask(): SaveMaskShape | null {
+    const tracker = sam2Tracker;
+    const currentMask = tracker?.interpolateAt(currentFrameIndex.value)?.data.mask ?? null;
+    if (currentMask) {
+      return currentMask;
+    }
+    return vosSession.value.anchor?.mask ?? null;
+  }
+
+  async function handleVosTrack(): Promise<void> {
+    const modelSelection = selectedVideoSegmentationModel.value;
+    const anchor = vosSession.value.anchor;
+    if (!modelSelection || !anchor) return;
+
+    const targetFrame = currentFrameIndex.value;
+    if (targetFrame <= anchor.frameIndex) {
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        `vos-track-${Date.now()}`,
+        anchor.viewRef.name,
+        new Error("Tracking currently supports only later end frames."),
+      );
+      return;
+    }
+
+    const requestId = `vos-track-${Date.now()}`;
+    beginVosPendingInterval({
+      requestId,
+      startFrame: anchor.frameIndex,
+      endFrame: targetFrame,
+      direction: "forward",
+    });
+    smartSegmentationUiState.value = createPendingSmartSegmentationUiState(
+      requestId,
+      anchor.viewRef.name,
+      "Tracking in progress...",
+    );
+
+    const tracker = getOrCreateTracker(anchor.viewRef.name);
+    if (!tracker) {
+      failVosPendingInterval(requestId);
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        requestId,
+        anchor.viewRef.name,
+        new Error(`Could not resolve the current SequenceFrame for view '${anchor.viewRef.name}'.`),
+      );
+      return;
+    }
+
+    const keyframe = {
+      frameIndex: anchor.frameIndex,
+      viewRef: anchor.viewRef,
+      objectId: 1,
+      model: modelSelection.name,
+      providerName: modelSelection.provider_name,
+      itemId: selectedItem.item.id,
+      prompt: buildTrackerPrompt(anchor.prompt, anchor.sourceKind === "mask" ? anchor.mask : null),
+      mask: anchor.mask,
+    };
+
+    tracker.addKeyframe(keyframe);
+
+    try {
+      const jobStatus = await runVosTrackingJob({
+        requestId,
+        viewName: anchor.viewRef.name,
+        tracker,
+        kind: "interval",
+        submit: () => tracker.submitPropagateIntervalJob(anchor.frameIndex, targetFrame, keyframe),
+      });
+
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      if (!jobStatus || jobStatus.status === "canceled") {
+        return;
+      }
+
+      if (jobStatus.status !== "completed") {
+        throw new Error(jobStatus.detail ?? "Tracking job failed.");
+      }
+
+      tracker.applyTrackingResult(jobStatus.data, keyframe);
+      const targetMask = tracker.interpolateAt(targetFrame)?.data.mask ?? null;
+      const targetViewRef = resolveViewRefByFrameIndex(anchor.viewRef.name, targetFrame);
+      const intervalOutputs = tracker.getTrackingOutputsInRange(anchor.frameIndex, targetFrame);
+      if (!targetMask || !targetViewRef || intervalOutputs.length === 0) {
+        failVosPendingInterval(requestId);
+        smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+          requestId,
+          anchor.viewRef.name,
+          new Error("Tracking did not return any masks for the requested interval."),
+        );
+        return;
+      }
+
+      commitVosInterval({
+        requestId,
+        outputs: intervalOutputs,
+        nextAnchor: {
+          frameIndex: targetFrame,
+          viewRef: targetViewRef,
+          sourceKind: "mask",
+          prompt: null,
+          mask: targetMask,
+        },
+      });
+      syncVosTrackingOutputs();
+      resetSmartSegmentationFeedback();
+
+      const currentMask = tracker.interpolateAt(currentFrameIndex.value)?.data.mask ?? targetMask;
+      setSmartPreview(anchor.viewRef.name, currentMask);
+    } catch (error) {
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      failVosPendingInterval(requestId);
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        requestId,
+        anchor.viewRef.name,
+        error,
+      );
+    }
+  }
+
+  async function handleSmartSegmentationRequest(
+    requestId: string,
+    request: InteractiveSegmenterAIInput,
+  ): Promise<void> {
+    if (request.action === "clear") {
+      resetSmartTracking();
+      return;
+    }
+
+    const isVos = selectedTool.value?.type === ToolType.VOS;
+    if (isVos && !isVosSessionActive.value && isTracking.value) {
+      cancelTrackingSession();
+    }
+    const modelSelection = selectedVideoSegmentationModel.value;
+    if (!modelSelection) return;
+
+    if (request.action === "confirm") {
+      if (isVos) {
+        return;
+      }
+
+      const previewMask = smartPreviewMasks[request.viewRef.name];
+      if (!previewMask) return;
+      newShape.value = previewMask;
+      return;
+    }
+
+    const frameIndex = resolveFrameIndex(request.viewRef);
+    const tracker = getOrCreateTracker(request.viewRef.name);
+    if (!tracker || frameIndex === null) {
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        requestId,
+        request.viewRef.name,
+        new Error(
+          `Could not resolve the current SequenceFrame for view '${request.viewRef.name}'.`,
+        ),
+      );
+      return;
+    }
+
+    smartSegmentationUiState.value = createPendingSmartSegmentationUiState(
+      requestId,
+      request.viewRef.name,
+      "Tracking in progress...",
+    );
+
+    try {
+      const keyframe = {
+        frameIndex,
+        viewRef: request.viewRef,
+        objectId: 1,
+        model: modelSelection.name,
+        providerName: modelSelection.provider_name,
+        itemId: selectedItem.item.id,
+        prompt: {
+          points: request.prompt.points.map((point) => ({
+            x: point.x,
+            y: point.y,
+            label: point.label as 0 | 1,
+          })),
+          box: request.prompt.box
+            ? {
+                x: request.prompt.box.x,
+                y: request.prompt.box.y,
+                width: request.prompt.box.width,
+                height: request.prompt.box.height,
+              }
+            : null,
+        },
+      };
+
+      const jobStatus = await runVosTrackingJob({
+        requestId,
+        viewName: request.viewRef.name,
+        tracker,
+        kind: "preview",
+        submit: () => tracker.submitPredictKeyframeJob(keyframe),
+      });
+
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      if (!jobStatus || jobStatus.status === "canceled") {
+        return;
+      }
+
+      if (jobStatus.status !== "completed") {
+        throw new Error(jobStatus.detail ?? "Tracking job failed.");
+      }
+
+      const previewMask = tracker.applyTrackingResult(jobStatus.data, keyframe)[0] ?? null;
+      if (!previewMask) {
+        throw new Error("Tracking did not return a mask for the prompted frame.");
+      }
+      const previewOutput =
+        tracker.getTrackingOutputsInRange(frameIndex, frameIndex)[0] ??
+        saveMaskShapeToTrackingOutput(previewMask, frameIndex, {
+          modelName: modelSelection.name,
+          providerName: modelSelection.provider_name,
+        });
+
+      resetSmartSegmentationFeedback();
+      setSmartPreview(request.viewRef.name, previewMask);
+
+      if (isVos) {
+        setVosAnchor({
+          frameIndex,
+          viewRef: request.viewRef,
+          sourceKind: "prompt",
+          prompt: request.prompt,
+          mask: previewMask,
+          output: previewOutput,
+        });
+        syncVosTrackingOutputs();
+      }
+    } catch (error) {
+      if (smartSegmentationUiState.value.requestId !== requestId) {
+        return;
+      }
+
+      smartSegmentationUiState.value = createErrorSmartSegmentationUiState(
+        requestId,
+        request.viewRef.name,
+        error,
+      );
+    }
+  }
+
   const handleCanvasShapeChange = (shape: import("$lib/ui").Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
     if (shape.status === "creating") return;
 
     // Intercept bbox saves to start/extend a tracking session
     if (shape.status === "saving" && shape.type === ShapeType.bbox) {
+      if (!isTracking.value && isVosSessionActive.value) {
+        resetSmartTracking();
+      }
+
       const saveShape = shape;
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
@@ -144,6 +667,7 @@ License: CECILL-C
     if (!viewNames.length || longestView <= 0) {
       lastLoadedVideoKey = "";
       isLoaded = false;
+      resetSmartTracking();
       resetVideoStores();
       return;
     }
@@ -161,6 +685,7 @@ License: CECILL-C
         isBuffering: false,
       }));
       isLoaded = false;
+      resetSmartTracking();
 
       currentItemId.value = nextItemId;
       videoViewNames.value = viewNames;
@@ -264,18 +789,31 @@ License: CECILL-C
   // ─── Tracking: keyboard handler ───────────────────────────────────────────
 
   const handleTrackingKeydown = (event: KeyboardEvent) => {
-    if (!isTracking.value) return;
+    const isVos = selectedTool.value?.type === ToolType.VOS;
+    if (!isTracking.value && !isVos) return;
     const tag = (event.target as HTMLElement)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
     if (event.key === "n" || event.key === "N") {
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (isVos) {
+        if (smartSegmentationUiState.value.phase === "pending") return;
+        startNewVosSegment();
+        return;
+      }
       if (hasPendingKeyframe.value) confirmPendingKeyframe();
       startNewTrackingSegment();
       return;
     }
     if (event.key === "t" || event.key === "T") {
+      if (isVos) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        void handleVosTrack();
+        return;
+      }
+
       if (hasPendingKeyframe.value) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -285,6 +823,16 @@ License: CECILL-C
       return; // no pending → let Canvas2D handle T for rectangle draft
     }
     if (event.key === "Enter") {
+      if (isVos) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (smartSegmentationUiState.value.phase === "pending") return;
+        const saveMask = getCurrentVosSaveMask();
+        if (!saveMask || vosTrackedMasks.value.length === 0) return;
+        syncVosTrackingOutputs();
+        newShape.value = saveMask;
+        return;
+      }
       event.preventDefault();
       event.stopImmediatePropagation();
       if (hasPendingKeyframe.value) confirmPendingKeyframe();
@@ -293,6 +841,11 @@ License: CECILL-C
     }
     if (event.key === "Escape") {
       event.preventDefault();
+      if (isVos) {
+        event.stopImmediatePropagation();
+        resetSmartTracking();
+        return;
+      }
       cancelTrackingSession();
     }
   };
@@ -314,6 +867,45 @@ License: CECILL-C
     if (isTracking.value && toolType !== ToolType.Rectangle) {
       untrack(() => cancelTrackingSession());
     }
+  });
+
+  $effect(() => {
+    void selectedVideoSegmentationModel.value;
+    untrack(() => {
+      resetSmartTracking();
+    });
+  });
+
+  $effect(() => {
+    const shape = newShape.value;
+    if (shape.status !== "none" || !shape.shouldReset) return;
+    if (shape.resetReason !== "save-confirmed" || shape.resetShapeType !== ShapeType.mask) return;
+    if (!isVosSessionActive.value) return;
+
+    untrack(() => {
+      resetSmartTracking();
+    });
+  });
+
+  $effect(() => {
+    const tracker = sam2Tracker;
+    const frameIndex = currentFrameIndex.value;
+    const anchor = vosSession.value.anchor;
+    const activeViewName = anchor?.viewRef.name ?? tracker?.viewName ?? null;
+    if (!activeViewName) return;
+
+    const interpolated = tracker?.interpolateAt(frameIndex) ?? null;
+    if (interpolated) {
+      setSmartPreview(activeViewName, interpolated.data.mask);
+      return;
+    }
+
+    if (anchor && anchor.viewRef.name === activeViewName && anchor.frameIndex === frameIndex) {
+      setSmartPreview(activeViewName, anchor.mask);
+      return;
+    }
+
+    clearSmartPreview(activeViewName);
   });
 </script>
 
@@ -346,14 +938,24 @@ License: CECILL-C
         selectedTool={selectedTool.value}
         brushSettings={brushSettings.value}
         newShape={newShape.value}
+        {smartPreviewMasks}
+        smartInferenceStatus={smartSegmentationUiState.value}
+        showSmartPromptCursorOverlay={true}
+        {currentSequenceFrameRefsByView}
         onSelectedToolChange={(tool: SelectionTool) => {
-          selectedTool.value = tool;
+          selectedTool.value =
+            tool.type === ToolType.InteractiveSegmenter
+              ? { ...vosTool, promptMode: tool.promptMode }
+              : tool;
         }}
         onNewShapeChange={(shape) => {
           handleCanvasShapeChange(shape as import("$lib/ui").Shape);
         }}
         onBrushSettingsChange={(settings: BrushSettings) => {
           brushSettings.value = settings;
+        }}
+        onAIRequest={(requestId, request) => {
+          void handleSmartSegmentationRequest(requestId, request);
         }}
         {merge}
       />
@@ -378,6 +980,21 @@ License: CECILL-C
           {:else}
             Draw or edit on a frame and press T &middot; N for new segment &middot; Enter to save
             &middot; Escape to cancel
+          {/if}
+        </div>
+      {/if}
+      {#if selectedTool.value?.type === ToolType.VOS}
+        <div
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
+        >
+          {#if smartSegmentationUiState.value.phase === "pending"}
+            Tracking interval... Scrub is locked until the request finishes
+          {:else if vosAnchorFrameIndex.value === null}
+            Prompt an object to set anchor A &middot; Scrub forward and press T &middot; N starts a
+            new segment &middot; Enter saves &middot; Escape resets
+          {:else}
+            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T &middot;
+            N starts a new segment &middot; Enter saves &middot; Escape resets
           {/if}
         </div>
       {/if}

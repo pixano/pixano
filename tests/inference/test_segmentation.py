@@ -19,15 +19,15 @@ from pixano.features import (
     NDArrayFloat,
     ViewEmbedding,
 )
-from pixano.inference.mask_generation import image_mask_generation, video_mask_generation
 from pixano.inference.provider import InferenceProvider
+from pixano.inference.segmentation import segmentation, tracking
 from pixano.inference.types import (
     CompressedRLEData,
-    ImageMaskGenerationOutput,
-    ImageMaskGenerationResult,
     NDArrayData,
-    VideoMaskGenerationOutput,
-    VideoMaskGenerationResult,
+    SegmentationOutput,
+    SegmentationResult,
+    TrackingOutput,
+    TrackingResult,
 )
 
 
@@ -59,11 +59,11 @@ class ViewEmbedding8(ViewEmbedding):
     "response, expected_output, image_embedding, high_resolution_features, bbox, points, labels",
     [
         (
-            ImageMaskGenerationResult(
+            SegmentationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=ImageMaskGenerationOutput(
+                data=SegmentationOutput(
                     masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
                     scores=NDArrayData(values=[0.9], shape=[1]),
                     image_embedding=NDArrayData(values=[1], shape=[1]),
@@ -92,11 +92,11 @@ class ViewEmbedding8(ViewEmbedding):
             None,
         ),
         (
-            ImageMaskGenerationResult(
+            SegmentationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=ImageMaskGenerationOutput(
+                data=SegmentationOutput(
                     masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
                     scores=NDArrayData(values=[0.9], shape=[1]),
                     image_embedding=None,
@@ -126,9 +126,9 @@ class ViewEmbedding8(ViewEmbedding):
         ),
     ],
 )
-async def test_image_mask_generation(
+async def test_segmentation(
     simple_inference_provider: InferenceProvider,
-    response: ImageMaskGenerationResult,
+    response: SegmentationResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     image_embedding: ViewEmbedding | None,
     high_resolution_features: list[ViewEmbedding] | None,
@@ -137,11 +137,11 @@ async def test_image_mask_generation(
     labels: list[int],
     image_url: Image,
 ):
-    simple_inference_provider.image_mask_generation.return_value = response
+    simple_inference_provider.segmentation.return_value = response
 
     entity = Entity(id="test_entity")
 
-    mask, score, out_image_embedding, out_high_resolution_features = await image_mask_generation(
+    mask, score, out_image_embedding, out_high_resolution_features = await segmentation(
         provider=simple_inference_provider,
         image=image_url,
         entity=entity,
@@ -167,12 +167,12 @@ async def test_image_mask_generation(
     "response, expected_output, bbox, points, labels",
     [
         (
-            VideoMaskGenerationResult(
+            TrackingResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=VideoMaskGenerationOutput(
+                data=TrackingOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -197,12 +197,12 @@ async def test_image_mask_generation(
             None,
         ),
         (
-            VideoMaskGenerationResult(
+            TrackingResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=VideoMaskGenerationOutput(
+                data=TrackingOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -227,12 +227,12 @@ async def test_image_mask_generation(
             [0],
         ),
         (
-            VideoMaskGenerationResult(
+            TrackingResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=VideoMaskGenerationOutput(
+                data=TrackingOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -258,20 +258,20 @@ async def test_image_mask_generation(
         ),
     ],
 )
-async def test_video_mask_generation(
+async def test_tracking(
     simple_inference_provider: InferenceProvider,
-    response: VideoMaskGenerationResult,
+    response: TrackingResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     bbox: BBox | None,
     points: list[list[int]] | None,
     labels: list[int],
     image_url: Image,
 ):
-    simple_inference_provider.video_mask_generation.return_value = response
+    simple_inference_provider.tracking.return_value = response
 
     entity = Entity(id="test_entity")
 
-    masks, objects_ids, frame_indexes = await video_mask_generation(
+    masks, objects_ids, frame_indexes = await tracking(
         provider=simple_inference_provider,
         video=[image_url],
         entity=entity,
@@ -290,11 +290,11 @@ async def test_video_mask_generation(
 
 
 @pytest.mark.asyncio
-async def test_error_video_mask_generation(
+async def test_error_tracking(
     simple_inference_provider: InferenceProvider,
 ):
     with pytest.raises(ValueError, match="Video format not currently supported, please use sequence frames."):
-        await video_mask_generation(
+        await tracking(
             provider=simple_inference_provider,
             video="not a list",
             source_name="test_source",

@@ -1,66 +1,66 @@
 {
-  "module": "pixano.datasets.utils.errors",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/utils/errors.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "DatasetAccessError",
+      "attributes": [],
+      "bases": [
+        "ValueError"
+      ],
+      "class_methods": [],
+      "decorators": [],
       "docstring": "Error raised when accessing a dataset.",
+      "lineno": 14,
+      "methods": [],
+      "name": "DatasetAccessError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "ValueError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 14
-    },
-    {
-      "name": "DatasetIntegrityError",
       "docstring": "Error raised when dataset integrity is compromised.",
+      "lineno": 26,
+      "methods": [],
+      "name": "DatasetIntegrityError",
+      "properties": [],
+      "static_methods": []
+    },
+    {
+      "attributes": [],
       "bases": [
         "ValueError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 26
-    },
-    {
-      "name": "DatasetPaginationError",
       "docstring": "Error raised when paginating a dataset.",
-      "bases": [
-        "ValueError"
-      ],
-      "attributes": [],
+      "lineno": 8,
       "methods": [],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "DatasetPaginationError",
       "properties": [],
-      "decorators": [],
-      "lineno": 8
+      "static_methods": []
     },
     {
-      "name": "DatasetWriteError",
-      "docstring": "Error raised when writing to a dataset.",
+      "attributes": [],
       "bases": [
         "ValueError"
       ],
-      "attributes": [],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 20
+      "docstring": "Error raised when writing to a dataset.",
+      "lineno": 20,
+      "methods": [],
+      "name": "DatasetWriteError",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/utils/errors.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.utils.errors",
   "submodules": []
 }

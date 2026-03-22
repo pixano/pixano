@@ -8,6 +8,7 @@ import { DocumentImpl, type DocumentNode, type NodeId } from "$lib/document";
 import { createPixanoContext } from "$lib/stores/createPixanoContext";
 import {
   BrushToolFSM,
+  InteractiveSegmenterToolFSM,
   PanToolFSM,
   PolygonToolFSM,
   PolylineToolFSM,
@@ -56,6 +57,9 @@ export function createToolFSMForSelection(tool: SelectionTool): ToolFSM | null {
       return new PanToolFSM();
     case ToolType.Rectangle:
       return new RectangleToolFSM({ isSmart: !!tool.isSmart });
+    case ToolType.InteractiveSegmenter:
+    case ToolType.VOS:
+      return new InteractiveSegmenterToolFSM(tool.promptMode);
     case ToolType.Polygon:
       return new PolygonToolFSM({ defaultOutputMode: tool.outputMode });
     case ToolType.Polyline:

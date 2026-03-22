@@ -1,0 +1,74 @@
+{
+  "attributes": [],
+  "classes": [],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/inference/detection.py",
+  "functions": [
+    {
+      "decorators": [],
+      "docstring": "Image detection task.\n\nArgs:\n    provider: Inference provider.\n    image: Image to detect objects in.\n    entity: Entity associated with the image.\n    source_name: Name of the model source.\n    source_type: Kind of source (default \"model\").\n    classes: List of classes to detect in the image.\n    box_threshold: Box threshold for detection in the image.\n    text_threshold: Text threshold for detection in the image.\n    provider_kwargs: Additional kwargs for the provider.\n\nReturns:\n    List of BBoxes and Classifications detected in the image with respect to classes and threshold values.",
+      "is_async": false,
+      "lineno": 27,
+      "name": "detection",
+      "parameters": [
+        {
+          "annotation": "InferenceProvider",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "provider"
+        },
+        {
+          "annotation": "Image",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "image"
+        },
+        {
+          "annotation": "Entity",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "entity"
+        },
+        {
+          "annotation": "str",
+          "default": null,
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_name"
+        },
+        {
+          "annotation": "str",
+          "default": "'model'",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "source_type"
+        },
+        {
+          "annotation": "list[str] | str",
+          "default": "''",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "classes"
+        },
+        {
+          "annotation": "float",
+          "default": "0.5",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "box_threshold"
+        },
+        {
+          "annotation": "float",
+          "default": "0.5",
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "text_threshold"
+        },
+        {
+          "annotation": "Any",
+          "default": "{}",
+          "kind": "ParameterKind.var_keyword",
+          "name": "provider_kwargs"
+        }
+      ],
+      "returns": "list[tuple[BBox, Classification]]"
+    }
+  ],
+  "module": "pixano.inference.detection",
+  "submodules": []
+}

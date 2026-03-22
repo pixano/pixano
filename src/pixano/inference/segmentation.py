@@ -15,9 +15,9 @@ from pixano.schemas.entities.entity import Entity
 from .provider import InferenceProvider
 from .types import (
     CompressedRLEData,
-    ImageMaskGenerationInput,
     NDArrayData,
-    VideoMaskGenerationInput,
+    SegmentationInput,
+    TrackingInput,
 )
 
 
@@ -30,7 +30,7 @@ def _resolved_view_id(image: Image | SequenceFrame) -> str:
     return image.logical_name or "image"
 
 
-async def image_mask_generation(
+async def segmentation(
     provider: InferenceProvider,
     image: Image,
     entity: Entity | None,
@@ -44,7 +44,7 @@ async def image_mask_generation(
     labels: list[int] | None = None,
     **provider_kwargs: Any,
 ) -> tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None]:
-    """Image mask generation task.
+    """Image segmentation task.
 
     Args:
         provider: Inference provider.
@@ -110,7 +110,7 @@ async def image_mask_generation(
     # More, it is VERY costly (around 13 sec) as it means to shape them and transfer them via HTTP.
     return_image_embedding = False
 
-    input_data = ImageMaskGenerationInput(
+    input_data = SegmentationInput(
         image=image_request,
         model=source_name,
         image_embedding=image_embedding_request,
@@ -124,7 +124,7 @@ async def image_mask_generation(
         return_image_embedding=return_image_embedding,
     )
 
-    result = await provider.image_mask_generation(input_data, **provider_kwargs)
+    result = await provider.segmentation(input_data, **provider_kwargs)
 
     # Get first mask from first prompt
     mask_data: CompressedRLEData = result.data.masks[0][0]
@@ -158,7 +158,7 @@ async def image_mask_generation(
     return mask, score, returned_embedding, returned_features
 
 
-async def video_mask_generation(
+async def tracking(
     provider: InferenceProvider,
     video: list[SequenceFrame],
     source_name: str,
@@ -169,7 +169,7 @@ async def video_mask_generation(
     labels: list[int] | None = None,
     **provider_kwargs: Any,
 ) -> tuple[list[CompressedRLE], list[int], list[int]]:
-    """Video mask generation task.
+    """Video tracking task.
 
     Args:
         provider: Inference provider.
@@ -206,7 +206,7 @@ async def video_mask_generation(
             bbox = bbox.denormalize(height=video[0].height, width=video[0].width)
         boxes_request = [[int(c) for c in bbox.xyxy_coords]]
 
-    input_data = VideoMaskGenerationInput(
+    input_data = TrackingInput(
         video=video_request,
         model=source_name,
         objects_ids=list(range(len(video))),
@@ -216,7 +216,7 @@ async def video_mask_generation(
         boxes=boxes_request,
     )
 
-    result = await provider.video_mask_generation(input_data, **provider_kwargs)
+    result = await provider.tracking(input_data, **provider_kwargs)
 
     masks: list[CompressedRLE] = []
     objects_ids: list[int] = []

@@ -12,7 +12,7 @@ from pixano.schemas import BBox, Classification, Image
 from pixano.schemas.entities.entity import Entity
 
 from .provider import InferenceProvider
-from .types import ImageZeroShotDetectionInput
+from .types import DetectionInput
 
 
 def _is_url(value: str) -> bool:
@@ -24,7 +24,7 @@ def _resolved_view_id(image: Image) -> str:
     return image.logical_name or "image"
 
 
-async def image_zero_shot_detection(
+async def detection(
     provider: InferenceProvider,
     image: Image,
     entity: Entity,
@@ -35,11 +35,11 @@ async def image_zero_shot_detection(
     text_threshold: float = 0.5,
     **provider_kwargs: Any,
 ) -> list[tuple[BBox, Classification]]:
-    """Image zero shot detection task.
+    """Image detection task.
 
     Args:
         provider: Inference provider.
-        image: Image to generate mask for.
+        image: Image to detect objects in.
         entity: Entity associated with the image.
         source_name: Name of the model source.
         source_type: Kind of source (default "model").
@@ -53,7 +53,7 @@ async def image_zero_shot_detection(
     """
     image_request = image.uri if _is_url(image.uri) else image.open(as_base64=True)
 
-    input_data = ImageZeroShotDetectionInput(
+    input_data = DetectionInput(
         image=image_request,
         model=source_name,
         classes=classes,
@@ -61,7 +61,7 @@ async def image_zero_shot_detection(
         text_threshold=text_threshold,
     )
 
-    result = await provider.image_zero_shot_detection(input_data, **provider_kwargs)
+    result = await provider.detection(input_data, **provider_kwargs)
 
     boxes = result.data.boxes
     scores = result.data.scores

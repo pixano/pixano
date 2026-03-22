@@ -10,6 +10,12 @@ License: CECILL-C
 
   import { brushSettings } from "$lib/stores/workspaceStores.svelte";
 
+  interface Props {
+    disabled?: boolean;
+  }
+
+  let { disabled = false }: Props = $props();
+
   function onBrushRadiusInput(e: Event) {
     const value = +(e.target as HTMLInputElement).value;
     brushSettings.update((s) => ({ ...s, brushRadius: value }));
@@ -28,8 +34,10 @@ License: CECILL-C
 
 <Popover.Root>
   <Popover.Trigger
+    {disabled}
     type="button"
-    class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/60 transition-all duration-200"
+    aria-disabled={disabled}
+    class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/60 transition-all duration-200 disabled:pointer-events-none disabled:opacity-50"
     title="Brush Settings"
   >
     <Gear weight="regular" class="h-4.5 w-4.5" />
@@ -43,6 +51,7 @@ License: CECILL-C
         <span>{brushSettings.value.brushRadius}px</span>
       </div>
       <input
+        {disabled}
         type="range"
         min="1"
         max="100"
@@ -59,6 +68,7 @@ License: CECILL-C
         <span>{brushSettings.value.lazyRadius}px</span>
       </div>
       <input
+        {disabled}
         type="range"
         min="0"
         max="150"
@@ -75,6 +85,7 @@ License: CECILL-C
         <span>{Math.round(brushSettings.value.friction * 100)}%</span>
       </div>
       <input
+        {disabled}
         type="range"
         min="0"
         max="100"

@@ -1,58 +1,58 @@
 {
-  "module": "pixano.datasets.builders.folders.mel",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/mel.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "MelEntity",
-      "docstring": "Entity used by MEL image-text linking datasets.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "name",
+          "value": "''"
+        }
+      ],
       "bases": [
         "Entity"
       ],
-      "attributes": [
-        {
-          "name": "name",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 15
+      "docstring": "Entity used by MEL image-text linking datasets.",
+      "lineno": 15,
+      "methods": [],
+      "name": "MelEntity",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "MelFolderBuilder",
-      "docstring": "Builder for MEL datasets stored in a folder.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "DEFAULT_INFO",
+          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE_TEXT_ENTITY_LINKING), record=Record, entity=MelEntity, text_span=TextSpan, bbox=BBox, mask=CompressedRLE, views={'image': Image, 'text': Text})"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "EXTENSIONS",
+          "value": "IMAGE_EXTENSIONS + ['.txt']"
+        }
+      ],
       "bases": [
         "FolderBaseBuilder"
       ],
-      "attributes": [
-        {
-          "name": "DEFAULT_INFO",
-          "annotation": null,
-          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE_TEXT_ENTITY_LINKING), record=Record, entity=MelEntity, text_span=TextSpan, bbox=BBox, mask=CompressedRLE, views={'image': Image, 'text': Text})",
-          "docstring": ""
-        },
-        {
-          "name": "EXTENSIONS",
-          "annotation": null,
-          "value": "IMAGE_EXTENSIONS + ['.txt']",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 21
+      "docstring": "Builder for MEL datasets stored in a folder.",
+      "lineno": 21,
+      "methods": [],
+      "name": "MelFolderBuilder",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/mel.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.builders.folders.mel",
   "submodules": []
 }

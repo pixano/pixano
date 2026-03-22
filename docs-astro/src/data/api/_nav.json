@@ -1,725 +1,731 @@
 [
   {
-    "title": "api",
-    "slug": "api",
-    "module": null,
     "children": [
       {
-        "title": "display",
-        "slug": "api/display",
+        "children": [],
         "module": "pixano.api.display",
-        "children": []
+        "slug": "api/display",
+        "title": "display"
       },
       {
-        "title": "main",
-        "slug": "api/main",
+        "children": [],
         "module": "pixano.api.main",
-        "children": []
+        "slug": "api/main",
+        "title": "main"
       },
       {
-        "title": "media",
-        "slug": "api/media",
+        "children": [],
         "module": "pixano.api.media",
-        "children": []
+        "slug": "api/media",
+        "title": "media"
       },
       {
-        "title": "models",
-        "slug": "api/models",
+        "children": [],
         "module": "pixano.api.models",
-        "children": []
+        "slug": "api/models",
+        "title": "models"
       },
       {
-        "title": "resources",
-        "slug": "api/resources",
+        "children": [],
         "module": "pixano.api.resources",
-        "children": []
+        "slug": "api/resources",
+        "title": "resources"
       },
       {
-        "title": "routers",
-        "slug": "api/routers",
-        "module": "pixano.api.routers",
         "children": [
           {
-            "title": "bboxes",
-            "slug": "api/routers/bboxes",
+            "children": [],
             "module": "pixano.api.routers.bboxes",
-            "children": []
+            "slug": "api/routers/bboxes",
+            "title": "bboxes"
           },
           {
-            "title": "conversations",
-            "slug": "api/routers/conversations",
+            "children": [],
             "module": "pixano.api.routers.conversations",
-            "children": []
+            "slug": "api/routers/conversations",
+            "title": "conversations"
           },
           {
-            "title": "datasets",
-            "slug": "api/routers/datasets",
+            "children": [],
             "module": "pixano.api.routers.datasets",
-            "children": []
+            "slug": "api/routers/datasets",
+            "title": "datasets"
           },
           {
-            "title": "embeddings",
-            "slug": "api/routers/embeddings",
+            "children": [],
             "module": "pixano.api.routers.embeddings",
-            "children": []
+            "slug": "api/routers/embeddings",
+            "title": "embeddings"
           },
           {
-            "title": "entities",
-            "slug": "api/routers/entities",
+            "children": [],
             "module": "pixano.api.routers.entities",
-            "children": []
+            "slug": "api/routers/entities",
+            "title": "entities"
           },
           {
-            "title": "entity_dynamic_states",
-            "slug": "api/routers/entity_dynamic_states",
+            "children": [],
             "module": "pixano.api.routers.entity_dynamic_states",
-            "children": []
+            "slug": "api/routers/entity_dynamic_states",
+            "title": "entity_dynamic_states"
           },
           {
-            "title": "keypoints",
-            "slug": "api/routers/keypoints",
+            "children": [],
+            "module": "pixano.api.routers.inference",
+            "slug": "api/routers/inference",
+            "title": "inference"
+          },
+          {
+            "children": [],
             "module": "pixano.api.routers.keypoints",
-            "children": []
+            "slug": "api/routers/keypoints",
+            "title": "keypoints"
           },
           {
-            "title": "masks",
-            "slug": "api/routers/masks",
+            "children": [],
             "module": "pixano.api.routers.masks",
-            "children": []
+            "slug": "api/routers/masks",
+            "title": "masks"
           },
           {
-            "title": "messages",
-            "slug": "api/routers/messages",
+            "children": [],
             "module": "pixano.api.routers.messages",
-            "children": []
+            "slug": "api/routers/messages",
+            "title": "messages"
           },
           {
-            "title": "multi_paths",
-            "slug": "api/routers/multi_paths",
+            "children": [],
             "module": "pixano.api.routers.multi_paths",
-            "children": []
+            "slug": "api/routers/multi_paths",
+            "title": "multi_paths"
           },
           {
-            "title": "records",
-            "slug": "api/routers/records",
+            "children": [],
             "module": "pixano.api.routers.records",
-            "children": []
+            "slug": "api/routers/records",
+            "title": "records"
           },
           {
-            "title": "resources",
-            "slug": "api/routers/resources",
+            "children": [],
             "module": "pixano.api.routers.resources",
-            "children": []
+            "slug": "api/routers/resources",
+            "title": "resources"
           },
           {
-            "title": "text_spans",
-            "slug": "api/routers/text_spans",
+            "children": [],
             "module": "pixano.api.routers.text_spans",
-            "children": []
+            "slug": "api/routers/text_spans",
+            "title": "text_spans"
           },
           {
-            "title": "tracklets",
-            "slug": "api/routers/tracklets",
+            "children": [],
             "module": "pixano.api.routers.tracklets",
-            "children": []
+            "slug": "api/routers/tracklets",
+            "title": "tracklets"
           },
           {
-            "title": "views",
-            "slug": "api/routers/views",
+            "children": [],
             "module": "pixano.api.routers.views",
-            "children": []
+            "slug": "api/routers/views",
+            "title": "views"
           }
-        ]
+        ],
+        "module": "pixano.api.routers",
+        "slug": "api/routers",
+        "title": "routers"
       },
       {
-        "title": "serve",
-        "slug": "api/serve",
+        "children": [],
         "module": "pixano.api.serve",
-        "children": []
+        "slug": "api/serve",
+        "title": "serve"
       },
       {
-        "title": "service",
-        "slug": "api/service",
+        "children": [],
         "module": "pixano.api.service",
-        "children": []
+        "slug": "api/service",
+        "title": "service"
       },
       {
-        "title": "settings",
-        "slug": "api/settings",
+        "children": [],
         "module": "pixano.api.settings",
-        "children": []
+        "slug": "api/settings",
+        "title": "settings"
       }
-    ]
-  },
-  {
-    "title": "cli",
-    "slug": "cli",
-    "module": "pixano.cli",
-    "children": [
-      {
-        "title": "data",
-        "slug": "cli/data",
-        "module": "pixano.cli.data",
-        "children": []
-      },
-      {
-        "title": "init",
-        "slug": "cli/init",
-        "module": "pixano.cli.init",
-        "children": []
-      },
-      {
-        "title": "server",
-        "slug": "cli/server",
-        "module": "pixano.cli.server",
-        "children": []
-      }
-    ]
-  },
-  {
-    "title": "datasets",
-    "slug": "datasets",
+    ],
     "module": null,
+    "slug": "api",
+    "title": "api"
+  },
+  {
     "children": [
       {
-        "title": "builders",
-        "slug": "datasets/builders",
-        "module": null,
+        "children": [],
+        "module": "pixano.cli.data",
+        "slug": "cli/data",
+        "title": "data"
+      },
+      {
+        "children": [],
+        "module": "pixano.cli.init",
+        "slug": "cli/init",
+        "title": "init"
+      },
+      {
+        "children": [],
+        "module": "pixano.cli.server",
+        "slug": "cli/server",
+        "title": "server"
+      }
+    ],
+    "module": "pixano.cli",
+    "slug": "cli",
+    "title": "cli"
+  },
+  {
+    "children": [
+      {
         "children": [
           {
-            "title": "dataset_builder",
-            "slug": "datasets/builders/dataset_builder",
+            "children": [],
             "module": "pixano.datasets.builders.dataset_builder",
-            "children": []
+            "slug": "datasets/builders/dataset_builder",
+            "title": "dataset_builder"
           },
           {
-            "title": "folders",
-            "slug": "datasets/builders/folders",
-            "module": null,
             "children": [
               {
-                "title": "factories",
-                "slug": "datasets/builders/folders/factories",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.factories",
-                "children": []
+                "slug": "datasets/builders/folders/factories",
+                "title": "factories"
               },
               {
-                "title": "folder_base_builder",
-                "slug": "datasets/builders/folders/folder_base_builder",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.folder_base_builder",
-                "children": []
+                "slug": "datasets/builders/folders/folder_base_builder",
+                "title": "folder_base_builder"
               },
               {
-                "title": "image",
-                "slug": "datasets/builders/folders/image",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.image",
-                "children": []
+                "slug": "datasets/builders/folders/image",
+                "title": "image"
               },
               {
-                "title": "mel",
-                "slug": "datasets/builders/folders/mel",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.mel",
-                "children": []
+                "slug": "datasets/builders/folders/mel",
+                "title": "mel"
               },
               {
-                "title": "metadata",
-                "slug": "datasets/builders/folders/metadata",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.metadata",
-                "children": []
+                "slug": "datasets/builders/folders/metadata",
+                "title": "metadata"
               },
               {
-                "title": "processors",
-                "slug": "datasets/builders/folders/processors",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.processors",
-                "children": []
+                "slug": "datasets/builders/folders/processors",
+                "title": "processors"
               },
               {
-                "title": "video",
-                "slug": "datasets/builders/folders/video",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.video",
-                "children": []
+                "slug": "datasets/builders/folders/video",
+                "title": "video"
               },
               {
-                "title": "vqa",
-                "slug": "datasets/builders/folders/vqa",
+                "children": [],
                 "module": "pixano.datasets.builders.folders.vqa",
-                "children": []
+                "slug": "datasets/builders/folders/vqa",
+                "title": "vqa"
               }
-            ]
+            ],
+            "module": null,
+            "slug": "datasets/builders/folders",
+            "title": "folders"
           },
           {
-            "title": "validators",
-            "slug": "datasets/builders/validators",
+            "children": [],
             "module": "pixano.datasets.builders.validators",
-            "children": []
+            "slug": "datasets/builders/validators",
+            "title": "validators"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "datasets/builders",
+        "title": "builders"
       },
       {
-        "title": "dataset",
-        "slug": "datasets/dataset",
+        "children": [],
         "module": "pixano.datasets.dataset",
-        "children": []
+        "slug": "datasets/dataset",
+        "title": "dataset"
       },
       {
-        "title": "dataset_features_values",
-        "slug": "datasets/dataset_features_values",
+        "children": [],
         "module": "pixano.datasets.dataset_features_values",
-        "children": []
+        "slug": "datasets/dataset_features_values",
+        "title": "dataset_features_values"
       },
       {
-        "title": "dataset_info",
-        "slug": "datasets/dataset_info",
+        "children": [],
         "module": "pixano.datasets.dataset_info",
-        "children": []
+        "slug": "datasets/dataset_info",
+        "title": "dataset_info"
       },
       {
-        "title": "dataset_schema",
-        "slug": "datasets/dataset_schema",
+        "children": [],
         "module": "pixano.datasets.dataset_schema",
-        "children": []
+        "slug": "datasets/dataset_schema",
+        "title": "dataset_schema"
       },
       {
-        "title": "dataset_stat",
-        "slug": "datasets/dataset_stat",
+        "children": [],
         "module": "pixano.datasets.dataset_stat",
-        "children": []
+        "slug": "datasets/dataset_stat",
+        "title": "dataset_stat"
       },
       {
-        "title": "exporters",
-        "slug": "datasets/exporters",
-        "module": null,
         "children": [
           {
-            "title": "coco_dataset_exporter",
-            "slug": "datasets/exporters/coco_dataset_exporter",
+            "children": [],
             "module": "pixano.datasets.exporters.coco_dataset_exporter",
-            "children": []
+            "slug": "datasets/exporters/coco_dataset_exporter",
+            "title": "coco_dataset_exporter"
           },
           {
-            "title": "dataset_exporter",
-            "slug": "datasets/exporters/dataset_exporter",
+            "children": [],
             "module": "pixano.datasets.exporters.dataset_exporter",
-            "children": []
+            "slug": "datasets/exporters/dataset_exporter",
+            "title": "dataset_exporter"
           },
           {
-            "title": "default_json_dataset_exporter",
-            "slug": "datasets/exporters/default_json_dataset_exporter",
+            "children": [],
             "module": "pixano.datasets.exporters.default_json_dataset_exporter",
-            "children": []
+            "slug": "datasets/exporters/default_json_dataset_exporter",
+            "title": "default_json_dataset_exporter"
           },
           {
-            "title": "default_jsonl_dataset_exporter",
-            "slug": "datasets/exporters/default_jsonl_dataset_exporter",
+            "children": [],
             "module": "pixano.datasets.exporters.default_jsonl_dataset_exporter",
-            "children": []
+            "slug": "datasets/exporters/default_jsonl_dataset_exporter",
+            "title": "default_jsonl_dataset_exporter"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "datasets/exporters",
+        "title": "exporters"
       },
       {
-        "title": "queries",
-        "slug": "datasets/queries",
-        "module": null,
         "children": [
           {
-            "title": "table",
-            "slug": "datasets/queries/table",
+            "children": [],
             "module": "pixano.datasets.queries.table",
-            "children": []
+            "slug": "datasets/queries/table",
+            "title": "table"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "datasets/queries",
+        "title": "queries"
       },
       {
-        "title": "utils",
-        "slug": "datasets/utils",
-        "module": null,
         "children": [
           {
-            "title": "errors",
-            "slug": "datasets/utils/errors",
+            "children": [],
             "module": "pixano.datasets.utils.errors",
-            "children": []
+            "slug": "datasets/utils/errors",
+            "title": "errors"
           },
           {
-            "title": "integrity",
-            "slug": "datasets/utils/integrity",
+            "children": [],
             "module": "pixano.datasets.utils.integrity",
-            "children": []
+            "slug": "datasets/utils/integrity",
+            "title": "integrity"
           },
           {
-            "title": "labels",
-            "slug": "datasets/utils/labels",
+            "children": [],
             "module": "pixano.datasets.utils.labels",
-            "children": []
+            "slug": "datasets/utils/labels",
+            "title": "labels"
           },
           {
-            "title": "mosaic",
-            "slug": "datasets/utils/mosaic",
+            "children": [],
             "module": "pixano.datasets.utils.mosaic",
-            "children": []
+            "slug": "datasets/utils/mosaic",
+            "title": "mosaic"
           },
           {
-            "title": "video",
-            "slug": "datasets/utils/video",
+            "children": [],
             "module": "pixano.datasets.utils.video",
-            "children": []
+            "slug": "datasets/utils/video",
+            "title": "video"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "datasets/utils",
+        "title": "utils"
       },
       {
-        "title": "workspaces",
-        "slug": "datasets/workspaces",
-        "module": "pixano.datasets.workspaces",
         "children": [
           {
-            "title": "dataset_items",
-            "slug": "datasets/workspaces/dataset_items",
+            "children": [],
             "module": "pixano.datasets.workspaces.dataset_items",
-            "children": []
+            "slug": "datasets/workspaces/dataset_items",
+            "title": "dataset_items"
           }
-        ]
+        ],
+        "module": "pixano.datasets.workspaces",
+        "slug": "datasets/workspaces",
+        "title": "workspaces"
       }
-    ]
+    ],
+    "module": null,
+    "slug": "datasets",
+    "title": "datasets"
   },
   {
-    "title": "features",
-    "slug": "features",
-    "module": null,
     "children": [
       {
-        "title": "pyarrow_utils",
-        "slug": "features/pyarrow_utils",
+        "children": [],
         "module": "pixano.features.pyarrow_utils",
-        "children": []
+        "slug": "features/pyarrow_utils",
+        "title": "pyarrow_utils"
       },
       {
-        "title": "types",
-        "slug": "features/types",
-        "module": null,
         "children": [
           {
-            "title": "nd_array_float",
-            "slug": "features/types/nd_array_float",
+            "children": [],
             "module": "pixano.features.types.nd_array_float",
-            "children": []
+            "slug": "features/types/nd_array_float",
+            "title": "nd_array_float"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "features/types",
+        "title": "types"
       },
       {
-        "title": "utils",
-        "slug": "features/utils",
-        "module": null,
         "children": [
           {
-            "title": "boxes",
-            "slug": "features/utils/boxes",
+            "children": [],
             "module": "pixano.features.utils.boxes",
-            "children": []
+            "slug": "features/utils/boxes",
+            "title": "boxes"
           },
           {
-            "title": "creators",
-            "slug": "features/utils/creators",
+            "children": [],
             "module": "pixano.features.utils.creators",
-            "children": []
+            "slug": "features/utils/creators",
+            "title": "creators"
           },
           {
-            "title": "image",
-            "slug": "features/utils/image",
+            "children": [],
             "module": "pixano.features.utils.image",
-            "children": []
+            "slug": "features/utils/image",
+            "title": "image"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "features/utils",
+        "title": "utils"
       }
-    ]
+    ],
+    "module": null,
+    "slug": "features",
+    "title": "features"
   },
   {
-    "title": "inference",
-    "slug": "inference",
-    "module": null,
     "children": [
       {
-        "title": "exceptions",
-        "slug": "inference/exceptions",
+        "children": [],
+        "module": "pixano.inference.detection",
+        "slug": "inference/detection",
+        "title": "detection"
+      },
+      {
+        "children": [],
         "module": "pixano.inference.exceptions",
-        "children": []
+        "slug": "inference/exceptions",
+        "title": "exceptions"
       },
       {
-        "title": "mask_generation",
-        "slug": "inference/mask_generation",
-        "module": "pixano.inference.mask_generation",
-        "children": []
-      },
-      {
-        "title": "provider",
-        "slug": "inference/provider",
+        "children": [],
         "module": "pixano.inference.provider",
-        "children": []
+        "slug": "inference/provider",
+        "title": "provider"
       },
       {
-        "title": "providers",
-        "slug": "inference/providers",
-        "module": null,
         "children": [
           {
-            "title": "base",
-            "slug": "inference/providers/base",
+            "children": [],
             "module": "pixano.inference.providers.base",
-            "children": []
+            "slug": "inference/providers/base",
+            "title": "base"
           },
           {
-            "title": "pixano_inference",
-            "slug": "inference/providers/pixano_inference",
+            "children": [],
             "module": "pixano.inference.providers.pixano_inference",
-            "children": []
+            "slug": "inference/providers/pixano_inference",
+            "title": "pixano_inference"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "inference/providers",
+        "title": "providers"
       },
       {
-        "title": "registry",
-        "slug": "inference/registry",
+        "children": [],
         "module": "pixano.inference.registry",
-        "children": []
+        "slug": "inference/registry",
+        "title": "registry"
       },
       {
-        "title": "types",
-        "slug": "inference/types",
+        "children": [],
+        "module": "pixano.inference.segmentation",
+        "slug": "inference/segmentation",
+        "title": "segmentation"
+      },
+      {
+        "children": [],
         "module": "pixano.inference.types",
-        "children": []
-      },
-      {
-        "title": "zero_shot_detection",
-        "slug": "inference/zero_shot_detection",
-        "module": "pixano.inference.zero_shot_detection",
-        "children": []
+        "slug": "inference/types",
+        "title": "types"
       }
-    ]
+    ],
+    "module": null,
+    "slug": "inference",
+    "title": "inference"
   },
   {
-    "title": "pixano",
-    "slug": "pixano",
+    "children": [],
     "module": "pixano",
-    "children": []
+    "slug": "pixano",
+    "title": "pixano"
   },
   {
-    "title": "schemas",
-    "slug": "schemas",
-    "module": null,
     "children": [
       {
-        "title": "annotations",
-        "slug": "schemas/annotations",
-        "module": null,
         "children": [
           {
-            "title": "bbox",
-            "slug": "schemas/annotations/bbox",
+            "children": [],
             "module": "pixano.schemas.annotations.bbox",
-            "children": []
+            "slug": "schemas/annotations/bbox",
+            "title": "bbox"
           },
           {
-            "title": "classification",
-            "slug": "schemas/annotations/classification",
+            "children": [],
             "module": "pixano.schemas.annotations.classification",
-            "children": []
+            "slug": "schemas/annotations/classification",
+            "title": "classification"
           },
           {
-            "title": "compressed_rle",
-            "slug": "schemas/annotations/compressed_rle",
+            "children": [],
             "module": "pixano.schemas.annotations.compressed_rle",
-            "children": []
+            "slug": "schemas/annotations/compressed_rle",
+            "title": "compressed_rle"
           },
           {
-            "title": "conversation",
-            "slug": "schemas/annotations/conversation",
+            "children": [],
             "module": "pixano.schemas.annotations.conversation",
-            "children": []
+            "slug": "schemas/annotations/conversation",
+            "title": "conversation"
           },
           {
-            "title": "entity_annotation",
-            "slug": "schemas/annotations/entity_annotation",
+            "children": [],
             "module": "pixano.schemas.annotations.entity_annotation",
-            "children": []
+            "slug": "schemas/annotations/entity_annotation",
+            "title": "entity_annotation"
           },
           {
-            "title": "entity_group_annotation",
-            "slug": "schemas/annotations/entity_group_annotation",
+            "children": [],
             "module": "pixano.schemas.annotations.entity_group_annotation",
-            "children": []
+            "slug": "schemas/annotations/entity_group_annotation",
+            "title": "entity_group_annotation"
           },
           {
-            "title": "keypoints",
-            "slug": "schemas/annotations/keypoints",
+            "children": [],
             "module": "pixano.schemas.annotations.keypoints",
-            "children": []
+            "slug": "schemas/annotations/keypoints",
+            "title": "keypoints"
           },
           {
-            "title": "message",
-            "slug": "schemas/annotations/message",
+            "children": [],
             "module": "pixano.schemas.annotations.message",
-            "children": []
+            "slug": "schemas/annotations/message",
+            "title": "message"
           },
           {
-            "title": "multi_path",
-            "slug": "schemas/annotations/multi_path",
+            "children": [],
             "module": "pixano.schemas.annotations.multi_path",
-            "children": []
+            "slug": "schemas/annotations/multi_path",
+            "title": "multi_path"
           },
           {
-            "title": "per_frame_annotation",
-            "slug": "schemas/annotations/per_frame_annotation",
+            "children": [],
             "module": "pixano.schemas.annotations.per_frame_annotation",
-            "children": []
+            "slug": "schemas/annotations/per_frame_annotation",
+            "title": "per_frame_annotation"
           },
           {
-            "title": "relation",
-            "slug": "schemas/annotations/relation",
+            "children": [],
             "module": "pixano.schemas.annotations.relation",
-            "children": []
+            "slug": "schemas/annotations/relation",
+            "title": "relation"
           },
           {
-            "title": "text_span",
-            "slug": "schemas/annotations/text_span",
+            "children": [],
             "module": "pixano.schemas.annotations.text_span",
-            "children": []
+            "slug": "schemas/annotations/text_span",
+            "title": "text_span"
           },
           {
-            "title": "tracklet",
-            "slug": "schemas/annotations/tracklet",
+            "children": [],
             "module": "pixano.schemas.annotations.tracklet",
-            "children": []
+            "slug": "schemas/annotations/tracklet",
+            "title": "tracklet"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "schemas/annotations",
+        "title": "annotations"
       },
       {
-        "title": "embeddings",
-        "slug": "schemas/embeddings",
-        "module": null,
         "children": [
           {
-            "title": "embedding",
-            "slug": "schemas/embeddings/embedding",
+            "children": [],
             "module": "pixano.schemas.embeddings.embedding",
-            "children": []
+            "slug": "schemas/embeddings/embedding",
+            "title": "embedding"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "schemas/embeddings",
+        "title": "embeddings"
       },
       {
-        "title": "entities",
-        "slug": "schemas/entities",
-        "module": null,
         "children": [
           {
-            "title": "entity",
-            "slug": "schemas/entities/entity",
+            "children": [],
             "module": "pixano.schemas.entities.entity",
-            "children": []
+            "slug": "schemas/entities/entity",
+            "title": "entity"
           },
           {
-            "title": "entity_dynamic_state",
-            "slug": "schemas/entities/entity_dynamic_state",
+            "children": [],
             "module": "pixano.schemas.entities.entity_dynamic_state",
-            "children": []
+            "slug": "schemas/entities/entity_dynamic_state",
+            "title": "entity_dynamic_state"
           }
-        ]
-      },
-      {
-        "title": "records",
-        "slug": "schemas/records",
-        "module": "pixano.schemas.records",
-        "children": []
-      },
-      {
-        "title": "schema_group",
-        "slug": "schemas/schema_group",
-        "module": "pixano.schemas.schema_group",
-        "children": []
-      },
-      {
-        "title": "table_names",
-        "slug": "schemas/table_names",
-        "module": "pixano.schemas.table_names",
-        "children": []
-      },
-      {
-        "title": "views",
-        "slug": "schemas/views",
+        ],
         "module": null,
+        "slug": "schemas/entities",
+        "title": "entities"
+      },
+      {
+        "children": [],
+        "module": "pixano.schemas.records",
+        "slug": "schemas/records",
+        "title": "records"
+      },
+      {
+        "children": [],
+        "module": "pixano.schemas.schema_group",
+        "slug": "schemas/schema_group",
+        "title": "schema_group"
+      },
+      {
+        "children": [],
+        "module": "pixano.schemas.table_names",
+        "slug": "schemas/table_names",
+        "title": "table_names"
+      },
+      {
         "children": [
           {
-            "title": "camcalibration",
-            "slug": "schemas/views/camcalibration",
+            "children": [],
             "module": "pixano.schemas.views.camcalibration",
-            "children": []
+            "slug": "schemas/views/camcalibration",
+            "title": "camcalibration"
           },
           {
-            "title": "image",
-            "slug": "schemas/views/image",
+            "children": [],
             "module": "pixano.schemas.views.image",
-            "children": []
+            "slug": "schemas/views/image",
+            "title": "image"
           },
           {
-            "title": "pdf",
-            "slug": "schemas/views/pdf",
+            "children": [],
             "module": "pixano.schemas.views.pdf",
-            "children": []
+            "slug": "schemas/views/pdf",
+            "title": "pdf"
           },
           {
-            "title": "point_cloud",
-            "slug": "schemas/views/point_cloud",
+            "children": [],
             "module": "pixano.schemas.views.point_cloud",
-            "children": []
+            "slug": "schemas/views/point_cloud",
+            "title": "point_cloud"
           },
           {
-            "title": "point_cloud_frame",
-            "slug": "schemas/views/point_cloud_frame",
+            "children": [],
             "module": "pixano.schemas.views.point_cloud_frame",
-            "children": []
+            "slug": "schemas/views/point_cloud_frame",
+            "title": "point_cloud_frame"
           },
           {
-            "title": "sequence_frame",
-            "slug": "schemas/views/sequence_frame",
+            "children": [],
             "module": "pixano.schemas.views.sequence_frame",
-            "children": []
+            "slug": "schemas/views/sequence_frame",
+            "title": "sequence_frame"
           },
           {
-            "title": "text",
-            "slug": "schemas/views/text",
+            "children": [],
             "module": "pixano.schemas.views.text",
-            "children": []
+            "slug": "schemas/views/text",
+            "title": "text"
           },
           {
-            "title": "video",
-            "slug": "schemas/views/video",
+            "children": [],
             "module": "pixano.schemas.views.video",
-            "children": []
+            "slug": "schemas/views/video",
+            "title": "video"
           },
           {
-            "title": "view",
-            "slug": "schemas/views/view",
+            "children": [],
             "module": "pixano.schemas.views.view",
-            "children": []
+            "slug": "schemas/views/view",
+            "title": "view"
           }
-        ]
+        ],
+        "module": null,
+        "slug": "schemas/views",
+        "title": "views"
       }
-    ]
+    ],
+    "module": null,
+    "slug": "schemas",
+    "title": "schemas"
   },
   {
-    "title": "utils",
-    "slug": "utils",
-    "module": null,
     "children": [
       {
-        "title": "python",
-        "slug": "utils/python",
+        "children": [],
         "module": "pixano.utils.python",
-        "children": []
+        "slug": "utils/python",
+        "title": "python"
       },
       {
-        "title": "validation",
-        "slug": "utils/validation",
+        "children": [],
         "module": "pixano.utils.validation",
-        "children": []
+        "slug": "utils/validation",
+        "title": "validation"
       }
-    ]
+    ],
+    "module": null,
+    "slug": "utils",
+    "title": "utils"
   }
 ]

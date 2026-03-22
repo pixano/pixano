@@ -19,8 +19,10 @@ Outputs to: src/data/api/
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import griffe
+
 
 # Configuration
 SRC_PATH = Path(__file__).parent.parent.parent / "src" / "pixano"
@@ -161,7 +163,7 @@ def extract_module(module) -> dict:
 
 def build_nav_tree(modules: list[dict]) -> list[dict]:
     """Build a navigation tree from flat module list."""
-    tree = {}
+    tree: dict[str, Any] = {}
     for mod in modules:
         parts = mod["module"].replace("pixano.", "").split(".")
         current = tree
@@ -234,11 +236,10 @@ def main():
         has_content = data["classes"] or data["functions"] or data["attributes"]
         if has_content or depth == 0:
             # Create output filename from module path
-            slug = module.path.replace(".", "/")
             filename = module.path.replace(".", "_") + ".json"
             output_path = OUTPUT_DIR / filename
 
-            output_path.write_text(json.dumps(data, indent=2, default=str))
+            output_path.write_text(json.dumps(data, indent=2, default=str, sort_keys=True) + "\n")
             all_modules.append(data)
             module_count += 1
             print(
@@ -257,7 +258,7 @@ def main():
     # Write navigation index
     nav_tree = build_nav_tree(all_modules)
     nav_path = OUTPUT_DIR / "_nav.json"
-    nav_path.write_text(json.dumps(nav_tree, indent=2))
+    nav_path.write_text(json.dumps(nav_tree, indent=2, sort_keys=True) + "\n")
     print(f"\nNavigation tree written to: {nav_path}")
 
     # Write module index
@@ -271,7 +272,7 @@ def main():
         }
         for m in all_modules
     ]
-    index_path.write_text(json.dumps(index_data, indent=2))
+    index_path.write_text(json.dumps(index_data, indent=2, sort_keys=True) + "\n")
 
     print(f"\nDone! Generated {module_count} module files.")
     print(f"Index written to: {index_path}")

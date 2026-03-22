@@ -142,7 +142,7 @@ import torch
 provider = TransformersProvider()
 model = provider.load_model(
     "dino",
-    ImageTask.ZERO_SHOT_DETECTION.value,
+    ImageTask.DETECTION.value,
     torch.device("cuda") if torch.cuda.is_available() else "cpu",
     "IDEA-Research/grounding-dino-base"
 )

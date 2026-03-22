@@ -6,7 +6,7 @@ License: CECILL-C
 
 import type Konva from "konva";
 
-import type { Shape } from "$lib/types/shapeTypes";
+import type { SaveMaskShape, Shape } from "$lib/types/shapeTypes";
 
 export type ViewGroupKind = "background" | "static" | "active";
 
@@ -14,6 +14,7 @@ export interface MaskRef {
   beginStroke(x: number, y: number): void;
   updateStroke(x: number, y: number): void;
   endStroke(): void;
+  loadDraftFromMask(mask: SaveMaskShape): void;
   getMaskData(): Shape | null;
   clearCanvas(): void;
   destroy(): void;

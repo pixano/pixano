@@ -1,68 +1,68 @@
 {
-  "module": "pixano.datasets.builders.validators",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/validators.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "ViewFamilyIntegrityValidator",
-      "docstring": "Reject mixed image and sequence-frame families for one logical view.",
-      "bases": [],
       "attributes": [
         {
-          "name": "schemas",
           "annotation": null,
-          "value": "schemas",
-          "docstring": ""
+          "docstring": "",
+          "name": "schemas",
+          "value": "schemas"
         }
       ],
+      "bases": [],
+      "class_methods": [],
+      "decorators": [],
+      "docstring": "Reject mixed image and sequence-frame families for one logical view.",
+      "lineno": 18,
       "methods": [
         {
-          "name": "__init__",
+          "decorators": [],
           "docstring": "Initialize the validator with the dataset table schemas.",
+          "is_async": false,
+          "lineno": 21,
+          "name": "__init__",
           "parameters": [
             {
-              "name": "schemas",
               "annotation": "dict[str, type[LanceModel]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "schemas"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 21
+          "returns": "None"
         },
         {
-          "name": "validate",
+          "decorators": [],
           "docstring": "Validate one buffered batch before insertion.",
+          "is_async": false,
+          "lineno": 25,
+          "name": "validate",
           "parameters": [
             {
-              "name": "batch",
               "annotation": "dict[str, list[LanceModel]]",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "batch"
             },
             {
-              "name": "dataset",
               "annotation": "Dataset",
               "default": null,
-              "kind": "ParameterKind.positional_or_keyword"
+              "kind": "ParameterKind.positional_or_keyword",
+              "name": "dataset"
             }
           ],
-          "returns": "None",
-          "is_async": false,
-          "decorators": [],
-          "lineno": 25
+          "returns": "None"
         }
       ],
-      "class_methods": [],
-      "static_methods": [],
+      "name": "ViewFamilyIntegrityValidator",
       "properties": [],
-      "decorators": [],
-      "lineno": 18
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/validators.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.builders.validators",
   "submodules": []
 }

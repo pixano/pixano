@@ -1,111 +1,111 @@
 {
-  "module": "pixano.schemas.annotations.entity_annotation",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/annotations/entity_annotation.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "AnnotationSourceKind",
-      "docstring": "Kind of source that produced the annotation.\n\nAttributes:\n    MODEL: Source produced by a model.\n    HUMAN: Source produced by a human.\n    GROUND_TRUTH: The source is a ground truth.\n    OTHER: Source produced by other means.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "GROUND_TRUTH",
+          "value": "'ground_truth'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "HUMAN",
+          "value": "'human'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "MODEL",
+          "value": "'model'"
+        },
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "OTHER",
+          "value": "'other'"
+        }
+      ],
       "bases": [
         "Enum"
       ],
-      "attributes": [
-        {
-          "name": "GROUND_TRUTH",
-          "annotation": null,
-          "value": "'ground_truth'",
-          "docstring": ""
-        },
-        {
-          "name": "HUMAN",
-          "annotation": null,
-          "value": "'human'",
-          "docstring": ""
-        },
-        {
-          "name": "MODEL",
-          "annotation": null,
-          "value": "'model'",
-          "docstring": ""
-        },
-        {
-          "name": "OTHER",
-          "annotation": null,
-          "value": "'other'",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 18
+      "docstring": "Kind of source that produced the annotation.\n\nAttributes:\n    MODEL: Source produced by a model.\n    HUMAN: Source produced by a human.\n    GROUND_TRUTH: The source is a ground truth.\n    OTHER: Source produced by other means.",
+      "lineno": 18,
+      "methods": [],
+      "name": "AnnotationSourceKind",
+      "properties": [],
+      "static_methods": []
     },
     {
-      "name": "EntityAnnotation",
-      "docstring": "Entity annotation.\n\nAttributes:\n    entity_id: ID of the entity annotated.\n    source_type: Kind of annotation source (model, human, ground_truth, other).\n    source_name: Name of the annotation source.\n    source_metadata: Metadata of the annotation source (JSON string).\n    view_id: ID of the view from which the annotation is derived.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "entity_id",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_metadata",
+          "value": "json.dumps({})"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_name",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "source_type",
+          "value": "''"
+        },
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "view_id",
+          "value": "''"
+        }
+      ],
       "bases": [
         "RecordComponent"
       ],
-      "attributes": [
-        {
-          "name": "entity_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "source_metadata",
-          "annotation": "str",
-          "value": "json.dumps({})",
-          "docstring": ""
-        },
-        {
-          "name": "source_name",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "source_type",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        },
-        {
-          "name": "view_id",
-          "annotation": "str",
-          "value": "''",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 34
+      "docstring": "Entity annotation.\n\nAttributes:\n    entity_id: ID of the entity annotated.\n    source_type: Kind of annotation source (model, human, ground_truth, other).\n    source_name: Name of the annotation source.\n    source_metadata: Metadata of the annotation source (JSON string).\n    view_id: ID of the view from which the annotation is derived.",
+      "lineno": 34,
+      "methods": [],
+      "name": "EntityAnnotation",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/annotations/entity_annotation.py",
   "functions": [
     {
-      "name": "is_entity_annotation",
+      "decorators": [],
       "docstring": "Check if a class is an EntityAnnotation or subclass of EntityAnnotation.",
+      "is_async": false,
+      "lineno": 87,
+      "name": "is_entity_annotation",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 87
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.annotations.entity_annotation",
   "submodules": []
 }

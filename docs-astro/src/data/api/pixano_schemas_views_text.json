@@ -1,88 +1,88 @@
 {
-  "module": "pixano.schemas.views.text",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/schemas/views/text.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "Text",
-      "docstring": "Text view.\n\nAttributes:\n    content: The text content.",
+      "attributes": [
+        {
+          "annotation": "str",
+          "docstring": "",
+          "name": "content",
+          "value": null
+        }
+      ],
       "bases": [
         "View"
       ],
-      "attributes": [
-        {
-          "name": "content",
-          "annotation": "str",
-          "value": null,
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 12
+      "docstring": "Text view.\n\nAttributes:\n    content: The text content.",
+      "lineno": 12,
+      "methods": [],
+      "name": "Text",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/schemas/views/text.py",
   "functions": [
     {
-      "name": "create_text",
+      "decorators": [],
       "docstring": "Create a `Text` instance.\n\nArgs:\n    content: The text content.\n    id: Text ID.\n    record_id: Record ID.\n    logical_name: Logical view name (e.g. \"text\").\n    uri: URI for text loaded from a file.\n\nReturns:\n    The created `Text` instance.",
+      "is_async": false,
+      "lineno": 27,
+      "name": "create_text",
       "parameters": [
         {
-          "name": "content",
           "annotation": "str",
           "default": null,
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "content"
         },
         {
-          "name": "id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "id"
         },
         {
-          "name": "record_id",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "record_id"
         },
         {
-          "name": "logical_name",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "logical_name"
         },
         {
-          "name": "uri",
           "annotation": "str",
           "default": "''",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "uri"
         }
       ],
-      "returns": "Text",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 27
+      "returns": "Text"
     },
     {
-      "name": "is_text",
+      "decorators": [],
       "docstring": "Check if the given class is `Text` or a subclass of `Text`.",
+      "is_async": false,
+      "lineno": 22,
+      "name": "is_text",
       "parameters": [
         {
-          "name": "strict",
           "annotation": "bool",
           "default": "False",
-          "kind": "ParameterKind.positional_or_keyword"
+          "kind": "ParameterKind.positional_or_keyword",
+          "name": "strict"
         }
       ],
-      "returns": "bool",
-      "is_async": false,
-      "decorators": [],
-      "lineno": 22
+      "returns": "bool"
     }
   ],
-  "attributes": [],
+  "module": "pixano.schemas.views.text",
   "submodules": []
 }

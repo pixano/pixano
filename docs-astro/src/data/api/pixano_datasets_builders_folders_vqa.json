@@ -1,31 +1,31 @@
 {
-  "module": "pixano.datasets.builders.folders.vqa",
-  "docstring": "",
-  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-docs-astro/src/pixano/datasets/builders/folders/vqa.py",
+  "attributes": [],
   "classes": [
     {
-      "name": "VQAFolderBuilder",
-      "docstring": "Builder for vqa datasets stored in a folder.",
+      "attributes": [
+        {
+          "annotation": null,
+          "docstring": "",
+          "name": "DEFAULT_INFO",
+          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE_VQA), record=Record, entity=Entity, message=Message, views={'image': Image})"
+        }
+      ],
       "bases": [
         "ImageFolderBuilder"
       ],
-      "attributes": [
-        {
-          "name": "DEFAULT_INFO",
-          "annotation": null,
-          "value": "DatasetInfo(workspace=(WorkspaceType.IMAGE_VQA), record=Record, entity=Entity, message=Message, views={'image': Image})",
-          "docstring": ""
-        }
-      ],
-      "methods": [],
       "class_methods": [],
-      "static_methods": [],
-      "properties": [],
       "decorators": [],
-      "lineno": 14
+      "docstring": "Builder for vqa datasets stored in a folder.",
+      "lineno": 14,
+      "methods": [],
+      "name": "VQAFolderBuilder",
+      "properties": [],
+      "static_methods": []
     }
   ],
+  "docstring": "",
+  "filepath": "/Users/jrabarisoa/Codes/pixano-workspace/worktree-connect-inference/src/pixano/datasets/builders/folders/vqa.py",
   "functions": [],
-  "attributes": [],
+  "module": "pixano.datasets.builders.folders.vqa",
   "submodules": []
 }
