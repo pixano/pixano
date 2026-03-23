@@ -63,7 +63,8 @@ export interface VqaMessageContext {
   viewId: string;
   conversationId: string;
   entityIds: string[];
-  imageUrl: string;
+  datasetId: string;
+  imageIds: string[];
 }
 
 export interface QuestionThread {

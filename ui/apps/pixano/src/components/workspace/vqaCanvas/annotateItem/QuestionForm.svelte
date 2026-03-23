@@ -26,13 +26,15 @@ License: CECILL-C
     type DeleteQuestionEvent,
     type GenerateAnswerEvent,
   } from "$lib/types/vqa";
+  import { AiProcessingBadge } from "$lib/ui";
 
   interface Props {
     thread: QuestionThread;
     completionModels: PixanoInferenceCompletionModel[];
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
-    onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
+    onGenerateAnswer?: (event: GenerateAnswerEvent) => Promise<string | null>;
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
+    onFillInput?: (text: string) => void;
   }
 
   let {
@@ -41,10 +43,12 @@ License: CECILL-C
     onAnswerContentChange,
     onGenerateAnswer,
     onDeleteQuestion,
+    onFillInput,
   }: Props = $props();
   const question = $derived(thread.question);
   const messages = $derived(thread.messages);
 
+  let isGenerating = $state(false);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let editingId: string | null = $state(null);
   let editContent = $state("");
@@ -67,17 +71,20 @@ License: CECILL-C
     editingId = null;
   };
 
-  const handleGenerateAnswer = () => {
+  const handleGenerateAnswer = async () => {
     const completionModel = completionModels.filter((model) => model.selected)[0] ?? undefined;
     if (completionModel === undefined) {
       console.error("ERROR: No model selected");
       return;
     }
 
-    onGenerateAnswer?.({
+    isGenerating = true;
+    const text = await onGenerateAnswer?.({
       questionId: question.id,
       completionModel,
     });
+    isGenerating = false;
+    if (text) onFillInput?.(text);
   };
 
   const getChoiceLabel = (index: number, format: LabelFormat | undefined): string => {
@@ -350,14 +357,18 @@ License: CECILL-C
           ></div>
 
           <button
-            class="ml-1 flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg text-[11px] font-bold uppercase tracking-tighter text-muted-foreground hover:border-primary hover:text-primary transition-all group/btn shadow-sm"
+            class="ml-1 flex items-center justify-center h-8 w-8 bg-card border border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-all group/btn shadow-sm"
             onclick={handleGenerateAnswer}
+            title="Generate answer with VLM"
           >
             <Sparkle weight="regular" size={16} class="group-hover/btn:animate-pulse" />
-            VLM Suggestion
           </button>
         </div>
       {/if}
     </div>
   </div>
 </div>
+
+{#if isGenerating}
+  <AiProcessingBadge overlay message="Generating answer..." />
+{/if}

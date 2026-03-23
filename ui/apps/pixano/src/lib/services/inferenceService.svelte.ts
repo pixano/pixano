@@ -10,6 +10,8 @@ import {
   registerInferenceServer,
 } from "$lib/api/inferenceApi";
 import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
+import { syncCompletionModels } from "$lib/stores/vqaStores.svelte";
+import { MultimodalImageNLPTask } from "$lib/types/inference";
 
 function applyErrorState(): void {
   inferenceServerStore.value = {
@@ -19,6 +21,7 @@ function applyErrorState(): void {
     defaultProvider: null,
     models: [],
   };
+  syncCompletionModels([]);
 }
 
 export async function loadInferenceRegistry(): Promise<void> {
@@ -36,23 +39,41 @@ export async function loadInferenceRegistry(): Promise<void> {
       defaultProvider: registry.default_provider,
       models,
     };
+
+    const vlmModels = models.filter((m) => m.task === MultimodalImageNLPTask.VLM);
+    syncCompletionModels(vlmModels);
   } catch {
     applyErrorState();
   }
+}
+
+let _registryLoadAttempted = false;
+
+export async function ensureInferenceRegistryLoaded(): Promise<void> {
+  const state = inferenceServerStore.value;
+  if (state.status === "loading") return;
+  if (state.providers.length > 0 || state.models.length > 0) return;
+  if (_registryLoadAttempted) return;
+  _registryLoadAttempted = true;
+  await loadInferenceRegistry();
 }
 
 export async function refreshInferenceModels(): Promise<void> {
   await loadInferenceRegistry();
 }
 
-export async function connectToInferenceServer(url: string): Promise<boolean> {
-  const connectedProvider = await registerInferenceServer(url);
-  if (!connectedProvider) {
-    return false;
+export async function connectToInferenceServer(
+  url: string | null,
+  type: string = "pixano-inference",
+  apiKey: string | null = null,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const result = await registerInferenceServer(url, type, apiKey);
+  if ("error" in result) {
+    return { success: false, error: result.error };
   }
 
   await loadInferenceRegistry();
-  return true;
+  return { success: true };
 }
 
 // Auto-load inference registry on first module import.

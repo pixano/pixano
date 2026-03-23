@@ -4,12 +4,13 @@
 # License: CECILL-C
 # =====================================
 
+import base64
 import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -19,9 +20,10 @@ from pydantic import BaseModel, Field
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
 from pixano.datasets.utils.errors import DatasetAccessError
-from pixano.inference.exceptions import InferenceError, ProviderConnectionError
+from pixano.inference.exceptions import InferenceError, ProviderConnectionError, ProviderNotFoundError
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
+from pixano.inference.registry import get_provider
 from pixano.inference.types import (
     DetectionInput,
     InferenceTask,
@@ -82,7 +84,9 @@ class ModelInfoResponse(BaseModel):
 class RegisterServerRequest(BaseModel):
     """Request schema for registering an inference server."""
 
-    url: str
+    type: str = "pixano-inference"
+    url: str | None = None
+    api_key: str | None = None
 
 
 class VLMRequest(BaseModel):
@@ -91,8 +95,9 @@ class VLMRequest(BaseModel):
     model: str
     provider_name: str | None = None
     prompt: str | list[dict[str, Any]]
-    images: list[str] | None = None
-    max_new_tokens: int = 100
+    dataset_id: str | None = None
+    image_ids: list[str] | None = None
+    max_new_tokens: int | None = None
     temperature: float = 1.0
 
 
@@ -230,10 +235,19 @@ def _normalize_provider_url(url: str) -> str:
     return normalized_url
 
 
-def _build_provider_name(url: str) -> str:
-    parsed = urlparse(_normalize_provider_url(url))
+def _build_provider_name(provider_type: str, url: str) -> str:
+    parsed = urlparse(url)
     port = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
-    return f"pixano-inference@{parsed.hostname}:{port}"
+    return f"{provider_type}@{parsed.hostname}:{port}"
+
+
+# Default URLs for providers that have well-known endpoints.
+_DEFAULT_PROVIDER_URLS: dict[str, str] = {
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com",
+    "ollama": "http://localhost:11434",
+    "litellm": "http://localhost:4000",
+}
 
 
 def _list_connected_providers(settings: Settings) -> list[ConnectedProviderResponse]:
@@ -647,20 +661,50 @@ async def register_inference_server(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, Any]:
     """Register a new inference server."""
-    normalized_url = _normalize_provider_url(request.url)
+    provider_type = request.type
 
-    try:
-        provider = await PixanoInferenceProvider.connect(normalized_url)
-    except ProviderConnectionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # Resolve URL: use provided, fall back to default, or error.
+    if request.url:
+        url = _normalize_provider_url(request.url)
+    elif provider_type in _DEFAULT_PROVIDER_URLS:
+        url = _DEFAULT_PROVIDER_URLS[provider_type]
+    else:
+        raise HTTPException(status_code=400, detail=f"URL is required for provider type '{provider_type}'")
 
-    provider_name = _build_provider_name(normalized_url)
+    # Build constructor kwargs.
+    kwargs: dict[str, Any] = {"url": url}
+    if request.api_key is not None:
+        kwargs["api_key"] = request.api_key
+
+    provider: InferenceProvider
+    if provider_type == "pixano-inference":
+        # Pixano-inference uses its own connection validation flow.
+        try:
+            provider = await PixanoInferenceProvider.connect(url)
+        except ProviderConnectionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        try:
+            provider = get_provider(provider_type, **kwargs)
+            # Validate connectivity by listing models.
+            await provider.list_models()
+        except ProviderNotFoundError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except ProviderConnectionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to connect to {provider_type} provider: {exc}",
+            ) from exc
+
+    provider_name = _build_provider_name(provider_type, url)
     settings.inference_providers[provider_name] = provider
     settings.default_inference_provider = provider_name
 
     return {
         "status": "ok",
-        "provider": ConnectedProviderResponse(name=provider_name, url=getattr(provider, "url", None)).model_dump(),
+        "provider": ConnectedProviderResponse(name=provider_name, url=url).model_dump(),
         "default_provider": settings.default_inference_provider,
     }
 
@@ -693,6 +737,33 @@ async def list_inference_models(
     return result
 
 
+def _detect_image_mime(blob: bytes) -> str:
+    """Detect MIME type from image magic bytes."""
+    if blob[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if blob[:2] == b"\xff\xd8":
+        return "image/jpeg"
+    if blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/jpeg"
+
+
+def _resolve_dataset_images(
+    dataset_id: str,
+    image_ids: list[str],
+    settings: Settings,
+) -> list[str | Path]:
+    """Read image blobs from the dataset and encode them as base64 data URIs."""
+    dataset = _get_dataset(dataset_id, settings)
+    result: list[str | Path] = []
+    for image_id in image_ids:
+        blob_data = _resolve_view_binary(dataset, image_id)
+        mime = _detect_image_mime(blob_data)
+        b64 = base64.b64encode(blob_data).decode("ascii")
+        result.append(f"data:{mime};base64,{b64}")
+    return result
+
+
 @router.post("/vlm", operation_id="vlm")
 async def vlm(
     request: VLMRequest,
@@ -700,10 +771,15 @@ async def vlm(
 ) -> dict[str, Any]:
     """Run vision-language model inference."""
     provider = _get_provider(settings, request.provider_name)
+
+    resolved_images: list[str | Path] | None = None
+    if request.dataset_id and request.image_ids:
+        resolved_images = _resolve_dataset_images(request.dataset_id, request.image_ids, settings)
+
     input_data = VLMInput(
         model=request.model,
         prompt=request.prompt,
-        images=cast(list[str | Path] | None, request.images),
+        images=resolved_images,
         max_new_tokens=request.max_new_tokens,
         temperature=request.temperature,
     )

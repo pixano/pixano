@@ -8,7 +8,6 @@ License: CECILL-C
   // Imports
   import { Canvas2D } from "$components/workspace/canvas2d";
   import { nanoid } from "nanoid";
-  import { CircleNotch } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import {
@@ -27,6 +26,7 @@ License: CECILL-C
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     inferenceServerStore,
     selectedStaticSegmentationModel,
@@ -70,7 +70,7 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { effectProbe, Image, LoadingModal, type LoadedImagesPerView } from "$lib/ui";
+  import { AiProcessingBadge, effectProbe, Image, type LoadedImagesPerView } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
@@ -307,20 +307,29 @@ License: CECILL-C
 
   const getImageViewContext = (): Pick<
     VqaMessageContext,
-    "recordId" | "viewId" | "entityIds" | "imageUrl"
+    "recordId" | "viewId" | "entityIds" | "datasetId" | "imageIds"
   > | null => {
     const recordId = selectedItem.item.id;
+    const datasetId = selectedItem.ui.datasetId;
+    const imageIds: string[] = [];
+    let firstViewId = "";
+
     for (const view of Object.values(selectedItem.views)) {
       if (!Array.isArray(view) && typeof view.data.url === "string" && view.data.url !== "") {
-        return {
-          recordId,
-          viewId: view.id,
-          entityIds: [],
-          imageUrl: view.data.url,
-        };
+        imageIds.push(view.id);
+        if (!firstViewId) firstViewId = view.id;
       }
     }
-    return null;
+
+    if (imageIds.length === 0) return null;
+
+    return {
+      recordId,
+      viewId: firstViewId,
+      entityIds: [],
+      datasetId,
+      imageIds,
+    };
   };
 
   const createNewConversationContext = (): VqaMessageContext | null => {
@@ -346,28 +355,34 @@ License: CECILL-C
     deleteQuestion(event);
   };
 
-  const handleGenerateAnswer = async (event: GenerateAnswerEvent) => {
+  const handleGenerateAnswer = async (event: GenerateAnswerEvent): Promise<string | null> => {
     const { questionId, completionModel } = event;
 
     const question = messages.value.find((m) => m.id === questionId);
 
     if (question === undefined) {
       console.error("ERROR: Message not found");
-      return;
+      return null;
     }
-    isGenerating = true;
     const imageContext = getImageViewContext();
-    await generateAnswer(completionModel, question, imageContext?.imageUrl ?? "");
-    isGenerating = false;
+    return generateAnswer(
+      completionModel,
+      question,
+      imageContext?.datasetId ?? "",
+      imageContext?.imageIds ?? [],
+    );
   };
 
-  const handleGenerateQuestion = async (completionModel: InferenceModelSelection) => {
+  const handleGenerateQuestion = async (
+    completionModel: InferenceModelSelection,
+    questionType: import("$lib/types/dataset").QuestionTypeEnum,
+  ) => {
     const context = createNewConversationContext();
     if (!context) {
       console.error("ERROR: No image view context found for VQA question generation");
       return null;
     }
-    return generateQuestion(completionModel, context);
+    return generateQuestion(completionModel, context, questionType);
   };
 
   const expand = (e: MouseEvent) => {
@@ -408,6 +423,12 @@ License: CECILL-C
       resetSmartSegmentationFeedback();
     });
   });
+
+  $effect(() => {
+    untrack(() => {
+      void ensureInferenceRegistryLoaded();
+    });
+  });
 </script>
 
 <div
@@ -422,7 +443,6 @@ License: CECILL-C
   <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
     <VqaArea
       messages={messages.value}
-      vqaSectionWidth={vqaAreaMaxWidth}
       inferenceServer={inferenceServerStore.value}
       vqaModels={vqaModels.value}
       completionModels={completionModelsStore.value}
@@ -476,11 +496,11 @@ License: CECILL-C
 
     {#if !loaded}
       <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
-        <CircleNotch weight="regular" class="h-10 w-10 animate-spin stroke-white" />
+        <AiProcessingBadge message="Loading images..." />
       </div>
     {/if}
   </div>
 </div>
 {#if isGenerating}
-  <LoadingModal />
+  <AiProcessingBadge overlay message="Processing..." />
 {/if}

@@ -29,10 +29,11 @@ export { default as Histogram } from "$components/ui/histogram/Histogram.svelte"
 // Molecules (kept, internals updated to use bits-ui directly)
 export { default as PrimaryButton } from "$components/ui/molecules/PrimaryButton.svelte";
 export { default as IconButton } from "$components/ui/molecules/TooltipIconButton.svelte";
+export { default as ModelSelectBadge } from "$components/ui/model-select-badge/ModelSelectBadge.svelte";
+export { default as AiProcessingBadge } from "$components/ui/ai-processing-badge/AiProcessingBadge.svelte";
 
 // Modals (kept)
 export { default as ConfirmModal } from "$components/modals/ConfirmModal.svelte";
-export { default as LoadingModal } from "$components/modals/LoadingModal.svelte";
 export { default as PromptModal } from "$components/modals/PromptModal.svelte";
 export { default as SelectModal } from "$components/modals/SelectModal.svelte";
 export { default as WarningModal } from "$components/modals/WarningModal.svelte";

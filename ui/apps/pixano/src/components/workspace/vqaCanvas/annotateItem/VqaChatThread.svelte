@@ -18,8 +18,9 @@ License: CECILL-C
     questionThreads: QuestionThread[];
     completionModels: PixanoInferenceCompletionModel[];
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
-    onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
+    onGenerateAnswer?: (event: GenerateAnswerEvent) => Promise<string | null>;
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
+    onFillInput?: (text: string) => void;
   }
 
   let {
@@ -28,6 +29,7 @@ License: CECILL-C
     onAnswerContentChange,
     onGenerateAnswer,
     onDeleteQuestion,
+    onFillInput,
   }: Props = $props();
   let scrollContainer: HTMLDivElement | undefined = $state();
 
@@ -83,6 +85,7 @@ License: CECILL-C
           {onAnswerContentChange}
           {onGenerateAnswer}
           {onDeleteQuestion}
+          {onFillInput}
         />
       </div>
     {/each}
