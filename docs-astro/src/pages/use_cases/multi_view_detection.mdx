@@ -68,6 +68,7 @@ Each line in `metadata.jsonl` pairs an RGB image with its thermal counterpart an
 
 ```json
 {
+  "status": "validated",
   "views": {
     "rgb": "rgb/000000.jpg",
     "thermal": "thermal/000000.jpg"
@@ -145,6 +146,7 @@ Each metadata entry uses glob patterns for frame sequences and per-frame annotat
 
 ```json
 {
+  "status": "validated",
   "views": {
     "rgb": { "path": "rgb/video_000/*.jpg", "fps": 30 },
     "thermal": { "path": "thermal/video_000/*.jpg", "fps": 30 }

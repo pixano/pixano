@@ -26,8 +26,6 @@ License: CECILL-C
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
-  // Import stores and API functions
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import {
     inferenceServerStore,
     selectedStaticSegmentationModel,

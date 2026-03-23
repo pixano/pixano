@@ -13,37 +13,37 @@ import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
 import { syncCompletionModels } from "$lib/stores/vqaStores.svelte";
 import { MultimodalImageNLPTask } from "$lib/types/inference";
 
-function applyDisconnectedState(): void {
+function applyErrorState(): void {
   inferenceServerStore.value = {
+    status: "error",
     connected: false,
     providers: [],
     defaultProvider: null,
     models: [],
-    isLoading: false,
   };
   syncCompletionModels([]);
 }
 
 export async function loadInferenceRegistry(): Promise<void> {
-  if (inferenceServerStore.value.isLoading) return;
+  if (inferenceServerStore.value.status === "loading") return;
 
-  inferenceServerStore.update((state) => ({ ...state, isLoading: true }));
+  inferenceServerStore.update((state) => ({ ...state, status: "loading" }));
 
   try {
     const registry = await getInferenceServers();
     const models = registry.connected ? await listInferenceModels() : [];
     inferenceServerStore.value = {
+      status: "loaded",
       connected: registry.connected,
       providers: registry.providers,
       defaultProvider: registry.default_provider,
       models,
-      isLoading: false,
     };
 
     const vlmModels = models.filter((m) => m.task === MultimodalImageNLPTask.VLM);
     syncCompletionModels(vlmModels);
   } catch {
-    applyDisconnectedState();
+    applyErrorState();
   }
 }
 
@@ -75,3 +75,13 @@ export async function connectToInferenceServer(
   await loadInferenceRegistry();
   return { success: true };
 }
+
+// Auto-load inference registry on first module import.
+// Follows the codebase pattern of $effect.root() at module level
+// (see theme sync in appStores.svelte.ts, model reconciliation in inferenceStores.svelte.ts).
+$effect.root(() => {
+  $effect(() => {
+    if (inferenceServerStore.value.status !== "idle") return;
+    void loadInferenceRegistry();
+  });
+});

@@ -63,12 +63,14 @@ export interface InferenceModel extends InferenceModelSelection {
   model_class?: string | null;
 }
 
+export type InferenceLoadStatus = "idle" | "loading" | "loaded" | "error";
+
 export interface InferenceServerState {
+  status: InferenceLoadStatus;
   connected: boolean;
   providers: ConnectedProvider[];
   defaultProvider: string | null;
   models: InferenceModel[];
-  isLoading: boolean;
 }
 
 export interface SystemPrompt {

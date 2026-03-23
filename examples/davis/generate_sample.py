@@ -77,6 +77,7 @@ def export_split(output_dir: Path, split: str, num_samples: int, seed: int, davi
 
         # Build metadata entry with glob patterns
         entry = {
+            "status": "validated",
             "views": {
                 "image": {"path": f"frames/{video_name}/*.jpg", "fps": 24},
             },
