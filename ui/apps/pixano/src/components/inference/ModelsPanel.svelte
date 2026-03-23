@@ -8,10 +8,7 @@ License: CECILL-C
   import { ArrowsClockwise, HardDrives, Plus, Sparkle } from "phosphor-svelte";
 
   import ConnectToServerModal from "./ConnectToServerModal.svelte";
-  import {
-    ensureInferenceRegistryLoaded,
-    refreshInferenceModels,
-  } from "$lib/services/inferenceService";
+  import { refreshInferenceModels } from "$lib/services/inferenceService.svelte";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
   import { formatInferenceProviderName, type InferenceModel } from "$lib/types/inference";
   import { IconButton, PrimaryButton } from "$lib/ui";
@@ -35,10 +32,6 @@ License: CECILL-C
   }
 
   const modelGroups = $derived(groupModelsByTask(inferenceServerStore.value.models));
-
-  $effect(() => {
-    void ensureInferenceRegistryLoaded();
-  });
 </script>
 
 <div class="flex flex-col h-full bg-card p-6 gap-6">

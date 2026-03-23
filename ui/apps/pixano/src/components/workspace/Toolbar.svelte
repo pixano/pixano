@@ -22,7 +22,6 @@ License: CECILL-C
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
   import { polygonIcon } from "$lib/assets";
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import {
     currentSegmentationModels,
     inferenceServerStore,
@@ -171,7 +170,7 @@ License: CECILL-C
     if (currentSegmentationSelection) {
       return currentSegmentationSelection.name;
     }
-    if (inferenceServerStore.value.isLoading) {
+    if (inferenceServerStore.value.status === "loading") {
       return "Loading";
     }
     if (!inferenceServerStore.value.connected) {
@@ -182,7 +181,7 @@ License: CECILL-C
   let segmentationSelectorDisabled = $derived(
     smartInferencePending ||
       compatibleSegmentationModels.length === 0 ||
-      inferenceServerStore.value.isLoading,
+      inferenceServerStore.value.status === "loading",
   );
   let segmentationModelItems = $derived(
     compatibleSegmentationModels.map((model) => ({
@@ -203,10 +202,6 @@ License: CECILL-C
       },
     ),
   );
-
-  $effect(() => {
-    void ensureInferenceRegistryLoaded();
-  });
 
   $effect(() => {
     if (!showInteractiveSegmenterTools || smartInferencePending) {

@@ -27,8 +27,6 @@ License: CECILL-C
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
-  // Import stores and API functions
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import {
     inferenceServerStore,
     selectedStaticSegmentationModel,
@@ -409,10 +407,6 @@ License: CECILL-C
       interactiveSegmenter.clear(viewRef);
       resetSmartSegmentationFeedback();
     });
-  });
-
-  $effect(() => {
-    void ensureInferenceRegistryLoaded();
   });
 </script>
 

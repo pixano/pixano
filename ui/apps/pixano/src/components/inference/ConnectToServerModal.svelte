@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { connectToInferenceServer } from "$lib/services/inferenceService";
+  import { connectToInferenceServer } from "$lib/services/inferenceService.svelte";
   import { Input, PrimaryButton } from "$lib/ui";
 
   interface Props {
