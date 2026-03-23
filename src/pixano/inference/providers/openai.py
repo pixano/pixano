@@ -87,10 +87,7 @@ class OpenAICompatibleProvider(HTTPProvider):
             return []
         response = await self.get("/v1/models")
         data = response.json()
-        return [
-            ModelInfo(name=item["id"], capability="vlm")
-            for item in data.get("data", [])
-        ]
+        return [ModelInfo(name=item["id"], capability="vlm") for item in data.get("data", [])]
 
     async def get_server_info(self) -> ServerInfo:
         """Get server information."""

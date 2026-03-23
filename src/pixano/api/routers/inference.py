@@ -749,7 +749,9 @@ def _detect_image_mime(blob: bytes) -> str:
 
 
 def _resolve_dataset_images(
-    dataset_id: str, image_ids: list[str], settings: Settings,
+    dataset_id: str,
+    image_ids: list[str],
+    settings: Settings,
 ) -> list[str | Path]:
     """Read image blobs from the dataset and encode them as base64 data URIs."""
     dataset = _get_dataset(dataset_id, settings)
@@ -772,9 +774,7 @@ async def vlm(
 
     resolved_images: list[str | Path] | None = None
     if request.dataset_id and request.image_ids:
-        resolved_images = _resolve_dataset_images(
-            request.dataset_id, request.image_ids, settings
-        )
+        resolved_images = _resolve_dataset_images(request.dataset_id, request.image_ids, settings)
 
     input_data = VLMInput(
         model=request.model,
