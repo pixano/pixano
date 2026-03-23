@@ -6,9 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { untrack } from "svelte";
-
   import { ArrowRight, Database } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { panTool } from "../workspace";
@@ -135,9 +134,7 @@ License: CECILL-C
       <Database weight="thin" size={44} class="text-primary/40" />
     </div>
 
-    <h2 class="text-2xl font-bold tracking-tight text-foreground">
-      Your library is empty
-    </h2>
+    <h2 class="text-2xl font-bold tracking-tight text-foreground">Your library is empty</h2>
 
     <p class="mt-3 text-sm text-muted-foreground max-w-md leading-relaxed">
       Use the Pixano CLI to import a dataset and start your annotation workflow.
@@ -151,8 +148,7 @@ License: CECILL-C
           </span>
         </div>
         <pre
-          class="px-4 py-3 text-xs text-muted-foreground font-mono leading-relaxed text-left overflow-x-auto"
->pixano data import &lt;DATA_DIR&gt; &lt;SOURCE_DIR&gt; \
+          class="px-4 py-3 text-xs text-muted-foreground font-mono leading-relaxed text-left overflow-x-auto">pixano data import &lt;DATA_DIR&gt; &lt;SOURCE_DIR&gt; \
   --info &lt;path/to/info.py:dataset_info&gt;</pre>
       </div>
     </div>
