@@ -23,7 +23,10 @@ License: CECILL-C
   import PromptDebugModal from "../manageModels/PromptDebugModal.svelte";
   import { serializeMessageContent } from "./utils/serializeMessageContent";
   import { selectedVqaModel } from "$lib/stores/inferenceStores.svelte";
-  import { lastVlmPromptStore, type PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
+  import {
+    lastVlmPromptStore,
+    type PixanoInferenceCompletionModel,
+  } from "$lib/stores/vqaStores.svelte";
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
   import {
     getInferenceModelKey,
@@ -95,7 +98,7 @@ License: CECILL-C
     })),
   );
 
-  let vqaModelLabel = $derived.by(() => {
+  let vqaModelLabel: string = $derived.by(() => {
     const entry = inferenceModels.find((m) => m.id === selectedModel);
     if (entry) return entry.selection.name;
     if (!inferenceServer.connected) return "No server";
@@ -325,7 +328,6 @@ License: CECILL-C
   };
 
   const handleVlmAction = async () => {
-
     if (!completionModel) return;
 
     isGenerating = true;
@@ -479,7 +481,7 @@ License: CECILL-C
           selectedModelKey={selectedModel}
           disabled={!inferenceServer.connected || vqaModels.length === 0}
           label={vqaModelLabel}
-          onValueChange={(key) => {
+          onValueChange={(key: string) => {
             selectedModel = key;
           }}
         />
@@ -523,9 +525,7 @@ License: CECILL-C
           tooltipContent={isAnswering ? "Reply" : "Post"}
           class={cn(
             "h-7 w-7 text-primary-foreground shadow-sm",
-            isAnswering
-              ? "bg-warning hover:bg-warning/90"
-              : "bg-primary hover:bg-primary/90",
+            isAnswering ? "bg-warning hover:bg-warning/90" : "bg-primary hover:bg-primary/90",
           )}
         >
           <PaperPlaneRight weight="regular" size={16} />

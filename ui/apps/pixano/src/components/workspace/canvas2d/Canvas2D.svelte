@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import Konva from "konva";
-  import { AiProcessingBadge } from "$lib/ui";
   import { untrack } from "svelte";
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
@@ -84,6 +83,7 @@ License: CECILL-C
   } from "$lib/types/shapeTypes";
   import type { ToolBridge } from "$lib/types/store";
   import type { SmartSegmentationUiState } from "$lib/types/workspace";
+  import { AiProcessingBadge } from "$lib/ui";
 
   interface BrushSettings {
     brushRadius: number;

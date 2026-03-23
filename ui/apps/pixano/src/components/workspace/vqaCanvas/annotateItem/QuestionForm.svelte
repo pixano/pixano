@@ -18,7 +18,6 @@ License: CECILL-C
 
   import { deserializeMessageContent, isQuestionCompleted } from "./utils";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
-  import { AiProcessingBadge } from "$lib/ui";
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
   import type { LabelFormat, QuestionThread } from "$lib/types/vqa";
   import {
@@ -27,6 +26,7 @@ License: CECILL-C
     type DeleteQuestionEvent,
     type GenerateAnswerEvent,
   } from "$lib/types/vqa";
+  import { AiProcessingBadge } from "$lib/ui";
 
   interface Props {
     thread: QuestionThread;

@@ -21,12 +21,12 @@ License: CECILL-C
     type VqaMessageContext,
   } from "../vqaCanvas";
   import { InteractiveSegmenter } from "$lib/segmentation";
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     createErrorSmartSegmentationUiState,
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     inferenceServerStore,
     selectedStaticSegmentationModel,
@@ -443,7 +443,6 @@ License: CECILL-C
   <div class="w-full grow overflow-hidden" style={`max-width: ${vqaAreaMaxWidth}px`}>
     <VqaArea
       messages={messages.value}
-
       inferenceServer={inferenceServerStore.value}
       vqaModels={vqaModels.value}
       completionModels={completionModelsStore.value}

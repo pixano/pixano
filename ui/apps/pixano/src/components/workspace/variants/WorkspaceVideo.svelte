@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import { AiProcessingBadge } from "$lib/ui";
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
@@ -79,7 +78,13 @@ License: CECILL-C
   import { Sam2VideoTracker } from "$lib/trackers";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { SequenceFrame, ShapeType, type EditShape, type SaveMaskShape } from "$lib/ui";
+  import {
+    AiProcessingBadge,
+    SequenceFrame,
+    ShapeType,
+    type EditShape,
+    type SaveMaskShape,
+  } from "$lib/ui";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -960,9 +965,7 @@ License: CECILL-C
         {merge}
       />
       {#if playbackState.value.isBuffering}
-        <div
-          class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
-        >
+        <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <AiProcessingBadge message="Buffering next frames..." />
         </div>
       {/if}

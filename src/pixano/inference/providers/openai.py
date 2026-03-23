@@ -42,6 +42,7 @@ from ..types import (
 )
 from .base import HTTPProvider
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +54,7 @@ class OpenAICompatibleProvider(HTTPProvider):
     """
 
     def __init__(self, url: str, api_key: str | None = None):
+        """Initialize the provider."""
         super().__init__(url)
         self._api_key = api_key
 
@@ -67,9 +69,12 @@ class OpenAICompatibleProvider(HTTPProvider):
 
     @property
     @abstractmethod
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """Provider name."""
+        ...
 
     async def get_capabilities(self) -> ProviderCapabilities:
+        """Return provider capabilities."""
         return ProviderCapabilities(
             tasks=[InferenceTask.VLM],
             supports_batching=False,
@@ -77,6 +82,7 @@ class OpenAICompatibleProvider(HTTPProvider):
         )
 
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
+        """List available models."""
         if task is not None and task != InferenceTask.VLM:
             return []
         response = await self.get("/v1/models")
@@ -87,6 +93,7 @@ class OpenAICompatibleProvider(HTTPProvider):
         ]
 
     async def get_server_info(self) -> ServerInfo:
+        """Get server information."""
         models = await self.list_models()
         return ServerInfo(
             app_name=self.name,
@@ -102,6 +109,7 @@ class OpenAICompatibleProvider(HTTPProvider):
         )
 
     async def vlm(self, input_data: VLMInput, timeout: float = 120.0) -> VLMResult:
+        """Run VLM inference."""
         messages = self._build_chat_messages(input_data)
         request_body: dict[str, Any] = {
             "model": input_data.model,
@@ -196,21 +204,27 @@ class OpenAICompatibleProvider(HTTPProvider):
     # --- Unsupported tasks ---
 
     async def segmentation(self, input_data: SegmentationInput, timeout: float = 60.0) -> SegmentationResult:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support segmentation")
 
     async def tracking(self, input_data: TrackingInput, timeout: float = 120.0) -> TrackingResult:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
 
     async def submit_tracking_job(self, input_data: TrackingInput, timeout: float = 30.0) -> TrackingJobStatus:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
 
     async def get_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
 
     async def cancel_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
 
     async def detection(self, input_data: DetectionInput, timeout: float = 60.0) -> DetectionResult:
+        """Not supported."""
         raise TaskNotSupportedError(f"Provider '{self.name}' does not support detection")
 
 
@@ -219,10 +233,12 @@ class OpenAIProvider(OpenAICompatibleProvider):
     """OpenAI API provider."""
 
     def __init__(self, api_key: str, url: str = "https://api.openai.com"):
+        """Initialize the provider."""
         super().__init__(url=url, api_key=api_key)
 
     @property
     def name(self) -> str:
+        """Provider name."""
         return "openai"
 
 
@@ -231,10 +247,12 @@ class VLLMProvider(OpenAICompatibleProvider):
     """vLLM provider (OpenAI-compatible API)."""
 
     def __init__(self, url: str, api_key: str | None = None):
+        """Initialize the provider."""
         super().__init__(url=url, api_key=api_key)
 
     @property
     def name(self) -> str:
+        """Provider name."""
         return "vllm"
 
 
@@ -243,10 +261,12 @@ class LMStudioProvider(OpenAICompatibleProvider):
     """LM Studio provider (OpenAI-compatible API)."""
 
     def __init__(self, url: str, api_key: str | None = None):
+        """Initialize the provider."""
         super().__init__(url=url, api_key=api_key)
 
     @property
     def name(self) -> str:
+        """Provider name."""
         return "lmstudio"
 
 
@@ -261,10 +281,12 @@ class LiteLLMProvider(OpenAICompatibleProvider):
     """
 
     def __init__(self, url: str, api_key: str | None = None):
+        """Initialize the provider."""
         super().__init__(url=url, api_key=api_key)
 
     @property
     def name(self) -> str:
+        """Provider name."""
         return "litellm"
 
     async def vlm(self, input_data: VLMInput, timeout: float = 120.0) -> VLMResult:

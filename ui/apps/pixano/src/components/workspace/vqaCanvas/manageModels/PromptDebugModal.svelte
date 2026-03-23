@@ -17,9 +17,7 @@ License: CECILL-C
   let { entry, onClose }: Props = $props();
 
   let formattedPrompt = $derived(
-    typeof entry.prompt === "string"
-      ? entry.prompt
-      : JSON.stringify(entry.prompt, null, 2),
+    typeof entry.prompt === "string" ? entry.prompt : JSON.stringify(entry.prompt, null, 2),
   );
 
   let formattedTime = $derived(new Date(entry.timestamp).toLocaleTimeString());
@@ -80,8 +78,7 @@ License: CECILL-C
     <!-- Prompt content -->
     <div class="flex-1 min-h-0 px-6 pb-6">
       <pre
-        class="w-full h-full overflow-auto rounded-xl border border-border bg-muted/30 p-4 text-[12px] leading-relaxed font-mono text-foreground whitespace-pre-wrap break-words"
-      >{formattedPrompt}</pre>
+        class="w-full h-full overflow-auto rounded-xl border border-border bg-muted/30 p-4 text-[12px] leading-relaxed font-mono text-foreground whitespace-pre-wrap break-words">{formattedPrompt}</pre>
     </div>
   </div>
 </div>

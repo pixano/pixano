@@ -160,16 +160,15 @@ License: CECILL-C
 
         <!-- User prompt template (read-only preview) -->
         <div class="flex flex-col flex-1 min-h-0 space-y-1.5">
-          <span class="text-[13px] font-medium text-muted-foreground shrink-0"
-            >User Prompt Template
+          <span class="text-[13px] font-medium text-muted-foreground shrink-0">
+            User Prompt Template
             <span class="text-[11px] font-normal opacity-60">(auto-generated, read-only)</span>
           </span>
           <div
             class="flex-1 min-h-0 rounded-xl border border-border/50 bg-muted/50 overflow-y-auto"
           >
             <pre
-              class="py-2.5 px-3.5 text-[12px] leading-relaxed text-muted-foreground font-sans whitespace-pre-wrap break-words"
-            >{userPromptPreview}</pre>
+              class="py-2.5 px-3.5 text-[12px] leading-relaxed text-muted-foreground font-sans whitespace-pre-wrap break-words">{userPromptPreview}</pre>
           </div>
         </div>
       </div>

@@ -20,13 +20,49 @@ License: CECILL-C
   let { defaultUrl = "", onClose, onConnected }: Props = $props();
 
   const providerTypes = [
-    { value: "pixano-inference", label: "Pixano Inference", urlRequired: true, apiKeyRequired: false, defaultUrl: "" },
-    { value: "openai", label: "OpenAI", urlRequired: false, apiKeyRequired: true, defaultUrl: "https://api.openai.com" },
-    { value: "gemini", label: "Gemini", urlRequired: false, apiKeyRequired: true, defaultUrl: "https://generativelanguage.googleapis.com" },
+    {
+      value: "pixano-inference",
+      label: "Pixano Inference",
+      urlRequired: true,
+      apiKeyRequired: false,
+      defaultUrl: "",
+    },
+    {
+      value: "openai",
+      label: "OpenAI",
+      urlRequired: false,
+      apiKeyRequired: true,
+      defaultUrl: "https://api.openai.com",
+    },
+    {
+      value: "gemini",
+      label: "Gemini",
+      urlRequired: false,
+      apiKeyRequired: true,
+      defaultUrl: "https://generativelanguage.googleapis.com",
+    },
     { value: "vllm", label: "vLLM", urlRequired: true, apiKeyRequired: false, defaultUrl: "" },
-    { value: "lmstudio", label: "LM Studio", urlRequired: true, apiKeyRequired: false, defaultUrl: "" },
-    { value: "ollama", label: "Ollama", urlRequired: true, apiKeyRequired: false, defaultUrl: "http://localhost:11434" },
-    { value: "litellm", label: "LiteLLM", urlRequired: false, apiKeyRequired: false, defaultUrl: "http://localhost:4000" },
+    {
+      value: "lmstudio",
+      label: "LM Studio",
+      urlRequired: true,
+      apiKeyRequired: false,
+      defaultUrl: "",
+    },
+    {
+      value: "ollama",
+      label: "Ollama",
+      urlRequired: true,
+      apiKeyRequired: false,
+      defaultUrl: "http://localhost:11434",
+    },
+    {
+      value: "litellm",
+      label: "LiteLLM",
+      urlRequired: false,
+      apiKeyRequired: false,
+      defaultUrl: "http://localhost:4000",
+    },
   ];
 
   const providerItems = providerTypes.map((p) => ({ value: p.value, label: p.label }));
@@ -38,10 +74,15 @@ License: CECILL-C
   let error = $state("");
   let isProviderOpen = $state(false);
 
-  let selectedProvider = $derived(providerTypes.find((p) => p.value === selectedType)!);
+  let selectedProvider = $derived(
+    providerTypes.find((p) => p.value === selectedType) ?? providerTypes[0],
+  );
   let selectedLabel = $derived(selectedProvider.label);
   let showUrl = $derived(selectedProvider.urlRequired || selectedProvider.defaultUrl !== "");
-  let showApiKey = $derived(selectedProvider.apiKeyRequired || ["vllm", "lmstudio", "ollama", "litellm"].includes(selectedType));
+  let showApiKey = $derived(
+    selectedProvider.apiKeyRequired ||
+      ["vllm", "lmstudio", "ollama", "litellm"].includes(selectedType),
+  );
 
   $effect(() => {
     url = defaultUrl || selectedProvider.defaultUrl;
@@ -160,7 +201,9 @@ License: CECILL-C
                   >
                     <Check class="h-3 w-3" />
                   </div>
-                  <span class={cn("font-medium", { "text-foreground": isSelected })}>{item.label}</span>
+                  <span class={cn("font-medium", { "text-foreground": isSelected })}>
+                    {item.label}
+                  </span>
                 </Select.Item>
               {/each}
             </Select.Content>
@@ -180,12 +223,12 @@ License: CECILL-C
             type="text"
             value={url}
             placeholder={selectedProvider.defaultUrl || "http://localhost:8000"}
-            oninput={(event) => {
+            oninput={(event: Event) => {
               url = (event.currentTarget as HTMLInputElement).value;
             }}
-            onkeyup={(event) => {
+            onkeyup={(event: KeyboardEvent) => {
               event.stopPropagation();
-              if ((event as KeyboardEvent).key === "Enter") void handleConnect();
+              if (event.key === "Enter") void handleConnect();
             }}
             class="h-10 px-3.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-primary/5"
           />
@@ -204,12 +247,12 @@ License: CECILL-C
             type="password"
             value={apiKey}
             placeholder="Enter API key"
-            oninput={(event) => {
+            oninput={(event: Event) => {
               apiKey = (event.currentTarget as HTMLInputElement).value;
             }}
-            onkeyup={(event) => {
+            onkeyup={(event: KeyboardEvent) => {
               event.stopPropagation();
-              if ((event as KeyboardEvent).key === "Enter") void handleConnect();
+              if (event.key === "Enter") void handleConnect();
             }}
             class="h-10 px-3.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-primary/5"
           />

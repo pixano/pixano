@@ -20,13 +20,16 @@ class OllamaProvider(OpenAICompatibleProvider):
     """Ollama provider."""
 
     def __init__(self, url: str = "http://localhost:11434", api_key: str | None = None):
+        """Initialize the provider."""
         super().__init__(url=url, api_key=api_key)
 
     @property
     def name(self) -> str:
+        """Provider name."""
         return "ollama"
 
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
+        """List available models."""
         if task is not None and task != InferenceTask.VLM:
             return []
         response = await self.get("/api/tags")

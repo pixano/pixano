@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -676,6 +676,7 @@ async def register_inference_server(
     if request.api_key is not None:
         kwargs["api_key"] = request.api_key
 
+    provider: InferenceProvider
     if provider_type == "pixano-inference":
         # Pixano-inference uses its own connection validation flow.
         try:
@@ -749,10 +750,10 @@ def _detect_image_mime(blob: bytes) -> str:
 
 def _resolve_dataset_images(
     dataset_id: str, image_ids: list[str], settings: Settings,
-) -> list[str]:
+) -> list[str | Path]:
     """Read image blobs from the dataset and encode them as base64 data URIs."""
     dataset = _get_dataset(dataset_id, settings)
-    result: list[str] = []
+    result: list[str | Path] = []
     for image_id in image_ids:
         blob_data = _resolve_view_binary(dataset, image_id)
         mime = _detect_image_mime(blob_data)

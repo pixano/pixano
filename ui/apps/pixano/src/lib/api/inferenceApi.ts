@@ -64,9 +64,11 @@ export async function registerInferenceServer(
     if (!response.ok) {
       let detail = `${response.status} ${response.statusText}`;
       try {
-        const body = await response.json();
+        const body = (await response.json()) as { detail?: string };
         if (body.detail) detail = body.detail;
-      } catch {}
+      } catch {
+        // Response body not JSON — use status text
+      }
       console.error("api.registerInferenceServer -", detail);
       return { error: detail };
     }

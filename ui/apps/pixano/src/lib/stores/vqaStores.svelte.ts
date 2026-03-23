@@ -79,9 +79,7 @@ function buildDefaultPrompts(): MessageGenerationPrompts {
   ) as PromptByQuestionType;
 
   return {
-    ...Object.fromEntries(
-      Object.values(MessageTypeEnum).map((key) => [key, answerPrompts]),
-    ),
+    ...Object.fromEntries(Object.values(MessageTypeEnum).map((key) => [key, answerPrompts])),
     [MessageTypeEnum.QUESTION]: questionPrompts,
     [MessageTypeEnum.ANSWER]: answerPrompts,
     as_system: true,
@@ -92,9 +90,7 @@ export function syncCompletionModels(availableModels: InferenceModelSelection[])
   const current = completionModelsStore.value;
   const defaultPrompts = buildDefaultPrompts();
 
-  const existingByKey = new Map(
-    current.map((m) => [getInferenceModelKey(m), m]),
-  );
+  const existingByKey = new Map(current.map((m) => [getInferenceModelKey(m), m]));
 
   const next = availableModels.map(
     (model) =>
@@ -107,8 +103,7 @@ export function syncCompletionModels(availableModels: InferenceModelSelection[])
       },
   );
 
-  const hasChange =
-    next.length !== current.length || next.some((m, i) => m !== current[i]);
+  const hasChange = next.length !== current.length || next.some((m, i) => m !== current[i]);
 
   if (hasChange) {
     completionModelsStore.value = next;

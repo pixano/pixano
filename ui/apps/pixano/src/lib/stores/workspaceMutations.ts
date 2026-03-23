@@ -67,8 +67,6 @@ function getQuestionContext(
   };
 }
 
-type ChatMessage = { role: string; content: string };
-
 // ─── Record History ─────────────────────────────────────────────────────────────
 
 /**
@@ -78,7 +76,7 @@ type ChatMessage = { role: string; content: string };
 function formatRecordHistory(recordId: string, excludeMessageId?: string): string {
   const msgs = messagesStore.value
     .filter((m) => {
-      const rid = (m.data.record_id as string) || (m.data.item_id as string) || "";
+      const rid = (m.data.record_id as string) || m.data.item_id || "";
       return rid === recordId && m.id !== excludeMessageId;
     })
     .sort((a, b) => (a.data.number ?? 0) - (b.data.number ?? 0));
@@ -350,9 +348,7 @@ export const generateAnswer = async (
   const questionContent = String(question.data.content ?? "");
   const choices = (question.data.choices as string[]) ?? [];
 
-  const historyContext = includeHist
-    ? formatRecordHistory(context.recordId, question.id)
-    : "";
+  const historyContext = includeHist ? formatRecordHistory(context.recordId, question.id) : "";
 
   const input: CondititionalGenerationTextImageInput = {
     model: completionModel.name,

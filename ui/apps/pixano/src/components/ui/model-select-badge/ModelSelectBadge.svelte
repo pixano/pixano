@@ -33,12 +33,14 @@ License: CECILL-C
   }
 
   let displayLabel = $derived(
-    shortName(label ?? models.find((m) => getInferenceModelKey(m) === selectedModelKey)?.name ?? "Select model"),
+    shortName(
+      label ??
+        models.find((m) => getInferenceModelKey(m) === selectedModelKey)?.name ??
+        "Select model",
+    ),
   );
 
-  let items = $derived(
-    models.map((m) => ({ value: getInferenceModelKey(m), label: m.name })),
-  );
+  let items = $derived(models.map((m) => ({ value: getInferenceModelKey(m), label: m.name })));
 
   let chipClass = $derived(
     cn(
@@ -76,12 +78,9 @@ License: CECILL-C
         {displayLabel}
       </span>
       <CaretDown
-        class={cn(
-          "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
-          {
-            "rotate-180": isOpen,
-          },
-        )}
+        class={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200", {
+          "rotate-180": isOpen,
+        })}
       />
     {/snippet}
   </Select.Trigger>
