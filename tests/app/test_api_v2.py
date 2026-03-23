@@ -1134,3 +1134,28 @@ class TestPaginatedResponse:
         assert resp2.status_code == 200
         body2 = resp2.json()
         assert len(body2["items"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Empty library
+# ---------------------------------------------------------------------------
+
+
+class TestEmptyLibrary:
+    """Verify the app works gracefully with no datasets."""
+
+    def test_list_datasets_returns_empty(self):
+        tmp = Path(tempfile.mkdtemp())
+        settings = Settings(library_dir=str(tmp), models_dir=str(tmp))
+
+        @lru_cache
+        def _override():
+            return settings
+
+        app = create_app(settings)
+        app.dependency_overrides[get_settings] = _override
+        client = TestClient(app)
+
+        resp = client.get("/datasets")
+        assert resp.status_code == 200
+        assert resp.json() == []
