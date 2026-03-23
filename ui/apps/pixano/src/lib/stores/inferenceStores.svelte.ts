@@ -26,11 +26,11 @@ import {
 // ─── Inference Server ───────────────────────────────────────────────────────────
 
 export const inferenceServerStore = reactiveStore<InferenceServerState>({
+  status: "idle",
   connected: false,
   providers: [],
   defaultProvider: null,
   models: [],
-  isLoading: false,
 });
 
 const STATIC_SEGMENTATION_MODEL_STORAGE_KEY = "pixano-static-segmentation-model";

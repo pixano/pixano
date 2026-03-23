@@ -11,41 +11,34 @@ import {
 } from "$lib/api/inferenceApi";
 import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
 
-function applyDisconnectedState(): void {
+function applyErrorState(): void {
   inferenceServerStore.value = {
+    status: "error",
     connected: false,
     providers: [],
     defaultProvider: null,
     models: [],
-    isLoading: false,
   };
 }
 
 export async function loadInferenceRegistry(): Promise<void> {
-  if (inferenceServerStore.value.isLoading) return;
+  if (inferenceServerStore.value.status === "loading") return;
 
-  inferenceServerStore.update((state) => ({ ...state, isLoading: true }));
+  inferenceServerStore.update((state) => ({ ...state, status: "loading" }));
 
   try {
     const registry = await getInferenceServers();
     const models = registry.connected ? await listInferenceModels() : [];
     inferenceServerStore.value = {
+      status: "loaded",
       connected: registry.connected,
       providers: registry.providers,
       defaultProvider: registry.default_provider,
       models,
-      isLoading: false,
     };
   } catch {
-    applyDisconnectedState();
+    applyErrorState();
   }
-}
-
-export async function ensureInferenceRegistryLoaded(): Promise<void> {
-  const state = inferenceServerStore.value;
-  if (state.isLoading) return;
-  if (state.providers.length > 0 || state.models.length > 0) return;
-  await loadInferenceRegistry();
 }
 
 export async function refreshInferenceModels(): Promise<void> {
@@ -61,3 +54,13 @@ export async function connectToInferenceServer(url: string): Promise<boolean> {
   await loadInferenceRegistry();
   return true;
 }
+
+// Auto-load inference registry on first module import.
+// Follows the codebase pattern of $effect.root() at module level
+// (see theme sync in appStores.svelte.ts, model reconciliation in inferenceStores.svelte.ts).
+$effect.root(() => {
+  $effect(() => {
+    if (inferenceServerStore.value.status !== "idle") return;
+    void loadInferenceRegistry();
+  });
+});

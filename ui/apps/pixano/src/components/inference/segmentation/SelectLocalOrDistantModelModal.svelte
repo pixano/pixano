@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   import { Check, HardDrives, MagicWand } from "phosphor-svelte";
 
-  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService";
   import {
     inferenceServerStore,
     pixanoInferenceTracking,
@@ -37,10 +36,6 @@ License: CECILL-C
   );
 
   let selectedModelKey = $state("");
-
-  $effect(() => {
-    void ensureInferenceRegistryLoaded();
-  });
 
   $effect(() => {
     const availableModels = compatibleModels;
