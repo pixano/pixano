@@ -97,7 +97,7 @@ class VLMRequest(BaseModel):
     prompt: str | list[dict[str, Any]]
     dataset_id: str | None = None
     image_ids: list[str] | None = None
-    max_new_tokens: int = 100
+    max_new_tokens: int = 2048
     temperature: float = 1.0
 
 
@@ -246,6 +246,7 @@ _DEFAULT_PROVIDER_URLS: dict[str, str] = {
     "openai": "https://api.openai.com",
     "gemini": "https://generativelanguage.googleapis.com",
     "ollama": "http://localhost:11434",
+    "litellm": "http://localhost:4000",
 }
 
 
@@ -735,14 +736,28 @@ async def list_inference_models(
     return result
 
 
-def _resolve_dataset_images(dataset_id: str, image_ids: list[str], settings: Settings) -> list[str]:
+def _detect_image_mime(blob: bytes) -> str:
+    """Detect MIME type from image magic bytes."""
+    if blob[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if blob[:2] == b"\xff\xd8":
+        return "image/jpeg"
+    if blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/jpeg"
+
+
+def _resolve_dataset_images(
+    dataset_id: str, image_ids: list[str], settings: Settings,
+) -> list[str]:
     """Read image blobs from the dataset and encode them as base64 data URIs."""
     dataset = _get_dataset(dataset_id, settings)
     result: list[str] = []
     for image_id in image_ids:
         blob_data = _resolve_view_binary(dataset, image_id)
+        mime = _detect_image_mime(blob_data)
         b64 = base64.b64encode(blob_data).decode("ascii")
-        result.append(f"data:image/jpeg;base64,{b64}")
+        result.append(f"data:{mime};base64,{b64}")
     return result
 
 

@@ -415,7 +415,7 @@ class VLMInput:
     model: str
     prompt: str | list[dict[str, Any]]
     images: list[str | Path] | None = None
-    max_new_tokens: int = 100
+    max_new_tokens: int = 2048
     temperature: float = 1.0
 
 

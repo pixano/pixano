@@ -325,6 +325,7 @@ License: CECILL-C
   };
 
   const handleVlmAction = async () => {
+
     if (!completionModel) return;
 
     isGenerating = true;
@@ -333,6 +334,7 @@ License: CECILL-C
         questionId: pendingQuestion.id,
         completionModel,
       });
+
       if (text) questionContent = text;
     } else {
       if (!onGenerateQuestion) {
@@ -340,6 +342,7 @@ License: CECILL-C
         return;
       }
       const generated = await onGenerateQuestion(completionModel, questionType);
+
       if (generated) questionContent = generated.content;
     }
     isGenerating = false;

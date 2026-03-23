@@ -11,6 +11,7 @@ implementations for OpenAI, vLLM, and LM Studio.
 """
 
 import base64
+import logging
 import mimetypes
 import time
 from abc import abstractmethod
@@ -40,6 +41,8 @@ from ..types import (
     VLMResult,
 )
 from .base import HTTPProvider
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAICompatibleProvider(HTTPProvider):
@@ -107,6 +110,8 @@ class OpenAICompatibleProvider(HTTPProvider):
             "temperature": input_data.temperature,
         }
 
+        logger.debug("VLM request — model=%s, max_tokens=%s", input_data.model, input_data.max_new_tokens)
+
         start = time.monotonic()
         response = await self.post("/v1/chat/completions", json=request_body, timeout=timeout)
         processing_time = time.monotonic() - start
@@ -114,10 +119,11 @@ class OpenAICompatibleProvider(HTTPProvider):
         data = response.json()
         choice = data["choices"][0]
         usage_data = data.get("usage", {})
+        generated_text = choice["message"].get("content") or ""
 
         return VLMResult(
             data=VLMOutput(
-                generated_text=choice["message"]["content"],
+                generated_text=generated_text,
                 usage=UsageInfo(
                     prompt_tokens=usage_data.get("prompt_tokens", 0),
                     completion_tokens=usage_data.get("completion_tokens", 0),
@@ -142,19 +148,17 @@ class OpenAICompatibleProvider(HTTPProvider):
                     if msg["role"] == "user":
                         text = msg["content"]
                         msg["content"] = [
-                            *[self._format_image(img) for img in input_data.images],
                             {"type": "text", "text": text},
+                            *[self._format_image(img) for img in input_data.images],
                         ]
                         break
             return messages
 
-        content: list[dict[str, Any]] = []
+        content: list[dict[str, Any]] = [{"type": "text", "text": input_data.prompt}]
 
         if input_data.images:
             for image in input_data.images:
                 content.append(self._format_image(image))
-
-        content.append({"type": "text", "text": input_data.prompt})
 
         return [{"role": "user", "content": content}]
 
@@ -245,3 +249,21 @@ class LMStudioProvider(OpenAICompatibleProvider):
     @property
     def name(self) -> str:
         return "lmstudio"
+
+
+@register_provider("litellm")
+class LiteLLMProvider(OpenAICompatibleProvider):
+    """LiteLLM proxy provider (OpenAI-compatible API).
+
+    Note: LiteLLM has a known bug with base64 image forwarding to Ollama
+    backends (https://github.com/BerriAI/litellm/issues/18338).
+    Vision works correctly when LiteLLM routes to non-Ollama backends
+    (OpenAI, vLLM, etc.) or when the backend model can fetch image URLs.
+    """
+
+    def __init__(self, url: str, api_key: str | None = None):
+        super().__init__(url=url, api_key=api_key)
+
+    @property
+    def name(self) -> str:
+        return "litellm"
