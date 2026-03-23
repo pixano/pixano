@@ -5,12 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import { toDataset, toDatasetInfo } from "./adapters";
-import { requestJson } from "./apiClient";
+import { apiFetch, requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
 import type { Dataset, DatasetInfo } from "$lib/types/dataset";
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
-  const datasets = await requestJson<DatasetInfoResponse[]>("/datasets", {}, "listDatasets");
+  const datasets = await apiFetch<DatasetInfoResponse[]>("/datasets", {}, [], "listDatasets");
   return datasets.map(toDatasetInfo);
 }
 

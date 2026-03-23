@@ -39,10 +39,7 @@ def get_datasets_info(
             return_path=True,
         )
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No datasets found in {settings.library_dir.absolute()}.",
-        )
+        return []
 
     result = []
     for info, path in infos_and_paths:
@@ -52,11 +49,6 @@ def get_datasets_info(
             logger.warning(f"Failed to load dataset info for {path}, skipping.")
             continue
 
-    if not result:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No datasets found in {settings.library_dir.absolute()}.",
-        )
     return result
 
 
