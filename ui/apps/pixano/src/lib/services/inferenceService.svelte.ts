@@ -51,7 +51,7 @@ let _registryLoadAttempted = false;
 
 export async function ensureInferenceRegistryLoaded(): Promise<void> {
   const state = inferenceServerStore.value;
-  if (state.isLoading) return;
+  if (state.status === "loading") return;
   if (state.providers.length > 0 || state.models.length > 0) return;
   if (_registryLoadAttempted) return;
   _registryLoadAttempted = true;

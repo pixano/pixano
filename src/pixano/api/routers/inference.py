@@ -97,7 +97,7 @@ class VLMRequest(BaseModel):
     prompt: str | list[dict[str, Any]]
     dataset_id: str | None = None
     image_ids: list[str] | None = None
-    max_new_tokens: int = 2048
+    max_new_tokens: int | None = None
     temperature: float = 1.0
 
 

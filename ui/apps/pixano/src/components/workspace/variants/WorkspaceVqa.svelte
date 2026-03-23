@@ -21,6 +21,7 @@ License: CECILL-C
     type VqaMessageContext,
   } from "../vqaCanvas";
   import { InteractiveSegmenter } from "$lib/segmentation";
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     createErrorSmartSegmentationUiState,
     createIdleSmartSegmentationUiState,

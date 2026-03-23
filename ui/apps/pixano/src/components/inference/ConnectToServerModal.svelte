@@ -8,7 +8,7 @@ License: CECILL-C
   import { Select } from "bits-ui";
   import { CaretDown, Check, WarningCircle, X } from "phosphor-svelte";
 
-  import { connectToInferenceServer } from "$lib/services/inferenceService";
+  import { connectToInferenceServer } from "$lib/services/inferenceService.svelte";
   import { AiProcessingBadge, cn } from "$lib/ui";
 
   interface Props {

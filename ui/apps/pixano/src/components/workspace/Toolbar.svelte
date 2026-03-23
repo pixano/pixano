@@ -19,6 +19,7 @@ License: CECILL-C
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
   import { polygonIcon } from "$lib/assets";
+  import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     currentSegmentationModels,
     inferenceServerStore,

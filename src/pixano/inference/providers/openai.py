@@ -101,16 +101,15 @@ class OpenAICompatibleProvider(HTTPProvider):
             models_to_capability={m.name: m.capability for m in models},
         )
 
-    async def vlm(self, input_data: VLMInput, timeout: float = 60.0) -> VLMResult:
+    async def vlm(self, input_data: VLMInput, timeout: float = 120.0) -> VLMResult:
         messages = self._build_chat_messages(input_data)
         request_body: dict[str, Any] = {
             "model": input_data.model,
             "messages": messages,
-            "max_tokens": input_data.max_new_tokens,
             "temperature": input_data.temperature,
         }
-
-        logger.debug("VLM request — model=%s, max_tokens=%s", input_data.model, input_data.max_new_tokens)
+        if input_data.max_new_tokens is not None:
+            request_body["max_tokens"] = input_data.max_new_tokens
 
         start = time.monotonic()
         response = await self.post("/v1/chat/completions", json=request_body, timeout=timeout)
@@ -267,3 +266,38 @@ class LiteLLMProvider(OpenAICompatibleProvider):
     @property
     def name(self) -> str:
         return "litellm"
+
+    async def vlm(self, input_data: VLMInput, timeout: float = 120.0) -> VLMResult:
+        """Override to add think=False for Ollama reasoning models behind LiteLLM."""
+        messages = self._build_chat_messages(input_data)
+        request_body: dict[str, Any] = {
+            "model": input_data.model,
+            "messages": messages,
+            "temperature": input_data.temperature,
+            "think": False,
+        }
+        if input_data.max_new_tokens is not None:
+            request_body["max_tokens"] = input_data.max_new_tokens
+
+        start = time.monotonic()
+        response = await self.post("/v1/chat/completions", json=request_body, timeout=timeout)
+        processing_time = time.monotonic() - start
+
+        data = response.json()
+        choice = data["choices"][0]
+        usage_data = data.get("usage", {})
+        generated_text = choice["message"].get("content") or ""
+
+        return VLMResult(
+            data=VLMOutput(
+                generated_text=generated_text,
+                usage=UsageInfo(
+                    prompt_tokens=usage_data.get("prompt_tokens", 0),
+                    completion_tokens=usage_data.get("completion_tokens", 0),
+                    total_tokens=usage_data.get("total_tokens", 0),
+                ),
+            ),
+            timestamp=datetime.now(tz=timezone.utc),
+            processing_time=processing_time,
+            metadata={"model": input_data.model, "provider": self.name},
+        )
