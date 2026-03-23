@@ -146,10 +146,11 @@ def export_video_test(
                 categories.append(category_map.get(ann.get("category_id", 0), "unknown"))
 
         entry: dict = {
+            "status": "validated",
             "views": {
                 "rgb": f"rgb/{out_name}",
                 "thermal": f"thermal/{out_name}",
-            }
+            },
         }
         if bboxes:
             entry["entities"] = [
@@ -286,6 +287,7 @@ def export_video_test_video_mode(
                     )
 
         entry = {
+            "status": "validated",
             "views": {
                 "rgb": {"path": f"rgb/{video_name}/*.jpg", "fps": 30},
                 "thermal": {"path": f"thermal/{video_name}/*.jpg", "fps": 30},
