@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   import { isQuestionCompleted } from "./annotateItem/utils";
   import VqaChatThread from "./annotateItem/VqaChatThread.svelte";
-  import VqaHeader from "./annotateItem/VqaHeader.svelte";
   import VqaInputArea from "./annotateItem/VqaInputArea.svelte";
   import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { Message } from "$lib/types/dataset";
@@ -26,16 +25,18 @@ License: CECILL-C
 
   interface Props {
     messages: Message[];
-    vqaSectionWidth: number;
     inferenceServer: InferenceServerState;
     vqaModels: InferenceModel[];
     completionModels: PixanoInferenceCompletionModel[];
     onCompletionModelsChange?: (models: PixanoInferenceCompletionModel[]) => void;
     onStoreQuestion?: (event: StoreQuestionEvent) => void;
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
-    onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
+    onGenerateAnswer?: (event: GenerateAnswerEvent) => Promise<string | null>;
     onDeleteQuestion?: (event: DeleteQuestionEvent) => void;
-    onGenerateQuestion?: (completionModel: InferenceModelSelection) => Promise<{
+    onGenerateQuestion?: (
+      completionModel: InferenceModelSelection,
+      questionType: import("$lib/types/dataset").QuestionTypeEnum,
+    ) => Promise<{
       content: string;
       choices: string[];
       question_type: import("$lib/types/dataset").QuestionTypeEnum;
@@ -44,7 +45,6 @@ License: CECILL-C
 
   let {
     messages,
-    vqaSectionWidth,
     inferenceServer,
     vqaModels,
     completionModels,
@@ -63,17 +63,15 @@ License: CECILL-C
   let pendingQuestion = $derived(
     lastThread && !isQuestionCompleted(lastThread.messages) ? lastThread.question : null,
   );
+
+  let pendingInputText = $state("");
+
+  function handleFillInput(text: string) {
+    pendingInputText = text;
+  }
 </script>
 
 <div class="flex flex-col h-full bg-card overflow-hidden">
-  <VqaHeader
-    {vqaSectionWidth}
-    {inferenceServer}
-    {vqaModels}
-    {completionModels}
-    {onCompletionModelsChange}
-  />
-
   <div class="flex-1 overflow-hidden">
     <VqaChatThread
       {questionThreads}
@@ -81,18 +79,20 @@ License: CECILL-C
       {onAnswerContentChange}
       {onGenerateAnswer}
       {onDeleteQuestion}
+      onFillInput={handleFillInput}
     />
   </div>
 
   <VqaInputArea
     {pendingQuestion}
+    {inferenceServer}
+    {vqaModels}
     {completionModels}
+    {onCompletionModelsChange}
     {onStoreQuestion}
     {onAnswerContentChange}
     {onGenerateAnswer}
     {onGenerateQuestion}
+    bind:pendingInputText
   />
 </div>
-
-<style>
-</style>

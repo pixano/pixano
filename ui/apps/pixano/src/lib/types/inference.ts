@@ -81,7 +81,8 @@ export interface CondititionalGenerationTextImageInput {
   model: string;
   provider_name?: string | null;
   prompt: string | Array<{ role: string; content: string }>;
-  images?: string[] | null;
+  dataset_id?: string | null;
+  image_ids?: string[] | null;
   max_new_tokens?: number;
   temperature?: number;
 }

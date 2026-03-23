@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { completionModelsStore } from "./vqaStores.svelte";
+import { completionModelsStore, lastVlmPromptStore } from "./vqaStores.svelte";
 import { annotations } from "./workspaceBaseStores.svelte";
 import { messages as messagesStore } from "./workspaceStores.svelte";
 import * as api from "$lib/api";
@@ -31,6 +31,8 @@ import { createMessage, updateMessage } from "$lib/utils/messageUtils";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { buildQuestionThreads } from "$lib/utils/vqaThreads";
 
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
 function getMessageEntityIds(message: Message): string[] {
   if (Array.isArray(message.data.entity_ids)) {
     return message.data.entity_ids as string[];
@@ -41,25 +43,6 @@ function getMessageEntityIds(message: Message): string[] {
   return [];
 }
 
-function buildPrompt(
-  instruction: string,
-  userContent: string,
-  asSystem: boolean,
-): CondititionalGenerationTextImageInput["prompt"] {
-  if (instruction.trim() === "") {
-    return userContent;
-  }
-
-  if (asSystem) {
-    return [
-      { role: "system", content: instruction },
-      { role: "user", content: userContent },
-    ];
-  }
-
-  return [{ role: "user", content: `${instruction}\n\n${userContent}`.trim() }];
-}
-
 function getNextMessageNumber(conversationId: string): number {
   const conversationMessages = messagesStore.value.filter(
     (message) => (message.data.conversation_id as string) === conversationId,
@@ -67,6 +50,176 @@ function getNextMessageNumber(conversationId: string): number {
   return conversationMessages.length === 0
     ? 0
     : Math.max(...conversationMessages.map((message) => message.data.number ?? 0)) + 1;
+}
+
+function getQuestionContext(
+  question: Message,
+  datasetId: string,
+  imageIds: string[],
+): VqaMessageContext {
+  return {
+    recordId: (question.data.record_id as string) ?? question.data.item_id ?? "",
+    viewId: (question.data.view_id as string) ?? "",
+    conversationId: (question.data.conversation_id as string) ?? "",
+    entityIds: getMessageEntityIds(question),
+    datasetId,
+    imageIds,
+  };
+}
+
+type ChatMessage = { role: string; content: string };
+
+// ─── Record History ─────────────────────────────────────────────────────────────
+
+/**
+ * Format all Q&A messages for a record as a structured context string.
+ * Groups questions with their answers as `- Q: ... | A: ...` pairs.
+ */
+function formatRecordHistory(recordId: string, excludeMessageId?: string): string {
+  const msgs = messagesStore.value
+    .filter((m) => {
+      const rid = (m.data.record_id as string) || (m.data.item_id as string) || "";
+      return rid === recordId && m.id !== excludeMessageId;
+    })
+    .sort((a, b) => (a.data.number ?? 0) - (b.data.number ?? 0));
+
+  if (msgs.length === 0) return "";
+
+  const lines: string[] = [];
+  let currentQ = "";
+  for (const m of msgs) {
+    if (m.data.type === MessageTypeEnum.QUESTION) {
+      if (currentQ) lines.push(`- Q: ${currentQ}`);
+      currentQ = String(m.data.content ?? "");
+    } else {
+      const answer = String(m.data.content ?? "");
+      if (currentQ) {
+        lines.push(`- Q: ${currentQ} | A: ${answer}`);
+        currentQ = "";
+      }
+    }
+  }
+  if (currentQ) lines.push(`- Q: ${currentQ}`);
+
+  return lines.join("\n");
+}
+
+// ─── Task Templates ─────────────────────────────────────────────────────────────
+
+const NO_REPETITION_RULE =
+  "NO REPETITION: Do not ask anything conceptually similar to questions in the Existing Q&A Context.";
+const VISUAL_GROUNDING_RULE =
+  "VISUAL GROUNDING: The question must be answerable ONLY by analyzing the image.";
+
+export function questionTaskBody(questionType: QuestionTypeEnum, hasHistory: boolean): string {
+  const rules: string[] = [];
+  if (hasHistory) rules.push(NO_REPETITION_RULE);
+  rules.push(VISUAL_GROUNDING_RULE);
+
+  switch (questionType) {
+    case QuestionTypeEnum.SINGLE_CHOICE:
+    case QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION:
+      rules.push(
+        "The answer must be definitively 'Yes' or 'No' based on the image.",
+        "OUTPUT FORMAT: Output ONLY the raw text of your new question. No prefixes, quotes, or conversational text.",
+      );
+      return `Generate ONE NEW yes/no question about the visual content of this image.\n\n### Rules:\n${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+
+    case QuestionTypeEnum.MULTI_CHOICE:
+    case QuestionTypeEnum.MULTI_CHOICE_EXPLANATION:
+      rules.push(
+        "Exactly one option must be correct. The others should be plausible distractors.",
+        "OUTPUT FORMAT:\nQuestion text\nA. first option\nB. second option\nC. third option\nD. fourth option",
+      );
+      return `Generate ONE NEW multiple-choice question about the visual content of this image with exactly 4 options.\n\n### Rules:\n${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+
+    default:
+      rules.push(
+        "HIGH DIFFICULTY: Ask about spatial relationships, actions, fine-grained details, text in the image, or counting. Avoid trivial object identification.",
+        "OUTPUT FORMAT: Output ONLY the raw text of your new question. No prefixes, quotes, or conversational text.",
+      );
+      return `Generate ONE NEW open-ended question about the visual content of this image.\n\n### Rules:\n${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+  }
+}
+
+export function answerTaskBody(
+  questionType: QuestionTypeEnum,
+  questionContent: string,
+  choices: string[],
+): string {
+  const formattedChoices =
+    choices.length > 0
+      ? choices.map((c, i) => `${String.fromCharCode(65 + i)}. ${c}`).join("\n")
+      : "";
+
+  switch (questionType) {
+    case QuestionTypeEnum.SINGLE_CHOICE:
+      return `Answer the following yes/no question about this image.\n\n### Question:\n${questionContent}\n\n### Rules:\n1. Reply with exactly 'Yes' or 'No'.\n2. Base your answer ONLY on what you see in the image.`;
+
+    case QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION:
+      return `Answer the following yes/no question about this image.\n\n### Question:\n${questionContent}\n\n### Rules:\n1. Reply with 'Yes' or 'No' followed by a brief explanation.\n2. Base your answer ONLY on what you see in the image.`;
+
+    case QuestionTypeEnum.MULTI_CHOICE:
+      return `Answer the following multiple-choice question about this image.\n\n### Question:\n${questionContent}\n\n### Choices:\n${formattedChoices}\n\n### Rules:\n1. Reply with ONLY the letter of the correct answer (e.g. 'A').\n2. Base your answer ONLY on what you see in the image.`;
+
+    case QuestionTypeEnum.MULTI_CHOICE_EXPLANATION:
+      return `Answer the following multiple-choice question about this image.\n\n### Question:\n${questionContent}\n\n### Choices:\n${formattedChoices}\n\n### Rules:\n1. Reply with the letter of the correct answer followed by a brief explanation.\n2. Base your answer ONLY on what you see in the image.`;
+
+    default:
+      return `Answer the following question about this image concisely and accurately.\n\n### Question:\n${questionContent}\n\n### Rules:\n1. Base your answer ONLY on what you see in the image.\n2. Be concise but complete.\n3. OUTPUT FORMAT: Output ONLY the answer text. No prefixes or conversational text.`;
+  }
+}
+
+// ─── Prompt Builder ─────────────────────────────────────────────────────────────
+
+interface PromptOptions {
+  systemInstruction: string;
+  taskBody: string;
+  historyContext: string;
+}
+
+/**
+ * Build a structured prompt for the VLM API.
+ *
+ * Always produces exactly 2 messages:
+ * - system: the editable system instruction (expert role)
+ * - user: optional history context section + task body with rules
+ *
+ * History is NEVER injected as separate chat messages — it's formatted
+ * as a `### Existing Q&A Context` section inside the user message.
+ */
+function buildPrompt(opts: PromptOptions): CondititionalGenerationTextImageInput["prompt"] {
+  const { systemInstruction, taskBody, historyContext } = opts;
+
+  const sections: string[] = [];
+
+  if (historyContext) {
+    sections.push(`### Existing Q&A Context:\n${historyContext}`);
+  }
+
+  sections.push(`### Task:\n${taskBody}`);
+
+  const userContent = sections.join("\n\n");
+
+  if (!systemInstruction.trim()) {
+    return userContent;
+  }
+
+  return [
+    { role: "system", content: systemInstruction },
+    { role: "user", content: userContent },
+  ];
+}
+
+function logVlmInput(input: CondititionalGenerationTextImageInput): void {
+  lastVlmPromptStore.value = {
+    prompt: input.prompt,
+    model: input.model,
+    provider: input.provider_name ?? "",
+    temperature: input.temperature ?? 0.7,
+    imageCount: input.image_ids?.length ?? 0,
+    timestamp: Date.now(),
+  };
 }
 
 // ─── addAnswer ──────────────────────────────────────────────────────────────────
@@ -169,87 +322,62 @@ export const deleteQuestion = ({ questionId }: DeleteQuestionEvent) => {
   }
 };
 
-function getQuestionContext(question: Message, imageUrl: string): VqaMessageContext {
-  return {
-    recordId: (question.data.record_id as string) ?? question.data.item_id ?? "",
-    viewId: (question.data.view_id as string) ?? "",
-    conversationId: (question.data.conversation_id as string) ?? "",
-    entityIds: getMessageEntityIds(question),
-    imageUrl,
-  };
-}
-
 // ─── generateAnswer ─────────────────────────────────────────────────────────────
 
 export const generateAnswer = async (
   completionModel: InferenceModelSelection,
   question: Message,
-  imageUrl: string,
-) => {
+  datasetId: string,
+  imageIds: string[],
+): Promise<string | null> => {
   const questionData = question.data;
   const selectedCompletionModel =
     completionModelsStore.value.find((m) => isSameInferenceModel(m, completionModel)) ??
     completionModelsStore.value.find((m) => m.selected);
-  const temperature = selectedCompletionModel?.temperature ?? 1.0;
+  const temperature = selectedCompletionModel?.temperature ?? 0.7;
 
   if (!isQuestionData(questionData)) {
     console.error("ERROR: Message is not a question");
-    return;
+    return null;
   }
 
-  if (question.data.question_type !== QuestionTypeEnum.OPEN) {
-    console.warn("Sorry, generation is only available for Open questions for now.");
-    return;
-  }
-
-  const context = getQuestionContext(question, imageUrl);
-  const questionType = question.data.question_type ?? QuestionTypeEnum.OPEN;
-  const promptInstruction =
+  const context = getQuestionContext(question, datasetId, imageIds);
+  const questionType = (question.data.question_type as QuestionTypeEnum) ?? QuestionTypeEnum.OPEN;
+  const systemInstruction =
     selectedCompletionModel?.prompts[MessageTypeEnum.ANSWER][questionType] ?? "";
+  const includeHist = selectedCompletionModel?.includeHistory ?? false;
+
+  const questionContent = String(question.data.content ?? "");
+  const choices = (question.data.choices as string[]) ?? [];
+
+  const historyContext = includeHist
+    ? formatRecordHistory(context.recordId, question.id)
+    : "";
+
   const input: CondititionalGenerationTextImageInput = {
     model: completionModel.name,
     provider_name: completionModel.provider_name,
-    prompt: buildPrompt(
-      promptInstruction,
-      question.data.content,
-      selectedCompletionModel?.prompts.as_system ?? false,
-    ),
-    images: imageUrl ? [imageUrl] : null,
+    prompt: buildPrompt({
+      systemInstruction,
+      taskBody: answerTaskBody(questionType, questionContent, choices),
+      historyContext,
+    }),
+    dataset_id: datasetId || null,
+    image_ids: imageIds.length > 0 ? imageIds : null,
     temperature,
   };
 
-  try {
-    const generatedAnswer = await api.vlm(input);
+  logVlmInput(input);
 
-    if (!generatedAnswer) {
-      console.error(
-        "Model generation error: Unexpected error, please look at Pixano-Inference logs for more information.",
-      );
+  try {
+    const result = await api.vlm(input);
+    if (!result) {
+      console.error("Model generation error: VLM returned no result.");
       return null;
     }
-
-    const newAnswer = createMessage({
-      number: getNextMessageNumber(context.conversationId),
-      record_id: context.recordId,
-      view_id: context.viewId,
-      conversation_id: context.conversationId,
-      entity_ids: context.entityIds,
-      type: MessageTypeEnum.ANSWER,
-      user: "user",
-      inference_metadata: generatedAnswer.metadata ?? {},
-      content: generatedAnswer.data.generated_text,
-      choices: [],
-      source_type: question.data.source_type ?? undefined,
-      source_name: question.data.source_name ?? undefined,
-      source_metadata: question.data.source_metadata ?? undefined,
-    });
-
-    annotations.update((prevAnnotations) => [...prevAnnotations, newAnswer]);
-
-    saveTo("add", newAnswer);
-
-    return newAnswer;
-  } catch {
+    return result.data.generated_text;
+  } catch (err) {
+    console.error("Model generation error:", err);
     return null;
   }
 };
@@ -259,29 +387,32 @@ export const generateAnswer = async (
 export const generateQuestion = async (
   completionModel: InferenceModelSelection,
   context: VqaMessageContext,
+  questionType: QuestionTypeEnum = QuestionTypeEnum.OPEN,
 ): Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null> => {
   const selectedCompletionModel =
     completionModelsStore.value.find((m) => isSameInferenceModel(m, completionModel)) ??
     completionModelsStore.value.find((m) => m.selected);
-  const temperature = selectedCompletionModel?.temperature ?? 1.0;
-  const questionType =
-    (Object.entries(selectedCompletionModel?.prompts[MessageTypeEnum.QUESTION] ?? {}).find(
-      ([, value]) => value.trim() !== "",
-    )?.[0] as QuestionTypeEnum | undefined) ?? QuestionTypeEnum.OPEN;
-  const promptInstruction =
+  const temperature = selectedCompletionModel?.temperature ?? 0.7;
+  const systemInstruction =
     selectedCompletionModel?.prompts[MessageTypeEnum.QUESTION][questionType] ?? "";
+  const includeHist = selectedCompletionModel?.includeHistory ?? false;
+
+  const historyContext = includeHist ? formatRecordHistory(context.recordId) : "";
 
   const input: CondititionalGenerationTextImageInput = {
     model: completionModel.name,
     provider_name: completionModel.provider_name,
-    prompt: buildPrompt(
-      promptInstruction,
-      "Generate one question for this image.",
-      selectedCompletionModel?.prompts.as_system ?? false,
-    ),
-    images: context.imageUrl ? [context.imageUrl] : null,
+    prompt: buildPrompt({
+      systemInstruction,
+      taskBody: questionTaskBody(questionType, historyContext.length > 0),
+      historyContext,
+    }),
+    dataset_id: context.datasetId || null,
+    image_ids: context.imageIds.length > 0 ? context.imageIds : null,
     temperature,
   };
+
+  logVlmInput(input);
 
   try {
     const generatedQuestion = await api.vlm(input);

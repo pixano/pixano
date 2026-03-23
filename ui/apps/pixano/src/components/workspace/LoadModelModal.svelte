@@ -6,11 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   import { modelsUiStore } from "$lib/stores/workspaceStores.svelte";
-  import { LoadingModal } from "$lib/ui";
+  import { AiProcessingBadge } from "$lib/ui";
 
   const currentModalOpen = $derived(modelsUiStore.value.currentModalOpen);
 </script>
 
 {#if currentModalOpen === "loading"}
-  <LoadingModal />
+  <AiProcessingBadge overlay message="Loading model..." />
 {/if}

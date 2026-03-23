@@ -13,7 +13,7 @@ License: CECILL-C
   import { Table } from "./table";
   import { navigating } from "$app/state";
   import type { DatasetBrowser } from "$lib/ui";
-  import { LoadingModal, PrimaryButton, WarningModal } from "$lib/ui";
+  import { AiProcessingBadge, PrimaryButton, WarningModal } from "$lib/ui";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
 
   interface Props {
@@ -149,6 +149,6 @@ License: CECILL-C
 
   <!-- Loading modal while results are being loaded -->
   {#if loadingResultsModal}
-    <LoadingModal />
+    <AiProcessingBadge overlay message="Loading results..." />
   {/if}
 </div>

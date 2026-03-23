@@ -45,27 +45,40 @@ export async function getInferenceServers(): Promise<InferenceProviderRegistry> 
   }
 }
 
-export async function registerInferenceServer(url: string): Promise<ConnectedProvider | null> {
+export async function registerInferenceServer(
+  url: string | null,
+  type: string = "pixano-inference",
+  apiKey: string | null = null,
+): Promise<{ provider: ConnectedProvider } | { error: string }> {
   try {
     const response = await fetch("/app/inference/servers/", {
       headers: JSON_HEADERS,
       method: "POST",
-      body: JSON.stringify({ url: url.trim() }),
+      body: JSON.stringify({
+        type,
+        url: url?.trim() || null,
+        api_key: apiKey?.trim() || null,
+      }),
     });
 
     if (!response.ok) {
-      console.error("api.registerInferenceServer -", response.status, response.statusText);
-      return null;
+      let detail = `${response.status} ${response.statusText}`;
+      try {
+        const body = await response.json();
+        if (body.detail) detail = body.detail;
+      } catch {}
+      console.error("api.registerInferenceServer -", detail);
+      return { error: detail };
     }
 
     const payload = (await response.json()) as {
       provider: ConnectedProvider;
       default_provider: string | null;
     };
-    return payload.provider;
+    return { provider: payload.provider };
   } catch (e) {
     console.error("api.registerInferenceServer -", e);
-    return null;
+    return { error: String(e) };
   }
 }
 

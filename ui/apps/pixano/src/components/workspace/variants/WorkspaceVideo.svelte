@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Canvas2D } from "$components/workspace/canvas2d";
-  import { CircleNotch } from "phosphor-svelte";
+  import { AiProcessingBadge } from "$lib/ui";
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
@@ -961,12 +961,9 @@ License: CECILL-C
       />
       {#if playbackState.value.isBuffering}
         <div
-          class="absolute inset-0 z-10 bg-black/35 flex items-center justify-center pointer-events-none"
+          class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
         >
-          <div class="flex flex-col items-center gap-2 text-white">
-            <CircleNotch weight="regular" class="h-8 w-8 animate-spin" />
-            <p class="text-sm">Buffering next frames...</p>
-          </div>
+          <AiProcessingBadge message="Buffering next frames..." />
         </div>
       {/if}
       {#if isTracking.value}
@@ -1000,10 +997,7 @@ License: CECILL-C
       {/if}
     {:else}
       <div class="h-full w-full bg-canvas flex items-center justify-center">
-        <div class="flex flex-col items-center gap-3 text-muted-foreground">
-          <CircleNotch weight="regular" class="h-8 w-8 animate-spin text-white" />
-          <p class="text-sm">Loading video frames...</p>
-        </div>
+        <AiProcessingBadge message="Loading video frames..." />
       </div>
     {/if}
   </div>

@@ -38,7 +38,15 @@ from .exceptions import (
 from .provider import InferenceProvider
 
 # Concrete providers (importing these registers them)
-from .providers import PixanoInferenceProvider
+from .providers import (
+    GeminiProvider,
+    LMStudioProvider,
+    OllamaProvider,
+    OpenAICompatibleProvider,
+    OpenAIProvider,
+    PixanoInferenceProvider,
+    VLLMProvider,
+)
 from .registry import get_provider, is_provider_registered, list_providers, register_provider
 from .segmentation import segmentation, tracking
 
@@ -104,7 +112,13 @@ __all__ = [
     "VLMResult",
     "UsageInfo",
     # Concrete providers
+    "GeminiProvider",
+    "LMStudioProvider",
+    "OllamaProvider",
+    "OpenAICompatibleProvider",
+    "OpenAIProvider",
     "PixanoInferenceProvider",
+    "VLLMProvider",
     # Task functions
     "segmentation",
     "tracking",

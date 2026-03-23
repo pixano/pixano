@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import Konva from "konva";
-  import { CircleNotch, WarningCircle } from "phosphor-svelte";
+  import { AiProcessingBadge } from "$lib/ui";
   import { untrack } from "svelte";
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
@@ -1996,22 +1996,11 @@ License: CECILL-C
     >
       {#if isSmartInferencePending}
         <div class="absolute inset-0 flex items-center justify-center p-4">
-          <div
-            class="inline-flex items-center gap-3 rounded-xl border border-border/40 bg-card/90 px-4 py-3 text-sm text-foreground shadow-glass-sm backdrop-blur-sm"
-          >
-            <CircleNotch class="h-5 w-5 animate-spin text-primary" />
-            <span>{smartInferenceStatus.message || "Running segmentation..."}</span>
-          </div>
+          <AiProcessingBadge message={smartInferenceStatus.message || "Running segmentation..."} />
         </div>
       {:else}
-        <div
-          class="absolute left-3 top-3 max-w-[min(22rem,calc(100%-1.5rem))] rounded-xl border border-destructive/30 bg-card/95 px-4 py-3 text-sm text-foreground shadow-glass-sm backdrop-blur-sm"
-          role="alert"
-        >
-          <div class="flex items-start gap-3">
-            <WarningCircle class="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-            <p>{smartInferenceStatus.message}</p>
-          </div>
+        <div class="absolute left-3 top-3 max-w-[min(22rem,calc(100%-1.5rem))]">
+          <AiProcessingBadge variant="error" message={smartInferenceStatus.message} />
         </div>
       {/if}
     </div>

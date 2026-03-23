@@ -5,59 +5,173 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { Select } from "bits-ui";
   import {
-    ArrowBendUpLeft,
+    CaretDown,
     Chat,
+    Check,
     CheckCircle,
+    Gear,
     ListNumbers,
     PaperPlaneRight,
-    Question,
     Sparkle,
+    Terminal,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
 
+  import ConfigurePromptModal from "../manageModels/ConfigurePromptModal.svelte";
+  import PromptDebugModal from "../manageModels/PromptDebugModal.svelte";
   import { serializeMessageContent } from "./utils/serializeMessageContent";
-  import type { PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
+  import { selectedVqaModel } from "$lib/stores/inferenceStores.svelte";
+  import { lastVlmPromptStore, type PixanoInferenceCompletionModel } from "$lib/stores/vqaStores.svelte";
   import { QuestionTypeEnum, type Message } from "$lib/types/dataset";
-  import type { InferenceModelSelection } from "$lib/types/inference";
+  import {
+    getInferenceModelKey,
+    type InferenceModel,
+    type InferenceModelSelection,
+    type InferenceServerState,
+  } from "$lib/types/inference";
   import type { LabelFormat, StoreQuestionEvent } from "$lib/types/vqa";
   import {
     ContentChangeEventType,
     type ContentChangeEvent,
     type GenerateAnswerEvent,
   } from "$lib/types/vqa";
-  import { AutoResizeTextarea, IconButton, LoadingModal } from "$lib/ui";
+  import { AiProcessingBadge, AutoResizeTextarea, cn, IconButton, ModelSelectBadge } from "$lib/ui";
+  import { effectProbe } from "$lib/utils/effectProbe";
 
   interface Props {
     pendingQuestion?: Message | null;
+    inferenceServer: InferenceServerState;
+    vqaModels: InferenceModel[];
     completionModels: PixanoInferenceCompletionModel[];
+    onCompletionModelsChange?: (models: PixanoInferenceCompletionModel[]) => void;
     onStoreQuestion?: (event: StoreQuestionEvent) => void;
     onAnswerContentChange?: (event: ContentChangeEvent) => void;
-    onGenerateAnswer?: (event: GenerateAnswerEvent) => void;
+    onGenerateAnswer?: (event: GenerateAnswerEvent) => Promise<string | null>;
     onGenerateQuestion?: (
       completionModel: InferenceModelSelection,
+      questionType: QuestionTypeEnum,
     ) => Promise<{ content: string; choices: string[]; question_type: QuestionTypeEnum } | null>;
+    pendingInputText?: string;
   }
 
   let {
     pendingQuestion = null,
+    inferenceServer,
+    vqaModels,
     completionModels,
+    onCompletionModelsChange,
     onStoreQuestion,
     onAnswerContentChange,
     onGenerateAnswer,
     onGenerateQuestion,
+    pendingInputText = $bindable(""),
   }: Props = $props();
+
   let questionContent = $state("");
   let questionType = $state(QuestionTypeEnum.OPEN);
   let isGenerating = $state(false);
 
+  // Consume text pushed from sibling components (e.g. QuestionForm sparkle button)
+  $effect(() => {
+    if (pendingInputText) {
+      questionContent = pendingInputText;
+      pendingInputText = "";
+    }
+  });
+  let selectedModel = $state("");
+  let showPromptModal = $state(false);
+  let showDebugModal = $state(false);
+  let isQuestionTypeOpen = $state(false);
+
   let completionModel = $derived(completionModels.find((m) => m.selected));
   let isAnswering = $derived(!!pendingQuestion);
 
-  const allowedTypes = [
-    { type: QuestionTypeEnum.OPEN, label: "Open Question", icon: Chat },
-    { type: QuestionTypeEnum.SINGLE_CHOICE, label: "Single Choice", icon: CheckCircle },
-    { type: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple Choice", icon: ListNumbers },
+  let inferenceModels = $derived(
+    vqaModels.map((m) => ({
+      id: getInferenceModelKey(m),
+      selection: { name: m.name, provider_name: m.provider_name },
+    })),
+  );
+
+  let vqaModelLabel = $derived.by(() => {
+    const entry = inferenceModels.find((m) => m.id === selectedModel);
+    if (entry) return entry.selection.name;
+    if (!inferenceServer.connected) return "No server";
+    if (inferenceModels.length === 0) return "No models";
+    return "Select model";
+  });
+
+  // Sync selected model to store and completion models
+  $effect(() => {
+    const model = selectedModel;
+    const models = inferenceModels;
+    if (!model && models.length === 0) return;
+    untrack(() => {
+      effectProbe("VqaInputArea.syncSelectedModel", {
+        selectedModel: model,
+        modelCount: models.length,
+      });
+      if (!model) {
+        if (selectedVqaModel.value !== null) selectedVqaModel.value = null;
+        return;
+      }
+      let hasSelectionChange = false;
+      const nextModels = completionModels.map((m) => {
+        const shouldSelect = getInferenceModelKey(m) === model;
+        if (m.selected === shouldSelect) return m;
+        hasSelectionChange = true;
+        return { ...m, selected: shouldSelect };
+      });
+      const selectedInferenceModel = models.find((entry) => entry.id === model)?.selection ?? null;
+      selectedVqaModel.value = selectedInferenceModel;
+      if (hasSelectionChange) onCompletionModelsChange?.(nextModels);
+    });
+  });
+
+  // Auto-select first model when none is selected
+  $effect(() => {
+    const models = inferenceModels;
+    if (models.length === 0) return;
+    untrack(() => {
+      effectProbe("VqaInputArea.autoselect", {
+        selectedModel,
+        modelCount: models.length,
+      });
+      const hasSelection = models.some((model) => model.id === selectedModel);
+      if (hasSelection) return;
+      const currentSelection = selectedVqaModel.value;
+      const currentSelectionId = currentSelection ? getInferenceModelKey(currentSelection) : "";
+      selectedModel =
+        models.find((model) => model.id === currentSelectionId)?.id ?? models[0]?.id ?? "";
+    });
+  });
+
+  // Question type options
+  const questionTypes = [
+    { value: QuestionTypeEnum.OPEN, label: "Open", icon: Chat },
+    { value: QuestionTypeEnum.SINGLE_CHOICE, label: "Yes / No", icon: CheckCircle },
+    { value: QuestionTypeEnum.MULTI_CHOICE, label: "Multiple", icon: ListNumbers },
   ];
+
+  let questionTypeItems = questionTypes.map((t) => ({ value: t.value, label: t.label }));
+
+  let selectedTypeEntry = $derived(
+    questionTypes.find((t) => t.value === questionType) ?? questionTypes[0],
+  );
+
+  let questionTypeChipClass = $derived(
+    cn(
+      "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-normal shadow-sm backdrop-blur-sm transition-all duration-200",
+      "bg-background/82 text-foreground border-border/45",
+      "hover:bg-background/96 hover:border-border/70 hover:shadow-md",
+      {
+        "border-primary/35 bg-primary/8 shadow-[0_6px_18px_hsl(var(--primary)/0.12)]":
+          isQuestionTypeOpen,
+      },
+    ),
+  );
 
   const parseQuestionInput = (
     text: string,
@@ -76,7 +190,6 @@ License: CECILL-C
     const alphaUpperRegex = /^[A-Z][.)]\s*(.*)/;
     const bulletRegex = /^[-*]\s*(.*)/;
 
-    // Detect label format from first choice line
     const firstLine = potentialChoices[0];
     let labelFormat: LabelFormat = "none";
     if (numericRegex.test(firstLine)) labelFormat = "numeric";
@@ -84,7 +197,6 @@ License: CECILL-C
     else if (alphaUpperRegex.test(firstLine)) labelFormat = "alpha_upper";
     else if (bulletRegex.test(firstLine)) labelFormat = "none";
 
-    // Strip labels from all choice lines
     const choiceRegex = /^([0-9]+[.)]|[a-zA-Z][.)]|[-*])\s*(.*)/;
     const extractedChoices = potentialChoices.map((line) => {
       const match = line.match(choiceRegex);
@@ -121,7 +233,6 @@ License: CECILL-C
         const lowerContent = content.toLowerCase();
         let selectedIndices: number[] = [];
 
-        // 1. Check for Yes/No shortcuts if applicable
         if (isSingleChoice) {
           if (
             lowerContent === "y" ||
@@ -129,18 +240,17 @@ License: CECILL-C
             lowerContent.startsWith("y ") ||
             lowerContent.startsWith("yes ")
           ) {
-            selectedIndices = [0]; // Yes
+            selectedIndices = [0];
           } else if (
             lowerContent === "n" ||
             lowerContent === "no" ||
             lowerContent.startsWith("n ") ||
             lowerContent.startsWith("no ")
           ) {
-            selectedIndices = [1]; // No
+            selectedIndices = [1];
           }
         }
 
-        // 2. Check for label shortcuts (1, 2, a, b, etc.) if no Yes/No match
         if (selectedIndices.length === 0) {
           const parts = content
             .split(/[,\s]+/)
@@ -167,11 +277,7 @@ License: CECILL-C
 
             if (foundIndex !== -1) {
               candidateIndices.push(foundIndex);
-              if (isSingleChoice) break; // Only take first for single choice
-            } else {
-              // If any part doesn't match a label, we might want to treat the whole thing as text
-              // But let's be flexible: if it's just one part and it didn't match, it's text.
-              // If it's multiple parts, some matching labels and some not, it's ambiguous.
+              if (isSingleChoice) break;
             }
           }
 
@@ -180,7 +286,6 @@ License: CECILL-C
           }
         }
 
-        // 3. Serialize if matches were found
         if (selectedIndices.length > 0) {
           const labels = selectedIndices.map((i) => String.fromCharCode(i + 65));
           const explanation = content.replace(/^(yes|no|y|n|[a-z0-9])\s*/i, "").trim();
@@ -199,7 +304,6 @@ License: CECILL-C
         questionType === QuestionTypeEnum.SINGLE_CHOICE_EXPLANATION;
 
       if (isSingleChoice) {
-        // Yes/No is implicit for single choice — no parsing needed
         onStoreQuestion?.({
           content: finalContent,
           question_type: questionType,
@@ -223,25 +327,22 @@ License: CECILL-C
   const handleVlmAction = async () => {
     if (!completionModel) return;
 
+    isGenerating = true;
     if (isAnswering && pendingQuestion) {
-      onGenerateAnswer?.({
+      const text = await onGenerateAnswer?.({
         questionId: pendingQuestion.id,
         completionModel,
       });
+      if (text) questionContent = text;
     } else {
-      if (!onGenerateQuestion) return;
-      isGenerating = true;
-      const generated = await onGenerateQuestion(completionModel);
-      isGenerating = false;
-
-      if (generated) {
-        onStoreQuestion?.({
-          content: generated.content,
-          question_type: generated.question_type,
-          choices: generated.choices || [],
-        });
+      if (!onGenerateQuestion) {
+        isGenerating = false;
+        return;
       }
+      const generated = await onGenerateQuestion(completionModel, questionType);
+      if (generated) questionContent = generated.content;
     }
+    isGenerating = false;
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -267,97 +368,185 @@ License: CECILL-C
       handleSend();
     }
   };
+
+  let placeholder = $derived(
+    isAnswering
+      ? `Answering Question #${(pendingQuestion?.data.number ?? 0) + 1}...`
+      : "Ask a question...",
+  );
 </script>
 
-<div
-  class="p-4 bg-card border-t border-border space-y-3 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] shrink-0"
->
-  <!-- Dynamic Status Label -->
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <div
-        class="flex items-center gap-1.5 px-2 py-0.5 rounded-md {isAnswering
-          ? 'bg-warning/10 text-warning'
-          : 'bg-primary/5 text-primary'} text-[10px] font-bold uppercase tracking-widest border {isAnswering
-          ? 'border-warning/20'
-          : 'border-primary/10'}"
-      >
-        {#if isAnswering}
-          <ArrowBendUpLeft weight="regular" size={14} /> Answering Question #{(pendingQuestion?.data
-            .number ?? 0) + 1}
-        {:else}
-          <Chat weight="regular" size={14} /> New Question
-        {/if}
-      </div>
-    </div>
-  </div>
-
+<div class="p-3 shrink-0">
   <div
-    class="w-full relative {isAnswering
-      ? 'bg-warning/5'
-      : 'bg-muted/30'} rounded-xl border {isAnswering
-      ? 'border-warning/30 focus-within:border-warning/50 focus-within:ring-warning/5'
-      : 'border-border focus-within:border-primary/50 focus-within:ring-primary/5'} focus-within:bg-card focus-within:ring-4 transition-all overflow-hidden"
+    class={cn(
+      "rounded-xl border transition-all overflow-hidden",
+      isAnswering
+        ? "bg-warning/5 border-warning/30 focus-within:border-warning/50 focus-within:ring-warning/5"
+        : "bg-muted/30 border-border focus-within:border-primary/50 focus-within:ring-primary/5",
+      "focus-within:bg-card focus-within:ring-4",
+    )}
   >
     <AutoResizeTextarea
-      placeholder={isAnswering ? "Provide the answer..." : "Ask a question..."}
+      {placeholder}
       bind:value={questionContent}
       onkeydown={handleKeyDown}
       class="w-full bg-transparent border-none focus:ring-0 py-3 px-4 text-sm text-foreground leading-relaxed placeholder:text-muted-foreground resize-none min-h-[44px] max-h-32"
     />
-  </div>
 
-  <div class="flex items-center justify-between gap-3">
-    <div class="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
-      {#if !isAnswering}
-        {#each allowedTypes as item}
-          <IconButton
-            selected={questionType === item.type}
-            onclick={() => (questionType = item.type)}
-            tooltipContent={item.label}
-            class="h-8 w-8"
+    <!-- Toolbar row -->
+    <div class="flex items-center justify-between gap-2 px-2.5 pb-2.5">
+      <div class="flex items-center gap-1.5">
+        <!-- Question type badge -->
+        {#if !isAnswering}
+          <Select.Root
+            type="single"
+            value={questionType}
+            items={questionTypeItems}
+            open={isQuestionTypeOpen}
+            onOpenChange={(open) => (isQuestionTypeOpen = open)}
+            onValueChange={(value) => {
+              if (value) questionType = value as QuestionTypeEnum;
+            }}
           >
-            <item.icon size={14} />
-          </IconButton>
-        {/each}
-      {/if}
-    </div>
+            <Select.Trigger aria-label="Question type" class={questionTypeChipClass}>
+              {#snippet children()}
+                <selectedTypeEntry.icon
+                  weight="regular"
+                  class={cn("h-3 w-3 shrink-0 text-muted-foreground transition-colors", {
+                    "text-primary": isQuestionTypeOpen,
+                  })}
+                />
+                <span class="truncate">{selectedTypeEntry.label}</span>
+                <CaretDown
+                  class={cn(
+                    "h-3 w-3 shrink-0 text-muted-foreground transition-transform duration-200",
+                    { "rotate-180": isQuestionTypeOpen },
+                  )}
+                />
+              {/snippet}
+            </Select.Trigger>
 
-    <div class="flex items-center gap-2">
-      <IconButton
-        onclick={handleVlmAction}
-        disabled={!completionModel || isGenerating}
-        tooltipContent={isAnswering ? "Generate answer with VLM" : "Generate question from VLM"}
-        class="h-10 w-10 bg-muted text-muted-foreground hover:bg-accent border border-border"
-      >
-        <Sparkle weight="regular" size={22} />
-      </IconButton>
+            <Select.Portal>
+              <Select.Content
+                sideOffset={10}
+                class="z-50 min-w-[10rem] overflow-hidden rounded-2xl border border-border/50 bg-popover/96 p-1.5 text-popover-foreground shadow-[0_18px_48px_rgba(15,23,42,0.18)] backdrop-blur-md"
+              >
+                {#each questionTypes as qt}
+                  {@const isSelected = questionType === qt.value}
+                  <Select.Item
+                    value={qt.value}
+                    label={qt.label}
+                    class="cursor-pointer rounded-xl px-3 py-2 outline-none transition-colors data-[highlighted]:bg-accent/80 data-[highlighted]:text-accent-foreground"
+                  >
+                    {#snippet children()}
+                      <div class="flex items-center gap-3">
+                        <div
+                          class={cn(
+                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-background/70",
+                            isSelected
+                              ? "border-primary/25 text-primary"
+                              : "border-border/35 text-muted-foreground/70",
+                          )}
+                        >
+                          {#if isSelected}
+                            <Check class="h-3 w-3" />
+                          {:else}
+                            <qt.icon weight="regular" class="h-3 w-3" />
+                          {/if}
+                        </div>
+                        <span
+                          class={cn("text-[13px] font-medium", {
+                            "text-foreground font-semibold": isSelected,
+                          })}
+                        >
+                          {qt.label}
+                        </span>
+                      </div>
+                    {/snippet}
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
+        {/if}
 
-      <IconButton
-        onclick={handleSend}
-        disabled={questionContent.trim() === ""}
-        tooltipContent={isAnswering ? "Reply" : "Post"}
-        class="h-10 w-10 {isAnswering
-          ? 'bg-warning hover:bg-warning/90'
-          : 'bg-primary hover:bg-primary/90'} text-primary-foreground shadow-md"
-      >
-        <PaperPlaneRight weight="regular" size={22} />
-      </IconButton>
+        <!-- Model badge -->
+        <ModelSelectBadge
+          models={vqaModels}
+          selectedModelKey={selectedModel}
+          disabled={!inferenceServer.connected || vqaModels.length === 0}
+          label={vqaModelLabel}
+          onValueChange={(key) => {
+            selectedModel = key;
+          }}
+        />
+
+        <!-- Settings button -->
+        <IconButton
+          tooltipContent="Model & Prompt Settings"
+          disabled={completionModels.length === 0}
+          onclick={() => (showPromptModal = !showPromptModal)}
+          class="h-7 w-7"
+        >
+          <Gear weight="regular" size={14} />
+        </IconButton>
+
+        <!-- Debug prompt viewer -->
+        <IconButton
+          tooltipContent="View last VLM prompt"
+          disabled={!lastVlmPromptStore.value}
+          onclick={() => (showDebugModal = true)}
+          class="h-7 w-7"
+        >
+          <Terminal weight="regular" size={14} />
+        </IconButton>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <!-- VLM action -->
+        <IconButton
+          onclick={handleVlmAction}
+          disabled={!completionModel || isGenerating}
+          tooltipContent={isAnswering ? "Generate answer with VLM" : "Generate question from VLM"}
+          class="h-7 w-7 bg-muted/60 text-muted-foreground hover:bg-accent border border-border/50"
+        >
+          <Sparkle weight="regular" size={16} />
+        </IconButton>
+
+        <!-- Send -->
+        <IconButton
+          onclick={handleSend}
+          disabled={questionContent.trim() === ""}
+          tooltipContent={isAnswering ? "Reply" : "Post"}
+          class={cn(
+            "h-7 w-7 text-primary-foreground shadow-sm",
+            isAnswering
+              ? "bg-warning hover:bg-warning/90"
+              : "bg-primary hover:bg-primary/90",
+          )}
+        >
+          <PaperPlaneRight weight="regular" size={16} />
+        </IconButton>
+      </div>
     </div>
   </div>
-
-  <p class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
-    <Question weight="regular" size={14} />
-    {#if isAnswering}
-      Complete this question by providing an answer manually or using <strong>VLM</strong>
-      .
-    {:else}
-      Type a question or use <strong>VLM</strong>
-      to suggest one.
-    {/if}
-  </p>
 </div>
 
+{#if showPromptModal}
+  <ConfigurePromptModal
+    {completionModels}
+    {onCompletionModelsChange}
+    onCancelPrompt={() => (showPromptModal = false)}
+  />
+{/if}
+
+{#if showDebugModal && lastVlmPromptStore.value}
+  <PromptDebugModal entry={lastVlmPromptStore.value} onClose={() => (showDebugModal = false)} />
+{/if}
+
 {#if isGenerating}
-  <LoadingModal />
+  <AiProcessingBadge
+    overlay
+    message={isAnswering ? "Generating answer..." : "Generating question..."}
+  />
 {/if}
