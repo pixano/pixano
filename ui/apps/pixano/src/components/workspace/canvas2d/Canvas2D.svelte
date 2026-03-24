@@ -1543,7 +1543,6 @@ License: CECILL-C
     };
   });
 
-
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
     const currentTool = selectedTool;
@@ -1811,7 +1810,8 @@ License: CECILL-C
           {#if !shouldHideShapes || peekVisibility.closedMultiPaths || peekVisibility.openMultiPaths}
             {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
               {#if !multiPath.ui.displayControl.hidden}
-                {@const showInPeek = (multiPath.data.is_closed && peekVisibility.closedMultiPaths) ||
+                {@const showInPeek =
+                  (multiPath.data.is_closed && peekVisibility.closedMultiPaths) ||
                   (!multiPath.data.is_closed && peekVisibility.openMultiPaths)}
                 {#if !shouldHideShapes || showInPeek}
                   <MultiPathShape

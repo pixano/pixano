@@ -42,7 +42,9 @@ License: CECILL-C
   >
     <Gear weight="regular" class="h-4.5 w-4.5" />
   </Popover.Trigger>
-  <Popover.Content class="w-64 p-4 space-y-4 bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg shadow-lg">
+  <Popover.Content
+    class="w-64 p-4 space-y-4 bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg shadow-lg"
+  >
     <div class="text-sm font-medium text-foreground mb-2">Brush Settings</div>
 
     <div class="space-y-1.5">

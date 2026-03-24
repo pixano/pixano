@@ -20,8 +20,13 @@ License: CECILL-C
     forceNeutralColor?: boolean;
   }
 
-  let { multiPath, colorScale, imageWidth, imageHeight, forceNeutralColor = false }: Props =
-    $props();
+  let {
+    multiPath,
+    colorScale,
+    imageWidth,
+    imageHeight,
+    forceNeutralColor = false,
+  }: Props = $props();
 
   let color = $derived.by(() => {
     if (forceNeutralColor || multiPath.ui.displayControl.highlighted === "none")
