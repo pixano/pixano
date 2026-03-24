@@ -8,7 +8,6 @@ import { reactiveDerived } from "./reactiveStore.svelte";
 import {
   annotations,
   entities,
-  generatedPreviewBBoxes,
   highlightedEntity,
   selectedTool,
   views,
@@ -82,14 +81,6 @@ export const itemBboxes = reactiveDerived(() => {
       );
       if (box) bboxes.push(box);
     }
-  }
-  for (const previewBBox of generatedPreviewBBoxes.value) {
-    const box = mapBBoxForDisplay(
-      previewBBox,
-      mViews,
-      getEffectiveHighlight(previewBBox, focusedEntityId, selectedToolType, eById),
-    );
-    if (box) bboxes.push(box);
   }
   return bboxes;
 });

@@ -18,6 +18,7 @@ License: CECILL-C
   } from "phosphor-svelte";
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
+  import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
   import { polygonIcon } from "$lib/assets";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
@@ -60,6 +61,7 @@ License: CECILL-C
   };
 
   const selectInteractiveSegmenterTool = () => {
+    if (segmenterUnavailable) return;
     if (
       selectedTool.value?.type !== ToolType.InteractiveSegmenter &&
       selectedTool.value?.type !== ToolType.VOS
@@ -180,6 +182,15 @@ License: CECILL-C
       compatibleSegmentationModels.length === 0 ||
       inferenceServerStore.value.status === "loading",
   );
+  let segmenterUnavailable = $derived(
+    !inferenceServerStore.value.connected || compatibleSegmentationModels.length === 0,
+  );
+  let segmenterDisabled = $derived(smartInferencePending || segmenterUnavailable);
+  let segmenterTooltip = $derived(
+    segmenterUnavailable
+      ? "Connect an inference provider to use Smart Segmentation"
+      : "Interactive Smart Segmentation (W)",
+  );
   $effect(() => {
     void ensureInferenceRegistryLoaded();
   });
@@ -189,6 +200,7 @@ License: CECILL-C
   class="flex items-center gap-1.5 z-10 bg-card/90 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm"
   aria-busy={smartInferencePending}
 >
+  <!-- Navigation -->
   <IconButton
     tooltipContent={panTool.name}
     onclick={selectPanTool}
@@ -199,6 +211,9 @@ License: CECILL-C
     <Cursor weight="regular" class="h-4.5 w-4.5" />
   </IconButton>
 
+  <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  <!-- Manual annotation tools -->
   <IconButton
     tooltipContent={rectangleTool.name}
     onclick={selectRectangleTool}
@@ -208,76 +223,6 @@ License: CECILL-C
   >
     <Square class="h-4.5 w-4.5" />
   </IconButton>
-
-  <div
-    class={cn(
-      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
-      {
-        "bg-muted/40 border-border/20 shadow-inner": showInteractiveSegmenterTools,
-      },
-    )}
-  >
-    <IconButton
-      tooltipContent="Interactive Smart Segmentation (W)"
-      onclick={selectInteractiveSegmenterTool}
-      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-        selectedTool.value?.type === ToolType.VOS}
-      disabled={smartInferencePending}
-      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
-    >
-      <MagicWand weight="regular" class="h-4.5 w-4.5" />
-    </IconButton>
-
-    {#if showInteractiveSegmenterTools}
-      <div
-        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
-      >
-        <IconButton
-          tooltipContent="Positive Point Prompt (X toggles +/-)"
-          onclick={() => setInteractivePromptMode("positive")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-            selectedTool.value?.type === ToolType.VOS) &&
-            selectedTool.value.promptMode === "positive"}
-          disabled={smartInferencePending}
-          class="h-8 w-8"
-        >
-          <span class="text-base font-semibold leading-none">+</span>
-        </IconButton>
-        <IconButton
-          tooltipContent="Negative Point Prompt (X toggles +/-)"
-          onclick={() => setInteractivePromptMode("negative")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-            selectedTool.value?.type === ToolType.VOS) &&
-            selectedTool.value.promptMode === "negative"}
-          disabled={smartInferencePending}
-          class="h-8 w-8"
-        >
-          <span class="text-base font-semibold leading-none">-</span>
-        </IconButton>
-        <IconButton
-          tooltipContent="Bounding Box Prompt (R)"
-          onclick={() => setInteractivePromptMode("box")}
-          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-            selectedTool.value?.type === ToolType.VOS) &&
-            selectedTool.value.promptMode === "box"}
-          disabled={smartInferencePending}
-          class="h-8 w-8"
-        >
-          <Square class="h-4 w-4" />
-        </IconButton>
-
-        <div class="mx-1 h-4 w-px bg-border/30"></div>
-
-        <ModelSelectBadge
-          models={compatibleSegmentationModels}
-          selectedModelKey={currentSegmentationModelKey}
-          disabled={segmentationSelectorDisabled}
-          label={segmentationModelLabel}
-          onValueChange={setSegmentationModelSelection}
-        />
-      </div>
-    {/if}
-  </div>
 
   <div
     class={cn(
@@ -383,4 +328,82 @@ License: CECILL-C
       </div>
     {/if}
   </div>
+
+  <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  <!-- AI-powered tools -->
+  <div
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showInteractiveSegmenterTools,
+      },
+    )}
+  >
+    <IconButton
+      tooltipContent={segmenterTooltip}
+      onclick={selectInteractiveSegmenterTool}
+      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+        selectedTool.value?.type === ToolType.VOS}
+      disabled={segmenterDisabled}
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+    >
+      <MagicWand weight="regular" class="h-4.5 w-4.5" />
+    </IconButton>
+
+    {#if showInteractiveSegmenterTools}
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
+      >
+        <IconButton
+          tooltipContent="Positive Point Prompt (X toggles +/-)"
+          onclick={() => setInteractivePromptMode("positive")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "positive"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <span class="text-base font-semibold leading-none">+</span>
+        </IconButton>
+        <IconButton
+          tooltipContent="Negative Point Prompt (X toggles +/-)"
+          onclick={() => setInteractivePromptMode("negative")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "negative"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <span class="text-base font-semibold leading-none">-</span>
+        </IconButton>
+        <IconButton
+          tooltipContent="Bounding Box Prompt (R)"
+          onclick={() => setInteractivePromptMode("box")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "box"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <Square class="h-4 w-4" />
+        </IconButton>
+
+        <div class="mx-1 h-4 w-px bg-border/30"></div>
+
+        <ModelSelectBadge
+          models={compatibleSegmentationModels}
+          selectedModelKey={currentSegmentationModelKey}
+          disabled={segmentationSelectorDisabled}
+          label={segmentationModelLabel}
+          onValueChange={setSegmentationModelSelection}
+        />
+      </div>
+    {/if}
+  </div>
+
+  <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  <!-- Help -->
+  <KeyboardShortcuts isVideo={currentWorkspaceType === WorkspaceType.VIDEO} />
 </div>

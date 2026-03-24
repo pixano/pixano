@@ -4,12 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { nanoid } from "nanoid";
-
 import {
   Annotation,
   BaseSchema,
-  BBox,
   Entity,
   entityHasTracklets,
   initDisplayControl,
@@ -17,13 +14,10 @@ import {
   Mask,
   Tracklet,
   WorkspaceType,
-  type AnnotationData,
-  type BBoxData,
   type FeaturesValues,
   type View,
 } from "$lib/types/dataset";
 import type { WorkspaceData } from "$lib/types/workspace";
-import { nowTimestamp } from "$lib/utils/coreUtils";
 import {
   resolveMaskBitmapSource,
   resolveMaskBounds,
@@ -83,77 +77,6 @@ function prepareAnnotation(
   }
 
   return ann;
-}
-
-/**
- * Build preview-only bounding boxes from masks that do not have a real bbox annotation.
- * These boxes are used only for UI display/hit targets and are never auto-saved.
- */
-export function buildPreviewBBoxesFromMasks(
-  annotations: Annotation[],
-  annotationTables: string[],
-): BBox[] {
-  const previewBBoxes: BBox[] = [];
-
-  const bboxTableNames = annotationTables.filter((name) => name.toLowerCase().includes("bbox"));
-  const defaultBBoxTable = bboxTableNames.length > 0 ? bboxTableNames[0] : null;
-
-  for (const ann of annotations) {
-    if (ann.is_type(BaseSchema.Mask)) {
-      const mask = ann as Mask;
-      const hasBBox = annotations.some(
-        (other) =>
-          other.is_type(BaseSchema.BBox) &&
-          other.data.entity_id === mask.data.entity_id &&
-          other.data.frame_id === mask.data.frame_id &&
-          other.data.view_name === mask.data.view_name,
-      );
-
-      if (!hasBBox) {
-        const bboxCoords = mask.ui.bounds;
-        if (bboxCoords) {
-          const now = nowTimestamp();
-          const bboxData: BBoxData & AnnotationData = {
-            item_id: mask.data.item_id,
-            view_name: mask.data.view_name,
-            frame_id: mask.data.frame_id,
-            entity_id: mask.data.entity_id,
-            source_type: mask.data.source_type,
-            source_name: mask.data.source_name,
-            source_metadata: mask.data.source_metadata,
-            frame_index: mask.data.frame_index,
-            tracklet_id: mask.data.tracklet_id,
-            entity_dynamic_state_id: mask.data.entity_dynamic_state_id,
-            inference_metadata: {},
-            coords: [bboxCoords.x, bboxCoords.y, bboxCoords.width, bboxCoords.height],
-            format: "xywh",
-            is_normalized: false,
-            confidence: 1,
-          };
-
-          const newBBox = new BBox({
-            id: nanoid(10),
-            created_at: now,
-            updated_at: now,
-            table_info: {
-              name: defaultBBoxTable || mask.table_info.name.replace("mask", "bbox"),
-              group: "annotations",
-              base_schema: BaseSchema.BBox,
-            },
-            data: bboxData,
-          });
-          newBBox.ui = {
-            datasetItemType: mask.ui.datasetItemType,
-            displayControl: { ...initDisplayControl, highlighted: "none" },
-            frame_index: mask.ui.frame_index,
-          };
-          previewBBoxes.push(newBBox);
-        }
-      }
-    }
-  }
-
-  return previewBBoxes;
 }
 
 /**
@@ -246,7 +169,6 @@ export function computeWorkspaceVideoSpeed(
 export interface WorkspaceRuntimeData {
   annotations: Annotation[];
   entities: Entity[];
-  previewBBoxes: BBox[];
   videoSpeed: number | undefined;
 }
 
@@ -272,10 +194,6 @@ export function buildWorkspaceRuntimeData(
     }
   }
 
-  // Build preview-only bboxes from masks without a canonical bbox annotation.
-  const annotationTables = Object.keys(workspaceData.annotations);
-  const previewBBoxes = buildPreviewBBoxesFromMasks(newAnns, annotationTables);
-
   // Sort by frame_index
   newAnns.sort((a, b) => sortByFrameIndex(a, b));
 
@@ -285,7 +203,6 @@ export function buildWorkspaceRuntimeData(
   return {
     annotations: newAnns,
     entities,
-    previewBBoxes,
     videoSpeed,
   };
 }

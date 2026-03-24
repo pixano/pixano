@@ -41,6 +41,7 @@ License: CECILL-C
     zoomFactor: number;
     selectedItemId?: string;
     brushSettings?: BrushSettings;
+    forceNeutralColor?: boolean;
   }
 
   let {
@@ -53,6 +54,7 @@ License: CECILL-C
     zoomFactor,
     selectedItemId = "",
     brushSettings = { brushRadius: 20, lazyRadius: 10, friction: 0.15 },
+    forceNeutralColor = false,
   }: Props = $props();
 
   const BRUSH_MASK_COLOR = "rgba(255, 0, 80, 0.5)";
@@ -194,7 +196,7 @@ License: CECILL-C
 
   let effectiveRadius = $derived(brushSettings.brushRadius / (zoomFactor || 1));
   let maskFingerprint = $derived.by(() => {
-    let fp = `${currentImage.width}x${currentImage.height}|`;
+    let fp = `${currentImage.width}x${currentImage.height}|neutral:${forceNeutralColor}|`;
     for (const mask of masks) {
       const source =
         mask.ui.bitmapUrl ??
@@ -304,6 +306,7 @@ License: CECILL-C
     image: HTMLImageElement | ImageBitmap,
     colorScaleFn: (id: string) => string,
     cycle: number,
+    forceNeutral: boolean,
   ): Promise<void> {
     const { baseCtx, scratchCanvas, scratchCtx } = infra;
     if (!baseCtx || !scratchCtx) return;
@@ -330,7 +333,7 @@ License: CECILL-C
         mask.ui.top_entities && mask.ui.top_entities.length > 0
           ? mask.ui.top_entities[0].id
           : mask.data.entity_id;
-      const isNeutralMask = mask.ui.displayControl.highlighted === "none";
+      const isNeutralMask = forceNeutral || mask.ui.displayControl.highlighted === "none";
       const color = isNeutralMask ? NEUTRAL_ENTITY_COLOR : colorScaleFn(colorId);
       const overlayAlpha = isNeutralMask ? 0.2 : 0.5;
 
@@ -393,9 +396,7 @@ License: CECILL-C
       scratchCtx.drawImage(previewCanvas, 0, 0);
       scratchCtx.globalCompositeOperation = "source-in";
       scratchCtx.fillStyle = BRUSH_MASK_COLOR;
-      scratchCtx.globalAlpha = 0.55;
       scratchCtx.fillRect(0, 0, image.width, image.height);
-      scratchCtx.globalAlpha = 1.0;
       scratchCtx.globalCompositeOperation = "source-over";
       baseCtx.drawImage(scratchCanvas, 0, 0);
     }
@@ -449,12 +450,13 @@ License: CECILL-C
     const currentPreview = previewMask;
     const img = currentImage;
     const scale = colorScale;
+    const neutral = forceNeutralColor;
     const cycle = ++renderCycle;
 
     const rafId = requestAnimationFrame(() => {
       if (cycle !== renderCycle) return;
       untrack(() => {
-        void redrawBaseLayerWith(infra, currentMasks, currentPreview, img, scale, cycle);
+        void redrawBaseLayerWith(infra, currentMasks, currentPreview, img, scale, cycle, neutral);
       });
     });
 

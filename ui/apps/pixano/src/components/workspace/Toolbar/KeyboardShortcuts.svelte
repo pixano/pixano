@@ -23,6 +23,18 @@ License: CECILL-C
       { keys: ["Esc"], action: "Switch to Pan tool" },
       { keys: ["Delete", "Backspace"], action: "Delete selected point" },
       { keys: ["Ctrl+S", "⌘+S"], action: "Save all annotations" },
+      { keys: ["Alt (hold)"], action: "Peek at existing annotations" },
+    ],
+  };
+
+  const polygonShortcuts: ShortcutCategory = {
+    title: "Polygon / Polyline",
+    shortcuts: [
+      { keys: ["P"], action: "Activate Polygon tool" },
+      { keys: ["L"], action: "Activate Polyline tool" },
+      { keys: ["N"], action: "Finish sub-path (polyline)" },
+      { keys: ["Enter"], action: "Validate shape" },
+      { keys: ["Esc"], action: "Cancel current path" },
     ],
   };
 
@@ -80,15 +92,44 @@ License: CECILL-C
     ],
   };
 
-  let categories = $derived([
+  // Columns grouped semantically: Global | Shape tools | Painting & AI
+  let leftColumn = $derived([
     generalShortcuts,
-    bboxShortcuts,
+    navigationShortcuts,
+    ...(isVideo ? [videoShortcuts] : []),
+  ]);
+  let centerColumn = $derived([bboxShortcuts, polygonShortcuts]);
+  let rightColumn = $derived([
     brushShortcuts,
     smartSegmentationShortcuts,
-    navigationShortcuts,
-    ...(isVideo ? [fusionShortcuts, videoShortcuts] : []),
+    ...(isVideo ? [fusionShortcuts] : []),
   ]);
 </script>
+
+{#snippet categoryBlock(category: ShortcutCategory)}
+  <div class="space-y-1.5">
+    <div class="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide">
+      {category.title}
+    </div>
+    {#each category.shortcuts as shortcut}
+      <div class="flex items-center justify-between text-xs gap-2">
+        <span class="text-muted-foreground">{shortcut.action}</span>
+        <div class="flex items-center gap-1 shrink-0">
+          {#each shortcut.keys as key, i}
+            {#if i > 0}
+              <span class="text-muted-foreground/50">/</span>
+            {/if}
+            <kbd
+              class="min-w-[1.5rem] px-1.5 py-0.5 text-center text-[11px] font-mono rounded border border-border/60 bg-muted/50 text-muted-foreground"
+            >
+              {key}
+            </kbd>
+          {/each}
+        </div>
+      </div>
+    {/each}
+  </div>
+{/snippet}
 
 <Popover.Root>
   <Popover.Trigger
@@ -98,31 +139,26 @@ License: CECILL-C
   >
     <Keyboard class="h-4.5 w-4.5" />
   </Popover.Trigger>
-  <Popover.Content class="w-72 p-4 space-y-3">
-    <div class="text-sm font-medium text-foreground mb-2">Keyboard Shortcuts</div>
-    {#each categories as category}
-      <div class="space-y-1.5">
-        <div class="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide">
-          {category.title}
-        </div>
-        {#each category.shortcuts as shortcut}
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-muted-foreground">{shortcut.action}</span>
-            <div class="flex items-center gap-1">
-              {#each shortcut.keys as key, i}
-                {#if i > 0}
-                  <span class="text-muted-foreground/50">/</span>
-                {/if}
-                <kbd
-                  class="min-w-[1.5rem] px-1.5 py-0.5 text-center text-[11px] font-mono rounded border border-border/60 bg-muted/50 text-muted-foreground"
-                >
-                  {key}
-                </kbd>
-              {/each}
-            </div>
-          </div>
+  <Popover.Content
+    class="w-[44rem] p-5 bg-popover backdrop-blur-xl border border-border rounded-lg shadow-xl"
+  >
+    <div class="text-sm font-medium text-foreground mb-4">Keyboard Shortcuts</div>
+    <div class="grid grid-cols-3 gap-10">
+      <div class="space-y-3">
+        {#each leftColumn as category}
+          {@render categoryBlock(category)}
         {/each}
       </div>
-    {/each}
+      <div class="space-y-3">
+        {#each centerColumn as category}
+          {@render categoryBlock(category)}
+        {/each}
+      </div>
+      <div class="space-y-3">
+        {#each rightColumn as category}
+          {@render categoryBlock(category)}
+        {/each}
+      </div>
+    </div>
   </Popover.Content>
 </Popover.Root>

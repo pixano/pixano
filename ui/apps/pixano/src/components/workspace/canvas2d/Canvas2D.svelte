@@ -38,6 +38,10 @@ License: CECILL-C
   import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import { ViewRefManager } from "./viewRefs";
   import { createIdleSmartSegmentationUiState } from "$lib/segmentation/smartInferenceStatus";
+  import {
+    currentSegmentationModels,
+    inferenceServerStore,
+  } from "$lib/stores/inferenceStores.svelte";
   import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
   import {
     ToolType,
@@ -1313,6 +1317,13 @@ License: CECILL-C
       return; // Ignore shortcut when typing text
     }
 
+    // Peek mode: Alt activates peek while a drawing tool is active.
+    if (event.key === "Alt" && isDrawingTool) {
+      event.preventDefault();
+      isPeeking = true;
+      return;
+    }
+
     if (isSmartInferencePending && blockedSmartInteractionKeys.has(event.key)) {
       event.preventDefault();
       return;
@@ -1368,7 +1379,9 @@ License: CECILL-C
     const shortcutHandled = handleToolShortcuts(event, selectedTool, {
       selectPan: () => onSelectedToolChange?.(panTool),
       selectRectangle: () => onSelectedToolChange?.(rectangleTool),
-      selectInteractiveSegmenter: () => onSelectedToolChange?.(interactiveSegmenterTool),
+      selectInteractiveSegmenter: () => {
+        if (isSegmenterAvailable) onSelectedToolChange?.(interactiveSegmenterTool);
+      },
       selectPolygon: () => onSelectedToolChange?.(polygonTool),
       selectPolyline: () => onSelectedToolChange?.(polylineTool),
       selectBrushDraw: () => onSelectedToolChange?.(brushDrawTool),
@@ -1455,8 +1468,80 @@ License: CECILL-C
       return;
     }
   }
-  // True for active painting flows in the reduced Pan/Rectangle/Brush architecture.
-  let isActivePaintingTool = $derived(selectedTool?.type === ToolType.Brush);
+
+  function handleKeyUp(event: KeyboardEvent) {
+    if (event.key === "Alt") {
+      isPeeking = false;
+    }
+  }
+
+  function handleWindowBlur() {
+    isPeeking = false;
+  }
+
+  // ********** DRAWING-MODE VISIBILITY STATE ********** //
+
+  // Tools that qualify as "drawing" — shapes are hidden while any of these is active.
+  const DRAWING_TOOL_TYPES: ReadonlySet<ToolType> = new Set([
+    ToolType.Rectangle,
+    ToolType.Keypoint,
+    ToolType.Polygon,
+    ToolType.Polyline,
+    ToolType.Brush,
+    ToolType.InteractiveSegmenter,
+  ]);
+
+  let isDrawingTool = $derived(selectedTool != null && DRAWING_TOOL_TYPES.has(selectedTool.type));
+
+  // Whether the interactive segmenter is available (provider connected with compatible models).
+  let isSegmenterAvailable = $derived(
+    inferenceServerStore.value.connected && currentSegmentationModels.value.length > 0,
+  );
+
+  // Peek state: true while Alt is held AND a drawing tool is active.
+  let isPeeking = $state(false);
+
+  // Reset peek whenever the tool changes.
+  $effect(() => {
+    void selectedTool;
+    isPeeking = false;
+  });
+
+  // Whether existing shapes should be hidden right now.
+  let shouldHideShapes = $derived(isDrawingTool && !isPeeking);
+
+  // Per-shape-type peek visibility, derived from the active tool.
+  type PeekVisibility = {
+    bboxes: boolean;
+    masks: boolean;
+    closedMultiPaths: boolean;
+    openMultiPaths: boolean;
+    keypoints: boolean;
+  };
+
+  let peekVisibility: PeekVisibility = $derived.by(() => {
+    if (!isPeeking) {
+      return {
+        bboxes: false,
+        masks: false,
+        closedMultiPaths: false,
+        openMultiPaths: false,
+        keypoints: false,
+      };
+    }
+    const t = selectedTool?.type;
+    return {
+      bboxes: t === ToolType.Rectangle,
+      masks:
+        t === ToolType.Brush ||
+        t === ToolType.InteractiveSegmenter ||
+        t === ToolType.VOS ||
+        (t === ToolType.Polygon && selectedTool?.outputMode === "mask"),
+      closedMultiPaths: t === ToolType.Polygon && selectedTool?.outputMode !== "mask",
+      openMultiPaths: t === ToolType.Polyline,
+      keypoints: t === ToolType.Keypoint,
+    };
+  });
 
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
@@ -1686,7 +1771,7 @@ License: CECILL-C
           currentSequenceFrameRefsByView,
         )}
         <Group id={`static-${view_name}`} bind:this={viewRefs.staticViewRefs[view_name]}>
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes || peekVisibility.bboxes}
             {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
               {#if !bbox.ui.displayControl.editing}
                 <BBox2D
@@ -1698,41 +1783,50 @@ License: CECILL-C
                   imageHeight={currentImage?.height ?? 0}
                   {merge}
                   {onNewShapeChange}
+                  forceNeutralColor={isPeeking}
                 />
               {/if}
             {/each}
           {/if}
 
           {@const viewMasks = masksByView[view_name] ?? []}
-          {#if (viewMasks.length > 0 || selectedTool?.type === ToolType.Brush || smartPreviewMasks[view_name]) && currentImage}
+          {@const effectiveMasks = shouldHideShapes && !peekVisibility.masks ? [] : viewMasks}
+          {#if (effectiveMasks.length > 0 || selectedTool?.type === ToolType.Brush || smartPreviewMasks[view_name]) && currentImage}
             <Mask
               bind:this={viewRefs.maskRefs[view_name]}
               {viewRef}
               {currentImage}
-              masks={viewMasks}
+              masks={effectiveMasks}
               previewMask={getPreviewMaskForView(view_name)}
               {colorScale}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
               {selectedItemId}
               {brushSettings}
+              forceNeutralColor={isPeeking}
             />
           {/if}
 
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes || peekVisibility.closedMultiPaths || peekVisibility.openMultiPaths}
             {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
               {#if !multiPath.ui.displayControl.hidden}
-                <MultiPathShape
-                  {multiPath}
-                  {colorScale}
-                  imageWidth={currentImage?.width ?? 0}
-                  imageHeight={currentImage?.height ?? 0}
-                />
+                {@const showInPeek =
+                  (multiPath.data.is_closed && peekVisibility.closedMultiPaths) ||
+                  (!multiPath.data.is_closed && peekVisibility.openMultiPaths)}
+                {#if !shouldHideShapes || showInPeek}
+                  <MultiPathShape
+                    {multiPath}
+                    {colorScale}
+                    imageWidth={currentImage?.width ?? 0}
+                    imageHeight={currentImage?.height ?? 0}
+                    forceNeutralColor={isPeeking}
+                  />
+                {/if}
               {/if}
             {/each}
           {/if}
 
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes || peekVisibility.keypoints}
             <Group listening={false}>
               <ShowKeypoints
                 {colorScale}
@@ -1743,6 +1837,7 @@ License: CECILL-C
                 {newShape}
                 {onNewShapeChange}
                 {isPlaybackActive}
+                forceNeutralColor={isPeeking}
               />
             </Group>
           {/if}
@@ -1875,7 +1970,7 @@ License: CECILL-C
             />
           {/if}
 
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes}
             {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
               {#if !bbox.ui.displayControl.editing && (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan)}
                 <Rect
@@ -1905,7 +2000,7 @@ License: CECILL-C
             {/each}
           {/if}
 
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes}
             {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
               {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
                 {@const bounds = computeMultiPathBounds(
@@ -1943,7 +2038,7 @@ License: CECILL-C
             />
           {/if}
 
-          {#if !isActivePaintingTool}
+          {#if !shouldHideShapes}
             <ShowKeypoints
               {colorScale}
               {viewRef}
@@ -2006,4 +2101,4 @@ License: CECILL-C
     </div>
   {/if}
 </div>
-<svelte:window onkeydown={handleKeyDown} />
+<svelte:window onkeydown={handleKeyDown} onkeyup={handleKeyUp} onblur={handleWindowBlur} />
