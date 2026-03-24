@@ -76,10 +76,8 @@ prerelease = "allow"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# [tool.hatch.build]
-# include = ["/pixano"]
-# exclude = ["__pycache__"]
-# artifacts = ["/pixano/api/dist"]
+[tool.hatch.build]
+artifacts = ["src/pixano/api/dist"]
 
 [tool.hatch.build.hooks.custom]
 
