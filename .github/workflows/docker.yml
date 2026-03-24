@@ -21,30 +21,56 @@ on:
       - main
     paths:
       - "Dockerfile"
-      # - "pixano/**"
-      # - "ui/**"
       - ".github/workflows/docker.yml"
-      # - "pyproject.toml"
-
-env:
-  TEST_TAG: pixano/pixano:test
-  LATEST_TAG: pixano/pixano:latest
 
 jobs:
-  docker:
-    name: Test and publish
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        uses: docker/build-push-action@v6
         with:
-          daemon-config: |
-            {
-              "debug": true,
-              "features": {
-                "containerd-snapshotter": true
-              }
-            }
+          context: .
+          load: true
+          tags: pixano/pixano:test
+
+      - name: Test container
+        run: |
+          docker run -p 7492:7492 --name pixano -d pixano/pixano:test
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:7492/health > /dev/null 2>&1; then
+              echo "Server is up after ${i}s"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Server failed to start within 30s"
+              docker logs pixano
+              docker rm -f pixano
+              exit 1
+            fi
+            sleep 1
+          done
+          RESPONSE=$(curl -sf http://localhost:7492/health)
+          echo "Health check response: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"status":"ok"'
+          echo "Test passed"
+          docker rm -f pixano
+
+  publish:
+    name: Publish
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -58,42 +84,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push test
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
-          load: true
-          tags: ${{ env.TEST_TAG }}
-
-      - name: Test
-        run: |
-          mkdir -p ./data/library ./data/media
-          docker run -p 8000:8000 --name pixano -d -v ./data:/app/data ${{ env.TEST_TAG }}
-          sleep 5
-          docker logs pixano
-          EXPECTED_RESPONSE='{"detail":"No datasets found in /app/data/library."}'
-          RESPONSE=$(curl http://localhost:8000/datasets/info)
-          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
-              echo "Test Passed: Service returned expected response."
-              echo "Expected: $EXPECTED_RESPONSE"
-              echo "Actual: $RESPONSE"
-              docker kill pixano
-              docker rm pixano
-              exit 0
-          else
-              echo "Test Failed: Service response did not match expected response."
-              echo "Expected: $EXPECTED_RESPONSE"
-              echo "Actual: $RESPONSE"
-              docker logs pixano
-              docker kill pixano
-              docker rm pixano
-              exit 1
-          fi
-
-      - name: Build and push latest
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
-        with:
+          context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.LATEST_TAG }}
+          tags: pixano/pixano:latest
