@@ -19,7 +19,6 @@ License: CECILL-C
     annotations,
     canSave,
     entities,
-    generatedPreviewBBoxes,
     itemMetas,
     modelsUiStore,
     newShape,
@@ -102,7 +101,6 @@ License: CECILL-C
 
   const loadData = () => {
     saveData.value = [];
-    generatedPreviewBBoxes.value = [];
     views.value = workspaceData.views;
 
     const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
@@ -113,7 +111,6 @@ License: CECILL-C
 
     // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
-    generatedPreviewBBoxes.value = result.previewBBoxes;
 
     // Attach track children & top entities BEFORE writing to the store,
     // using the pure getTopEntityFromList to avoid reading entities through the proxy.

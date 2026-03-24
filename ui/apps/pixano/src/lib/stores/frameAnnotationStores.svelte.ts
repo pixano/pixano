@@ -9,7 +9,6 @@ import { reactiveDerived } from "./reactiveStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   annotations,
-  generatedPreviewBBoxes,
   highlightedEntity,
   interpolate,
   selectedTool,
@@ -184,7 +183,7 @@ export const current_itemBBoxes = reactiveDerived(() => {
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
 
-  const { results, seenIds } = collectFrameAnnotations<BBox, BBox>({
+  const { results } = collectFrameAnnotations<BBox, BBox>({
     frameAnnotations: _frameBuckets.bboxes.get(frameIdx) ?? [],
     typeFilter: (ann): ann is BBox => ann.is_type(BaseSchema.BBox),
     mapForDisplay: (bbox, hl) => mapBBoxForDisplay(bbox, mViews, hl),
@@ -197,16 +196,6 @@ export const current_itemBBoxes = reactiveDerived(() => {
     selectedToolType,
     entitiesById: eById,
   });
-
-  for (const previewBBox of generatedPreviewBBoxes.value) {
-    if (previewBBox.ui.frame_index !== frameIdx || seenIds.has(previewBBox.id)) continue;
-    const mapped = mapBBoxForDisplay(
-      previewBBox,
-      mViews,
-      getEffectiveHighlight(previewBBox, focusedEntityId, selectedToolType, eById),
-    );
-    if (mapped) results.push(mapped);
-  }
 
   return results;
 });

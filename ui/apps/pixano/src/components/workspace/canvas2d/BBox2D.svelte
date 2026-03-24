@@ -23,6 +23,7 @@ License: CECILL-C
     imageHeight?: number;
     merge?: (ann: { id: string }) => void;
     onNewShapeChange?: (shape: Shape) => void;
+    forceNeutralColor?: boolean;
   }
 
   let {
@@ -34,6 +35,7 @@ License: CECILL-C
     imageHeight = 0,
     merge,
     onNewShapeChange,
+    forceNeutralColor = false,
   }: Props = $props();
 
   let rectComponent: { node: Konva.Rect } | undefined = $state();
@@ -41,7 +43,8 @@ License: CECILL-C
 
   let editing = $derived(bbox.ui.displayControl.editing);
   let color = $derived.by(() => {
-    if (bbox.ui.displayControl.highlighted === "none") return NEUTRAL_ENTITY_COLOR;
+    if (forceNeutralColor || bbox.ui.displayControl.highlighted === "none")
+      return NEUTRAL_ENTITY_COLOR;
     return colorScale(
       (bbox.ui.top_entities ?? []).length > 0
         ? (bbox.ui.top_entities ?? [])[0].id

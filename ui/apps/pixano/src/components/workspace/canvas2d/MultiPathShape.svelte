@@ -17,12 +17,15 @@ License: CECILL-C
     colorScale: (id: string) => string;
     imageWidth: number;
     imageHeight: number;
+    forceNeutralColor?: boolean;
   }
 
-  let { multiPath, colorScale, imageWidth, imageHeight }: Props = $props();
+  let { multiPath, colorScale, imageWidth, imageHeight, forceNeutralColor = false }: Props =
+    $props();
 
   let color = $derived.by(() => {
-    if (multiPath.ui.displayControl.highlighted === "none") return NEUTRAL_ENTITY_COLOR;
+    if (forceNeutralColor || multiPath.ui.displayControl.highlighted === "none")
+      return NEUTRAL_ENTITY_COLOR;
     const entityId =
       multiPath.ui.top_entities && multiPath.ui.top_entities.length > 0
         ? multiPath.ui.top_entities[0].id
