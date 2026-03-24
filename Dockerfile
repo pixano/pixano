@@ -71,12 +71,14 @@ RUN uv sync
 # 8000: FastAPI server
 EXPOSE 8000
 
-# Copy the build files to FastAPI static files
-WORKDIR /app/src/pixano/api
-COPY --from=build /app/src/pixano/api/dist ./dist/
+# Copy the frontend build files to the source tree where serve.py expects them
+# (uv sync installs in editable mode, so files("pixano") resolves to /app/src/pixano/)
+COPY --from=build /app/src/pixano/api/dist /app/src/pixano/api/dist/
 
 # Clean up the build environment
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 # Run the server
 # TODO: Improve the conditional statement to avoid the use of the shell if possible
