@@ -72,14 +72,6 @@ jobs:
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
 
-      - name: Format docs Markdown files with Prettier
-        uses: creyD/prettier_action@v4.3
-        with:
-          dry: True
-          prettier_options: --check ./docs/**/*.md
-          # Prettier 3.0 not yet available in VSCode extension
-          prettier_version: 2.8.8
-
       - name: Format backend Markdown files with Prettier
         uses: creyD/prettier_action@v4.3
         with:

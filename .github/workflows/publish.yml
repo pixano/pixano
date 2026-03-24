@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   publish_pypi:
     name: PyPI
@@ -51,45 +55,56 @@ jobs:
   publish_docs:
     name: Documentation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs-astro/package-lock.json
 
-      - name: Set VERSION environment variable
-        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-
-      - name: Configure git credentials
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Set up Python 3.12
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Create cache_id for key creation
-        run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Create cache key with cache_id
-        uses: actions/cache@v4
-        with:
-          key: mkdocs-material-${{ env.cache_id }}
-          path: .cache
-          restore-keys: |
-            mkdocs-material-
-
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: uv sync --group docs
 
-      - name: Publish documentation website
-        run: uv run mike deploy --push --update-aliases ${{ env.VERSION }} stable
+      - name: Install Node dependencies
+        run: npm ci
+        working-directory: docs-astro
+
+      - name: Generate API reference
+        run: uv run python docs-astro/scripts/generate_api_docs.py
+
+      - name: Build Astro site
+        run: npx astro build
+        working-directory: docs-astro
+
+      - name: Run Pagefind
+        run: npx pagefind --site dist
+        working-directory: docs-astro
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-astro/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   publish_docker:
     name: Docker
