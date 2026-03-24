@@ -53,7 +53,7 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-COPY pixano/ ./pixano
+COPY src/ ./src
 COPY ["pyproject.toml", "uv.lock", "hatch_build.py", "README.md", "./"]
 
 # Install dependencies
@@ -72,8 +72,8 @@ RUN uv sync
 EXPOSE 8000
 
 # Copy the build files to FastAPI static files
-WORKDIR /app/pixano/app
-COPY --from=build /app/pixano/app/dist ./dist/
+WORKDIR /app/src/pixano/api
+COPY --from=build /app/src/pixano/api/dist ./dist/
 
 # Clean up the build environment
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
