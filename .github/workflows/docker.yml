@@ -12,7 +12,7 @@ on:
       - main
     paths:
       - "Dockerfile"
-      - "pixano/**"
+      - "src/pixano/**"
       - "ui/**"
       - ".github/workflows/docker.yml"
       - "pyproject.toml"

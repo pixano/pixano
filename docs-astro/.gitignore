@@ -2,6 +2,8 @@
 dist/
 # generated types
 .astro/
+# generated API reference (built by scripts/generate_api_docs.py)
+src/data/api/
 
 # dependencies
 node_modules/
