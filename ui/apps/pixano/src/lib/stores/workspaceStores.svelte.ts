@@ -17,7 +17,6 @@ import {
   entities,
   entityFilters,
   filters,
-  generatedPreviewBBoxes,
   highlightedEntity,
   imageSmoothing,
   interactiveSegmenterModel,
@@ -46,7 +45,6 @@ export {
   entities,
   entityFilters,
   filters,
-  generatedPreviewBBoxes,
   highlightedEntity,
   imageSmoothing,
   interactiveSegmenterModel,
@@ -103,7 +101,6 @@ export function resetWorkspaceStores() {
   selectedTool.value = panTool;
   highlightedEntity.value = null;
   annotations.value = [];
-  generatedPreviewBBoxes.value = [];
   entities.value = [];
   views.value = {};
   merges.value = { to_fuse: [], forbids: [] };

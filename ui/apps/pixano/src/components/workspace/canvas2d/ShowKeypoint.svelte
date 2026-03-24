@@ -23,6 +23,7 @@ License: CECILL-C
     imageSize?: { width: number; height: number };
     isPlaybackActive?: boolean;
     onNewShapeChange?: (shape: Shape) => void;
+    forceNeutralColor?: boolean;
   }
 
   let {
@@ -35,6 +36,7 @@ License: CECILL-C
     imageSize = { width: 1, height: 1 },
     isPlaybackActive = false,
     onNewShapeChange,
+    forceNeutralColor = false,
   }: Props = $props();
 
   const onClick = (keypoint: KeypointAnnotation) => {
@@ -72,7 +74,7 @@ License: CECILL-C
           ? (keypointStructure.ui?.top_entities ?? [])[0].id
           : (keypointStructure.entityRef?.id ?? "")}
       {@const keypointColor =
-        keypointStructure.ui?.displayControl.highlighted === "none"
+        forceNeutralColor || keypointStructure.ui?.displayControl.highlighted === "none"
           ? NEUTRAL_ENTITY_COLOR
           : colorScale(colorId)}
       <KeyPoints
