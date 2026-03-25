@@ -1,0 +1,214 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Object Detection with Pascal VOC"
+section: cookbook
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Object Detection with Pascal VOC
+
+By the end of this page, you will understand how an object detection dataset maps to Pixano's data model and be ready to annotate images with bounding boxes and segmentation masks.
+
+<Callout type="info" title="What you'll learn">
+
+- What the Pascal VOC detection challenge is and why it matters
+- How VOC's annotations map to Pixano's records, entities, and annotations
+- How to import a VOC dataset using the [Pixano Cookbook](https://github.com/pixano/pixano-cookbook)
+- Key Pixano features for object detection: bbox drawing, interactive segmentation, and annotation provenance
+
+</Callout>
+
+## Background: What is Pascal VOC?
+
+The **PASCAL Visual Object Classes (VOC)** challenge was one of the foundational benchmarks in computer vision, running from 2005 to 2012. It asked a simple but powerful question: *given a natural image, can a system identify and localize every object in it?*
+
+The VOC 2007 dataset contains images sourced from Flickr, annotated with **20 object categories**: person, bird, cat, cow, dog, horse, sheep, aeroplane, bicycle, boat, bus, car, motorbike, train, bottle, chair, dining table, potted plant, sofa, and TV/monitor. Each object is annotated with a **bounding box** (a rectangle around the object) and a category label.
+
+VOC shaped how the computer vision community thinks about detection evaluation. It introduced key concepts still used today:
+
+- **IoU (Intersection over Union)** — a metric that measures how well a predicted bounding box overlaps with the ground truth
+- **mAP (mean Average Precision)** — the standard metric for evaluating detection models, computed across all categories
+- **Difficult flag** — some objects are marked as "difficult" (heavily occluded, very small, etc.) and excluded from evaluation
+
+<Callout type="note" title="References">
+
+- [PASCAL VOC 2007 homepage](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/)
+- [The PASCAL Visual Object Classes Challenge (Everingham et al., 2010)](http://host.robots.ox.ac.uk/pascal/VOC/pubs/everingham10.pdf)
+
+</Callout>
+
+## The detection problem in Pixano terms
+
+To work with a VOC dataset in Pixano, we need to map its structure to Pixano's data model:
+
+| VOC concept | Pixano concept | Why |
+|-------------|---------------|-----|
+| An image in the dataset | **Record** | Each image is one sample. The record holds its split (`train`, `val`) and workflow status. |
+| The image file itself | **View** (`Image`) | The media attached to the record. Named `"image"` in this dataset. |
+| An annotated object (e.g. "car") | **Entity** | Entities represent the real-world objects you want to label. We subclass `Entity` to add `category` and `is_difficult`. |
+| The rectangle around the object | **Annotation** (`BBox`) | The geometric label — normalized bounding box coordinates. |
+
+This separation is intentional. By keeping records, views, entities, and annotations in separate tables, Pixano makes it easy to attach **multiple annotation types** to the same entity — for instance a bounding box *and* a segmentation mask — and to track who created each annotation.
+
+## Dataset schema
+
+Here is the `DatasetInfo` used to import a VOC dataset into Pixano:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record
+
+
+class VOCEntity(Entity):
+    """An object detected in a VOC image."""
+    category: str = ""
+    is_difficult: bool = False
+
+
+dataset_info = DatasetInfo(
+    name="VOC 2007 Sample",
+    description="Pascal VOC 2007 object detection dataset.",
+    workspace=WorkspaceType.IMAGE,
+    record=Record,
+    entity=VOCEntity,
+    bbox=BBox,
+    mask=CompressedRLE,
+    views={"image": Image},
+)
+```
+
+Let's look at each piece:
+
+- **`VOCEntity`** — A custom subclass of `Entity` with two domain-specific fields. `category` stores the object class (e.g. `"car"`, `"person"`). `is_difficult` mirrors VOC's flag for objects that are hard to recognize.
+
+- **`bbox=BBox`** — Creates a bounding box table. This is where the rectangular coordinates for each entity will be stored. VOC annotations use normalized coordinates in `[x, y, w, h]` format, which Pixano handles natively.
+
+- **`mask=CompressedRLE`** — Creates a segmentation mask table using compressed run-length encoding. The original VOC dataset only has bounding boxes — we add masks here to show that **Pixano supports multiple annotation types per entity**. This also enables AI-assisted segmentation tools like SAM in the annotation workspace.
+
+- **`views={"image": Image}`** — Each record has one view named `"image"`.
+
+- **`workspace=WorkspaceType.IMAGE`** — Tells the UI to use the single-image viewer with annotation tools.
+
+## Import the dataset
+
+The [Pixano Cookbook](https://github.com/pixano/pixano-cookbook) provides a ready-to-run script that downloads Pascal VOC 2007, samples a subset, converts the XML annotations to Pixano's `metadata.jsonl` format, and organizes everything into a source folder.
+
+### Clone the cookbook and generate the data
+
+```bash
+git clone https://github.com/pixano/pixano-cookbook.git
+cd pixano-cookbook
+
+pip install pillow
+python data_importation/voc/generate_sample.py ./voc_sample --num-samples 50
+```
+
+This produces a source folder organized by splits:
+
+```
+voc_sample/
+  train/
+    000032.jpg
+    000045.jpg
+    ...
+    metadata.jsonl
+  validation/
+    000007.jpg
+    ...
+    metadata.jsonl
+```
+
+### What's inside metadata.jsonl
+
+Each line in `metadata.jsonl` describes one image and its annotations:
+
+```json
+{
+  "status": "validated",
+  "views": { "image": "000032.jpg" },
+  "entities": [
+    {
+      "category": "aeroplane",
+      "is_difficult": false,
+      "annotations": {
+        "image": {
+          "bbox": [0.078, 0.09, 0.756, 0.792]
+        }
+      }
+    }
+  ]
+}
+```
+
+Notice the structure:
+- `"views"` maps view names to filenames — Pixano uses this to find the image
+- `"entities"` is a list of objects, each with the custom fields from `VOCEntity`
+- `"annotations"` is nested per view — the `"image"` key matches the view name defined in `DatasetInfo`, and `"bbox"` matches the annotation slot. Coordinates are normalized `[x, y, w, h]` values in `[0, 1]`.
+
+### Run the import
+
+```bash
+pixano init ./my_library
+pixano data import ./my_library ./voc_sample \
+    --info data_importation/voc/info.py:dataset_info
+```
+
+<Callout type="tip" title="Import options">
+Use `--dry-run` to validate your metadata without creating the dataset. Use `--mode overwrite` to re-import over an existing dataset.
+</Callout>
+
+## Launch and explore
+
+```bash
+pixano server run ./my_library
+```
+
+Open **http://127.0.0.1:7492** in your browser. You will see the Pixano library with a card for the VOC dataset. Click it to open the dataset explorer, where you can browse images, filter by split or category, and click any image to view it with its bounding box annotations.
+
+## Key Pixano features for object detection
+
+### Bounding box annotation
+
+The core annotation tool for object detection. In the annotation workspace, you draw rectangles over objects in the image. Each bounding box is linked to an entity, which carries the object's category and any custom fields you defined.
+
+Because annotations and entities are stored separately, you can attach multiple annotations to the same entity. For example, you could have a bounding box *and* a segmentation mask for the same "car" — each stored in its own table, both linked to the same entity. This is exactly why we included `CompressedRLE` in the schema even though VOC only provides bounding boxes.
+
+### Interactive segmentation with SAM
+
+The **Segment Anything Model (SAM)** lets you go beyond bounding boxes to pixel-level segmentation. Instead of manually drawing mask boundaries, you provide a few click prompts (foreground/background points or a bounding box) and SAM predicts a precise segmentation mask.
+
+In Pixano, SAM integration works through the inference provider system. When connected to a [Pixano Inference](https://github.com/pixano/pixano-inference) server running SAM, the annotation workspace offers a **smart segmentation tool**: click on an object, and Pixano sends the prompt to SAM, receives the mask, and stores it as a `CompressedRLE` annotation linked to the entity.
+
+This is particularly powerful for object detection workflows: you can start with bounding boxes for quick labeling, then selectively refine objects with pixel-level masks using SAM — all within the same dataset, on the same entities.
+
+### Annotation provenance
+
+Every annotation in Pixano carries built-in provenance fields:
+
+- **`source_type`** — one of `model`, `human`, `ground_truth`, or `other`
+- **`source_name`** — identifies the source (e.g. `"yolo11n"`, `"annotator_01"`)
+- **`source_metadata`** — a JSON string for arbitrary metadata (e.g. model version, confidence threshold)
+
+This means you can import ground truth annotations from VOC, add YOLO predictions, and generate SAM masks — all in the same dataset — and always know which annotations came from where. In the UI, you can filter and compare annotations by source, which is essential for evaluating model performance against human labels.
+
+## What you've learned
+
+Let's connect the dots:
+
+- **Pascal VOC** is an object detection benchmark where each image contains objects localized with bounding boxes and classified into 20 categories.
+- In Pixano, this maps to **records** (images), **entities** (objects with `category` and `is_difficult`), and **annotations** (bounding boxes and optionally masks).
+- The `DatasetInfo` schema defines which tables Pixano creates — adding `CompressedRLE` alongside `BBox` enables multi-type annotation and AI segmentation tools.
+- **Provenance fields** on annotations let you combine human labels, model predictions, and AI-assisted masks in a single dataset.
+
+## Next steps
+
+- [Video Object Tracking with DAVIS](/pixano/cookbook/video_tracking/) — extend these concepts to video: tracking objects across frames with tracklets and masks
+- [Key Concepts](/pixano/getting_started/key_concepts/) — deeper dive into the data model
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Overview", href: "/cookbook/" }}
+  next={{ title: "Video Object Tracking", href: "/cookbook/video_tracking/" }}
+/>

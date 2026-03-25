@@ -1,0 +1,248 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Visual Question Answering with VQAv2"
+section: cookbook
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Visual Question Answering with VQAv2
+
+By the end of this page, you will understand how visual question answering datasets map to Pixano's data model, and discover how Pixano uniquely combines Q&A annotation with spatial entity annotation in the same workspace.
+
+<Callout type="info" title="What you'll learn">
+
+- What the VQAv2 challenge is and why it matters for multimodal AI
+- How VQAv2's questions, answers, and images map to Pixano's records, messages, and views
+- How Pixano goes beyond pure Q&A by letting you annotate entities with bounding boxes and masks alongside questions
+- Key Pixano features: message annotation, VLM integration, and the combination of language and spatial annotation
+
+</Callout>
+
+## Background: What is VQAv2?
+
+**Visual Question Answering (VQA)** is the task of answering natural language questions about an image. **VQAv2** (2017) is a large-scale benchmark for this task, containing over 1 million questions on 200,000+ images from [MS COCO](https://cocodataset.org/). It was designed to reduce language bias — each question is paired with two similar images that have different answers, forcing models to ground their reasoning in visual content rather than guessing from the question alone.
+
+<Callout type="note" title="References">
+
+- [VQAv2 website](https://visualqa.org/)
+- [Making the V in VQA Matter (Goyal et al., 2017)](https://arxiv.org/abs/1612.00837) — the VQAv2 paper
+- [VQA: Visual Question Answering (Antol et al., 2015)](https://arxiv.org/abs/1505.00468) — the original VQA paper
+
+</Callout>
+
+## The VQA problem in Pixano terms
+
+Here is how VQAv2's structure maps to Pixano:
+
+| VQAv2 concept | Pixano concept | Why |
+|---------------|---------------|-----|
+| An image in the dataset | **Record** | Each image is one sample, with a split and workflow status. |
+| The image file | **View** (`Image`) | The visual content attached to the record. |
+| A question about the image | **Message** (type `QUESTION`) | A structured annotation with the question text, type (open/multiple-choice), and optional choices. |
+| An answer to the question | **Message** (type `ANSWER`) | A separate message linked to the same conversation, containing the answer text. |
+| A set of Q&A pairs for one image | **Conversation** (via `conversation_id`) | Messages are grouped into conversations by a shared `conversation_id`. |
+
+But here is where Pixano goes further than a typical VQA tool. A question like *"What animal is lying on the couch?"* implicitly refers to a specific object in the image. In most VQA datasets, this spatial reference is lost — the answer is just text. Pixano lets you **explicitly annotate the objects that questions refer to**, using the same entity and annotation model from object detection:
+
+| Additional concept | Pixano concept | Why |
+|-------------------|---------------|-----|
+| The object a question refers to | **Entity** | The real-world object (e.g. "the cat on the couch"). We subclass `Entity` to add `category` and `subcategory`. |
+| A bounding box around that object | **Annotation** (`BBox`) | Spatially locates the entity in the image. |
+| A segmentation mask for that object | **Annotation** (`CompressedRLE`) | Pixel-level delineation of the entity. |
+
+This combination of **language annotation** (Q&A messages) and **spatial annotation** (bounding boxes, masks) in the same dataset is a distinctive feature of Pixano. It lets you build richer datasets where questions are grounded in specific image regions.
+
+## Dataset schema
+
+Here is the `DatasetInfo` used to import a VQAv2 dataset:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, CompressedRLE, Entity, Image, Message, Record
+
+
+class VQAv2Entity(Entity):
+    """An entity referenced by VQA questions."""
+    category: str = ""
+    subcategory: str = ""
+
+
+dataset_info = DatasetInfo(
+    name="VQAv2 Sample",
+    description="VQAv2 visual question answering dataset.",
+    workspace=WorkspaceType.IMAGE_VQA,
+    record=Record,
+    entity=VQAv2Entity,
+    message=Message,
+    bbox=BBox,
+    mask=CompressedRLE,
+    views={"image": Image},
+)
+```
+
+Let's break this down:
+
+- **`VQAv2Entity`** — A custom entity with `category` (e.g. `"animal"`, `"furniture"`) and `subcategory` (e.g. `"cat"`, `"couch"`). These entities represent the objects that questions refer to.
+
+- **`message=Message`** — Creates a message table for Q&A pairs. Each `Message` has:
+  - `type` — `"QUESTION"` or `"ANSWER"` (or `"SYSTEM"` for instructions)
+  - `content` — the text of the question or answer
+  - `question_type` — `"OPEN"` for free-form, `"SINGLE_CHOICE"` or `"MULTI_CHOICE"` for multiple-choice
+  - `choices` — a list of options (only for multiple-choice questions)
+  - `conversation_id` — groups related messages together
+  - `number` — the message's position within the conversation
+  - `entity_ids` — links the message to specific entities in the image
+
+- **`bbox=BBox` and `mask=CompressedRLE`** — The original VQAv2 dataset contains only questions and answers. We include bounding boxes and masks because **Pixano lets you enrich a VQA dataset with entity annotations**. You can draw boxes and masks on the objects that questions refer to, creating a bridge between language understanding and spatial grounding.
+
+- **`workspace=WorkspaceType.IMAGE_VQA`** — Switches the UI to VQA mode: the image is displayed alongside a conversation panel for managing questions and answers.
+
+## Import the dataset
+
+The [Pixano Cookbook](https://github.com/pixano/pixano-cookbook) provides a script that downloads a VQAv2 subset from HuggingFace and generates a Pixano-compatible source folder.
+
+### Clone the cookbook and generate the data
+
+```bash
+git clone https://github.com/pixano/pixano-cookbook.git
+cd pixano-cookbook
+
+pip install datasets pillow
+python data_importation/vqav2/generate_sample.py ./vqav2_sample --num-samples 50
+```
+
+This produces:
+
+```
+vqav2_sample/
+  validation/
+    000000.jpg
+    000001.jpg
+    ...
+    metadata.jsonl
+```
+
+### What's inside metadata.jsonl
+
+Each line describes one image with its questions and answers:
+
+```json
+{
+  "status": "validated",
+  "views": { "image": "000000.jpg" },
+  "messages": [
+    {
+      "question": {
+        "content": "Where are the kids riding?",
+        "question_type": "OPEN"
+      },
+      "responses": [
+        { "content": "carnival ride" }
+      ]
+    }
+  ]
+}
+```
+
+Notice the structure:
+- `"messages"` is a list of Q&A exchanges for this image
+- Each exchange has a `"question"` object with `"content"` and `"question_type"`
+- `"responses"` is a list of answers — VQAv2 supports multiple answers per question from different annotators
+
+<Callout type="note" title="Multiple-choice questions" collapsible>
+
+For multiple-choice questions, set `question_type` to `"SINGLE_CHOICE"` or `"MULTI_CHOICE"` and add a `choices` list:
+
+```json
+{
+  "question": {
+    "content": "What is in the image?",
+    "question_type": "SINGLE_CHOICE",
+    "choices": ["a cat", "a dog", "a bird", "a fish"]
+  },
+  "responses": [{ "content": "a cat" }]
+}
+```
+
+</Callout>
+
+### Run the import
+
+```bash
+pixano init ./my_library
+pixano data import ./my_library ./vqav2_sample \
+    --info data_importation/vqav2/info.py:dataset_info
+```
+
+## Launch and explore
+
+```bash
+pixano server run ./my_library
+```
+
+Open **http://127.0.0.1:7492** and click the VQAv2 dataset card. When you open an image, the UI displays the image in the center with a **VQA conversation panel** on the side. The panel lists all questions for the current image, their answers, and controls for adding new Q&A pairs.
+
+## Key Pixano features for VQA
+
+### Message annotation
+
+Messages are Pixano's annotation type for conversational data. Unlike bounding boxes or masks which describe *where* something is, messages describe *what is being asked and answered* about the image.
+
+Each message has a `type` (`QUESTION` or `ANSWER`) and belongs to a conversation (grouped by `conversation_id`). Questions can be open-ended (free-form text) or multiple-choice (with a list of options). Multiple answers per question are supported — this is important for VQA evaluation, where the ground truth is typically the consensus across multiple annotators.
+
+The `entity_ids` field on messages lets you link a question to specific entities in the image, connecting the language annotation to spatial annotations.
+
+### Combining Q&A with entity annotation
+
+This is where Pixano differs from typical VQA annotation tools. Most VQA platforms only handle questions and answers — the visual content is view-only. Pixano treats VQA images as full annotation workspaces.
+
+Because the schema includes `BBox` and `CompressedRLE` alongside `Message`, you can:
+
+- **Draw bounding boxes** around the objects that questions refer to
+- **Create segmentation masks** for precise spatial grounding
+- **Link entities to messages** via `entity_ids`, explicitly connecting "What animal is on the couch?" to the cat entity with its bounding box
+
+This creates datasets that are richer than pure VQA: each question is not just a text pair but a grounded reference to a specific region of the image. This kind of grounded VQA data is increasingly valuable for training and evaluating multimodal models that need to localize their answers.
+
+### VLM integration
+
+Pixano can connect to a [Pixano Inference](https://github.com/pixano/pixano-inference) server running vision-language models (VLMs) to assist with annotation. When a compatible model is connected:
+
+- You can **generate answers** to existing questions — click the star icon next to a question, and the VLM produces an answer based on the image and question text
+- You can **generate questions** — the model proposes questions about the image content
+- Annotators can then **review and correct** the AI-generated outputs
+
+This human-in-the-loop workflow speeds up annotation significantly: instead of writing every question and answer from scratch, annotators review and refine model outputs.
+
+### Annotation provenance
+
+As with all annotation types in Pixano, messages carry provenance fields (`source_type`, `source_name`, `source_metadata`). This lets you distinguish:
+
+- **Human-written** questions and answers from annotators
+- **Model-generated** answers from a connected VLM
+- **Ground truth** answers imported from the original VQAv2 dataset
+
+When combining human and AI annotations in the same dataset, provenance is essential for evaluation and quality control.
+
+## What you've learned
+
+Let's connect the dots:
+
+- **VQAv2** is a visual question answering benchmark where each image is paired with natural language questions and multiple human answers, designed to test whether models truly ground their reasoning in visual content.
+- In Pixano, questions and answers are stored as **Message** annotations with types (`QUESTION`, `ANSWER`), grouped by `conversation_id`. The `IMAGE_VQA` workspace provides a dedicated conversation panel alongside the image.
+- Pixano's unique strength is **combining Q&A with spatial annotation**: by including `BBox` and `CompressedRLE` in the schema, you can annotate the entities that questions refer to, creating grounded VQA datasets.
+- **VLM integration** enables a human-in-the-loop workflow where models generate draft questions and answers that annotators review and correct.
+
+## Next steps
+
+- [Object Detection with Pascal VOC](/pixano/cookbook/object_detection/) — learn how entity and bbox annotation works in depth
+- [Video Object Tracking with DAVIS](/pixano/cookbook/video_tracking/) — extend to video with tracklets and temporal masks
+- [Key Concepts](/pixano/getting_started/key_concepts/) — deeper dive into the data model
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Multi-View Detection", href: "/cookbook/multi_view_detection/" }}
+  next={{ title: "Entity Linking", href: "/cookbook/entity_linking/" }}
+/>

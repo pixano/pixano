@@ -19,7 +19,7 @@ export interface NavSection {
 
 export const topNav: NavItem[] = [
   { title: "Getting Started", href: "/getting_started/" },
-  { title: "Use Cases", href: "/use_cases/" },
+  { title: "Cookbook", href: "/cookbook/" },
   { title: "API Reference", href: "/api_reference/" },
 ];
 
@@ -38,25 +38,25 @@ export const sidebarNav: Record<string, NavSection[]> = {
       ],
     },
   ],
-  use_cases: [
+  cookbook: [
     {
-      title: "Use Cases",
+      title: "Cookbook",
       items: [
-        { title: "Overview", href: "/use_cases/" },
-        { title: "Object Detection", href: "/use_cases/object_detection/" },
+        { title: "Overview", href: "/cookbook/" },
+        { title: "Object Detection", href: "/cookbook/object_detection/" },
         {
           title: "Video Object Tracking",
-          href: "/use_cases/video_tracking/",
+          href: "/cookbook/video_tracking/",
         },
         {
           title: "Multi-View Detection",
-          href: "/use_cases/multi_view_detection/",
+          href: "/cookbook/multi_view_detection/",
         },
-        { title: "Entity Linking", href: "/use_cases/entity_linking/" },
         {
           title: "Visual Question Answering",
-          href: "/use_cases/vqa/",
+          href: "/cookbook/vqa/",
         },
+        { title: "Entity Linking", href: "/cookbook/entity_linking/" },
       ],
     },
   ],
@@ -193,7 +193,7 @@ export const sidebarNav: Record<string, NavSection[]> = {
  * Determine which sidebar section to show based on the current path.
  */
 export function getSidebarSection(path: string): string {
-  if (path.includes("/use_cases")) return "use_cases";
+  if (path.includes("/cookbook")) return "cookbook";
   if (path.includes("/api_reference")) return "api_reference";
   return "getting_started";
 }
