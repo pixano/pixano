@@ -1,0 +1,253 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Video Object Tracking with DAVIS"
+section: cookbook
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Video Object Tracking with DAVIS
+
+By the end of this page, you will understand how video object segmentation datasets map to Pixano's data model and know how Pixano handles tracking and segmenting objects across frames.
+
+<Callout type="info" title="What you'll learn">
+
+- What the DAVIS challenge is and why it pushed the field forward
+- What changes when you move from single images to video: temporal consistency, tracklets, and per-frame state
+- How DAVIS's structure maps to Pixano's records, SequenceFrames, entities, tracklets, and masks
+- Key Pixano features for video: bbox tracking, interactive segmentation, and EntityDynamicState
+
+</Callout>
+
+## Background: What is DAVIS?
+
+**DAVIS (Densely Annotated Video Segmentation)** is a benchmark for video object segmentation, introduced in 2016 and extended through 2019. It addresses a fundamental challenge in video understanding: *given the mask of an object in the first frame of a video, can a system accurately segment that object in every subsequent frame?*
+
+This is the **semi-supervised** setting — the model (or annotator) receives one reference annotation and must propagate it across the entire video, handling appearance changes, occlusions, camera motion, and deformation.
+
+The DAVIS 2017 dataset contains **150 video sequences** with pixel-accurate segmentation masks at every frame. Each video features one or more objects, each tracked independently. The annotation quality is exceptionally high — every frame has a manually verified, pixel-perfect mask.
+
+DAVIS introduced evaluation metrics that are now standard in the field:
+
+- **J (Jaccard index)** — measures region overlap between predicted and ground truth masks (similar to IoU)
+- **F (boundary F-measure)** — evaluates how well the predicted boundary matches the ground truth
+- **J&F** — the combined metric, averaging both to capture both region accuracy and boundary precision
+
+The challenge influenced real-world applications in autonomous driving (tracking pedestrians and vehicles), video editing (rotoscoping and background removal), and surveillance (object re-identification).
+
+<Callout type="note" title="References">
+
+- [DAVIS challenge website](https://davischallenge.org/)
+- [DAVIS 2017 paper: A Benchmark Dataset and Evaluation Methodology for Video Object Segmentation (Pont-Tuset et al., 2017)](https://davischallenge.org/davis2017/code.html)
+
+</Callout>
+
+## From images to video: new challenges
+
+If you worked through the [Object Detection](/pixano/cookbook/object_detection/) use case, you annotated objects in single images. Video introduces several new problems:
+
+- **Temporal consistency** — An object must maintain the same identity across frames. A "car" in frame 1 should be the same "car" in frame 100, even if its appearance changes dramatically.
+- **Identity persistence through occlusion** — Objects disappear behind other objects and reappear. The system needs to re-associate them with the correct identity.
+- **Per-frame variation** — The same object can be visible, partially occluded, fully occluded, or out of frame at different times. You need to track these states separately from the geometric annotations.
+
+To handle these challenges, Pixano introduces two concepts that don't exist in image datasets:
+
+- **Tracklets** — A tracklet represents a continuous temporal segment of an entity's visibility. It defines when an entity appears and disappears within the video. Per-frame annotations (bounding boxes, masks) are linked to a tracklet, which is itself linked to an entity.
+- **EntityDynamicState** — Stores per-frame attributes that change over time (e.g. visibility, occlusion level, pose) separately from geometric annotations. This decouples "what does the annotation look like?" from "what is the object's state in this frame?"
+
+## The segmentation problem in Pixano terms
+
+Here is how DAVIS's structure maps to Pixano:
+
+| DAVIS concept | Pixano concept | Why |
+|---------------|---------------|-----|
+| A video sequence | **Record** | Each video is one sample in the dataset. The record holds the split and status. |
+| Individual video frames | **View** (`SequenceFrame`) | Each frame is a view with a `frame_index` and `timestamp`, linking it to its position in the video. |
+| A tracked object (e.g. "bear") | **Entity** | The real-world object being tracked. We subclass `Entity` to add a `category` field. |
+| The object's trajectory across frames | **Tracklet** | Defines the temporal extent (start/end frame) of the entity's visibility. Per-frame annotations link to this tracklet. |
+| The pixel mask at one frame | **Annotation** (`CompressedRLE`) | A per-frame segmentation mask stored in COCO-style run-length encoding. Each mask is linked to a tracklet and entity. |
+| Per-frame object state | **EntityDynamicState** | Per-frame attributes (visibility, occlusion) stored separately from geometry. |
+
+The key insight: in image datasets, an entity has annotations directly. In video datasets, an entity has a **tracklet** that spans multiple frames, and each frame's annotation is linked to that tracklet. This extra level of indirection is what gives Pixano temporal tracking capabilities.
+
+## Dataset schema
+
+Here is the `DatasetInfo` used to import a DAVIS dataset:
+
+```python
+from pixano.datasets import DatasetInfo
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import (
+    CompressedRLE, Entity, EntityDynamicState,
+    Record, SequenceFrame, Tracklet,
+)
+
+
+class DAVISEntity(Entity):
+    """A segmented object in a DAVIS video."""
+    category: str = "object"
+
+
+class DAVISEntityDynamicState(EntityDynamicState):
+    """Per-frame dynamic state for a DAVIS entity."""
+    pass
+
+
+dataset_info = DatasetInfo(
+    name="DAVIS 2017 Sample",
+    description="DAVIS 2017 video object segmentation dataset.",
+    workspace=WorkspaceType.VIDEO,
+    record=Record,
+    entity=DAVISEntity,
+    entity_dynamic_state=DAVISEntityDynamicState,
+    tracklet=Tracklet,
+    mask=CompressedRLE,
+    views={"image": SequenceFrame},
+)
+```
+
+Compared to the image dataset schema, several things are new:
+
+- **`WorkspaceType.VIDEO`** — Switches the UI to video mode with a timeline, frame navigation, and track inspector.
+
+- **`SequenceFrame` instead of `Image`** — A `SequenceFrame` extends `Image` with `frame_index` (integer position in the sequence) and `timestamp` (time in seconds). This is how Pixano knows the temporal ordering of frames within a video.
+
+- **`tracklet=Tracklet`** — Creates a tracklet table. Each tracklet has `start_timestep`, `end_timestep`, `start_timestamp`, and `end_timestamp` fields that define when the tracked entity is visible. Per-frame masks link back to the tracklet.
+
+- **`entity_dynamic_state=DAVISEntityDynamicState`** — Creates a table for per-frame entity state. Here we use an empty subclass (DAVIS doesn't have per-frame attributes beyond the mask), but you could add fields like `is_occluded: bool = False` or `visibility: float = 1.0`.
+
+- **`mask=CompressedRLE`** — Segmentation masks in compressed run-length encoding. Each mask is a per-frame annotation linked to a tracklet and entity.
+
+## Import the dataset
+
+The [Pixano Cookbook](https://github.com/pixano/pixano-cookbook) provides a script that exports DAVIS 2017 into a Pixano-compatible source folder.
+
+### Clone the cookbook and generate the data
+
+```bash
+git clone https://github.com/pixano/pixano-cookbook.git
+cd pixano-cookbook
+
+python data_importation/davis/generate_sample.py ./davis_sample /path/to/DAVIS \
+    --num-samples 5 --splits train val
+```
+
+<Callout type="note" title="DAVIS download">
+You need to download the DAVIS 2017 dataset (Full-Resolution) from the [DAVIS website](https://davischallenge.org/davis2017/code.html) before running the script. The `/path/to/DAVIS` argument should point to the root of the downloaded dataset.
+</Callout>
+
+This produces a source folder with frames and masks organized by video:
+
+```
+davis_sample/
+  train/
+    frames/
+      bear/
+        00000.jpg
+        00001.jpg
+        ...
+      bmx-trees/
+        ...
+    masks/
+      bear/
+        00000.png
+        00001.png
+        ...
+    metadata.jsonl
+  val/
+    frames/...
+    masks/...
+    metadata.jsonl
+```
+
+### What's inside metadata.jsonl
+
+Each line describes one video using **glob patterns** for frames and masks:
+
+```json
+{
+  "status": "validated",
+  "views": {
+    "image": { "path": "frames/bear/*.jpg", "fps": 24 }
+  },
+  "annotation_files": {
+    "mask": "masks/bear/*.png"
+  }
+}
+```
+
+Notice the differences from image datasets:
+- `"views"` uses an object with `"path"` (a glob pattern) and `"fps"` (frame rate) instead of a simple filename. Pixano expands the glob to discover all frames and creates one `SequenceFrame` per file, ordered alphabetically.
+- `"annotation_files"` is a separate key (not inside `"entities"`) that maps annotation types to glob patterns for mask files. Pixano matches masks to frames by filename (e.g. `00000.png` matches `00000.jpg`).
+
+### Run the import
+
+```bash
+pixano init ./my_library
+pixano data import ./my_library ./davis_sample \
+    --info data_importation/davis/info.py:dataset_info
+```
+
+## Launch and explore
+
+```bash
+pixano server run ./my_library
+```
+
+Open **http://127.0.0.1:7492** and click the DAVIS dataset card. When you open a video item, the UI switches to video mode: the current frame is displayed in the center, and the **Video Inspector** panel appears at the bottom with a timeline, track bars for each entity, and playback controls.
+
+## Key Pixano features for video tracking
+
+### Tracklets
+
+A tracklet is the core concept that connects single-frame annotations into a temporal identity. In the Video Inspector, each entity's track is displayed as a horizontal bar along the timeline. Colored segments within the bar represent tracklets — continuous periods where the entity is visible.
+
+Keyframes (frames with real annotations) are shown as dots on the tracklet. Frames between keyframes can be interpolated automatically for bounding boxes and keypoints.
+
+You can split, merge, and relink tracklets to correct tracking errors — for example, splitting a tracklet when an object is temporarily occluded, or merging two tracklets that belong to the same entity after an identity switch.
+
+### Bbox tracking
+
+For bounding box workflows in video, Pixano can propagate a bounding box annotation across frames. You annotate a few keyframes, and Pixano interpolates the box positions for the frames in between. This dramatically reduces the annotation effort — instead of drawing a box on every frame, you only need to annotate the frames where the object's position changes significantly.
+
+### Interactive segmentation in video (SAM)
+
+SAM integration extends to video: you can use the smart segmentation tool on any individual frame to generate a pixel-level mask from point prompts. When connected to a [Pixano Inference](https://github.com/pixano/pixano-inference) server running SAM2, you can propagate masks across frames — similar to the DAVIS semi-supervised task itself.
+
+This is particularly powerful for video annotation: annotate a precise mask on one frame, propagate it forward, then correct on frames where the prediction drifts. The combination of tracklets (for temporal identity) and SAM (for per-frame precision) mirrors the workflow that made DAVIS such an influential benchmark.
+
+### EntityDynamicState
+
+While tracklets and masks capture *where* an object is, `EntityDynamicState` captures *what state* the object is in at each frame. This is stored separately from geometric annotations because the same object can have different per-frame attributes (occluded, truncated, moving, stationary) independent of its mask or bounding box.
+
+In the DAVIS example, `DAVISEntityDynamicState` is empty — but for your own datasets you can add custom fields. For example, in an autonomous driving dataset you might track:
+
+```python
+class VehicleDynamicState(EntityDynamicState):
+    is_occluded: bool = False
+    is_moving: bool = True
+    visibility: float = 1.0
+```
+
+This separation keeps your annotation tables clean and lets you query temporal attributes independently of geometry.
+
+## What you've learned
+
+Let's connect the dots:
+
+- **DAVIS** is a video object segmentation benchmark where objects are tracked and segmented with pixel-accurate masks across every frame.
+- Moving from images to video introduces temporal challenges: identity persistence, occlusion handling, and per-frame variation.
+- Pixano handles this with **SequenceFrame** views (ordered frames with timestamps), **Tracklets** (temporal segments linking per-frame annotations to entities), and **EntityDynamicState** (per-frame attributes separate from geometry).
+- The `DatasetInfo` schema for video includes `WorkspaceType.VIDEO`, `SequenceFrame`, `Tracklet`, and optionally `EntityDynamicState` — which together unlock the timeline UI, track management, and temporal annotation tools.
+- **SAM in video** combines tracklets for temporal identity with per-frame segmentation, enabling efficient annotation workflows that mirror the DAVIS semi-supervised task.
+
+## Next steps
+
+- [Object Detection with Pascal VOC](/pixano/cookbook/object_detection/) — if you haven't already, start with the image use case to understand the foundations
+- [Key Concepts](/pixano/getting_started/key_concepts/) — deeper dive into the data model
+- [API Reference](/pixano/api_reference/) — full Python API documentation
+
+<PrevNext
+  prev={{ title: "Object Detection", href: "/cookbook/object_detection/" }}
+  next={{ title: "Multi-View Detection", href: "/cookbook/multi_view_detection/" }}
+/>
