@@ -1,24 +1,31 @@
 {
   "name": "pixano_ui",
   "scripts": {
+    "build": "turbo build",
+    "check": "turbo check",
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@pixano/web",
+    "dev:pixano": "turbo dev --filter=pixano",
+    "lint": "turbo lint",
+    "test": "turbo test",
     "format": "prettier --write --ignore-unknown .",
-    "format_check": "prettier --check --ignore-unknown .",
-    "lint": "pnpm run -r -no-bail lint"
+    "format_check": "prettier --check --ignore-unknown ."
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.20.0",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
     "@typescript-eslint/parser": "^8.24.1",
-    "globals": "^16.0.0",
     "eslint": "^9.20.1",
-    "@eslint/js": "^9.20.0",
-    "@eslint/eslintrc": "^3.2.0",
-    "typescript-eslint": "^8.24.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-svelte": "^2.46.1",
-    "svelte-eslint-parser": "^0.43.0",
+    "globals": "^16.0.0",
     "prettier": "^3.2.5",
-    "prettier-plugin-svelte": "^3.3.2"
+    "prettier-plugin-svelte": "^3.3.2",
+    "svelte-eslint-parser": "^0.43.0",
+    "turbo": "^2.8.20",
+    "typescript-eslint": "^8.24.1"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }

@@ -57,3 +57,6 @@ venv
 *.lance
 tests/assets/library/*
 my_data/
+
+.svelte-kit
+build
