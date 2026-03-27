@@ -11,11 +11,19 @@ import PrevNext from '../../components/PrevNext.astro'
 ## Prerequisites
 
 - **Python 3.10 to 3.13** — check with `python --version`
+<<<<<<< HEAD
 - **pip** (included with Python)
 - A modern browser (Chrome, Firefox, Safari, Edge)
 
 <Callout type="note" title="Operating system support">
 Pixano is tested on Linux and macOS. It should work on Windows but is not officially tested.
+=======
+- **pip** (included with Python) or [uv](https://docs.astral.sh/uv/) for faster installs
+- A modern browser (Chrome, Firefox, Safari, Edge)
+
+<Callout type="tip" title="Operating system support">
+Pixano works on Linux and macOS. It should also work on Windows, but this has not been tested officially.
+>>>>>>> 9d8de36e (refactor: streamline release Docker image and install docs)
 </Callout>
 
 ## Install with pip
@@ -34,14 +42,42 @@ Verify the installation:
 pip show pixano
 ```
 
+<<<<<<< HEAD
 You should see output including `Name: pixano` and `Version: 0.7.x`.
 
 You can also check that the CLI is available:
+=======
+## Docker
+
+Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases. Pull the
+`stable` tag to get the latest released version:
+>>>>>>> 9d8de36e (refactor: streamline release Docker image and install docs)
 
 ```bash
 pixano --help
 ```
 
+<<<<<<< HEAD
+=======
+If you need to pin a specific release, use the corresponding version tag instead of `stable`.
+
+Run the container with a mounted library directory:
+
+```bash
+docker run -d \
+    --name pixano \
+    -p 7492:7492 \
+    -v ./my_library:/library \
+    pixano/pixano:stable
+```
+
+Open `http://localhost:7492` in your browser.
+
+In this example, `./my_library` is the directory on your machine where Pixano stores its library. Inside the
+container, Pixano always uses `/library`. Reusing the same mounted directory lets you keep your data across
+container restarts or upgrades.
+
+>>>>>>> 9d8de36e (refactor: streamline release Docker image and install docs)
 ## Troubleshooting
 
 | Problem | Solution |
@@ -49,6 +85,10 @@ pixano --help
 | `pip install pixano` fails with build errors | Make sure you have Python 3.10+ and an up-to-date pip: `pip install --upgrade pip` |
 | `pixano` command not found after install | Activate your virtual environment: `source .venv/bin/activate` |
 | Port 7492 already in use | Use `--port 8000` or stop the other process |
+<<<<<<< HEAD
+=======
+| Docker container exits immediately | Check logs with `docker logs pixano`, then verify that the mounted host directory exists and is writable |
+>>>>>>> 9d8de36e (refactor: streamline release Docker image and install docs)
 
 ## Next steps
 

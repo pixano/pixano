@@ -10,6 +10,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 
+from pixano.__version__ import __version__
 from pixano.api.routers import include_api_routers
 from pixano.api.settings import Settings
 
@@ -24,7 +25,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(title="Pixano", version="0.1.0", default_response_class=ORJSONResponse)
+    app = FastAPI(title="Pixano", version=__version__, default_response_class=ORJSONResponse)
     app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(
         CORSMiddleware,
