@@ -574,6 +574,7 @@ License: CECILL-C
   export function destroy(): void {
     isPainting = false;
     lastBrushPos = null;
+    hasDraftContent = false;
   }
 
   export function getIsPainting(): boolean {

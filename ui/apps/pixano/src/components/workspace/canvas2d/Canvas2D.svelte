@@ -16,6 +16,9 @@ License: CECILL-C
     computeCursorFlushAction,
     computeToolChangeAction,
     getToolSwitchSignature,
+    shouldClearHighlightingOnPanCanvasClick,
+    shouldHideAnnotationsForToolMode,
+    shouldRenderAnnotationWhileToolHidden,
   } from "./canvasEventHandlers";
   import { zoomViewTransform } from "./canvasGeometry";
   import { resolveCanvasViewRef } from "./canvasViewRefs";
@@ -42,7 +45,7 @@ License: CECILL-C
     currentSegmentationModels,
     inferenceServerStore,
   } from "$lib/stores/inferenceStores.svelte";
-  import { highlightedEntity } from "$lib/stores/workspaceStores.svelte";
+  import { clearHighlighting } from "$lib/utils/highlightOperations";
   import {
     ToolType,
     type InteractiveSegmenterAIInput,
@@ -110,6 +113,16 @@ License: CECILL-C
     blueRange: [0, 255],
     u16BitRange: [0, 65535],
   };
+
+  const DRAWING_TOOL_TYPES: ReadonlySet<ToolType> = new Set([
+    ToolType.Rectangle,
+    ToolType.Keypoint,
+    ToolType.Polygon,
+    ToolType.Polyline,
+    ToolType.Brush,
+    ToolType.InteractiveSegmenter,
+    ToolType.VOS,
+  ]);
 
   interface Props {
     // Exports
@@ -1048,8 +1061,8 @@ License: CECILL-C
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
 
-    if (selectedTool?.type === ToolType.Pan && event.button === 0) {
-      highlightedEntity.value = null;
+    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
+      clearHighlighting();
       return;
     }
 
@@ -1236,9 +1249,31 @@ License: CECILL-C
     return grouped;
   });
 
+  let toolHiddenBboxesByView = $derived.by(() => {
+    const grouped: Record<string, BBox[]> = {};
+    for (const bbox of bboxes) {
+      if (!shouldRenderAnnotationWhileToolHidden(bbox.ui?.displayControl ?? {})) continue;
+      const key = bbox.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(bbox);
+    }
+    return grouped;
+  });
+
   let masksByView = $derived.by(() => {
     const grouped: Record<string, DatasetMask[]> = {};
     for (const mask of masks) {
+      const key = mask.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(mask);
+    }
+    return grouped;
+  });
+
+  let toolHiddenMasksByView = $derived.by(() => {
+    const grouped: Record<string, DatasetMask[]> = {};
+    for (const mask of masks) {
+      if (!shouldRenderAnnotationWhileToolHidden(mask.ui?.displayControl ?? {})) continue;
       const key = mask.data.view_name;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(mask);
@@ -1257,9 +1292,32 @@ License: CECILL-C
     return grouped;
   });
 
+  let toolHiddenKeypointsByView = $derived.by(() => {
+    const grouped: Record<string, KeypointAnnotation[]> = {};
+    for (const kpt of keypoints) {
+      if (!shouldRenderAnnotationWhileToolHidden(kpt.ui?.displayControl ?? {})) continue;
+      const key = kpt.viewRef?.name;
+      if (!key) continue;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(kpt);
+    }
+    return grouped;
+  });
+
   let multiPathsByView = $derived.by(() => {
     const grouped: Record<string, DatasetMultiPath[]> = {};
     for (const mp of multiPaths) {
+      const key = mp.data.view_name;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(mp);
+    }
+    return grouped;
+  });
+
+  let toolHiddenMultiPathsByView = $derived.by(() => {
+    const grouped: Record<string, DatasetMultiPath[]> = {};
+    for (const mp of multiPaths) {
+      if (!shouldRenderAnnotationWhileToolHidden(mp.ui?.displayControl ?? {})) continue;
       const key = mp.data.view_name;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(mp);
@@ -1482,15 +1540,6 @@ License: CECILL-C
   // ********** DRAWING-MODE VISIBILITY STATE ********** //
 
   // Tools that qualify as "drawing" — shapes are hidden while any of these is active.
-  const DRAWING_TOOL_TYPES: ReadonlySet<ToolType> = new Set([
-    ToolType.Rectangle,
-    ToolType.Keypoint,
-    ToolType.Polygon,
-    ToolType.Polyline,
-    ToolType.Brush,
-    ToolType.InteractiveSegmenter,
-  ]);
-
   let isDrawingTool = $derived(selectedTool != null && DRAWING_TOOL_TYPES.has(selectedTool.type));
 
   // Whether the interactive segmenter is available (provider connected with compatible models).
@@ -1507,41 +1556,8 @@ License: CECILL-C
     isPeeking = false;
   });
 
-  // Whether existing shapes should be hidden right now.
-  let shouldHideShapes = $derived(isDrawingTool && !isPeeking);
-
-  // Per-shape-type peek visibility, derived from the active tool.
-  type PeekVisibility = {
-    bboxes: boolean;
-    masks: boolean;
-    closedMultiPaths: boolean;
-    openMultiPaths: boolean;
-    keypoints: boolean;
-  };
-
-  let peekVisibility: PeekVisibility = $derived.by(() => {
-    if (!isPeeking) {
-      return {
-        bboxes: false,
-        masks: false,
-        closedMultiPaths: false,
-        openMultiPaths: false,
-        keypoints: false,
-      };
-    }
-    const t = selectedTool?.type;
-    return {
-      bboxes: t === ToolType.Rectangle,
-      masks:
-        t === ToolType.Brush ||
-        t === ToolType.InteractiveSegmenter ||
-        t === ToolType.VOS ||
-        (t === ToolType.Polygon && selectedTool?.outputMode === "mask"),
-      closedMultiPaths: t === ToolType.Polygon && selectedTool?.outputMode !== "mask",
-      openMultiPaths: t === ToolType.Polyline,
-      keypoints: t === ToolType.Keypoint,
-    };
-  });
+  // Whether store-backed annotations should be hidden right now.
+  let shouldHideShapes = $derived(shouldHideAnnotationsForToolMode(isDrawingTool, isPeeking));
 
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
@@ -1581,7 +1597,6 @@ License: CECILL-C
         });
       }
       untrack(() => clearAnnotationAndInputs({ preserveSmartPromptPreview }));
-      onNewShapeChange?.({ status: "none" });
       prevSelectedTool = currentTool;
       return;
     }
@@ -1771,32 +1786,34 @@ License: CECILL-C
           currentSequenceFrameRefsByView,
         )}
         <Group id={`static-${view_name}`} bind:this={viewRefs.staticViewRefs[view_name]}>
-          {#if !shouldHideShapes || peekVisibility.bboxes}
-            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
-              {#if !bbox.ui.displayControl.editing}
-                <BBox2D
-                  {bbox}
-                  {colorScale}
-                  zoomFactor={zoomFactor[view_name] ?? 1}
-                  listening={false}
-                  imageWidth={currentImage?.width ?? 0}
-                  imageHeight={currentImage?.height ?? 0}
-                  {merge}
-                  {onNewShapeChange}
-                  forceNeutralColor={isPeeking}
-                />
-              {/if}
-            {/each}
-          {/if}
+          {@const visibleBboxes = shouldHideShapes
+            ? (toolHiddenBboxesByView[view_name] ?? [])
+            : (bboxesByView[view_name] ?? [])}
+          {#each visibleBboxes as bbox (bbox.id)}
+            {#if !bbox.ui.displayControl.editing}
+              <BBox2D
+                {bbox}
+                {colorScale}
+                zoomFactor={zoomFactor[view_name] ?? 1}
+                listening={false}
+                imageWidth={currentImage?.width ?? 0}
+                imageHeight={currentImage?.height ?? 0}
+                {merge}
+                {onNewShapeChange}
+                forceNeutralColor={isPeeking}
+              />
+            {/if}
+          {/each}
 
-          {@const viewMasks = masksByView[view_name] ?? []}
-          {@const effectiveMasks = shouldHideShapes && !peekVisibility.masks ? [] : viewMasks}
-          {#if (effectiveMasks.length > 0 || selectedTool?.type === ToolType.Brush || smartPreviewMasks[view_name]) && currentImage}
+          {@const visibleMasks = shouldHideShapes
+            ? (toolHiddenMasksByView[view_name] ?? [])
+            : (masksByView[view_name] ?? [])}
+          {#if (visibleMasks.length > 0 || selectedTool?.type === ToolType.Brush || smartPreviewMasks[view_name]) && currentImage}
             <Mask
               bind:this={viewRefs.maskRefs[view_name]}
               {viewRef}
               {currentImage}
-              masks={effectiveMasks}
+              masks={visibleMasks}
               previewMask={getPreviewMaskForView(view_name)}
               {colorScale}
               {selectedTool}
@@ -1807,31 +1824,30 @@ License: CECILL-C
             />
           {/if}
 
-          {#if !shouldHideShapes || peekVisibility.closedMultiPaths || peekVisibility.openMultiPaths}
-            {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
-              {#if !multiPath.ui.displayControl.hidden}
-                {@const showInPeek =
-                  (multiPath.data.is_closed && peekVisibility.closedMultiPaths) ||
-                  (!multiPath.data.is_closed && peekVisibility.openMultiPaths)}
-                {#if !shouldHideShapes || showInPeek}
-                  <MultiPathShape
-                    {multiPath}
-                    {colorScale}
-                    imageWidth={currentImage?.width ?? 0}
-                    imageHeight={currentImage?.height ?? 0}
-                    forceNeutralColor={isPeeking}
-                  />
-                {/if}
-              {/if}
-            {/each}
-          {/if}
+          {@const visibleMultiPaths = shouldHideShapes
+            ? (toolHiddenMultiPathsByView[view_name] ?? [])
+            : (multiPathsByView[view_name] ?? [])}
+          {#each visibleMultiPaths as multiPath (multiPath.id)}
+            {#if !multiPath.ui.displayControl.hidden}
+              <MultiPathShape
+                {multiPath}
+                {colorScale}
+                imageWidth={currentImage?.width ?? 0}
+                imageHeight={currentImage?.height ?? 0}
+                forceNeutralColor={isPeeking}
+              />
+            {/if}
+          {/each}
 
-          {#if !shouldHideShapes || peekVisibility.keypoints}
+          {@const visibleKeypoints = shouldHideShapes
+            ? (toolHiddenKeypointsByView[view_name] ?? [])
+            : (keypointsByView[view_name] ?? [])}
+          {#if visibleKeypoints.length > 0}
             <Group listening={false}>
               <ShowKeypoints
                 {colorScale}
                 {viewRef}
-                keypoints={keypointsByView[view_name] ?? []}
+                keypoints={visibleKeypoints}
                 zoomFactor={zoomFactor[view_name] ?? 1}
                 imageSize={{ width: currentImage?.width ?? 1, height: currentImage?.height ?? 1 }}
                 {newShape}
@@ -1970,8 +1986,13 @@ License: CECILL-C
             />
           {/if}
 
-          {#if !shouldHideShapes}
-            {#each bboxesByView[view_name] ?? [] as bbox (bbox.id)}
+          {@const activeBboxes = shouldHideShapes
+            ? (toolHiddenBboxesByView[view_name] ?? []).filter(
+                (bbox) => bbox.ui.displayControl.editing,
+              )
+            : (bboxesByView[view_name] ?? [])}
+          {#if !shouldHideShapes || activeBboxes.length > 0}
+            {#each activeBboxes as bbox (bbox.id)}
               {#if !bbox.ui.displayControl.editing && (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan)}
                 <Rect
                   x={bbox.data.coords[0]}

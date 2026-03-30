@@ -28,6 +28,7 @@ import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import { getTable, PIXANO_SOURCE } from "$lib/utils/entityLookupUtils";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
+import { resolveVideoFrameIdentity } from "$lib/utils/videoFrameIdentity";
 import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 export const removeAnnotationsByIds = (
@@ -224,6 +225,18 @@ export const defineCreatedAnnotation = (
   currentFrameIndex: number,
 ): Annotation | undefined => {
   const now = nowTimestamp();
+  const videoFrameRef =
+    isVideo && shape.type !== ShapeType.track
+      ? resolveVideoFrameIdentity(
+          viewRef,
+          currentFrameIndex,
+          Array.isArray(views.value[viewRef.name])
+            ? (views.value[viewRef.name] as import("$lib/types/dataset").SequenceFrame[])
+            : undefined,
+        )
+      : null;
+  const annotationViewRef = videoFrameRef?.viewRef ?? viewRef;
+  const annotationFrameIndex = videoFrameRef?.frameIndex ?? currentFrameIndex;
   const baseAnn = {
     id: nanoid(10),
     created_at: now,
@@ -231,7 +244,7 @@ export const defineCreatedAnnotation = (
   };
   const baseData = {
     item_id: entity.data.item_id,
-    view_name: viewRef.name,
+    view_name: annotationViewRef.name,
     entity_id: entity.id,
     source_type: PIXANO_SOURCE.type,
     source_name: PIXANO_SOURCE.name,
@@ -240,8 +253,8 @@ export const defineCreatedAnnotation = (
   };
   const perFrameData = {
     ...baseData,
-    frame_id: viewRef.id,
-    frame_index: -1,
+    frame_id: annotationViewRef.id,
+    frame_index: videoFrameRef ? annotationFrameIndex : -1,
     tracklet_id: "",
     entity_dynamic_state_id: "",
   };
@@ -357,8 +370,10 @@ export const defineCreatedAnnotation = (
       : WorkspaceType.IMAGE;
 
   if (isVideo && shape.type !== ShapeType.track) {
-    newAnnotation.ui.frame_index = currentFrameIndex;
-    newAnnotation.data.frame_index = currentFrameIndex;
+    newAnnotation.ui.frame_index = annotationFrameIndex;
+    newAnnotation.data.frame_index = annotationFrameIndex;
+    newAnnotation.data.frame_id = annotationViewRef.id;
+    newAnnotation.data.view_name = annotationViewRef.name;
   }
 
   //add extra features if any

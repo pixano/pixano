@@ -74,6 +74,9 @@ export function buildPersistedVosMasks(
 
     annotation.table_info = { ...input.tableInfo };
     annotation.data.entity_id = input.entityId;
+    annotation.data.view_name = persistedOutput.data.view_name;
+    annotation.data.frame_id = persistedOutput.data.frame_id;
+    annotation.data.frame_index = frameIndex;
     annotation.ui = cloneMaskUiTemplate(input.uiTemplate, frameIndex);
 
     allMasks.push(annotation);

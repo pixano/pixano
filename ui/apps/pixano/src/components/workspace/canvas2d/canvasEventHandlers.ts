@@ -122,6 +122,39 @@ export interface CursorFlushAction {
   showSmartPromptCursor: boolean;
 }
 
+export interface AnnotationToolHideDisplayControl {
+  hidden?: boolean;
+  editing?: boolean;
+  highlighted?: "all" | "self" | "none";
+}
+
+/**
+ * Existing annotations are hidden while a drawing tool is active unless the user is peeking.
+ */
+export function shouldHideAnnotationsForToolMode(isDrawingTool: boolean, isPeeking: boolean): boolean {
+  return isDrawingTool && !isPeeking;
+}
+
+/**
+ * A left click on the blank canvas while Pan is active should clear all annotation highlighting.
+ */
+export function shouldClearHighlightingOnPanCanvasClick(
+  tool: SelectionTool | undefined,
+  button: number,
+): boolean {
+  return tool?.type === ToolType.Pan && button === 0;
+}
+
+/**
+ * While a drawing tool is active, keep only the selected/self-highlighted annotation (or any
+ * annotation already in editing mode) visible.
+ */
+export function shouldRenderAnnotationWhileToolHidden(
+  control: AnnotationToolHideDisplayControl,
+): boolean {
+  return !control.hidden && (control.highlighted === "self" || control.editing === true);
+}
+
 /**
  * Compute which cursor overlays should be active for the current tool.
  * The actual position/state updates are done by the caller.

@@ -70,6 +70,9 @@ describe("buildPersistedVosMasks", () => {
     });
 
     expect(built.currentMask?.data.frame_index).toBe(6);
+    expect(built.currentMask?.ui.frame_index).toBe(6);
+    expect(built.currentMask?.data.frame_id).toBe("frame-6");
+    expect(built.currentMask?.data.view_name).toBe("camera");
     expect(built.trackingMasks.map((mask) => mask.data.frame_index)).toEqual([2, 4]);
     expect(built.allMasks).toHaveLength(3);
     expect(new Set(built.allMasks.map((mask) => mask.id)).size).toBe(3);

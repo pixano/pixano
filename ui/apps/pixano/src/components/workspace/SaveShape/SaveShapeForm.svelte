@@ -50,6 +50,7 @@ License: CECILL-C
     getFrameIndex,
   } from "$lib/utils/entityOperations";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
+  import { highlightTrackletChildren } from "$lib/utils/highlightOperations";
   import { getAlphaBoundingBox, rleToBitmapCanvas } from "$lib/utils/maskUtils";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { cn } from "$lib/utils/styleUtils";
@@ -113,12 +114,10 @@ License: CECILL-C
     let newAnnotation: Annotation | undefined = undefined;
     let newTrack: Annotation | undefined = undefined;
     let newTracks: Annotation[] = [];
+    let focusedTrackletId: string | null = null;
 
     const isVideo = itemMetas.value?.type === WorkspaceType.VIDEO;
-    const shapeFrameIndex =
-      isVideo && "viewRef" in newShape.value
-        ? getFrameIndex(newShape.value.viewRef.name, newShape.value.viewRef.id)
-        : currentFrameIndex.value;
+    const shapeFrameIndex = currentFrameIndex.value;
     const isFromVOS =
       isVideo && newShape.value.type === ShapeType.mask && vosSession.value.masks.length > 0;
     const isFromTracking =
@@ -344,6 +343,9 @@ License: CECILL-C
                 const candidate_track = candidate_tracks[0] as Tracklet;
                 for (const bbox of segBBoxes) candidate_track.ui.childs.push(bbox);
                 candidate_track.ui.childs.sort(sortByFrameIndex);
+                if (segStart <= shapeFrameIndex && shapeFrameIndex <= segEnd) {
+                  focusedTrackletId = candidate_track.id;
+                }
               } else {
                 const trackShape: SaveTrackShape = {
                   type: ShapeType.track,
@@ -375,6 +377,9 @@ License: CECILL-C
                 saveTo("add", segTrack);
                 entity.ui.childs?.push(segTrack);
                 newTracks.push(segTrack);
+                if (segStart <= shapeFrameIndex && shapeFrameIndex <= segEnd) {
+                  focusedTrackletId = segTrack.id;
+                }
               }
             }
           }
@@ -395,6 +400,9 @@ License: CECILL-C
               for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
             }
             candidate_track.ui.childs.sort(sortByFrameIndex);
+            if (newAnnotation.is_type(BaseSchema.BBox)) {
+              focusedTrackletId = candidate_track.id;
+            }
           } else {
             const trackShape: SaveTrackShape = {
               type: ShapeType.track,
@@ -428,6 +436,9 @@ License: CECILL-C
             (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
             saveTo("add", newTrack);
             entity.ui.childs?.push(newTrack);
+            if (newAnnotation.is_type(BaseSchema.BBox)) {
+              focusedTrackletId = newTrack.id;
+            }
           }
         }
       }
@@ -478,6 +489,14 @@ License: CECILL-C
     });
 
     annotations.value.sort((a, b) => sortByFrameIndex(a, b));
+    if (focusedTrackletId) {
+      const focusedTracklet = annotations.value.find(
+        (annotation) => annotation.id === focusedTrackletId && annotation.is_type(BaseSchema.Tracklet),
+      );
+      if (focusedTracklet) {
+        highlightTrackletChildren(focusedTracklet as Tracklet);
+      }
+    }
     for (const tname in objectProperties) {
       for (const feat in objectProperties[tname]) {
         if (typeof objectProperties[feat] === "string") {
