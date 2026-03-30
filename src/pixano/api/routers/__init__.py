@@ -19,6 +19,7 @@ from pixano.api.routers.keypoints import router as keypoints_router
 from pixano.api.routers.masks import router as masks_router
 from pixano.api.routers.messages import router as messages_router
 from pixano.api.routers.multi_paths import router as multi_paths_router
+from pixano.api.routers.preannotation import router as preannotation_router
 from pixano.api.routers.records import router as records_router
 from pixano.api.routers.text_spans import router as text_spans_router
 from pixano.api.routers.tracklets import router as tracklets_router
@@ -45,6 +46,7 @@ API_ROUTERS: tuple[APIRouter, ...] = (
     datasets_router,
     inference_app_router,
     inference_router,
+    preannotation_router,
     *RESOURCE_ROUTERS,
 )
 

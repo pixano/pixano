@@ -145,3 +145,76 @@ def import_data(
 
     dataset = builder.build(mode=mode.value)
     typer.echo(f"Dataset '{dataset_name}' built successfully ({dataset.num_rows} records).")
+
+
+@data_app.command(name="preannotate")
+def preannotate(
+    data_dir: Path = typer.Argument(..., exists=True, dir_okay=True, help="Path to root data directory."),
+    dataset_id: str = typer.Argument(..., help="ID of the dataset to pre-annotate."),
+    inference_url: str = typer.Option(..., "--inference-url", help="URL of the pixano-inference server."),
+    model: str = typer.Option(..., "--model", help="Model name on the inference server."),
+    task: str = typer.Option("detection", "--task", help="Inference task (detection)."),
+    classes: list[str] = typer.Option([], "--class", "-c", help="Target classes (required for detection)."),
+    class_field: str | None = typer.Option(
+        None, "--class-field", help="Entity field to write the detected class into (e.g. 'category')."
+    ),
+    box_threshold: float = typer.Option(0.5, "--box-threshold", help="Box confidence threshold."),
+    text_threshold: float = typer.Option(0.5, "--text-threshold", help="Text matching threshold."),
+    batch_write_size: int = typer.Option(50, "--batch-size", help="Records per DB write batch."),
+    view_name: str | None = typer.Option(None, "--view", help="Logical view name to use."),
+) -> None:
+    """Pre-annotate a dataset using an inference model.
+
+    Connects directly to a pixano-inference server and runs the specified
+    model over every record in the dataset, writing predictions back as
+    annotation rows.
+    """
+    import asyncio
+
+    from pixano.datasets import Dataset
+    from pixano.inference.preannotation import PreannotationConfig, PreannotationProgress, run_preannotation
+    from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
+    from pixano.inference.types import InferenceTask as IT
+
+    library_dir = data_dir / "library"
+
+    try:
+        dataset = Dataset.find(dataset_id, library_dir)
+    except FileNotFoundError:
+        typer.echo(f"Error: dataset '{dataset_id}' not found in {library_dir}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        provider = asyncio.run(PixanoInferenceProvider.connect(inference_url))
+    except Exception as exc:
+        typer.echo(f"Error: could not connect to inference server at {inference_url}: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    config = PreannotationConfig(
+        task=IT(task),
+        model=model,
+        source_name=model,
+        classes=classes if classes else None,
+        class_field=class_field,
+        box_threshold=box_threshold,
+        text_threshold=text_threshold,
+        batch_write_size=batch_write_size,
+        view_name=view_name,
+    )
+
+    def _cli_progress(progress: PreannotationProgress) -> None:
+        typer.echo(
+            f"\r[{progress.processed}/{progress.total}] "
+            f"OK={progress.succeeded} ERR={progress.failed}",
+            nl=False,
+        )
+
+    typer.echo(f"Starting pre-annotation: dataset={dataset_id}, model={model}, task={task}")
+    result = asyncio.run(run_preannotation(dataset, provider, config, progress_callback=_cli_progress))
+    typer.echo()  # newline after progress
+    typer.echo(f"Done: {result.succeeded} succeeded, {result.failed} failed out of {result.total} records.")
+    if result.errors:
+        for err in result.errors[:10]:
+            typer.echo(f"  Error: record={err['record_id']}: {err['error']}", err=True)
+        if len(result.errors) > 10:
+            typer.echo(f"  ... and {len(result.errors) - 10} more errors", err=True)

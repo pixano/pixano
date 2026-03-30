@@ -26,6 +26,7 @@ Example:
 
 # Core provider interface and registry
 from .detection import detection
+from .preannotation import PreannotationConfig, PreannotationProgress, run_preannotation
 from .exceptions import (
     InferenceError,
     InferenceTimeoutError,
@@ -123,4 +124,8 @@ __all__ = [
     "segmentation",
     "tracking",
     "detection",
+    # Pre-annotation
+    "PreannotationConfig",
+    "PreannotationProgress",
+    "run_preannotation",
 ]
