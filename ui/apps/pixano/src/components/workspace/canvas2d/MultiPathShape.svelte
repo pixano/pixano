@@ -8,8 +8,8 @@ License: CECILL-C
   import type Konva from "konva";
   import { Shape as KonvaShape } from "svelte-konva";
 
+  import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
-  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import type { MultiPath } from "$lib/types/dataset";
 
   interface Props {
@@ -28,9 +28,16 @@ License: CECILL-C
     forceNeutralColor = false,
   }: Props = $props();
 
+  let peekPresentation = $derived(
+    resolveNeutralPeekPresentation({
+      isPeeking: forceNeutralColor,
+      highlighted: multiPath.ui.displayControl.highlighted,
+      baseOpacity: multiPath.ui.opacity ?? 1,
+    }),
+  );
   let color = $derived.by(() => {
     if (forceNeutralColor || multiPath.ui.displayControl.highlighted === "none")
-      return NEUTRAL_ENTITY_COLOR;
+      return peekPresentation.neutralColor;
     const entityId =
       multiPath.ui.top_entities && multiPath.ui.top_entities.length > 0
         ? multiPath.ui.top_entities[0].id
@@ -39,7 +46,13 @@ License: CECILL-C
   });
 
   let isClosed = $derived(multiPath.data.is_closed);
-  let fillColor = $derived(isClosed ? color + "33" : undefined);
+  let fillColor = $derived.by(() => {
+    if (!isClosed) return undefined;
+    if (forceNeutralColor || multiPath.ui.displayControl.highlighted === "none") {
+      return color;
+    }
+    return color + "33";
+  });
 
   function sceneFunc(ctx: Konva.Context, shape: Konva.Shape) {
     const { coords, num_points } = multiPath.data;
@@ -83,7 +96,7 @@ License: CECILL-C
   perfectDrawEnabled={false}
   shadowForStrokeEnabled={false}
   fill={fillColor}
-  opacity={multiPath.ui.opacity ?? 1}
+  opacity={peekPresentation.opacity}
   visible={!multiPath.ui.displayControl.hidden}
   listening={false}
 />

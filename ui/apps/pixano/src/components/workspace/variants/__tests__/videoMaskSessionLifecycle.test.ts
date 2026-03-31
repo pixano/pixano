@@ -92,4 +92,14 @@ describe("videoMaskSessionLifecycle", () => {
       }),
     ).toBe(false);
   });
+
+  it("does not rehydrate video previews after confirm teardown clears the live session", () => {
+    expect(
+      shouldHydrateVideoPreview(ToolType.VOS, {
+        isVosSessionActive: false,
+        hasTracker: false,
+        hasActiveJob: false,
+      }),
+    ).toBe(false);
+  });
 });

@@ -16,6 +16,7 @@ License: CECILL-C
     computeCursorFlushAction,
     computeToolChangeAction,
     getToolSwitchSignature,
+    resolveInteractiveToolResetAction,
     shouldClearHighlightingOnPanCanvasClick,
     shouldHideAnnotationsForToolMode,
     shouldRenderAnnotationWhileToolHidden,
@@ -1567,14 +1568,12 @@ License: CECILL-C
     const shouldReset = "shouldReset" in newShape ? newShape.shouldReset : false;
     const resetReason = "resetReason" in newShape ? newShape.resetReason : undefined;
     const resetShapeType = "resetShapeType" in newShape ? newShape.resetShapeType : undefined;
-    const preserveSmartPromptPreview =
-      resetReason === "save-cancelled" &&
-      resetShapeType === ShapeType.mask &&
-      (currentTool?.type === ToolType.InteractiveSegmenter || currentTool?.type === ToolType.VOS);
-    const shouldClearInteractiveSession =
-      resetReason === "save-confirmed" &&
-      resetShapeType === ShapeType.mask &&
-      (currentTool?.type === ToolType.InteractiveSegmenter || currentTool?.type === ToolType.VOS);
+    const interactiveResetAction = resolveInteractiveToolResetAction(
+      currentTool?.type,
+      resetReason,
+      resetShapeType,
+    );
+    const preserveSmartPromptPreview = interactiveResetAction === "preserve-local-preview";
 
     // Fallback unsupported tools
     if (currentTool && !isSupportedCanvasTool(currentTool)) {
@@ -1588,15 +1587,18 @@ License: CECILL-C
 
     // Reset when shape explicitly requests it
     if (shapeStatus === "none" && shouldReset) {
-      if (
-        shouldClearInteractiveSession &&
-        activeToolBridge?.preview.value?.type === "interactive-segmenter"
-      ) {
-        untrack(() => {
-          activeToolBridge?.dispatchEvent({ type: "cancel" });
-        });
-      }
-      untrack(() => clearAnnotationAndInputs({ preserveSmartPromptPreview }));
+      untrack(() => {
+        clearAnnotationAndInputs({ preserveSmartPromptPreview });
+        if (interactiveResetAction === "reset-local-interactive-tool" && currentTool) {
+          const bridge = activeToolBridge;
+          const fsm = bridge ? createToolFSMForSelection(currentTool) : null;
+          if (bridge && fsm) {
+            bridge.switchTool(fsm);
+            lastBridgeForToolSwitch = bridge;
+            lastToolSwitchSignature = getToolSwitchSignature(currentTool);
+          }
+        }
+      });
       prevSelectedTool = currentTool;
       return;
     }
