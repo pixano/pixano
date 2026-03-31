@@ -24,9 +24,7 @@ _EXAMPLES_AVAILABLE = _EXAMPLES_DIR.is_dir()
 VOC_INFO_SPEC = f"{(_EXAMPLES_DIR / 'voc' / 'info.py')}:{'dataset_info'}"
 VQAV2_INFO_SPEC = f"{(_EXAMPLES_DIR / 'vqav2' / 'info.py')}:{'dataset_info'}"
 
-_skip_no_examples = pytest.mark.skipif(
-    not _EXAMPLES_AVAILABLE, reason="examples/ moved to pixano-cookbook repository"
-)
+_skip_no_examples = pytest.mark.skipif(not _EXAMPLES_AVAILABLE, reason="examples/ moved to pixano-cookbook repository")
 
 
 @_skip_no_examples
