@@ -53,18 +53,20 @@ export function editKeyItemInTracklet(
 
     if (shape.type === ShapeType.bbox) {
       const interpolatedBox = currentBBoxes.find((box) => box.id === shape.shapeId);
-      if (interpolatedBox && "startRef" in interpolatedBox) {
-        newAnn = BBox.cloneForFrame(interpolatedBox.startRef as BBox, {
+      const sourceBBox = interpolatedBox?.ui?.startRef as BBox | undefined;
+      if (interpolatedBox && sourceBBox) {
+        newAnn = BBox.cloneForFrame(sourceBBox, {
           id: shape.shapeId,
           coords: shape.coords,
           view_name: shape.viewRef.name,
           frame_id: shape.viewRef.id,
           frame_index: currentFrame,
         });
+        newAnn.data.tracklet_id = sourceBBox.data.tracklet_id;
       }
     } else if (shape.type === ShapeType.keypoints) {
       const interpolatedKpt = currentKeypoints.find((kpt) => kpt.id === shape.shapeId);
-      if (interpolatedKpt && "startRef" in interpolatedKpt) {
+      if (interpolatedKpt?.ui?.startRef) {
         const keypointRef = allAnnotations.find(
           (ann) => ann.is_type(BaseSchema.Keypoints) && ann.id === interpolatedKpt.ui?.startRef?.id,
         ) as Keypoints;
@@ -78,6 +80,7 @@ export function editKeyItemInTracklet(
             frame_id: shape.viewRef.id,
             frame_index: currentFrame,
           });
+          newAnn.data.tracklet_id = keypointRef.data.tracklet_id;
         }
       }
     } else if (

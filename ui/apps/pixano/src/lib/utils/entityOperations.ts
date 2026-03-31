@@ -25,6 +25,7 @@ import {
   type Reference,
 } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type SaveShape } from "$lib/types/shapeTypes";
+import { toLegacyReference, toViewLocator } from "$lib/types/workspaceLocators";
 import { nowTimestamp } from "$lib/utils/coreUtils";
 import { getTable, PIXANO_SOURCE } from "$lib/utils/entityLookupUtils";
 import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
@@ -228,14 +229,14 @@ export const defineCreatedAnnotation = (
   const videoFrameRef =
     isVideo && shape.type !== ShapeType.track
       ? resolveVideoFrameIdentity(
-          viewRef,
+          toViewLocator(viewRef),
           currentFrameIndex,
           Array.isArray(views.value[viewRef.name])
             ? (views.value[viewRef.name] as import("$lib/types/dataset").SequenceFrame[])
             : undefined,
         )
       : null;
-  const annotationViewRef = videoFrameRef?.viewRef ?? viewRef;
+  const annotationViewRef = videoFrameRef ? toLegacyReference(videoFrameRef.frameLocator) : viewRef;
   const annotationFrameIndex = videoFrameRef?.frameIndex ?? currentFrameIndex;
   const baseAnn = {
     id: nanoid(10),

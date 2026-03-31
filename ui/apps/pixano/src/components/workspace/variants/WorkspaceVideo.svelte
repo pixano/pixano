@@ -15,7 +15,7 @@ License: CECILL-C
     shouldClearVideoMaskSessionOnToolSwitch,
     shouldHydrateVideoPreview,
   } from "./videoMaskSessionLifecycle";
-  import { buildCurrentSequenceFrameRefsByView } from "./videoSequenceFrameRefs";
+  import { buildCurrentSequenceFrameLocatorsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
   import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
   import {
@@ -69,6 +69,7 @@ License: CECILL-C
     current_itemKeypoints,
     current_itemMasks,
     current_itemMultiPaths,
+    entities,
     imageSmoothing,
     newShape,
     selectedTool,
@@ -82,6 +83,7 @@ License: CECILL-C
   } from "$lib/tools";
   import { Sam2VideoTracker } from "$lib/trackers";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
+  import { toLegacyReference } from "$lib/types/workspaceLocators";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import {
     AiProcessingBadge,
@@ -99,6 +101,7 @@ License: CECILL-C
   import { toggleFusionEntity } from "$lib/utils/videoFusion";
   import { loadInitialFrames, setBufferSpecs } from "$lib/utils/videoOperations";
   import { editKeyItemInTracklet } from "$lib/utils/videoShapeEditing";
+  import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 
   interface Props {
     selectedItem: WorkspaceViewerItem;
@@ -221,9 +224,18 @@ License: CECILL-C
     return frame ? { id: frame.id, name: viewName } : null;
   }
 
-  const currentSequenceFrameRefsByView = $derived.by(() => {
+  const currentSequenceFrameLocatorsByView = $derived.by(() => {
     const frameIndex = currentFrameIndex.value;
-    return buildCurrentSequenceFrameRefsByView(getSequenceFrameViews(selectedItem), frameIndex);
+    return buildCurrentSequenceFrameLocatorsByView(getSequenceFrameViews(selectedItem), frameIndex);
+  });
+
+  const currentSequenceFrameRefsByView = $derived.by(() => {
+    return Object.fromEntries(
+      Object.entries(currentSequenceFrameLocatorsByView).map(([logicalName, locator]) => [
+        logicalName,
+        toLegacyReference(locator),
+      ]),
+    );
   });
 
   function sleep(ms: number): Promise<void> {
@@ -743,7 +755,7 @@ License: CECILL-C
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         current_itemKeypoints.value as any,
       );
-      annotations.value = objects;
+      commitNormalizedWorkspaceRuntime(objects, entities.value);
       if (save_data) saveTo(save_data.change_type, save_data.data);
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));

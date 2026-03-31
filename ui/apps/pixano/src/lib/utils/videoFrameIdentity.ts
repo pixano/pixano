@@ -4,34 +4,58 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Reference, SequenceFrame } from "$lib/types/dataset";
+import type { SequenceFrame } from "$lib/types/dataset";
+import {
+  buildFrameLocator,
+  isFrameLocator,
+  type FrameLocator,
+  type ViewLocator,
+  type WorkspaceLocator,
+} from "$lib/types/workspaceLocators";
 
-export function resolveSequenceFrameRef(
-  viewName: string,
+export function resolveSequenceFrameLocator(
+  logicalName: string,
   frameIndex: number,
   viewFrames: SequenceFrame[] | undefined,
-  fallback: Reference,
-): Reference {
+  fallback: WorkspaceLocator,
+): FrameLocator {
   if (!viewFrames || !Number.isFinite(frameIndex) || frameIndex < 0) {
-    return fallback;
+    return isFrameLocator(fallback)
+      ? fallback
+      : {
+          frameId: fallback.id,
+          logicalName: fallback.logicalName,
+          frameIndex,
+        };
   }
 
   const frame =
     viewFrames.find((candidate) => candidate.data.frame_index === frameIndex) ?? viewFrames[frameIndex];
   if (!frame) {
-    return fallback;
+    return isFrameLocator(fallback)
+      ? fallback
+      : {
+          frameId: fallback.id,
+          logicalName: fallback.logicalName,
+          frameIndex,
+        };
   }
 
-  return { id: frame.id, name: viewName };
+  return buildFrameLocator(frame, logicalName);
 }
 
 export function resolveVideoFrameIdentity(
-  viewRef: Reference,
+  viewLocator: ViewLocator | FrameLocator,
   frameIndex: number,
   viewFrames: SequenceFrame[] | undefined,
-): { viewRef: Reference; frameIndex: number } {
+): { frameLocator: FrameLocator; frameIndex: number } {
   return {
-    viewRef: resolveSequenceFrameRef(viewRef.name, frameIndex, viewFrames, viewRef),
+    frameLocator: resolveSequenceFrameLocator(
+      viewLocator.logicalName,
+      frameIndex,
+      viewFrames,
+      viewLocator,
+    ),
     frameIndex,
   };
 }

@@ -32,6 +32,7 @@ License: CECILL-C
   import { relink } from "$lib/utils/entityRelink";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { sortByFrameIndex } from "$lib/utils/videoUtils";
+  import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
   type MView = Record<string, View | View[]>;
@@ -206,24 +207,22 @@ License: CECILL-C
     }
     movedAnn.ui.frame_index = newFrameIndex;
     movedAnn.data.frame_id = newViewId;
-
-    annotations.update((objects) =>
-      objects.map((ann) => {
-        if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
-          if (isStart) {
-            (ann as Tracklet).data.start_frame = newFrameIndex;
-          }
-          if (isEnd) {
-            (ann as Tracklet).data.end_frame = newFrameIndex;
-          }
+    const nextAnnotations = annotations.value.map((ann) => {
+      if (ann.is_type(BaseSchema.Tracklet) && ann.id === tracklet.id) {
+        if (isStart) {
+          (ann as Tracklet).data.start_frame = newFrameIndex;
         }
-        if (ann.id === movedAnn.id) {
-          ann.ui.frame_index = newFrameIndex;
-          ann.data.frame_id = newViewId;
+        if (isEnd) {
+          (ann as Tracklet).data.end_frame = newFrameIndex;
         }
-        return ann;
-      }),
-    );
+      }
+      if (ann.id === movedAnn.id) {
+        ann.ui.frame_index = newFrameIndex;
+        ann.data.frame_id = newViewId;
+      }
+      return ann;
+    });
+    commitNormalizedWorkspaceRuntime(nextAnnotations, entities.value);
     applyPixanoSourceFields(tracklet);
     saveTo("update", tracklet);
     applyPixanoSourceFields(movedAnn);
@@ -238,18 +237,15 @@ License: CECILL-C
     const neighbor = direction === "left" ? leftNeighbor : rightNeighbor;
     if (!neighbor) return;
 
-    annotations.update((anns) => {
-      let filteredAnns = anns.filter((ann) => ann.id !== neighbor.id);
-      return filteredAnns.map((ann) => {
+    const nextAnnotations = annotations.value
+      .filter((ann) => ann.id !== neighbor.id)
+      .map((ann) => {
         if (ann.id === tracklet.id) {
           const currentTracklet = ann as Tracklet;
           const neighborTracklet = neighbor as Tracklet;
-
-          currentTracklet.ui.childs = [
-            ...currentTracklet.ui.childs,
-            ...neighborTracklet.ui.childs,
-          ].sort(sortByFrameIndex);
-
+          [...currentTracklet.ui.childs, ...neighborTracklet.ui.childs].forEach((child) => {
+            child.data.tracklet_id = currentTracklet.id;
+          });
           if (direction === "left") {
             currentTracklet.data.start_frame = neighborTracklet.data.start_frame;
           } else {
@@ -258,16 +254,14 @@ License: CECILL-C
         }
         return ann;
       });
-    });
 
-    entities.update((ents) =>
-      ents.map((ent) => {
-        if (ent.id === entityId) {
-          ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
-        }
-        return ent;
-      }),
-    );
+    const nextEntities = entities.value.map((ent) => {
+      if (ent.id === entityId) {
+        ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
+      }
+      return ent;
+    });
+    commitNormalizedWorkspaceRuntime(nextAnnotations, nextEntities);
 
     saveTo("delete", neighbor);
   };

@@ -22,6 +22,7 @@ import {
 import { clearHighlighting } from "$lib/utils/highlightOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
+import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 // We need to pass a list of string as a 'dataset' attribute (dataset-overlap) of option choice of HTMLSelectElement.
@@ -140,6 +141,9 @@ export const relink = (
     let nextAnnotations = anns.map((ann) => {
       if (toRelink.includes(ann)) {
         ann.data.entity_id = targetEntity.id;
+        if (!child.is_type(BaseSchema.Tracklet) && "tracklet_id" in ann.data) {
+          ann.data.tracklet_id = "";
+        }
         ann.ui.top_entities = []; // reset top_entities
       }
       if (deleteTrack && ann.is_type(BaseSchema.Tracklet)) {
@@ -151,6 +155,14 @@ export const relink = (
             ...toMoveAnnotations,
             ...tracksToFuse.flatMap((fann) => (fann as Tracklet).ui.childs),
           ].sort(sortByFrameIndex);
+          [...toMoveAnnotations, ...tracksToFuse.flatMap((fann) => (fann as Tracklet).ui.childs)].forEach(
+            (movedChild) => {
+              if ("tracklet_id" in movedChild.data) {
+                movedChild.data.tracklet_id = ann.id;
+              }
+              movedChild.data.entity_id = targetEntity.id;
+            },
+          );
 
           // target track range may change: union of current & targets
           (ann as Tracklet).data.start_frame = Math.min(
@@ -180,6 +192,7 @@ export const relink = (
   });
 
   // reset moved child(s) new top_entities + check
+  commitNormalizedWorkspaceRuntime(annotations.value, entities.value);
   toMoveAnnotations.forEach((ann) => {
     ann.ui.top_entities = [];
     if (getTopEntity(ann) !== targetEntity) {

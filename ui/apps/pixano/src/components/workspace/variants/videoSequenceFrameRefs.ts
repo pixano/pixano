@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Reference } from "$lib/types/dataset";
+import type { FrameLocator } from "$lib/types/workspaceLocators";
 
 type SequenceFrameLike = {
   id: string;
@@ -13,17 +13,21 @@ type SequenceFrameLike = {
   };
 };
 
-export function buildCurrentSequenceFrameRefsByView(
+export function buildCurrentSequenceFrameLocatorsByView(
   views: Record<string, SequenceFrameLike[]>,
   frameIndex: number,
-): Record<string, Reference> {
-  const refs: Record<string, Reference> = {};
+): Record<string, FrameLocator> {
+  const locators: Record<string, FrameLocator> = {};
 
-  for (const [viewName, frames] of Object.entries(views)) {
+  for (const [logicalName, frames] of Object.entries(views)) {
     const frame = frames.find((candidate) => Number(candidate.data.frame_index) === frameIndex);
     if (!frame) continue;
-    refs[viewName] = { id: frame.id, name: viewName };
+    locators[logicalName] = {
+      frameId: frame.id,
+      logicalName,
+      frameIndex,
+    };
   }
 
-  return refs;
+  return locators;
 }

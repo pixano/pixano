@@ -27,7 +27,10 @@ import { resolveWorkspaceTable } from "$lib/workspace/manifest";
  * Pure variant of getTopEntity that accepts an entities list directly,
  * avoiding reading the store through the Svelte 5 proxy during loadData().
  */
-export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Entity[]): Entity => {
+export const tryGetTopEntityFromList = (
+  obj: Annotation | Entity,
+  entitiesList: Entity[],
+): Entity | null => {
   let entity: Entity | undefined;
   if (obj.table_info.group === "entities") {
     entity = obj as Entity;
@@ -37,8 +40,7 @@ export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Ent
       );
     }
     if (!entity) {
-      console.error("ERROR: Unable to find top level Entity of entity", obj);
-      throw new Error(`ERROR: Unable to find top level Entity of entity (id=${obj.id})`);
+      return null;
     }
   } else {
     const ann = obj as Annotation;
@@ -54,16 +56,32 @@ export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Ent
       );
     }
     if (!entity) {
-      console.error("ERROR: Unable to find top level Entity of annotation", ann);
-      throw new Error(`ERROR: Unable to find top level Entity of annotation (id=${ann.id})`);
+      return null;
     }
     ann.ui.top_entities.unshift(entity);
   }
   return entity;
 };
 
+export const getTopEntityFromList = (obj: Annotation | Entity, entitiesList: Entity[]): Entity => {
+  const entity = tryGetTopEntityFromList(obj, entitiesList);
+  if (!entity) {
+    if (obj.table_info.group === "entities") {
+      console.error("ERROR: Unable to find top level Entity of entity", obj);
+      throw new Error(`ERROR: Unable to find top level Entity of entity (id=${obj.id})`);
+    }
+    console.error("ERROR: Unable to find top level Entity of annotation", obj);
+    throw new Error(`ERROR: Unable to find top level Entity of annotation (id=${obj.id})`);
+  }
+  return entity;
+};
+
 export const getTopEntity = (obj: Annotation | Entity): Entity => {
   return getTopEntityFromList(obj, entities.value);
+};
+
+export const tryGetTopEntity = (obj: Annotation | Entity): Entity | null => {
+  return tryGetTopEntityFromList(obj, entities.value);
 };
 
 type SourceFieldStampedSchema = Schema & {

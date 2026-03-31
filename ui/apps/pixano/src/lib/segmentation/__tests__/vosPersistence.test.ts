@@ -31,6 +31,7 @@ function makeMask(frameIndex: number, counts: number[]): SaveMaskShape {
 
 describe("buildPersistedVosMasks", () => {
   it("materializes one persisted mask per frame from immutable session snapshots", () => {
+    const staleBitmapCanvas = { stale: true } as unknown as OffscreenCanvas;
     const sessionMasks = [
       {
         frameIndex: 2,
@@ -62,6 +63,9 @@ describe("buildPersistedVosMasks", () => {
         datasetItemType: WorkspaceType.VIDEO,
         displayControl: { hidden: false, editing: false, highlighted: "self" },
         top_entities: [],
+        bitmapCanvas: staleBitmapCanvas,
+        bounds: { x: 9, y: 9, width: 1, height: 1 },
+        bitmapUrl: "blob:stale-preview",
       },
       fallbackSource: {
         modelName: "sam2-video",
@@ -79,6 +83,12 @@ describe("buildPersistedVosMasks", () => {
     expect(built.trackingMasks[0]?.data.counts as number[]).toEqual([2, 4, 58]);
     expect(built.trackingMasks[1]?.data.counts as number[]).toEqual([4, 6, 54]);
     expect(built.currentMask?.data.counts as number[]).toEqual([6, 8, 50]);
+    expect(built.currentMask?.ui.bitmapCanvas).toBeUndefined();
+    expect(built.currentMask?.ui.bounds).toBeUndefined();
+    expect(built.currentMask?.ui.bitmapUrl).toBeUndefined();
+    expect(built.trackingMasks[0]?.ui.bitmapCanvas).toBeUndefined();
+    expect(built.trackingMasks[0]?.ui.bounds).toBeUndefined();
+    expect(built.trackingMasks[0]?.ui.bitmapUrl).toBeUndefined();
 
     (sessionMasks[0].output.data.counts as number[])[0] = 999;
     expect(built.trackingMasks[0]?.data.counts as number[]).toEqual([2, 4, 58]);

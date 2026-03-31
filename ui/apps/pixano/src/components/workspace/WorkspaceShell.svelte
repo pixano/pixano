@@ -29,8 +29,7 @@ License: CECILL-C
   import type { WorkspaceData } from "$lib/types/workspace";
   import { effectProbe, type FeaturesValues } from "$lib/ui";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
-  import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
-  import { attachTrackChildren, buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
+  import { buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
   import { setWorkspaceContext } from "$lib/workspace/context";
   import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
@@ -112,13 +111,7 @@ License: CECILL-C
     // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
 
-    // Attach track children & top entities BEFORE writing to the store,
-    // using the pure getTopEntityFromList to avoid reading entities through the proxy.
-    // This collapses 2 annotation writes into 1.
-    const withTracks = attachTrackChildren(result.annotations, (ann) =>
-      getTopEntityFromList(ann, result.entities),
-    );
-    annotations.value = withTracks;
+    annotations.value = result.annotations;
 
     itemMetas.value = {
       featuresList: featureValues || { main: {}, objects: {} },

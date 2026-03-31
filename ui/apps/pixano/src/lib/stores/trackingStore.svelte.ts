@@ -28,8 +28,9 @@ import {
   type Reference,
   type SequenceFrame,
 } from "$lib/types/dataset";
+import { toLegacyReference, toViewLocator } from "$lib/types/workspaceLocators";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
-import { resolveSequenceFrameRef } from "$lib/utils/videoFrameIdentity";
+import { resolveSequenceFrameLocator } from "$lib/utils/videoFrameIdentity";
 
 export type {
   VosAnchorSourceKind,
@@ -169,17 +170,17 @@ export function finalizeTrackingSession(): SaveRectangleShape | null {
   const frameIdx = currentFrameIndex.value;
   const result = tracker.interpolateAt(frameIdx);
   const coords = result ? result.data.coords : tracker.sortedKeyframes[0].coords;
-  const currentFrameRef = resolveSequenceFrameRef(
+  const currentFrameRef = resolveSequenceFrameLocator(
     tracker.viewName,
     frameIdx,
     Array.isArray(views.value[tracker.viewName]) ? (views.value[tracker.viewName] as SequenceFrame[]) : undefined,
-    viewRef,
+    toViewLocator(viewRef),
   );
 
   return {
     status: "saving",
     type: ShapeType.bbox,
-    viewRef: currentFrameRef,
+    viewRef: toLegacyReference(currentFrameRef),
     itemId,
     imageWidth,
     imageHeight,

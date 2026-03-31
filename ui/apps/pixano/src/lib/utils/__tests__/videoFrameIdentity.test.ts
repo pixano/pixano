@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { resolveSequenceFrameRef, resolveVideoFrameIdentity } from "$lib/utils/videoFrameIdentity";
+import { resolveSequenceFrameLocator, resolveVideoFrameIdentity } from "$lib/utils/videoFrameIdentity";
 import { BaseSchema, SequenceFrame } from "$lib/types/dataset";
 
 const NOW = "2026-03-29T00:00:00+00:00";
@@ -40,17 +40,20 @@ describe("videoFrameIdentity", () => {
     const frames = [makeFrame("camera", 0), makeFrame("camera", 1), makeFrame("camera", 2)];
 
     expect(
-      resolveSequenceFrameRef("camera", 1, frames, { id: "camera-frame-0", name: "camera" }),
-    ).toEqual({ id: "camera-frame-1", name: "camera" });
+      resolveSequenceFrameLocator("camera", 1, frames, {
+        id: "camera-frame-0",
+        logicalName: "camera",
+      }),
+    ).toEqual({ frameId: "camera-frame-1", logicalName: "camera", frameIndex: 1 });
   });
 
   it("normalizes a video annotation identity onto the active frame", () => {
     const frames = [makeFrame("camera", 0), makeFrame("camera", 1), makeFrame("camera", 2)];
 
     expect(
-      resolveVideoFrameIdentity({ id: "camera-frame-0", name: "camera" }, 2, frames),
+      resolveVideoFrameIdentity({ id: "camera-frame-0", logicalName: "camera" }, 2, frames),
     ).toEqual({
-      viewRef: { id: "camera-frame-2", name: "camera" },
+      frameLocator: { frameId: "camera-frame-2", logicalName: "camera", frameIndex: 2 },
       frameIndex: 2,
     });
   });

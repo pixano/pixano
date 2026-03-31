@@ -8,6 +8,7 @@ import type { MaskSegmentationOutput } from "$components/inference/segmentation/
 import { nanoid } from "nanoid";
 
 import {
+  cloneMaskUiForPersistence,
   cloneTrackingMaskOutput,
   normalizeTrackingMaskOutputForPersistence,
   type TrackingMaskSourceInput,
@@ -35,15 +36,6 @@ export interface BuildPersistedVosMasksResult {
   allMasks: Mask[];
   masksBySegment: Map<number, Mask[]>;
   lastFrameIndex: number;
-}
-
-function cloneMaskUiTemplate(uiTemplate: Mask["ui"], frameIndex: number): Mask["ui"] {
-  return {
-    ...uiTemplate,
-    displayControl: { ...uiTemplate.displayControl },
-    top_entities: uiTemplate.top_entities ? [...uiTemplate.top_entities] : uiTemplate.top_entities,
-    frame_index: frameIndex,
-  };
 }
 
 export function buildPersistedVosMasks(
@@ -77,7 +69,7 @@ export function buildPersistedVosMasks(
     annotation.data.view_name = persistedOutput.data.view_name;
     annotation.data.frame_id = persistedOutput.data.frame_id;
     annotation.data.frame_index = frameIndex;
-    annotation.ui = cloneMaskUiTemplate(input.uiTemplate, frameIndex);
+    annotation.ui = cloneMaskUiForPersistence(input.uiTemplate, frameIndex);
 
     allMasks.push(annotation);
     const segmentAnnotations = masksBySegment.get(sessionMask.segmentId) ?? [];
