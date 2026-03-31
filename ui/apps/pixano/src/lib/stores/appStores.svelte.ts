@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { createCurrentItemSaveCoordinator } from "./currentItemSaveCoordinator.svelte";
 import { reactiveStore } from "./reactiveStore.svelte";
 import type { DatasetInfo } from "$lib/types/dataset";
 
@@ -14,10 +15,7 @@ export const datasetsStore = reactiveStore<DatasetInfo[]>([]);
 export const datasetFilter = reactiveStore<string>("");
 export const datasetItemIds = reactiveStore<Array<string>>([]);
 export const datasetTotalItemsCount = reactiveStore<number>(0);
-export const saveCurrentItemStore = reactiveStore<{ shouldSave: boolean; canSave: boolean }>({
-  shouldSave: false,
-  canSave: false,
-});
+export const currentItemSaveCoordinator = createCurrentItemSaveCoordinator();
 
 // ─── Theme Store ────────────────────────────────────────────────────────────────
 

@@ -17,7 +17,7 @@ License: CECILL-C
 
   interface Props {
     currentItemId: string;
-    goToNeighborItem: (direction: "previous" | "next") => Promise<string | undefined>;
+    goToNeighborItem: (direction: "previous" | "next") => Promise<void>;
     handleReturnToPreviousPage: () => void;
     handleSave: () => void;
     getWorkspaceRecordDisplayCount: () => string;
