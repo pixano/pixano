@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PIL import Image as PILImage
 from typer.testing import CliRunner
 
@@ -16,10 +17,17 @@ from pixano.datasets import Dataset
 
 
 runner = CliRunner()
-VOC_INFO_SPEC = f"{(Path(__file__).resolve().parents[2] / 'examples' / 'voc' / 'info.py')}:{'dataset_info'}"
-VQAV2_INFO_SPEC = f"{(Path(__file__).resolve().parents[2] / 'examples' / 'vqav2' / 'info.py')}:{'dataset_info'}"
+
+_EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
+_EXAMPLES_AVAILABLE = _EXAMPLES_DIR.is_dir()
+
+VOC_INFO_SPEC = f"{(_EXAMPLES_DIR / 'voc' / 'info.py')}:{'dataset_info'}"
+VQAV2_INFO_SPEC = f"{(_EXAMPLES_DIR / 'vqav2' / 'info.py')}:{'dataset_info'}"
+
+_skip_no_examples = pytest.mark.skipif(not _EXAMPLES_AVAILABLE, reason="examples/ moved to pixano-cookbook repository")
 
 
+@_skip_no_examples
 def test_data_import_dry_run_reports_clean_metadata(tmp_path: Path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -49,6 +57,7 @@ def test_data_import_dry_run_reports_clean_metadata(tmp_path: Path):
     assert not (data_dir / "library" / "voc_2007_sample").exists()
 
 
+@_skip_no_examples
 def test_data_import_dry_run_strict_rejects_aliases(tmp_path: Path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -93,6 +102,7 @@ def test_data_import_requires_info(tmp_path: Path):
     assert "--info" in plain
 
 
+@_skip_no_examples
 @patch("importlib.import_module")
 def test_data_import_uses_dataset_info_workspace_and_snake_case_name(mock_import_module, tmp_path: Path):
     data_dir = tmp_path / "data"
@@ -135,6 +145,7 @@ def test_data_import_uses_dataset_info_workspace_and_snake_case_name(mock_import
     assert mock_builder_cls.call_args.kwargs["target_name"] == "voc_2007_sample"
 
 
+@_skip_no_examples
 def test_data_import_preserves_message_question_type(tmp_path: Path):
     data_dir = tmp_path / "data"
     data_dir.mkdir()
