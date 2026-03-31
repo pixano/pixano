@@ -4,6 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import {
+  NEUTRAL_ENTITY_COLOR,
+  PEEK_NEUTRAL_ANNOTATION_OPACITY,
+  PEEK_NEUTRAL_ENTITY_COLOR,
+  PEEK_NEUTRAL_MASK_OVERLAY_ALPHA,
+} from "$lib/constants/workspaceConstants";
 import { ToolType, type SelectionTool } from "$lib/tools";
 import {
   interactiveSegmenterTool,
@@ -12,6 +18,7 @@ import {
   polylineTool,
   rectangleTool,
 } from "$lib/tools/canvasToolPolicy";
+import { ShapeType } from "$lib/types/shapeTypes";
 
 /**
  * Computes a stable signature for a tool configuration.
@@ -120,6 +127,107 @@ export interface CursorFlushAction {
   showCrosshair: boolean;
   showBrushCursor: boolean;
   showSmartPromptCursor: boolean;
+}
+
+export interface AnnotationToolHideDisplayControl {
+  hidden?: boolean;
+  editing?: boolean;
+  highlighted?: "all" | "self" | "none";
+}
+
+export interface NeutralPeekPresentationInput {
+  isPeeking: boolean;
+  highlighted?: "all" | "self" | "none";
+  baseOpacity: number;
+  shapeKind?: "generic" | "mask";
+}
+
+export interface NeutralPeekPresentation {
+  neutralColor: string;
+  opacity: number;
+  maskOverlayAlpha: number | null;
+}
+
+const DEFAULT_NEUTRAL_MASK_OVERLAY_ALPHA = 0.2;
+
+/**
+ * Existing annotations are hidden while a drawing tool is active unless the user is peeking.
+ */
+export function shouldHideAnnotationsForToolMode(
+  isDrawingTool: boolean,
+  isPeeking: boolean,
+): boolean {
+  return isDrawingTool && !isPeeking;
+}
+
+/**
+ * A left click on the blank canvas while Pan is active should clear all annotation highlighting.
+ */
+export function shouldClearHighlightingOnPanCanvasClick(
+  tool: SelectionTool | undefined,
+  button: number,
+): boolean {
+  return tool?.type === ToolType.Pan && button === 0;
+}
+
+/**
+ * While a drawing tool is active, keep only the selected/self-highlighted annotation (or any
+ * annotation already in editing mode) visible.
+ */
+export function shouldRenderAnnotationWhileToolHidden(
+  control: AnnotationToolHideDisplayControl,
+): boolean {
+  return !control.hidden && (control.highlighted === "self" || control.editing === true);
+}
+
+/**
+ * Resolve the transient render overrides used while Alt-peeking hidden annotations.
+ * This never mutates store state; it only describes how the current render pass should look.
+ */
+export function resolveNeutralPeekPresentation(
+  input: NeutralPeekPresentationInput,
+): NeutralPeekPresentation {
+  const isNeutralPeek = input.isPeeking && input.highlighted === "none";
+
+  return {
+    neutralColor: input.isPeeking ? PEEK_NEUTRAL_ENTITY_COLOR : NEUTRAL_ENTITY_COLOR,
+    opacity: isNeutralPeek
+      ? Math.max(input.baseOpacity, PEEK_NEUTRAL_ANNOTATION_OPACITY)
+      : input.baseOpacity,
+    maskOverlayAlpha:
+      input.shapeKind === "mask"
+        ? input.isPeeking
+          ? PEEK_NEUTRAL_MASK_OVERLAY_ALPHA
+          : DEFAULT_NEUTRAL_MASK_OVERLAY_ALPHA
+        : null,
+  };
+}
+
+export type InteractiveToolResetAction =
+  | "none"
+  | "preserve-local-preview"
+  | "reset-local-interactive-tool";
+
+/**
+ * Determines how Canvas2D should handle local interactive-tool cleanup for a one-shot reset state.
+ * This intentionally describes only local canvas/FSM behavior and must not inspect live bridge state.
+ */
+export function resolveInteractiveToolResetAction(
+  toolType: ToolType | undefined,
+  resetReason: "save-confirmed" | "save-cancelled" | undefined,
+  resetShapeType: ShapeType | undefined,
+): InteractiveToolResetAction {
+  const isInteractiveTool = toolType === ToolType.InteractiveSegmenter || toolType === ToolType.VOS;
+  if (!isInteractiveTool || resetShapeType !== ShapeType.mask) {
+    return "none";
+  }
+  if (resetReason === "save-cancelled") {
+    return "preserve-local-preview";
+  }
+  if (resetReason === "save-confirmed") {
+    return "reset-local-interactive-tool";
+  }
+  return "none";
 }
 
 /**

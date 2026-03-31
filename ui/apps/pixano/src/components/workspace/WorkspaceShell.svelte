@@ -14,6 +14,7 @@ License: CECILL-C
   import WorkspaceInspectorPanel from "./Inspector/WorkspaceInspectorPanel.svelte";
   import LoadModelModal from "./LoadModelModal.svelte";
   import type { ResourceMutation } from "$lib/api/resourcePayloads";
+  import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -29,8 +30,7 @@ License: CECILL-C
   import type { WorkspaceData } from "$lib/types/workspace";
   import { effectProbe, type FeaturesValues } from "$lib/ui";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
-  import { getTopEntityFromList } from "$lib/utils/entityLookupUtils";
-  import { attachTrackChildren, buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
+  import { buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
   import { setWorkspaceContext } from "$lib/workspace/context";
   import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
@@ -40,7 +40,6 @@ License: CECILL-C
     workspaceData: WorkspaceData;
     handleSaveItem: (data: ResourceMutation[]) => Promise<void>;
     isLoading: boolean;
-    shouldSaveCurrentItem: boolean;
     viewer: Snippet<[{ resize: number }]>;
   }
 
@@ -50,7 +49,6 @@ License: CECILL-C
     workspaceData,
     handleSaveItem,
     isLoading,
-    shouldSaveCurrentItem,
     viewer,
   }: Props = $props();
 
@@ -81,6 +79,7 @@ License: CECILL-C
   let initialOIAreaWidth = 0;
 
   let isSaving: boolean = $state(false);
+  let lastHandledSaveRequestId = $state<number | null>(null);
 
   // --- Store probes via $effect (auto-cleanup, replaces subscribe + onDestroy) ---
 
@@ -112,13 +111,7 @@ License: CECILL-C
     // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
 
-    // Attach track children & top entities BEFORE writing to the store,
-    // using the pure getTopEntityFromList to avoid reading entities through the proxy.
-    // This collapses 2 annotation writes into 1.
-    const withTracks = attachTrackChildren(result.annotations, (ann) =>
-      getTopEntityFromList(ann, result.entities),
-    );
-    annotations.value = withTracks;
+    annotations.value = result.annotations;
 
     itemMetas.value = {
       featuresList: featureValues || { main: {}, objects: {} },
@@ -152,18 +145,33 @@ License: CECILL-C
 
   // --- Save ---
 
-  const onSave = async () => {
+  const onSave = async (requestId: number | null) => {
     isSaving = true;
-    await handleSaveItem(saveData.value);
-    saveData.value = [];
-    isSaving = false;
+    try {
+      await handleSaveItem(saveData.value);
+      saveData.value = [];
+      if (requestId !== null) {
+        currentItemSaveCoordinator.setSaveSucceeded(requestId);
+      }
+    } catch (error) {
+      if (requestId !== null) {
+        currentItemSaveCoordinator.setSaveFailed(undefined, requestId);
+      }
+      console.error(error);
+    } finally {
+      isSaving = false;
+    }
   };
 
   $effect(() => {
-    if (!shouldSaveCurrentItem) return;
+    const activeRequestId = currentItemSaveCoordinator.value.activeRequestId;
+    const saveStatus = currentItemSaveCoordinator.value.status;
+    if (saveStatus !== "saving" || activeRequestId === null) return;
+    if (activeRequestId === lastHandledSaveRequestId) return;
     untrack(() => {
       if (!isSaving) {
-        onSave().catch((err) => console.error(err));
+        lastHandledSaveRequestId = activeRequestId;
+        void onSave(activeRequestId);
       }
     });
   });
@@ -193,7 +201,7 @@ License: CECILL-C
     if ((event.ctrlKey || event.metaKey) && event.key === "s") {
       event.preventDefault();
       if (canSave.value && !isSaving) {
-        void onSave();
+        void currentItemSaveCoordinator.requestSave();
       }
     }
   };

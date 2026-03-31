@@ -21,7 +21,7 @@ import {
 import type { Annotation } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { EntityProperties, MView } from "$lib/types/workspace";
-import { getTopEntity } from "$lib/utils/entityLookupUtils";
+import { tryGetTopEntity } from "$lib/utils/entityLookupUtils";
 import { templates } from "$lib/utils/keyPointsTemplates";
 import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
@@ -121,7 +121,7 @@ export const mapBBoxForDisplay = (
       bbox_ui_coords[3] * imageHeight,
     ];
   }
-  const entity = getTopEntity(bbox);
+  const entity = tryGetTopEntity(bbox);
   const tooltip = entity ? defineTooltip(bbox, entity) : "";
 
   return {

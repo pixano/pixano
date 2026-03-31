@@ -7,7 +7,7 @@ License: CECILL-C
 import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 import { nanoid } from "nanoid";
 
-import { BaseSchema, type Reference } from "$lib/types/dataset";
+import { BaseSchema, type Mask, type Reference } from "$lib/types/dataset";
 import type { CompressedRLEPayload } from "$lib/types/inference";
 import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
 import {
@@ -49,6 +49,16 @@ function cloneMaskCounts(counts: number[] | string): number[] | string {
 
 function cloneMaskSize(size: number[]): number[] {
   return [...size];
+}
+
+export function cloneMaskUiForPersistence(uiTemplate: Mask["ui"], frameIndex: number): Mask["ui"] {
+  return {
+    datasetItemType: uiTemplate.datasetItemType,
+    displayControl: { ...uiTemplate.displayControl },
+    review_state: uiTemplate.review_state,
+    top_entities: uiTemplate.top_entities ? [...uiTemplate.top_entities] : uiTemplate.top_entities,
+    frame_index: frameIndex,
+  };
 }
 
 function isNonEmptyString(value: unknown): value is string {

@@ -10,7 +10,12 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import TimelinePanel from "../VideoPlayer/TimelinePanel.svelte";
-  import { buildCurrentSequenceFrameRefsByView } from "./videoSequenceFrameRefs";
+  import {
+    resolveVideoMaskResetAction,
+    shouldClearVideoMaskSessionOnToolSwitch,
+    shouldHydrateVideoPreview,
+  } from "./videoMaskSessionLifecycle";
+  import { buildCurrentSequenceFrameLocatorsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
   import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
   import {
@@ -64,6 +69,7 @@ License: CECILL-C
     current_itemKeypoints,
     current_itemMasks,
     current_itemMultiPaths,
+    entities,
     imageSmoothing,
     newShape,
     selectedTool,
@@ -78,6 +84,7 @@ License: CECILL-C
   import { Sam2VideoTracker } from "$lib/trackers";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { toLegacyReference } from "$lib/types/workspaceLocators";
   import {
     AiProcessingBadge,
     SequenceFrame,
@@ -94,6 +101,7 @@ License: CECILL-C
   import { toggleFusionEntity } from "$lib/utils/videoFusion";
   import { loadInitialFrames, setBufferSpecs } from "$lib/utils/videoOperations";
   import { editKeyItemInTracklet } from "$lib/utils/videoShapeEditing";
+  import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 
   interface Props {
     selectedItem: WorkspaceViewerItem;
@@ -180,6 +188,14 @@ License: CECILL-C
     smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
   }
 
+  function consumeResetStateOnNextMicrotask(shape: typeof newShape.value): void {
+    queueMicrotask(() => {
+      if (newShape.value === shape) {
+        newShape.value = { status: "none" };
+      }
+    });
+  }
+
   function resolveFrameSources(viewName: string) {
     const frames = selectedItem.views?.[viewName] as SequenceFrame[] | undefined;
     if (!Array.isArray(frames)) return [];
@@ -208,9 +224,18 @@ License: CECILL-C
     return frame ? { id: frame.id, name: viewName } : null;
   }
 
-  const currentSequenceFrameRefsByView = $derived.by(() => {
+  const currentSequenceFrameLocatorsByView = $derived.by(() => {
     const frameIndex = currentFrameIndex.value;
-    return buildCurrentSequenceFrameRefsByView(getSequenceFrameViews(selectedItem), frameIndex);
+    return buildCurrentSequenceFrameLocatorsByView(getSequenceFrameViews(selectedItem), frameIndex);
+  });
+
+  const currentSequenceFrameRefsByView = $derived.by(() => {
+    return Object.fromEntries(
+      Object.entries(currentSequenceFrameLocatorsByView).map(([logicalName, locator]) => [
+        logicalName,
+        toLegacyReference(locator),
+      ]),
+    );
   });
 
   function sleep(ms: number): Promise<void> {
@@ -730,7 +755,7 @@ License: CECILL-C
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         current_itemKeypoints.value as any,
       );
-      annotations.value = objects;
+      commitNormalizedWorkspaceRuntime(objects, entities.value);
       if (save_data) saveTo(save_data.change_type, save_data.data);
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
@@ -875,6 +900,22 @@ License: CECILL-C
   });
 
   $effect(() => {
+    const toolType = selectedTool.value?.type;
+    if (
+      !shouldClearVideoMaskSessionOnToolSwitch(toolType, {
+        isVosSessionActive: isVosSessionActive.value,
+        hasTracker: sam2Tracker !== null,
+        hasActiveJob: activeVosJob !== null,
+      })
+    )
+      return;
+
+    untrack(() => {
+      resetSmartTracking();
+    });
+  });
+
+  $effect(() => {
     void selectedVideoSegmentationModel.value;
     untrack(() => {
       resetSmartTracking();
@@ -884,19 +925,43 @@ License: CECILL-C
   $effect(() => {
     const shape = newShape.value;
     if (shape.status !== "none" || !shape.shouldReset) return;
-    if (shape.resetReason !== "save-confirmed" || shape.resetShapeType !== ShapeType.mask) return;
-    if (!isVosSessionActive.value) return;
 
     untrack(() => {
-      resetSmartTracking();
+      const resetAction = resolveVideoMaskResetAction(shape, {
+        isVosSessionActive: isVosSessionActive.value,
+        hasTracker: sam2Tracker !== null,
+        hasActiveJob: activeVosJob !== null,
+      });
+      if (resetAction === "reset-smart-tracking") {
+        resetSmartTracking();
+      } else if (resetAction === "clear-preview") {
+        clearSmartPreview(shape.resetViewRef?.name);
+        resetSmartSegmentationFeedback();
+      }
+      consumeResetStateOnNextMicrotask(shape);
     });
   });
 
   $effect(() => {
+    const toolType = selectedTool.value?.type;
     const tracker = sam2Tracker;
     const frameIndex = currentFrameIndex.value;
     const anchor = vosSession.value.anchor;
     const activeViewName = anchor?.viewRef.name ?? tracker?.viewName ?? null;
+    if (
+      !shouldHydrateVideoPreview(toolType, {
+        isVosSessionActive: isVosSessionActive.value,
+        hasTracker: tracker !== null,
+        hasActiveJob: activeVosJob !== null,
+      })
+    ) {
+      if (activeViewName) {
+        untrack(() => {
+          clearSmartPreview(activeViewName);
+        });
+      }
+      return;
+    }
     if (!activeViewName) return;
 
     const interpolated = tracker?.interpolateAt(frameIndex) ?? null;

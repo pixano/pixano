@@ -18,6 +18,7 @@ License: CECILL-C
     zoomFactor: number;
     findPointCoordinate?: (point: number, type: "x" | "y") => number;
     color?: string;
+    opacityOverride?: number;
     isPlaybackActive?: boolean;
     children?: import("svelte").Snippet;
   }
@@ -28,6 +29,7 @@ License: CECILL-C
     zoomFactor,
     findPointCoordinate = (point) => point,
     color = "rgba(135, 47, 100)",
+    opacityOverride = -1,
     isPlaybackActive = false,
     children,
   }: Props = $props();
@@ -107,7 +109,13 @@ License: CECILL-C
     draftVertices = null;
   });
 
-  let opacity = $derived(keypointStructure.ui?.displayControl.highlighted === "none" ? 0.3 : 1);
+  let opacity = $derived(
+    opacityOverride >= 0
+      ? opacityOverride
+      : keypointStructure.ui?.displayControl.highlighted === "none"
+        ? 0.3
+        : 1,
+  );
 </script>
 
 {@render children?.()}

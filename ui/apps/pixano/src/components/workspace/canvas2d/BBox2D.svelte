@@ -8,9 +8,9 @@ License: CECILL-C
   import type Konva from "konva";
   import { Group, Rect, Transformer } from "svelte-konva";
 
+  import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import LabelTag from "./LabelTag.svelte";
-  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
@@ -42,15 +42,23 @@ License: CECILL-C
   let trComponent: { node: Konva.Transformer } | undefined = $state();
 
   let editing = $derived(bbox.ui.displayControl.editing);
+  let peekPresentation = $derived(
+    resolveNeutralPeekPresentation({
+      isPeeking: forceNeutralColor,
+      highlighted: bbox.ui.displayControl.highlighted,
+      baseOpacity: bbox.ui.opacity ?? 1,
+    }),
+  );
   let color = $derived.by(() => {
     if (forceNeutralColor || bbox.ui.displayControl.highlighted === "none")
-      return NEUTRAL_ENTITY_COLOR;
+      return peekPresentation.neutralColor;
     return colorScale(
       (bbox.ui.top_entities ?? []).length > 0
         ? (bbox.ui.top_entities ?? [])[0].id
         : bbox.data.entity_id,
     );
   });
+  let opacity = $derived(peekPresentation.opacity);
 
   // Attach transformer to rect when editing
   $effect(() => {
@@ -144,7 +152,7 @@ License: CECILL-C
     strokeScaleEnabled={false}
     perfectDrawEnabled={false}
     shadowForStrokeEnabled={false}
-    opacity={bbox.ui.opacity ?? 1}
+    {opacity}
     visible={!bbox.ui.displayControl.hidden}
     draggable={editing}
     ondragmove={handleDragMove}
@@ -161,7 +169,7 @@ License: CECILL-C
     y={bbox.data.coords[1]}
     visible={!bbox.ui.displayControl.hidden}
     {zoomFactor}
-    opacity={bbox.ui.opacity ?? 1}
+    {opacity}
     tooltip={bbox.ui.tooltip ?? ""}
     {color}
   />

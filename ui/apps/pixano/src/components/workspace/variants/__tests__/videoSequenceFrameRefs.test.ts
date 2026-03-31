@@ -6,12 +6,12 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { buildCurrentSequenceFrameRefsByView } from "../videoSequenceFrameRefs";
+import { buildCurrentSequenceFrameLocatorsByView } from "../videoSequenceFrameRefs";
 
-describe("buildCurrentSequenceFrameRefsByView", () => {
+describe("buildCurrentSequenceFrameLocatorsByView", () => {
   it("returns canonical refs for the displayed frame index across views", () => {
     expect(
-      buildCurrentSequenceFrameRefsByView(
+      buildCurrentSequenceFrameLocatorsByView(
         {
           camera: [
             { id: "camera-frame-0", data: { frame_index: 0 } },
@@ -25,14 +25,14 @@ describe("buildCurrentSequenceFrameRefsByView", () => {
         1,
       ),
     ).toEqual({
-      camera: { id: "camera-frame-1", name: "camera" },
-      thermal: { id: "thermal-frame-1", name: "thermal" },
+      camera: { frameId: "camera-frame-1", logicalName: "camera", frameIndex: 1 },
+      thermal: { frameId: "thermal-frame-1", logicalName: "thermal", frameIndex: 1 },
     });
   });
 
   it("skips views that do not contain the displayed frame", () => {
     expect(
-      buildCurrentSequenceFrameRefsByView(
+      buildCurrentSequenceFrameLocatorsByView(
         {
           camera: [{ id: "camera-frame-0", data: { frame_index: 0 } }],
         },

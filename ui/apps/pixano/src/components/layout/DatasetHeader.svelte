@@ -13,10 +13,10 @@ License: CECILL-C
   import { page } from "$app/state";
   import {
     currentDatasetStore,
+    currentItemSaveCoordinator,
     datasetItemIds,
-    saveCurrentItemStore,
   } from "$lib/stores/appStores.svelte";
-  import { ConfirmModal, PrimaryButton } from "$lib/ui";
+  import { PrimaryButton, UnsavedChangesDialog } from "$lib/ui";
   import {
     EXPLORER_ROUTE_ID,
     findNeighborItemId,
@@ -32,11 +32,23 @@ License: CECILL-C
 
   let { pageId }: Props = $props();
 
-  let showConfirmModal: string = $state("none");
-  let newItemId: string = "none";
+  let pendingNavigationRoute = $state<string | null>(null);
+  let isDestroyed = false;
 
   let currentItemId = $derived(page.params.itemId);
   const isWorkspaceRoute = $derived(page.route.id === WORKSPACE_ROUTE_ID);
+  const saveState = $derived(currentItemSaveCoordinator.value);
+
+  $effect(() => {
+    return () => {
+      isDestroyed = true;
+    };
+  });
+
+  $effect(() => {
+    if (page.route.id === WORKSPACE_ROUTE_ID) return;
+    currentItemSaveCoordinator.resetForItemChange();
+  });
 
   const getWorkspaceRecordDisplayCount = () => {
     const index = datasetItemIds.value.indexOf(currentItemId);
@@ -56,9 +68,9 @@ License: CECILL-C
       const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId);
 
       // Ask for confirmation if modifications have been made to the item
-      if (saveCurrentItemStore.value.canSave) {
-        newItemId = neighborId;
-        return (showConfirmModal = route);
+      if (saveState.isDirty) {
+        pendingNavigationRoute = route;
+        return;
       }
 
       // Go to next/previous item
@@ -67,21 +79,34 @@ License: CECILL-C
   };
 
   const handleSave = () => {
-    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
+    void currentItemSaveCoordinator.requestSave();
   };
 
   const handleSaveAndContinue = async () => {
-    handleSave();
-    await handleContinue();
+    const route = pendingNavigationRoute;
+    if (!route) return;
+
+    const result = await currentItemSaveCoordinator.requestSave();
+    if (!result.ok) return;
+
+    pendingNavigationRoute = null;
+    await goto(route);
   };
 
-  const handleContinue = async () => {
-    if (newItemId !== "none") {
-      newItemId = "none";
+  const handleDiscardAndContinue = async () => {
+    const route = pendingNavigationRoute;
+    if (!route) return;
+
+    pendingNavigationRoute = null;
+    currentItemSaveCoordinator.beginDiscardBypass();
+
+    try {
+      await goto(route);
+    } finally {
+      if (!isDestroyed) {
+        currentItemSaveCoordinator.endDiscardBypass();
+      }
     }
-    await goto(showConfirmModal);
-    showConfirmModal = "none";
-    saveCurrentItemStore.value = { canSave: false, shouldSave: false };
   };
 
   // Return to the previous page
@@ -94,21 +119,23 @@ License: CECILL-C
   };
 
   const navigateTo = async (route: string) => {
-    if (saveCurrentItemStore.value.canSave) {
-      return (showConfirmModal = route);
+    if (saveState.isDirty) {
+      pendingNavigationRoute = route;
+      return;
     }
     await goto(route);
   };
 
-  //Note: the two following function aims to prevent losing unsaved changes after BROWSER actions
-  //(pixano site internal navigation is already covered)
-  //first one on browser refresh (for this one, we can't (?) customize the message)
-  //second one on browser navigation (back/forward)
-  // parameter is given, but we don't need it -- if we don't take it, tslint warns...
+  // Prevent losing unsaved changes on browser-level unloads.
+  // Internal app navigation is handled by the dialog flow above.
+  // The parameter is unused but required by the Svelte action signature.
   // eslint-disable-next-line
   function preventUnsavedUnload(_: HTMLElement) {
     function checkNavigation(e: BeforeUnloadEvent) {
-      if (saveCurrentItemStore.value.canSave) {
+      if (
+        currentItemSaveCoordinator.value.isDirty &&
+        currentItemSaveCoordinator.value.guardMode === "armed"
+      ) {
         e.preventDefault();
       }
     }
@@ -157,13 +184,12 @@ License: CECILL-C
     </div>
   {/if}
 </div>
-{#if showConfirmModal !== "none"}
-  <ConfirmModal
-    message="You have unsaved changes"
-    confirm="Save and continue"
-    alternativeAction="Continue without saving"
-    onConfirm={handleSaveAndContinue}
-    onAlternative={handleContinue}
-    onCancel={() => (showConfirmModal = "none")}
+{#if pendingNavigationRoute !== null}
+  <UnsavedChangesDialog
+    isSaving={saveState.status === "saving"}
+    errorMessage={saveState.status === "failed" ? saveState.errorMessage : null}
+    onSave={handleSaveAndContinue}
+    onDiscard={handleDiscardAndContinue}
+    onCancel={() => (pendingNavigationRoute = null)}
   />
 {/if}

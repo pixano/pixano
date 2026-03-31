@@ -13,6 +13,7 @@ License: CECILL-C
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
+  import { cloneMaskUiForPersistence } from "$lib/segmentation/maskNormalization";
   import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import {
     pixanoInferenceToValidateTrackingMasks,
@@ -50,10 +51,11 @@ License: CECILL-C
     getFrameIndex,
   } from "$lib/utils/entityOperations";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
+  import { highlightTrackletChildren } from "$lib/utils/highlightOperations";
   import { getAlphaBoundingBox, rleToBitmapCanvas } from "$lib/utils/maskUtils";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { cn } from "$lib/utils/styleUtils";
-  import { sortByFrameIndex } from "$lib/utils/videoUtils";
+  import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
   interface Props {
@@ -102,6 +104,12 @@ License: CECILL-C
     mask.ui.bounds = getAlphaBoundingBox(mask.ui.bitmapCanvas) ?? undefined;
   }
 
+  function setTrackletOwnership(trackletId: string, children: Annotation[]): void {
+    for (const child of children) {
+      child.data.tracklet_id = trackletId;
+    }
+  }
+
   const handleFormSubmit = () => {
     removeTemporaryTextSpan();
     currentTab = "objects";
@@ -113,12 +121,10 @@ License: CECILL-C
     let newAnnotation: Annotation | undefined = undefined;
     let newTrack: Annotation | undefined = undefined;
     let newTracks: Annotation[] = [];
+    let focusedTrackletId: string | null = null;
 
     const isVideo = itemMetas.value?.type === WorkspaceType.VIDEO;
-    const shapeFrameIndex =
-      isVideo && "viewRef" in newShape.value
-        ? getFrameIndex(newShape.value.viewRef.name, newShape.value.viewRef.id)
-        : currentFrameIndex.value;
+    const shapeFrameIndex = currentFrameIndex.value;
     const isFromVOS =
       isVideo && newShape.value.type === ShapeType.mask && vosSession.value.masks.length > 0;
     const isFromTracking =
@@ -236,8 +242,7 @@ License: CECILL-C
           );
           if (candidate_tracks && candidate_tracks.length === 1) {
             const candidate_track = candidate_tracks[0] as Tracklet;
-            for (const mask of segMasks) candidate_track.ui.childs.push(mask);
-            candidate_track.ui.childs.sort(sortByFrameIndex);
+            setTrackletOwnership(candidate_track.id, segMasks);
           } else {
             const trackShape: SaveTrackShape = {
               type: ShapeType.track,
@@ -264,8 +269,7 @@ License: CECILL-C
             );
             if (!segTrack) return;
             segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-            (segTrack as Tracklet).ui.childs = [...segMasks];
-            (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
+            setTrackletOwnership(segTrack.id, segMasks);
             saveTo("add", segTrack);
             entity.ui.childs?.push(segTrack);
             newTracks.push(segTrack);
@@ -282,7 +286,19 @@ License: CECILL-C
             tr_mask.data.entity_id = newAnnotation.data.entity_id;
             tr_mask.table_info = newAnnotation.table_info;
             const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
-            tr_mask.ui = { ...newAnnotation.ui, frame_index: tr_frame_idx };
+            if (newAnnotation.is_type(BaseSchema.Mask)) {
+              tr_mask.ui = cloneMaskUiForPersistence(newAnnotation.ui as Mask["ui"], tr_frame_idx);
+            } else {
+              tr_mask.ui = {
+                datasetItemType: newAnnotation.ui.datasetItemType,
+                displayControl: { ...newAnnotation.ui.displayControl },
+                review_state: newAnnotation.ui.review_state,
+                top_entities: newAnnotation.ui.top_entities
+                  ? [...newAnnotation.ui.top_entities]
+                  : newAnnotation.ui.top_entities,
+                frame_index: tr_frame_idx,
+              };
+            }
             entity.ui.childs?.push(tr_mask);
             //get lastFrameIndex from tracking masks
             lastFrameIndex = Math.max(tr_frame_idx, lastFrameIndex);
@@ -342,8 +358,10 @@ License: CECILL-C
               );
               if (candidate_tracks && candidate_tracks.length === 1) {
                 const candidate_track = candidate_tracks[0] as Tracklet;
-                for (const bbox of segBBoxes) candidate_track.ui.childs.push(bbox);
-                candidate_track.ui.childs.sort(sortByFrameIndex);
+                setTrackletOwnership(candidate_track.id, segBBoxes);
+                if (segStart <= shapeFrameIndex && shapeFrameIndex <= segEnd) {
+                  focusedTrackletId = candidate_track.id;
+                }
               } else {
                 const trackShape: SaveTrackShape = {
                   type: ShapeType.track,
@@ -370,11 +388,13 @@ License: CECILL-C
                 );
                 if (!segTrack) return;
                 segTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-                (segTrack as Tracklet).ui.childs = [...segBBoxes];
-                (segTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
+                setTrackletOwnership(segTrack.id, segBBoxes);
                 saveTo("add", segTrack);
                 entity.ui.childs?.push(segTrack);
                 newTracks.push(segTrack);
+                if (segStart <= shapeFrameIndex && shapeFrameIndex <= segEnd) {
+                  focusedTrackletId = segTrack.id;
+                }
               }
             }
           }
@@ -390,11 +410,13 @@ License: CECILL-C
           );
           if (candidate_tracks && candidate_tracks.length === 1) {
             const candidate_track = candidate_tracks[0] as Tracklet;
-            candidate_track.ui.childs.push(newAnnotation);
+            setTrackletOwnership(candidate_track.id, [newAnnotation]);
             if (isFromTracking || isFromVOS) {
-              for (const tr_mask of tracking_masks) candidate_track.ui.childs.push(tr_mask);
+              setTrackletOwnership(candidate_track.id, tracking_masks);
             }
-            candidate_track.ui.childs.sort(sortByFrameIndex);
+            if (newAnnotation.is_type(BaseSchema.BBox)) {
+              focusedTrackletId = candidate_track.id;
+            }
           } else {
             const trackShape: SaveTrackShape = {
               type: ShapeType.track,
@@ -421,13 +443,15 @@ License: CECILL-C
             );
             if (!newTrack) return;
             newTrack.ui.displayControl = { hidden: false, editing: false, highlighted: "all" };
-            (newTrack as Tracklet).ui.childs = [newAnnotation];
+            setTrackletOwnership(newTrack.id, [newAnnotation]);
             if (isFromTracking || isFromVOS) {
-              for (const tr_mask of tracking_masks) (newTrack as Tracklet).ui.childs.push(tr_mask);
+              setTrackletOwnership(newTrack.id, tracking_masks);
             }
-            (newTrack as Tracklet).ui.childs.sort(sortByFrameIndex);
             saveTo("add", newTrack);
             entity.ui.childs?.push(newTrack);
+            if (newAnnotation.is_type(BaseSchema.BBox)) {
+              focusedTrackletId = newTrack.id;
+            }
           }
         }
       }
@@ -455,29 +479,33 @@ License: CECILL-C
       }
     }
 
-    // push new entity
-    entities.update((ents) => {
-      if (!ents.includes(entity)) ents.push(entity);
-      return ents;
+    const nextEntities = entities.value.includes(entity)
+      ? entities.value
+      : [...entities.value, entity];
+    const objectsWithoutHighlighted: Annotation[] = annotations.value.map((object) => {
+      object.ui.displayControl.highlighted = "none";
+      object.ui.displayControl = { ...object.ui.displayControl, editing: false };
+      return object;
     });
-
-    //push new annotations
-    annotations.update((oldObjects) => {
-      const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
-        object.ui.displayControl.highlighted = "none";
-        object.ui.displayControl = { ...object.ui.displayControl, editing: false };
-        return object;
-      });
-      return [
+    const normalized = commitNormalizedWorkspaceRuntime(
+      [
         ...objectsWithoutHighlighted,
         ...addedAnnotations,
         ...(isFromTracking || isFromVOS ? tracking_masks : []),
         ...(newTrack ? [newTrack] : []),
         ...newTracks,
-      ];
-    });
-
-    annotations.value.sort((a, b) => sortByFrameIndex(a, b));
+      ],
+      nextEntities,
+    );
+    if (focusedTrackletId) {
+      const focusedTracklet = normalized.annotations.find(
+        (annotation) =>
+          annotation.id === focusedTrackletId && annotation.is_type(BaseSchema.Tracklet),
+      );
+      if (focusedTracklet) {
+        highlightTrackletChildren(focusedTracklet as Tracklet);
+      }
+    }
     for (const tname in objectProperties) {
       for (const feat in objectProperties[tname]) {
         if (typeof objectProperties[feat] === "string") {

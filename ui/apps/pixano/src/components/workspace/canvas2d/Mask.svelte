@@ -10,7 +10,7 @@ License: CECILL-C
   import { untrack } from "svelte";
   import { Image as KonvaImage } from "svelte-konva";
 
-  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
+  import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { ToolType, type SelectionTool } from "$lib/tools";
   import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
@@ -334,8 +334,14 @@ License: CECILL-C
           ? mask.ui.top_entities[0].id
           : mask.data.entity_id;
       const isNeutralMask = forceNeutral || mask.ui.displayControl.highlighted === "none";
-      const color = isNeutralMask ? NEUTRAL_ENTITY_COLOR : colorScaleFn(colorId);
-      const overlayAlpha = isNeutralMask ? 0.2 : 0.5;
+      const neutralPresentation = resolveNeutralPeekPresentation({
+        isPeeking: forceNeutral,
+        highlighted: mask.ui.displayControl.highlighted,
+        baseOpacity: mask.ui.opacity ?? 1,
+        shapeKind: "mask",
+      });
+      const color = isNeutralMask ? neutralPresentation.neutralColor : colorScaleFn(colorId);
+      const overlayAlpha = isNeutralMask ? (neutralPresentation.maskOverlayAlpha ?? 0.2) : 0.5;
 
       // Prioritize OffscreenCanvas (from RLE decode) -- avoids async Image loading
       let imageSource: CanvasImageSource | null = mask.ui.bitmapCanvas ?? null;
@@ -574,6 +580,7 @@ License: CECILL-C
   export function destroy(): void {
     isPainting = false;
     lastBrushPos = null;
+    hasDraftContent = false;
   }
 
   export function getIsPainting(): boolean {

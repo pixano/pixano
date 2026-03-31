@@ -752,10 +752,16 @@ export const splitTrackInTwo = (track2split: Tracklet, prev: number, next: numbe
   rightTrack.ui = ui;
   //note: get object links from original object, as structuredClone lose class specifics
   rightTrack.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index >= next);
+  rightTrack.ui.childs.forEach((ann) => {
+    ann.data.tracklet_id = rightTrack.id;
+  });
   rightTrack.ui.top_entities = track2split.ui.top_entities;
   //track2split become left track
   track2split.data.end_frame = prev;
   track2split.ui.childs = track2split.ui.childs.filter((ann) => ann.ui.frame_index <= prev);
+  track2split.ui.childs.forEach((ann) => {
+    ann.data.tracklet_id = track2split.id;
+  });
 
   applyPixanoSourceFields(track2split);
   saveTo("update", track2split);
