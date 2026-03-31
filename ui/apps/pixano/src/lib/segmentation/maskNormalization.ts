@@ -51,10 +51,7 @@ function cloneMaskSize(size: number[]): number[] {
   return [...size];
 }
 
-export function cloneMaskUiForPersistence(
-  uiTemplate: Mask["ui"],
-  frameIndex: number,
-): Mask["ui"] {
+export function cloneMaskUiForPersistence(uiTemplate: Mask["ui"], frameIndex: number): Mask["ui"] {
   return {
     datasetItemType: uiTemplate.datasetItemType,
     displayControl: { ...uiTemplate.displayControl },

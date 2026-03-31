@@ -31,7 +31,6 @@ License: CECILL-C
   import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { relink } from "$lib/utils/entityRelink";
   import { saveTo } from "$lib/utils/saveItemUtils";
-  import { sortByFrameIndex } from "$lib/utils/videoUtils";
   import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 

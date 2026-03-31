@@ -11,7 +11,6 @@ import {
   PEEK_NEUTRAL_MASK_OVERLAY_ALPHA,
 } from "$lib/constants/workspaceConstants";
 import { ToolType, type SelectionTool } from "$lib/tools";
-import { ShapeType } from "$lib/types/shapeTypes";
 import {
   interactiveSegmenterTool,
   panTool,
@@ -19,6 +18,7 @@ import {
   polylineTool,
   rectangleTool,
 } from "$lib/tools/canvasToolPolicy";
+import { ShapeType } from "$lib/types/shapeTypes";
 
 /**
  * Computes a stable signature for a tool configuration.
@@ -153,7 +153,10 @@ const DEFAULT_NEUTRAL_MASK_OVERLAY_ALPHA = 0.2;
 /**
  * Existing annotations are hidden while a drawing tool is active unless the user is peeking.
  */
-export function shouldHideAnnotationsForToolMode(isDrawingTool: boolean, isPeeking: boolean): boolean {
+export function shouldHideAnnotationsForToolMode(
+  isDrawingTool: boolean,
+  isPeeking: boolean,
+): boolean {
   return isDrawingTool && !isPeeking;
 }
 
@@ -188,7 +191,9 @@ export function resolveNeutralPeekPresentation(
 
   return {
     neutralColor: input.isPeeking ? PEEK_NEUTRAL_ENTITY_COLOR : NEUTRAL_ENTITY_COLOR,
-    opacity: isNeutralPeek ? Math.max(input.baseOpacity, PEEK_NEUTRAL_ANNOTATION_OPACITY) : input.baseOpacity,
+    opacity: isNeutralPeek
+      ? Math.max(input.baseOpacity, PEEK_NEUTRAL_ANNOTATION_OPACITY)
+      : input.baseOpacity,
     maskOverlayAlpha:
       input.shapeKind === "mask"
         ? input.isPeeking
@@ -212,8 +217,7 @@ export function resolveInteractiveToolResetAction(
   resetReason: "save-confirmed" | "save-cancelled" | undefined,
   resetShapeType: ShapeType | undefined,
 ): InteractiveToolResetAction {
-  const isInteractiveTool =
-    toolType === ToolType.InteractiveSegmenter || toolType === ToolType.VOS;
+  const isInteractiveTool = toolType === ToolType.InteractiveSegmenter || toolType === ToolType.VOS;
   if (!isInteractiveTool || resetShapeType !== ShapeType.mask) {
     return "none";
   }

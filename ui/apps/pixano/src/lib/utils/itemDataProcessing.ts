@@ -15,18 +15,14 @@ import {
   type View,
 } from "$lib/types/dataset";
 import type { WorkspaceData } from "$lib/types/workspace";
-import { normalizeWorkspaceRuntimeState } from "$lib/utils/workspaceRuntime";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
+import { normalizeWorkspaceRuntimeState } from "$lib/utils/workspaceRuntime";
 
 /**
  * Prepare a single annotation for front-end display.
  * Unpacks mask RLE, generates SVG polygons, and attaches frame indices for video.
  */
-function prepareAnnotation(
-  ann: Annotation,
-  workspaceType: WorkspaceType,
-  views: Record<string, View | View[]>,
-): Annotation {
+function prepareAnnotation(ann: Annotation, workspaceType: WorkspaceType): Annotation {
   ann.ui = { datasetItemType: workspaceType, displayControl: initDisplayControl };
 
   if (workspaceType === WorkspaceType.VIDEO) {
@@ -42,7 +38,7 @@ function prepareAnnotation(
 }
 
 function flattenWorkspaceEntities(entitiesByTable: WorkspaceData["entities"]): Entity[] {
-  let newEntities: Entity[] = [];
+  const newEntities: Entity[] = [];
 
   for (const itemEntities of Object.values(entitiesByTable)) {
     for (const entity of itemEntities) {
@@ -95,7 +91,7 @@ export function buildWorkspaceRuntimeData(
   const newAnns: Annotation[] = [];
   for (const anns of Object.values(workspaceData.annotations)) {
     for (const ann of anns) {
-      newAnns.push(prepareAnnotation(ann, workspaceType, workspaceData.views));
+      newAnns.push(prepareAnnotation(ann, workspaceType));
     }
   }
 

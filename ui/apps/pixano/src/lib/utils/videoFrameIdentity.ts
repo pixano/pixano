@@ -30,7 +30,8 @@ export function resolveSequenceFrameLocator(
   }
 
   const frame =
-    viewFrames.find((candidate) => candidate.data.frame_index === frameIndex) ?? viewFrames[frameIndex];
+    viewFrames.find((candidate) => candidate.data.frame_index === frameIndex) ??
+    viewFrames[frameIndex];
   if (!frame) {
     return isFrameLocator(fallback)
       ? fallback

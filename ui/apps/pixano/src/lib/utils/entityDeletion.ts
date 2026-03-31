@@ -122,7 +122,10 @@ export const onDeleteTrackItemClick = (
           (fann) => !annotationsToDeleteIds.has(fann.id),
         );
 
-        if (itemFrameIndex === track.data.start_frame && remainingChildren[0]?.ui.frame_index !== undefined) {
+        if (
+          itemFrameIndex === track.data.start_frame &&
+          remainingChildren[0]?.ui.frame_index !== undefined
+        ) {
           (ann as Tracklet).data.start_frame = remainingChildren[0].ui.frame_index;
           changedTrack = true;
         }
@@ -130,7 +133,8 @@ export const onDeleteTrackItemClick = (
           itemFrameIndex === track.data.end_frame &&
           remainingChildren[remainingChildren.length - 1]?.ui.frame_index !== undefined
         ) {
-          (ann as Tracklet).data.end_frame = remainingChildren[remainingChildren.length - 1].ui.frame_index!;
+          (ann as Tracklet).data.end_frame =
+            remainingChildren[remainingChildren.length - 1].ui.frame_index!;
           changedTrack = true;
         }
       }

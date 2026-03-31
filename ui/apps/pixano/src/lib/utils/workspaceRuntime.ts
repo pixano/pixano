@@ -12,7 +12,6 @@ import {
   initDisplayControl,
   isSequenceFrameArray,
   Mask,
-  SequenceFrame,
   Tracklet,
   WorkspaceType,
   type View,
@@ -85,7 +84,12 @@ function ensureAnnotationRuntimeFields(
 
   const frameId = annotation.data.frame_id;
   const viewName = annotation.data.view_name;
-  if (typeof frameId !== "string" || frameId === "" || typeof viewName !== "string" || viewName === "") {
+  if (
+    typeof frameId !== "string" ||
+    frameId === "" ||
+    typeof viewName !== "string" ||
+    viewName === ""
+  ) {
     return annotation;
   }
 
@@ -93,7 +97,7 @@ function ensureAnnotationRuntimeFields(
   if (!candidateView || !isSequenceFrameArray(candidateView)) {
     return annotation;
   }
-  const frame = (candidateView as SequenceFrame[]).find((item) => item.id === frameId);
+  const frame = candidateView.find((item) => item.id === frameId);
   if (frame) {
     annotation.data.frame_index = frame.data.frame_index;
     annotation.ui.frame_index = frame.data.frame_index;
@@ -151,7 +155,9 @@ function chooseLegacyTracklet(candidates: Tracklet[]): Tracklet | null {
 }
 
 function rebuildVideoTrackletChildren(annotations: Annotation[], entities: Entity[]): Annotation[] {
-  const tracklets = annotations.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Tracklet[];
+  const tracklets = annotations.filter((annotation) =>
+    annotation.is_type(BaseSchema.Tracklet),
+  ) as Tracklet[];
   if (tracklets.length === 0) {
     return annotations;
   }
@@ -226,7 +232,9 @@ export function normalizeWorkspaceRuntimeState(
   views: MView,
 ): WorkspaceRuntimeSnapshot {
   const annotations = snapshot.annotations.slice();
-  annotations.forEach((annotation) => ensureAnnotationRuntimeFields(annotation, workspaceType, views));
+  annotations.forEach((annotation) =>
+    ensureAnnotationRuntimeFields(annotation, workspaceType, views),
+  );
   annotations.sort(sortByFrameIndex);
 
   const entities = rebuildEntityChildren(snapshot.entities.slice(), annotations);

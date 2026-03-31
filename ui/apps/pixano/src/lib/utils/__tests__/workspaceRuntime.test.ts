@@ -6,7 +6,6 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
-import { boxLinearInterpolation } from "$lib/utils/interpolation";
 import {
   collectFrameAnnotations,
   getBBoxInterpolationIdentity,
@@ -23,6 +22,7 @@ import {
 } from "$lib/types/dataset";
 import { ToolType } from "$lib/types/tools";
 import type { WorkspaceData } from "$lib/types/workspace";
+import { boxLinearInterpolation } from "$lib/utils/interpolation";
 
 const NOW = "2026-03-31T00:00:00+00:00";
 
@@ -237,7 +237,7 @@ describe("workspaceRuntime", () => {
       interpolationIdentity: getBBoxInterpolationIdentity,
       frameIdx: 1,
       doInterpolate: true,
-      tracks: [normalizedTracklet as Tracklet],
+      tracks: [normalizedTracklet],
       mViews: mediaViews,
       focusedEntityId: null,
       selectedToolType: ToolType.Pan,

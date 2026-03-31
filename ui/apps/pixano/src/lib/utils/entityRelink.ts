@@ -155,14 +155,15 @@ export const relink = (
             ...toMoveAnnotations,
             ...tracksToFuse.flatMap((fann) => (fann as Tracklet).ui.childs),
           ].sort(sortByFrameIndex);
-          [...toMoveAnnotations, ...tracksToFuse.flatMap((fann) => (fann as Tracklet).ui.childs)].forEach(
-            (movedChild) => {
-              if ("tracklet_id" in movedChild.data) {
-                movedChild.data.tracklet_id = ann.id;
-              }
-              movedChild.data.entity_id = targetEntity.id;
-            },
-          );
+          [
+            ...toMoveAnnotations,
+            ...tracksToFuse.flatMap((fann) => (fann as Tracklet).ui.childs),
+          ].forEach((movedChild) => {
+            if ("tracklet_id" in movedChild.data) {
+              movedChild.data.tracklet_id = ann.id;
+            }
+            movedChild.data.entity_id = targetEntity.id;
+          });
 
           // target track range may change: union of current & targets
           (ann as Tracklet).data.start_frame = Math.min(

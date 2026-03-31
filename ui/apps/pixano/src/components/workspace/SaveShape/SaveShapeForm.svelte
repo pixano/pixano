@@ -13,8 +13,8 @@ License: CECILL-C
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
   import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
-  import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import { cloneMaskUiForPersistence } from "$lib/segmentation/maskNormalization";
+  import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import {
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
@@ -479,7 +479,9 @@ License: CECILL-C
       }
     }
 
-    const nextEntities = entities.value.includes(entity) ? entities.value : [...entities.value, entity];
+    const nextEntities = entities.value.includes(entity)
+      ? entities.value
+      : [...entities.value, entity];
     const objectsWithoutHighlighted: Annotation[] = annotations.value.map((object) => {
       object.ui.displayControl.highlighted = "none";
       object.ui.displayControl = { ...object.ui.displayControl, editing: false };
@@ -497,7 +499,8 @@ License: CECILL-C
     );
     if (focusedTrackletId) {
       const focusedTracklet = normalized.annotations.find(
-        (annotation) => annotation.id === focusedTrackletId && annotation.is_type(BaseSchema.Tracklet),
+        (annotation) =>
+          annotation.id === focusedTrackletId && annotation.is_type(BaseSchema.Tracklet),
       );
       if (focusedTracklet) {
         highlightTrackletChildren(focusedTracklet as Tracklet);

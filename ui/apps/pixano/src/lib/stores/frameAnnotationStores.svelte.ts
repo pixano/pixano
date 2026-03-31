@@ -6,8 +6,8 @@ License: CECILL-C
 
 import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
 import {
-  collectFrameAnnotations,
   collectExactFrameAnnotations,
+  collectFrameAnnotations,
   getAnnotationFrameIndex,
   getBBoxInterpolationIdentity,
   getKeypointsInterpolationIdentity,
@@ -22,13 +22,7 @@ import {
 } from "./workspaceBaseStores.svelte";
 import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
 import { ToolType } from "$lib/tools";
-import {
-  BaseSchema,
-  BBox,
-  Keypoints,
-  Mask,
-  MultiPath,
-} from "$lib/types/dataset";
+import { BaseSchema, BBox, Keypoints, Mask, MultiPath } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import {
   mapBBoxForDisplay,

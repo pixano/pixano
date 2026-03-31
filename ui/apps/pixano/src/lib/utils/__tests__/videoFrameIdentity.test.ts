@@ -6,8 +6,11 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { resolveSequenceFrameLocator, resolveVideoFrameIdentity } from "$lib/utils/videoFrameIdentity";
 import { BaseSchema, SequenceFrame } from "$lib/types/dataset";
+import {
+  resolveSequenceFrameLocator,
+  resolveVideoFrameIdentity,
+} from "$lib/utils/videoFrameIdentity";
 
 const NOW = "2026-03-29T00:00:00+00:00";
 

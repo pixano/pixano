@@ -4,14 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import {
-  Annotation,
-  BBox,
-  Entity,
-  Keypoints,
-  SequenceFrame,
-  Tracklet,
-} from "$lib/types/dataset";
+import { Annotation, BBox, Entity, Keypoints, SequenceFrame, Tracklet } from "$lib/types/dataset";
 import { ToolType } from "$lib/types/tools";
 import type { MView } from "$lib/types/workspace";
 import { getEffectiveHighlight, type HighlightState } from "$lib/utils/highlightUtils";
@@ -50,7 +43,10 @@ export function collectExactFrameAnnotations<TRaw extends Annotation, TDisplay>(
     .filter((value): value is TDisplay => value !== undefined);
 }
 
-export function collectFrameAnnotations<TRaw extends Annotation, TDisplay extends { id: string }>(opts: {
+export function collectFrameAnnotations<
+  TRaw extends Annotation,
+  TDisplay extends { id: string },
+>(opts: {
   frameAnnotations: TRaw[];
   typeFilter: (ann: Annotation) => ann is TRaw;
   mapForDisplay: (ann: TRaw, highlight: HighlightState) => TDisplay | undefined;
@@ -88,7 +84,8 @@ export function collectFrameAnnotations<TRaw extends Annotation, TDisplay extend
   }
 
   const currentTracklets = opts.tracks.filter(
-    (tracklet) => tracklet.data.start_frame <= opts.frameIdx && tracklet.data.end_frame >= opts.frameIdx,
+    (tracklet) =>
+      tracklet.data.start_frame <= opts.frameIdx && tracklet.data.end_frame >= opts.frameIdx,
   );
 
   for (const tracklet of currentTracklets) {
@@ -129,7 +126,12 @@ export function collectFrameAnnotations<TRaw extends Annotation, TDisplay extend
       .map((ann) =>
         opts.mapForDisplay(
           ann,
-          getEffectiveHighlight(ann, opts.focusedEntityId, opts.selectedToolType, opts.entitiesById),
+          getEffectiveHighlight(
+            ann,
+            opts.focusedEntityId,
+            opts.selectedToolType,
+            opts.entitiesById,
+          ),
         ),
       )
       .filter((value): value is TDisplay => value !== undefined);

@@ -6,15 +6,9 @@ License: CECILL-C
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { boxLinearInterpolation } from "$lib/utils/interpolation";
-import {
-  BaseSchema,
-  BBox,
-  Entity,
-  Tracklet,
-  WorkspaceType,
-} from "$lib/types/dataset";
+import { BaseSchema, BBox, Entity, Tracklet, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
+import { boxLinearInterpolation } from "$lib/utils/interpolation";
 
 const NOW = "2026-03-31T00:00:00+00:00";
 
@@ -186,17 +180,11 @@ describe("videoTrackMutations", () => {
       highlighted: "self",
     };
 
-    const result = editKeyItemInTracklet(
-      [startBBox, endBBox],
-      shape,
-      1,
-      [interpolatedBBox],
-      [],
-    );
+    const result = editKeyItemInTracklet([startBBox, endBBox], shape, 1, [interpolatedBBox], []);
 
-    const createdBBox = result.objects.find((annotation) => annotation.id === interpolatedBBox.id) as
-      | BBox
-      | undefined;
+    const createdBBox = result.objects.find(
+      (annotation) => annotation.id === interpolatedBBox.id,
+    ) as BBox | undefined;
     expect(result.save_data.change_type).toBe("add");
     expect(createdBBox?.data.tracklet_id).toBe("track-1");
     expect(createdBBox?.data.frame_id).toBe("camera-frame-1");
@@ -217,9 +205,9 @@ describe("videoTrackMutations", () => {
 
     expect(tracklet.data.end_frame).toBe(1);
     expect(tracklet.ui.childs.map((annotation) => annotation.id)).toEqual(["bbox-0", "bbox-1"]);
-    expect(tracklet.ui.childs.every((annotation) => annotation.data.tracklet_id === "track-1")).toBe(
-      true,
-    );
+    expect(
+      tracklet.ui.childs.every((annotation) => annotation.data.tracklet_id === "track-1"),
+    ).toBe(true);
 
     expect(rightTracklet.data.start_frame).toBe(2);
     expect(rightTracklet.ui.childs.map((annotation) => annotation.id)).toEqual([

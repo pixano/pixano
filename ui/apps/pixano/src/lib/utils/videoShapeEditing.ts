@@ -53,7 +53,7 @@ export function editKeyItemInTracklet(
 
     if (shape.type === ShapeType.bbox) {
       const interpolatedBox = currentBBoxes.find((box) => box.id === shape.shapeId);
-      const sourceBBox = interpolatedBox?.ui?.startRef as BBox | undefined;
+      const sourceBBox = interpolatedBox?.ui?.startRef;
       if (interpolatedBox && sourceBBox) {
         newAnn = BBox.cloneForFrame(sourceBBox, {
           id: shape.shapeId,

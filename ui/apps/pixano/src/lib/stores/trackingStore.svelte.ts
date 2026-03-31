@@ -28,8 +28,8 @@ import {
   type Reference,
   type SequenceFrame,
 } from "$lib/types/dataset";
-import { toLegacyReference, toViewLocator } from "$lib/types/workspaceLocators";
 import { ShapeType, type SaveRectangleShape } from "$lib/types/shapeTypes";
+import { toLegacyReference, toViewLocator } from "$lib/types/workspaceLocators";
 import { resolveSequenceFrameLocator } from "$lib/utils/videoFrameIdentity";
 
 export type {
@@ -173,7 +173,9 @@ export function finalizeTrackingSession(): SaveRectangleShape | null {
   const currentFrameRef = resolveSequenceFrameLocator(
     tracker.viewName,
     frameIdx,
-    Array.isArray(views.value[tracker.viewName]) ? (views.value[tracker.viewName] as SequenceFrame[]) : undefined,
+    Array.isArray(views.value[tracker.viewName])
+      ? (views.value[tracker.viewName] as SequenceFrame[])
+      : undefined,
     toViewLocator(viewRef),
   );
 

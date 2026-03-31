@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest";
 import {
   computeCursorFlushAction,
   computeToolChangeAction,
-  resolveNeutralPeekPresentation,
   resolveInteractiveToolResetAction,
+  resolveNeutralPeekPresentation,
   shouldClearHighlightingOnPanCanvasClick,
   shouldHideAnnotationsForToolMode,
   shouldRenderAnnotationWhileToolHidden,
@@ -22,8 +22,8 @@ import {
   PEEK_NEUTRAL_ENTITY_COLOR,
   PEEK_NEUTRAL_MASK_OVERLAY_ALPHA,
 } from "$lib/constants/workspaceConstants";
-import { brushDrawTool, interactiveSegmenterTool, panTool } from "$lib/tools/canvasToolPolicy";
 import { ToolType } from "$lib/tools";
+import { brushDrawTool, interactiveSegmenterTool, panTool } from "$lib/tools/canvasToolPolicy";
 import { ShapeType } from "$lib/types/shapeTypes";
 
 describe("canvasEventHandlers", () => {
@@ -166,9 +166,9 @@ describe("canvasEventHandlers", () => {
   });
 
   it("preserves local prompt previews only for cancelled interactive mask resets", () => {
-    expect(
-      resolveInteractiveToolResetAction(ToolType.VOS, "save-cancelled", ShapeType.mask),
-    ).toBe("preserve-local-preview");
+    expect(resolveInteractiveToolResetAction(ToolType.VOS, "save-cancelled", ShapeType.mask)).toBe(
+      "preserve-local-preview",
+    );
     expect(
       resolveInteractiveToolResetAction(
         ToolType.InteractiveSegmenter,
@@ -179,9 +179,9 @@ describe("canvasEventHandlers", () => {
   });
 
   it("reinitializes interactive tools locally after a confirmed mask save without AI cancel", () => {
-    expect(
-      resolveInteractiveToolResetAction(ToolType.VOS, "save-confirmed", ShapeType.mask),
-    ).toBe("reset-local-interactive-tool");
+    expect(resolveInteractiveToolResetAction(ToolType.VOS, "save-confirmed", ShapeType.mask)).toBe(
+      "reset-local-interactive-tool",
+    );
     expect(
       resolveInteractiveToolResetAction(
         ToolType.InteractiveSegmenter,
@@ -192,9 +192,9 @@ describe("canvasEventHandlers", () => {
   });
 
   it("ignores non-mask and non-interactive reset states", () => {
-    expect(
-      resolveInteractiveToolResetAction(ToolType.VOS, "save-confirmed", ShapeType.bbox),
-    ).toBe("none");
+    expect(resolveInteractiveToolResetAction(ToolType.VOS, "save-confirmed", ShapeType.bbox)).toBe(
+      "none",
+    );
     expect(resolveInteractiveToolResetAction(ToolType.Pan, "save-confirmed", ShapeType.mask)).toBe(
       "none",
     );

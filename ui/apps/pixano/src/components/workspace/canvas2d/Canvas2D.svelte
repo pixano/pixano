@@ -46,7 +46,6 @@ License: CECILL-C
     currentSegmentationModels,
     inferenceServerStore,
   } from "$lib/stores/inferenceStores.svelte";
-  import { clearHighlighting } from "$lib/utils/highlightOperations";
   import {
     ToolType,
     type InteractiveSegmenterAIInput,
@@ -92,6 +91,7 @@ License: CECILL-C
   import type { ToolBridge } from "$lib/types/store";
   import type { SmartSegmentationUiState } from "$lib/types/workspace";
   import { AiProcessingBadge } from "$lib/ui";
+  import { clearHighlighting } from "$lib/utils/highlightOperations";
 
   interface BrushSettings {
     brushRadius: number;

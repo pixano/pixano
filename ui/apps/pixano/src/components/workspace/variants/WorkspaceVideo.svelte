@@ -83,8 +83,8 @@ License: CECILL-C
   } from "$lib/tools";
   import { Sam2VideoTracker } from "$lib/trackers";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
-  import { toLegacyReference } from "$lib/types/workspaceLocators";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
+  import { toLegacyReference } from "$lib/types/workspaceLocators";
   import {
     AiProcessingBadge,
     SequenceFrame,
