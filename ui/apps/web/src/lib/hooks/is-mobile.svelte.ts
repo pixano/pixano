@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { MediaQuery } from 'svelte/reactivity';
 
 const DEFAULT_MOBILE_BREAKPOINT = 768;

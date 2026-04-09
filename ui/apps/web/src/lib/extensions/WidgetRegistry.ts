@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { WidgetExtensionConfig } from './types.js';
 import type { WidgetExtension } from './WidgetExtension.js';
 

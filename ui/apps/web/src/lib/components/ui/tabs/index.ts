@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import Root from './tabs.svelte';
 import Content from './tabs-content.svelte';
 import List from './tabs-list.svelte';

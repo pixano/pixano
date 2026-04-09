@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import type { WorkspaceManager } from '$lib/workspace/workspaceManager.svelte.js';
 	import { ScanSearch, MessageSquare } from 'lucide-svelte';

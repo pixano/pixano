@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import { Lock, Unlock, PanelRight } from 'lucide-svelte';
 	import type { WorkspaceManager } from '$lib/workspace/workspaceManager.svelte.js';

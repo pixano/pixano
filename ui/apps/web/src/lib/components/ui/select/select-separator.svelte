@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import type { Separator as SeparatorPrimitive } from 'bits-ui';
 	import { Separator } from '$lib/components/ui/separator/index.js';

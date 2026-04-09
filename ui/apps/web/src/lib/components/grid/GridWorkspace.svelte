@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import 'gridstack/dist/gridstack.min.css';
 	import { onMount, onDestroy, mount, unmount } from 'svelte';

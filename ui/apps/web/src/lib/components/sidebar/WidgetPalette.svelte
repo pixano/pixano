@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import { Image, FileText, Box } from 'lucide-svelte';
 	import type { WidgetRegistry } from '$lib/extensions/WidgetRegistry.js';

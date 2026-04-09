@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';

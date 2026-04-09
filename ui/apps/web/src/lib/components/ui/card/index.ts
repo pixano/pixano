@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import Root from './card.svelte';
 import Content from './card-content.svelte';
 import Description from './card-description.svelte';

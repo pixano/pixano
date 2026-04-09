@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { useSidebar } from './context.svelte.js';
 import Content from './sidebar-content.svelte';
 import Footer from './sidebar-footer.svelte';

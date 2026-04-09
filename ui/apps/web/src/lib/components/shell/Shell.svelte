@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import ActivityBar from './ActivityBar.svelte';
 	import Toolbar from './Toolbar.svelte';
@@ -12,7 +18,7 @@
 
 	const registry = createDefaultRegistry();
 	const manager = new WorkspaceManager(registry);
-	manager.applyPreset(DEFAULT_PRESET);
+	manager.selectRecordInDataset("NSn7gHtkh6366dWXz6kdwF", "85dMNwowyc7ZXQrWNSyBmc");
 
 	const leftPanel = new PanelState({ defaultWidth: 260, minWidth: 200, maxWidth: 480 });
 	const rightPanel = new PanelState({ defaultWidth: 300, minWidth: 240, maxWidth: 520 });

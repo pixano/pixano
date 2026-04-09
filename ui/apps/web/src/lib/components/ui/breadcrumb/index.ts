@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import Root from './breadcrumb.svelte';
 import Ellipsis from './breadcrumb-ellipsis.svelte';
 import Item from './breadcrumb-item.svelte';

@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { WidgetExtension } from '../WidgetExtension.js';
 import TextWidget from '$lib/components/widgets/TextWidget.svelte';
 

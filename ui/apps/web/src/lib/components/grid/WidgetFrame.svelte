@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import { GripVertical, X } from 'lucide-svelte';
 	import type { WidgetInstance, WidgetExtensionConfig } from '$lib/extensions/types.js';

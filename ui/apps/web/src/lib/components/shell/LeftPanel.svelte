@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import WidgetPalette from '$lib/components/sidebar/WidgetPalette.svelte';
 	import type { WidgetRegistry } from '$lib/extensions/WidgetRegistry.js';

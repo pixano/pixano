@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
 	import { Select as SelectPrimitive } from 'bits-ui';
 	import SelectScrollUpButton from './select-scroll-up-button.svelte';

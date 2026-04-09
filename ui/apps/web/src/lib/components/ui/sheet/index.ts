@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { Dialog as SheetPrimitive } from 'bits-ui';
 import Trigger from './sheet-trigger.svelte';
 import Close from './sheet-close.svelte';

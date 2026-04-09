@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 /**
  * Reactive state for a resizable panel.
  * Uses Svelte 5 $state runes for fine-grained reactivity.

@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { WorkspacePreset } from '$lib/extensions/types.js';
 
 export const DEFAULT_PRESET: WorkspacePreset = {
@@ -8,7 +14,7 @@ export const DEFAULT_PRESET: WorkspacePreset = {
 			title: '2D Canvas',
 			layout: { x: 0, y: 0, w: 5, h: 5 },
 			options: {},
-			data: { imageUrl: '/sample-image.svg' }
+			data: { imageUrl: '/datasets/NSn7gHtkh6366dWXz6kdwF/images/NSgX5APmfXnQwYdsdHPPbA/blob' }
 		},
 		{
 			extensionName: 'text',

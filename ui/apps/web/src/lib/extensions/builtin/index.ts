@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { WidgetRegistry } from '../WidgetRegistry.js';
 import { ImageExtension } from './ImageExtension.js';
 import { TextExtension } from './TextExtension.js';

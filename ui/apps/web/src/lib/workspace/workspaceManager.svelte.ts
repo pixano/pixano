@@ -1,6 +1,15 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { WidgetInstance, WidgetLayout } from '$lib/extensions/types.js';
 import type { WidgetRegistry } from '$lib/extensions/WidgetRegistry.js';
 import type { WorkspacePreset } from '$lib/extensions/types.js';
+import * as api from '$lib/api';
+import { WorkspaceType } from '$lib/types/dataset';
+import type { ImageResponse } from '$lib/api/restTypes';
 
 /**
  * Reactive workspace manager using Svelte 5 $state runes.
@@ -11,6 +20,8 @@ export class WorkspaceManager {
 	widgets = $state<WidgetInstance[]>([]);
 	editMode = $state(true);
 	presetName = $state('Default');
+	datasetId = $state<string | null>("NSn7gHtkh6366dWXz6kdwF");
+	recordId = $state<string | null>("85dMNwowyc7ZXQrWNSyBmc");
 
 	widgetCount = $derived(this.widgets.length);
 
@@ -76,5 +87,26 @@ export class WorkspaceManager {
 		for (const template of preset.widgets) {
 			this.addWidget(template.extensionName, template);
 		}
+	}
+
+	async selectRecordInDataset(datasetId: string, recordId: string): Promise<void> {
+		const dataset = await api.getDataset(datasetId);
+		if(dataset.info.workspace !== WorkspaceType.IMAGE) {
+			throw new Error("Dataset is not an image dataset");
+		}
+		const TOREMOVE = {
+			extensionName: 'image',
+			title: '2D Canvas',
+			layout: { x: 0, y: 0, w: 5, h: 5 },
+			options: {},
+			data: { imageUrl: '/datasets/NSn7gHtkh6366dWXz6kdwF/images/NSgX5APmfXnQwYdsdHPPbA/blob' }
+		}
+		const images = await api.loadImages(datasetId, recordId);
+		images.forEach(image => {
+			this.addWidget('image', {
+				...TOREMOVE,
+				data: { imageUrl: image.src }
+			});
+		});
 	}
 }
