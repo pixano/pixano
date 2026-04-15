@@ -113,6 +113,15 @@ export interface SFrameResponse {
   timestamp?: number;
 }
 
+export interface PointCloudResponse {
+  id: string;
+  record_id: string;
+  logical_name?: string;
+  created_at?: string;
+  updated_at?: string;
+  src: string;
+}
+
 export interface EntityResponse extends RecordComponentResponse {
   parent_id?: string;
 }

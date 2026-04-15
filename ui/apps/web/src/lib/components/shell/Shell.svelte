@@ -18,7 +18,9 @@ License: CECILL-C
 
 	const registry = createDefaultRegistry();
 	const manager = new WorkspaceManager(registry);
+	// TOREMOVE: hardcoded dataset/record selection for VOC + nuScenes
 	manager.selectRecordInDataset("NSn7gHtkh6366dWXz6kdwF", "85dMNwowyc7ZXQrWNSyBmc");
+	manager.selectRecordInDataset("UCS4JxEwHYt4JJEWwPgYQc", "00889f8a9549450aa2f32cf310a3e305");
 
 	const leftPanel = new PanelState({ defaultWidth: 260, minWidth: 200, maxWidth: 480 });
 	const rightPanel = new PanelState({ defaultWidth: 300, minWidth: 240, maxWidth: 520 });

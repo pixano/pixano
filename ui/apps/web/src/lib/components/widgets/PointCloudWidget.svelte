@@ -50,7 +50,7 @@ License: CECILL-C
 	{:else if ready && CanvasComponent && SceneComponent}
 		<div class="absolute inset-0">
 			<CanvasComponent>
-				<SceneComponent />
+				<SceneComponent pointCloudUrl={data?.pointCloudUrl as string | undefined} />
 			</CanvasComponent>
 		</div>
 	{:else}

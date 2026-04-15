@@ -237,6 +237,12 @@ export interface FeaturesValues {
 
 // ─── DatasetInfo ───────────────────────────────────────────────────────────────
 
+export interface SchemaDescriptor {
+  base?: string;
+  name?: string;
+  fields?: Record<string, { type?: string; collection?: boolean }>;
+}
+
 export interface DatasetInfoType {
   id: string;
   name: string;
@@ -245,6 +251,7 @@ export interface DatasetInfoType {
   preview: string;
   workspace: string;
   num_items: number;
+  views?: Record<string, SchemaDescriptor>;
   isFiltered?: boolean;
 }
 
@@ -256,6 +263,7 @@ export class DatasetInfo implements DatasetInfoType {
   size: string;
   preview: string;
   workspace: WorkspaceType;
+  views?: Record<string, SchemaDescriptor>;
   isFiltered?: boolean;
 
   constructor(obj: DatasetInfoType) {
@@ -266,6 +274,7 @@ export class DatasetInfo implements DatasetInfoType {
     this.size = obj.size;
     this.preview = obj.preview;
     this.workspace = obj.workspace as WorkspaceType;
+    this.views = obj.views;
     this.isFiltered = obj.isFiltered;
   }
 }

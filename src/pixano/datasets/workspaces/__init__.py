@@ -6,7 +6,7 @@
 
 from enum import Enum
 
-from .dataset_items import default_image_tables, default_video_tables, default_vqa_tables
+from .dataset_items import default_image_tables, default_point_cloud_tables, default_video_tables, default_vqa_tables
 
 
 class WorkspaceType(Enum):
@@ -19,6 +19,7 @@ class WorkspaceType(Enum):
         VIDEO: Video workspace.
         IMAGE_VQA: Image VQA workspace.
         IMAGE_TEXT_ENTITY_LINKING: Image text entity linking workspace.
+        POINT_CLOUD: Point-cloud workspace (3D lidar + optional camera views).
         UNDEFINED: Undefined workspace.
     """
 
@@ -26,12 +27,14 @@ class WorkspaceType(Enum):
     VIDEO = "video"
     IMAGE_VQA = "image_vqa"
     IMAGE_TEXT_ENTITY_LINKING = "image_text_entity_linking"
+    POINT_CLOUD = "3d"
     UNDEFINED = "undefined"
 
 
 __all__ = [
     "WorkspaceType",
     "default_image_tables",
+    "default_point_cloud_tables",
     "default_video_tables",
     "default_vqa_tables",
 ]

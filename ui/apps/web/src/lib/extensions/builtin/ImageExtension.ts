@@ -16,6 +16,7 @@ export const ImageExtension = WidgetExtension.create({
 	component: ImageWidget,
 	addOptions: () => ({
 		imageUrl: '/datasets/NSn7gHtkh6366dWXz6kdwF/images/NSgX5APmfXnQwYdsdHPPbA/blob',
-		tools: ['select', 'bbox']
+		tools: ['select', 'bbox'],
+		logicalName: ''
 	})
 });

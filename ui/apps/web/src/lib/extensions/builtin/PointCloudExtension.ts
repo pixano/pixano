@@ -16,6 +16,7 @@ export const PointCloudExtension = WidgetExtension.create({
 	component: PointCloudWidget,
 	addOptions: () => ({
 		pointSize: 0.08,
-		backgroundColor: '#1e293b'
+		backgroundColor: '#1e293b',
+		logicalName: ''
 	})
 });
