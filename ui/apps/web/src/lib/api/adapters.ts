@@ -84,6 +84,7 @@ function toDatasetSchemaEntry(
 }
 
 export function toDatasetInfo(dto: DatasetInfoResponse): DatasetInfo {
+  console.log("dto.views", dto.views);
   return {
     id: dto.id,
     name: dto.name,
@@ -92,6 +93,7 @@ export function toDatasetInfo(dto: DatasetInfoResponse): DatasetInfo {
     preview: dto.preview,
     workspace: mapWorkspace(dto.workspace),
     num_items: dto.num_records,
+    views: dto.views,
   };
 }
 

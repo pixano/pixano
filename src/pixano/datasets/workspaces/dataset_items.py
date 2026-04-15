@@ -20,6 +20,7 @@ from pixano.schemas import (
     Image,
     KeyPoints,
     Message,
+    PointCloud,
     Record,
     SequenceFrame,
     Tracklet,
@@ -49,6 +50,18 @@ def default_video_tables() -> dict[str, type[LanceModel]]:
         "tracklets": Tracklet,
         "bboxes": BBox,
         "masks": CompressedRLE,
+        "keypoints": KeyPoints,
+    }
+
+
+def default_point_cloud_tables() -> dict[str, type[LanceModel]]:
+    """Return default tables for a point-cloud dataset (lidar + camera views)."""
+    return {
+        "records": Record,
+        "point_clouds": PointCloud,
+        "images": Image,
+        "entities": Entity,
+        "bboxes": BBox,
         "keypoints": KeyPoints,
     }
 

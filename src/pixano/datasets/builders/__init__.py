@@ -5,7 +5,14 @@
 # =====================================
 
 from .dataset_builder import DatasetBuilder
-from .folders import FolderBaseBuilder, ImageFolderBuilder, MelFolderBuilder, VideoFolderBuilder, VQAFolderBuilder
+from .folders import (
+    FolderBaseBuilder,
+    ImageFolderBuilder,
+    MelFolderBuilder,
+    PointCloudFolderBuilder,
+    VideoFolderBuilder,
+    VQAFolderBuilder,
+)
 
 
 __all__ = [
@@ -13,6 +20,7 @@ __all__ = [
     "FolderBaseBuilder",
     "ImageFolderBuilder",
     "MelFolderBuilder",
+    "PointCloudFolderBuilder",
     "VideoFolderBuilder",
     "VQAFolderBuilder",
 ]

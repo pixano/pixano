@@ -5,10 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-	import '../app.css';
-	import type { Snippet } from 'svelte';
+  import "../app.css";
 
-	let { children }: { children: Snippet } = $props();
+  import type { Snippet } from "svelte";
+
+  let { children }: { children: Snippet } = $props();
 </script>
 
 {@render children()}

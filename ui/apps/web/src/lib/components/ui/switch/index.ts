@@ -4,10 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import Root from './switch.svelte';
+import Root from "./switch.svelte";
 
 export {
-	Root,
-	//
-	Root as Switch
+  Root,
+  //
+  Root as Switch,
 };

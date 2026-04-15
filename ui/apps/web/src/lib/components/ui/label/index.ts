@@ -4,10 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import Root from './label.svelte';
+import Root from "./label.svelte";
 
 export {
-	Root,
-	//
-	Root as Label
+  Root,
+  //
+  Root as Label,
 };

@@ -4,10 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import Root from './separator.svelte';
+import Root from "./separator.svelte";
 
 export {
-	Root,
-	//
-	Root as Separator
+  Root,
+  //
+  Root as Separator,
 };

@@ -44,7 +44,6 @@ export async function requestJson<T>(
   return (await response.json()) as T;
 }
 
-
 export async function apiFetch<T>(
   url: string,
   init: RequestInit,

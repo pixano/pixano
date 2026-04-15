@@ -5,64 +5,88 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-	import { T } from '@threlte/core';
-	import { OrbitControls } from '@threlte/extras';
-	import * as THREE from 'three';
+  import { T } from "@threlte/core";
+  import { OrbitControls } from "@threlte/extras";
+  import { onMount } from "svelte";
+  import * as THREE from "three";
 
-	// Generate random point cloud data
-	const pointCount = 500;
-	const positions = new Float32Array(pointCount * 3);
-	const colors = new Float32Array(pointCount * 3);
+  interface Props {
+    pointCloudUrl?: string;
+  }
 
-	for (let i = 0; i < pointCount; i++) {
-		const theta = Math.random() * Math.PI * 2;
-		const phi = Math.acos(Math.random() * 2 - 1);
-		const r = Math.random() * 3 + 0.5;
+  let { pointCloudUrl }: Props = $props();
 
-		positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-		positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-		positions[i * 3 + 2] = r * Math.cos(phi);
+  let positions = $state<Float32Array>(new Float32Array(0));
+  let colors = $state<Float32Array>(new Float32Array(0));
+  let loading = $state(true);
 
-		const t = (positions[i * 3 + 1] + 3.5) / 7;
-		colors[i * 3] = t;
-		colors[i * 3 + 1] = 0.4 + t * 0.4;
-		colors[i * 3 + 2] = 1 - t * 0.5;
-	}
+  onMount(async () => {
+    if (!pointCloudUrl) {
+      loading = false;
+      return;
+    }
+    try {
+      const response = await fetch(pointCloudUrl);
+      const buffer = await response.arrayBuffer();
+      // nuScenes .pcd.bin: 5 float32 per point (x, y, z, intensity, ring_index)
+      const floats = new Float32Array(buffer);
+      const stride = 5;
+      const pointCount = Math.floor(floats.length / stride);
 
-	const geometry = new THREE.BufferGeometry();
-	geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-	geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const pos = new Float32Array(pointCount * 3);
+      const col = new Float32Array(pointCount * 3);
+
+      let minZ = Infinity,
+        maxZ = -Infinity;
+      for (let i = 0; i < pointCount; i++) {
+        const z = floats[i * stride + 2];
+        if (z < minZ) minZ = z;
+        if (z > maxZ) maxZ = z;
+      }
+      const rangeZ = maxZ - minZ || 1;
+
+      for (let i = 0; i < pointCount; i++) {
+        pos[i * 3] = floats[i * stride];
+        pos[i * 3 + 1] = floats[i * stride + 2]; // z -> up
+        pos[i * 3 + 2] = -floats[i * stride + 1]; // -y -> forward
+        // Color by height
+        const t = (floats[i * stride + 2] - minZ) / rangeZ;
+        col[i * 3] = t;
+        col[i * 3 + 1] = 0.4 + t * 0.4;
+        col[i * 3 + 2] = 1 - t * 0.5;
+      }
+
+      positions = pos;
+      colors = col;
+    } catch (e) {
+      console.error("Failed to load point cloud:", e);
+    }
+    loading = false;
+  });
 </script>
 
 <T.PerspectiveCamera
-	makeDefault
-	position={[6, 4, 6]}
-	oncreate={(ref) => {
-		ref.lookAt(0, 0, 0);
-	}}
+  makeDefault
+  position={[30, 20, 30]}
+  oncreate={(ref) => {
+    ref.lookAt(0, 0, 0);
+  }}
 >
-	<OrbitControls enableDamping autoRotate autoRotateSpeed={0.5} />
+  <OrbitControls enableDamping />
 </T.PerspectiveCamera>
 
-<T.DirectionalLight position={[5, 5, 5]} intensity={1} />
-<T.AmbientLight intensity={0.4} />
+<T.AmbientLight intensity={0.6} />
 
-<!-- Point cloud -->
-<T.Points>
-	<T.BufferGeometry
-		oncreate={(ref) => {
-			ref.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-			ref.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-		}}
-	/>
-	<T.PointsMaterial size={0.08} vertexColors sizeAttenuation />
-</T.Points>
+{#if !loading && positions.length > 0}
+  <T.Points>
+    <T.BufferGeometry
+      oncreate={(ref) => {
+        ref.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        ref.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      }}
+    />
+    <T.PointsMaterial size={0.05} vertexColors sizeAttenuation />
+  </T.Points>
+{/if}
 
-<!-- Central reference cube -->
-<T.Mesh position.y={0}>
-	<T.BoxGeometry args={[0.5, 0.5, 0.5]} />
-	<T.MeshStandardMaterial color="#6366f1" wireframe />
-</T.Mesh>
-
-<!-- Ground grid -->
-<T.GridHelper args={[10, 10, '#333333', '#222222']} position.y={-3.5} />
+<T.GridHelper args={[100, 50, "#333333", "#222222"]} />
