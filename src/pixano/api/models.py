@@ -259,6 +259,17 @@ class SFrameResponse(ResponseModel):
     src: str
 
 
+class PointCloudResponse(ResponseModel):
+    """Response model for a point-cloud view row."""
+
+    id: str
+    record_id: str
+    logical_name: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    src: str
+
+
 TrackletCreate = _create_transport_model(
     "TrackletCreate",
     Tracklet,
@@ -507,6 +518,7 @@ __all__ = [
     "RelationResponse",
     "RelationUpdate",
     "ImageResponse",
+    "PointCloudResponse",
     "SFrameResponse",
     "TextResponse",
     "TextSpanCreate",

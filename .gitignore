@@ -60,3 +60,4 @@ my_data/
 
 .svelte-kit
 build
+data/
