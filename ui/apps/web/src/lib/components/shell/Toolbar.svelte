@@ -9,7 +9,7 @@ License: CECILL-C
 
   import type { PanelState } from "$lib/components/ui/resizable-panel/PanelState.svelte.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
-
+  import pixanoLogo from "$lib/assets/pixano.png";
   interface Props {
     manager: WorkspaceManager;
     rightPanel: PanelState;
@@ -26,7 +26,8 @@ License: CECILL-C
   class="bg-background/80 sticky top-0 z-10 flex h-10 shrink-0 items-center gap-2 border-b border-border px-3 backdrop-blur-sm"
 >
   <div class="flex flex-1 items-center gap-3">
-    <span class="text-sm font-medium text-foreground">Workspace</span>
+    <img src={pixanoLogo} alt="Logo Pixano" class="w-7 h-7" />
+    <span class="text-sm font-medium text-foreground">Pixano -Workspace</span>
     <span class="text-xs text-muted-foreground">— {manager.presetName}</span>
   </div>
 
