@@ -1,16 +1,23 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
-	import { ScrollArea as ScrollAreaPrimitive } from 'bits-ui';
-	import { cn } from '$lib/utils.js';
+  import { ScrollArea as ScrollAreaPrimitive } from "bits-ui";
 
-	interface Props {
-		class?: string;
-		[key: string]: any;
-	}
+  import { cn } from "$lib/utils.js";
 
-	let { class: className, ...restProps }: Props = $props();
+  interface Props {
+    class?: string;
+    [key: string]: any;
+  }
+
+  let { class: className, ...restProps }: Props = $props();
 </script>
 
 <ScrollAreaPrimitive.Thumb
-	class={cn('relative flex-1 rounded-full bg-border', className)}
-	{...restProps}
+  class={cn("relative flex-1 rounded-full bg-border", className)}
+  {...restProps}
 />

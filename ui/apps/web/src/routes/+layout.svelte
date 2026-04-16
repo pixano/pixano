@@ -1,8 +1,15 @@
-<script lang="ts">
-	import '../app.css';
-	import type { Snippet } from 'svelte';
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
-	let { children }: { children: Snippet } = $props();
+<script lang="ts">
+  import "../app.css";
+
+  import type { Snippet } from "svelte";
+
+  let { children }: { children: Snippet } = $props();
 </script>
 
 {@render children()}

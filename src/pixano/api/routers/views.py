@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from pixano.api.media import MULTIPART_BOUNDARY, iter_multipart_frames, media_type_from_format
-from pixano.api.models import ImageResponse, PaginatedResponse, SFrameResponse, TextResponse
+from pixano.api.models import ImageResponse, PaginatedResponse, PointCloudResponse, SFrameResponse, TextResponse
 from pixano.api.routers._deps import PaginationParams, get_dataset_dep
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetPaginationError
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Views"])
 IMAGE_TABLE = "images"
 TEXT_TABLE = "texts"
 SFRAME_TABLE = "sequence_frames"
+POINT_CLOUD_TABLE = "point_clouds"
 
 
 def _combine_where(*clauses: str | None) -> str | None:
@@ -232,6 +233,42 @@ def _list_sframe_responses(
     )
     return PaginatedResponse(
         items=[_to_sframe_response(dataset_id, row) for row in rows],
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+
+
+def _to_point_cloud_response(dataset_id: str, row: Any) -> PointCloudResponse:
+    return PointCloudResponse(
+        id=row.id,
+        record_id=row.record_id,
+        logical_name=getattr(row, "logical_name", "") or "",
+        created_at=str(getattr(row, "created_at", "") or ""),
+        updated_at=str(getattr(row, "updated_at", "") or ""),
+        src=_image_src(dataset_id, "point-clouds", row),
+    )
+
+
+def _list_point_cloud_responses(
+    dataset_id: str,
+    dataset: Dataset,
+    pagination: PaginationParams,
+    *,
+    record_id: str | None = None,
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    rows, total = _list_rows(
+        dataset,
+        POINT_CLOUD_TABLE,
+        pagination=pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
+    )
+    return PaginatedResponse(
+        items=[_to_point_cloud_response(dataset_id, row) for row in rows],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -449,4 +486,60 @@ def get_record_sframe_batch(
             "X-Start-Frame": str(start_frame),
             "X-Batch-Size": str(batch_size),
         },
+    )
+
+
+@router.get("/point-clouds", response_model=PaginatedResponse[PointCloudResponse], operation_id="list_point_clouds")
+def list_point_clouds(
+    dataset_id: str,
+    dataset: Dataset = Depends(get_dataset_dep),
+    pagination: PaginationParams = Depends(),
+    record_id: str | None = None,
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    """List point-cloud views with optional filtering."""
+    return _list_point_cloud_responses(
+        dataset_id,
+        dataset,
+        pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
+    )
+
+
+@router.get("/point-clouds/{id}", response_model=PointCloudResponse, operation_id="get_point_cloud")
+def get_point_cloud(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> PointCloudResponse:
+    """Fetch a single point-cloud view by ID."""
+    return _to_point_cloud_response(dataset_id, _get_row(dataset, POINT_CLOUD_TABLE, id))
+
+
+@router.get("/point-clouds/{id}/blob", operation_id="get_point_cloud_blob")
+def get_point_cloud_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the raw binary blob of a point cloud."""
+    return _stream_blob(dataset, POINT_CLOUD_TABLE, id)
+
+
+@router.get(
+    "/records/{record_id}/point-clouds",
+    response_model=PaginatedResponse[PointCloudResponse],
+    operation_id="list_record_point_clouds",
+)
+def list_record_point_clouds(
+    record_id: str,
+    dataset_id: str,
+    dataset: Dataset = Depends(get_dataset_dep),
+    pagination: PaginationParams = Depends(),
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    """List point clouds belonging to a specific record."""
+    return _list_point_cloud_responses(
+        dataset_id,
+        dataset,
+        pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
     )

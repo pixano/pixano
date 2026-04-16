@@ -41,6 +41,7 @@ def _builder_path_for_workspace(workspace: WorkspaceType) -> str:
         WorkspaceType.VIDEO: "pixano.datasets.builders.folders.video.VideoFolderBuilder",
         WorkspaceType.IMAGE_VQA: "pixano.datasets.builders.folders.vqa.VQAFolderBuilder",
         WorkspaceType.IMAGE_TEXT_ENTITY_LINKING: "pixano.datasets.builders.folders.mel.MelFolderBuilder",
+        WorkspaceType.POINT_CLOUD: "pixano.datasets.builders.folders.point_cloud.PointCloudFolderBuilder",
     }
     try:
         return builder_map[workspace]
