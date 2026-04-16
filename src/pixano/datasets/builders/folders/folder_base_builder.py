@@ -149,6 +149,8 @@ class FolderBaseBuilder(DatasetBuilder):
             )
         if self.info.bbox is not None:
             self.annotations_schema[canonical_table_name_for_slot("bbox")] = self.info.bbox
+        if self.info.bbox3d is not None:
+            self.annotations_schema[canonical_table_name_for_slot("bbox3d")] = self.info.bbox3d
         if self.info.mask is not None:
             self.annotations_schema[canonical_table_name_for_slot("mask")] = self.info.mask
         if self.info.keypoint is not None:
