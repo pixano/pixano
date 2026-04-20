@@ -225,6 +225,7 @@ class FolderEntityFactory:
         self.normalize_view_name_alias = normalize_view_name_alias
         self.annotation_alias_map = {
             "bbox": canonical_table_name_for_slot("bbox"),
+            "bbox3d": canonical_table_name_for_slot("bbox3d"),
             "mask": canonical_table_name_for_slot("mask"),
             "keypoint": canonical_table_name_for_slot("keypoint"),
             "text_span": canonical_table_name_for_slot("text_span"),

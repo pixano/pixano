@@ -7,6 +7,7 @@
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
 
+from pixano.api.routers.bbox3ds import router as bbox3ds_router
 from pixano.api.routers.bboxes import router as bboxes_router
 from pixano.api.routers.conversations import router as conversations_router
 from pixano.api.routers.datasets import router as datasets_router
@@ -32,6 +33,7 @@ RESOURCE_ROUTERS: tuple[APIRouter, ...] = (
     entity_dynamic_states_router,
     tracklets_router,
     bboxes_router,
+    bbox3ds_router,
     masks_router,
     multi_paths_router,
     keypoints_router,

@@ -16,6 +16,7 @@ from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
 from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
+    BBox3D,
     CompressedRLE,
     Embedding,
     Entity,
@@ -209,6 +210,17 @@ class SFrameResponse(ResponseModel):
     src: str
 
 
+class PointCloudResponse(ResponseModel):
+    """Response model for a point-cloud view row."""
+
+    id: str
+    record_id: str
+    logical_name: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    src: str
+
+
 TrackletCreate = _create_transport_model(
     "TrackletCreate",
     Tracklet,
@@ -236,6 +248,20 @@ BBoxUpdate = _create_transport_model(
     optional=True,
 )
 BBoxResponse = _create_transport_model("BBoxResponse", BBox)
+
+BBox3DCreate = _create_transport_model(
+    "BBox3DCreate",
+    BBox3D,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+BBox3DUpdate = _create_transport_model(
+    "BBox3DUpdate",
+    BBox3D,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+BBox3DResponse = _create_transport_model("BBox3DResponse", BBox3D)
 
 MaskCreate = _create_transport_model(
     "MaskCreate",
@@ -334,6 +360,7 @@ class DatasetInfoResponse(DatasetInfo):
         "entity",
         "entity_dynamic_state",
         "bbox",
+        "bbox3d",
         "mask",
         "multi_path",
         "keypoint",
@@ -389,6 +416,9 @@ __all__ = [
     "BBoxCreate",
     "BBoxResponse",
     "BBoxUpdate",
+    "BBox3DCreate",
+    "BBox3DResponse",
+    "BBox3DUpdate",
     "DatasetInfoResponse",
     "DatasetResponse",
     "EmbeddingCreate",
@@ -417,6 +447,7 @@ __all__ = [
     "MessageUpdate",
     "PaginatedResponse",
     "ImageResponse",
+    "PointCloudResponse",
     "SFrameResponse",
     "TextResponse",
     "TextSpanCreate",

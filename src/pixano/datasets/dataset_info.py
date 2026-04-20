@@ -26,6 +26,7 @@ from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 from pixano.schemas import (
     BBox,
+    BBox3D,
     CompressedRLE,
     Entity,
     EntityDynamicState,
@@ -51,6 +52,7 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "entity": Entity,
     "entity_dynamic_state": EntityDynamicState,
     "bbox": BBox,
+    "bbox3d": BBox3D,
     "mask": CompressedRLE,
     "multi_path": MultiPath,
     "keypoint": KeyPoints,
@@ -79,6 +81,7 @@ class DatasetInfo(BaseModel):
         entity: Entity schema.
         entity_dynamic_state: Entity dynamic state schema.
         bbox: Bounding box schema.
+        bbox3d: 3D bounding box schema.
         mask: Mask schema.
         keypoint: Keypoint schema.
         tracklet: Tracklet schema.
@@ -98,6 +101,7 @@ class DatasetInfo(BaseModel):
     entity: type[Entity] | None = None
     entity_dynamic_state: type[EntityDynamicState] | None = None
     bbox: type[BBox] | None = None
+    bbox3d: type[BBox3D] | None = None
     mask: type[CompressedRLE] | None = None
     multi_path: type[MultiPath] | None = None
     keypoint: type[KeyPoints] | None = None

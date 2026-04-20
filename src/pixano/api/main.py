@@ -39,7 +39,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     if settings.models_dir is None:
         raise FileNotFoundError("Model directory not provided")
     if not settings.models_dir.exists():
-        settings.models_dir.mkdir(exist_ok=True)
+        settings.models_dir.mkdir(parents=True, exist_ok=True)
     app.mount(
         "/app_models",
         StaticFiles(directory=settings.models_dir),

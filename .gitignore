@@ -56,3 +56,7 @@ venv
 # Dataset files
 *.lance
 tests/assets/library/*
+
+.svelte-kit
+build
+data/

@@ -83,6 +83,15 @@ class FolderBaseBuilder(DatasetBuilder):
     EXTENSIONS: list[str]
     DEFAULT_INFO: DatasetInfo | None = None
 
+    def _has_valid_extension(self, file: Path) -> bool:
+        """Return True if *file* has an extension declared in EXTENSIONS.
+
+        Checks both the simple suffix (e.g. ``.jpg``) and any compound suffix
+        (e.g. ``.pcd.bin``) so that double-extension files are not silently
+        dropped.
+        """
+        return file.suffix in self.EXTENSIONS or "".join(file.suffixes) in self.EXTENSIONS
+
     def __init__(
         self,
         source_dir: Path | str,
@@ -149,6 +158,8 @@ class FolderBaseBuilder(DatasetBuilder):
             )
         if self.info.bbox is not None:
             self.annotations_schema[canonical_table_name_for_slot("bbox")] = self.info.bbox
+        if self.info.bbox3d is not None:
+            self.annotations_schema[canonical_table_name_for_slot("bbox3d")] = self.info.bbox3d
         if self.info.mask is not None:
             self.annotations_schema[canonical_table_name_for_slot("mask")] = self.info.mask
         if self.info.keypoint is not None:
@@ -442,7 +453,7 @@ class FolderBaseBuilder(DatasetBuilder):
         """Yield records and views for a split without ``metadata.jsonl``."""
         view_name, view_schema = list(self.views_schema.items())[0]
         for view_file in sorted(split.glob("**/*")):
-            if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
+            if not view_file.is_file() or not self._has_valid_extension(view_file):
                 continue
             record_metadata = self._build_default_custom_metadata_record()
             record_metadata["id"] = view_file.stem
@@ -521,7 +532,7 @@ class FolderBaseBuilder(DatasetBuilder):
             if is_sequence_frame(view_schema):
                 frame_files = self._resolve_view_files(split_name, raw_value, view_schema)
                 for frame_index, frame_file in enumerate(frame_files):
-                    if frame_file.suffix not in self.EXTENSIONS:
+                    if not self._has_valid_extension(frame_file):
                         continue
                     timestamp = frame_index * frame_period_ms
                     view = self._create_view(
@@ -537,7 +548,7 @@ class FolderBaseBuilder(DatasetBuilder):
                 continue
 
             view_file = self._resolve_non_sequence_view_file(split_name, raw_value, view_name)
-            if view_file is None or view_file.suffix not in self.EXTENSIONS:
+            if view_file is None or not self._has_valid_extension(view_file):
                 continue
             views_data.append((view_name, self._create_view(record, view_file, view_name, view_schema)))
 

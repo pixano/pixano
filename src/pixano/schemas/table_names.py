@@ -10,12 +10,12 @@ from dataclasses import dataclass
 
 from lancedb.pydantic import LanceModel
 
-from .annotations import BBox, CompressedRLE, KeyPoints, Message, MultiPath, TextSpan, Tracklet
+from .annotations import BBox, BBox3D, CompressedRLE, KeyPoints, Message, MultiPath, TextSpan, Tracklet
 from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
 from .schema_group import SchemaGroup
-from .views import PDF, Image, PointCloud, SequenceFrame, Text, Video, View
+from .views import PDF, CalibratedImage, Image, PointCloud, SequenceFrame, Text, Video, View
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +42,7 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
         EntityDynamicState,
     ),
     CanonicalResourceFamily("bbox", "bboxes", "bboxes", SchemaGroup.ANNOTATION, BBox),
+    CanonicalResourceFamily("bbox3d", "bbox3ds", "bbox3ds", SchemaGroup.ANNOTATION, BBox3D),
     CanonicalResourceFamily("mask", "masks", "masks", SchemaGroup.ANNOTATION, CompressedRLE),
     CanonicalResourceFamily("keypoint", "keypoints", "keypoints", SchemaGroup.ANNOTATION, KeyPoints),
     CanonicalResourceFamily("tracklet", "tracklets", "tracklets", SchemaGroup.ANNOTATION, Tracklet),
@@ -49,6 +50,9 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
     CanonicalResourceFamily("multi_path", "multi-paths", "multi_paths", SchemaGroup.ANNOTATION, MultiPath),
     CanonicalResourceFamily("text_span", "text-spans", "text_spans", SchemaGroup.ANNOTATION, TextSpan),
     CanonicalResourceFamily("image", "images", "images", SchemaGroup.VIEW, Image),
+    CanonicalResourceFamily(
+        "calibrated_image", "calibrated_images", "calibrated_images", SchemaGroup.VIEW, CalibratedImage
+    ),
     CanonicalResourceFamily(
         "sequence_frame",
         "sframes",
@@ -83,6 +87,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "entity",
             "entity_dynamic_state",
             "bbox",
+            "bbox3d",
             "mask",
             "multi_path",
             "keypoint",

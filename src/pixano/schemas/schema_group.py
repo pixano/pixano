@@ -26,7 +26,18 @@ from .annotations import (
 from .embeddings import Embedding, ViewEmbedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
-from .views import PDF, Image, PointCloud, PointCloudFrame, SequenceFrame, Text, Video, View
+from .views import (
+    PDF,
+    CalibratedImage,
+    CalibratedPointCloud,
+    Image,
+    PointCloud,
+    PointCloudFrame,
+    SequenceFrame,
+    Text,
+    Video,
+    View,
+)
 
 
 class SchemaGroup(Enum):
@@ -65,6 +76,8 @@ CANONICAL_SCHEMA_TYPES = (
     PointCloud,
     PointCloudFrame,
     SequenceFrame,
+    CalibratedImage,
+    CalibratedPointCloud,
     Text,
     Video,
     Entity,
