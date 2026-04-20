@@ -6,7 +6,12 @@ License: CECILL-C
 
 import { toDataset, toDatasetInfo } from "./adapters";
 import { apiFetch, requestJson } from "./apiClient";
-import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
+import type {
+  DatasetInfoResponse,
+  DatasetResponse,
+  PaginatedResponse,
+  RecordResponse,
+} from "./restTypes";
 import type { Dataset, DatasetInfo } from "$lib/types/dataset";
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
@@ -17,4 +22,16 @@ export async function listDatasets(): Promise<DatasetInfo[]> {
 export async function getDataset(datasetId: string): Promise<Dataset> {
   const dataset = await requestJson<DatasetResponse>(`/datasets/${datasetId}`, {}, "getDataset");
   return toDataset(dataset);
+}
+
+export async function listRecords(
+  datasetId: string,
+  limit = 50,
+  offset = 0,
+): Promise<PaginatedResponse<RecordResponse>> {
+  return requestJson<PaginatedResponse<RecordResponse>>(
+    `/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`,
+    {},
+    "listRecords",
+  );
 }
