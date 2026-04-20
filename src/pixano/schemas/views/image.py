@@ -175,6 +175,51 @@ class Image(View):
             preview_format="png",
         )
 
+    @classmethod
+    def from_pil(
+        cls,
+        record_id: str,
+        logical_name: str,
+        pil_image: PIL.Image,
+        *,
+        id: str | None = None,
+    ) -> Image:
+        """Create an ``Image`` from raw bytes.
+
+        Args:
+            record_id: Record ID that owns this view.
+            logical_name: Logical view name (e.g. ``"front_camera"``).
+            pil_image: PIL Image instance.
+            id: Optional explicit ID.  Auto-generated when `None`.
+
+        Returns:
+            A fully-populated ``Image`` instance.
+        """
+        if id is None:
+            id = shortuuid.uuid()
+
+        width = pil_image.width
+        height = pil_image.height
+        fmt = pil_image.format or ""
+        preview = _generate_preview(pil_image)
+
+        # Get the raw bytes of the PIL image by saving it to a bytes buffer
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format=fmt)
+        raw_bytes = buffer.getvalue()
+
+        return cls(
+            id=id,
+            record_id=record_id,
+            logical_name=logical_name,
+            raw_bytes=raw_bytes,
+            width=width,
+            height=height,
+            format=fmt,
+            preview=preview,
+            preview_format="png",
+        )
+
 
 def is_image(cls: type, strict: bool = False) -> bool:
     """Check if the given class is ``Image`` or a subclass of ``Image``."""

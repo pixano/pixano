@@ -25,10 +25,10 @@ class CalibratedPointCloud(PointCloud):
     """
 
     # Extrinsics
-    extrinsic_matrix: Vector(16)
+    extrinsic_matrix: Vector(16)  # type: ignore[valid-type]
 
     # Ego pose
-    ego_to_world: Vector(16)
+    ego_to_world: Vector(16)  # type: ignore[valid-type]
 
 
 def is_calibrated_pointcloud(cls: type, strict: bool = False) -> bool:

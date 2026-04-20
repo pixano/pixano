@@ -12,7 +12,7 @@ def test_calibrated_image():
     calibrated_image = CalibratedImage.from_uri(
         record_id="record_id",
         logical_name="front_camera",
-        uri="/home/mfauvel/Datasets/NuScenes/samples/CAM_FRONT/n008-2018-05-21-11-06-59-0400__CAM_FRONT__1526915243012465.jpg",
+        uri="/path/to/image.jpg",
         f=(1000.0, 1000.0),
         c=(640.0, 480.0),
         distortion=[0.1, 0.01, 0.001],
@@ -20,10 +20,7 @@ def test_calibrated_image():
         ego_to_world=[1.0] * 16,
     )
 
-    assert (
-        calibrated_image.uri
-        == "/home/mfauvel/Datasets/NuScenes/samples/CAM_FRONT/n008-2018-05-21-11-06-59-0400__CAM_FRONT__1526915243012465.jpg"
-    )
+    assert calibrated_image.uri == "/path/to/image.jpg"
     assert calibrated_image.record_id == "record_id"
     assert calibrated_image.logical_name == "front_camera"
     assert calibrated_image.f == (1000.0, 1000.0)
