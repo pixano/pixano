@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide-icon lucide lucide-share-2 "
+   version="1.1"
+   id="svg12"
+   sodipodi:docname="lucide_pentagon_icon.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs16" />
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="11.617249"
+     inkscape:cx="-10.630744"
+     inkscape:cy="9.1243631"
+     inkscape:window-width="1870"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg12" />
+  <circle
+     cx="2.8121941"
+     cy="8.2798672"
+     r="1.771229"
+     id="circle2"
+     style="stroke-width:1.18082"
+     transform="rotate(-20)" />
+  <circle
+     cx="4.2527084"
+     cy="15.359586"
+     r="1.771229"
+     id="circle4"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="11.337629"
+     cy="19.492434"
+     r="1.771229"
+     id="circle6"
+     style="stroke-width:1.18082" />
+  <line
+     x1="5.7818651"
+     x2="9.8143721"
+     y1="16.251104"
+     y2="18.600916"
+     id="line8"
+     style="stroke-width:1.18082" />
+  <line
+     x1="5.0555859"
+     x2="4.2674112"
+     y1="8.9681635"
+     y2="13.563156"
+     id="line10"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="13.190857"
+     cy="-6.1153512"
+     r="1.771229"
+     id="circle2-3"
+     style="stroke-width:1.18082"
+     transform="rotate(40)" />
+  <line
+     x1="11.964732"
+     x2="7.5912538"
+     y1="4.5062404"
+     y2="6.1211557"
+     id="line10-6"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="-5.3153663"
+     cy="-17.667992"
+     r="1.771229"
+     id="circle2-3-7"
+     style="stroke-width:1.18082"
+     transform="rotate(150)" />
+  <line
+     x1="13.476516"
+     x2="13.454803"
+     y1="10.453698"
+     y2="5.7916374"
+     id="line10-6-5"
+     style="stroke-width:1.18082" />
+  <circle
+     cx="14.857767"
+     cy="-22.976959"
+     r="1.771229"
+     id="circle2-3-7-3"
+     style="stroke-width:1.18082"
+     transform="rotate(100)" />
+  <line
+     x1="18.395834"
+     x2="14.81056"
+     y1="17.18445"
+     y2="14.204382"
+     id="line10-6-5-5"
+     style="stroke-width:1.18082" />
+  <line
+     x1="18.240763"
+     x2="13.578732"
+     y1="19.389568"
+     y2="19.411274"
+     id="line10-6-5-5-6"
+     style="stroke-width:1.18082" />
+</svg>
