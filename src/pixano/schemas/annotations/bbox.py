@@ -215,34 +215,34 @@ class BBox(PerFrameAnnotation):
 
 
 class BBox3D(PerFrameAnnotation):
-    """A 3D bounding Box.
+    """A 3D bounding box.
 
     Attributes:
-        coords: List of coordinates in given format.
+        coords: List of 6 coordinates in given format.
         format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
-        heading: Orientation of the bounding box.
-        is_normalized: True if coordinates are normalized to image size.
+        rotation: Orientation as a row-major flattened 3×3 rotation matrix (9 elements).
+        is_normalized: True if coordinates are normalized.
         confidence: Bounding box confidence if predicted. -1 if not predicted.
     """
 
     coords: list[float]
     format: str
-    heading: list[float]
+    rotation: list[float]
     is_normalized: bool
     confidence: float = -1.0
 
     @model_validator(mode="after")
-    def _validate_fields(self):
+    def _validate_fields(self) -> Self:
         if len(self.coords) != 6:
-            raise ValueError("3D Bounding box coordinates must have 6 elements.")
-        elif not all(coord >= 0 for coord in self.coords):
-            raise ValueError("Bounding box coordinates must be positive.")
+            raise ValueError("3D bounding box coordinates must have 6 elements.")
         elif self.is_normalized and not all(0 <= coord <= 1 for coord in self.coords):
             raise ValueError("Normalized bounding box coordinates must be in [0, 1] range.")
-        elif (self.confidence < 0 or self.confidence > 1) and not self.confidence == -1:
+        elif (self.confidence < 0 or self.confidence > 1) and self.confidence != -1:
             raise ValueError("Bounding box confidence must be in [0, 1] range or -1.")
         elif self.format not in ["xyzxyz", "xyzwhd"]:
             raise ValueError("Bounding box format must be 'xyzxyz' or 'xyzwhd'.")
+        elif len(self.rotation) != 9:
+            raise ValueError("Rotation matrix must have 9 elements (row-major flattened 3×3).")
         return self
 
     @classmethod
@@ -255,10 +255,10 @@ class BBox3D(PerFrameAnnotation):
         """
         return cls(
             id="",
-            coords=[0, 0, 0, 0, 0, 0],
+            coords=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             format="xyzwhd",
-            heading=[0, 0, 0],
-            is_normalized=True,
+            rotation=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            is_normalized=False,
             confidence=-1,
         )
 
@@ -334,7 +334,7 @@ def create_bbox(
 def create_bbox3d(
     coords: list[float],
     format: Literal["xyzxyz", "xyzwhd"],
-    heading: list[float],
+    rotation: list[float],
     is_normalized: bool,
     confidence: float = -1.0,
     id: str = "",
@@ -352,10 +352,10 @@ def create_bbox3d(
     """Create a `BBox3D` instance.
 
     Args:
-        coords: The 3D position coordinates.
+        coords: The 3D position coordinates (6 elements).
         format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
-        heading: The orientation.
-        is_normalized: True if coordinates are normalized to image size.
+        rotation: Row-major flattened 3×3 rotation matrix (9 elements).
+        is_normalized: True if coordinates are normalized.
         confidence: Bounding box confidence if predicted.
         id: BBox3D ID.
         record_id: Record ID.
@@ -385,8 +385,8 @@ def create_bbox3d(
         frame_id=frame_id,
         frame_index=frame_index,
         coords=coords,
-        format=str(format),
-        heading=heading,
+        format=format,
+        rotation=rotation,
         is_normalized=is_normalized,
         confidence=confidence,
     )

@@ -12,6 +12,7 @@ from lancedb.pydantic import LanceModel
 
 from .annotations import (
     BBox,
+    BBox3D,
     Classification,
     CompressedRLE,
     KeyPoints,
@@ -53,6 +54,7 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
         EntityDynamicState,
     ),
     CanonicalResourceFamily("bbox", "bboxes", "bboxes", SchemaGroup.ANNOTATION, BBox),
+    CanonicalResourceFamily("bbox3d", "bbox3ds", "bbox3ds", SchemaGroup.ANNOTATION, BBox3D),
     CanonicalResourceFamily("mask", "masks", "masks", SchemaGroup.ANNOTATION, CompressedRLE),
     CanonicalResourceFamily("keypoint", "keypoints", "keypoints", SchemaGroup.ANNOTATION, KeyPoints),
     CanonicalResourceFamily(
@@ -99,6 +101,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "entity",
             "entity_dynamic_state",
             "bbox",
+            "bbox3d",
             "mask",
             "multi_path",
             "keypoint",

@@ -16,6 +16,7 @@ from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
 from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
+    BBox3D,
     Classification,
     CompressedRLE,
     Embedding,
@@ -298,6 +299,20 @@ BBoxUpdate = _create_transport_model(
 )
 BBoxResponse = _create_transport_model("BBoxResponse", BBox)
 
+BBox3DCreate = _create_transport_model(
+    "BBox3DCreate",
+    BBox3D,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+BBox3DUpdate = _create_transport_model(
+    "BBox3DUpdate",
+    BBox3D,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+BBox3DResponse = _create_transport_model("BBox3DResponse", BBox3D)
+
 MaskCreate = _create_transport_model(
     "MaskCreate",
     CompressedRLE,
@@ -426,6 +441,7 @@ class DatasetInfoResponse(DatasetInfo):
         "entity",
         "entity_dynamic_state",
         "bbox",
+        "bbox3d",
         "mask",
         "multi_path",
         "keypoint",
@@ -484,6 +500,9 @@ __all__ = [
     "BBoxCreate",
     "BBoxResponse",
     "BBoxUpdate",
+    "BBox3DCreate",
+    "BBox3DResponse",
+    "BBox3DUpdate",
     "ClassificationCreate",
     "ClassificationResponse",
     "ClassificationUpdate",

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from pixano.schemas import (
     BBox,
+    BBox3D,
     Classification,
     CompressedRLE,
     Embedding,
@@ -32,6 +33,9 @@ from pixano.schemas import (
 )
 
 from .models import (
+    BBox3DCreate,
+    BBox3DResponse,
+    BBox3DUpdate,
     BBoxCreate,
     BBoxResponse,
     BBoxUpdate,
@@ -241,6 +245,28 @@ BBOX_RESOURCE = ResourceSpec(
     validate_create=_validate_per_frame_annotation_create,
 )
 
+BBOX3D_RESOURCE = ResourceSpec(
+    name="bbox3d",
+    path="bbox3ds",
+    tag="BBox3Ds",
+    schema_group=SchemaGroup.ANNOTATION,
+    schema_cls=BBox3D,
+    canonical_table_name=canonical_table_name_for_schema(BBox3D),
+    create_model=BBox3DCreate,
+    update_model=BBox3DUpdate,
+    response_model=BBox3DResponse,
+    list_filters=(
+        "record_id",
+        "entity_id",
+        "view_name",
+        "source_type",
+        "tracklet_id",
+        "frame_index",
+        "where",
+    ),
+    validate_create=_validate_per_frame_annotation_create,
+)
+
 MASK_RESOURCE = ResourceSpec(
     name="mask",
     path="masks",
@@ -402,6 +428,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     ENTITY_DYNAMIC_STATE_RESOURCE,
     TRACKLET_RESOURCE,
     BBOX_RESOURCE,
+    BBOX3D_RESOURCE,
     MASK_RESOURCE,
     MULTI_PATH_RESOURCE,
     KEYPOINTS_RESOURCE,
@@ -416,6 +443,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
 
 __all__ = [
     "BBOX_RESOURCE",
+    "BBOX3D_RESOURCE",
     "CLASSIFICATION_RESOURCE",
     "EMBEDDING_RESOURCE",
     "TIMESERIES_RESOURCE",
