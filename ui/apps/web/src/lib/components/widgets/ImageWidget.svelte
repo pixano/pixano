@@ -21,6 +21,32 @@ License: CECILL-C
   let imageLoaded = $state(false);
   let imageError = $state(false);
 
+  let layer: Konva.Layer | null = null;
+  let konvaImage: Konva.Image | null = null;
+  let loadedImg: HTMLImageElement | null = null;
+  let placeholderShapes: Konva.Node[] = [];
+
+  function fitImageToStage() {
+    if (!stage || !konvaImage || !loadedImg) return;
+    const sw = stage.width();
+    const sh = stage.height();
+    const scale = Math.min(sw / loadedImg.width, sh / loadedImg.height);
+    const iw = loadedImg.width * scale;
+    const ih = loadedImg.height * scale;
+    konvaImage.width(iw);
+    konvaImage.height(ih);
+    konvaImage.x((sw - iw) / 2);
+    konvaImage.y((sh - ih) / 2);
+    layer?.batchDraw();
+  }
+
+  function redrawPlaceholder() {
+    if (!stage || !layer) return;
+    for (const node of placeholderShapes) node.destroy();
+    placeholderShapes = [];
+    drawPlaceholder(layer, stage.width(), stage.height());
+  }
+
   onMount(() => {
     if (!containerEl) return;
 
@@ -32,36 +58,18 @@ License: CECILL-C
       height: height || 300,
     });
 
-    const layer = new Konva.Layer();
+    layer = new Konva.Layer();
     stage.add(layer);
 
-    // Load image if URL provided
     const imageUrl = data?.imageUrl as string | undefined;
     if (imageUrl) {
       const img = new Image();
       img.onload = () => {
-        if (!stage) return;
-
-        const konvaImage = new Konva.Image({
-          image: img,
-          x: 0,
-          y: 0,
-          width: stage.width(),
-          height: stage.height(),
-        });
-
-        // Fit image to canvas maintaining aspect ratio
-        const scaleX = stage.width() / img.width;
-        const scaleY = stage.height() / img.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        konvaImage.width(img.width * scale);
-        konvaImage.height(img.height * scale);
-        konvaImage.x((stage.width() - konvaImage.width()) / 2);
-        konvaImage.y((stage.height() - konvaImage.height()) / 2);
-
+        if (!stage || !layer) return;
+        loadedImg = img;
+        konvaImage = new Konva.Image({ image: img, x: 0, y: 0 });
         layer.add(konvaImage);
-        layer.draw();
+        fitImageToStage();
         imageLoaded = true;
       };
       img.onerror = () => {
@@ -69,17 +77,21 @@ License: CECILL-C
       };
       img.src = imageUrl;
     } else {
-      // Draw placeholder grid pattern
       drawPlaceholder(layer, stage.width(), stage.height());
     }
 
-    // ResizeObserver for responsive sizing
+    // Rescale image/placeholder whenever the widget (and thus the stage) is resized.
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width: w, height: h } = entry.contentRect;
         if (stage && w > 0 && h > 0) {
           stage.width(w);
           stage.height(h);
+          if (konvaImage) {
+            fitImageToStage();
+          } else if (!imageUrl) {
+            redrawPlaceholder();
+          }
           stage.draw();
         }
       }
@@ -91,14 +103,22 @@ License: CECILL-C
       resizeObserver.disconnect();
       stage?.destroy();
       stage = null;
+      layer = null;
+      konvaImage = null;
+      loadedImg = null;
+      placeholderShapes = [];
     };
   });
 
   function drawPlaceholder(layer: Konva.Layer, width: number, height: number) {
-    // Draw a grid pattern as placeholder
     const gridSize = 30;
+    const add = (node: Konva.Node) => {
+      layer.add(node as Konva.Shape);
+      placeholderShapes.push(node);
+    };
+
     for (let x = 0; x < width; x += gridSize) {
-      layer.add(
+      add(
         new Konva.Line({
           points: [x, 0, x, height],
           stroke: "rgba(255,255,255,0.05)",
@@ -107,7 +127,7 @@ License: CECILL-C
       );
     }
     for (let y = 0; y < height; y += gridSize) {
-      layer.add(
+      add(
         new Konva.Line({
           points: [0, y, width, y],
           stroke: "rgba(255,255,255,0.05)",
@@ -116,8 +136,7 @@ License: CECILL-C
       );
     }
 
-    // Center text
-    layer.add(
+    add(
       new Konva.Text({
         text: "Image Canvas",
         x: 0,

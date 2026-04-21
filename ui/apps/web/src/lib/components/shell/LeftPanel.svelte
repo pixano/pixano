@@ -110,6 +110,7 @@ License: CECILL-C
 
   async function openRecord(recordId: string) {
     if (!selectedDataset) return;
+    manager.clearWorkspace();
     await manager.selectRecordInDataset(selectedDataset.id, recordId);
   }
 </script>
