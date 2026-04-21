@@ -7,7 +7,6 @@ License: CECILL-C
 import * as api from "$lib/api";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
-import { WorkspaceType } from "$lib/types/dataset";
 
 /**
  * Reactive workspace manager using Svelte 5 $state runes.
@@ -74,6 +73,12 @@ export class WorkspaceManager {
     return this.storageMap.get(id);
   }
 
+  /** Clear the workspace */
+  clearWorkspace(): void {
+    this.storageMap.clear();
+    this.widgets = [];
+  }
+
   /** Apply a workspace preset, replacing all current widgets */
   applyPreset(preset: WorkspacePreset): void {
     // Clear existing
@@ -89,79 +94,72 @@ export class WorkspaceManager {
 
   async selectRecordInDataset(datasetId: string, recordId: string): Promise<void> {
     const dataset = await api.getDataset(datasetId);
-    const workspace = dataset.info.workspace;
+    const views = dataset.info.views ?? {};
 
-    if (workspace === WorkspaceType.IMAGE) {
-      const TOREMOVE_IMAGE = {
-        extensionName: "image",
-        title: "2D Canvas",
-        layout: { x: 0, y: 0, w: 5, h: 5 },
-        options: {},
-      };
-      const images = await api.loadImages(datasetId, recordId);
-      images.forEach((image) => {
+    // Keep only views we know how to render, preserving dataset order.
+    const renderableBases = new Set(["Image", "PointCloud", "SequenceFrame", "Text"]);
+    const viewEntries = Object.entries(views).filter(([, v]) => !!v.base && renderableBases.has(v.base));
+    const n = viewEntries.length;
+    if (n === 0) return;
+
+    // Compute a grid layout that fits all widgets on screen.
+    // GridStack uses 12 columns with square cells, so we target a total
+    // number of cell-rows that matches the grid container's aspect ratio,
+    // which keeps every widget visible without scrolling.
+    const TOTAL_COLS = 12;
+    const gridEl = typeof document !== "undefined" ? document.querySelector(".grid-stack") : null;
+    const containerW = (gridEl as HTMLElement | null)?.clientWidth ?? 1600;
+    const containerH = (gridEl as HTMLElement | null)?.clientHeight ?? 900;
+    const totalRows = Math.max(2, Math.round((TOTAL_COLS * containerH) / containerW));
+
+    const cols = Math.min(TOTAL_COLS, Math.ceil(Math.sqrt(n)));
+    const rows = Math.ceil(n / cols);
+    const w = Math.max(1, Math.floor(TOTAL_COLS / cols));
+    const h = Math.max(1, Math.floor(totalRows / rows));
+
+    for (let i = 0; i < n; i++) {
+      const [viewName, viewDef] = viewEntries[i];
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const layout: WidgetLayout = { x: col * w, y: row * h, w, h };
+
+      if (viewDef.base === "Image") {
+        const imageUrl = await api
+          .loadImageByLogicalName(datasetId, recordId, viewName)
+          .then((image) => image?.src);
         this.addWidget("image", {
-          ...TOREMOVE_IMAGE,
-          data: { imageUrl: image.src },
+          extensionName: "image",
+          title: viewName,
+          layout,
+          options: {},
+          data: { imageUrl },
         });
-      });
-    } else if (workspace === WorkspaceType.PCL_3D) {
-      const TOREMOVE_PCL_IMAGE3 = {
-        extensionName: "image",
-        title: "cam_front",
-        layout: { x: 0, y: 0, w: 5, h: 4 },
-        options: {},
-      };
-      const TOREMOVE_PCL_CLOUD = {
-        extensionName: "point-cloud",
-        title: "3D Viewer",
-        layout: { x: 5, y: 0, w: 5, h: 4 },
-        options: {},
-      };
-      const TOREMOVE_PCL_IMAGE2 = {
-        extensionName: "image",
-        title: "cam_back_right",
-        layout: { x: 10, y: 0, w: 5, h: 4 },
-        options: {},
-      };
-      const TOREMOVE_PCL_IMAGE1 = {
-        extensionName: "image",
-        title: "cam_back",
-        layout: { x: 0, y: 4, w: 5, h: 4 },
-        options: {},
-      };
-      const [camImage1, camImage2, camImage3, pointCloud] = await Promise.all([
-        api.loadImageByLogicalName(datasetId, recordId, "cam_back"),
-        api.loadImageByLogicalName(datasetId, recordId, "cam_back_left"),
-        api.loadImageByLogicalName(datasetId, recordId, "cam_front"),
-        api.loadPointCloudByLogicalName(datasetId, recordId, "point_cloud"),
-      ]);
-      if (camImage1) {
-        this.addWidget("image", {
-          ...TOREMOVE_PCL_IMAGE1,
-          data: { imageUrl: camImage1.src },
-        });
-      }
-      if (camImage2) {
-        this.addWidget("image", {
-          ...TOREMOVE_PCL_IMAGE2,
-          data: { imageUrl: camImage2.src },
-        });
-      }
-      if (camImage3) {
-        this.addWidget("image", {
-          ...TOREMOVE_PCL_IMAGE3,
-          data: { imageUrl: camImage3.src },
-        });
-      }
-      if (pointCloud) {
+      } else if (viewDef.base === "PointCloud") {
+        const pointCloudUrl = await api
+          .loadPointCloudByLogicalName(datasetId, recordId, viewName)
+          .then((pointCloud) => pointCloud?.src);
         this.addWidget("point-cloud", {
-          ...TOREMOVE_PCL_CLOUD,
-          data: { pointCloudUrl: pointCloud.src },
+          extensionName: "point-cloud",
+          title: viewName,
+          layout,
+          options: {},
+          data: { pointCloudUrl },
+        });
+      } else if (viewDef.base === "SequenceFrame") {
+        this.addWidget("sequence-frame", {
+          extensionName: "sequence-frame",
+          title: viewName,
+          layout,
+          options: {},
+        });
+      } else if (viewDef.base === "Text") {
+        this.addWidget("text", {
+          extensionName: "text",
+          title: viewName,
+          layout,
+          options: {},
         });
       }
-    } else {
-      throw new Error(`Workspace type '${workspace}' is not supported`);
     }
   }
 }

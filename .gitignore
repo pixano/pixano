@@ -18,6 +18,10 @@ dist-ssr
 # Coverage
 .coverage
 coverage.xml
+coverage/
+
+# AI assistants
+CLAUDE.md
 
 # Docs
 site
