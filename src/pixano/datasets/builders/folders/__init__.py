@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from .builder_3d import Dataset3DBuilder
 from .folder_base_builder import FolderBaseBuilder
 from .image import ImageFolderBuilder
 from .mel import MelFolderBuilder
@@ -19,4 +20,5 @@ __all__ = [
     "PointCloudFolderBuilder",
     "VideoFolderBuilder",
     "VQAFolderBuilder",
+    "Dataset3DBuilder",
 ]
