@@ -7,8 +7,8 @@ License: CECILL-C
 <script lang="ts">
   import { Rect } from "svelte-konva";
 
+  import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import KeyPoints from "./keypoints/Keypoint.svelte";
-  import { NEUTRAL_ENTITY_COLOR } from "$lib/constants/workspaceConstants";
   import type { Reference } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
   import type { KeypointAnnotation, KeypointVertex } from "$lib/types/shapeTypes";
@@ -73,15 +73,22 @@ License: CECILL-C
         (keypointStructure.ui?.top_entities ?? []).length > 0
           ? (keypointStructure.ui?.top_entities ?? [])[0].id
           : (keypointStructure.entityRef?.id ?? "")}
+      {@const keypointPresentation = resolveNeutralPeekPresentation({
+        isPeeking: forceNeutralColor,
+        highlighted: keypointStructure.ui?.displayControl.highlighted,
+        baseOpacity: keypointStructure.ui?.displayControl.highlighted === "none" ? 0.3 : 1,
+      })}
       {@const keypointColor =
         forceNeutralColor || keypointStructure.ui?.displayControl.highlighted === "none"
-          ? NEUTRAL_ENTITY_COLOR
+          ? keypointPresentation.neutralColor
           : colorScale(colorId)}
+      {@const keypointOpacity = keypointPresentation.opacity}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {keypointStructure}
         {zoomFactor}
         color={keypointColor}
+        opacityOverride={keypointOpacity}
         {isPlaybackActive}
       >
         {@const bounds = findRectBoundaries(keypointStructure.graph.vertices)}
@@ -91,8 +98,8 @@ License: CECILL-C
           width={bounds.width + 20 / zoomFactor}
           height={bounds.height + 20 / zoomFactor}
           fill={keypointColor}
-          stroke={keypointStructure.ui?.displayControl.highlighted === "none"
-            ? NEUTRAL_ENTITY_COLOR
+          stroke={forceNeutralColor || keypointStructure.ui?.displayControl.highlighted === "none"
+            ? keypointColor
             : "rgba(135, 47, 100, 0.8)"}
           id="move-keyPoints-group"
           opacity={keypointStructure.ui?.displayControl.editing ? 0.3 : 0}

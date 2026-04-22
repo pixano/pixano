@@ -36,4 +36,5 @@ export { default as AiProcessingBadge } from "$components/ui/ai-processing-badge
 export { default as ConfirmModal } from "$components/modals/ConfirmModal.svelte";
 export { default as PromptModal } from "$components/modals/PromptModal.svelte";
 export { default as SelectModal } from "$components/modals/SelectModal.svelte";
+export { default as UnsavedChangesDialog } from "$components/modals/UnsavedChangesDialog.svelte";
 export { default as WarningModal } from "$components/modals/WarningModal.svelte";

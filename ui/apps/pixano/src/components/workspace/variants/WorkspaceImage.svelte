@@ -103,6 +103,14 @@ License: CECILL-C
     smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
   }
 
+  function consumeResetStateOnNextMicrotask(shape: typeof newShape.value): void {
+    queueMicrotask(() => {
+      if (newShape.value === shape) {
+        newShape.value = { status: "none" };
+      }
+    });
+  }
+
   function resolveImageSource(viewName: string): {
     width: number;
     height: number;
@@ -282,14 +290,17 @@ License: CECILL-C
   $effect(() => {
     const shape = newShape.value;
     if (shape.status !== "none" || !shape.shouldReset) return;
-    if (shape.resetReason !== "save-confirmed" || shape.resetShapeType !== ShapeType.mask) return;
-    const viewRef = shape.resetViewRef;
-    if (!viewRef) return;
 
     untrack(() => {
-      clearSmartPreview(viewRef.name);
-      interactiveSegmenter.clear(viewRef);
-      resetSmartSegmentationFeedback();
+      if (shape.resetReason === "save-confirmed" && shape.resetShapeType === ShapeType.mask) {
+        const viewRef = shape.resetViewRef;
+        if (viewRef) {
+          clearSmartPreview(viewRef.name);
+          interactiveSegmenter.clear(viewRef);
+          resetSmartSegmentationFeedback();
+        }
+      }
+      consumeResetStateOnNextMicrotask(shape);
     });
   });
 </script>

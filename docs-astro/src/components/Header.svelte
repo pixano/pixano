@@ -16,7 +16,7 @@ License: CECILL-C
 
   const navItems = [
     { title: "Getting Started", href: `${basePath}/getting_started/` },
-    { title: "Use Cases", href: `${basePath}/use_cases/` },
+    { title: "Cookbook", href: `${basePath}/cookbook/` },
     { title: "API Reference", href: `${basePath}/api_reference/` },
   ];
 

@@ -12,34 +12,31 @@ License: CECILL-C
   import { navigating } from "$app/state";
   import { persistSaveItems } from "$lib/api";
   import type { ResourceMutation } from "$lib/api/resourcePayloads";
-  import { saveCurrentItemStore } from "$lib/stores/appStores.svelte";
+  import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { canSave } from "$lib/stores/workspaceStores.svelte";
-  import { effectProbe, PrimaryButton } from "$lib/ui";
+  import { PrimaryButton } from "$lib/ui";
   import { getExplorerRoute } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
 
   const isLoading = $derived(navigating.from !== null);
-  const shouldSaveCurrentItem = $derived(saveCurrentItemStore.value.shouldSave);
   const Variant = $derived(resolveWorkspaceVariant(data.workspaceData?.ui?.type));
 
+  let lastObservedItemId = $state<string | null>(null);
+
   $effect(() => {
-    const value = canSave.value;
-    const current = saveCurrentItemStore.value;
-    if (current.canSave === value) return;
-    saveCurrentItemStore.value = { ...current, canSave: value };
+    currentItemSaveCoordinator.syncDirty(canSave.value);
+  });
+
+  $effect(() => {
+    const currentItemId = data.workspaceData?.item?.id ?? null;
+    if (currentItemId === lastObservedItemId) return;
+    lastObservedItemId = currentItemId;
+    currentItemSaveCoordinator.resetForItemChange();
   });
 
   async function handleSaveItem(saveData: ResourceMutation[]) {
     await persistSaveItems(saveData, data.dataset.id);
-
-    const current = saveCurrentItemStore.value;
-    effectProbe("WorkspacePage.resetShouldSave", {
-      shouldSaveBeforeReset: current.shouldSave,
-      saveItemCount: saveData.length,
-    });
-    if (!current.shouldSave) return;
-    saveCurrentItemStore.value = { ...current, shouldSave: false };
   }
 </script>
 
@@ -50,7 +47,6 @@ License: CECILL-C
     workspaceManifest={data.workspaceManifest}
     {handleSaveItem}
     {isLoading}
-    {shouldSaveCurrentItem}
   >
     {#snippet viewer({ resize })}
       <Variant selectedItem={data.workspaceData} {resize} />
