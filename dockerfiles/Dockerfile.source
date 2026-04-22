@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 && \
 COPY --from=builder /app/dist/pixano-*.whl /tmp/
 RUN uv pip install --system /tmp/pixano-*.whl && rm /tmp/pixano-*.whl
 
-ARG DATA_DIR=/app/data
+ARG DATA_DIR=/library
 ENV DATA_DIR=${DATA_DIR}
 
 EXPOSE 7492

@@ -1,0 +1,34 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import CardGrid from "../../components/CardGrid.astro";
+import Card from "../../components/Card.astro";
+---
+
+<DocsLayout title="Cookbook" section="cookbook">
+  <h1>Cookbook</h1>
+  <p>
+    This section is a companion to the <a href="https://github.com/pixano/pixano-cookbook">Pixano Cookbook</a> repository.
+    Each chapter takes a well-known computer vision benchmark, explains the problem it addresses,
+    shows how its data structure maps to Pixano's data model, and walks you through the import and
+    annotation workflow. Along the way, you will discover the Pixano features that are most relevant
+    to each task.
+  </p>
+
+  <CardGrid>
+    <Card title="Object Detection" href="/cookbook/object_detection/" icon="target">
+      Learn how Pascal VOC maps to Pixano's data model. Import images, annotate with bounding boxes, and explore interactive segmentation.
+    </Card>
+    <Card title="Video Object Tracking" href="/cookbook/video_tracking/" icon="video">
+      Learn how DAVIS maps to Pixano's video model. Understand tracklets, per-frame masks, and temporal annotation workflows.
+    </Card>
+    <Card title="Multi-View Detection" href="/cookbook/multi_view_detection/" icon="layers">
+      Import FLIR ADAS v2 in image or video mode, and browse synchronized RGB + thermal views side by side.
+    </Card>
+    <Card title="Visual Question Answering" href="/cookbook/vqa/" icon="message">
+      Learn how VQAv2 maps to Pixano's data model. Combine Q&A annotation with spatial entity annotation in the same workspace.
+    </Card>
+    <Card title="Entity Linking" href="/cookbook/entity_linking/" icon="link">
+      Import the MEL dataset, link image regions to text spans, and annotate with bounding boxes and text selection.
+    </Card>
+  </CardGrid>
+</DocsLayout>

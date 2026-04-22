@@ -8,21 +8,47 @@ import PrevNext from '../../components/PrevNext.astro'
 
 # Key Concepts
 
-This page explains how Pixano organizes data under the hood. Understanding these concepts helps you design your datasets, write import scripts, and make the most of the UI.
+This page explains how Pixano organizes data. Understanding these concepts helps you design datasets, write import scripts, and get the most out of the UI.
 
-## Architecture
+## Architecture overview
 
 Pixano has three layers:
 
-- **Backend** — a Python library that manages datasets: creation, queries, updates, statistics.
-- **REST API** — a FastAPI server that translates HTTP requests into backend operations.
-- **UI** — a Svelte/TypeScript web app for browsing, annotating, and running AI-assisted tools.
+- **Python backend** — manages datasets: creation, queries, updates, statistics. You can use it standalone for scripting.
+- **REST API** — a FastAPI server that exposes the backend over HTTP.
+- **Web UI** — a Svelte/TypeScript app for browsing, annotating, and running AI-assisted tools.
 
-You can use just the Python backend (for scripting), or run the full stack (backend + API + UI) with `pixano server run`.
+Run the full stack with `pixano server run`, or use the Python backend directly in your own scripts.
+
+## How data is organized
+
+A Pixano dataset is a collection of **tables** stored in a [LanceDB](https://lancedb.github.io/lancedb/) database. Each table belongs to one of six **schema groups**:
+
+| Group | Purpose | Schema classes |
+|-------|---------|----------------|
+| **Record** | One row per dataset sample. Holds metadata, split, and workflow status. | `Record` |
+| **View** | Media files attached to a record. | `Image`, `Video`, `SequenceFrame`, `Text` |
+| **Entity** | An object observable in one or more views (e.g. a car, a person). | `Entity` |
+| **Annotation** | Labels attached to entities (bounding boxes, masks, keypoints, etc.). | `BBox`, `CompressedRLE`, `KeyPoints`, `TextSpan`, `Message`, `Tracklet` |
+| **EntityDynamicState** | Per-frame state of an entity in video (e.g. visibility, pose). | `EntityDynamicState` |
+| **Embedding** | Vectors for semantic search. | `ViewEmbedding` |
+
+All schema classes live in `pixano.schemas` and are Pydantic models backed by LanceDB. You can subclass them to add custom fields.
+
+### Example: an object detection dataset
+
+Consider an image dataset for detecting vehicles:
+
+1. Each **record** represents one image in the dataset (with a split like `train` or `val`).
+2. The record has one **view** — the image file itself.
+3. The image contains several **entities** — physical objects you want to label (a car, a truck, a bicycle).
+4. Each entity has one or more **annotations** — e.g. a bounding box with coordinates.
+5. You can later add model predictions (YOLO, GroundingDINO, etc.) as additional annotations — provenance fields on the annotation let you distinguish human labels from model outputs.
+6. You compute embeddings (e.g. OpenCLIP) so the dataset becomes searchable — those go in the **embedding** table.
 
 ## DatasetInfo
 
-Every dataset starts with a `DatasetInfo` object. It declares the dataset's name, workspace type, and which tables to create:
+Every dataset is defined by a `DatasetInfo` that declares its name, workspace type, and schema:
 
 ```python
 from pixano.datasets import DatasetInfo
@@ -30,44 +56,38 @@ from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import BBox, Entity, Image, Record
 
 
-class DetectedObject(Entity):
+class Vehicle(Entity):
     category: str = ""
 
 
 dataset_info = DatasetInfo(
-    name="My Dataset",
+    name="Vehicle Detection",
     workspace=WorkspaceType.IMAGE,
     record=Record,
-    entity=DetectedObject,
+    entity=Vehicle,
     bbox=BBox,
     views={"image": Image},
 )
 ```
 
-`DatasetInfo` is the source of truth for imports. The `workspace` selects the UI layout and the matching folder builder. The schema types you pass (`record`, `entity`, `bbox`, `views`, etc.) determine which tables are created in the Lance database.
+The `workspace` selects the UI layout. The schema types you pass (`record`, `entity`, `bbox`, `views`, etc.) determine which tables are created in the database.
 
-## Schema groups
+### Custom fields
 
-Every dataset is composed of **tables** grouped by purpose. Pixano defines six schema groups:
+Each schema group maps to a base class you can subclass to add domain-specific fields:
 
-| Group | What it stores | Examples |
-|-------|---------------|----------|
-| **Record** | One row per dataset sample (metadata, split, workflow status) | `Record` (subclass with your fields) |
-| **View** | Media files attached to a record | `Image`, `Video`, `SequenceFrame`, `Text` |
-| **Entity** | A physical object observable in one or several views | `Entity` (subclass with your fields) |
-| **EntityDynamicState** | Per-frame state of an entity (e.g. visibility) | `EntityDynamicState` |
-| **Annotation** | Labels attached to entities | `BBox`, `CompressedRLE`, `KeyPoints`, `TextSpan`, `Message`, `Tracklet` |
-| **Embedding** | Vectors for semantic search | `ViewEmbedding` |
+```python
+from pixano.schemas import Entity
 
-### A concrete scenario
+class DetectedObject(Entity):
+    category: str = ""
+    is_difficult: bool = False
+    confidence: float = 0.0
+```
 
-Imagine an image dataset for object detection. Each **record** is one dataset sample. The record has one **view** (the image file). The image contains several **entities** — physical objects observable in the view (a car, a pedestrian, a bicycle). Each entity has an **annotation** (a bounding box with coordinates). Later you run YOLO to add model predictions — each prediction carries built-in provenance fields (`source_type`, `source_name`, `source_metadata`) directly on the annotation, so you can distinguish human annotations from model outputs without a separate table. You also compute OpenCLIP embeddings so the dataset becomes searchable — those are **embeddings**. Each record carries a `status` field to track annotation progress (`new`, `inProgress`, `inReview`, `validated`), enabling campaign monitoring across multiple annotators.
+Fields must have default values (Pixano uses Pydantic under the hood).
 
-<Callout type="info" title="Source provenance">
-There is no separate **Source** table. Provenance is tracked directly on annotations via three fields: `source_type` (one of `model`, `human`, `ground_truth`, `other`), `source_name`, and `source_metadata` (a JSON string). These fields are available on `EntityAnnotation`, `EntityGroupAnnotation`, and `EntityDynamicState`.
-</Callout>
-
-### Record built-in fields
+## Record fields
 
 The base `Record` class provides these fields out of the box:
 
@@ -80,26 +100,20 @@ The base `Record` class provides these fields out of the box:
 | `created_at` | `datetime` | now | Creation timestamp |
 | `updated_at` | `datetime` | now | Last modification timestamp |
 
-The `status` field helps monitor annotation campaigns: filter the dataset explorer by status to see which items still need work, and use the dashboard to track overall progress.
+The `status` field is central to annotation campaigns: filter the dataset explorer by status to see which items still need work, and use the dashboard to track overall progress. You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for ground truth).
 
-You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for pre-annotated ground truth). Items without a `status` field default to `"new"`.
+## Annotation provenance
 
-Each group maps to a Pydantic base class you can subclass to add your own fields:
-
-```python
-from pixano.schemas import Entity
-
-class DetectedObject(Entity):
-    category: str = ""
-    is_difficult: bool = False
-```
+<Callout type="info" title="No separate Source table">
+Provenance is tracked directly on annotations via three built-in fields: `source_type` (one of `model`, `human`, `ground_truth`, `other`), `source_name`, and `source_metadata` (a JSON string). This lets you distinguish human annotations from model predictions without a separate table.
+</Callout>
 
 ## Workspace types
 
-The workspace type tells Pixano what kind of data you're working with and which UI layout to use:
+The workspace type tells Pixano what kind of data you're working with and which UI layout to display:
 
-| Workspace | Views | UI layout |
-|-----------|-------|-----------|
+| Workspace | Data | UI layout |
+|-----------|------|-----------|
 | `IMAGE` | Single image per item | Image viewer with annotation tools |
 | `VIDEO` | Frame sequence per item | Video player with timeline and track inspector |
 | `IMAGE_VQA` | Image + Q&A conversations | Image viewer + conversation panel |
@@ -109,37 +123,35 @@ The workspace type tells Pixano what kind of data you're working with and which 
 
 Pixano organizes data around three directories, created by `pixano init`:
 
-- **Library** — contains all datasets (each dataset is a LanceDB database).
-- **Media** — holds images, videos, and other files referenced by views.
-- **Models** — optional directory for model files (e.g. SAM ONNX weights).
+```
+my_data/
+  library/   # All datasets (each is a LanceDB database)
+  media/     # Images, videos, and other files referenced by views
+  models/    # Model files for inference (e.g. SAM weights)
+```
 
-## On-disk layout
-
-Each dataset is a directory inside the library:
+Each dataset inside `library/` has this layout:
 
 ```text
-<dataset>/
-  info.json               # name, description, workspace type
-  schema.json             # tables, fields, relations, groups
-  features_values.json    # value constraints for fields (optional)
-  stats.json              # dataset statistics (optional)
-  preview.png             # preview image (optional)
+library/<dataset>/
+  info.json               # Name, description, workspace type, schema
+  features_values.json    # Value constraints for fields
+  stats.json              # Dataset statistics
+  preview.png             # Thumbnail for the UI
   db/                     # LanceDB tables (one per schema)
 ```
 
-Media files live in the separate media directory. Views reference them by relative URL.
-
-## Common Python operations
+## Python API
 
 ```python
 from pathlib import Path
 from pixano.datasets import Dataset
 
 # Open a dataset
-ds = Dataset(Path("./library/my_dataset"), media_dir=Path("./media"))
+ds = Dataset(Path("./my_data/library/my_dataset"))
 
-# Read items
-items = ds.get_dataset_items(limit=20, skip=0)
+# Read records
+records = ds.get_records(limit=20, skip=0)
 
 # Read a specific table
 images = ds.get_data("image", limit=5)
@@ -148,20 +160,20 @@ images = ds.get_data("image", limit=5)
 ds.add_data("bboxes", [bbox1, bbox2])
 
 # Semantic search (requires precomputed embeddings)
-top_items, distances = ds.semantic_search("car on road", "image_embedding", limit=50)
+records, distances, record_ids = ds.semantic_search("car on road", "image_embedding", limit=50)
 ```
 
 ## Next steps
 
-You now have the foundation. Pick a use case to see these concepts in action:
+Pick a use case to see these concepts in action:
 
-- [Object Detection](/pixano/use_cases/object_detection/) — images + bounding boxes with pre-annotation
-- [Video Object Tracking](/pixano/use_cases/video_tracking/) — video frames + tracklets + SAM
-- [Multi-View Detection](/pixano/use_cases/multi_view_detection/) — synchronized multi-camera views
-- [Entity Linking](/pixano/use_cases/entity_linking/) — image + text annotation
-- [Visual Question Answering](/pixano/use_cases/vqa/) — image + conversation Q&A
+- [Object Detection](/pixano/cookbook/object_detection/) — images + bounding boxes with pre-annotation
+- [Video Object Tracking](/pixano/cookbook/video_tracking/) — video frames + tracklets + SAM
+- [Multi-View Detection](/pixano/cookbook/multi_view_detection/) — synchronized multi-camera views
+- [Entity Linking](/pixano/cookbook/entity_linking/) — image + text annotation
+- [Visual Question Answering](/pixano/cookbook/vqa/) — image + conversation Q&A
 
 <PrevNext
   prev={{ title: "Quickstart", href: "/getting_started/quickstart/" }}
-  next={{ title: "Object Detection", href: "/use_cases/object_detection/" }}
+  next={{ title: "Object Detection", href: "/cookbook/object_detection/" }}
 />

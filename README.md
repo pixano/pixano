@@ -56,11 +56,15 @@ pixano init path/to/database
 pixano server run path/to/database
 ```
 
-Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano):
+Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases.
 
 ```shell
 docker pull pixano/pixano:stable
+docker run -p 7492:7492 -v /path/on/host:/library pixano/pixano:stable
 ```
+
+In this example, `/path/on/host` is the directory on your machine where Pixano stores its library. Inside the
+container, Pixano always uses `/library`.
 
 ## Development (from source)
 

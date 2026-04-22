@@ -23,6 +23,7 @@ import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { splitTrackInTwo } from "$lib/utils/videoOperations";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
+import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 
 type MView = Record<string, View | View[]>;
 
@@ -50,6 +51,7 @@ export function addKeyItemToTracklet(
   );
   if (interpolatedBox) {
     newItemBBox = BBox.cloneForFrame(interpolatedBox, {});
+    newItemBBox.data.tracklet_id = tracklet.id;
     applyPixanoSourceFields(newItemBBox);
     // Coords are denormalized: normalize them
     const currentSf = (views[newItemBBox.data.view_name] as SequenceFrame[])[
@@ -97,6 +99,7 @@ export function addKeyItemToTracklet(
         frame_index: interpolatedKpt.ui.frame_index,
         displayControl: interpolatedKpt.ui.displayControl,
       });
+      newItemKpt.data.tracklet_id = tracklet.id;
       applyPixanoSourceFields(newItemKpt);
       saveTo("add", newItemKpt);
     }
@@ -106,28 +109,9 @@ export function addKeyItemToTracklet(
   const newTrackChildren: Annotation[] = [];
   if (newItemBBox) newTrackChildren.push(newItemBBox);
   if (newItemKpt) newTrackChildren.push(newItemKpt);
-
-  annotations.update((objects) => {
-    objects.map((obj) => {
-      if (obj.is_type(BaseSchema.Tracklet) && obj.id === tracklet.id) {
-        const objTrack = obj as Tracklet;
-        objTrack.ui.childs = appendAnnotationsSorted(
-          objTrack.ui.childs,
-          newTrackChildren,
-          sortByFrameIndex,
-        );
-      }
-      return obj;
-    });
-    return appendAnnotationsSorted(objects, newTrackChildren, sortByFrameIndex);
-  });
-  entities.update((objects) =>
-    objects.map((ent) => {
-      if (ent.id === tracklet.data.entity_id) {
-        ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, newTrackChildren, sortByFrameIndex);
-      }
-      return ent;
-    }),
+  commitNormalizedWorkspaceRuntime(
+    appendAnnotationsSorted(annotations.value, newTrackChildren, sortByFrameIndex),
+    entities.value,
   );
   return true;
 }
@@ -166,15 +150,13 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
 export function splitTracklet(tracklet: Tracklet, entityId: string): void {
   const [prev, next] = findPreviousAndNextFrames(tracklet);
   const newOnRight = splitTrackInTwo(tracklet, prev, next);
-  entities.update((objects) =>
-    objects.map((ent) => {
-      if (entityHasTracklets(ent) && ent.id === entityId) {
-        ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, [newOnRight], sortByFrameIndex);
-      }
-      return ent;
-    }),
-  );
-  annotations.update((objects) => objects.concat(newOnRight));
+  const nextEntities = entities.value.map((ent) => {
+    if (entityHasTracklets(ent) && ent.id === entityId) {
+      ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, [newOnRight], sortByFrameIndex);
+    }
+    return ent;
+  });
+  commitNormalizedWorkspaceRuntime(annotations.value.concat(newOnRight), nextEntities);
 }
 
 /**

@@ -10,6 +10,7 @@ import { Annotation, BaseSchema, Entity, entityHasTracklets, Tracklet } from "$l
 import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { removeAnnotationsByIds } from "$lib/utils/entityOperations";
 import { saveTo } from "$lib/utils/saveItemUtils";
+import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 
 function listsAreEqual(list1: string[], list2: string[]): boolean {
   if (list1.length !== list2.length) {
@@ -37,11 +38,9 @@ const deleteEntityFull = (entity: Entity): void => {
   }
 
   const subEntityIds = subentities.map((subent) => subent.id);
-  annotations.update((oldObjects) =>
-    oldObjects.filter((ann) => ![entity.id, ...subEntityIds].includes(ann.data.entity_id)),
-  );
-  entities.update((oldObjects) =>
-    oldObjects.filter((ent) => ent.id !== entity.id && ent.data.parent_id !== entity.id),
+  commitNormalizedWorkspaceRuntime(
+    annotations.value.filter((ann) => ![entity.id, ...subEntityIds].includes(ann.data.entity_id)),
+    entities.value.filter((ent) => ent.id !== entity.id && ent.data.parent_id !== entity.id),
   );
 
   // in case we are in fusion mode, remove from to_fuse / forbids
@@ -78,14 +77,15 @@ export const deleteEntity = (entity: Entity, child: Annotation | null = null): v
       });
     }
 
-    annotations.update((oldObjects) => oldObjects.filter((ann) => !toDeleteIdSet.has(ann.id)));
-    entities.update((oldObjects) =>
-      oldObjects.map((ent) => {
-        if (ent.id === entity.id) {
-          ent.ui.childs = removeAnnotationsByIds(entity.ui.childs, toDeleteIdSet);
-        }
-        return ent;
-      }),
+    const nextEntities = entities.value.map((ent) => {
+      if (ent.id === entity.id) {
+        ent.ui.childs = removeAnnotationsByIds(entity.ui.childs, toDeleteIdSet);
+      }
+      return ent;
+    });
+    commitNormalizedWorkspaceRuntime(
+      annotations.value.filter((ann) => !toDeleteIdSet.has(ann.id)),
+      nextEntities,
     );
   }
 };
@@ -115,39 +115,40 @@ export const onDeleteTrackItemClick = (
   const annotationsToDeleteIds = new Set(annotationsToDelete.map((ann) => ann.id));
   let changedTrack = false;
 
-  annotations.update((anns) =>
-    anns
-      .map((ann) => {
-        if (ann.id === track.id && ann.is_type(BaseSchema.Tracklet)) {
-          (ann as Tracklet).ui.childs = (ann as Tracklet).ui.childs.filter(
-            (fann) => !annotationsToDeleteIds.has(fann.id),
-          );
+  const nextAnnotations = annotations.value
+    .map((ann) => {
+      if (ann.id === track.id && ann.is_type(BaseSchema.Tracklet)) {
+        const remainingChildren = (ann as Tracklet).ui.childs.filter(
+          (fann) => !annotationsToDeleteIds.has(fann.id),
+        );
 
-          // if ann_to_del first/last of track, need to "resize" (childs should be sorted)
-          if (itemFrameIndex === track.data.start_frame) {
-            (ann as Tracklet).data.start_frame = (ann as Tracklet).ui.childs[0].ui.frame_index!;
-            changedTrack = true;
-          }
-          if (itemFrameIndex === track.data.end_frame) {
-            (ann as Tracklet).data.end_frame = (ann as Tracklet).ui.childs[
-              (ann as Tracklet).ui.childs.length - 1
-            ].ui.frame_index!;
-            changedTrack = true;
-          }
+        if (
+          itemFrameIndex === track.data.start_frame &&
+          remainingChildren[0]?.ui.frame_index !== undefined
+        ) {
+          (ann as Tracklet).data.start_frame = remainingChildren[0].ui.frame_index;
+          changedTrack = true;
         }
-        return ann;
-      })
-      .filter((ann) => !annotationsToDeleteIds.has(ann.id)),
-  );
-
-  entities.update((ents) =>
-    ents.map((ent) => {
-      if (entityHasTracklets(ent) && ent.id === track.data.entity_id) {
-        ent.ui.childs = removeAnnotationsByIds(ent.ui.childs, annotationsToDeleteIds);
+        if (
+          itemFrameIndex === track.data.end_frame &&
+          remainingChildren[remainingChildren.length - 1]?.ui.frame_index !== undefined
+        ) {
+          (ann as Tracklet).data.end_frame =
+            remainingChildren[remainingChildren.length - 1].ui.frame_index!;
+          changedTrack = true;
+        }
       }
-      return ent;
-    }),
-  );
+      return ann;
+    })
+    .filter((ann) => !annotationsToDeleteIds.has(ann.id));
+
+  const nextEntities = entities.value.map((ent) => {
+    if (entityHasTracklets(ent) && ent.id === track.data.entity_id) {
+      ent.ui.childs = removeAnnotationsByIds(ent.ui.childs, annotationsToDeleteIds);
+    }
+    return ent;
+  });
+  commitNormalizedWorkspaceRuntime(nextAnnotations, nextEntities);
 
   for (const annToDelete of annotationsToDelete) {
     saveTo("delete", annToDelete);
