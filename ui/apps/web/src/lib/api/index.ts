@@ -4,5 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+export * from "./annotations";
 export * from "./datasets";
 export * from "./workspace";

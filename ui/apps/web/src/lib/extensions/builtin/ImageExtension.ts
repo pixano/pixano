@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------*/
 
 import { WidgetExtension } from "../WidgetExtension.js";
+import type { ImageWidgetOptions, ImageWidgetStorage } from "$lib/annotations/types.js";
 import ImageWidget from "$lib/components/widgets/ImageWidget.svelte";
 
-export const ImageExtension = WidgetExtension.create({
+export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWidgetStorage>({
   name: "image",
   label: "2D Canvas",
   icon: "image",
@@ -15,8 +16,16 @@ export const ImageExtension = WidgetExtension.create({
   defaultLayout: { x: 0, y: 0, w: 6, h: 5, minW: 3, minH: 3 },
   component: ImageWidget,
   addOptions: () => ({
-    imageUrl: "/datasets/NSn7gHtkh6366dWXz6kdwF/images/NSgX5APmfXnQwYdsdHPPbA/blob",
-    tools: ["select", "bbox"],
-    logicalName: "",
+    datasetId: "",
+    recordId: "",
+    viewId: "",
+    viewName: "",
+    imageWidth: 0,
+    imageHeight: 0,
+  }),
+  addStorage: () => ({
+    mode: "select",
+    selectedId: null,
+    bboxes: [],
   }),
 });

@@ -29,6 +29,7 @@ const mockRegistry = {
 
 const mockManager = {
   addWidget: vi.fn(),
+  clearWorkspace: vi.fn(),
   selectRecordInDataset: vi.fn().mockResolvedValue(undefined),
 } as unknown as WorkspaceManager;
 

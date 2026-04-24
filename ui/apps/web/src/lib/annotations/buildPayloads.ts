@@ -1,0 +1,155 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import type { CoordsNorm, ResourceMutation } from "./types.js";
+
+const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+/**
+ * Generate a short random id suitable for identifying a new entity or annotation
+ * before the backend has assigned one. Matches the shape of pixano's nanoid(10).
+ */
+export function generateShortId(length = 10): string {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += ID_ALPHABET[Math.floor(Math.random() * ID_ALPHABET.length)];
+  }
+  return out;
+}
+
+/**
+ * Context required to build a BBox / Entity pair. Extracted from the widget's
+ * options so the helper stays pure and easy to unit-test.
+ */
+export interface BuildContext {
+  datasetId: string;
+  recordId: string;
+  viewId: string;
+  viewName: string;
+}
+
+export interface BuildBBoxResult {
+  entityId: string;
+  bboxId: string;
+  mutations: ResourceMutation[];
+}
+
+/**
+ * Default annotation source metadata. Matches `PIXANO_SOURCE` in the legacy
+ * pixano UI (`apps/pixano/src/lib/utils/entityLookupUtils.ts`) — using
+ * `"other"` as the source type so we don't imply ground-truth provenance for
+ * freshly drawn boxes.
+ */
+const DEFAULT_SOURCE = {
+  source_type: "other",
+  source_name: "Pixano",
+  source_metadata: "{}",
+} as const;
+
+/**
+ * Build the (entity, bbox) create mutation pair for a new 2D box annotation.
+ *
+ * The payloads match what the pixano backend `EntityCreate` / `BBoxCreate`
+ * transport models expect (see `src/pixano/api/models.py`). In particular:
+ *   - Entities only carry `{ id, record_id, parent_id }`. They do NOT carry
+ *     source_* or timestamps: the `Entity` schema does not declare those
+ *     fields and LanceModel-backed tables reject unknown ones.
+ *   - BBoxes carry the full per-frame annotation shape including the
+ *     required `source_*` and `view_id`/`frame_id` linkage fields.
+ */
+export function buildBBoxCreate(
+  ctx: BuildContext,
+  coordsNorm: CoordsNorm,
+  opts: { widgetId?: string; localBBoxId?: string; entityId?: string; bboxId?: string } = {},
+): BuildBBoxResult {
+  const entityId = opts.entityId ?? generateShortId();
+  const bboxId = opts.bboxId ?? generateShortId();
+
+  const entityBody: Record<string, unknown> = {
+    id: entityId,
+    record_id: ctx.recordId,
+    parent_id: "",
+  };
+
+  const bboxBody: Record<string, unknown> = {
+    id: bboxId,
+    record_id: ctx.recordId,
+    entity_id: entityId,
+    view_id: ctx.viewId,
+    // For single-image workspaces, the frame row and the view row are the
+    // same id — mirrors what pixano's `defineCreatedAnnotation` does when
+    // `isVideo === false`.
+    frame_id: ctx.viewId,
+    frame_index: -1,
+    tracklet_id: "",
+    entity_dynamic_state_id: "",
+    coords: Array.from(coordsNorm),
+    format: "xywh",
+    is_normalized: true,
+    confidence: 1,
+    ...DEFAULT_SOURCE,
+  };
+
+  const mutations: ResourceMutation[] = [
+    {
+      op: "create",
+      resource: "entities",
+      body: entityBody,
+      widgetId: opts.widgetId,
+      localBBoxId: opts.localBBoxId,
+    },
+    {
+      op: "create",
+      resource: "bboxes",
+      body: bboxBody,
+      widgetId: opts.widgetId,
+      localBBoxId: opts.localBBoxId,
+    },
+  ];
+
+  return { entityId, bboxId, mutations };
+}
+
+/**
+ * Build an update body for an existing BBox whose geometry changed. Only
+ * includes fields the backend's `BBoxUpdate` transport model accepts — the
+ * server merges this onto the existing row.
+ */
+export function buildBBoxUpdate(
+  ctx: BuildContext,
+  bboxId: string,
+  entityId: string,
+  coordsNorm: CoordsNorm,
+): Record<string, unknown> {
+  return {
+    id: bboxId,
+    record_id: ctx.recordId,
+    entity_id: entityId,
+    view_id: ctx.viewId,
+    coords: Array.from(coordsNorm),
+    format: "xywh",
+    is_normalized: true,
+    confidence: 1,
+    ...DEFAULT_SOURCE,
+  };
+}
+
+/**
+ * Ordering priority for mutations: entities must be created before bboxes that
+ * reference them; deletes run last so we don't drop an entity whose bbox hasn't
+ * been removed yet. Mirrors `mutationPriority` in pixano's saveOrchestration.
+ */
+export function mutationPriority(m: ResourceMutation): number {
+  if (m.op === "delete") {
+    return m.resource === "entities" ? 4 : 3;
+  }
+  if (m.resource === "entities") return 0;
+  return 1;
+}
+
+export function sortMutations(mutations: ResourceMutation[]): ResourceMutation[] {
+  return [...mutations].sort((a, b) => mutationPriority(a) - mutationPriority(b));
+}
