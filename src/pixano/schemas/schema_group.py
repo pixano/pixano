@@ -27,7 +27,18 @@ from .embeddings import Embedding, ViewEmbedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
 from .timeseries import TimeSeries
-from .views import PDF, CamCalibration, Image, PointCloud, PointCloudFrame, SequenceFrame, Text, Video, View
+from .views import (
+    PDF,
+    CalibratedImage,
+    CalibratedPointCloud,
+    Image,
+    PointCloud,
+    PointCloudFrame,
+    SequenceFrame,
+    Text,
+    Video,
+    View,
+)
 
 
 class SchemaGroup(Enum):
@@ -63,12 +74,13 @@ _SCHEMA_GROUP_TO_SCHEMA_DICT = {
 CANONICAL_SCHEMA_TYPES = (
     Record,
     View,
-    CamCalibration,
     Image,
     PDF,
     PointCloud,
     PointCloudFrame,
     SequenceFrame,
+    CalibratedImage,
+    CalibratedPointCloud,
     Text,
     Video,
     Entity,
