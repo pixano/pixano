@@ -21,7 +21,7 @@ from pydantic_core import PydanticUndefined
 
 from pixano.features.pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATATYPE
 from pixano.features.types.nd_array_float import NDArrayFloat
-from pixano.schemas import CANONICAL_SCHEMA_MAP, BaseIntrinsics, Extrinsics, Intrinsics
+from pixano.schemas import CANONICAL_SCHEMA_MAP
 
 
 # ---------------------------------------------------------------------------
@@ -38,10 +38,7 @@ _MANIFEST_TYPES: dict[str, type] = {
     "int": int,
     "memoryview": memoryview,
     "str": str,
-    "NDArrayFloat": NDArrayFloat,
-    "BaseIntrinsics": BaseIntrinsics,
-    "Intrinsics": Intrinsics,
-    "Extrinsics": Extrinsics,
+    "NDArrayFloat": NDArrayFloat
 }
 
 
