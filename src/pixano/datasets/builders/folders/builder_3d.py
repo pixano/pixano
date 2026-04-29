@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-# %%
 from pathlib import Path
 from typing import Dict, Iterator
 
@@ -105,11 +104,14 @@ class Dataset3DBuilder(DatasetBuilder):
         # Add point cloud view
         res["point_clouds"] = []
         for sensor in self.tri3d_dataset.pcl_sensors:
-            filename = self.tri3d_dataset.scenes[seq].data[sensor][frame]
+            sensor2world = self.tri3d_dataset.poses(seq, sensor)[frame]
+            world_points = sensor2world.apply(self.tri3d_dataset.points(seq,frame,sensor)[:,:3])
+            points = np.hstack((world_points, self.tri3d_dataset.points(seq,frame,sensor)[:,3:]))
+            raw_bytes = points.tobytes()
             pcd = self.info.views[sensor](
                 record_id=record.id,
                 logical_name=sensor,
-                uri=self.source_dir + "/" + str(filename),
+                raw_bytes=raw_bytes,
                 id=f"{sensor}_{seq}_{frame}",
                 extrinsic_matrix=self.get_transformation_matrix(seq, sensor, frame),
                 ego_to_world=self.get_transformation_matrix(seq, ego_sensor, frame),
@@ -119,20 +121,22 @@ class Dataset3DBuilder(DatasetBuilder):
         # add 3D bounding boxes
         res["bbox3ds"] = []
         for id, ann in enumerate(self.tri3d_dataset.boxes(seq, frame, coords=ego_sensor)):
+            sensor2world = self.tri3d_dataset.poses(seq, ego_sensor)[frame]
+            z_angle_world = np.arctan2(sensor2world.rotation.mat[1, 0], sensor2world.rotation.mat[0, 0])
             rotation = [
-                np.cos(ann.heading),
-                -np.sin(ann.heading),
+                np.cos(ann.heading+z_angle_world),
+                -np.sin(ann.heading+z_angle_world),
                 0,
-                np.sin(ann.heading),
-                np.cos(ann.heading),
+                np.sin(ann.heading+z_angle_world),
+                np.cos(ann.heading+z_angle_world),
                 0,
                 0,
                 0,
                 1,
             ]
+            world_center = sensor2world.apply(ann.center)
             bbox = self.schemas["bbox3ds"](
-                coords=[-ann.center[1], ann.center[0], ann.center[2], ann.size[0], ann.size[1], ann.size[2]],
-                # TODO these coordonates only work for nuscsenes
+                coords=[world_center[0], world_center[1], world_center[2], ann.size[0], ann.size[1], ann.size[2]],
                 format="xyzwhd",
                 rotation=rotation,
                 is_normalized=False,
@@ -146,7 +150,7 @@ class Dataset3DBuilder(DatasetBuilder):
 
     def get_transformation_matrix(self, seq: int, sensor: str, frame: int) -> np.ndarray:
         """Get the transformation matrix for a given sequence and sensor."""
-        R = self.tri3d_dataset.poses(seq, sensor)[frame].rotation.mat
+        R = self.tri3d_dataset.poses(seq, sensor)[frame].rotation.mat.T
         C = self.tri3d_dataset.poses(seq, sensor)[frame].translation.vec
         # translation
         t = -R @ C
