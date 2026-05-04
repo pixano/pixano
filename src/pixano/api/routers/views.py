@@ -19,14 +19,33 @@ from pixano.api.routers._deps import PaginationParams, get_dataset_dep
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetAccessError
+from pixano.schemas.schema_group import SchemaGroup
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Views"])
 
 IMAGE_TABLE = "images"
+CALIBRATED_IMAGE_TABLE = "calibrated_images"
 TEXT_TABLE = "texts"
 SFRAME_TABLE = "sequence_frames"
 POINT_CLOUD_TABLE = "point_clouds"
+
+
+def _resolve_image_table(dataset: Dataset) -> str:
+    """Return the image-family view table for this dataset.
+
+    A dataset stores its image rows in either the canonical ``images`` table
+    (``Image`` schema) or the ``calibrated_images`` table (``CalibratedImage``
+    extends ``Image`` but is its own canonical family). The two are mutually
+    exclusive per dataset, so we pick whichever one is registered. Public
+    endpoints stay rooted at ``/images`` regardless, since the UI treats both
+    families as plain images and only differs by extra calibration fields it
+    currently ignores.
+    """
+    view_tables = dataset.info.groups.get(SchemaGroup.VIEW, set())
+    if CALIBRATED_IMAGE_TABLE in view_tables:
+        return CALIBRATED_IMAGE_TABLE
+    return IMAGE_TABLE
 
 
 def _combine_where(*clauses: str | None) -> str | None:
@@ -176,7 +195,7 @@ def _list_image_responses(
 ) -> PaginatedResponse[ImageResponse]:
     rows, total = _list_rows(
         dataset,
-        IMAGE_TABLE,
+        _resolve_image_table(dataset),
         pagination=pagination,
         record_id=record_id,
         view_name=view_name,
@@ -298,19 +317,19 @@ def list_images(
 @router.get("/images/{id}", response_model=ImageResponse, operation_id="get_image")
 def get_image(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> ImageResponse:
     """Fetch a single image view by ID."""
-    return _to_image_response(dataset_id, _get_row(dataset, IMAGE_TABLE, id))
+    return _to_image_response(dataset_id, _get_row(dataset, _resolve_image_table(dataset), id))
 
 
 @router.get("/images/{id}/blob", operation_id="get_image_blob")
 def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
     """Stream the raw binary blob of an image."""
-    return _stream_blob(dataset, IMAGE_TABLE, id)
+    return _stream_blob(dataset, _resolve_image_table(dataset), id)
 
 
 @router.get("/images/{id}/preview", operation_id="get_image_preview")
 def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
     """Stream the preview thumbnail of an image."""
-    return _stream_preview(dataset, IMAGE_TABLE, id)
+    return _stream_preview(dataset, _resolve_image_table(dataset), id)
 
 
 @router.get("/texts", response_model=PaginatedResponse[TextResponse], operation_id="list_texts")

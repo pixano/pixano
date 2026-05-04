@@ -207,7 +207,17 @@ describe("LeftPanel — explorer section", () => {
     fireEvent.click(screen.getByRole("button", { name: "rec-1" }));
 
     await waitFor(() =>
-      expect(mockManager.selectRecordInDataset).toHaveBeenCalledWith("ds-1", "rec-1"),
+      expect(mockManager.selectRecordInDataset).toHaveBeenCalledWith(
+        "ds-1",
+        "rec-1",
+        // Viewport is measured from the (jsdom) DOM. We don't care about
+        // the exact numbers here — just that LeftPanel forwards a
+        // {width, height} object so the manager doesn't have to.
+        expect.objectContaining({
+          width: expect.any(Number),
+          height: expect.any(Number),
+        }),
+      ),
     );
   });
 

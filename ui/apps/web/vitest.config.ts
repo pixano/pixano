@@ -23,7 +23,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/lib/api/**", "src/lib/components/shell/**"],
+      include: [
+        "src/lib/api/**",
+        "src/lib/annotations/**",
+        "src/lib/components/shell/**",
+        "src/lib/workspace/**",
+      ],
       exclude: ["**/__tests__/**", "**/*.d.ts", "src/lib/api/restTypes.ts"],
     },
   },

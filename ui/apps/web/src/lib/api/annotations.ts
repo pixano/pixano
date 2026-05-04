@@ -41,6 +41,40 @@ interface PaginatedBBoxes {
 }
 
 /**
+ * Minimal shape of a BBox3D row as returned by `GET /datasets/:id/bbox3ds`.
+ * Mirrors the backend `BBox3D` LanceModel: 6 coords + 9-element row-major
+ * rotation matrix. Format is either 'xyzwhd' (center + size) or 'xyzxyz'
+ * (axis-aligned min/max corners). Confidence is -1 for ground truth.
+ */
+export interface BBox3DRow {
+  id: string;
+  record_id: string;
+  entity_id: string;
+  view_id: string;
+  coords: [number, number, number, number, number, number];
+  format: "xyzwhd" | "xyzxyz";
+  rotation: number[];
+  is_normalized: boolean;
+  confidence?: number;
+}
+
+/**
+ * Client-side augmentation of `BBox3DRow` with the parent entity row resolved
+ * via `entity_id`. Mirrors the `LocalBBox.entity` pattern used for 2D boxes
+ * so the 3D scene can render labels via `pickEntityLabel` without an extra
+ * fetch. Datasets without entities (or with empty `entity_id`) leave this
+ * undefined, in which case the scene draws no label.
+ */
+export type LocalBBox3D = BBox3DRow & { entity?: Record<string, unknown> };
+
+interface PaginatedBBox3Ds {
+  items: BBox3DRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
  * Minimal shape of an Entity row. The backend Entity schema only guarantees
  * `id`, `record_id` and `parent_id`; dataset-specific subclasses add custom
  * fields (e.g. VOCEntity adds `category` and `is_difficult`). We keep those
@@ -99,6 +133,26 @@ export async function listBBoxes(
     `${resourceUrl(datasetId, "bboxes")}?${qs.toString()}`,
     { headers: JSON_HEADERS, method: "GET" },
     "listBBoxes",
+  );
+  return res.items ?? [];
+}
+
+/**
+ * List 3D bboxes for a (record, view) pair. Same query-param contract as
+ * `listBBoxes`: `view_name` filters the `view_id` column server-side.
+ */
+export async function listBBox3Ds(
+  datasetId: string,
+  params: { recordId?: string; viewId?: string; limit?: number } = {},
+): Promise<BBox3DRow[]> {
+  const qs = new URLSearchParams();
+  if (params.recordId) qs.set("record_id", params.recordId);
+  if (params.viewId) qs.set("view_name", params.viewId);
+  qs.set("limit", String(params.limit ?? 1000));
+  const res = await requestJson<PaginatedBBox3Ds>(
+    `${resourceUrl(datasetId, "bbox3ds")}?${qs.toString()}`,
+    { headers: JSON_HEADERS, method: "GET" },
+    "listBBox3Ds",
   );
   return res.items ?? [];
 }

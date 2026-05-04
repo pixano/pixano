@@ -50,7 +50,12 @@ License: CECILL-C
   {:else if ready && CanvasComponent && SceneComponent}
     <div class="absolute inset-0">
       <CanvasComponent>
-        <SceneComponent pointCloudUrl={data?.pointCloudUrl as string | undefined} />
+        <SceneComponent
+          pointCloudUrl={data?.pointCloudUrl as string | undefined}
+          bboxes3d={data?.bboxes3d as
+            | import("$lib/api/annotations").LocalBBox3D[]
+            | undefined}
+        />
       </CanvasComponent>
     </div>
   {:else}
