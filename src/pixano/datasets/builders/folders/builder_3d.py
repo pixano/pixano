@@ -16,6 +16,12 @@ from pixano.datasets import DatasetInfo
 from pixano.datasets.builders import DatasetBuilder
 
 
+class CategoryEntity(pix_types.Entity):
+    """Entity with a category."""
+
+    category: str
+
+
 class Dataset3DBuilder(DatasetBuilder):
     """Dataset builder for 3D datasets supported by tri3d."""
 
@@ -46,6 +52,7 @@ class Dataset3DBuilder(DatasetBuilder):
             },
             bbox3d=pix_types.BBox3D,
             bbox=pix_types.BBox,
+            entity=CategoryEntity,
         )
         super().__init__(target_dir, info)
         self.tri3d_dataset = tri3d_dataset
@@ -88,14 +95,36 @@ class Dataset3DBuilder(DatasetBuilder):
         res["calibrated_images"] = []
         for sensor in self.tri3d_dataset.cam_sensors:
             f = (
-                self.tri3d_dataset.scenes[seq].calibration[sensor]["camera_intrinsic"][0][0],
-                self.tri3d_dataset.scenes[seq].calibration[sensor]["camera_intrinsic"][1][1],
+                self.tri3d_dataset._calibration(
+                    seq, ego_sensor, self.tri3d_dataset.img_sensors[self.tri3d_dataset.cam_sensors.index(sensor)]
+                )
+                .operations[1]
+                .intrinsics[0],
+                self.tri3d_dataset._calibration(
+                    seq, ego_sensor, self.tri3d_dataset.img_sensors[self.tri3d_dataset.cam_sensors.index(sensor)]
+                )
+                .operations[1]
+                .intrinsics[1],
             )
             c = (
-                self.tri3d_dataset.scenes[seq].calibration[sensor]["camera_intrinsic"][0][2],
-                self.tri3d_dataset.scenes[seq].calibration[sensor]["camera_intrinsic"][1][2],
+                self.tri3d_dataset._calibration(
+                    seq, ego_sensor, self.tri3d_dataset.img_sensors[self.tri3d_dataset.cam_sensors.index(sensor)]
+                )
+                .operations[1]
+                .intrinsics[2],
+                self.tri3d_dataset._calibration(
+                    seq, ego_sensor, self.tri3d_dataset.img_sensors[self.tri3d_dataset.cam_sensors.index(sensor)]
+                )
+                .operations[1]
+                .intrinsics[3],
             )
-            distortion = [0, 0, 0, 0]
+            distortion = (
+                self.tri3d_dataset._calibration(
+                    seq, ego_sensor, self.tri3d_dataset.img_sensors[self.tri3d_dataset.cam_sensors.index(sensor)]
+                )
+                .operations[1]
+                .intrinsics[3:]
+            )
 
             cam_image = self.info.views[sensor].from_pil(
                 record_id=record.id,
@@ -115,7 +144,7 @@ class Dataset3DBuilder(DatasetBuilder):
         for sensor in self.tri3d_dataset.pcl_sensors:
             sensor2world = self.tri3d_dataset.poses(seq, sensor)[frame]
             world_points = sensor2world.apply(self.tri3d_dataset.points(seq, frame, sensor)[:, :3])
-            points = np.hstack((world_points, self.tri3d_dataset.points(seq, frame, sensor)[:, 3:]))
+            points = np.hstack((world_points, self.tri3d_dataset.points(seq, frame, sensor)[:, 3:]), dtype=np.float32)
             raw_bytes = points.tobytes()
             pcd = self.info.views[sensor](
                 record_id=record.id,
@@ -127,10 +156,20 @@ class Dataset3DBuilder(DatasetBuilder):
             )
             res["point_clouds"].append(pcd)
 
-        # add 3D bounding boxes and 2D bounding boxes from the 3D boxes
+        # add 3D bounding boxes and 2D bounding boxes from the 3D boxes and associate them to an entity
+        res["entities"] = []
         res["bbox3ds"] = []
         res["bboxes"] = []
         for id, ann in enumerate(self.tri3d_dataset.boxes(seq, frame, coords=ego_sensor)):
+            # create entity for bbox
+            entity = self.schemas["entities"](
+                id=f"entity_{seq}_{frame}_{id}",
+                record_id=record.id,
+                logical_name="entity",
+                category=ann.label,
+            )
+            res["entities"].append(entity)
+
             # creation of the 3D bbox in world coordinates
             sensor2world = self.tri3d_dataset.poses(seq, ego_sensor)[frame]
             z_angle_world = np.arctan2(sensor2world.rotation.mat[1, 0], sensor2world.rotation.mat[0, 0])
@@ -153,7 +192,7 @@ class Dataset3DBuilder(DatasetBuilder):
                 is_normalized=False,
                 record_id=record.id,
                 logical_name="bbox3d",
-                category=ann.label,
+                entity_id=entity.id,
                 id=f"bbox3d_{seq}_{frame}_{id}",
             )
             res["bbox3ds"].append(bbox3d)
@@ -183,7 +222,7 @@ class Dataset3DBuilder(DatasetBuilder):
                     is_normalized=False,
                     record_id=record.id,
                     logical_name="bbox2d",
-                    category=ann.label,
+                    entity_id=entity.id,
                     id=f"bbox2d_{seq}_{frame}_{id}_{image.logical_name}",
                     view_id=image.id,
                 )
