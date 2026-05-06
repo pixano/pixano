@@ -18,10 +18,8 @@ License: CECILL-C
 
   let ready = $state(false);
   let error = $state<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let CanvasComponent = $state<Component<any> | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let SceneComponent = $state<Component<any> | null>(null);
+  let CanvasComponent = $state<Component | null>(null);
+  let SceneComponent = $state<Component | null>(null);
 
   onMount(async () => {
     try {

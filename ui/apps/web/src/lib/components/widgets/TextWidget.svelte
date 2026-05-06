@@ -141,7 +141,7 @@ License: CECILL-C
             ? 'bg-accent text-accent-foreground'
             : ''}"
         >
-          {"</>"}
+          &lt;/&gt;
         </button>
         <button
           onclick={() => editor?.chain().focus().toggleBlockquote().run()}

@@ -131,12 +131,10 @@ export class MutationQueue {
 
   private async run(datasetId: string, mutation: ResourceMutation): Promise<void> {
     if (mutation.op === "create" && mutation.resource === "entities") {
-      console.debug("flushSave -> POST entities", mutation.body);
       await this.gateway.createEntity(datasetId, mutation.body);
       return;
     }
     if (mutation.op === "create" && mutation.resource === "bboxes") {
-      console.debug("flushSave -> POST bboxes", mutation.body);
       await this.gateway.createBBox(datasetId, mutation.body);
       return;
     }

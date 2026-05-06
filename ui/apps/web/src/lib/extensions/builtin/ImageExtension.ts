@@ -47,30 +47,47 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
 
     const image = await gateway.loadImageByLogicalName(datasetId, recordId, viewName);
 
-    // Pre-fetch any bboxes already stored for this (record, view) pair so
-    // we can hand them to the widget at mount time. If the fetch fails we
-    // log and fall back to an empty list — the user can still draw new
-    // boxes.
-    const existingBBoxes = image?.id
+    // Pre-fetch bboxes for this view. We load all record bboxes and filter
+    // client-side, matching both the image row id (new annotations) and the
+    // view logical name (legacy annotations where view_id was the camera name
+    // rather than the image row id) so existing data is always visible.
+    const allBBoxes = image
       ? await gateway
-          .listBBoxes(datasetId, { recordId, viewId: image.id })
+          .listBBoxes(datasetId, { recordId })
           .catch((err) => {
             console.error("listBBoxes failed", err);
             return [] as BBoxRow[];
           })
       : [];
 
+    const existingBBoxes = allBBoxes.filter(
+      (b) => b.view_id === image?.id || b.view_id === viewName,
+    );
+
+    const iw = image?.width ?? 1;
+    const ih = image?.height ?? 1;
+
     const seedBBoxes = existingBBoxes
-      .filter((b) => Array.isArray(b.coords) && b.coords.length === 4 && b.is_normalized)
-      .map<LocalBBox>((b) => ({
-        id: b.id,
-        entityId: b.entity_id,
-        coordsNorm: [...b.coords] as CoordsNorm,
-        persisted: true,
-        // Attach the parent entity (when one exists) so the widget can
-        // render a label without an extra fetch.
-        entity: entitiesById.get(b.entity_id),
-      }));
+      .filter((b) => Array.isArray(b.coords) && b.coords.length === 4)
+      .map<LocalBBox>((b) => {
+        // Convert pixel-space coords to normalized [0,1] if needed.
+        // Backend stores xywh or xyxy; we normalise to xywh here.
+        let [a, c_b, w, h] = b.coords;
+        if (b.format === "xyxy") {
+          w = w - a;
+          h = h - c_b;
+        }
+        const coordsNorm: CoordsNorm = b.is_normalized
+          ? [a, c_b, w, h]
+          : [a / iw, c_b / ih, w / iw, h / ih];
+        return {
+          id: b.id,
+          entityId: b.entity_id,
+          coordsNorm,
+          persisted: true,
+          entity: entitiesById.get(b.entity_id),
+        };
+      });
 
     return {
       title: viewName,

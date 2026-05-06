@@ -1141,6 +1141,152 @@ class TestPaginatedResponse:
 # ---------------------------------------------------------------------------
 
 
+# ===========================================================================
+# Scenario 5: Dataset with a custom entity subschema (CategoryEntity)
+# ===========================================================================
+#
+# Mirrors the NuScenes case: the entity table uses a schema that adds a
+# required `category` field, but the web UI only sends the base Entity
+# fields.  `service._pad_entity_payload` must fill in "" so the row is
+# accepted without a 400.
+
+
+CATEGORY_DATASET_ID = "category_entity_dataset"
+
+
+class CategoryEntity(Entity):
+    """Entity subclass that adds a required category label — like NuScenes."""
+
+    category: str
+
+
+class CategoryEntityBuilder(DatasetBuilder):
+    def __init__(self, target_dir: Path, info: DatasetInfo):
+        base = info.model_dump(include={"id", "name", "description", "size", "preview", "workspace", "storage_mode"})
+        info = DatasetInfo(
+            **base,
+            record=Record,
+            views={"image": Image},
+            entity=CategoryEntity,
+            bbox=BBox,
+        )
+        super().__init__(target_dir=target_dir, info=info)
+
+    def generate_data(self):
+        record_id = "rec_0"
+        image = Image(
+            id="img_0",
+            record_id=record_id,
+            logical_name="image",
+            uri="img_0.jpg",
+            width=640,
+            height=480,
+            format="jpg",
+            preview=_blob_bytes("img_0"),
+            preview_format="png",
+        )
+        entity = CategoryEntity(id="ent_0", record_id=record_id, category="car")
+        bbox = BBox(
+            id="bbox_0",
+            record_id=record_id,
+            entity_id="ent_0",
+            source_type="ground_truth",
+            source_name="Ground Truth",
+            view_id="img_0",
+            coords=[0.1, 0.1, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            confidence=1.0,
+        )
+        yield {
+            self.record_table_name: self.record_schema(id=record_id, split="train"),
+            "images": image,
+            "entities": [entity],
+            "bboxes": [bbox],
+        }
+
+
+@pytest.fixture(scope="module")
+def category_entity_dataset() -> Dataset:
+    tmp = Path(tempfile.mkdtemp())
+    target = tmp / CATEGORY_DATASET_ID
+    info = DatasetInfo(
+        id=CATEGORY_DATASET_ID,
+        name=CATEGORY_DATASET_ID,
+        description="Dataset with CategoryEntity for padding tests",
+        workspace=WorkspaceType.IMAGE,
+    )
+    builder = CategoryEntityBuilder(target_dir=target, info=info)
+    return builder.build(mode="overwrite", check_integrity="none")
+
+
+@pytest.fixture(scope="module")
+def category_entity_client(category_entity_dataset: Dataset) -> TestClient:
+    return _make_client(category_entity_dataset)
+
+
+CAT_BASE = f"/datasets/{CATEGORY_DATASET_ID}"
+
+
+class TestCategoryEntityPadding:
+    """Verify that _pad_entity_payload lets the UI create entities on datasets
+    whose entity table has extra required fields (e.g. category: str)."""
+
+    def test_create_entity_without_category_succeeds(self, category_entity_client: TestClient):
+        """POST with only base fields — category is padded to '' by the service."""
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "new_ent", "record_id": "rec_0", "parent_id": ""},
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["id"] == "new_ent"
+        assert body.get("category") == ""
+
+    def test_create_entity_with_category_succeeds(self, category_entity_client: TestClient):
+        """POST with an explicit category still works as expected."""
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "new_ent_cat", "record_id": "rec_0", "parent_id": "", "category": "truck"},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["category"] == "truck"
+
+    def test_create_bbox_after_auto_created_entity_succeeds(self, category_entity_client: TestClient):
+        """Bbox referencing a freshly-padded entity must pass FK validation."""
+        # Create entity first (padding path)
+        category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "ent_for_bbox", "record_id": "rec_0", "parent_id": ""},
+        )
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/bboxes",
+            json={
+                "id": "bbox_new",
+                "record_id": "rec_0",
+                "entity_id": "ent_for_bbox",
+                "view_id": "img_0",
+                "frame_id": "img_0",
+                "frame_index": -1,
+                "tracklet_id": "",
+                "entity_dynamic_state_id": "",
+                "coords": [0.1, 0.2, 0.3, 0.4],
+                "format": "xywh",
+                "is_normalized": True,
+                "confidence": 1.0,
+                "source_type": "other",
+                "source_name": "Pixano",
+                "source_metadata": "{}",
+            },
+        )
+        assert resp.status_code == 201
+
+
+# ---------------------------------------------------------------------------
+# Empty library
+# ---------------------------------------------------------------------------
+
+
 class TestEmptyLibrary:
     """Verify the app works gracefully with no datasets."""
 
