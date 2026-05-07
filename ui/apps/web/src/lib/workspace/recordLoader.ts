@@ -52,6 +52,10 @@ export class RecordLoader {
   private gateway: DatasetGateway;
   private readGateway: RecordReadGateway;
   private session: WorkspaceSession;
+  // Incremented on every load() call. Each async continuation checks that it
+  // still holds the current token before mutating workspace state, so a
+  // rapid record-switch never lets a stale load overwrite the newer one.
+  private loadToken = 0;
 
   constructor(deps: RecordLoaderDeps) {
     this.workspace = deps.workspace;
@@ -66,6 +70,8 @@ export class RecordLoader {
     recordId: string,
     viewport: Viewport = measureGridViewport(),
   ): Promise<void> {
+    const token = ++this.loadToken;
+
     // Track the active selection so queued mutations (`MutationQueue.flush`,
     // entity creation, etc.) hit the right dataset and so the UI reflects
     // it. Set *before* the awaits below so a mid-load `clearWorkspace`
@@ -78,11 +84,11 @@ export class RecordLoader {
     // record-scoped, not view-scoped.
     const [dataset, entityRows] = await Promise.all([
       this.readGateway.getDataset(datasetId),
-      this.readGateway.listEntities(datasetId, { recordId }).catch((err) => {
-        console.error("listEntities failed", err);
-        return [] as EntityRow[];
-      }),
+      this.readGateway.listEntities(datasetId, { recordId }).catch(() => [] as EntityRow[]),
     ]);
+
+    // A newer load() was started while we were awaiting — discard our results.
+    if (token !== this.loadToken) return;
 
     // Entities are record-scoped (a bbox points at an entity via
     // entity_id, and that entity row lives in the dataset's single
@@ -129,10 +135,7 @@ export class RecordLoader {
     const claimed = resolved.filter((s): s is ResolvedSeed => s !== null);
 
     if (claimed.length === 0) {
-      console.warn(
-        `selectRecordInDataset: no renderable views for record ${recordId} in dataset ${datasetId}`,
-      );
-      return;
+      throw new Error(`No renderable views for record "${recordId}" in dataset "${datasetId}".`);
     }
 
     const layouts = planViewportLayouts(claimed.length, viewport);

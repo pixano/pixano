@@ -85,6 +85,7 @@ artifacts = ["src/pixano/api/dist"]
 path = "src/pixano/__version__.py"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
 ]

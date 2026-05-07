@@ -13,11 +13,11 @@ const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
  * before the backend has assigned one. Matches the shape of pixano's nanoid(10).
  */
 export function generateShortId(length = 10): string {
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += ID_ALPHABET[Math.floor(Math.random() * ID_ALPHABET.length)];
-  }
-  return out;
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => ID_ALPHABET[b % ID_ALPHABET.length])
+    .join("");
 }
 
 /**

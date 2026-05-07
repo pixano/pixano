@@ -321,7 +321,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(data.bboxes3d?.[0].entity).toStrictEqual(entity);
   });
 
-  it("creates no widgets and warns when the dataset has no renderable views", async () => {
+  it("throws when the dataset has no renderable views", async () => {
     const dataset = makeDataset({ misc: { base: "UnknownBase" } });
     const { gateway } = makeGateway({
       dataset,
@@ -333,12 +333,13 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     });
 
     const manager = new WorkspaceManager(makeRegistry(), gateway);
-    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    await expect(
+      manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT),
+    ).rejects.toThrow("No renderable views");
 
-    expect(manager.widgets).toHaveLength(0);
     // datasetId/recordId are still set so any subsequent flushSave knows
-    // which dataset to target — the empty-views case shouldn't make the
-    // manager pretend the user didn't select anything.
+    // which dataset to target — the error case shouldn't make the manager
+    // pretend the user didn't select anything.
     expect(manager.datasetId).toBe("ds-1");
     expect(manager.recordId).toBe("rec-1");
   });

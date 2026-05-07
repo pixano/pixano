@@ -168,11 +168,10 @@ describe("RecordLoader.load", () => {
     expect(widgets).toHaveLength(1);
   });
 
-  it("does nothing (no widgets) when no views are renderable", async () => {
+  it("throws when no views are renderable", async () => {
     const dataset = makeDataset({ depth: { base: "Unknown" } });
-    const { sink, widgets } = makeSink();
+    const { sink } = makeSink();
     const session = new WorkspaceSession();
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const loader = new RecordLoader({
       workspace: sink,
       registry: makeRegistry(makeImageExtension()),
@@ -180,11 +179,7 @@ describe("RecordLoader.load", () => {
       session,
     });
 
-    await loader.load("ds-1", "rec-1", VIEWPORT);
-
-    expect(widgets).toHaveLength(0);
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    await expect(loader.load("ds-1", "rec-1", VIEWPORT)).rejects.toThrow("No renderable views");
   });
 
   it("gracefully handles listEntities failure", async () => {

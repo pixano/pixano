@@ -95,11 +95,16 @@ export class MutationQueue {
     this.saving = true;
     this.saveError = null;
 
-    const ordered = sortMutations(this.pending);
+    // Snapshot and sort; elements are still the same object references as in
+    // this.pending so we can filter by identity after each successful run.
+    const toProcess = sortMutations([...this.pending]);
 
     try {
-      for (const mutation of ordered) {
+      for (const mutation of toProcess) {
         await this.run(datasetId, mutation);
+        // Drop the just-applied mutation immediately so a mid-flush failure
+        // does not re-send already-persisted mutations on the next flush.
+        this.pending = this.pending.filter((m) => m !== mutation);
         if (
           mutation.op === "create" &&
           mutation.resource === "bboxes" &&
@@ -113,13 +118,11 @@ export class MutationQueue {
           if (bbox) bbox.persisted = true;
         }
       }
-      this.pending = [];
     } catch (err) {
       if (err instanceof ApiError) {
         // Surface the backend's `detail` so the user can see why the
         // request was rejected (e.g. "Invalid data: <field> extra inputs
         // are not permitted" or "Foreign key violation: record_id=…").
-        console.error("flushSave - failing mutation body:", err.body);
         this.saveError = `${err.message}: ${err.body}`;
       } else {
         this.saveError = err instanceof Error ? err.message : String(err);

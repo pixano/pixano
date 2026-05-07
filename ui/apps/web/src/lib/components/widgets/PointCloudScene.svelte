@@ -24,9 +24,80 @@ License: CECILL-C
   let colors = $state<Float32Array>(new Float32Array(0));
   let loading = $state(true);
 
-  // ✅ NEW: camera state
   let cameraPosition = $state<[number, number, number]>([30, 20, 30]);
   let cameraTarget = $state<[number, number, number]>([0, 0, 0]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let controlsRef = $state<any>(null);
+
+  $effect(() => {
+    const ref = controlsRef;
+    if (!ref) return;
+
+    const SENSITIVITY = 0.003;
+    const FLY_SPEED = 0.05;
+    let isRightDragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 2) {
+        isRightDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      }
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isRightDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      const cam = ref.object as THREE.PerspectiveCamera;
+      cam.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -dx * SENSITIVITY);
+      cam.rotateOnAxis(new THREE.Vector3(1, 0, 0), -dy * SENSITIVITY);
+
+      const dist = cam.position.distanceTo(ref.target);
+      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+      ref.target.copy(cam.position).addScaledVector(dir, dist);
+      cameraTarget = [ref.target.x, ref.target.y, ref.target.z];
+      ref.update();
+    };
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 2) isRightDragging = false;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const cam = ref.object as THREE.PerspectiveCamera;
+      const dir = new THREE.Vector3();
+      cam.getWorldDirection(dir);
+      const move = dir.multiplyScalar(-e.deltaY * FLY_SPEED);
+      cam.position.add(move);
+      ref.target.add(move);
+      cameraTarget = [ref.target.x, ref.target.y, ref.target.z];
+      ref.update();
+    };
+
+    ref.domElement.addEventListener("contextmenu", onContextMenu);
+    ref.domElement.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    ref.domElement.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      ref.domElement.removeEventListener("contextmenu", onContextMenu);
+      ref.domElement.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      ref.domElement.removeEventListener("wheel", onWheel);
+    };
+  });
 
   function lanceToThree(x: number, y: number, z: number): [number, number, number] {
     return [x, z, -y];
@@ -178,7 +249,15 @@ License: CECILL-C
     ref.lookAt(...cameraTarget);
   }}
 >
-  <OrbitControls enableDamping target={cameraTarget} />
+  <OrbitControls
+    target={cameraTarget}
+    oncreate={(ref) => {
+      ref.enableZoom = false;
+      ref.enableRotate = false;
+      ref.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY };
+      controlsRef = ref;
+    }}
+  />
 </T.PerspectiveCamera>
 
 <T.AmbientLight intensity={0.6} />

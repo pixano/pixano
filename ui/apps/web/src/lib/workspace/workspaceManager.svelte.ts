@@ -145,8 +145,8 @@ export class WorkspaceManager {
   ): WidgetInstance | null {
     const config = this.registry.get(extensionName);
     if (!config) {
-      console.warn(`Extension "${extensionName}" not found in registry`);
-      return null;
+      throw new Error(`Extension "${extensionName}" not found in registry`);
+
     }
 
     const options = config.addOptions?.() ?? {};

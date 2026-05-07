@@ -134,36 +134,35 @@ describe("MutationQueue.flush", () => {
     expect(bbox.persisted).toBe(true);
   });
 
-  it("surfaces ApiError detail in saveError and stops on the failing mutation", async () => {
+  it("surfaces ApiError detail in saveError", async () => {
+    const apiErr = new ApiError("createBBox failed with 422 Unprocessable", 422, '{"detail":"bad"}');
+    const { gateway } = makeGateway({ failOn: "createBBox", error: apiErr });
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.queue({ op: "create", resource: "bboxes", body: {} } as ResourceMutation);
+
+    await queue.flush();
+
+    expect(queue.saveError).toContain("createBBox failed with 422");
+    expect(queue.saveError).toContain('{"detail":"bad"}');
+    expect(queue.saving).toBe(false);
+  });
+
+  it("drops already-applied mutations so a retry does not re-send them", async () => {
     const apiErr = new ApiError("createBBox failed with 422 Unprocessable", 422, '{"detail":"bad"}');
     const { gateway, calls } = makeGateway({ failOn: "createBBox", error: apiErr });
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
 
-    queue.queue({
-      op: "create",
-      resource: "entities",
-      body: {},
-    } as ResourceMutation);
-    queue.queue({
-      op: "create",
-      resource: "bboxes",
-      body: {},
-    } as ResourceMutation);
-    queue.queue({
-      op: "delete",
-      resource: "bboxes",
-      id: "x",
-    } as ResourceMutation);
+    queue.queue({ op: "create", resource: "entities", body: {} } as ResourceMutation);
+    queue.queue({ op: "create", resource: "bboxes", body: {} } as ResourceMutation);
+    queue.queue({ op: "delete", resource: "bboxes", id: "x" } as ResourceMutation);
 
     await queue.flush();
 
+    // createEntity ran first (sort order) and succeeded; createBBox failed.
     expect(calls.map((c) => c.method)).toEqual(["createEntity", "createBBox"]);
-    expect(queue.saveError).toContain("createBBox failed with 422");
-    expect(queue.saveError).toContain('{"detail":"bad"}');
-    expect(queue.saving).toBe(false);
-    // Pending is preserved on failure so the user can retry after fixing
-    // whatever the backend rejected.
-    expect(queue.count).toBe(3);
+    // createEntity was dropped; createBBox and deleteBBox remain for retry.
+    expect(queue.count).toBe(2);
   });
 
   it("ignores re-entrant flush calls while saving", async () => {

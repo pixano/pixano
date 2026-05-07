@@ -197,11 +197,16 @@ def test_create_bbox():
 
 def test_create_bbox3d():
     # Test 1: default references
-    bbox = create_bbox3d(coords=[1, 1, 1, 2, 2, 2], format="xyzwhd", heading=[3.0], is_normalized=False)
+    bbox = create_bbox3d(
+        coords=[1, 1, 1, 2, 2, 2],
+        format="xyzwhd",
+        rotation=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+        is_normalized=False,
+    )
     assert isinstance(bbox, BBox3D)
     assert bbox.coords == [1, 1, 1, 2, 2, 2]
     assert bbox.format == "xyzwhd"
-    assert bbox.heading == [3.0]
+    assert bbox.rotation == [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
     assert bbox.confidence == -1
     assert not bbox.is_normalized
     assert bbox.id == ""
@@ -213,7 +218,7 @@ def test_create_bbox3d():
     bbox = create_bbox3d(
         coords=[0.1, 0.1, 0.1, 0.2, 0.2, 0.2],
         format="xyzwhd",
-        heading=[3.0],
+        rotation=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
         is_normalized=True,
         confidence=0.5,
         id="bbox_1",
@@ -224,7 +229,7 @@ def test_create_bbox3d():
     assert isinstance(bbox, BBox3D)
     assert bbox.coords == [0.1, 0.1, 0.1, 0.2, 0.2, 0.2]
     assert bbox.format == "xyzwhd"
-    assert bbox.heading == [3.0]
+    assert bbox.rotation == [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
     assert bbox.confidence == 0.5
     assert bbox.is_normalized
     assert bbox.id == "bbox_1"

@@ -102,6 +102,9 @@ def _pad_entity_payload(schema: type[LanceModel], payload: dict[str, Any]) -> di
     required fields (e.g. CategoryEntity.category) while the UI only sends base
     Entity fields.  The padded row can be updated with real values later.
     """
+    import logging
+
+    logger_ = logging.getLogger(__name__)
     patched = dict(payload)
     for field_name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
         if field_name in patched or not field_info.is_required():
@@ -118,6 +121,13 @@ def _pad_entity_payload(schema: type[LanceModel], payload: dict[str, Any]) -> di
             patched[field_name] = False
         elif origin in (list, tuple):
             patched[field_name] = []
+        else:
+            logger_.warning(
+                "Cannot pad required field %r of unhandled type %r on schema %s — " "row may fail validation",
+                field_name,
+                ann,
+                schema.__name__,
+            )
     return patched
 
 

@@ -36,10 +36,12 @@ def _resolve_image_table(dataset: Dataset) -> str:
 
     A dataset stores its image rows in either the canonical ``images`` table
     (``Image`` schema) or the ``calibrated_images`` table (``CalibratedImage``
-    extends ``Image`` but is its own canonical family). The two are mutually
-    exclusive per dataset, so we pick whichever one is registered. Public
-    endpoints stay rooted at ``/images`` regardless, since the UI treats both
-    families as plain images and only differs by extra calibration fields it
+    extends ``Image`` but is its own canonical family). In practice the two are
+    mutually exclusive per dataset. If both are somehow present (e.g. a dataset
+    migrated mid-build), ``calibrated_images`` wins because it is the richer
+    schema and losing calibration data silently would be worse than the reverse.
+    Public endpoints stay rooted at ``/images`` regardless, since the UI treats
+    both families as plain images and only differs by extra calibration fields it
     currently ignores.
     """
     view_tables = dataset.info.groups.get(SchemaGroup.VIEW, set())
