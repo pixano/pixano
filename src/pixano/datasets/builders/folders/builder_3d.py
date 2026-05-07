@@ -198,26 +198,13 @@ class Dataset3DBuilder(DatasetBuilder):
             res["bbox3ds"].append(bbox3d)
 
             # creation of the 2D bbox
-            corners_3d = get_3dbbox_corners(bbox3d)
             for image in res["calibrated_images"]:
-                extrinsics = np.array(image.extrinsic_matrix).reshape(4, 4)
-                projected_corners = project_points(corners_3d, image.f, image.c, extrinsics)
-                if np.any(projected_corners[:, 2] < 0):
+                coords = bbox3d.get_bbox2d_coords(image)
+                if coords == []:
                     continue
 
-                minx, maxx = np.min(projected_corners[:, 0]), np.max(projected_corners[:, 0])
-                miny, maxy = np.min(projected_corners[:, 1]), np.max(projected_corners[:, 1])
-
-                if minx > image.width or maxx < 0 or miny > image.height or maxy < 0:
-                    continue
-
-                minx, maxx = np.clip([minx, maxx], 0, image.width)
-                miny, maxy = np.clip([miny, maxy], 0, image.height)
-
-                center = [(minx + maxx) / 2, (miny + maxy) / 2]
-                size = [maxx - minx, maxy - miny]
                 bbox2d = self.schemas["bboxes"](
-                    coords=[center[0], center[1], size[0], size[1]],
+                    coords=coords,
                     format="xywh",
                     is_normalized=False,
                     record_id=record.id,
@@ -241,57 +228,3 @@ class Dataset3DBuilder(DatasetBuilder):
         matrix[:3, :3] = R
         matrix[:3, 3] = t
         return matrix.flatten().tolist()
-
-
-def get_3dbbox_corners(bbox: pix_types.BBox3D) -> np.ndarray:
-    """Get the corners of a 3D bounding box."""
-    # Define the corners of a unit cube centered at the origin
-    unit_cube_corners = np.array(
-        [
-            [-0.5, -0.5, -0.5],
-            [0.5, -0.5, -0.5],
-            [0.5, 0.5, -0.5],
-            [-0.5, 0.5, -0.5],
-            [-0.5, -0.5, 0.5],
-            [0.5, -0.5, 0.5],
-            [0.5, 0.5, 0.5],
-            [-0.5, 0.5, 0.5],
-        ]
-    )
-    center = bbox.coords[:3]
-    size = bbox.coords[3:]
-
-    rotation_mat = np.zeros((3, 3))
-    rotation_mat[0] = bbox.rotation[:3]
-    rotation_mat[1] = bbox.rotation[3:6]
-    rotation_mat[2] = bbox.rotation[6:]
-
-    # Scale the unit cube corners by the size and translate them to the center of the bounding box
-    scaled_corners = unit_cube_corners * size
-    rotated_corners = (rotation_mat @ scaled_corners.T).T
-    translated_corners = rotated_corners + center
-    return translated_corners
-
-
-def project_points(points_3d, f, c, extrinsics):
-    """Projects 3D points onto a 2D image plane.
-
-     points_3d: (N, 3)
-    f: focale (fx, fy)
-    c: centre (cx, cy)
-    extrinsics: extrinsic matrix (4x4)
-    """
-    N = len(points_3d)
-
-    # homogeneous coordinates (N, 4)
-    points_h = np.hstack((points_3d, np.ones((N, 1))))
-
-    # world -> camera; keep x,y,z
-    points_cam = (extrinsics @ points_h.T).T[:, :3]
-    points_cam[:, 0] = np.sign(points_cam[:, 2]) * points_cam[:, 0] / points_cam[:, 2]
-    points_cam[:, 1] = np.sign(points_cam[:, 2]) * points_cam[:, 1] / points_cam[:, 2]
-    # 3D -> 2D
-    u = f[0] * points_cam[:, 0] + c[0]
-    v = f[1] * points_cam[:, 1] + c[1]
-
-    return np.stack([u, v, points_cam[:, 2]], axis=-1)

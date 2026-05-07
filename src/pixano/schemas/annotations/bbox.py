@@ -7,12 +7,14 @@
 from typing import Any, Literal
 
 import numpy as np
+from lancedb.pydantic import Vector
 from pydantic import model_validator
 from typing_extensions import Self
 
 from pixano.features.utils import boxes as bbox_utils
 from pixano.utils import issubclass_strict
 
+from ..views import CalibratedImage
 from .compressed_rle import CompressedRLE
 from .per_frame_annotation import PerFrameAnnotation
 
@@ -225,9 +227,9 @@ class BBox3D(PerFrameAnnotation):
         confidence: Bounding box confidence if predicted. -1 if not predicted.
     """
 
-    coords: list[float]
+    coords: Vector(6)  # type: ignore[valid-type]
     format: str
-    rotation: list[float]
+    rotation: Vector(9)  # type: ignore[valid-type]
     is_normalized: bool
     confidence: float = -1.0
 
@@ -261,6 +263,87 @@ class BBox3D(PerFrameAnnotation):
             is_normalized=False,
             confidence=-1,
         )
+
+    def get_3dbbox_corners(self) -> np.ndarray:
+        """Get the corners of a 3D bounding box."""
+        # Define the corners of a unit cube centered at the origin
+        unit_cube_corners = np.array(
+            [
+                [-0.5, -0.5, -0.5],
+                [0.5, -0.5, -0.5],
+                [0.5, 0.5, -0.5],
+                [-0.5, 0.5, -0.5],
+                [-0.5, -0.5, 0.5],
+                [0.5, -0.5, 0.5],
+                [0.5, 0.5, 0.5],
+                [-0.5, 0.5, 0.5],
+            ]
+        )
+        center = self.coords[:3]
+        size = self.coords[3:]
+
+        rotation_mat = np.zeros((3, 3))
+        rotation_mat[0] = self.rotation[:3]
+        rotation_mat[1] = self.rotation[3:6]
+        rotation_mat[2] = self.rotation[6:]
+
+        # Scale the unit cube corners by the size and translate them to the center of the bounding box
+        scaled_corners = unit_cube_corners * size
+        rotated_corners = (rotation_mat @ scaled_corners.T).T
+        translated_corners = rotated_corners + center
+        return translated_corners
+
+    def get_bbox2d_coords(self, calibrated_image: CalibratedImage) -> list[float]:
+        """Get the 2D bounding box coordinates corresponding to the 3D bounding box for a given camera.
+        return [] if the 3D bounding box is not visible in the camera view.
+
+        Args:
+            calibrated_image: The calibrated image of the camera.
+        """
+        projected_corners = project_points(
+            self.get_3dbbox_corners(),
+            calibrated_image.f,
+            calibrated_image.c,
+            extrinsics=np.array(calibrated_image.extrinsic_matrix).reshape(4, 4),
+        )
+
+        if np.any(projected_corners[:, 2] < 0):
+            return []
+
+        minx, maxx = np.min(projected_corners[:, 0]), np.max(projected_corners[:, 0])
+        miny, maxy = np.min(projected_corners[:, 1]), np.max(projected_corners[:, 1])
+
+        if minx > calibrated_image.width or maxx < 0 or miny > calibrated_image.height or maxy < 0:
+            return []
+
+        minx, maxx = np.clip([minx, maxx], 0, calibrated_image.width)
+        miny, maxy = np.clip([miny, maxy], 0, calibrated_image.height)
+        sizex, sizey = maxx - minx, maxy - miny
+        return [minx, miny, sizex, sizey]
+
+
+def project_points(points_3d, f, c, extrinsics):
+    """Projects 3D points onto a 2D image plane.
+
+     points_3d: (N, 3)
+    f: focale (fx, fy)
+    c: centre (cx, cy)
+    extrinsics: extrinsic matrix (4x4)
+    """
+    N = len(points_3d)
+
+    # homogeneous coordinates (N, 4)
+    points_h = np.hstack((points_3d, np.ones((N, 1))))
+
+    # world -> camera; keep x,y,z
+    points_cam = (extrinsics @ points_h.T).T[:, :3]
+    points_cam[:, 0] = np.sign(points_cam[:, 2]) * points_cam[:, 0] / points_cam[:, 2]
+    points_cam[:, 1] = np.sign(points_cam[:, 2]) * points_cam[:, 1] / points_cam[:, 2]
+    # 3D -> 2D
+    u = f[0] * points_cam[:, 0] + c[0]
+    v = f[1] * points_cam[:, 1] + c[1]
+
+    return np.stack([u, v, points_cam[:, 2]], axis=-1)
 
 
 def is_bbox(cls: type, strict: bool = False) -> bool:
