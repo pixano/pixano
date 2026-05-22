@@ -6,6 +6,7 @@
 
 """Canonical API resource definitions."""
 
+import typing
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -69,6 +70,7 @@ from .models import (
 
 
 CreateValidator = Callable[[Any, dict[str, Any]], None]
+PayloadPadder = Callable[[type[LanceModel], dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +92,43 @@ class ResourceSpec:
     allow_update: bool = True
     allow_delete: bool = True
     validate_create: CreateValidator | None = None
+    pad_payload: PayloadPadder | None = None
+
+
+def _pad_entity_payload(schema: type[LanceModel], payload: dict[str, Any]) -> dict[str, Any]:
+    """Fill type-appropriate empty defaults for required fields missing from payload.
+
+    Handles the case where the entity table uses a custom subschema with extra
+    required fields (e.g. CategoryEntity.category) while the UI only sends base
+    Entity fields.  The padded row can be updated with real values later.
+    """
+    import logging
+
+    logger_ = logging.getLogger(__name__)
+    patched = dict(payload)
+    for field_name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
+        if field_name in patched or not field_info.is_required():
+            continue
+        ann = field_info.annotation
+        origin = typing.get_origin(ann)
+        if ann is str:
+            patched[field_name] = ""
+        elif ann is int:
+            patched[field_name] = 0
+        elif ann is float:
+            patched[field_name] = 0.0
+        elif ann is bool:
+            patched[field_name] = False
+        elif origin in (list, tuple):
+            patched[field_name] = []
+        else:
+            logger_.warning(
+                "Cannot pad required field %r of unhandled type %r on schema %s — " "row may fail validation",
+                field_name,
+                ann,
+                schema.__name__,
+            )
+    return patched
 
 
 def _validate_entity_create(service: Any, data: dict[str, Any]) -> None:
@@ -167,6 +206,7 @@ ENTITY_RESOURCE = ResourceSpec(
     response_model=EntityResponse,
     list_filters=("record_id", "where"),
     validate_create=_validate_entity_create,
+    pad_payload=_pad_entity_payload,
 )
 
 ENTITY_DYNAMIC_STATE_RESOURCE = ResourceSpec(
@@ -385,6 +425,7 @@ __all__ = [
     "MASK_RESOURCE",
     "MESSAGE_RESOURCE",
     "MULTI_PATH_RESOURCE",
+    "PayloadPadder",
     "ResourceSpec",
     "TEXT_SPAN_RESOURCE",
     "TRACKLET_RESOURCE",

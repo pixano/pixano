@@ -4,41 +4,153 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import * as api from "$lib/api";
+import type { ImageWidgetStorage, ResourceMutation } from "$lib/annotations/types.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 
+import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
+import type { Viewport } from "./layoutPlanner.js";
+import { MutationQueue } from "./mutationQueue.svelte.js";
+import { RecordLoader } from "./recordLoader.js";
+import { WorkspaceSession } from "./workspaceSession.svelte.js";
+
 /**
- * Reactive workspace manager using Svelte 5 $state runes.
- * Manages the collection of widget instances and bridges
- * between the WidgetRegistry (blueprints) and GridStack (DOM).
+ * Reactive workspace facade. Owns:
+ *
+ *   - widget instances + their per-instance storage,
+ *   - edit-mode and preset UI state,
+ *   - the wiring that composes the sub-services
+ *     (`WorkspaceSession`, `MutationQueue`, `RecordLoader`).
+ *
+ * Everything else delegates:
+ *
+ *  - `datasetId`, `recordId`         → `WorkspaceSession`
+ *  - `pendingMutations`, `saving`,   → `MutationQueue`
+ *    `saveError`, `pendingCount`,
+ *    `queueMutation`, `flushSave`,
+ *    `dropMutationsForLocalBBox`
+ *  - `selectRecordInDataset`         → `RecordLoader`
+ *
+ * The single public surface keeps consumers (LeftPanel, Toolbar,
+ * StatusBar, ImageWidget, GridWorkspace, RightPanel) reaching through
+ * `manager.X` regardless of where the implementation lives.
  */
 export class WorkspaceManager {
   widgets = $state<WidgetInstance[]>([]);
   editMode = $state(true);
   presetName = $state("Default");
-  datasetId = $state<string | null>("NSn7gHtkh6366dWXz6kdwF");
-  recordId = $state<string | null>("85dMNwowyc7ZXQrWNSyBmc");
-
   widgetCount = $derived(this.widgets.length);
 
   private registry: WidgetRegistry;
   private storageMap: Map<string, Record<string, unknown>> = new Map();
 
-  constructor(registry: WidgetRegistry) {
+  private session: WorkspaceSession;
+  private mutations: MutationQueue;
+  private loader: RecordLoader;
+
+  constructor(registry: WidgetRegistry, gateway: DatasetGateway = httpDatasetGateway) {
     this.registry = registry;
+    this.session = new WorkspaceSession();
+
+    // Locator closure keeps `ImageWidgetStorage`-shape knowledge confined
+    // to this wiring; `MutationQueue` itself stays widget-storage-agnostic.
+    this.mutations = new MutationQueue(gateway, this.session, {
+      findLocalBBox: (widgetId, localBBoxId) => {
+        const storage = this.storageMap.get(widgetId) as
+          | ImageWidgetStorage
+          | undefined;
+        return storage?.bboxes.find((b) => b.id === localBBoxId);
+      },
+    });
+
+    this.loader = new RecordLoader({
+      workspace: this,
+      registry,
+      gateway,
+      session: this.session,
+    });
   }
 
-  /** Add a new widget instance for the given extension name */
-  addWidget(extensionName: string, overrides?: Partial<WidgetInstance>): WidgetInstance | null {
+  // ─── Session forwarders ───────────────────────────────────────────────────
+  // Reading a `$state` through a getter triggers Svelte 5 reactivity at
+  // the consumer's read site, so templates like `manager.datasetId` track
+  // updates as if the field lived on this class.
+
+  get datasetId(): string | null {
+    return this.session.datasetId;
+  }
+
+  get recordId(): string | null {
+    return this.session.recordId;
+  }
+
+  // ─── Mutation queue forwarders ────────────────────────────────────────────
+
+  get pendingMutations(): ResourceMutation[] {
+    return this.mutations.pending;
+  }
+
+  get pendingCount(): number {
+    return this.mutations.count;
+  }
+
+  get saving(): boolean {
+    return this.mutations.saving;
+  }
+
+  get saveError(): string | null {
+    return this.mutations.saveError;
+  }
+
+  /** Queue a resource mutation for the next `flushSave`. */
+  queueMutation(mutation: ResourceMutation): void {
+    this.mutations.queue(mutation);
+  }
+
+  /** Drop every queued mutation referencing the given local bbox id. */
+  dropMutationsForLocalBBox(localBBoxId: string): ResourceMutation[] {
+    return this.mutations.dropForLocalBBox(localBBoxId);
+  }
+
+  /** Flush every queued mutation to the backend. */
+  flushSave(): Promise<void> {
+    return this.mutations.flush();
+  }
+
+  // ─── Record loader forwarder ──────────────────────────────────────────────
+
+  /** Load a record's widgets via the registered extensions' `addRecordSeed` hooks. */
+  selectRecordInDataset(
+    datasetId: string,
+    recordId: string,
+    viewport?: Viewport,
+  ): Promise<void> {
+    return this.loader.load(datasetId, recordId, viewport);
+  }
+
+  // ─── Widget lifecycle ─────────────────────────────────────────────────────
+
+  /**
+   * Add a new widget instance for the given extension name.
+   *
+   * `seedStorage` is merged into the storage object built by the
+   * extension's `addStorage()` factory, so the widget is created already
+   * populated with its starting state (e.g. pre-fetched bboxes from
+   * `RecordLoader`).
+   */
+  addWidget(
+    extensionName: string,
+    overrides?: Partial<WidgetInstance>,
+    seedStorage?: Record<string, unknown>,
+  ): WidgetInstance | null {
     const config = this.registry.get(extensionName);
     if (!config) {
-      console.warn(`Extension "${extensionName}" not found in registry`);
-      return null;
+      throw new Error(`Extension "${extensionName}" not found in registry`);
+
     }
 
     const options = config.addOptions?.() ?? {};
-    const storage = config.addStorage?.() ?? {};
+    const storage = { ...(config.addStorage?.() ?? {}), ...(seedStorage ?? {}) };
 
     const widget: WidgetInstance = {
       id: crypto.randomUUID(),
@@ -54,13 +166,13 @@ export class WorkspaceManager {
     return widget;
   }
 
-  /** Remove a widget by ID */
+  /** Remove a widget by ID. */
   removeWidget(id: string): void {
     this.storageMap.delete(id);
     this.widgets = this.widgets.filter((w) => w.id !== id);
   }
 
-  /** Update a widget's grid layout */
+  /** Update a widget's grid layout. */
   updateLayout(id: string, layout: Partial<WidgetLayout>): void {
     const widget = this.widgets.find((w) => w.id === id);
     if (widget) {
@@ -68,98 +180,30 @@ export class WorkspaceManager {
     }
   }
 
-  /** Get the mutable storage for a widget instance */
+  /** Get the mutable storage for a widget instance. */
   getStorage(id: string): Record<string, unknown> | undefined {
     return this.storageMap.get(id);
   }
 
-  /** Clear the workspace */
+  /**
+   * Clear the visual workspace. The active `datasetId`/`recordId`
+   * selection is intentionally preserved so a subsequent `flushSave`
+   * still targets whatever record the user last opened.
+   */
   clearWorkspace(): void {
     this.storageMap.clear();
     this.widgets = [];
+    this.mutations.reset();
   }
 
-  /** Apply a workspace preset, replacing all current widgets */
+  /** Apply a workspace preset, replacing all current widgets. */
   applyPreset(preset: WorkspacePreset): void {
-    // Clear existing
     this.storageMap.clear();
     this.widgets = [];
     this.presetName = preset.name;
 
-    // Add widgets from preset
     for (const template of preset.widgets) {
       this.addWidget(template.extensionName, template);
-    }
-  }
-
-  async selectRecordInDataset(datasetId: string, recordId: string): Promise<void> {
-    const dataset = await api.getDataset(datasetId);
-    const views = dataset.info.views ?? {};
-
-    // Keep only views we know how to render, preserving dataset order.
-    const renderableBases = new Set(["Image", "PointCloud", "SequenceFrame", "Text"]);
-    const viewEntries = Object.entries(views).filter(([, v]) => !!v.base && renderableBases.has(v.base));
-    const n = viewEntries.length;
-    if (n === 0) return;
-
-    // Compute a grid layout that fits all widgets on screen.
-    // GridStack uses 12 columns with square cells, so we target a total
-    // number of cell-rows that matches the grid container's aspect ratio,
-    // which keeps every widget visible without scrolling.
-    const TOTAL_COLS = 12;
-    const gridEl = typeof document !== "undefined" ? document.querySelector(".grid-stack") : null;
-    const containerW = (gridEl as HTMLElement | null)?.clientWidth ?? 1600;
-    const containerH = (gridEl as HTMLElement | null)?.clientHeight ?? 900;
-    const totalRows = Math.max(2, Math.round((TOTAL_COLS * containerH) / containerW));
-
-    const cols = Math.min(TOTAL_COLS, Math.ceil(Math.sqrt(n)));
-    const rows = Math.ceil(n / cols);
-    const w = Math.max(1, Math.floor(TOTAL_COLS / cols));
-    const h = Math.max(1, Math.floor(totalRows / rows));
-
-    for (let i = 0; i < n; i++) {
-      const [viewName, viewDef] = viewEntries[i];
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const layout: WidgetLayout = { x: col * w, y: row * h, w, h };
-
-      if (viewDef.base === "Image") {
-        const imageUrl = await api
-          .loadImageByLogicalName(datasetId, recordId, viewName)
-          .then((image) => image?.src);
-        this.addWidget("image", {
-          extensionName: "image",
-          title: viewName,
-          layout,
-          options: {},
-          data: { imageUrl },
-        });
-      } else if (viewDef.base === "PointCloud") {
-        const pointCloudUrl = await api
-          .loadPointCloudByLogicalName(datasetId, recordId, viewName)
-          .then((pointCloud) => pointCloud?.src);
-        this.addWidget("point-cloud", {
-          extensionName: "point-cloud",
-          title: viewName,
-          layout,
-          options: {},
-          data: { pointCloudUrl },
-        });
-      } else if (viewDef.base === "SequenceFrame") {
-        this.addWidget("sequence-frame", {
-          extensionName: "sequence-frame",
-          title: viewName,
-          layout,
-          options: {},
-        });
-      } else if (viewDef.base === "Text") {
-        this.addWidget("text", {
-          extensionName: "text",
-          title: viewName,
-          layout,
-          options: {},
-        });
-      }
     }
   }
 }

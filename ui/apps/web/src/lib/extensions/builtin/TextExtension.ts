@@ -4,8 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { WidgetExtension } from "../WidgetExtension.js";
 import TextWidget from "$lib/components/widgets/TextWidget.svelte";
+
+import { WidgetExtension } from "../WidgetExtension.js";
 
 export const TextExtension = WidgetExtension.create({
   name: "text",
@@ -20,4 +21,10 @@ export const TextExtension = WidgetExtension.create({
   addStorage: () => ({
     editorInstance: null,
   }),
+  // The text widget has no per-record fetch; it just claims any `Text`
+  // view and renders an editor pane.
+  addRecordSeed: ({ viewName, viewDef }) =>
+    viewDef.base === "Text"
+      ? Promise.resolve({ title: viewName, options: {} })
+      : Promise.resolve(null),
 });

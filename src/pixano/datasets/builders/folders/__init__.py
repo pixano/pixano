@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-from .builder_3d import Dataset3DBuilder
 from .folder_base_builder import FolderBaseBuilder
 from .image import ImageFolderBuilder
 from .mel import MelFolderBuilder
@@ -20,5 +19,12 @@ __all__ = [
     "PointCloudFolderBuilder",
     "VideoFolderBuilder",
     "VQAFolderBuilder",
-    "Dataset3DBuilder",
 ]
+
+# tri3d is an optional external dependency — only expose Dataset3DBuilder when it's installed.
+try:
+    from .builder_3d import Dataset3DBuilder
+
+    __all__ = [*__all__, "Dataset3DBuilder"]
+except ImportError:
+    pass

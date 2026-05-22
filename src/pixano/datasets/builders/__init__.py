@@ -6,7 +6,6 @@
 
 from .dataset_builder import DatasetBuilder
 from .folders import (
-    Dataset3DBuilder,
     FolderBaseBuilder,
     ImageFolderBuilder,
     MelFolderBuilder,
@@ -18,7 +17,6 @@ from .folders import (
 
 __all__ = [
     "DatasetBuilder",
-    "Dataset3DBuilder",
     "FolderBaseBuilder",
     "ImageFolderBuilder",
     "MelFolderBuilder",
@@ -26,3 +24,10 @@ __all__ = [
     "VideoFolderBuilder",
     "VQAFolderBuilder",
 ]
+
+try:
+    from .folders import Dataset3DBuilder
+
+    __all__ = [*__all__, "Dataset3DBuilder"]
+except ImportError:
+    pass

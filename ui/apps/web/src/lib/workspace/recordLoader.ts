@@ -1,0 +1,162 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import type { EntityRow } from "$lib/api/annotations.js";
+import type { WidgetInstance } from "$lib/extensions/types.js";
+import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
+
+import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
+import {
+  measureGridViewport,
+  planViewportLayouts,
+  type Viewport,
+} from "./layoutPlanner.js";
+import type { RecordWidgetSeed } from "./recordSeed.js";
+import type { WorkspaceSession } from "./workspaceSession.svelte.js";
+
+/**
+ * Minimal write surface the loader needs. Defined as an interface so
+ * tests (and any future alternative loader) can provide a stand-in
+ * without coupling to the full `WorkspaceManager` class.
+ */
+export interface WidgetSink {
+  addWidget(
+    extensionName: string,
+    overrides?: Partial<WidgetInstance>,
+    seedStorage?: Record<string, unknown>,
+  ): WidgetInstance | null;
+}
+
+export interface RecordLoaderDeps {
+  workspace: WidgetSink;
+  registry: WidgetRegistry;
+  /**
+   * The combined `DatasetGateway` is accepted so it can be passed through
+   * to each extension's `addRecordSeed` via `SeedContext.gateway`. The
+   * loader itself only ever calls `RecordReadGateway` methods on it.
+   */
+  gateway: DatasetGateway;
+  session: WorkspaceSession;
+}
+
+/**
+ * Materializes the widget set for a (dataset, record) selection by
+ * delegating per-view materialization to each extension's `addRecordSeed`.
+ */
+export class RecordLoader {
+  private workspace: WidgetSink;
+  private registry: WidgetRegistry;
+  private gateway: DatasetGateway;
+  private readGateway: RecordReadGateway;
+  private session: WorkspaceSession;
+  // Incremented on every load() call. Each async continuation checks that it
+  // still holds the current token before mutating workspace state, so a
+  // rapid record-switch never lets a stale load overwrite the newer one.
+  private loadToken = 0;
+
+  constructor(deps: RecordLoaderDeps) {
+    this.workspace = deps.workspace;
+    this.registry = deps.registry;
+    this.gateway = deps.gateway;
+    this.readGateway = deps.gateway;
+    this.session = deps.session;
+  }
+
+  async load(
+    datasetId: string,
+    recordId: string,
+    viewport: Viewport = measureGridViewport(),
+  ): Promise<void> {
+    const token = ++this.loadToken;
+
+    // Track the active selection so queued mutations (`MutationQueue.flush`,
+    // entity creation, etc.) hit the right dataset and so the UI reflects
+    // it. Set *before* the awaits below so a mid-load `clearWorkspace`
+    // still leaves a consistent session.
+    this.session.datasetId = datasetId;
+    this.session.recordId = recordId;
+
+    // Kick off both the dataset metadata fetch and the entities listing in
+    // parallel — they don't depend on each other and the entities call is
+    // record-scoped, not view-scoped.
+    const [dataset, entityRows] = await Promise.all([
+      this.readGateway.getDataset(datasetId),
+      this.readGateway.listEntities(datasetId, { recordId }).catch(() => [] as EntityRow[]),
+    ]);
+
+    // A newer load() was started while we were awaiting — discard our results.
+    if (token !== this.loadToken) return;
+
+    // Entities are record-scoped (a bbox points at an entity via
+    // entity_id, and that entity row lives in the dataset's single
+    // entities table), so we look them up once and hand each extension's
+    // seed the same map.
+    const entitiesById = new Map<string, EntityRow>();
+    for (const entity of entityRows) entitiesById.set(entity.id, entity);
+
+    const candidates = Object.entries(dataset.info.views ?? {});
+    const extensions = this.registry.getAll();
+
+    type ResolvedSeed = {
+      extensionName: string;
+      viewName: string;
+      seed: RecordWidgetSeed;
+    };
+
+    // For each view, ask every extension (in registry priority order)
+    // whether it claims it; the first non-null seed wins. Views are
+    // resolved in parallel: a record with N sensors costs roughly one
+    // round-trip's worth of latency, not N. Inside one view the
+    // extension scan is sequential, but extensions are few and the first
+    // match returns immediately.
+    const resolved = await Promise.all(
+      candidates.map(async ([viewName, viewDef]): Promise<ResolvedSeed | null> => {
+        for (const ext of extensions) {
+          if (!ext.addRecordSeed) continue;
+          const seed = await ext.addRecordSeed({
+            datasetId,
+            recordId,
+            viewName,
+            viewDef,
+            entitiesById,
+            gateway: this.gateway,
+          });
+          if (seed) {
+            return { extensionName: ext.name, viewName, seed };
+          }
+        }
+        return null;
+      }),
+    );
+
+    const claimed = resolved.filter((s): s is ResolvedSeed => s !== null);
+
+    if (claimed.length === 0) {
+      throw new Error(`No renderable views for record "${recordId}" in dataset "${datasetId}".`);
+    }
+
+    const layouts = planViewportLayouts(claimed.length, viewport);
+
+    // Materialize widgets in the dataset's declared view order so on-screen
+    // placement matches the schema (e.g. cameras left-to-right, lidar
+    // after); the parallel resolution above only races fetches, not
+    // ordering.
+    for (let i = 0; i < claimed.length; i++) {
+      const { extensionName, viewName, seed } = claimed[i];
+      this.workspace.addWidget(
+        extensionName,
+        {
+          extensionName,
+          title: seed.title ?? viewName,
+          layout: layouts[i],
+          options: seed.options,
+          data: seed.data,
+        },
+        seed.storage as Record<string, unknown> | undefined,
+      );
+    }
+  }
+}

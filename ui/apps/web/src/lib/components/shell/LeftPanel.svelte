@@ -11,6 +11,7 @@ License: CECILL-C
   import WidgetPalette from "$lib/components/sidebar/WidgetPalette.svelte";
   import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
+  import { measureGridViewport } from "$lib/workspace/layoutPlanner.js";
   import { listDatasets, listRecords } from "$lib/api/datasets";
   import type { DatasetInfo } from "$lib/types/dataset";
   import type { RecordResponse } from "$lib/api/restTypes";
@@ -111,7 +112,11 @@ License: CECILL-C
   async function openRecord(recordId: string) {
     if (!selectedDataset) return;
     manager.clearWorkspace();
-    await manager.selectRecordInDataset(selectedDataset.id, recordId);
+    // Measure the grid viewport from this component (which lives next to
+    // GridWorkspace in the page) and pass it explicitly. Keeping the DOM
+    // read here lets the manager stay environment-agnostic and unit-testable.
+    const viewport = measureGridViewport();
+    await manager.selectRecordInDataset(selectedDataset.id, recordId, viewport);
   }
 </script>
 

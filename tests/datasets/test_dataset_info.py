@@ -43,6 +43,7 @@ class TestDatasetInfo:
             "entity",
             "entity_dynamic_state",
             "bbox",
+            "bbox3d",
             "mask",
             "multi_path",
             "keypoint",
@@ -101,6 +102,7 @@ class TestDatasetInfo:
         "base": "BBox",
         "fields": {}
     },
+    "bbox3d": null,
     "mask": null,
     "keypoint": null,
     "tracklet": null,

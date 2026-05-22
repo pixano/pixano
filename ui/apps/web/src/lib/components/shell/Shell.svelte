@@ -13,7 +13,6 @@ License: CECILL-C
   import GridWorkspace from "$lib/components/grid/GridWorkspace.svelte";
   import { PanelState, ResizablePanel } from "$lib/components/ui/resizable-panel/index.js";
   import { createDefaultRegistry } from "$lib/extensions/builtin/index.js";
-  import { DEFAULT_PRESET } from "$lib/workspace/presets.js";
   import { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
   const registry = createDefaultRegistry();
