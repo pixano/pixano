@@ -65,20 +65,22 @@ export interface MutationGateway {
     body: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
 
-  createBBox(
+  deleteEntity(datasetId: string, id: string): Promise<void>;
+
+  createAnnotation(
     datasetId: string,
+    resource: string,
     body: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
 
-  updateBBox(
+  updateAnnotation(
     datasetId: string,
+    resource: string,
     id: string,
     body: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
 
-  deleteBBox(datasetId: string, id: string): Promise<void>;
-
-  deleteEntity(datasetId: string, id: string): Promise<void>;
+  deleteAnnotation(datasetId: string, resource: string, id: string): Promise<void>;
 }
 
 /** Combined read+write gateway used by the workspace facade. */
@@ -100,8 +102,8 @@ export const httpDatasetGateway: DatasetGateway = {
   listBBox3Ds: (datasetId, params) => api.listBBox3Ds(datasetId, params),
 
   createEntity: (datasetId, body) => api.createEntity(datasetId, body),
-  createBBox: (datasetId, body) => api.createBBox(datasetId, body),
-  updateBBox: (datasetId, id, body) => api.updateBBox(datasetId, id, body),
-  deleteBBox: (datasetId, id) => api.deleteBBox(datasetId, id),
   deleteEntity: (datasetId, id) => api.deleteEntity(datasetId, id),
+  createAnnotation: (datasetId, resource, body) => api.createAnnotation(datasetId, resource, body),
+  updateAnnotation: (datasetId, resource, id, body) => api.updateAnnotation(datasetId, resource, id, body),
+  deleteAnnotation: (datasetId, resource, id) => api.deleteAnnotation(datasetId, resource, id),
 };

@@ -34,10 +34,10 @@ function makeGateway(image: ImageResponse | null, bboxes: BBoxRow[]): DatasetGat
     loadPointCloudByLogicalName: () => Promise.resolve(null),
     listBBox3Ds: () => Promise.resolve([]),
     createEntity: () => Promise.resolve({}),
-    createBBox: () => Promise.resolve({}),
-    updateBBox: () => Promise.resolve({}),
-    deleteBBox: () => Promise.resolve(),
     deleteEntity: () => Promise.resolve(),
+    createAnnotation: () => Promise.resolve({}),
+    updateAnnotation: () => Promise.resolve({}),
+    deleteAnnotation: () => Promise.resolve(),
   };
 }
 
