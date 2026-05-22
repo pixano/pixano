@@ -56,6 +56,7 @@ class TestDatasetInfo:
             "entity",
             "entity_dynamic_state",
             "bbox",
+            "bbox3d",
             "mask",
             "multi_path",
             "keypoint",
@@ -109,6 +110,7 @@ class TestDatasetInfo:
         assert dumped["entity"] == {"base": "Entity", "fields": {}}
         assert dumped["entity_dynamic_state"] is None
         assert dumped["bbox"] == {"base": "BBox", "fields": {}}
+        assert dumped["bbox3d"] is None
         assert dumped["mask"] is None
         assert dumped["keypoint"] is None
         assert dumped["classification"] is None

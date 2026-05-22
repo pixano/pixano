@@ -18,10 +18,8 @@ License: CECILL-C
 
   let ready = $state(false);
   let error = $state<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let CanvasComponent = $state<Component<any> | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let SceneComponent = $state<Component<any> | null>(null);
+  let CanvasComponent = $state<Component | null>(null);
+  let SceneComponent = $state<Component | null>(null);
 
   onMount(async () => {
     try {
@@ -50,7 +48,12 @@ License: CECILL-C
   {:else if ready && CanvasComponent && SceneComponent}
     <div class="absolute inset-0">
       <CanvasComponent>
-        <SceneComponent pointCloudUrl={data?.pointCloudUrl as string | undefined} />
+        <SceneComponent
+          pointCloudUrl={data?.pointCloudUrl as string | undefined}
+          bboxes3d={data?.bboxes3d as
+            | import("$lib/api/annotations").LocalBBox3D[]
+            | undefined}
+        />
       </CanvasComponent>
     </div>
   {:else}

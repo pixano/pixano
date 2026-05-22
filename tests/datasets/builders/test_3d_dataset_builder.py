@@ -8,9 +8,13 @@ import shutil
 from pathlib import Path
 
 import lancedb
-from tri3d.datasets import NuScenes
+import pytest
 
-from pixano.datasets.builders import Dataset3DBuilder
+
+pytest.importorskip("tri3d", reason="tri3d optional dependency not installed")
+from tri3d.datasets import NuScenes  # noqa: E402
+
+from pixano.datasets.builders import Dataset3DBuilder  # noqa: E402
 
 
 def test_3d_dataset_builder():

@@ -51,16 +51,17 @@ class BaseService:
     def resolve_table(self) -> str:
         """Resolve the backing table for this resource.
 
-        For annotation resources, if the canonical table does not exist yet it
-        is created on the fly with the base schema.  This lets users start
-        annotating immediately even when the ``DatasetInfo`` did not originally
-        declare the slot.  To use a **custom** schema with extra fields,
+        For annotation and entity resources, if the canonical table does not
+        exist yet it is created on the fly with the base schema.  This lets
+        users start annotating immediately even when the ``DatasetInfo`` did
+        not originally declare the slot (e.g. a 3D-only dataset that gains 2D
+        bbox annotations).  To use a **custom** schema with extra fields,
         recreate the dataset with ``DatasetInfo(<slot>=YourCustomSchema)``.
         """
         resolved_table = self.resource.canonical_table_name
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
-            if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            if self.resource.schema_group in (SchemaGroup.ANNOTATION, SchemaGroup.ENTITY):
                 with self.dataset.write_lock():
                     if resolved_table in self.dataset.info.tables:
                         return self.resolve_table()
@@ -71,6 +72,11 @@ class BaseService:
                         self.resource.schema_cls.__name__,
                     )
                     self.dataset.create_table(resolved_table, self.resource.schema_cls, exist_ok=True)
+                    # Update the in-memory tables dict so that subsequent
+                    # validate_entity_exists / validate_tracklet_exists calls
+                    # can find the newly created table within the same request
+                    # chain without requiring a full reload from disk.
+                    self.dataset.info.tables[resolved_table] = self.resource.schema_cls
                     # Persist the slot as well as the physical table.
                     slot_name = self.resource.name
                     if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
@@ -267,6 +273,9 @@ class BaseService:
             self.resource.validate_create(self, payload)
 
         schema = self.dataset.info.tables[resolved_table]
+        if self.resource.pad_payload is not None:
+            payload = self.resource.pad_payload(schema, payload)
+
         try:
             row = schema.model_validate(payload)
         except Exception as err:

@@ -6,6 +6,8 @@ License: CECILL-C
 
 import type { Component } from "svelte";
 
+import type { RecordWidgetSeed, SeedContext } from "$lib/workspace/recordSeed.js";
+
 /** Grid position and size for a widget instance */
 export interface WidgetLayout {
   x: number;
@@ -83,6 +85,14 @@ export interface WidgetExtensionConfig<
 
   /** Child extensions this extension bundles (composition pattern) */
   addExtensions?: () => WidgetExtensionConfig[];
+
+  /**
+   * Optional: claim a (record, view) pair and produce a seed describing how
+   * to instantiate this widget for it. See `lib/workspace/recordSeed.ts`
+   * for the rationale. Return `null` if this view isn't ours so the
+   * `WorkspaceManager` can ask the next extension.
+   */
+  addRecordSeed?: (ctx: SeedContext) => Promise<RecordWidgetSeed<TStorage> | null>;
 }
 
 /** A widget instance in the workspace */

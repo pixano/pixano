@@ -36,6 +36,7 @@ License: CECILL-C
 
     const component = mount(WidgetFrame, {
       target: element,
+      context: new Map<string, unknown>([["workspaceManager", manager]]),
       props: {
         widget,
         config,
@@ -45,13 +46,19 @@ License: CECILL-C
 
     mountedWidgets.set(widget.id, component);
 
+    // Honor the computed layout even when it is below the extension's default
+    // minW/minH; otherwise GridStack silently enlarges the widget and breaks
+    // the alignment of programmatically computed grids.
+    const minW = Math.min(widget.layout.w, config.defaultLayout.minW ?? 2);
+    const minH = Math.min(widget.layout.h, config.defaultLayout.minH ?? 2);
+
     grid.makeWidget(element, {
       x: widget.layout.x,
       y: widget.layout.y,
       w: widget.layout.w,
       h: widget.layout.h,
-      minH: config.defaultLayout.minH ?? 2,
-      minW: config.defaultLayout.minW ?? 2,
+      minH,
+      minW,
     });
   }
 

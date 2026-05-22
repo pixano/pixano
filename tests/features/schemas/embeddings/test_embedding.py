@@ -10,7 +10,7 @@ import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry
 from lancedb.pydantic import FixedSizeListMixin, pydantic_to_schema
-from numpy.core.multiarray import array as array
+from numpy import array as array
 
 from pixano.datasets.dataset import Dataset
 from pixano.features import (

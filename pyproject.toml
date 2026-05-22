@@ -112,6 +112,7 @@ exclude = [
 path = "src/pixano/__version__.py"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
     "slow: Long-running scale/soak tests, excluded from the default CI run",
