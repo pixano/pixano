@@ -18,7 +18,6 @@ const CTX = {
   datasetId: "ds-1",
   recordId: "rec-1",
   viewId: "view-1",
-  viewName: "image",
 };
 
 describe("buildBBoxCreate", () => {

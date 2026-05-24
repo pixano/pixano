@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ImageWidgetStorage, ResourceMutation } from "$lib/annotations/types.js";
+import type { ResourceMutation } from "$lib/annotations/types.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 
@@ -52,14 +52,16 @@ export class WorkspaceManager {
     this.registry = registry;
     this.session = new WorkspaceSession();
 
-    // Locator closure keeps `ImageWidgetStorage`-shape knowledge confined
-    // to this wiring; `MutationQueue` itself stays widget-storage-agnostic.
+    // Each extension owns the knowledge of its own storage shape via findLocalDraft.
+    // The manager delegates rather than enumerating widget-type-specific fields.
     this.mutations = new MutationQueue(gateway, this.session, {
       findLocalBBox: (widgetId, localBBoxId) => {
-        const storage = this.storageMap.get(widgetId) as
-          | ImageWidgetStorage
-          | undefined;
-        return storage?.bboxes.find((b) => b.id === localBBoxId);
+        const storage = this.storageMap.get(widgetId);
+        if (!storage) return undefined;
+        const widget = this.widgets.find((w) => w.id === widgetId);
+        if (!widget) return undefined;
+        const config = this.registry.get(widget.extensionName);
+        return config?.findLocalDraft?.(storage, localBBoxId);
       },
     });
 
@@ -150,7 +152,9 @@ export class WorkspaceManager {
     }
 
     const options = config.addOptions?.() ?? {};
-    const storage = { ...(config.addStorage?.() ?? {}), ...(seedStorage ?? {}) };
+    // Wrap in $state so property mutations (e.g. storage.mode = "draw-bbox3d")
+    // are tracked by Svelte's reactivity system inside widget components.
+    const storage = $state({ ...(config.addStorage?.() ?? {}), ...(seedStorage ?? {}) });
 
     const widget: WidgetInstance = {
       id: crypto.randomUUID(),

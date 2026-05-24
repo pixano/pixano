@@ -34,20 +34,20 @@ function makeGateway(opts: { failOn?: keyof MutationGateway; error?: Error } = {
       record("createEntity", args);
       return Promise.resolve({});
     },
-    createBBox: (...args) => {
-      record("createBBox", args);
-      return Promise.resolve({});
-    },
-    updateBBox: (...args) => {
-      record("updateBBox", args);
-      return Promise.resolve({});
-    },
-    deleteBBox: (...args) => {
-      record("deleteBBox", args);
-      return Promise.resolve();
-    },
     deleteEntity: (...args) => {
       record("deleteEntity", args);
+      return Promise.resolve();
+    },
+    createAnnotation: (...args) => {
+      record("createAnnotation", args);
+      return Promise.resolve({});
+    },
+    updateAnnotation: (...args) => {
+      record("updateAnnotation", args);
+      return Promise.resolve({});
+    },
+    deleteAnnotation: (...args) => {
+      record("deleteAnnotation", args);
       return Promise.resolve();
     },
   };
@@ -106,8 +106,8 @@ describe("MutationQueue.flush", () => {
 
     expect(calls.map((c) => c.method)).toEqual([
       "createEntity",
-      "createBBox",
-      "deleteBBox",
+      "createAnnotation",
+      "deleteAnnotation",
     ]);
     expect(queue.count).toBe(0);
     expect(queue.saveError).toBeNull();
@@ -135,22 +135,22 @@ describe("MutationQueue.flush", () => {
   });
 
   it("surfaces ApiError detail in saveError", async () => {
-    const apiErr = new ApiError("createBBox failed with 422 Unprocessable", 422, '{"detail":"bad"}');
-    const { gateway } = makeGateway({ failOn: "createBBox", error: apiErr });
+    const apiErr = new ApiError("createAnnotation(bboxes) failed with 422 Unprocessable", 422, '{"detail":"bad"}');
+    const { gateway } = makeGateway({ failOn: "createAnnotation", error: apiErr });
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
 
     queue.queue({ op: "create", resource: "bboxes", body: {} } as ResourceMutation);
 
     await queue.flush();
 
-    expect(queue.saveError).toContain("createBBox failed with 422");
+    expect(queue.saveError).toContain("createAnnotation(bboxes) failed with 422");
     expect(queue.saveError).toContain('{"detail":"bad"}');
     expect(queue.saving).toBe(false);
   });
 
   it("drops already-applied mutations so a retry does not re-send them", async () => {
-    const apiErr = new ApiError("createBBox failed with 422 Unprocessable", 422, '{"detail":"bad"}');
-    const { gateway, calls } = makeGateway({ failOn: "createBBox", error: apiErr });
+    const apiErr = new ApiError("createAnnotation(bboxes) failed with 422 Unprocessable", 422, '{"detail":"bad"}');
+    const { gateway, calls } = makeGateway({ failOn: "createAnnotation", error: apiErr });
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
 
     queue.queue({ op: "create", resource: "entities", body: {} } as ResourceMutation);
@@ -159,8 +159,8 @@ describe("MutationQueue.flush", () => {
 
     await queue.flush();
 
-    // createEntity ran first (sort order) and succeeded; createBBox failed.
-    expect(calls.map((c) => c.method)).toEqual(["createEntity", "createBBox"]);
+    // createEntity ran first (sort order) and succeeded; createAnnotation(bboxes) failed.
+    expect(calls.map((c) => c.method)).toEqual(["createEntity", "createAnnotation"]);
     // createEntity was dropped; createBBox and deleteBBox remain for retry.
     expect(queue.count).toBe(2);
   });
@@ -174,10 +174,10 @@ describe("MutationQueue.flush", () => {
         await inflight;
         return {};
       },
-      createBBox: () => Promise.resolve({}),
-      updateBBox: () => Promise.resolve({}),
-      deleteBBox: () => Promise.resolve(),
       deleteEntity: () => Promise.resolve(),
+      createAnnotation: () => Promise.resolve({}),
+      updateAnnotation: () => Promise.resolve({}),
+      deleteAnnotation: () => Promise.resolve(),
     };
 
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);

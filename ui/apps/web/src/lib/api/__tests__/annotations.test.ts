@@ -8,14 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../apiClient";
 import {
-  createBBox,
+  createAnnotation,
   createEntity,
-  deleteBBox,
+  deleteAnnotation,
   deleteEntity,
   listBBox3Ds,
   listBBoxes,
   listEntities,
-  updateBBox,
+  updateAnnotation,
 } from "../annotations";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -202,13 +202,13 @@ describe("createEntity", () => {
   });
 });
 
-// ─── createBBox ──────────────────────────────────────────────────────────────
+// ─── createAnnotation ────────────────────────────────────────────────────────
 
-describe("createBBox", () => {
-  it("POSTs to bboxes endpoint", async () => {
+describe("createAnnotation", () => {
+  it("POSTs to the given resource endpoint", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(okJson({ id: "new-b" }));
 
-    await createBBox(DS, { entity_id: "e1" });
+    await createAnnotation(DS, "bboxes", { entity_id: "e1" });
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`/datasets/${DS}/bboxes`);
@@ -216,40 +216,39 @@ describe("createBBox", () => {
   });
 });
 
-// ─── updateBBox ──────────────────────────────────────────────────────────────
+// ─── updateAnnotation ────────────────────────────────────────────────────────
 
-describe("updateBBox", () => {
-  it("PUTs to bboxes/:id and strips the id field from the body", async () => {
+describe("updateAnnotation", () => {
+  it("PUTs to resource/:id and strips the id field from the body", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(okJson({ id: "b1", coords: [0, 0, 0.5, 0.5] }));
 
-    await updateBBox(DS, "b1", { id: "b1", coords: [0, 0, 0.5, 0.5] });
+    await updateAnnotation(DS, "bboxes", "b1", { id: "b1", coords: [0, 0, 0.5, 0.5] });
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`/datasets/${DS}/bboxes/b1`);
     expect(init.method).toBe("PUT");
-    // id must be stripped from the patch body
     const sent = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(sent).not.toHaveProperty("id");
     expect(sent).toMatchObject({ coords: [0, 0, 0.5, 0.5] });
   });
 
-  it("URL-encodes the bbox id", async () => {
+  it("URL-encodes the annotation id", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(okJson({}));
 
-    await updateBBox(DS, "a/b c", {});
+    await updateAnnotation(DS, "bboxes", "a/b c", {});
 
     const [url] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(url).toContain("a%2Fb%20c");
   });
 });
 
-// ─── deleteBBox ──────────────────────────────────────────────────────────────
+// ─── deleteAnnotation ────────────────────────────────────────────────────────
 
-describe("deleteBBox", () => {
-  it("DELETEs the bbox by id", async () => {
+describe("deleteAnnotation", () => {
+  it("DELETEs the annotation by resource and id", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    await deleteBBox(DS, "b1");
+    await deleteAnnotation(DS, "bboxes", "b1");
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`/datasets/${DS}/bboxes/b1`);
@@ -258,12 +257,12 @@ describe("deleteBBox", () => {
 
   it("does not throw on 404 (already deleted)", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 404 }));
-    await expect(deleteBBox(DS, "gone")).resolves.toBeUndefined();
+    await expect(deleteAnnotation(DS, "bboxes", "gone")).resolves.toBeUndefined();
   });
 
   it("throws on unexpected non-404 error", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500, statusText: "Internal Server Error" }));
-    await expect(deleteBBox(DS, "b1")).rejects.toThrow("deleteBBox failed with 500");
+    await expect(deleteAnnotation(DS, "bboxes", "b1")).rejects.toThrow("deleteAnnotation(bboxes) failed with 500");
   });
 });
 

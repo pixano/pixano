@@ -28,7 +28,6 @@ export interface BuildContext {
   datasetId: string;
   recordId: string;
   viewId: string;
-  viewName: string;
 }
 
 export interface BuildBBoxResult {
@@ -135,6 +134,76 @@ export function buildBBoxUpdate(
     confidence: 1,
     ...DEFAULT_SOURCE,
   };
+}
+
+/**
+ * Build the (entity, bbox3d) create mutation pair for a new 3D box annotation.
+ * Coordinates are in Lance/backend space (xyzwhd, Z-up). Rotation defaults to
+ * identity — axis-aligned boxes only for now.
+ */
+export const DEFAULT_3D_ROTATION = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+export function buildBBox3DUpdate(
+  ctx: BuildContext,
+  bboxId: string,
+  entityId: string,
+  coordsLance: [number, number, number, number, number, number],
+  rotation?: number[],
+): Record<string, unknown> {
+  return {
+    id: bboxId,
+    record_id: ctx.recordId,
+    entity_id: entityId,
+    view_id: ctx.viewId,
+    coords: Array.from(coordsLance),
+    format: "xyzwhd",
+    rotation: rotation ?? DEFAULT_3D_ROTATION,
+    is_normalized: false,
+    confidence: 1,
+    ...DEFAULT_SOURCE,
+  };
+}
+
+export function buildBBox3DCreate(
+  ctx: BuildContext,
+  coordsLance: [number, number, number, number, number, number],
+  opts: { widgetId?: string; localBBoxId?: string; entityId?: string; bboxId?: string; rotation?: number[] } = {},
+): BuildBBoxResult {
+  const entityId = opts.entityId ?? generateShortId();
+  const bboxId = opts.bboxId ?? generateShortId();
+
+  const entityBody: Record<string, unknown> = {
+    id: entityId,
+    record_id: ctx.recordId,
+    parent_id: "",
+  };
+
+  const bboxBody: Record<string, unknown> = {
+    ...buildBBox3DUpdate(ctx, bboxId, entityId, coordsLance, opts.rotation),
+    frame_id: ctx.viewId,
+    frame_index: -1,
+    tracklet_id: "",
+    entity_dynamic_state_id: "",
+  };
+
+  const mutations: ResourceMutation[] = [
+    {
+      op: "create",
+      resource: "entities",
+      body: entityBody,
+      widgetId: opts.widgetId,
+      localBBoxId: opts.localBBoxId,
+    },
+    {
+      op: "create",
+      resource: "bbox3ds",
+      body: bboxBody,
+      widgetId: opts.widgetId,
+      localBBoxId: opts.localBBoxId,
+    },
+  ];
+
+  return { entityId, bboxId, mutations };
 }
 
 /**

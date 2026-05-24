@@ -292,7 +292,6 @@ License: CECILL-C
         datasetId: imgOptions.datasetId,
         recordId: imgOptions.recordId,
         viewId: imgOptions.viewId,
-        viewName: imgOptions.viewName,
       };
       const body = buildBBoxUpdate(ctx, bbox.id, bbox.entityId, coordsNorm);
       const existing = manager.pendingMutations.find(
@@ -439,7 +438,6 @@ License: CECILL-C
         datasetId: imgOptions.datasetId,
         recordId: imgOptions.recordId,
         viewId: imgOptions.viewId,
-        viewName: imgOptions.viewName,
       },
       coordsNorm,
       { widgetId: stableWidgetId, localBBoxId: localId },

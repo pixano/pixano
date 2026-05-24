@@ -168,41 +168,47 @@ export function createEntity(
   );
 }
 
-export function createBBox(
+export async function deleteEntity(datasetId: string, id: string): Promise<void> {
+  const res = await fetch(resourceUrl(datasetId, "entities", id), { method: "DELETE" });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`deleteEntity failed with ${res.status} ${res.statusText}`);
+  }
+}
+
+export function createAnnotation(
   datasetId: string,
+  resource: string,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   return requestJson<Record<string, unknown>>(
-    resourceUrl(datasetId, "bboxes"),
+    resourceUrl(datasetId, resource),
     { headers: JSON_HEADERS, method: "POST", body: JSON.stringify(body) },
-    "createBBox",
+    `createAnnotation(${resource})`,
   );
 }
 
-export function updateBBox(
+export function updateAnnotation(
   datasetId: string,
+  resource: string,
   id: string,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const { id: _ignored, ...patch } = body;
   void _ignored;
   return requestJson<Record<string, unknown>>(
-    resourceUrl(datasetId, "bboxes", id),
+    resourceUrl(datasetId, resource, id),
     { headers: JSON_HEADERS, method: "PUT", body: JSON.stringify(patch) },
-    "updateBBox",
+    `updateAnnotation(${resource})`,
   );
 }
 
-export async function deleteBBox(datasetId: string, id: string): Promise<void> {
-  const res = await fetch(resourceUrl(datasetId, "bboxes", id), { method: "DELETE" });
+export async function deleteAnnotation(
+  datasetId: string,
+  resource: string,
+  id: string,
+): Promise<void> {
+  const res = await fetch(resourceUrl(datasetId, resource, id), { method: "DELETE" });
   if (!res.ok && res.status !== 404) {
-    throw new Error(`deleteBBox failed with ${res.status} ${res.statusText}`);
-  }
-}
-
-export async function deleteEntity(datasetId: string, id: string): Promise<void> {
-  const res = await fetch(resourceUrl(datasetId, "entities", id), { method: "DELETE" });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`deleteEntity failed with ${res.status} ${res.statusText}`);
+    throw new Error(`deleteAnnotation(${resource}) failed with ${res.status} ${res.statusText}`);
   }
 }

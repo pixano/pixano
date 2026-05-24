@@ -83,13 +83,35 @@ export interface ImageWidgetStorage {
 }
 
 /**
+ * In-flight 3D box before the backend POST succeeds.
+ */
+export interface DraftBBox3D {
+  id: string;
+  entityId: string;
+  coordsLance: [number, number, number, number, number, number];
+  /** Lance 3×3 rotation matrix (row-major). Omitted means identity. */
+  rotation?: number[];
+  persisted: boolean;
+  entity?: Record<string, unknown>;
+}
+
+/**
+ * Mutable per-instance storage for the point-cloud widget.
+ */
+export interface PointCloudWidgetStorage {
+  mode: "navigate" | "draw-bbox3d";
+  drafts: DraftBBox3D[];
+  [key: string]: unknown;
+}
+
+/**
  * A pending mutation to be flushed to the backend by WorkspaceManager.flushSave.
  * Modeled after pixano's ResourceMutation in apps/pixano/src/lib/api/resourcePayloads.ts.
  */
 export type ResourceMutation =
   | {
       op: "create";
-      resource: "entities" | "bboxes";
+      resource: string;
       body: Record<string, unknown>;
       /** Widget this mutation belongs to; used to flip `persisted` after success. */
       widgetId?: string;
@@ -98,7 +120,7 @@ export type ResourceMutation =
     }
   | {
       op: "update";
-      resource: "bboxes";
+      resource: string;
       id: string;
       body: Record<string, unknown>;
       widgetId?: string;
@@ -106,7 +128,7 @@ export type ResourceMutation =
     }
   | {
       op: "delete";
-      resource: "bboxes" | "entities";
+      resource: string;
       id: string;
       widgetId?: string;
       localBBoxId?: string;
