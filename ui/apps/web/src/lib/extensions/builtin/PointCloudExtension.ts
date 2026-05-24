@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { BBox3DRow, LocalBBox3D } from "$lib/api/annotations.js";
+import type { PointCloudWidgetStorage } from "$lib/annotations/types.js";
 import PointCloudWidget from "$lib/components/widgets/PointCloudWidget.svelte";
 
 import { WidgetExtension } from "../WidgetExtension.js";
@@ -27,6 +28,13 @@ export const PointCloudExtension = WidgetExtension.create({
     backgroundColor: "#1e293b",
     logicalName: "",
   }),
+  addStorage: (): PointCloudWidgetStorage => ({
+    mode: "navigate",
+    drafts: [],
+  }),
+  findLocalDraft: (storage, localId) => {
+    return (storage as PointCloudWidgetStorage).drafts?.find((b) => b.id === localId);
+  },
   addRecordSeed: async ({ datasetId, recordId, viewName, viewDef, entitiesById, gateway }) => {
     if (!viewDef.base || !CLAIMED_BASES.has(viewDef.base)) return null;
 
@@ -56,7 +64,7 @@ export const PointCloudExtension = WidgetExtension.create({
     return {
       title: viewName,
       options: {},
-      data: { pointCloudUrl: pointCloud?.src, bboxes3d },
+      data: { pointCloudUrl: pointCloud?.src, bboxes3d, datasetId, recordId, viewId: pointCloud?.id ?? "" },
     };
   },
 });

@@ -22,6 +22,7 @@ coverage/
 
 # AI assistants
 CLAUDE.md
+.claude/
 
 # Docs
 site

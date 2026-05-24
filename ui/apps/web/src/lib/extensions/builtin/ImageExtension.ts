@@ -42,6 +42,9 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
     selectedId: null,
     bboxes: [],
   }),
+  findLocalDraft: (storage, localId) => {
+    return (storage as ImageWidgetStorage).bboxes?.find((b) => b.id === localId);
+  },
   addRecordSeed: async ({ datasetId, recordId, viewName, viewDef, entitiesById, gateway }) => {
     if (!viewDef.base || !CLAIMED_BASES.has(viewDef.base)) return null;
 

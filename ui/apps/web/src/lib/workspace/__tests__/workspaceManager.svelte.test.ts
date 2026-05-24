@@ -74,10 +74,10 @@ function makeGateway(state: FakeGatewayState) {
       return Promise.resolve(state.bboxes3d);
     },
     createEntity: () => Promise.resolve({}),
-    createBBox: () => Promise.resolve({}),
-    updateBBox: () => Promise.resolve({}),
-    deleteBBox: () => Promise.resolve(),
     deleteEntity: () => Promise.resolve(),
+    createAnnotation: () => Promise.resolve({}),
+    updateAnnotation: () => Promise.resolve({}),
+    deleteAnnotation: () => Promise.resolve(),
   };
   return { gateway, calls };
 }
@@ -281,7 +281,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       entityId: "ent-1",
       persisted: true,
     });
-    expect(storage?.bboxes[0].entity).toBe(entity);
+    expect(storage?.bboxes[0].entity).toStrictEqual(entity);
   });
 
   it("forwards 3D boxes (with entity attached) to the point-cloud widget data", async () => {
@@ -372,6 +372,9 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       updateBBox: () => Promise.resolve({}),
       deleteBBox: () => Promise.resolve(),
       deleteEntity: () => Promise.resolve(),
+      createBBox3D: () => Promise.resolve({}),
+      updateBBox3D: () => Promise.resolve({}),
+      deleteBBox3D: () => Promise.resolve(),
     };
 
     const manager = new WorkspaceManager(makeRegistry(), gateway);

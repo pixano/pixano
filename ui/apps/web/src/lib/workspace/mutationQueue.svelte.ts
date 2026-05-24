@@ -107,7 +107,7 @@ export class MutationQueue {
         this.pending = this.pending.filter((m) => m !== mutation);
         if (
           mutation.op === "create" &&
-          mutation.resource === "bboxes" &&
+          mutation.resource !== "entities" &&
           mutation.widgetId &&
           mutation.localBBoxId
         ) {
@@ -133,25 +133,20 @@ export class MutationQueue {
   }
 
   private async run(datasetId: string, mutation: ResourceMutation): Promise<void> {
-    if (mutation.op === "create" && mutation.resource === "entities") {
-      await this.gateway.createEntity(datasetId, mutation.body);
+    if (mutation.resource === "entities") {
+      if (mutation.op === "create") {
+        await this.gateway.createEntity(datasetId, mutation.body);
+      } else if (mutation.op === "delete") {
+        await this.gateway.deleteEntity(datasetId, mutation.id);
+      }
       return;
     }
-    if (mutation.op === "create" && mutation.resource === "bboxes") {
-      await this.gateway.createBBox(datasetId, mutation.body);
-      return;
-    }
-    if (mutation.op === "update" && mutation.resource === "bboxes") {
-      await this.gateway.updateBBox(datasetId, mutation.id, mutation.body);
-      return;
-    }
-    if (mutation.op === "delete" && mutation.resource === "bboxes") {
-      await this.gateway.deleteBBox(datasetId, mutation.id);
-      return;
-    }
-    if (mutation.op === "delete" && mutation.resource === "entities") {
-      await this.gateway.deleteEntity(datasetId, mutation.id);
-      return;
+    if (mutation.op === "create") {
+      await this.gateway.createAnnotation(datasetId, mutation.resource, mutation.body);
+    } else if (mutation.op === "update") {
+      await this.gateway.updateAnnotation(datasetId, mutation.resource, mutation.id, mutation.body);
+    } else if (mutation.op === "delete") {
+      await this.gateway.deleteAnnotation(datasetId, mutation.resource, mutation.id);
     }
   }
 }
