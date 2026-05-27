@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Lock, PanelRight, Unlock } from "lucide-svelte";
+  import { Lock, Moon, PanelRight, Sun, Unlock } from "lucide-svelte";
 
   import type { PanelState } from "$lib/components/ui/resizable-panel/PanelState.svelte.js";
+  import { themeStore } from "$lib/stores/theme.svelte.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
   import pixanoLogo from "$lib/assets/pixano.png";
   interface Props {
@@ -16,6 +17,8 @@ License: CECILL-C
   }
 
   let { manager, rightPanel }: Props = $props();
+
+  const isDark = $derived(themeStore.mode === "dark");
 
   function toggleEditMode() {
     manager.editMode = !manager.editMode;
@@ -48,6 +51,18 @@ License: CECILL-C
       {:else}
         <Lock class="h-3.5 w-3.5" />
         <span>Locked</span>
+      {/if}
+    </button>
+
+    <button
+      onclick={() => themeStore.toggle()}
+      class="flex items-center justify-center rounded-md border border-border p-1 text-xs text-foreground/70 transition-colors hover:bg-accent/50 hover:text-foreground"
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {#if isDark}
+        <Sun class="h-3.5 w-3.5" />
+      {:else}
+        <Moon class="h-3.5 w-3.5" />
       {/if}
     </button>
 
