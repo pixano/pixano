@@ -20,7 +20,7 @@ from pixano.api.settings import Settings, get_settings
 from pixano.datasets.builders.folders.image import ImageFolderBuilder
 from pixano.datasets.builders.folders.video import VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.schemas import Entity, Record
+from pixano.schemas import CompressedRLE, Entity, Record
 
 
 class _ImageEntity(Entity):
@@ -110,7 +110,7 @@ def _run_image_import(job_id: str, source_path: Path, name: str, target_name: st
             builder = ImageFolderBuilder(
                 source_dir=tmp,
                 library_dir=library_dir,
-                info=DatasetInfo(name=name, record=Record, entity=_ImageEntity),
+                info=DatasetInfo(name=name, record=Record, entity=_ImageEntity, mask=CompressedRLE),
                 target_name=target_name,
             )
             _set_job(job_id, "running", "Validating source folder…")
@@ -184,7 +184,7 @@ def _run_video_import(job_id: str, source_path: Path, name: str, target_name: st
             builder = VideoFolderBuilder(
                 source_dir=tmp,
                 library_dir=library_dir,
-                info=DatasetInfo(name=name, record=Record, entity=_VideoEntity),
+                info=DatasetInfo(name=name, record=Record, entity=_VideoEntity, mask=CompressedRLE),
                 target_name=target_name,
             )
             _set_job(job_id, "running", "Building dataset…")
