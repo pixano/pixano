@@ -32,6 +32,11 @@ License: CECILL-C
       label: "Unlabeled Images Folder",
       description: "Import a flat folder of image files (JPG, PNG, BMP, TIFF…)",
     },
+    {
+      id: "unlabeled_videos",
+      label: "Unlabeled Videos Folder",
+      description: "Import a flat folder of video files (MP4, AVI, MOV, MKV…)",
+    },
   ] as const;
 
   let { onClose }: Props = $props();
