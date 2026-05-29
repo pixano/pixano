@@ -10,6 +10,7 @@ from fastapi.routing import APIRouter
 from pixano.api.routers.bboxes import router as bboxes_router
 from pixano.api.routers.conversations import router as conversations_router
 from pixano.api.routers.datasets import router as datasets_router
+from pixano.api.routers.import_datasets import router as import_datasets_router
 from pixano.api.routers.embeddings import router as embeddings_router
 from pixano.api.routers.entities import router as entities_router
 from pixano.api.routers.entity_dynamic_states import router as entity_dynamic_states_router
@@ -42,6 +43,7 @@ RESOURCE_ROUTERS: tuple[APIRouter, ...] = (
 )
 
 API_ROUTERS: tuple[APIRouter, ...] = (
+    import_datasets_router,
     datasets_router,
     inference_app_router,
     inference_router,
