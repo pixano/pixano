@@ -50,6 +50,11 @@ License: CECILL-C
   let jobId = $state<string | null>(null);
   let pollHandle = $state<ReturnType<typeof setInterval> | null>(null);
 
+  const previouslyFocusedElement: HTMLElement | null =
+    typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
   const canSubmit = $derived(sourceDir.trim().length > 0 && phase === "form");
 
   function stopPolling() {
@@ -111,14 +116,23 @@ License: CECILL-C
       return;
     }
     open = nextOpen;
-    if (!nextOpen) {
-      stopPolling();
-      onClose();
+  }
+
+  function handleOpenChangeComplete(nextOpen: boolean) {
+    if (nextOpen) return;
+    stopPolling();
+    onClose();
+  }
+
+  function handleCloseAutoFocus(event: Event) {
+    event.preventDefault();
+    if (previouslyFocusedElement && previouslyFocusedElement.isConnected) {
+      previouslyFocusedElement.focus({ preventScroll: true });
     }
   }
 </script>
 
-<AlertDialog.Root {open} onOpenChange={handleOpenChange}>
+<AlertDialog.Root {open} onOpenChange={handleOpenChange} onOpenChangeComplete={handleOpenChangeComplete}>
   <AlertDialog.Portal>
     <AlertDialog.Overlay class={BLOCKING_ALERT_OVERLAY_CLASS} />
 
@@ -129,6 +143,7 @@ License: CECILL-C
           trapFocus={true}
           preventScroll={true}
           onEscapeKeydown={(e) => { if (phase !== "running") { e.preventDefault(); handleClose(); } else { e.preventDefault(); } }}
+          onCloseAutoFocus={handleCloseAutoFocus}
         >
           <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/15"></div>
 
