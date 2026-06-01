@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { toDataset, toDatasetInfo } from "./adapters";
-import { apiFetch, requestJson, JSON_HEADERS } from "./apiClient";
+import { apiFetch, JSON_HEADERS, requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
 import type { Dataset, DatasetInfo } from "$lib/types/dataset";
 
@@ -31,11 +31,19 @@ export async function startDatasetImport(
   importType: string,
   datasetName: string,
 ): Promise<ImportJobStatus> {
-  return requestJson<ImportJobStatus>("/datasets/import", {
-    method: "POST",
-    headers: JSON_HEADERS,
-    body: JSON.stringify({ source_dir: sourceDir, import_type: importType, dataset_name: datasetName }),
-  }, "startDatasetImport");
+  return requestJson<ImportJobStatus>(
+    "/datasets/import",
+    {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        source_dir: sourceDir,
+        import_type: importType,
+        dataset_name: datasetName,
+      }),
+    },
+    "startDatasetImport",
+  );
 }
 
 export async function getImportJob(jobId: string): Promise<ImportJobStatus> {

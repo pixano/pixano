@@ -5,21 +5,21 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { AlertDialog } from "bits-ui";
-  import { CircleNotch, CheckCircle, WarningCircle, FolderOpen } from "phosphor-svelte";
-  import { invalidateAll } from "$app/navigation";
-
   import PrimaryButton from "$components/ui/molecules/PrimaryButton.svelte";
-  import { startDatasetImport, getImportJob } from "$lib/api/datasets";
+  import { AlertDialog } from "bits-ui";
+  import { CheckCircle, CircleNotch, FolderOpen, WarningCircle } from "phosphor-svelte";
+
+  import { invalidateAll } from "$app/navigation";
+  import { getImportJob, startDatasetImport } from "$lib/api/datasets";
   import {
-    BLOCKING_ALERT_OVERLAY_CLASS,
-    BLOCKING_ALERT_VIEWPORT_CLASS,
+    BLOCKING_ALERT_ACTIONS_CLASS,
     BLOCKING_ALERT_CONTENT_CLASS,
     BLOCKING_ALERT_HEADER_CLASS,
-    BLOCKING_ALERT_TITLE_CLASS,
-    BLOCKING_ALERT_SUPPORTING_TEXT_CLASS,
-    BLOCKING_ALERT_ACTIONS_CLASS,
+    BLOCKING_ALERT_OVERLAY_CLASS,
     BLOCKING_ALERT_SECONDARY_BUTTON_CLASS,
+    BLOCKING_ALERT_SUPPORTING_TEXT_CLASS,
+    BLOCKING_ALERT_TITLE_CLASS,
+    BLOCKING_ALERT_VIEWPORT_CLASS,
   } from "$lib/constants/modalConstants";
 
   interface Props {
@@ -132,7 +132,11 @@ License: CECILL-C
   }
 </script>
 
-<AlertDialog.Root {open} onOpenChange={handleOpenChange} onOpenChangeComplete={handleOpenChangeComplete}>
+<AlertDialog.Root
+  {open}
+  onOpenChange={handleOpenChange}
+  onOpenChangeComplete={handleOpenChangeComplete}
+>
   <AlertDialog.Portal>
     <AlertDialog.Overlay class={BLOCKING_ALERT_OVERLAY_CLASS} />
 
@@ -142,15 +146,20 @@ License: CECILL-C
           class={BLOCKING_ALERT_CONTENT_CLASS}
           trapFocus={true}
           preventScroll={true}
-          onEscapeKeydown={(e) => { if (phase !== "running") { e.preventDefault(); handleClose(); } else { e.preventDefault(); } }}
+          onEscapeKeydown={(e) => {
+            if (phase !== "running") {
+              e.preventDefault();
+              handleClose();
+            } else {
+              e.preventDefault();
+            }
+          }}
           onCloseAutoFocus={handleCloseAutoFocus}
         >
           <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/15"></div>
 
           <div class={BLOCKING_ALERT_HEADER_CLASS}>
-            <AlertDialog.Title class={BLOCKING_ALERT_TITLE_CLASS}>
-              Import Dataset
-            </AlertDialog.Title>
+            <AlertDialog.Title class={BLOCKING_ALERT_TITLE_CLASS}>Import Dataset</AlertDialog.Title>
             <AlertDialog.Description class={BLOCKING_ALERT_SUPPORTING_TEXT_CLASS}>
               <p>Select an import type and provide the path to your data folder on the server.</p>
             </AlertDialog.Description>
@@ -167,8 +176,8 @@ License: CECILL-C
                   <label
                     class="flex items-start gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-colors duration-150
                       {selectedType === t.id
-                        ? 'border-primary/40 bg-primary/5'
-                        : 'border-border/50 bg-background/40 hover:border-border hover:bg-muted/30'}"
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border/50 bg-background/40 hover:border-border hover:bg-muted/30'}"
                   >
                     <input
                       type="radio"
@@ -188,11 +197,17 @@ License: CECILL-C
 
             <!-- Source folder path -->
             <div class="px-6 sm:px-7 pb-2 space-y-2">
-              <label for="import-source-dir" class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <label
+                for="import-source-dir"
+                class="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+              >
                 Source folder path
               </label>
               <div class="relative flex items-center">
-                <FolderOpen weight="regular" class="absolute left-3 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+                <FolderOpen
+                  weight="regular"
+                  class="absolute left-3 h-4 w-4 text-muted-foreground/60 pointer-events-none"
+                />
                 <input
                   id="import-source-dir"
                   type="text"
@@ -210,7 +225,10 @@ License: CECILL-C
 
             <!-- Optional dataset name -->
             <div class="px-6 sm:px-7 pb-5 space-y-2">
-              <label for="import-dataset-name" class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <label
+                for="import-dataset-name"
+                class="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+              >
                 Dataset name <span class="font-normal normal-case tracking-normal">(optional)</span>
               </label>
               <input
@@ -223,26 +241,29 @@ License: CECILL-C
                   focus:ring-primary/20 focus:bg-background transition-all duration-200"
               />
             </div>
-
           {:else if phase === "running"}
             <div class="px-6 sm:px-7 pb-5">
-              <div class="flex items-center gap-3 rounded-xl border border-border/50 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
+              <div
+                class="flex items-center gap-3 rounded-xl border border-border/50 bg-background/55 px-4 py-3 text-sm text-muted-foreground"
+              >
                 <CircleNotch weight="regular" class="h-4 w-4 shrink-0 animate-spin text-primary" />
                 <span>{statusMessage}</span>
               </div>
             </div>
-
           {:else if phase === "done"}
             <div class="px-6 sm:px-7 pb-5">
-              <div class="flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/8 px-4 py-3 text-sm text-green-600 dark:text-green-400">
+              <div
+                class="flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/8 px-4 py-3 text-sm text-green-600 dark:text-green-400"
+              >
                 <CheckCircle weight="regular" class="h-4 w-4 shrink-0" />
                 <span>{statusMessage}</span>
               </div>
             </div>
-
           {:else if phase === "error"}
             <div class="px-6 sm:px-7 pb-5">
-              <div class="flex items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+              <div
+                class="flex items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+              >
                 <WarningCircle weight="regular" class="h-4 w-4 shrink-0" />
                 <span>{statusMessage}</span>
               </div>
@@ -251,13 +272,21 @@ License: CECILL-C
 
           <div class={BLOCKING_ALERT_ACTIONS_CLASS}>
             {#if phase === "form" || phase === "error"}
-              <button type="button" class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS} onclick={handleClose}>
+              <button
+                type="button"
+                class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
+                onclick={handleClose}
+              >
                 Cancel
               </button>
             {/if}
 
             {#if phase === "error"}
-              <button type="button" class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS} onclick={handleRetry}>
+              <button
+                type="button"
+                class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
+                onclick={handleRetry}
+              >
                 Try again
               </button>
             {/if}

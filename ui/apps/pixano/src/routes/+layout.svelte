@@ -121,7 +121,9 @@ License: CECILL-C
                 class="flex items-center gap-2.5 px-3 py-2 cursor-pointer rounded-lg mx-1
                   text-foreground hover:bg-accent focus-visible:bg-accent
                   focus-visible:outline-none transition-colors"
-                onSelect={() => { showImportModal = true; }}
+                onSelect={() => {
+                  showImportModal = true;
+                }}
               >
                 <FolderOpen weight="regular" class="h-4 w-4 text-muted-foreground" />
                 Import dataset…
@@ -142,6 +144,10 @@ License: CECILL-C
   </div>
 
   {#if showImportModal}
-    <ImportDatasetModal onClose={() => { showImportModal = false; }} />
+    <ImportDatasetModal
+      onClose={() => {
+        showImportModal = false;
+      }}
+    />
   {/if}
 </Tooltip.Provider>

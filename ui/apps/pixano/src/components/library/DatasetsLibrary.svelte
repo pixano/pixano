@@ -10,8 +10,8 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
-  import ImportDatasetModal from "./ImportDatasetModal.svelte";
   import { panTool } from "../workspace";
+  import ImportDatasetModal from "./ImportDatasetModal.svelte";
   import { goto } from "$app/navigation";
   import { datasetFilter, datasetsStore } from "$lib/stores/appStores.svelte";
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
@@ -72,7 +72,11 @@ License: CECILL-C
 </script>
 
 {#if showImport}
-  <ImportDatasetModal onClose={() => { showImport = false; }} />
+  <ImportDatasetModal
+    onClose={() => {
+      showImport = false;
+    }}
+  />
 {/if}
 
 {#if datasets && datasets.length > 0}
@@ -148,7 +152,9 @@ License: CECILL-C
     </p>
 
     <button
-      onclick={() => { showImport = true; }}
+      onclick={() => {
+        showImport = true;
+      }}
       class="mt-8 inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-primary-foreground
         text-sm font-bold uppercase tracking-widest shadow-sm hover:bg-primary/90 active:scale-95
         transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

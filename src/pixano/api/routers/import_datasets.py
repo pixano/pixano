@@ -58,12 +58,16 @@ IMPORT_TYPES = {
 
 
 class ImportRequest(BaseModel):
+    """Request body for starting a dataset import job."""
+
     source_dir: str
     import_type: str = "unlabeled_images"
     dataset_name: str = ""
 
 
 class ImportJobResponse(BaseModel):
+    """Response body for import job status queries."""
+
     job_id: str
     status: str
     message: str
@@ -131,7 +135,11 @@ def _run_video_import(job_id: str, source_path: Path, name: str, target_name: st
     try:
         import cv2
     except ImportError:
-        _set_job(job_id, "error", "opencv-python (cv2) is required for video import. Install it with: pip install opencv-python")
+        _set_job(
+            job_id,
+            "error",
+            "opencv-python (cv2) is required for video import. Install it with: pip install opencv-python",
+        )
         return
 
     from pixano.datasets.builders.folders.video import VIDEO_EXTENSIONS
@@ -235,6 +243,4 @@ def get_import_job(
         job = _jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Import job '{job_id}' not found.")
-    return ImportJobResponse(
-        job_id=job.id, status=job.status, message=job.message, dataset_id=job.dataset_id
-    )
+    return ImportJobResponse(job_id=job.id, status=job.status, message=job.message, dataset_id=job.dataset_id)
