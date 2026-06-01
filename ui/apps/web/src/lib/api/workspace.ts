@@ -13,7 +13,7 @@ export async function loadImage(
   imageId: string,
 ): Promise<ImageResponse> {
   return await requestJson<ImageResponse>(
-    `/datasets/${datasetId}/records/${recordId}/images/${imageId}`,
+    `/datasets/${datasetId}/images/${imageId}`,
     {},
     "getImage",
   );

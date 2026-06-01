@@ -72,10 +72,7 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
     const allBBoxes = image
       ? await gateway
           .listBBoxes(datasetId, { recordId })
-          .catch((err) => {
-            console.error("listBBoxes failed", err);
-            return [] as BBoxRow[];
-          })
+          .catch(() => [] as BBoxRow[])
       : [];
 
     const existingBBoxes = allBBoxes.filter(
