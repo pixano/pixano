@@ -57,6 +57,18 @@ export function pickEntityLabel(entity: Record<string, unknown> | undefined): st
 }
 
 /**
+ * Camera intrinsics and extrinsics from a CalibratedImage view.
+ * All matrices are row-major, 4×4 flattened to 16 floats.
+ */
+export interface CameraCalibration {
+  f: [number, number];
+  c: [number, number];
+  distortion: number[];
+  extrinsicMatrix: number[];
+  egoToWorld: number[];
+}
+
+/**
  * Options attached to every image widget instance. `WorkspaceManager.selectRecordInDataset`
  * populates these so the widget can build valid BBox payloads without
  * having to reach back into global state.
@@ -68,6 +80,7 @@ export interface ImageWidgetOptions {
   viewName: string;
   imageWidth: number;
   imageHeight: number;
+  calibration: CameraCalibration | null;
   [key: string]: unknown;
 }
 

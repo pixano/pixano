@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { MessageSquare, ScanSearch } from "lucide-svelte";
+  import { Eye, EyeOff, Layers, MessageSquare, ScanSearch } from "lucide-svelte";
 
+  import EntitiesPanel from "./EntitiesPanel.svelte";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
   interface Props {
@@ -15,10 +16,11 @@ License: CECILL-C
 
   let { manager }: Props = $props();
 
-  let activeTab = $state<"inspector" | "agent">("inspector");
+  let activeTab = $state<"inspector" | "entities" | "agent">("inspector");
 
   const tabs = [
     { id: "inspector" as const, label: "Inspector", icon: ScanSearch },
+    { id: "entities" as const, label: "Entities", icon: Layers },
     { id: "agent" as const, label: "Agent", icon: MessageSquare },
   ];
 </script>
@@ -43,7 +45,15 @@ License: CECILL-C
 
   <!-- Tab content -->
   <div class="flex-1 overflow-y-auto">
-    {#if activeTab === "inspector"}
+    {#if activeTab === "entities"}
+      {#if manager.recordId !== null}
+        <EntitiesPanel entities={manager.entities} entitySchemaName={manager.entitySchemaName} />
+      {:else}
+        <div class="p-3">
+          <p class="text-xs text-muted-foreground">Open a record to inspect its entities.</p>
+        </div>
+      {/if}
+    {:else if activeTab === "inspector"}
       <div class="p-3">
         <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Properties
@@ -52,18 +62,33 @@ License: CECILL-C
         {#if manager.widgetCount > 0}
           <div class="space-y-2">
             {#each manager.widgets as widget (widget.id)}
-              <div class="rounded-md border border-border bg-card p-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-medium text-card-foreground">{widget.title}</span>
-                  <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              <div
+                class="rounded-md border border-border bg-card p-2 transition-opacity {widget.hidden
+                  ? 'opacity-50'
+                  : ''}"
+              >
+                <div class="flex items-center gap-2">
+                  <button
+                    onclick={() => manager.toggleWidgetVisibility(widget.id)}
+                    title={widget.hidden ? "Show widget" : "Hide widget"}
+                    class="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    {#if widget.hidden}
+                      <EyeOff class="h-3.5 w-3.5" />
+                    {:else}
+                      <Eye class="h-3.5 w-3.5" />
+                    {/if}
+                  </button>
+                  <span
+                    class="flex-1 truncate text-xs font-medium {widget.hidden
+                      ? 'text-muted-foreground line-through'
+                      : 'text-card-foreground'}"
+                  >
+                    {widget.title}
+                  </span>
+                  <span class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {widget.extensionName}
                   </span>
-                </div>
-                <div class="mt-1.5 grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
-                  <span>x: {widget.layout.x}</span>
-                  <span>y: {widget.layout.y}</span>
-                  <span>w: {widget.layout.w}</span>
-                  <span>h: {widget.layout.h}</span>
                 </div>
               </div>
             {/each}
