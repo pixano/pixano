@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Lock, Moon, PanelRight, Sun, Unlock } from "lucide-svelte";
+  import { Lock, Moon, PanelRight, Sun, Unlock, ArrowLeftRight } from "lucide-svelte";
 
   import type { PanelState } from "$lib/components/ui/resizable-panel/PanelState.svelte.js";
   import { themeStore } from "$lib/stores/theme.svelte.js";
@@ -52,6 +52,18 @@ License: CECILL-C
         <Lock class="h-3.5 w-3.5" />
         <span>Locked</span>
       {/if}
+    </button>
+
+    <button
+      type="button"
+      onclick={() => {
+        document.cookie = "pixano_ui_version=classic; max-age=31536000; path=/";
+        window.location.href = "/";
+      }}
+      class="flex items-center justify-center rounded-md border border-border p-1 text-xs text-foreground/70 transition-colors hover:bg-accent/50 hover:text-foreground"
+      title="Switch to classic UI"
+    >
+      <ArrowLeftRight class="h-3.5 w-3.5" />
     </button>
 
     <button

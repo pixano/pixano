@@ -77,7 +77,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-artifacts = ["src/pixano/api/dist"]
+artifacts = ["src/pixano/api/dist", "src/pixano/api/classic_dist"]
 
 [tool.hatch.build.hooks.custom]
 

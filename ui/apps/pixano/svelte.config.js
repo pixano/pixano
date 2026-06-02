@@ -7,10 +7,11 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapter({
-      pages: "build",
-      assets: "build",
+      pages: "../../../src/pixano/api/classic_dist",
+      assets: "../../../src/pixano/api/classic_dist",
       fallback: "index.html",
     }),
+    appDir: "_classic_app",
     alias: pixanoAliases,
   },
 };

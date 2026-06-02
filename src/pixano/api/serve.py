@@ -37,9 +37,12 @@ LOGO = """
 """
 ASSETS_PATH = str(files("pixano").joinpath("api/dist/_app"))
 TEMPLATE_PATH = str(files("pixano").joinpath("api/dist"))
+CLASSIC_ASSETS_PATH = str(files("pixano").joinpath("api/classic_dist/_classic_app"))
+CLASSIC_TEMPLATE_PATH = str(files("pixano").joinpath("api/classic_dist"))
 NON_SPA_PREFIXES = (
     *API_PREFIXES,
     "/_app",
+    "/_classic_app",
     "/app_models",
     "/health",
     "/docs",
@@ -141,11 +144,15 @@ class App:
         # Create app
         settings = get_settings_override()
         templates = Jinja2Templates(directory=TEMPLATE_PATH)
+        classic_templates = Jinja2Templates(directory=CLASSIC_TEMPLATE_PATH)
         self.app = create_app(settings=settings)
         self.app.dependency_overrides[get_settings] = get_settings_override
 
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
+            # TODO: if classic_dist is not built and cookie is "classic", clear cookie and serve new app to avoid 500
+            if request.cookies.get("pixano_ui_version") == "classic":
+                return classic_templates.TemplateResponse(request, "index.html")
             return templates.TemplateResponse(request, "index.html")
 
         def _is_non_spa_path(path: str) -> bool:
@@ -158,6 +165,14 @@ class App:
             warnings.warn(
                 "Pixano app assets not found. If it is a production environment, this is not expected, "
                 "check if you have built the assets for the UI."
+            )
+
+        try:
+            self.app.mount("/_classic_app", StaticFiles(directory=CLASSIC_ASSETS_PATH), name="classic_assets")
+        except RuntimeError:
+            warnings.warn(
+                "Classic app assets not found. If it is a production environment, this is not expected, "
+                "check if you have built the assets for the classic UI."
             )
 
         @self.app.get("/{full_path:path}", include_in_schema=False)
