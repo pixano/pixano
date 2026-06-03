@@ -246,6 +246,7 @@ export const defineCreatedAnnotation = (
   const baseData = {
     item_id: entity.data.item_id,
     view_name: annotationViewRef.name,
+    view_id: annotationViewRef.id,
     entity_id: entity.id,
     source_type: PIXANO_SOURCE.type,
     source_name: PIXANO_SOURCE.name,

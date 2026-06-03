@@ -170,17 +170,20 @@ License: CECILL-C
   };
 
   const totalAllowableChildCount = $derived.by(() => {
+    void entities.value;
     return entity.ui.childs?.filter((ann) => isAllowableChild(ann)).length ?? 0;
   });
 
   const allowedChilds = $derived.by(() => {
     if (!isExpanded) return [];
     if (currentFrameIndex.value === undefined) return [];
+    void entities.value;
     return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   });
 
   // ─── Annotation type summary for header pills ──────────────────────────────
   const annotationTypeSummary = $derived.by(() => {
+    void entities.value;
     const counts: Record<string, number> = {};
     for (const ann of entity.ui.childs ?? []) {
       if (!isAllowableChild(ann)) continue;
