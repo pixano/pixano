@@ -54,11 +54,11 @@ License: CECILL-C
     <button
       type="button"
       onclick={() => {
-        document.cookie = "pixano_ui_version=classic; max-age=31536000; path=/";
+        document.cookie = "pixano_ui_version=legacy; max-age=31536000; path=/";
         window.location.href = "/";
       }}
       class="flex items-center justify-center rounded-md border border-border p-1 text-xs text-foreground/70 transition-colors hover:bg-accent/50 hover:text-foreground"
-      title="Switch to classic UI"
+      title="Switch to legacy UI"
     >
       <ArrowLeftRight class="h-3.5 w-3.5" />
     </button>

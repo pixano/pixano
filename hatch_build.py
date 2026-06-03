@@ -19,7 +19,7 @@ class CustomBuildHook(BuildHookInterface):
             return
 
         ui_dir = os.path.join(self.root, "ui")
-        classic_app_dir = os.path.join(ui_dir, "apps", "pixano")
+        legacy_app_dir = os.path.join(ui_dir, "apps", "pixano")
         web_app_dir = os.path.join(ui_dir, "apps", "web")
 
         if not os.path.isdir(ui_dir):
@@ -32,10 +32,10 @@ class CustomBuildHook(BuildHookInterface):
             check=True,
         )
 
-        self.app.display_info("Building classic frontend...")
+        self.app.display_info("Building legacy frontend...")
         subprocess.run(
             ["pnpm", "build"],
-            cwd=classic_app_dir,
+            cwd=legacy_app_dir,
             check=True,
         )
 
