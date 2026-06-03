@@ -8,6 +8,7 @@ import asyncio
 import warnings
 from functools import lru_cache
 from importlib.resources import files
+from pathlib import Path
 
 import fastapi
 import uvicorn
@@ -150,9 +151,12 @@ class App:
 
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
-            # TODO: if legacy_dist is not built and cookie is "legacy", clear cookie and serve new app to avoid 500
             if request.cookies.get("pixano_ui_version") == "legacy":
-                return legacy_templates.TemplateResponse(request, "index.html")
+                if (Path(LEGACY_TEMPLATE_PATH) / "index.html").exists():
+                    return legacy_templates.TemplateResponse(request, "index.html")
+                response = templates.TemplateResponse(request, "index.html")
+                response.delete_cookie("pixano_ui_version")
+                return response
             return templates.TemplateResponse(request, "index.html")
 
         def _is_non_spa_path(path: str) -> bool:
