@@ -11,13 +11,13 @@ export const EXPLORER_ROUTE_ID = "/explorer/[datasetId]";
 export const WORKSPACE_ROUTE_ID = "/explorer/[datasetId]/workspace/[itemId]";
 
 export const getExplorerRoute = (datasetId: string, query?: string): string => {
-  const baseRoute = `/explorer/${datasetId}`;
+  const baseRoute = `#/explorer/${datasetId}`;
   if (!query) return baseRoute;
   return query.startsWith("?") ? `${baseRoute}${query}` : `${baseRoute}?${query}`;
 };
 
 export const getWorkspaceRoute = (datasetId: string, itemId: string): string =>
-  `/explorer/${datasetId}/workspace/${itemId}`;
+  `#/explorer/${datasetId}/workspace/${itemId}`;
 
 export const findNeighborItemId = (
   itemsIds: string[],
