@@ -18,16 +18,23 @@ from pixano.schemas import canonical_table_name_for_slot
 
 
 def _snake_case_name(value: str) -> str:
+    """Transform a string into snake case, useful for filenames."""
+    # TODO: move snake_case in a library to avoid dupplicates
     snake = re.sub(r"[^a-zA-Z0-9]+", "_", value.strip().lower())
     snake = re.sub(r"_+", "_", snake).strip("_")
     return snake
 
 
-def _has_diacritics(chaine: str):
+def _has_diacritics(chaine: str) -> bool:
+    """Check if a string contains diacritics."""
     for caractere in chaine:
-        # Normaliser le caractère pour obtenir sa forme décomposée
+        # Normalize the character to get its decomposed form.
+        # > Normal form D (NFD) is also known as canonical decomposition,
+        # > and translates each character into its decomposed form
         normalise = unicodedata.normalize("NFD", caractere)
-        # Vérifier si le caractère a été décomposé en un caractère de base et un diacritique
+        # Check if the character was decomposed into a base character and a diacritic.
+        # > The category codes are abbreviations describing the nature of the character.
+        # > 'Mn' is “Mark, nonspacing”
         if len(normalise) > 1 and unicodedata.category(normalise[-1]) == "Mn":
             return True
     return False
@@ -43,7 +50,9 @@ class MetadataIssueAggregate:
     def add(self, location: str) -> None:
         """Record one occurrence of an issue at the given location."""
         self.count += 1
-        if len(self.samples) < 5 and location not in self.samples:
+        # Number of occurence to keep for display in the report. Supplementary occurences are dropped.
+        nb_sample_to_keep = 5
+        if len(self.samples) < nb_sample_to_keep and location not in self.samples:
             self.samples.append(location)
 
 
@@ -295,10 +304,6 @@ class FolderMetadataService:
                 else:
                     if _has_diacritics(str(value)):
                         report.add_warning("prefer_view_media_has_no_diacritics", location)
-                    print(
-                        value,
-                        [(f.stem, _snake_case_name(f.stem)) for f in files],
-                    )
                     if any(f.stem != _snake_case_name(f.stem) for f in files):
                         if validation_mode == "strict":
                             report.add_error("ensure_snake_case_view_media", location)
