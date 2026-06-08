@@ -440,17 +440,32 @@ License: CECILL-C
         {#if bboxData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1.5">
             <!-- Coordinate grid -->
-            <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
-              {#each bboxData.labels as label, i}
-                {#if i < bboxData.coords.length}
-                  <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-muted-foreground/70 font-medium">{label}</span>
-                    <span class="text-[11px] font-mono text-foreground/90">
-                      {fmtCoord(bboxData.coords[i])}
-                    </span>
-                  </div>
-                {/if}
-              {/each}
+            <div class="flex gap-2 items-stretch">
+              <div class="flex-1 min-w-0 space-y-0.5">
+                {#each bboxData.labels as label, i}
+                  {#if i < bboxData.coords.length && i % 2 === 0}
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[10px] text-foreground font-medium">{label}</span>
+                      <span class="text-[11px] font-mono text-foreground/70">
+                        {fmtCoord(bboxData.coords[i])}
+                      </span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
+              <div class="w-[50px] bg-border/20 shrink-0 self-stretch"></div>
+              <div class="flex-1 min-w-0 space-y-0.5">
+                {#each bboxData.labels as label, i}
+                  {#if i < bboxData.coords.length && i % 2 === 1}
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[10px] text-foreground font-medium">{label}</span>
+                      <span class="text-[11px] font-mono text-foreground/70">
+                        {fmtCoord(bboxData.coords[i])}
+                      </span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
             </div>
 
             <!-- Format row -->
@@ -476,16 +491,16 @@ License: CECILL-C
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if maskData.size.length >= 2}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Size</span>
-                <span class="text-[11px] font-mono text-foreground/90">
+                <span class="text-[10px] text-foreground font-medium">Size</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {maskData.size[0]} &times; {maskData.size[1]}
                 </span>
               </div>
             {/if}
             {#if maskData.bounds}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Bounds</span>
-                <span class="text-[11px] font-mono text-foreground/80">
+                <span class="text-[10px] text-foreground font-medium">Bounds</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {Math.round(maskData.bounds.x)}, {Math.round(maskData.bounds.y)} &mdash; {Math.round(
                     maskData.bounds.width,
                   )}&times;{Math.round(maskData.bounds.height)}
@@ -504,7 +519,7 @@ License: CECILL-C
                   weight="fill"
                   class="h-3 w-3 text-muted-foreground/40 flex-shrink-0 mt-0.5"
                 />
-                <span class="text-[11px] italic text-foreground/90 leading-snug break-words">
+                <span class="text-[11px] italic text-foreground/70 leading-snug break-words">
                   {textSpanData.mention}
                 </span>
               </div>
@@ -513,10 +528,10 @@ License: CECILL-C
             <!-- Span offsets -->
             {#if textSpanData.spans.length > 0}
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Spans</span>
+                <span class="text-[10px] text-foreground font-medium">Spans</span>
                 {#each textSpanData.spans as span}
                   <span
-                    class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none"
+                    class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-foreground/70 leading-none"
                   >
                     [{span[0]}, {span[1]}]
                   </span>
@@ -531,7 +546,7 @@ License: CECILL-C
                   <span
                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/30 text-[10px] font-medium text-foreground/70 leading-none"
                   >
-                    <span class="text-muted-foreground/60">{extra.key}:</span>
+                    <span class="text-foreground">{extra.key}:</span>
                     {extra.value}
                   </span>
                 {/each}
@@ -544,15 +559,15 @@ License: CECILL-C
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if keypointsData.templateId}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Template</span>
-                <span class="text-[11px] font-mono text-foreground/80">
+                <span class="text-[10px] text-foreground font-medium">Template</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {keypointsData.templateId}
                 </span>
               </div>
             {/if}
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-muted-foreground/70 font-medium">Vertices</span>
-              <span class="text-[11px] text-foreground/80">{keypointsData.vertexCount}</span>
+              <span class="text-[10px] text-foreground font-medium">Vertices</span>
+              <span class="text-[11px] text-foreground/70">{keypointsData.vertexCount}</span>
               {#if keypointsData.visibleCount > 0 || keypointsData.hiddenCount > 0}
                 <span class="text-[9px] text-muted-foreground/50">
                   ({keypointsData.visibleCount} visible, {keypointsData.hiddenCount} hidden)
@@ -565,12 +580,12 @@ License: CECILL-C
         {:else if trackletData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2">
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-muted-foreground/70 font-medium">Frames</span>
-              <span class="text-[11px] font-mono text-foreground/80">
+              <span class="text-[10px] text-foreground font-medium">Frames</span>
+              <span class="text-[11px] font-mono text-foreground/70">
                 {trackletData.startFrame}
               </span>
               <span class="text-[10px] text-muted-foreground/40">&rarr;</span>
-              <span class="text-[11px] font-mono text-foreground/80">
+              <span class="text-[11px] font-mono text-foreground/70">
                 {trackletData.endFrame}
               </span>
               <span class="text-[9px] text-muted-foreground/50">
