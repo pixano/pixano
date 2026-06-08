@@ -19,7 +19,6 @@ export const load: LayoutLoad = async ({ params, parent }) => {
     api.getDataset(params.datasetId),
     api.listAllRecordIds(params.datasetId),
   ]);
-
   return {
     dataset,
     schema: ds.schema,
