@@ -11,7 +11,7 @@ import type {
   LocalBBox,
 } from "$lib/annotations/types.js";
 import type { BBoxRow } from "$lib/api/annotations.js";
-import ImageWidget from "$lib/components/widgets/ImageWidget.svelte";
+import ImageWidget from "$lib/components/widgets/image/ImageWidget.svelte";
 
 import { WidgetExtension } from "../WidgetExtension.js";
 
