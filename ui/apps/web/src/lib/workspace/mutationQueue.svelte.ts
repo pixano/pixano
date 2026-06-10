@@ -7,6 +7,7 @@ License: CECILL-C
 import { sortMutations } from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
 import { ApiError } from "$lib/api/apiClient.js";
+import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
 import type { MutationGateway } from "./datasetGateway.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
@@ -107,7 +108,7 @@ export class MutationQueue {
         this.pending = this.pending.filter((m) => m !== mutation);
         if (
           mutation.op === "create" &&
-          mutation.resource !== "entities" &&
+          mutation.resource !== ENTITY_RESOURCE &&
           mutation.widgetId &&
           mutation.localBBoxId
         ) {
@@ -133,7 +134,7 @@ export class MutationQueue {
   }
 
   private async run(datasetId: string, mutation: ResourceMutation): Promise<void> {
-    if (mutation.resource === "entities") {
+    if (mutation.resource === ENTITY_RESOURCE) {
       if (mutation.op === "create") {
         await this.gateway.createEntity(datasetId, mutation.body);
       } else if (mutation.op === "delete") {

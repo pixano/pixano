@@ -114,6 +114,8 @@ export interface DraftBBox3D {
 export interface PointCloudWidgetStorage {
   mode: "navigate" | "draw-bbox3d";
   drafts: DraftBBox3D[];
+  /** Optimistic overrides for persisted boxes that have been edited but not yet saved. */
+  overrides: Record<string, { coords: [number, number, number, number, number, number]; rotation?: number[] }>;
   [key: string]: unknown;
 }
 
