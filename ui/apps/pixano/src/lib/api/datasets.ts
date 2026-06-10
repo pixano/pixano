@@ -5,9 +5,16 @@ License: CECILL-C
 -------------------------------------*/
 
 import { toDataset, toDatasetInfo } from "./adapters";
-import { apiFetch, requestJson } from "./apiClient";
+import { apiFetch, JSON_HEADERS, requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
 import type { Dataset, DatasetInfo } from "$lib/types/dataset";
+
+export interface ImportJobStatus {
+  job_id: string;
+  status: "pending" | "running" | "done" | "error";
+  message: string;
+  dataset_id: string;
+}
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
   const datasets = await apiFetch<DatasetInfoResponse[]>("/datasets", {}, [], "listDatasets");
@@ -17,6 +24,30 @@ export async function listDatasets(): Promise<DatasetInfo[]> {
 export async function getDataset(datasetId: string): Promise<Dataset> {
   const dataset = await requestJson<DatasetResponse>(`/datasets/${datasetId}`, {}, "getDataset");
   return toDataset(dataset);
+}
+
+export async function startDatasetImport(
+  sourceDir: string,
+  importType: string,
+  datasetName: string,
+): Promise<ImportJobStatus> {
+  return requestJson<ImportJobStatus>(
+    "/datasets/import",
+    {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        source_dir: sourceDir,
+        import_type: importType,
+        dataset_name: datasetName,
+      }),
+    },
+    "startDatasetImport",
+  );
+}
+
+export async function getImportJob(jobId: string): Promise<ImportJobStatus> {
+  return requestJson<ImportJobStatus>(`/datasets/import/${jobId}`, {}, "getImportJob");
 }
 
 export async function getDatasetStats(

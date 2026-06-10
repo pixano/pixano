@@ -6,11 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowRight, Database } from "phosphor-svelte";
+  import { ArrowRight, Database, UploadSimple } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { panTool } from "../workspace";
+  import ImportDatasetModal from "./ImportDatasetModal.svelte";
   import { goto } from "$app/navigation";
   import { datasetFilter, datasetsStore } from "$lib/stores/appStores.svelte";
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
@@ -36,6 +37,8 @@ License: CECILL-C
   }
 
   let { datasets }: Props = $props();
+
+  let showImport = $state(false);
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     await goto(getExplorerRoute(dataset.id));
@@ -67,6 +70,14 @@ License: CECILL-C
     });
   });
 </script>
+
+{#if showImport}
+  <ImportDatasetModal
+    onClose={() => {
+      showImport = false;
+    }}
+  />
+{/if}
 
 {#if datasets && datasets.length > 0}
   <div class="flex flex-col gap-8">
@@ -137,27 +148,26 @@ License: CECILL-C
     <h2 class="text-2xl font-bold tracking-tight text-foreground">Your library is empty</h2>
 
     <p class="mt-3 text-sm text-muted-foreground max-w-md leading-relaxed">
-      Use the Pixano CLI to import a dataset and start your annotation workflow.
+      Import a folder of images or videos to start your annotation workflow.
     </p>
 
-    <div class="mt-8 w-full max-w-md">
-      <div class="rounded-xl bg-card border border-border/60 shadow-sm overflow-hidden">
-        <div class="px-4 py-2 border-b border-border/40 bg-muted/30">
-          <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-            Terminal
-          </span>
-        </div>
-        <pre
-          class="px-4 py-3 text-xs text-muted-foreground font-mono leading-relaxed text-left overflow-x-auto">pixano data import &lt;DATA_DIR&gt; &lt;SOURCE_DIR&gt; \
-  --info &lt;path/to/info.py:dataset_info&gt;</pre>
-      </div>
-    </div>
+    <button
+      onclick={() => {
+        showImport = true;
+      }}
+      class="mt-8 inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary text-primary-foreground
+        text-sm font-bold uppercase tracking-widest shadow-sm hover:bg-primary/90 active:scale-95
+        transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <UploadSimple weight="bold" size={16} />
+      Import dataset
+    </button>
 
     <a
       href="https://pixano.github.io/pixano/latest/getting_started/"
       target="_blank"
       rel="noopener noreferrer"
-      class="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+      class="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary hover:underline transition-colors"
     >
       Read the getting started guide
       <ArrowRight weight="bold" size={14} />

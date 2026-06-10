@@ -442,7 +442,7 @@ class FolderBaseBuilder(DatasetBuilder):
         """Yield records and views for a split without ``metadata.jsonl``."""
         view_name, view_schema = list(self.views_schema.items())[0]
         for view_file in sorted(split.glob("**/*")):
-            if not view_file.is_file() or view_file.suffix not in self.EXTENSIONS:
+            if not view_file.is_file() or view_file.suffix.lower() not in self.EXTENSIONS:
                 continue
             record_metadata = self._build_default_custom_metadata_record()
             record_metadata["id"] = view_file.stem
