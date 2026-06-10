@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import logging
 import os
 import re
 import tempfile
@@ -21,6 +22,9 @@ from pixano.datasets.builders.folders.image import ImageFolderBuilder
 from pixano.datasets.builders.folders.video import VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.schemas import CompressedRLE, Entity, Record
+
+
+logger = logging.getLogger(__name__)
 
 
 class _ImageEntity(Entity):
@@ -78,6 +82,7 @@ def _set_job(job_id: str, status: str, message: str = "", dataset_id: str = "") 
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job:
+            logger.info("_set_job()", job_id, status, message, dataset_id)
             job.status = status  # type: ignore[assignment]
             job.message = message
             job.dataset_id = dataset_id
@@ -123,7 +128,9 @@ def _run_image_import(job_id: str, source_path: Path, name: str, target_name: st
                 _set_job(job_id, "error", f"Validation failed with {report.error_count} error(s).")
                 return
             _set_job(job_id, "running", "Importing images…")
-            dataset = builder.build()
+            dataset = builder.build(
+                check_integrity="raise",
+            )
         _set_job(job_id, "done", f"Successfully imported {dataset.num_rows} image(s).", dataset.info.id)
     except Exception as exc:
         _set_job(job_id, "error", str(exc))
