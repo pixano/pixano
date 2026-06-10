@@ -7,7 +7,7 @@ License: CECILL-C
 import { describe, expect, it, vi } from "vitest";
 
 import type { BBoxRow } from "$lib/api/annotations.js";
-import type { ImageResponse } from "$lib/api/restTypes.js";
+import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
 import type { DatasetGateway } from "$lib/workspace/datasetGateway.js";
 
 // ImageExtension references ImageWidget.svelte which imports Konva (requires native canvas).
@@ -18,14 +18,20 @@ import { ImageExtension } from "../ImageExtension.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const IMAGE: ImageResponse = {
+const IMAGE: CalibratedImageResponse = {
   id: "CAM_FRONT_0_0",
+  record_id: "rec_0",
   src: "/cam.jpg",
   width: 1600,
   height: 900,
-} as ImageResponse;
+  f: null,
+  c: null,
+  distortion: null,
+  extrinsic_matrix: null,
+  ego_to_world: null,
+};
 
-function makeGateway(image: ImageResponse | null, bboxes: BBoxRow[]): DatasetGateway {
+function makeGateway(image: CalibratedImageResponse | null, bboxes: BBoxRow[]): DatasetGateway {
   return {
     getDataset: () => Promise.resolve(null as never),
     listEntities: () => Promise.resolve([]),

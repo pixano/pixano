@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { requestJson } from "./apiClient";
-import type { ImageResponse, PaginatedResponse, PointCloudResponse } from "./restTypes";
+import type { CalibratedImageResponse, ImageResponse, PaginatedResponse, PointCloudResponse } from "./restTypes";
 
 export async function loadImage(
   datasetId: string,
@@ -13,7 +13,7 @@ export async function loadImage(
   imageId: string,
 ): Promise<ImageResponse> {
   return await requestJson<ImageResponse>(
-    `/datasets/${datasetId}/records/${recordId}/images/${imageId}`,
+    `/datasets/${datasetId}/images/${imageId}`,
     {},
     "getImage",
   );
@@ -32,8 +32,8 @@ export async function loadImageByLogicalName(
   datasetId: string,
   recordId: string,
   logicalName: string,
-): Promise<ImageResponse | null> {
-  const res = await requestJson<PaginatedResponse<ImageResponse>>(
+): Promise<CalibratedImageResponse | null> {
+  const res = await requestJson<PaginatedResponse<CalibratedImageResponse>>(
     `/datasets/${datasetId}/records/${recordId}/images?view_name=${encodeURIComponent(logicalName)}`,
     {},
     "loadImageByLogicalName",

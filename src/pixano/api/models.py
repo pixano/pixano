@@ -182,6 +182,21 @@ class ImageResponse(ResponseModel):
     src: str
 
 
+class CalibratedImageResponse(ImageResponse):
+    """Response model for a calibrated image view row.
+
+    Extends ``ImageResponse`` with optional camera intrinsics, extrinsics and
+    ego-to-world pose.  Fields are ``None`` when the underlying row comes from
+    the plain ``images`` table so that callers always receive this type.
+    """
+
+    f: tuple[float, float] | None = None
+    c: tuple[float, float] | None = None
+    distortion: list[float] | None = None
+    extrinsic_matrix: list[float] | None = None
+    ego_to_world: list[float] | None = None
+
+
 class TextResponse(ResponseModel):
     """Response model for a text view row."""
 
@@ -446,6 +461,7 @@ __all__ = [
     "MessageResponse",
     "MessageUpdate",
     "PaginatedResponse",
+    "CalibratedImageResponse",
     "ImageResponse",
     "PointCloudResponse",
     "SFrameResponse",

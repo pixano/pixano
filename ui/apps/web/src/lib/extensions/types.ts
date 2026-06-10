@@ -113,6 +113,7 @@ export interface WidgetInstance {
   layout: WidgetLayout;
   options: Record<string, unknown>;
   data?: Record<string, unknown>;
+  hidden?: boolean;
 }
 
 /** A workspace preset (named layout configuration) */
