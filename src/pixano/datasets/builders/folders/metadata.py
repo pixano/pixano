@@ -7,12 +7,37 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
 from pixano.schemas import canonical_table_name_for_slot
+
+
+def _snake_case_name(value: str) -> str:
+    """Transform a string into snake case, useful for filenames."""
+    # TODO: move snake_case in a library to avoid dupplicates
+    snake = re.sub(r"[^a-zA-Z0-9]+", "_", value.strip().lower())
+    snake = re.sub(r"_+", "_", snake).strip("_")
+    return snake
+
+
+def _has_diacritics(chaine: str) -> bool:
+    """Check if a string contains diacritics."""
+    for caractere in chaine:
+        # Normalize the character to get its decomposed form.
+        # > Normal form D (NFD) is also known as canonical decomposition,
+        # > and translates each character into its decomposed form
+        normalise = unicodedata.normalize("NFD", caractere)
+        # Check if the character was decomposed into a base character and a diacritic.
+        # > The category codes are abbreviations describing the nature of the character.
+        # > 'Mn' is “Mark, nonspacing”
+        if len(normalise) > 1 and unicodedata.category(normalise[-1]) == "Mn":
+            return True
+    return False
 
 
 @dataclass
@@ -25,7 +50,9 @@ class MetadataIssueAggregate:
     def add(self, location: str) -> None:
         """Record one occurrence of an issue at the given location."""
         self.count += 1
-        if len(self.samples) < 3 and location not in self.samples:
+        # Number of occurence to keep for display in the report. Supplementary occurences are dropped.
+        nb_sample_to_keep = 5
+        if len(self.samples) < nb_sample_to_keep and location not in self.samples:
             self.samples.append(location)
 
 
@@ -271,8 +298,18 @@ class FolderMetadataService:
                     continue
                 files = self._resolve_view_files(split_name, value, self.views_schema[key])
                 if not files:
+                    if _has_diacritics(str(value)):
+                        report.add_error("ensure_view_media_has_no_diacritics", location)
                     report.add_error("missing_view_media", location)
                 else:
+                    if _has_diacritics(str(value)):
+                        report.add_warning("prefer_view_media_has_no_diacritics", location)
+                    if any(f.stem != _snake_case_name(f.stem) for f in files):
+                        if validation_mode == "strict":
+                            report.add_error("ensure_snake_case_view_media", location)
+                            continue
+                        else:
+                            report.add_warning("prefer_snake_case_view_media", location)
                     report.add_normalized_example(f"{key} -> logical view '{key}'")
                 continue
             if key in self.entities_schema:

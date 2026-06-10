@@ -134,6 +134,10 @@ def import_data(
         for inferred, aggregate in sorted(report.inferred.items()):
             samples = ", ".join(aggregate.samples)
             typer.echo(f"- Inferred mapping: {inferred} ({aggregate.count} rows; e.g. {samples})")
+    if report.warnings:
+        for warning, aggregate in sorted(report.warnings.items()):
+            samples = ", ".join(aggregate.samples)
+            typer.echo(f"- Warning: {warning} ({aggregate.count} rows; e.g. {samples})")
     if report.errors:
         for code, aggregate in sorted(report.errors.items()):
             samples = ", ".join(aggregate.samples)
