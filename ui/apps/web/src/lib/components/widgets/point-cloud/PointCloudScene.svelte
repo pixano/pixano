@@ -223,35 +223,30 @@ License: CECILL-C
   {/each}
 {/if}
 
+{#snippet arrowGizmo(arrow: { id: string; pos: [number, number, number]; quat: [number, number, number, number]; color: string })}
+  <T.Group position={arrow.pos} quaternion={arrow.quat}>
+    <T.Mesh position={[0, editor.arrowShaftOffsetY, 0]}>
+      <T.CylinderGeometry args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]} />
+      <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
+    </T.Mesh>
+    <T.Mesh position={[0, editor.arrowHeadOffsetY, 0]}>
+      <T.ConeGeometry args={[editor.arrowRadius, editor.arrowHeadLength, 8]} />
+      <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
+    </T.Mesh>
+  </T.Group>
+{/snippet}
+
 <!-- Translation gizmo arrows -->
 {#if editor.previewVisible && gizmoVisibility.translateArrows && (editor.drawPhase === "confirming" || (editor.drawPhase === "moving" && editor.moveMode === "axis"))}
   {#each editor.translateArrowGizmos as arrow (arrow.id)}
-    <T.Group position={arrow.pos} quaternion={arrow.quat}>
-      <T.Mesh position={[0, editor.arrowShaftOffsetY, 0]}>
-        <T.CylinderGeometry args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]} />
-        <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-      </T.Mesh>
-      <T.Mesh position={[0, editor.arrowHeadOffsetY, 0]}>
-        <T.ConeGeometry args={[editor.arrowRadius, editor.arrowHeadLength, 8]} />
-        <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-      </T.Mesh>
-    </T.Group>
+    {@render arrowGizmo(arrow)}
   {/each}
 {/if}
 
 <!-- Resize arrows -->
 {#if editor.previewVisible && gizmoVisibility.resizeArrows && (editor.drawPhase === "confirming" || editor.drawPhase === "resizing-face")}
   {#each editor.arrowGizmos as arrow (arrow.id)}
-    <T.Group position={arrow.pos} quaternion={arrow.quat}>
-      <T.Mesh position={[0, editor.arrowShaftOffsetY, 0]}>
-        <T.CylinderGeometry args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]} />
-        <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-      </T.Mesh>
-      <T.Mesh position={[0, editor.arrowHeadOffsetY, 0]}>
-        <T.ConeGeometry args={[editor.arrowRadius, editor.arrowHeadLength, 8]} />
-        <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-      </T.Mesh>
-    </T.Group>
+    {@render arrowGizmo(arrow)}
   {/each}
 {/if}
 

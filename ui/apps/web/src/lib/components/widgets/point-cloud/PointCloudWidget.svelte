@@ -62,6 +62,12 @@ License: CECILL-C
   let confirmRotation = $state<number[] | undefined>(undefined);
   let gizmoVisibility = $state<GizmoVisibility>({ rings: true, resizeArrows: true, translateArrows: true });
 
+  const GIZMO_TOGGLES: { key: keyof GizmoVisibility; icon: typeof Orbit; label: string }[] = [
+    { key: "rings", icon: Orbit, label: "rotation rings" },
+    { key: "resizeArrows", icon: Scaling, label: "resize arrows" },
+    { key: "translateArrows", icon: Move, label: "translate arrows" },
+  ];
+
   onMount(async () => {
     try {
       const [threlte, scene] = await Promise.all([
@@ -307,30 +313,16 @@ License: CECILL-C
               Cancel
             </button>
             <div class="mx-1 h-4 w-px bg-border"></div>
-            <button
-              type="button"
-              onclick={() => (gizmoVisibility = { ...gizmoVisibility, rings: !gizmoVisibility.rings })}
-              title={gizmoVisibility.rings ? "Hide rotation rings" : "Show rotation rings"}
-              class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility.rings ? 'bg-accent text-accent-foreground' : ''}"
-            >
-              <Orbit class="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onclick={() => (gizmoVisibility = { ...gizmoVisibility, resizeArrows: !gizmoVisibility.resizeArrows })}
-              title={gizmoVisibility.resizeArrows ? "Hide resize arrows" : "Show resize arrows"}
-              class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility.resizeArrows ? 'bg-accent text-accent-foreground' : ''}"
-            >
-              <Scaling class="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onclick={() => (gizmoVisibility = { ...gizmoVisibility, translateArrows: !gizmoVisibility.translateArrows })}
-              title={gizmoVisibility.translateArrows ? "Hide translate arrows" : "Show translate arrows"}
-              class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility.translateArrows ? 'bg-accent text-accent-foreground' : ''}"
-            >
-              <Move class="h-3.5 w-3.5" />
-            </button>
+            {#each GIZMO_TOGGLES as toggle (toggle.key)}
+              <button
+                type="button"
+                onclick={() => (gizmoVisibility = { ...gizmoVisibility, [toggle.key]: !gizmoVisibility[toggle.key] })}
+                title={gizmoVisibility[toggle.key] ? `Hide ${toggle.label}` : `Show ${toggle.label}`}
+                class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility[toggle.key] ? 'bg-accent text-accent-foreground' : ''}"
+              >
+                <toggle.icon class="h-3.5 w-3.5" />
+              </button>
+            {/each}
           </div>
         </div>
       {/if}

@@ -225,13 +225,8 @@ def _list_image_responses(
         view_name=view_name,
         where=where,
     )
-    convert = (
-        _to_calibrated_image_response
-        if table_name == CALIBRATED_IMAGE_TABLE
-        else lambda ds, row: CalibratedImageResponse(**_to_image_response(ds, row).model_dump())
-    )
     return PaginatedResponse(
-        items=[convert(dataset_id, row) for row in rows],
+        items=[_to_calibrated_image_response(dataset_id, row) for row in rows],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,

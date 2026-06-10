@@ -139,6 +139,8 @@ export class BoxEditor {
   private readonly _raycastBoxMesh = new THREE.Mesh();
   private readonly _raycastRingMeshes = [new THREE.Mesh(), new THREE.Mesh(), new THREE.Mesh()];
   private readonly _raycastArrowMesh = new THREE.Mesh();
+  // Unit cube scaled per bbox, so existing-box raycasts allocate no geometry
+  private readonly _raycastExistingBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
   // Raycast scratch
   private readonly _raycastNdc = new THREE.Vector2();
@@ -271,13 +273,12 @@ export class BoxEditor {
         for (const bbox of this.getBboxes()) {
           if (bbox.id === this.editingBoxId) continue;
           const { x, y, z, w } = bbox.quaternion;
-          const geom = new THREE.BoxGeometry(bbox.size[0], bbox.size[1], bbox.size[2]);
-          const mesh = new THREE.Mesh(geom);
+          const mesh = this._raycastExistingBoxMesh;
           mesh.position.set(...bbox.position);
           mesh.quaternion.set(x, y, z, w);
+          mesh.scale.set(bbox.size[0], bbox.size[1], bbox.size[2]);
           mesh.updateMatrixWorld(true);
           const hits = this._raycastRay.intersectObject(mesh);
-          geom.dispose();
           if (hits.length > 0 && hits[0].distance < closestDist) {
             closestDist = hits[0].distance;
             closestBox = bbox;

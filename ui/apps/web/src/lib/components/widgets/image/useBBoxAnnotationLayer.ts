@@ -17,6 +17,7 @@ import {
   getPixelFrame,
   normalizedToPixel,
   type PixelFrame,
+  pixelToNormalized,
 } from "./imageWidgetGeometry.js";
 
 export class BBoxAnnotationLayer {
@@ -116,11 +117,7 @@ export class BBoxAnnotationLayer {
     const bbox = this.storage.bboxes.find((b) => b.id === bboxId);
     if (!bbox) return;
 
-    const x = (rect.x() - frame.x) / frame.w;
-    const y = (rect.y() - frame.y) / frame.h;
-    const w = rect.width() / frame.w;
-    const h = rect.height() / frame.h;
-    const coordsNorm: [number, number, number, number] = [x, y, w, h];
+    const coordsNorm = pixelToNormalized(rect.x(), rect.y(), rect.width(), rect.height(), frame);
     bbox.coordsNorm = coordsNorm;
 
     if (bbox.persisted) {
