@@ -10,7 +10,7 @@ lerna-debug.log*
 # Modules
 node_modules
 dist
-classic_dist
+legacy_dist
 dist-ssr
 *.local
 .vite

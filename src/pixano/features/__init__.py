@@ -10,7 +10,6 @@ from .pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATAT
 _SCHEMA_EXPORTS = {
     "AnnotationSourceKind",
     "PerFrameAnnotation",
-    "BaseIntrinsics",
     "BBox",
     "BBox3D",
     "CalibratedImage",
@@ -22,9 +21,7 @@ _SCHEMA_EXPORTS = {
     "Embedding",
     "Entity",
     "EntityDynamicState",
-    "Extrinsics",
     "Image",
-    "Intrinsics",
     "KeyPoints",
     "KeyPoints3D",
     "Message",
