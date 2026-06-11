@@ -42,17 +42,17 @@ export const RING_ATAN_AXES = [[2, 1], [2, 0], [1, 0]] as const;
 export const ARROW_DEFS = [
   { id: "+x", localDir: new THREE.Vector3( 1,  0,  0), color: "#ef4444", axis: 0 as const, sign:  1 as const },
   { id: "-x", localDir: new THREE.Vector3(-1,  0,  0), color: "#ef4444", axis: 0 as const, sign: -1 as const },
-  { id: "+y", localDir: new THREE.Vector3( 0,  1,  0), color: "#22c55e", axis: 1 as const, sign:  1 as const },
-  { id: "-y", localDir: new THREE.Vector3( 0, -1,  0), color: "#22c55e", axis: 1 as const, sign: -1 as const },
-  { id: "+z", localDir: new THREE.Vector3( 0,  0,  1), color: "#3b82f6", axis: 2 as const, sign:  1 as const },
-  { id: "-z", localDir: new THREE.Vector3( 0,  0, -1), color: "#3b82f6", axis: 2 as const, sign: -1 as const },
+  { id: "+y", localDir: new THREE.Vector3( 0,  1,  0), color: "#3b82f6", axis: 1 as const, sign:  1 as const },
+  { id: "-y", localDir: new THREE.Vector3( 0, -1,  0), color: "#3b82f6", axis: 1 as const, sign: -1 as const },
+  { id: "+z", localDir: new THREE.Vector3( 0,  0,  1), color: "#22c55e", axis: 2 as const, sign:  1 as const },
+  { id: "-z", localDir: new THREE.Vector3( 0,  0, -1), color: "#22c55e", axis: 2 as const, sign: -1 as const },
 ] as const;
 
 /** Three translate arrows — one per +axis direction from box center. */
 export const TRANSLATE_ARROW_DEFS = [
   { id: "+x", localDir: new THREE.Vector3(1, 0, 0), color: "#ef4444", axis: 0 as const },
-  { id: "+y", localDir: new THREE.Vector3(0, 1, 0), color: "#22c55e", axis: 1 as const },
-  { id: "+z", localDir: new THREE.Vector3(0, 0, 1), color: "#3b82f6", axis: 2 as const },
+  { id: "+y", localDir: new THREE.Vector3(0, 1, 0), color: "#3b82f6", axis: 1 as const },
+  { id: "+z", localDir: new THREE.Vector3(0, 0, 1), color: "#22c55e", axis: 2 as const },
 ] as const;
 
 /** Unit vectors for each axis — used for ring-angle raycasting. */
