@@ -6,7 +6,7 @@ License: CECILL-C
 
 import type { BBox3DRow, LocalBBox3D } from "$lib/api/annotations.js";
 import type { PointCloudWidgetStorage } from "$lib/annotations/types.js";
-import PointCloudWidget from "$lib/components/widgets/PointCloudWidget.svelte";
+import PointCloudWidget from "$lib/components/widgets/point-cloud/PointCloudWidget.svelte";
 
 import { WidgetExtension } from "../WidgetExtension.js";
 
@@ -31,6 +31,7 @@ export const PointCloudExtension = WidgetExtension.create({
   addStorage: (): PointCloudWidgetStorage => ({
     mode: "navigate",
     drafts: [],
+    overrides: {},
   }),
   findLocalDraft: (storage, localId) => {
     return (storage as PointCloudWidgetStorage).drafts?.find((b) => b.id === localId);

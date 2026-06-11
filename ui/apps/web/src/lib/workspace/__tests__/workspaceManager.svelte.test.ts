@@ -11,7 +11,7 @@ import type {
   BBoxRow,
   EntityRow,
 } from "$lib/api/annotations.js";
-import type { ImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type {
   WidgetComponentProps,
@@ -33,7 +33,7 @@ import { WorkspaceManager } from "../workspaceManager.svelte.js";
 interface FakeGatewayState {
   dataset: Dataset;
   entities: EntityRow[];
-  imagesByLogicalName: Map<string, ImageResponse>;
+  imagesByLogicalName: Map<string, CalibratedImageResponse>;
   pointCloudsByLogicalName: Map<string, PointCloudResponse>;
   bboxes: BBoxRow[];
   bboxes3d: BBox3DRow[];
@@ -196,6 +196,39 @@ function makeDataset(views: Record<string, { base: string }>): Dataset {
 
 const FIXED_VIEWPORT = { width: 1600, height: 900 };
 
+describe("WorkspaceManager.toggleWidgetVisibility", () => {
+  function findWidget(manager: WorkspaceManager, id: string) {
+    return manager.widgets.find((w) => w.id === id);
+  }
+
+  it("toggles hidden from falsy to true", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    const { id } = manager.addWidget("image")!;
+
+    manager.toggleWidgetVisibility(id);
+
+    expect(findWidget(manager, id)?.hidden).toBe(true);
+  });
+
+  it("toggles hidden back to false on second call", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    const { id } = manager.addWidget("image")!;
+
+    manager.toggleWidgetVisibility(id);
+    manager.toggleWidgetVisibility(id);
+
+    expect(findWidget(manager, id)?.hidden).toBe(false);
+  });
+
+  it("does nothing for an unknown id", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    const { id } = manager.addWidget("image")!;
+
+    expect(() => manager.toggleWidgetVisibility("nonexistent")).not.toThrow();
+    expect(findWidget(manager, id)?.hidden).toBeUndefined();
+  });
+});
+
 describe("WorkspaceManager.selectRecordInDataset", () => {
   it("creates one widget per renderable view, in dataset order", async () => {
     const dataset = makeDataset({
@@ -207,8 +240,8 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       dataset,
       entities: [],
       imagesByLogicalName: new Map([
-        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as ImageResponse],
-        ["cam_back", { id: "img-back", src: "/b.png", width: 100, height: 50 } as ImageResponse],
+        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse],
+        ["cam_back", { id: "img-back", src: "/b.png", width: 100, height: 50 } as CalibratedImageResponse],
       ]),
       pointCloudsByLogicalName: new Map([
         ["lidar_top", { id: "pc-top", src: "/lidar.pcd" } as PointCloudResponse],
@@ -257,7 +290,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       imagesByLogicalName: new Map([
         [
           "cam_front",
-          { id: "img-front", src: "/f.png", width: 100, height: 50 } as ImageResponse,
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
         ],
       ]),
       pointCloudsByLogicalName: new Map(),
@@ -363,7 +396,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
         return entitiesPromise;
       },
       loadImageByLogicalName: () =>
-        Promise.resolve({ id: "img-1", src: "", width: 1, height: 1 } as ImageResponse),
+        Promise.resolve({ id: "img-1", src: "", width: 1, height: 1, f: null, c: null, distortion: null, extrinsic_matrix: null, ego_to_world: null } as CalibratedImageResponse),
       listBBoxes: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
       listBBox3Ds: () => Promise.resolve([]),

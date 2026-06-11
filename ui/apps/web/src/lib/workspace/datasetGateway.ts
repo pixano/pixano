@@ -10,7 +10,7 @@ import type {
   BBoxRow,
   EntityRow,
 } from "$lib/api/annotations.js";
-import type { ImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { Dataset } from "$lib/types/dataset";
 
 /**
@@ -40,7 +40,7 @@ export interface RecordReadGateway {
     datasetId: string,
     recordId: string,
     logicalName: string,
-  ): Promise<ImageResponse | null>;
+  ): Promise<CalibratedImageResponse | null>;
 
   listBBoxes(
     datasetId: string,

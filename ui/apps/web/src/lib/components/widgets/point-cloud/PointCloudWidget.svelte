@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Box, Eye, Globe, MousePointer2, Orbit, Save, Scaling } from "lucide-svelte";
+  import { Box, Eye, Globe, Move, MousePointer2, Orbit, Save, Scaling } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
   import type { Component } from "svelte";
 
@@ -21,6 +21,8 @@ License: CECILL-C
   } from "$lib/annotations/types.js";
   import type { LocalBBox3D } from "$lib/api/annotations.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
+
+  import type { GizmoVisibility } from "./pointCloudTypes.js";
 
   interface Props {
     widgetId: string;
@@ -42,28 +44,29 @@ License: CECILL-C
   // svelte-ignore state_referenced_locally
   const viewId = (data?.viewId as string | undefined) ?? "";
 
-  // Camera control mode — local UI state, not persisted to backend
   let cameraMode = $state<"orbit" | "first-person">("orbit");
 
-  // Non-null while the user is confirming edits to an existing box (its id)
   let confirmEditingId = $state<string | null>(null);
-  // Optimistic coordinate overrides for persisted boxes edited but not yet reloaded from backend
-  let localOverrides = $state<Record<string, { coords: [number, number, number, number, number, number]; rotation?: number[] }>>({});
-  $effect(() => { void data; localOverrides = {}; });
+  // Clear persisted-box overrides when the record changes so stale edits don't bleed across records.
+  $effect(() => { void data; storage.overrides = {}; });
 
   let ready = $state(false);
   let error = $state<string | null>(null);
   let CanvasComponent = $state<Component | null>(null);
   let SceneComponent = $state<Component | null>(null);
   let canvasEl = $state<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sceneRef = $state<any>(null);
 
-  // Confirm overlay state — set by scene's onReadyToConfirm, cleared on save/cancel
   let confirmCoords = $state<[number, number, number, number, number, number] | null>(null);
   let confirmRotation = $state<number[] | undefined>(undefined);
-  let showRings = $state(true);
-  let showArrows = $state(true);
-  // Incrementing this tells the scene to reset its FSM (used by Cancel button)
-  let externalReset = $state(0);
+  let gizmoVisibility = $state<GizmoVisibility>({ rings: true, resizeArrows: true, translateArrows: true });
+
+  const GIZMO_TOGGLES: { key: keyof GizmoVisibility; icon: typeof Orbit; label: string }[] = [
+    { key: "rings", icon: Orbit, label: "rotation rings" },
+    { key: "resizeArrows", icon: Scaling, label: "resize arrows" },
+    { key: "translateArrows", icon: Move, label: "translate arrows" },
+  ];
 
   onMount(async () => {
     try {
@@ -106,74 +109,85 @@ License: CECILL-C
     confirmCoords = null;
 
     if (confirmEditingId) {
-      const boxId = confirmEditingId;
+      handleEditBoxSave(confirmEditingId, coords, rotation);
       confirmEditingId = null;
-      const existing = allBboxes3d.find((b) => b.id === boxId);
-      if (existing) {
-        const updateBody = buildBBox3DUpdate(
-          { datasetId, recordId, viewId },
-          boxId,
-          existing.entity_id,
-          coords,
-          rotation,
-        );
-        const pending = manager.pendingMutations.find(
-          (m) => m.op === "update" && m.resource === "bbox3ds" && m.id === boxId,
-        );
-        if (pending && pending.op === "update") {
-          pending.body = updateBody;
-        } else {
-          manager.queueMutation({
-            op: "update",
-            resource: "bbox3ds",
-            id: boxId,
-            body: updateBody,
-            widgetId: stableWidgetId,
-            localBBoxId: boxId,
-          });
-        }
-        // Optimistic update so the box shows new coords immediately
-        const draftIdx = storage.drafts.findIndex((d) => d.id === boxId);
-        if (draftIdx >= 0) {
-          storage.drafts[draftIdx] = { ...storage.drafts[draftIdx], coordsLance: coords, rotation };
-        } else {
-          localOverrides[boxId] = { coords, rotation };
-        }
-      }
     } else {
-      const localId = generateShortId();
-      const { entityId, mutations } = buildBBox3DCreate(
-        { datasetId, recordId, viewId },
-        coords,
-        { widgetId: stableWidgetId, localBBoxId: localId, rotation },
-      );
-      const draft: DraftBBox3D = {
-        id: localId,
-        entityId,
-        coordsLance: coords,
-        rotation,
-        persisted: false,
-      };
-      storage.drafts.push(draft);
-      for (const m of mutations) {
-        manager.queueMutation(m);
-      }
+      handleNewBoxSave(coords, rotation);
     }
-    // Reset the scene FSM so the user can draw/edit another box immediately.
-    externalReset++;
+
+    sceneRef?.reset();
   }
 
-  // Cancel button in the DOM overlay — clear coords and tell scene to reset
+  function handleEditBoxSave(
+    boxId: string,
+    coords: [number, number, number, number, number, number],
+    rotation: number[] | undefined,
+  ): void {
+    const existing = allBboxes3d.find((b) => b.id === boxId);
+    if (!existing) return;
+
+    const updateBody = buildBBox3DUpdate(
+      { datasetId, recordId, viewId },
+      boxId,
+      existing.entity_id,
+      coords,
+      rotation,
+    );
+    const pending = manager.pendingMutations.find(
+      (m) => m.op === "update" && m.resource === "bbox3ds" && m.id === boxId,
+    );
+    if (pending && pending.op === "update") {
+      pending.body = updateBody;
+    } else {
+      manager.queueMutation({
+        op: "update",
+        resource: "bbox3ds",
+        id: boxId,
+        body: updateBody,
+        widgetId: stableWidgetId,
+        localBBoxId: boxId,
+      });
+    }
+    const draftIdx = storage.drafts.findIndex((d) => d.id === boxId);
+    if (draftIdx >= 0) {
+      storage.drafts[draftIdx] = { ...storage.drafts[draftIdx], coordsLance: coords, rotation };
+    } else {
+      storage.overrides[boxId] = { coords, rotation };
+    }
+  }
+
+  function handleNewBoxSave(
+    coords: [number, number, number, number, number, number],
+    rotation: number[] | undefined,
+  ): void {
+    const localId = generateShortId();
+    const { entityId, mutations } = buildBBox3DCreate(
+      { datasetId, recordId, viewId },
+      coords,
+      { widgetId: stableWidgetId, localBBoxId: localId, rotation },
+    );
+    const draft: DraftBBox3D = {
+      id: localId,
+      entityId,
+      coordsLance: coords,
+      rotation,
+      persisted: false,
+    };
+    storage.drafts.push(draft);
+    for (const m of mutations) {
+      manager.queueMutation(m);
+    }
+  }
+
   function handleConfirmCancel(): void {
     confirmCoords = null;
     confirmEditingId = null;
-    externalReset++;
+    sceneRef?.reset();
   }
 
-  // All boxes: loaded from backend + locally added drafts (shown immediately for feedback)
   const allBboxes3d = $derived<LocalBBox3D[]>([
     ...((data?.bboxes3d as LocalBBox3D[] | undefined) ?? []).map((bbox) => {
-      const ov = localOverrides[bbox.id];
+      const ov = storage.overrides[bbox.id];
       if (!ov) return bbox;
       return { ...bbox, coords: ov.coords, rotation: ov.rotation ?? bbox.rotation };
     }),
@@ -206,10 +220,7 @@ License: CECILL-C
       type="button"
       onclick={() => (storage.mode = "navigate")}
       title="Navigate"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {storage.mode ===
-      'navigate'
-        ? 'bg-accent text-accent-foreground'
-        : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {storage.mode === 'navigate' ? 'bg-accent text-accent-foreground' : ''}"
     >
       <MousePointer2 class="h-3.5 w-3.5" />
     </button>
@@ -217,23 +228,16 @@ License: CECILL-C
       type="button"
       onclick={() => (storage.mode = storage.mode === "draw-bbox3d" ? "navigate" : "draw-bbox3d")}
       title="Draw 3D box"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {storage.mode ===
-      'draw-bbox3d'
-        ? 'bg-accent text-accent-foreground'
-        : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {storage.mode === 'draw-bbox3d' ? 'bg-accent text-accent-foreground' : ''}"
     >
       <Box class="h-3.5 w-3.5" />
     </button>
     <div class="mx-1 h-4 w-px bg-border"></div>
-    <!-- Camera control mode -->
     <button
       type="button"
       onclick={() => (cameraMode = "orbit")}
       title="Orbit mode (Left drag to orbit · Right drag to pan · Scroll to zoom)"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
-      'orbit'
-        ? 'bg-accent text-accent-foreground'
-        : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'orbit' ? 'bg-accent text-accent-foreground' : ''}"
     >
       <Globe class="h-3.5 w-3.5" />
     </button>
@@ -241,10 +245,7 @@ License: CECILL-C
       type="button"
       onclick={() => (cameraMode = "first-person")}
       title="First person mode (Left drag to pan · Right drag to look around · Scroll to move forward/back)"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
-      'first-person'
-        ? 'bg-accent text-accent-foreground'
-        : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'first-person' ? 'bg-accent text-accent-foreground' : ''}"
     >
       <Eye class="h-3.5 w-3.5" />
     </button>
@@ -262,10 +263,7 @@ License: CECILL-C
       <span class="ml-1 text-[10px] text-muted-foreground">{manager.pendingCount} unsaved</span>
     {/if}
     {#if manager.saveError}
-      <span
-        class="ml-1 max-w-[200px] truncate text-[10px] text-destructive"
-        title={manager.saveError}>Save failed</span
-      >
+      <span class="ml-1 max-w-[200px] truncate text-[10px] text-destructive" title={manager.saveError}>Save failed</span>
     {/if}
   </div>
 
@@ -282,6 +280,7 @@ License: CECILL-C
       <div class="absolute inset-0">
         <CanvasComponent>
           <SceneComponent
+            bind:this={sceneRef}
             pointCloudUrl={data?.pointCloudUrl as string | undefined}
             bboxes3d={allBboxes3d}
             drawMode={storage.mode === "draw-bbox3d"}
@@ -289,21 +288,15 @@ License: CECILL-C
             onReadyToConfirm={handleReadyToConfirm}
             onDrawCanceled={handleDrawCanceled}
             onLoadError={(msg) => (error = msg)}
-            {externalReset}
-            {showRings}
-            {showArrows}
+            {gizmoVisibility}
           />
         </CanvasComponent>
       </div>
 
-      <!-- Confirm overlay — plain DOM, guaranteed reliable click handling -->
+      <!-- Confirm overlay -->
       {#if confirmCoords}
-        <div
-          class="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center"
-        >
-          <div
-            class="pointer-events-auto flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm"
-          >
+        <div class="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+          <div class="pointer-events-auto flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm">
             <span class="text-muted-foreground">Save this 3D box?</span>
             <button
               type="button"
@@ -320,26 +313,16 @@ License: CECILL-C
               Cancel
             </button>
             <div class="mx-1 h-4 w-px bg-border"></div>
-            <button
-              type="button"
-              onclick={() => (showRings = !showRings)}
-              title={showRings ? "Hide rotation rings" : "Show rotation rings"}
-              class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {showRings
-                ? 'bg-accent text-accent-foreground'
-                : ''}"
-            >
-              <Orbit class="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onclick={() => (showArrows = !showArrows)}
-              title={showArrows ? "Hide resize arrows" : "Show resize arrows"}
-              class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {showArrows
-                ? 'bg-accent text-accent-foreground'
-                : ''}"
-            >
-              <Scaling class="h-3.5 w-3.5" />
-            </button>
+            {#each GIZMO_TOGGLES as toggle (toggle.key)}
+              <button
+                type="button"
+                onclick={() => (gizmoVisibility = { ...gizmoVisibility, [toggle.key]: !gizmoVisibility[toggle.key] })}
+                title={gizmoVisibility[toggle.key] ? `Hide ${toggle.label}` : `Show ${toggle.label}`}
+                class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility[toggle.key] ? 'bg-accent text-accent-foreground' : ''}"
+              >
+                <toggle.icon class="h-3.5 w-3.5" />
+              </button>
+            {/each}
           </div>
         </div>
       {/if}

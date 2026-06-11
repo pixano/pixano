@@ -28,7 +28,10 @@ import {
   type TableRow,
 } from "$lib/types/dataset";
 
-const BASE_SCHEMA_BY_NAME: Record<string, BaseSchema> = {
+// ─── Schema registries ────────────────────────────────────────────────────────
+
+/** Maps backend schema-class names → BaseSchema enum. */
+const SCHEMA_NAME_TO_BASE: Record<string, BaseSchema> = {
   Record: BaseSchema.Item,
   Entity: BaseSchema.Entity,
   EntityDynamicState: BaseSchema.Classification,
@@ -44,6 +47,44 @@ const BASE_SCHEMA_BY_NAME: Record<string, BaseSchema> = {
   Text: BaseSchema.TextView,
 };
 
+/** Maps normalized table names → BaseSchema enum. Single source of truth. */
+const TABLE_NAME_TO_BASE: Record<string, BaseSchema> = {
+  bboxes: BaseSchema.BBox,
+  masks: BaseSchema.Mask,
+  multi_paths: BaseSchema.MultiPath,
+  keypoints: BaseSchema.Keypoints,
+  tracklets: BaseSchema.Tracklet,
+  messages: BaseSchema.Message,
+  text_spans: BaseSchema.TextSpan,
+  entity_dynamic_states: BaseSchema.Classification,
+};
+
+/** Maps normalized table names → the corresponding key on DatasetInfoResponse. */
+type InfoDescriptorKey = keyof Pick<
+  DatasetInfoResponse,
+  | "record"
+  | "entity"
+  | "entity_dynamic_state"
+  | "bbox"
+  | "mask"
+  | "keypoint"
+  | "tracklet"
+  | "message"
+  | "text_span"
+>;
+
+const DESCRIPTOR_KEY_BY_TABLE: Partial<Record<string, InfoDescriptorKey>> = {
+  records: "record",
+  entities: "entity",
+  entity_dynamic_states: "entity_dynamic_state",
+  bboxes: "bbox",
+  masks: "mask",
+  keypoints: "keypoint",
+  tracklets: "tracklet",
+  messages: "message",
+  text_spans: "text_span",
+};
+
 const ANNOTATION_TABLES = new Set([
   "bboxes",
   "masks",
@@ -55,6 +96,8 @@ const ANNOTATION_TABLES = new Set([
   "entity_dynamic_states",
 ]);
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function mapWorkspace(workspace: string): DatasetInfo["workspace"] {
   return workspace as DatasetInfo["workspace"];
 }
@@ -63,10 +106,7 @@ function toFields(fields: Record<string, { type?: string; collection?: boolean }
   return Object.fromEntries(
     Object.entries(fields).map(([name, field]) => [
       name,
-      {
-        type: field.type ?? "str",
-        collection: field.collection ?? false,
-      },
+      { type: field.type ?? "str", collection: field.collection ?? false },
     ]),
   );
 }
@@ -77,11 +117,23 @@ function toDatasetSchemaEntry(
   schemaName?: string,
 ): DS_Schema {
   return {
-    base_schema: BASE_SCHEMA_BY_NAME[base ?? ""] ?? BaseSchema.Item,
+    base_schema: SCHEMA_NAME_TO_BASE[base ?? ""] ?? BaseSchema.Item,
     fields: toFields(fields),
     schema: schemaName ?? base ?? "Unknown",
   };
 }
+
+function tableInfo(name: string, group: string, baseSchema: BaseSchema) {
+  return { name, group, base_schema: baseSchema } as const;
+}
+
+function inferColumnType(value: unknown): string {
+  if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
+  if (typeof value === "boolean") return "bool";
+  return "str";
+}
+
+// ─── Public adapters ──────────────────────────────────────────────────────────
 
 export function toDatasetInfo(dto: DatasetInfoResponse): DatasetInfo {
   return {
@@ -109,21 +161,13 @@ export function toDatasetSchema(dto: DatasetResponse): DatasetSchema {
   for (const [tableName, schemaName] of Object.entries(dto.tables)) {
     const normalizedTableName = normalizeTableName(tableName);
     const info = dto.info;
-    let descriptor = undefined;
-    if (normalizedTableName === "records") descriptor = info.record ?? undefined;
-    else if (normalizedTableName === "entities") descriptor = info.entity ?? undefined;
-    else if (normalizedTableName === "entity_dynamic_states")
-      descriptor = info.entity_dynamic_state ?? undefined;
-    else if (normalizedTableName === "bboxes") descriptor = info.bbox ?? undefined;
-    else if (normalizedTableName === "masks") descriptor = info.mask ?? undefined;
-    else if (normalizedTableName === "keypoints") descriptor = info.keypoint ?? undefined;
-    else if (normalizedTableName === "tracklets") descriptor = info.tracklet ?? undefined;
-    else if (normalizedTableName === "messages") descriptor = info.message ?? undefined;
-    else if (normalizedTableName === "text_spans") descriptor = info.text_span ?? undefined;
-    else if (info.views) {
-      descriptor =
-        Object.values(info.views).find((candidate) => candidate.name === schemaName) ?? undefined;
-    }
+
+    const infoKey = DESCRIPTOR_KEY_BY_TABLE[normalizedTableName];
+    const descriptor = infoKey
+      ? (info[infoKey] ?? undefined)
+      : info.views
+        ? (Object.values(info.views).find((c) => c.name === schemaName) ?? undefined)
+        : undefined;
 
     schemas[normalizedTableName] = toDatasetSchemaEntry(
       descriptor?.base ?? schemaName,
@@ -133,20 +177,12 @@ export function toDatasetSchema(dto: DatasetResponse): DatasetSchema {
 
     if (normalizedTableName === "records") groups.item.push(normalizedTableName);
     else if (normalizedTableName === "entities") groups.entities.push(normalizedTableName);
-    else if (ANNOTATION_TABLES.has(normalizedTableName)) {
-      groups.annotations.push(normalizedTableName);
-    } else if (normalizedTableName === "embeddings") {
-      groups.embeddings.push(normalizedTableName);
-    } else {
-      groups.views.push(normalizedTableName);
-    }
+    else if (ANNOTATION_TABLES.has(normalizedTableName)) groups.annotations.push(normalizedTableName);
+    else if (normalizedTableName === "embeddings") groups.embeddings.push(normalizedTableName);
+    else groups.views.push(normalizedTableName);
   }
 
-  return {
-    relations: {},
-    schemas,
-    groups,
-  };
+  return { relations: {}, schemas, groups };
 }
 
 export function toDataset(dto: DatasetResponse): Dataset {
@@ -162,12 +198,6 @@ export function toDataset(dto: DatasetResponse): Dataset {
   };
 }
 
-function inferColumnType(value: unknown): string {
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
-  if (typeof value === "boolean") return "bool";
-  return "str";
-}
-
 export function toDatasetBrowser(
   datasetId: string,
   records: PaginatedResponse<RecordResponse>,
@@ -176,10 +206,8 @@ export function toDatasetBrowser(
   const items = [...records.items];
   if (sort?.col) {
     items.sort((left, right) => {
-      const leftValue = left[sort.col];
-      const rightValue = right[sort.col];
-      const leftStr = leftValue == null ? "" : String(leftValue as string | number);
-      const rightStr = rightValue == null ? "" : String(rightValue as string | number);
+      const leftStr = left[sort.col] == null ? "" : String(left[sort.col] as string | number);
+      const rightStr = right[sort.col] == null ? "" : String(right[sort.col] as string | number);
       const cmp = leftStr.localeCompare(rightStr);
       return sort.order === "desc" ? -cmp : cmp;
     });
@@ -192,35 +220,24 @@ export function toDatasetBrowser(
     for (const [key, value] of Object.entries(record)) {
       if (typeof value === "object" && value !== null) continue;
       row[key] = (value ?? "") as string | number | boolean;
-      if (!columnsMap.has(key)) {
-        columnsMap.set(key, inferColumnType(value));
-      }
+      if (!columnsMap.has(key)) columnsMap.set(key, inferColumnType(value));
     }
-
-    const viewPreviews = record.view_previews;
-    for (const [logicalName, preview] of Object.entries(viewPreviews ?? {})) {
+    for (const [logicalName, preview] of Object.entries(record.view_previews ?? {})) {
       row[logicalName] = preview.preview_url;
       viewColumns.set(logicalName, preview.kind);
     }
-
     return row;
   });
 
   const columns: TableColumn[] = [
     ...Array.from(viewColumns.entries()).map(([name, type]) => ({ name, type })),
-    ...Array.from(columnsMap.entries()).map(([name, type]) => ({
-      name,
-      type,
-    })),
+    ...Array.from(columnsMap.entries()).map(([name, type]) => ({ name, type })),
   ];
 
   return {
     id: datasetId,
     name: datasetId,
-    table_data: {
-      columns,
-      rows,
-    },
+    table_data: { columns, rows },
     pagination: {
       current_page: Math.floor(records.offset / Math.max(records.limit, 1)) + 1,
       page_size: records.limit,
@@ -230,43 +247,10 @@ export function toDatasetBrowser(
   };
 }
 
-function tableInfo(name: string, group: string, baseSchema: BaseSchema) {
-  return {
-    name,
-    group,
-    base_schema: baseSchema,
-  } as const;
-}
-
-function baseSchemaFromTableName(tableName: string): BaseSchema {
-  switch (normalizeTableName(tableName)) {
-    case "bboxes":
-      return BaseSchema.BBox;
-    case "masks":
-      return BaseSchema.Mask;
-    case "multi_paths":
-      return BaseSchema.MultiPath;
-    case "keypoints":
-      return BaseSchema.Keypoints;
-    case "tracklets":
-      return BaseSchema.Tracklet;
-    case "messages":
-      return BaseSchema.Message;
-    case "text_spans":
-      return BaseSchema.TextSpan;
-    case "entity_dynamic_states":
-      return BaseSchema.Classification;
-    default:
-      return BaseSchema.Classification;
-  }
-}
-
 export function toRawRecord(record: RecordResponse, tableName = "records"): RawSchemaData {
   const { id, created_at = "", updated_at = "", ...data } = record;
   return {
-    id,
-    created_at,
-    updated_at,
+    id, created_at, updated_at,
     table_info: tableInfo(normalizeTableName(tableName), "item", BaseSchema.Item),
     data,
   };
@@ -275,15 +259,9 @@ export function toRawRecord(record: RecordResponse, tableName = "records"): RawS
 export function toRawEntity(entity: EntityResponse, tableName = "entities"): RawSchemaData {
   const { id, created_at = "", updated_at = "", record_id = "", parent_id = "", ...data } = entity;
   return {
-    id,
-    created_at,
-    updated_at,
+    id, created_at, updated_at,
     table_info: tableInfo(normalizeTableName(tableName), "entities", BaseSchema.Entity),
-    data: {
-      item_id: record_id,
-      parent_id,
-      ...data,
-    },
+    data: { item_id: record_id, parent_id, ...data },
   };
 }
 
@@ -301,9 +279,7 @@ export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): 
   const isSequenceFrame = typeof frame_index === "number";
 
   return {
-    id,
-    created_at,
-    updated_at,
+    id, created_at, updated_at,
     table_info: tableInfo(
       isText ? "texts" : isSequenceFrame ? "sequence_frames" : "images",
       "views",
@@ -313,14 +289,7 @@ export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): 
       item_id: record_id,
       parent_id: "",
       view_name: logical_name,
-      url: src,
-      content,
-      uri,
-      width,
-      height,
-      format,
-      frame_index,
-      timestamp,
+      url: src, content, uri, width, height, format, frame_index, timestamp,
     },
   };
 }
@@ -343,15 +312,15 @@ export function toRawAnnotation(
     ...data
   } = component;
   const normalizedTableName = normalizeTableName(tableName);
-  // Use frame_id (if present) to resolve the view_name for display, but preserve
-  // the original view_id so that tracklets and per-frame annotations share the same value.
   const inferredViewId = typeof frame_id === "string" && frame_id !== "" ? frame_id : view_id;
 
   const result = {
-    id,
-    created_at,
-    updated_at,
-    table_info: tableInfo(normalizedTableName, "annotations", baseSchemaFromTableName(tableName)),
+    id, created_at, updated_at,
+    table_info: tableInfo(
+      normalizedTableName,
+      "annotations",
+      TABLE_NAME_TO_BASE[normalizedTableName] ?? BaseSchema.Classification,
+    ),
     data: {
       record_id,
       item_id: record_id,
@@ -372,14 +341,8 @@ export function toRawAnnotation(
   // Reverse-map backend field names for tracklets
   if (normalizedTableName === "tracklets") {
     const d = result.data as Record<string, unknown>;
-    if ("start_timestep" in d) {
-      d.start_frame = d.start_timestep;
-      delete d.start_timestep;
-    }
-    if ("end_timestep" in d) {
-      d.end_frame = d.end_timestep;
-      delete d.end_timestep;
-    }
+    if ("start_timestep" in d) { d.start_frame = d.start_timestep; delete d.start_timestep; }
+    if ("end_timestep" in d) { d.end_frame = d.end_timestep; delete d.end_timestep; }
   }
 
   return result;

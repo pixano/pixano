@@ -17,6 +17,8 @@ License: CECILL-C
   import { page } from "$app/state";
   import { pixanoLogo } from "$lib/assets";
   import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
+  import { ArrowsLeftRight } from "phosphor-svelte";
+
   import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
   import { navigateToRoute } from "$lib/utils/navigation";
 
@@ -98,6 +100,18 @@ License: CECILL-C
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick={() => {
+            document.cookie = "pixano_ui_version=next; max-age=31536000; path=/";
+            window.location.href = "/";
+          }}
+          class="inline-flex items-center justify-center rounded-lg p-1.5 text-foreground/60 transition-colors hover:bg-primary/5 hover:text-foreground"
+          title="Switch to new UI"
+        >
+          <ArrowsLeftRight size={20} />
+        </button>
+
         <InferenceStatusChip />
         <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
       </div>

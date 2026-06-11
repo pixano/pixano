@@ -7,7 +7,7 @@ License: CECILL-C
 import { describe, expect, it, vi } from "vitest";
 
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
-import type { ImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
 import { DatasetInfo } from "$lib/types/dataset";
@@ -49,7 +49,7 @@ function makeDataset(views: Record<string, { base: string }>): Dataset {
 function makeGateway(opts: {
   dataset?: Dataset;
   entities?: EntityRow[];
-  images?: Map<string, ImageResponse>;
+  images?: Map<string, CalibratedImageResponse>;
   pointClouds?: Map<string, PointCloudResponse>;
   bboxes?: BBoxRow[];
   bboxes3d?: BBox3DRow[];
@@ -118,7 +118,7 @@ describe("RecordLoader.load", () => {
     const loader = new RecordLoader({
       workspace: sink,
       registry: makeRegistry(makeImageExtension()),
-      gateway: makeGateway({ dataset, images: new Map([["cam", { id: "img-1", src: "/cam.jpg", width: 100, height: 100 } as ImageResponse]]) }),
+      gateway: makeGateway({ dataset, images: new Map([["cam", { id: "img-1", record_id: "rec-1", src: "/cam.jpg", width: 100, height: 100, f: null, c: null, distortion: null, extrinsic_matrix: null, ego_to_world: null } as CalibratedImageResponse]]) }),
       session,
     });
 
@@ -228,6 +228,73 @@ describe("RecordLoader.load", () => {
 
     expect(widgets).toHaveLength(1);
     expect(widgets[0].extensionName).toBe("high-image");
+  });
+
+  it("stores loaded entities in the session", async () => {
+    const entities: EntityRow[] = [
+      { id: "e1", record_id: "rec-1", category: "car" },
+      { id: "e2", record_id: "rec-1", category: "person" },
+    ];
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const { sink } = makeSink();
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway: makeGateway({ dataset, entities }),
+      session,
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    expect(session.entities).toHaveLength(2);
+    expect(session.entities[0].id).toBe("e1");
+    expect(session.entities[1].id).toBe("e2");
+  });
+
+  it("clears session entities at the start of a new load", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const { sink } = makeSink();
+    const session = new WorkspaceSession();
+    session.entities = [{ id: "stale", record_id: "old-rec" }];
+
+    let resolveEntities!: (rows: EntityRow[]) => void;
+    const entitiesPromise = new Promise<EntityRow[]>((res) => { resolveEntities = res; });
+
+    const gateway = makeGateway({ dataset });
+    gateway.listEntities = () => entitiesPromise;
+    const loader = new RecordLoader({
+      workspace: sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway,
+      session,
+    });
+
+    const loadPromise = loader.load("ds-1", "rec-1", VIEWPORT);
+    // Entities cleared immediately when load starts, before the fetch resolves
+    expect(session.entities).toEqual([]);
+    resolveEntities([]);
+    await loadPromise;
+  });
+
+  it("stores empty entities array when listEntities fails", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const { sink } = makeSink();
+    const session = new WorkspaceSession();
+    const gateway = makeGateway({ dataset });
+    gateway.listEntities = () => Promise.reject(new Error("network error"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const loader = new RecordLoader({
+      workspace: sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway,
+      session,
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    expect(session.entities).toEqual([]);
+    consoleSpy.mockRestore();
   });
 
   it("passes entitiesById to each extension seed", async () => {

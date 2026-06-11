@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { EntityRow } from "$lib/api/annotations.js";
+
 /**
  * Reactive "what record is currently loaded?" state, shared by the
  * sub-services of the workspace.
@@ -19,10 +21,14 @@ License: CECILL-C
 export class WorkspaceSession {
   datasetId = $state<string | null>(null);
   recordId = $state<string | null>(null);
+  entities = $state<EntityRow[]>([]);
+  entitySchemaName = $state<string | null>(null);
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
     this.datasetId = null;
     this.recordId = null;
+    this.entities = [];
+    this.entitySchemaName = null;
   }
 }

@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { ResourceMutation } from "$lib/annotations/types.js";
+import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 
@@ -84,6 +85,14 @@ export class WorkspaceManager {
 
   get recordId(): string | null {
     return this.session.recordId;
+  }
+
+  get entities(): EntityRow[] {
+    return this.session.entities;
+  }
+
+  get entitySchemaName(): string | null {
+    return this.session.entitySchemaName;
   }
 
   // ─── Mutation queue forwarders ────────────────────────────────────────────
@@ -181,6 +190,14 @@ export class WorkspaceManager {
     const widget = this.widgets.find((w) => w.id === id);
     if (widget) {
       widget.layout = { ...widget.layout, ...layout };
+    }
+  }
+
+  /** Toggle the visibility of a widget in the workspace. */
+  toggleWidgetVisibility(id: string): void {
+    const widget = this.widgets.find((w) => w.id === id);
+    if (widget) {
+      widget.hidden = !widget.hidden;
     }
   }
 

@@ -71,7 +71,7 @@ License: CECILL-C
 
     const element = grid.getGridItems().find((i) => i.dataset.widgetId === widgetId);
     if (element) {
-      grid.removeWidget(element, false);
+      grid.removeWidget(element, true);
     }
   }
 
@@ -151,22 +151,23 @@ License: CECILL-C
     }
   });
 
-  // React to widget additions/removals from manager
+  // React to widget additions/removals/visibility changes from manager
   $effect(() => {
     if (!grid) return;
 
     const currentIds = new Set(mountedWidgets.keys());
-    const managerIds = new Set(manager.widgets.map((w) => w.id));
+    const visibleWidgets = manager.widgets.filter((w) => !w.hidden);
+    const visibleIds = new Set(visibleWidgets.map((w) => w.id));
 
-    // Remove widgets no longer in manager
+    // Remove widgets no longer in manager or now hidden
     for (const id of currentIds) {
-      if (!managerIds.has(id)) {
+      if (!visibleIds.has(id)) {
         unmountWidget(id);
       }
     }
 
-    // Add new widgets from manager
-    for (const widget of manager.widgets) {
+    // Add new visible widgets from manager
+    for (const widget of visibleWidgets) {
       if (!currentIds.has(widget.id)) {
         mountWidget(widget);
       }

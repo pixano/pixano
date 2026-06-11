@@ -78,13 +78,18 @@ export class RecordLoader {
     // still leaves a consistent session.
     this.session.datasetId = datasetId;
     this.session.recordId = recordId;
+    this.session.entities = [];
+    this.session.entitySchemaName = null;
 
     // Kick off both the dataset metadata fetch and the entities listing in
     // parallel — they don't depend on each other and the entities call is
     // record-scoped, not view-scoped.
     const [dataset, entityRows] = await Promise.all([
       this.readGateway.getDataset(datasetId),
-      this.readGateway.listEntities(datasetId, { recordId }).catch(() => [] as EntityRow[]),
+      this.readGateway.listEntities(datasetId, { recordId }).catch((err: unknown) => {
+        console.error("Failed to load entities:", err);
+        return [] as EntityRow[];
+      }),
     ]);
 
     // A newer load() was started while we were awaiting — discard our results.
@@ -96,6 +101,10 @@ export class RecordLoader {
     // seed the same map.
     const entitiesById = new Map<string, EntityRow>();
     for (const entity of entityRows) entitiesById.set(entity.id, entity);
+
+    // Expose entities and their schema name to consumers (e.g. the right panel).
+    this.session.entities = entityRows;
+    this.session.entitySchemaName = dataset.schema.schemas?.["entities"]?.schema ?? null;
 
     const candidates = Object.entries(dataset.info.views ?? {});
     const extensions = this.registry.getAll();
