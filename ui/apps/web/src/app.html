@@ -1,9 +1,24 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      /* Theme key: keep in sync with STORAGE_KEY in src/lib/stores/theme.svelte.ts */
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem("pixano-theme");
+        } catch (_) {
+          /* localStorage blocked (e.g. Tor Browser, dom.storage.enabled=false) */
+        }
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (stored === "dark" || ((stored === null || stored === "") && prefersDark)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

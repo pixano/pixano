@@ -5,22 +5,36 @@ License: CECILL-C
 -------------------------------------*/
 
 import type {
+  CameraCalibration,
   CoordsNorm,
   ImageWidgetOptions,
   ImageWidgetStorage,
   LocalBBox,
 } from "$lib/annotations/types.js";
 import type { BBoxRow } from "$lib/api/annotations.js";
-import ImageWidget from "$lib/components/widgets/ImageWidget.svelte";
+import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
+import ImageWidget from "$lib/components/widgets/image/ImageWidget.svelte";
 
 import { WidgetExtension } from "../WidgetExtension.js";
 
 /**
  * Bases this extension claims. `CalibratedImage` extends `Image` on the
- * backend (extra calibration fields the UI ignores for now), so it goes
- * through the same widget and endpoint.
+ * backend and now surfaces calibration data via `options.calibration`.
  */
 const CLAIMED_BASES = new Set(["Image", "CalibratedImage"]);
+
+function _extractCalibration(image: CalibratedImageResponse | null): CameraCalibration | null {
+  if (!image?.extrinsic_matrix || !image.ego_to_world || !image.f || !image.c || !image.distortion) {
+    return null;
+  }
+  return {
+    f: image.f,
+    c: image.c,
+    distortion: image.distortion,
+    extrinsicMatrix: image.extrinsic_matrix,
+    egoToWorld: image.ego_to_world,
+  };
+}
 
 export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWidgetStorage>({
   name: "image",
@@ -36,6 +50,7 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
     viewName: "",
     imageWidth: 0,
     imageHeight: 0,
+    calibration: null,
   }),
   addStorage: () => ({
     mode: "select",
@@ -57,10 +72,7 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
     const allBBoxes = image
       ? await gateway
           .listBBoxes(datasetId, { recordId })
-          .catch((err) => {
-            console.error("listBBoxes failed", err);
-            return [] as BBoxRow[];
-          })
+          .catch(() => [] as BBoxRow[])
       : [];
 
     const existingBBoxes = allBBoxes.filter(
@@ -101,6 +113,7 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
         viewName,
         imageWidth: image?.width ?? 0,
         imageHeight: image?.height ?? 0,
+        calibration: _extractCalibration(image),
       },
       data: { imageUrl: image?.src },
       storage: { bboxes: seedBBoxes },

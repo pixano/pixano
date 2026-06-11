@@ -4,6 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+/** Canonical resource identifier for entity mutations. */
+export const ENTITY_RESOURCE = "entities";
+
 const TABLE_TO_RESOURCE_PATH: Record<string, string> = {
   entity_dynamic_states: "entity-dynamic-states",
   text_spans: "text-spans",

@@ -8,6 +8,7 @@ import asyncio
 import warnings
 from functools import lru_cache
 from importlib.resources import files
+from pathlib import Path
 
 import fastapi
 import uvicorn
@@ -37,9 +38,12 @@ LOGO = """
 """
 ASSETS_PATH = str(files("pixano").joinpath("api/dist/_app"))
 TEMPLATE_PATH = str(files("pixano").joinpath("api/dist"))
+LEGACY_ASSETS_PATH = str(files("pixano").joinpath("api/legacy_dist/_legacy_app"))
+LEGACY_TEMPLATE_PATH = str(files("pixano").joinpath("api/legacy_dist"))
 NON_SPA_PREFIXES = (
     *API_PREFIXES,
     "/_app",
+    "/_legacy_app",
     "/app_models",
     "/health",
     "/docs",
@@ -141,11 +145,18 @@ class App:
         # Create app
         settings = get_settings_override()
         templates = Jinja2Templates(directory=TEMPLATE_PATH)
+        legacy_templates = Jinja2Templates(directory=LEGACY_TEMPLATE_PATH)
         self.app = create_app(settings=settings)
         self.app.dependency_overrides[get_settings] = get_settings_override
 
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
+            if request.cookies.get("pixano_ui_version") == "legacy":
+                if (Path(LEGACY_TEMPLATE_PATH) / "index.html").exists():
+                    return legacy_templates.TemplateResponse(request, "index.html")
+                response = templates.TemplateResponse(request, "index.html")
+                response.delete_cookie("pixano_ui_version")
+                return response
             return templates.TemplateResponse(request, "index.html")
 
         def _is_non_spa_path(path: str) -> bool:
@@ -158,6 +169,14 @@ class App:
             warnings.warn(
                 "Pixano app assets not found. If it is a production environment, this is not expected, "
                 "check if you have built the assets for the UI."
+            )
+
+        try:
+            self.app.mount("/_legacy_app", StaticFiles(directory=LEGACY_ASSETS_PATH), name="legacy_assets")
+        except RuntimeError:
+            warnings.warn(
+                "Legacy app assets not found. If it is a production environment, this is not expected, "
+                "check if you have built the assets for the legacy UI."
             )
 
         @self.app.get("/{full_path:path}", include_in_schema=False)

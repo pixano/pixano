@@ -89,6 +89,16 @@ export interface ImageResponse {
   src: string;
 }
 
+export interface CalibratedImageResponse extends ImageResponse {
+  f: [number, number] | null;
+  c: [number, number] | null;
+  distortion: number[] | null;
+  /** 4×4 camera-to-world matrix flattened to 16 floats (row-major). */
+  extrinsic_matrix: number[] | null;
+  /** 4×4 ego-to-world matrix flattened to 16 floats (row-major). */
+  ego_to_world: number[] | null;
+}
+
 export interface TextResponse {
   id: string;
   record_id: string;
