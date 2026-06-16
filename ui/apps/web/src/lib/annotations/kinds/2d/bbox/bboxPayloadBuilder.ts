@@ -5,7 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { BBoxGeometry, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
-import { buildBBoxCreate, buildBBoxUpdate, type BuildContext } from "$lib/annotations/buildPayloads.js";
+import {
+  buildBBoxCreate,
+  buildBBoxUpdate,
+  type BuildContext,
+  type EntityCreateChoice,
+} from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
 import { BBOX_RESOURCE } from "$lib/api/resourceNames.js";
 
@@ -24,12 +29,15 @@ export const bboxPayloadBuilder = {
     ctx: BuildContext,
     annotation: LocalAnnotation<BBoxGeometry>,
     widgetId: string,
+    entity: EntityCreateChoice = {},
   ): ResourceMutation[] {
     return buildBBoxCreate(ctx, annotation.geometry, {
       widgetId,
       localAnnotationId: annotation.id,
       entityId: annotation.entityId,
       bboxId: annotation.id,
+      entityFields: entity.entityFields,
+      linkExisting: entity.linkExisting,
     }).mutations;
   },
 

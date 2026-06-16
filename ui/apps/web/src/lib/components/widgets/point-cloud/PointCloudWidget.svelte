@@ -19,7 +19,7 @@ License: CECILL-C
     bbox3dPayloadBuilder,
   } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
   import { DEFAULT_TOOL_3D, TOOLS_3D } from "$lib/annotations/tools/registry3d.js";
-  import type { PointCloudWidgetStorage } from "$lib/annotations/types.js";
+  import type { PendingEntityChoice, PointCloudWidgetStorage } from "$lib/annotations/types.js";
   import type { LocalBBox3D } from "$lib/api/annotations.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
@@ -59,7 +59,11 @@ License: CECILL-C
 
   let confirmCoords = $state<[number, number, number, number, number, number] | null>(null);
   let confirmRotation = $state<number[] | undefined>(undefined);
-  let gizmoVisibility = $state<GizmoVisibility>({ rings: true, resizeArrows: true, translateArrows: true });
+  let gizmoVisibility = $state<GizmoVisibility>({
+    rings: true,
+    resizeArrows: true,
+    translateArrows: true,
+  });
 
   const GIZMO_TOGGLES: { key: keyof GizmoVisibility; icon: typeof Orbit; label: string }[] = [
     { key: "rings", icon: Orbit, label: "rotation rings" },
@@ -150,16 +154,41 @@ License: CECILL-C
     coords: [number, number, number, number, number, number],
     rotation: number[] | undefined,
   ): void {
+    // Show the box right away as an unsaved draft; its entity (and the create
+    // mutations) are assigned once the user confirms in the Inspector form.
+    const localId = generateShortId();
     const draft: LocalBBox3DAnnotation = {
-      id: generateShortId(),
-      entityId: generateShortId(),
+      id: localId,
+      entityId: "",
       kind: "bbox3d",
       viewId,
       geometry: { coords, format: "xyzwhd", rotation },
       persisted: false,
     };
     manager.annotations.add(draft);
-    for (const m of bbox3dPayloadBuilder.buildCreate({ datasetId, recordId, viewId }, draft, stableWidgetId)) {
+
+    manager.beginPendingAnnotation({
+      kind: "3D box",
+      onConfirm: (choice: PendingEntityChoice) => commitDraftEntity(localId, choice),
+      onCancel: () => manager.annotations.remove(localId),
+    });
+  }
+
+  function commitDraftEntity(localId: string, choice: PendingEntityChoice): void {
+    const draft = manager.annotations.find(localId) as LocalBBox3DAnnotation | undefined;
+    if (!draft) return;
+
+    if (choice.mode === "existing") {
+      draft.entityId = choice.entityId;
+      draft.entity = manager.entities.find((e) => e.id === choice.entityId);
+    } else {
+      draft.entityId = generateShortId();
+      draft.entity = { id: draft.entityId, ...choice.entityFields };
+    }
+
+    const entity =
+      choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
+    for (const m of bbox3dPayloadBuilder.buildCreate({ datasetId, recordId, viewId }, draft, stableWidgetId, entity)) {
       manager.queueMutation(m);
     }
   }
@@ -211,7 +240,10 @@ License: CECILL-C
       type="button"
       onclick={() => (cameraMode = "orbit")}
       title="Orbit mode (Left drag to orbit · Right drag to pan · Scroll to zoom)"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'orbit' ? 'bg-accent text-accent-foreground' : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
+      'orbit'
+        ? 'bg-accent text-accent-foreground'
+        : ''}"
     >
       <Globe class="h-3.5 w-3.5" />
     </button>
@@ -219,7 +251,10 @@ License: CECILL-C
       type="button"
       onclick={() => (cameraMode = "first-person")}
       title="First person mode (Left drag to pan · Right drag to look around · Scroll to move forward/back)"
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'first-person' ? 'bg-accent text-accent-foreground' : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
+      'first-person'
+        ? 'bg-accent text-accent-foreground'
+        : ''}"
     >
       <Eye class="h-3.5 w-3.5" />
     </button>
@@ -237,7 +272,12 @@ License: CECILL-C
       <span class="ml-1 text-[10px] text-muted-foreground">{manager.pendingCount} unsaved</span>
     {/if}
     {#if manager.saveError}
-      <span class="ml-1 max-w-[200px] truncate text-[10px] text-destructive" title={manager.saveError}>Save failed</span>
+      <span
+        class="ml-1 max-w-[200px] truncate text-[10px] text-destructive"
+        title={manager.saveError}
+      >
+        Save failed
+      </span>
     {/if}
   </div>
 
@@ -270,7 +310,9 @@ License: CECILL-C
       <!-- Confirm overlay -->
       {#if confirmCoords}
         <div class="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-          <div class="pointer-events-auto flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm">
+          <div
+            class="pointer-events-auto flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm"
+          >
             <span class="text-muted-foreground">Save this 3D box?</span>
             <button
               type="button"
@@ -290,9 +332,19 @@ License: CECILL-C
             {#each GIZMO_TOGGLES as toggle (toggle.key)}
               <button
                 type="button"
-                onclick={() => (gizmoVisibility = { ...gizmoVisibility, [toggle.key]: !gizmoVisibility[toggle.key] })}
-                title={gizmoVisibility[toggle.key] ? `Hide ${toggle.label}` : `Show ${toggle.label}`}
-                class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility[toggle.key] ? 'bg-accent text-accent-foreground' : ''}"
+                onclick={() =>
+                  (gizmoVisibility = {
+                    ...gizmoVisibility,
+                    [toggle.key]: !gizmoVisibility[toggle.key],
+                  })}
+                title={gizmoVisibility[toggle.key]
+                  ? `Hide ${toggle.label}`
+                  : `Show ${toggle.label}`}
+                class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {gizmoVisibility[
+                  toggle.key
+                ]
+                  ? 'bg-accent text-accent-foreground'
+                  : ''}"
               >
                 <toggle.icon class="h-3.5 w-3.5" />
               </button>

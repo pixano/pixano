@@ -21,6 +21,7 @@ import {
   type Tool2D,
   type ToolHandler2D,
 } from "$lib/annotations/tools/types2d.js";
+import type { PendingEntityChoice } from "$lib/annotations/types.js";
 
 import { bboxPayloadBuilder } from "./bboxPayloadBuilder.js";
 
@@ -100,22 +101,51 @@ class DrawBBoxHandler implements ToolHandler2D {
 
     const coordsNorm = pixelToNormalized(clampedLeft, clampedTop, clampedW, clampedH, frame);
 
+    // Show the box right away as an unsaved draft; its entity (and the create
+    // mutations) are assigned once the user confirms in the Inspector form.
     const bbox: LocalBBox = {
       id: generateShortId(),
-      entityId: generateShortId(),
+      entityId: "",
       kind: "bbox",
       viewId: this.ctx.buildContext.viewId,
       geometry: coordsNorm,
       persisted: false,
     };
     this.ctx.collection.add(bbox);
-
-    for (const m of bboxPayloadBuilder.buildCreate(this.ctx.buildContext, bbox, this.ctx.widgetId)) {
-      this.ctx.mutations.queue(m);
-    }
-
     this.ctx.setActiveTool(DEFAULT_TOOL_2D);
     this.ctx.collection.select(bbox.id);
+    this.ctx.requestRedraw();
+
+    this.ctx.beginPendingAnnotation({
+      kind: "box",
+      onConfirm: (choice) => this._commitWithEntity(bbox.id, choice),
+      onCancel: () => this._discardDraft(bbox.id),
+    });
+  }
+
+  /** Build the entity + bbox create mutations for a confirmed draft and queue them. */
+  private _commitWithEntity(localId: string, choice: PendingEntityChoice): void {
+    const bbox = this.ctx.collection.find(localId) as LocalBBox | undefined;
+    if (!bbox) return;
+
+    if (choice.mode === "existing") {
+      bbox.entityId = choice.entityId;
+      bbox.entity = this.ctx.findEntity(choice.entityId);
+    } else {
+      bbox.entityId = generateShortId();
+      bbox.entity = { id: bbox.entityId, ...choice.entityFields };
+    }
+
+    const entity =
+      choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
+    for (const m of bboxPayloadBuilder.buildCreate(this.ctx.buildContext, bbox, this.ctx.widgetId, entity)) {
+      this.ctx.mutations.queue(m);
+    }
+  }
+
+  /** Remove an unconfirmed draft box (user cancelled the entity form). */
+  private _discardDraft(localId: string): void {
+    this.ctx.collection.remove(localId);
     this.ctx.requestRedraw();
   }
 

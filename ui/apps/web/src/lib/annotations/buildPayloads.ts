@@ -39,6 +39,33 @@ export interface BuildBBoxResult {
 }
 
 /**
+ * Options shared by the 2D and 3D box-create builders.
+ *
+ *  - `entityFields` are merged into the new entity's body (e.g. `{ category }`).
+ *  - `linkExisting` attaches the box to an entity that already exists: the
+ *    entity-create mutation is omitted and `entityId` must be supplied.
+ */
+export interface BuildBBoxOpts {
+  widgetId?: string;
+  localAnnotationId?: string;
+  entityId?: string;
+  bboxId?: string;
+  entityFields?: Record<string, unknown>;
+  linkExisting?: boolean;
+}
+
+/**
+ * The entity decision threaded from the Inspector form to a kind's create
+ * builder: merge `entityFields` into a new entity, or `linkExisting` to attach
+ * the box to an already-existing entity (the annotation's `entityId`) and skip
+ * the entity-create. Empty `{}` means "new anonymous entity".
+ */
+export interface EntityCreateChoice {
+  entityFields?: Record<string, unknown>;
+  linkExisting?: boolean;
+}
+
+/**
  * Default annotation source metadata. Matches `PIXANO_SOURCE` in the legacy
  * pixano UI (`apps/pixano/src/lib/utils/entityLookupUtils.ts`) — using
  * `"other"` as the source type so we don't imply ground-truth provenance for
@@ -64,7 +91,7 @@ const DEFAULT_SOURCE = {
 export function buildBBoxCreate(
   ctx: BuildContext,
   coordsNorm: CoordsNorm,
-  opts: { widgetId?: string; localAnnotationId?: string; entityId?: string; bboxId?: string } = {},
+  opts: BuildBBoxOpts = {},
 ): BuildBBoxResult {
   const entityId = opts.entityId ?? generateShortId();
   const bboxId = opts.bboxId ?? generateShortId();
@@ -73,6 +100,7 @@ export function buildBBoxCreate(
     id: entityId,
     record_id: ctx.recordId,
     parent_id: "",
+    ...opts.entityFields,
   };
 
   const bboxBody: Record<string, unknown> = {
@@ -95,13 +123,19 @@ export function buildBBoxCreate(
   };
 
   const mutations: ResourceMutation[] = [
-    {
-      op: "create",
-      resource: ENTITY_RESOURCE,
-      body: entityBody,
-      widgetId: opts.widgetId,
-      localAnnotationId: opts.localAnnotationId,
-    },
+    // `linkExisting` attaches the box to an entity that already exists, so the
+    // entity-create is skipped (the chosen entityId is supplied in opts).
+    ...(opts.linkExisting
+      ? []
+      : [
+          {
+            op: "create" as const,
+            resource: ENTITY_RESOURCE,
+            body: entityBody,
+            widgetId: opts.widgetId,
+            localAnnotationId: opts.localAnnotationId,
+          },
+        ]),
     {
       op: "create",
       resource: BBOX_RESOURCE,
@@ -169,13 +203,7 @@ export function buildBBox3DUpdate(
 export function buildBBox3DCreate(
   ctx: BuildContext,
   coordsLance: [number, number, number, number, number, number],
-  opts: {
-    widgetId?: string;
-    localAnnotationId?: string;
-    entityId?: string;
-    bboxId?: string;
-    rotation?: number[];
-  } = {},
+  opts: BuildBBoxOpts & { rotation?: number[] } = {},
 ): BuildBBoxResult {
   const entityId = opts.entityId ?? generateShortId();
   const bboxId = opts.bboxId ?? generateShortId();
@@ -184,6 +212,7 @@ export function buildBBox3DCreate(
     id: entityId,
     record_id: ctx.recordId,
     parent_id: "",
+    ...opts.entityFields,
   };
 
   const bboxBody: Record<string, unknown> = {
@@ -195,13 +224,17 @@ export function buildBBox3DCreate(
   };
 
   const mutations: ResourceMutation[] = [
-    {
-      op: "create",
-      resource: ENTITY_RESOURCE,
-      body: entityBody,
-      widgetId: opts.widgetId,
-      localAnnotationId: opts.localAnnotationId,
-    },
+    ...(opts.linkExisting
+      ? []
+      : [
+          {
+            op: "create" as const,
+            resource: ENTITY_RESOURCE,
+            body: entityBody,
+            widgetId: opts.widgetId,
+            localAnnotationId: opts.localAnnotationId,
+          },
+        ]),
     {
       op: "create",
       resource: BBOX3D_RESOURCE,

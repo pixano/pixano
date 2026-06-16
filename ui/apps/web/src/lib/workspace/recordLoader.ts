@@ -11,11 +11,7 @@ import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 
 import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
-import {
-  measureGridViewport,
-  planViewportLayouts,
-  type Viewport,
-} from "./layoutPlanner.js";
+import { measureGridViewport, planViewportLayouts, type Viewport } from "./layoutPlanner.js";
 import type { RecordWidgetSeed } from "./recordSeed.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 
@@ -82,6 +78,7 @@ export class RecordLoader {
     this.session.recordId = recordId;
     this.session.entities = [];
     this.session.entitySchemaName = null;
+    this.session.entitySchemaFields = null;
     this.session.annotations = new AnnotationCollection();
 
     // Kick off both the dataset metadata fetch and the entities listing in
@@ -105,9 +102,11 @@ export class RecordLoader {
     const entitiesById = new Map<string, EntityRow>();
     for (const entity of entityRows) entitiesById.set(entity.id, entity);
 
-    // Expose entities and their schema name to consumers (e.g. the right panel).
+    // Expose entities and their schema (name + fields) to consumers (e.g. the
+    // right panel's entity form, which generates inputs from the fields).
     this.session.entities = entityRows;
     this.session.entitySchemaName = dataset.schema.schemas?.["entities"]?.schema ?? null;
+    this.session.entitySchemaFields = dataset.schema.schemas?.["entities"]?.fields ?? null;
 
     const candidates = Object.entries(dataset.info.views ?? {});
     const extensions = this.registry.getAll();

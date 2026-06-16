@@ -8,7 +8,7 @@ import type Konva from "konva";
 
 import type { AnnotationKind, AnnotationStore } from "../annotationCollection.svelte.js";
 import type { BuildContext } from "../buildPayloads.js";
-import type { ResourceMutation } from "../types.js";
+import type { PendingAnnotation, ResourceMutation } from "../types.js";
 import type { ToolDefinition } from "./toolDefinition.js";
 
 export type { ToolDefinition } from "./toolDefinition.js";
@@ -52,6 +52,14 @@ export interface Scene2DContext {
   setActiveTool(id: string): void;
   /** Ask the widget to re-sync annotation rendering. */
   requestRedraw(): void;
+  /**
+   * Register a freshly drawn annotation that is awaiting its entity choice in
+   * the Inspector form (entity-assignment flow). The handler builds and queues
+   * the create mutations on confirm, or discards the draft on cancel.
+   */
+  beginPendingAnnotation(pending: PendingAnnotation): void;
+  /** Resolve an existing entity row by id, for the local annotation's label snapshot. */
+  findEntity(entityId: string): Record<string, unknown> | undefined;
 }
 
 /**

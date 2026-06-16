@@ -143,6 +143,8 @@ License: CECILL-C
         storage.activeToolId = id;
       },
       requestRedraw: () => syncRenderers(),
+      beginPendingAnnotation: (pending) => manager.beginPendingAnnotation(pending),
+      findEntity: (entityId) => manager.entities.find((e) => e.id === entityId),
     };
 
     renderers = RENDERER_FACTORIES_2D.map((factory) => factory.create(sceneContext!));

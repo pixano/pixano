@@ -5,10 +5,15 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
-import type { ResourceMutation } from "$lib/annotations/types.js";
+import type {
+  PendingAnnotation,
+  PendingEntityChoice,
+  ResourceMutation,
+} from "$lib/annotations/types.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
+import type { FieldInfo } from "$lib/types/dataset.js";
 
 import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
 import type { Viewport } from "./layoutPlanner.js";
@@ -42,6 +47,12 @@ export class WorkspaceManager {
   editMode = $state(true);
   presetName = $state("Default");
   widgetCount = $derived(this.widgets.length);
+
+  /**
+   * A box drawn but awaiting its entity choice in the Inspector. `null` when no
+   * box is pending. Set by widgets via `beginPendingAnnotation`.
+   */
+  pendingAnnotation = $state<PendingAnnotation | null>(null);
 
   private registry: WidgetRegistry;
   private storageMap: Map<string, Record<string, unknown>> = new Map();
@@ -94,6 +105,35 @@ export class WorkspaceManager {
     return this.session.annotations;
   }
 
+  get entitySchemaFields(): Record<string, FieldInfo> | null {
+    return this.session.entitySchemaFields;
+  }
+
+  // ─── Pending annotation (entity assignment) ───────────────────────────────
+
+  /**
+   * Register a freshly drawn box that is awaiting its entity choice. Any box
+   * already pending is cancelled first so only one form is ever shown.
+   */
+  beginPendingAnnotation(pending: PendingAnnotation): void {
+    this.pendingAnnotation?.onCancel();
+    this.pendingAnnotation = pending;
+  }
+
+  /** Confirm the pending box with the user's entity choice. */
+  confirmPendingAnnotation(choice: PendingEntityChoice): void {
+    const pending = this.pendingAnnotation;
+    this.pendingAnnotation = null;
+    pending?.onConfirm(choice);
+  }
+
+  /** Discard the pending box. */
+  cancelPendingAnnotation(): void {
+    const pending = this.pendingAnnotation;
+    this.pendingAnnotation = null;
+    pending?.onCancel();
+  }
+
   // ─── Mutation queue forwarders ────────────────────────────────────────────
 
   get pendingMutations(): ResourceMutation[] {
@@ -144,11 +184,9 @@ export class WorkspaceManager {
   // ─── Record loader forwarder ──────────────────────────────────────────────
 
   /** Load a record's widgets via the registered extensions' `addRecordSeed` hooks. */
-  selectRecordInDataset(
-    datasetId: string,
-    recordId: string,
-    viewport?: Viewport,
-  ): Promise<void> {
+  selectRecordInDataset(datasetId: string, recordId: string, viewport?: Viewport): Promise<void> {
+    // A box drawn on the previous record must not carry over to the next one.
+    this.pendingAnnotation = null;
     return this.loader.load(datasetId, recordId, viewport);
   }
 
@@ -170,7 +208,6 @@ export class WorkspaceManager {
     const config = this.registry.get(extensionName);
     if (!config) {
       throw new Error(`Extension "${extensionName}" not found in registry`);
-
     }
 
     const options = config.addOptions?.() ?? {};
@@ -225,6 +262,7 @@ export class WorkspaceManager {
    * still targets whatever record the user last opened.
    */
   clearWorkspace(): void {
+    this.pendingAnnotation = null;
     this.storageMap.clear();
     this.widgets = [];
     this.mutations.reset();

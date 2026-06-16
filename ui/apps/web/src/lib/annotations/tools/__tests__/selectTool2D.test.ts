@@ -33,6 +33,8 @@ function makeContext(collection: AnnotationCollection) {
     getKonvaImage: () => null,
     setActiveTool: vi.fn(),
     requestRedraw: vi.fn(),
+    beginPendingAnnotation: vi.fn(),
+    findEntity: vi.fn(),
   };
   return { ctx, stage };
 }

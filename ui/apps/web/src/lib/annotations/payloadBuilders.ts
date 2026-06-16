@@ -11,7 +11,7 @@ import type {
   AnnotationStore,
   LocalAnnotation,
 } from "./annotationCollection.svelte.js";
-import type { BuildContext } from "./buildPayloads.js";
+import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./tools/types2d.js";
@@ -26,8 +26,17 @@ export interface PayloadBuilder<G = unknown> {
   kind: AnnotationKind;
   /** Backend collection name, e.g. "bboxes". */
   resource: string;
-  /** Mutations creating the annotation and its parent entity. */
-  buildCreate(ctx: BuildContext, annotation: LocalAnnotation<G>, widgetId: string): ResourceMutation[];
+  /**
+   * Mutations creating the annotation and its parent entity. `entity` carries
+   * the user's entity choice (new fields, or link-existing to skip the
+   * entity-create); omitted means a new anonymous entity.
+   */
+  buildCreate(
+    ctx: BuildContext,
+    annotation: LocalAnnotation<G>,
+    widgetId: string,
+    entity?: EntityCreateChoice,
+  ): ResourceMutation[];
   /** Update body for an existing annotation whose geometry changed. */
   buildUpdate(ctx: BuildContext, annotation: LocalAnnotation<G>): Record<string, unknown>;
 }
