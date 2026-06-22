@@ -9,6 +9,7 @@ import { Square } from "lucide-svelte";
 
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
 import { generateShortId } from "$lib/annotations/buildPayloads.js";
+import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import {
   BBOX_COLOR_DRAFT,
   getPixelFrame,
@@ -21,9 +22,6 @@ import {
   type Tool2D,
   type ToolHandler2D,
 } from "$lib/annotations/tools/types2d.js";
-import type { PendingEntityChoice } from "$lib/annotations/types.js";
-
-import { bboxPayloadBuilder } from "./bboxPayloadBuilder.js";
 
 /**
  * Rubber-band bbox drawing. Pointer down anchors a corner, move stretches
@@ -117,30 +115,10 @@ class DrawBBoxHandler implements ToolHandler2D {
     this.ctx.requestRedraw();
 
     this.ctx.beginPendingAnnotation({
-      kind: "box",
-      onConfirm: (choice) => this._commitWithEntity(bbox.id, choice),
+      label: "box",
+      onConfirm: (choice) => commitDraftWithEntity(bbox, choice, this.ctx),
       onCancel: () => this._discardDraft(bbox.id),
     });
-  }
-
-  /** Build the entity + bbox create mutations for a confirmed draft and queue them. */
-  private _commitWithEntity(localId: string, choice: PendingEntityChoice): void {
-    const bbox = this.ctx.collection.find(localId) as LocalBBox | undefined;
-    if (!bbox) return;
-
-    if (choice.mode === "existing") {
-      bbox.entityId = choice.entityId;
-      bbox.entity = this.ctx.findEntity(choice.entityId);
-    } else {
-      bbox.entityId = generateShortId();
-      bbox.entity = { id: bbox.entityId, ...choice.entityFields };
-    }
-
-    const entity =
-      choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
-    for (const m of bboxPayloadBuilder.buildCreate(this.ctx.buildContext, bbox, this.ctx.widgetId, entity)) {
-      this.ctx.mutations.queue(m);
-    }
   }
 
   /** Remove an unconfirmed draft box (user cancelled the entity form). */

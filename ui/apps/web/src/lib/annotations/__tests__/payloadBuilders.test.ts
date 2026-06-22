@@ -4,10 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { AnnotationCollection } from "../annotationCollection.svelte.js";
 import type { LocalBBox, LocalBBox3DAnnotation } from "../annotationCollection.svelte.js";
-import { buildDeleteMutations, payloadBuilderFor } from "../payloadBuilders.js";
+import {
+  buildDeleteMutations,
+  commitDraftWithEntity,
+  payloadBuilderFor,
+  type DraftCommitContext,
+} from "../payloadBuilders.js";
 
 const CTX = { datasetId: "ds", recordId: "rec", viewId: "view" };
 
@@ -81,5 +87,49 @@ describe("buildDeleteMutations", () => {
       expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1" }),
       expect.objectContaining({ op: "delete", resource: "entities", id: "ent-1" }),
     ]);
+  });
+});
+
+describe("commitDraftWithEntity (shared draft-commit)", () => {
+  function makeDraft(): LocalBBox {
+    return { id: "d1", entityId: "", kind: "bbox", viewId: "view", geometry: [0, 0, 1, 1], persisted: false };
+  }
+
+  function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): DraftCommitContext {
+    return {
+      collection,
+      mutations: { queue: vi.fn() },
+      buildContext: CTX,
+      widgetId: "w1",
+      findEntity,
+      requestRedraw: vi.fn(),
+    };
+  }
+
+  it("new entity: assigns a generated id + field snapshot and queues entity + bbox creates", () => {
+    const collection = new AnnotationCollection([makeDraft()]);
+    const ctx = makeCtx(collection);
+
+    commitDraftWithEntity(collection.find("d1")!, { mode: "new", entityFields: { category: "car" } }, ctx);
+
+    const draft = collection.find("d1")!;
+    expect(draft.entityId).not.toBe("");
+    expect(draft.entity).toMatchObject({ category: "car" });
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(2); // entity + bbox
+    expect(ctx.requestRedraw).toHaveBeenCalled();
+  });
+
+  it("existing entity: reuses the id, snapshots via findEntity, and queues only the bbox create", () => {
+    const collection = new AnnotationCollection([makeDraft()]);
+    const findEntity = vi.fn().mockReturnValue({ id: "ent-9", category: "bus" });
+    const ctx = makeCtx(collection, findEntity);
+
+    commitDraftWithEntity(collection.find("d1")!, { mode: "existing", entityId: "ent-9" }, ctx);
+
+    const draft = collection.find("d1")!;
+    expect(draft.entityId).toBe("ent-9");
+    expect(draft.entity).toMatchObject({ category: "bus" });
+    expect(findEntity).toHaveBeenCalledWith("ent-9");
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(1); // bbox only; entity already exists
   });
 });

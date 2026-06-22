@@ -211,6 +211,11 @@ deviation is intentional, not forgotten (raised in the 2026-06-19 code review).
   handler factory (mirroring `Tool2D`) and move the write-path into the
   bbox3d kind module. _Target: when the second 3D kind is added (the
   trigger already noted in `tools/types3d.ts`)._
+  Update (entity-assignment feature): the new-box entity-commit also lives in
+  `PointCloudWidget` (it assembles a `DraftCommitContext` from the manager and
+  calls the shared `commitDraftWithEntity`). The commit logic itself is now
+  kind-agnostic; only the manager-vs-`Scene3DContext` wiring remains for this
+  fix to absorb.
 
 - **DEBT-3 (was T1) — no renderer sync tests.** `bboxRenderer2D` (and the 3D
   gizmo rendering) have no `sync()` tests; renderer-in-node testing needs a

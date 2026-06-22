@@ -103,7 +103,7 @@ export type PendingEntityChoice =
  */
 export interface PendingAnnotation {
   /** Human label for the form header, e.g. "box" or "3D box". */
-  kind: string;
+  label: string;
   onConfirm: (choice: PendingEntityChoice) => void;
   onCancel: () => void;
 }

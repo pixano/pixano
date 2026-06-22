@@ -18,6 +18,7 @@ License: CECILL-C
     BBOX3D_RESOURCE,
     bbox3dPayloadBuilder,
   } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
+  import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
   import { DEFAULT_TOOL_3D, TOOLS_3D } from "$lib/annotations/tools/registry3d.js";
   import type { PendingEntityChoice, PointCloudWidgetStorage } from "$lib/annotations/types.js";
   import type { LocalBBox3D } from "$lib/api/annotations.js";
@@ -168,29 +169,17 @@ License: CECILL-C
     manager.annotations.add(draft);
 
     manager.beginPendingAnnotation({
-      kind: "3D box",
-      onConfirm: (choice: PendingEntityChoice) => commitDraftEntity(localId, choice),
+      label: "3D box",
+      onConfirm: (choice: PendingEntityChoice) =>
+        commitDraftWithEntity(draft, choice, {
+          collection: manager.annotations,
+          mutations: { queue: (m) => manager.queueMutation(m) },
+          buildContext: { datasetId, recordId, viewId },
+          widgetId: stableWidgetId,
+          findEntity: (id) => manager.entities.find((e) => e.id === id),
+        }),
       onCancel: () => manager.annotations.remove(localId),
     });
-  }
-
-  function commitDraftEntity(localId: string, choice: PendingEntityChoice): void {
-    const draft = manager.annotations.find(localId) as LocalBBox3DAnnotation | undefined;
-    if (!draft) return;
-
-    if (choice.mode === "existing") {
-      draft.entityId = choice.entityId;
-      draft.entity = manager.entities.find((e) => e.id === choice.entityId);
-    } else {
-      draft.entityId = generateShortId();
-      draft.entity = { id: draft.entityId, ...choice.entityFields };
-    }
-
-    const entity =
-      choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
-    for (const m of bbox3dPayloadBuilder.buildCreate({ datasetId, recordId, viewId }, draft, stableWidgetId, entity)) {
-      manager.queueMutation(m);
-    }
   }
 
   function handleConfirmCancel(): void {

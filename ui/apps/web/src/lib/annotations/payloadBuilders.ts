@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
+import { generateShortId } from "./buildPayloads.js";
 import type {
   AnnotationKind,
   AnnotationStore,
@@ -15,7 +16,7 @@ import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./tools/types2d.js";
-import type { ResourceMutation } from "./types.js";
+import type { PendingEntityChoice, ResourceMutation } from "./types.js";
 
 /**
  * Per-kind knowledge of how a `LocalAnnotation` becomes backend payloads.
@@ -94,4 +95,52 @@ export function deleteLocalAnnotation(
     mutations.dropForLocalAnnotation(annotation.id);
   }
   collection.remove(annotation.id);
+}
+
+/**
+ * The dependencies a draft-commit needs, satisfied as-is by `Scene2DContext`
+ * (the 2D tool passes itself) and assembled from the manager by 3D widgets.
+ */
+export interface DraftCommitContext {
+  readonly collection: AnnotationStore;
+  readonly mutations: Pick<MutationSink, "queue">;
+  readonly buildContext: BuildContext;
+  readonly widgetId: string;
+  /** Resolve an existing entity row for the annotation's label snapshot. */
+  findEntity(entityId: string): Record<string, unknown> | undefined;
+  /** Optional: nudge the renderer after the entity/label changes (2D). */
+  requestRedraw?(): void;
+}
+
+/**
+ * Kind-agnostic commit of a freshly drawn draft once the user has picked its
+ * entity in the Inspector form: assign the entity (new id + snapshot, or link
+ * an existing one), then queue the kind's create mutations. Mirrors
+ * `deleteLocalAnnotation` so every drawable kind shares one commit path
+ * instead of re-implementing it in its tool/widget.
+ */
+export function commitDraftWithEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: DraftCommitContext,
+): void {
+  const builder = payloadBuilderFor(annotation.kind);
+
+  if (choice.mode === "existing") {
+    ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
+  } else {
+    const entityId = generateShortId();
+    ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
+  }
+
+  // Re-read so the builder sees the just-assigned entityId.
+  const committed = ctx.collection.find(annotation.id);
+  if (!committed) return;
+
+  const entityOpts =
+    choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
+  for (const m of builder.buildCreate(ctx.buildContext, committed, ctx.widgetId, entityOpts)) {
+    ctx.mutations.queue(m);
+  }
+  ctx.requestRedraw?.();
 }

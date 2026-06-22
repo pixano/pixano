@@ -77,7 +77,7 @@ License: CECILL-C
 {#if pending}
   <div class="border-b border-border bg-muted/30 p-3">
     <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      Save {pending.kind}
+      Save {pending.label}
     </h4>
 
     <div class="flex flex-col gap-3">
