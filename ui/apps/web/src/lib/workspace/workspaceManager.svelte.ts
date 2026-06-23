@@ -129,6 +129,13 @@ export class WorkspaceManager {
     const visible = this.session.visibleEntityIds;
     const isolated = visible !== null && visible.size === 1 && visible.has(entityId);
     this.session.visibleEntityIds = isolated ? null : new Set([entityId]);
+    // Keep the shared selection coherent with what's now displayed: a selection
+    // pointing at an annotation this filter just hid would otherwise leave the
+    // delete button/key acting on something no widget shows.
+    const selected = this.session.annotations.selected;
+    if (selected && selected.persisted && !this.isEntityVisible(selected.entityId)) {
+      this.session.annotations.select(null);
+    }
   }
 
   /** Reveal every entity's annotations (the "Show all" control). */

@@ -254,6 +254,58 @@ describe("WorkspaceManager entity visibility", () => {
     expect(manager.visibleEntityIds).toBeNull();
     expect(manager.isEntityVisible("e2")).toBe(true);
   });
+
+  it("clears a selection that isolation has just hidden (no delete on an unseen box)", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b-eB",
+      entityId: "eB",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    manager.annotations.select("b-eB");
+
+    // Isolate a different entity → the selected box is now hidden.
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("keeps a selection that stays visible after isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b-eA",
+      entityId: "eA",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    manager.annotations.select("b-eA");
+
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBe("b-eA");
+  });
+
+  it("keeps a draft selected even when its entity isn't in the visible set", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "draft",
+      entityId: "",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: false,
+    });
+    manager.annotations.select("draft");
+
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBe("draft");
+  });
 });
 
 describe("WorkspaceManager.selectRecordInDataset", () => {

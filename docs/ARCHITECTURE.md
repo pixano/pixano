@@ -239,3 +239,15 @@ deviation is intentional, not forgotten (raised in the 2026-06-19 code review).
   decision (button placement vs the confirm overlay; confirm-on-delete?), best
   made deliberately rather than bolted on. _Target: with the next point-cloud
   UX pass, before GA._
+
+- **DEBT-5 (2026-06-23 review) — entity-visibility is opt-in per renderer.** The
+  entity-driven display filter (`isEntityVisible`) is applied by a hand-written
+  guard in each read path — `bboxRenderer2D.sync()` and
+  `PointCloudWidget.allBboxes3d` — rather than enforced by the store the way
+  view-scoping is (`ViewScopedAnnotations._visible`). A future kind's renderer
+  that omits the guard silently ignores entity-visibility. It lives outside the
+  store on purpose (the store's lifecycle `find`/drafts/queue-flip must stay
+  unfiltered), and the 2D-facade / 3D-direct read asymmetry blocks a clean single
+  seam today. Fix: when **DEBT-2** lands a `Scene3DContext`, route both pipelines'
+  display reads through one visibility-aware seam so no renderer can forget the
+  filter. _Target: with DEBT-2._
