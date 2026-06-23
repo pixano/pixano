@@ -35,6 +35,7 @@ function makeContext(collection: AnnotationCollection) {
     requestRedraw: vi.fn(),
     beginPendingAnnotation: vi.fn(),
     findEntity: vi.fn(),
+    isEntityVisible: () => true,
   };
   return { ctx, stage };
 }

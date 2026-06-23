@@ -208,6 +208,54 @@ describe("WorkspaceManager.toggleWidgetVisibility", () => {
   });
 });
 
+describe("WorkspaceManager entity visibility", () => {
+  it("defaults to all entities visible (null filter)", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("any")).toBe(true);
+  });
+
+  it("toggleEntityVisible isolates a single entity", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+
+    expect(manager.isEntityVisible("e1")).toBe(true);
+    expect(manager.isEntityVisible("e2")).toBe(false);
+    expect([...(manager.visibleEntityIds ?? [])]).toEqual(["e1"]);
+  });
+
+  it("toggling a different entity switches the isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.toggleEntityVisible("e2");
+
+    expect(manager.isEntityVisible("e1")).toBe(false);
+    expect(manager.isEntityVisible("e2")).toBe(true);
+  });
+
+  it("toggling the already-isolated entity returns to show-all", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.toggleEntityVisible("e1");
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("anything")).toBe(true);
+  });
+
+  it("showAllEntities clears any isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.showAllEntities();
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("e2")).toBe(true);
+  });
+});
+
 describe("WorkspaceManager.selectRecordInDataset", () => {
   it("creates one widget per renderable view, in dataset order", async () => {
     const dataset = makeDataset({

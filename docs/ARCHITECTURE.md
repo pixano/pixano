@@ -156,7 +156,14 @@ metadata is renamed: `localBBoxId` → `localAnnotationId`, `LocalBBoxLocator` �
    `lib/annotations/tools/registry2d.ts` (`RENDERER_FACTORIES_2D`, `TOOLS_2D`).
 4. Tests: builder unit tests + one tool-lifecycle test through a fake
    `Scene2DContext` (see `tools/__tests__/selectTool2D.test.ts`).
-5. Nothing else changes: no widget edits, no mode-union edits, no queue edits.
+5. In the renderer's `sync()`, honour **entity-driven visibility** with one guard
+   atop the reconcile loop — `if (ann.persisted && !ctx.isEntityVisible(ann.entityId)) continue;`
+   — so a hidden entity's annotations produce no scene node (invisible AND
+   non-interactive); drafts (not yet persisted) always show. The filter is
+   record-scoped shared state on `WorkspaceSession` (`visibleEntityIds`,
+   `null` = all), driven by the Entities panel — a uniform, entity-id-based
+   display filter, never per-kind.
+6. Nothing else changes: no widget edits, no mode-union edits, no queue edits.
 
 > Closed gap: loading persisted annotations is now the per-kind
 > `SEED_LOADERS` registry — the REST→local mirror of the payload builders.

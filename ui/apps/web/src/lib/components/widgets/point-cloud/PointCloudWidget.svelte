@@ -189,8 +189,14 @@ License: CECILL-C
   }
 
   const allBboxes3d = $derived<LocalBBox3D[]>(
-    manager.annotations.byKind("bbox3d").map(
-      (a): LocalBBox3D => ({
+    manager.annotations
+      .byKind("bbox3d")
+      // Entity-driven visibility: hide persisted boxes whose entity is filtered
+      // out; drafts (still being created) always show. Same shared filter the
+      // 2D renderer applies, via the record-scoped session state.
+      .filter((a) => !a.persisted || manager.isEntityVisible(a.entityId))
+      .map(
+        (a): LocalBBox3D => ({
         id: a.id,
         record_id: recordId,
         entity_id: a.entityId,

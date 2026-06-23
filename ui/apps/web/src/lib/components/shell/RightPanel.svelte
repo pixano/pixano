@@ -54,7 +54,7 @@ License: CECILL-C
     {#if activeTab === "entities"}
       <SaveAnnotationForm {manager} />
       {#if manager.recordId !== null}
-        <EntitiesPanel entities={manager.entities} entitySchemaName={manager.entitySchemaName} />
+        <EntitiesPanel {manager} />
       {:else}
         <div class="p-3">
           <p class="text-xs text-muted-foreground">Open a record to inspect its entities.</p>

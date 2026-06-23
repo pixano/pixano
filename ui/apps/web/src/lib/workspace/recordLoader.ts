@@ -80,6 +80,7 @@ export class RecordLoader {
     this.session.entitySchemaName = null;
     this.session.entitySchemaFields = null;
     this.session.annotations = new AnnotationCollection();
+    this.session.visibleEntityIds = null;
 
     // Kick off both the dataset metadata fetch and the entities listing in
     // parallel — they don't depend on each other and the entities call is

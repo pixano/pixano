@@ -81,6 +81,7 @@ function makeHarness(opts: { image?: Konva.Image | null } = {}) {
     requestRedraw: vi.fn(),
     beginPendingAnnotation: vi.fn(),
     findEntity: vi.fn(),
+    isEntityVisible: () => true,
   };
   return { ctx, collection, setPointer: (p: { x: number; y: number } | null) => (pointer = p) };
 }

@@ -109,6 +109,33 @@ export class WorkspaceManager {
     return this.session.entitySchemaFields;
   }
 
+  // ─── Entity-driven annotation visibility ──────────────────────────────────
+  // `null` = all entities visible (default). A set isolates the listed entities.
+  // Display-only: renderers/derived lists consult `isEntityVisible`; the
+  // annotation collection's lifecycle (find/drafts/save) is never filtered.
+
+  get visibleEntityIds(): ReadonlySet<string> | null {
+    return this.session.visibleEntityIds;
+  }
+
+  /** Whether an entity's persisted annotations should be shown right now. */
+  isEntityVisible(entityId: string): boolean {
+    const visible = this.session.visibleEntityIds;
+    return visible === null || visible.has(entityId);
+  }
+
+  /** Isolate a single entity, or — if it is already the sole isolated one — show all. */
+  toggleEntityVisible(entityId: string): void {
+    const visible = this.session.visibleEntityIds;
+    const isolated = visible !== null && visible.size === 1 && visible.has(entityId);
+    this.session.visibleEntityIds = isolated ? null : new Set([entityId]);
+  }
+
+  /** Reveal every entity's annotations (the "Show all" control). */
+  showAllEntities(): void {
+    this.session.visibleEntityIds = null;
+  }
+
   // ─── Pending annotation (entity assignment) ───────────────────────────────
 
   /**

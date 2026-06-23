@@ -145,6 +145,7 @@ License: CECILL-C
       requestRedraw: () => syncRenderers(),
       beginPendingAnnotation: (pending) => manager.beginPendingAnnotation(pending),
       findEntity: (entityId) => manager.entities.find((e) => e.id === entityId),
+      isEntityVisible: (entityId) => manager.isEntityVisible(entityId),
     };
 
     renderers = RENDERER_FACTORIES_2D.map((factory) => factory.create(sceneContext!));
@@ -223,6 +224,8 @@ License: CECILL-C
   $effect(() => {
     void annotations.items.length;
     void annotations.selectedId;
+    // Re-render when the visible-entity filter changes (show/hide annotations).
+    void manager.visibleEntityIds;
     if (imageLoaded) syncRenderers();
   });
 

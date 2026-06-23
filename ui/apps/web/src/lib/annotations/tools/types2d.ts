@@ -60,6 +60,11 @@ export interface Scene2DContext {
   beginPendingAnnotation(pending: PendingAnnotation): void;
   /** Resolve an existing entity row by id, for the local annotation's label snapshot. */
   findEntity(entityId: string): Record<string, unknown> | undefined;
+  /**
+   * Whether a persisted annotation's entity is currently shown (entity-driven
+   * visibility). Display concern only — renderers skip non-visible annotations.
+   */
+  isEntityVisible(entityId: string): boolean;
 }
 
 /**

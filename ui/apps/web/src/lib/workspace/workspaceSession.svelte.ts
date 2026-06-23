@@ -33,6 +33,12 @@ export class WorkspaceSession {
   entitySchemaFields = $state<Record<string, FieldInfo> | null>(null);
   /** Shared annotations of the loaded record; replaced on every load. */
   annotations = $state(new AnnotationCollection());
+  /**
+   * Entity ids whose annotations are currently shown. `null` means "all
+   * visible" (the default). A set isolates the listed entities. Record-scoped
+   * shared state so every widget viewing the record filters identically.
+   */
+  visibleEntityIds = $state<Set<string> | null>(null);
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
@@ -42,5 +48,6 @@ export class WorkspaceSession {
     this.entitySchemaName = null;
     this.entitySchemaFields = null;
     this.annotations = new AnnotationCollection();
+    this.visibleEntityIds = null;
   }
 }
