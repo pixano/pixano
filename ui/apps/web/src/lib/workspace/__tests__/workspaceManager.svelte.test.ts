@@ -466,6 +466,34 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(annotation!.entity).toStrictEqual(entity);
   });
 
+  it("refreshes the entity list after a successful flushSave", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const state = {
+      dataset,
+      entities: [{ id: "ent-old", record_id: "rec-1" } as EntityRow],
+      imagesByLogicalName: new Map([
+        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    };
+    const { gateway, calls } = makeGateway(state);
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    expect(manager.entities.map((e) => e.id)).toEqual(["ent-old"]);
+
+    // Simulate the backend having created one entity and pruned the old one
+    // during the flush; the post-save refetch should pick this up.
+    state.entities = [{ id: "ent-new", record_id: "rec-1" } as EntityRow];
+    manager.queueMutation({ op: "delete", resource: "bbox3ds", id: "x", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(calls.listEntities).toBe(2); // once on load, once after save
+    expect(manager.entities.map((e) => e.id)).toEqual(["ent-new"]);
+  });
+
   it("throws when the dataset has no renderable views", async () => {
     const dataset = makeDataset({ misc: { base: "UnknownBase" } });
     const { gateway } = makeGateway({

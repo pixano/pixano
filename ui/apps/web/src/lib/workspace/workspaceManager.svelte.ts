@@ -222,8 +222,11 @@ export class WorkspaceManager {
   }
 
   /** Flush every queued mutation to the backend. */
-  flushSave(): Promise<void> {
-    return this.mutations.flush();
+  async flushSave(): Promise<void> {
+    await this.mutations.flush();
+    // Entity creates/prunes happen backend-side; refresh the local entity list
+    // so the panel and picker reflect them. Skip if the flush errored.
+    if (!this.mutations.saveError) await this.loader.reloadEntities();
   }
 
   // ─── Record loader forwarder ──────────────────────────────────────────────

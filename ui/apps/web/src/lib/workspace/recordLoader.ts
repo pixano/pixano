@@ -63,6 +63,22 @@ export class RecordLoader {
     this.session = deps.session;
   }
 
+  /**
+   * Refetch the current record's entities and refresh `session.entities`.
+   * Called after a save so the entity list (right-panel list + picker) reflects
+   * entities the flush created or the backend pruned, without a full reload.
+   */
+  async reloadEntities(): Promise<void> {
+    const datasetId = this.session.datasetId;
+    const recordId = this.session.recordId;
+    if (!datasetId || !recordId) return;
+    try {
+      this.session.entities = await this.readGateway.listEntities(datasetId, { recordId });
+    } catch (err) {
+      console.error("Failed to reload entities:", err);
+    }
+  }
+
   async load(
     datasetId: string,
     recordId: string,
