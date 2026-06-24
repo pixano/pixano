@@ -72,8 +72,14 @@ export class RecordLoader {
     const datasetId = this.session.datasetId;
     const recordId = this.session.recordId;
     if (!datasetId || !recordId) return;
+    // Observe (don't bump) the load token: if a record switch starts while we're
+    // fetching, discard our result so a stale list can't overwrite the newer
+    // record's entities — same guard load() uses for its async writes.
+    const token = this.loadToken;
     try {
-      this.session.entities = await this.readGateway.listEntities(datasetId, { recordId });
+      const entities = await this.readGateway.listEntities(datasetId, { recordId });
+      if (token !== this.loadToken) return;
+      this.session.entities = entities;
     } catch (err) {
       console.error("Failed to reload entities:", err);
     }
