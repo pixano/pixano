@@ -445,6 +445,16 @@ class TestStaticImage:
         assert resp.status_code == 200
         assert static_image_client.get(f"{STATIC_BASE}/entities/entity_np_from").status_code == 200
 
+    def test_reassign_to_nonexistent_entity_is_rejected(self, static_image_client: TestClient):
+        """Update must reject a reassignment to a missing entity (no dangling FK, no prune)."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_src", ["bbox_badref"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_badref", "entity_does_not_exist")
+        assert resp.status_code == 400
+        # The box still points at its original entity, which is left intact.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_src").status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_badref").json()["entity_id"] == "entity_src"
+
     def test_geometry_only_update_keeps_entity(self, static_image_client: TestClient):
         """A geometry edit (entity_id unchanged) never prunes the entity."""
         self._seed_entity_with_bboxes(static_image_client, "entity_geom", ["bbox_geom"])

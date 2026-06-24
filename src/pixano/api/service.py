@@ -271,6 +271,15 @@ class BaseService:
         except Exception as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        # Reassigning an annotation to a different entity must reference an
+        # existing one — the create path validates this, so update does too
+        # (raises 400). Only checked when entity_id actually changes, so plain
+        # geometry edits skip it.
+        if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            new_entity_id = getattr(row, "entity_id", None)
+            if new_entity_id and new_entity_id != getattr(existing, "entity_id", None):
+                self.validate_entity_exists(new_entity_id)
+
         try:
             updated_rows = self.dataset.update_data(resolved_table, [row])
         except DatasetIntegrityError as err:
