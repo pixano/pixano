@@ -229,16 +229,15 @@ deviation is intentional, not forgotten (raised in the 2026-06-19 code review).
   Konva/Threlte mock harness. Fix: add a fake-`Scene2DContext` + mocked-Konva
   harness and cover `sync()` reconcile/selection. _Target: alongside DEBT-1._
 
-- **DEBT-4 (2026-06-22 review) — 3D boxes can't be deleted.** The point-cloud
-  pipeline has no delete path: `PointCloudWidget` / `boxEditor` /
-  `PointCloudScene` have no Trash button, no Delete/Backspace handler, and never
-  call `collection.remove`. 2D deletes via `deleteLocalAnnotation` (select tool
-  + widget button); the helper already supports `bbox3d` (`payloadBuilderFor`
-  covers the kind) — it is purely unwired. Fix: wire a 3D delete (button +
-  Delete key) through `deleteLocalAnnotation`. Deferred because it needs a UX
-  decision (button placement vs the confirm overlay; confirm-on-delete?), best
-  made deliberately rather than bolted on. _Target: with the next point-cloud
-  UX pass, before GA._
+- **DEBT-4 (2026-06-22 review) — RESOLVED (2026-06-23).** 3D boxes are now
+  deletable: a Delete button on the "Save this 3D box?" confirm overlay
+  (`PointCloudWidget`) routes through `WorkspaceManager.deleteAnnotation` →
+  the shared `deleteLocalAnnotation`, the same path 2D uses. Orphan-entity
+  cleanup moved server-side: `deleteLocalAnnotation` now queues only the
+  annotation delete, and the API sends `?prune_orphan_entity=true` so the
+  backend (`BaseService.delete`) deletes the parent entity when it was the
+  annotation's last one — the only place that sees every reference (frontend
+  loads one record at a time).
 
 - **DEBT-5 (2026-06-23 review) — entity-visibility is opt-in per renderer.** The
   entity-driven display filter (`isEntityVisible`) is applied by a hand-written

@@ -4,8 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
-
 import { generateShortId } from "./buildPayloads.js";
 import type {
   AnnotationKind,
@@ -57,25 +55,18 @@ export function payloadBuilderFor(kind: AnnotationKind): PayloadBuilder {
 }
 
 /**
- * Delete mutations for a persisted annotation: the annotation row plus its
- * parent entity. Kind-agnostic — only the resource name comes from the
- * kind's builder.
+ * Delete mutation for a persisted annotation: just the annotation row. The
+ * parent entity is pruned server-side when this was its last annotation (the
+ * backend is the only place that sees every annotation referencing the
+ * entity); the API delete opts in via `?prune_orphan_entity=true`. Kind-agnostic
+ * — only the resource name comes from the kind's builder.
  */
 export function buildDeleteMutations(
   annotation: LocalAnnotation,
   widgetId: string,
 ): ResourceMutation[] {
   const { resource } = payloadBuilderFor(annotation.kind);
-  return [
-    { op: "delete", resource, id: annotation.id, widgetId, localAnnotationId: annotation.id },
-    {
-      op: "delete",
-      resource: ENTITY_RESOURCE,
-      id: annotation.entityId,
-      widgetId,
-      localAnnotationId: annotation.id,
-    },
-  ];
+  return [{ op: "delete", resource, id: annotation.id, widgetId, localAnnotationId: annotation.id }];
 }
 
 /**

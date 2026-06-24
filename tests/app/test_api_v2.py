@@ -359,6 +359,48 @@ class TestStaticImage:
         resp2 = static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_to_delete")
         assert resp2.status_code == 404
 
+    def _seed_entity_with_bboxes(self, client: TestClient, entity_id: str, bbox_ids: list[str]) -> None:
+        client.post(f"{STATIC_BASE}/entities", json={"id": entity_id, "record_id": "record_0", "parent_id": ""})
+        for bbox_id in bbox_ids:
+            resp = client.post(
+                f"{STATIC_BASE}/bboxes",
+                json={
+                    "id": bbox_id,
+                    "record_id": "record_0",
+                    "entity_id": entity_id,
+                    "coords": [0.0, 0.0, 0.1, 0.1],
+                    "format": "xywh",
+                    "is_normalized": True,
+                },
+            )
+            assert resp.status_code == 201
+
+    def test_delete_annotation_prunes_orphan_entity(self, static_image_client: TestClient):
+        """Deleting an entity's last annotation with the flag removes the entity too."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_orphan", ["bbox_orphan"])
+
+        resp = static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_orphan?prune_orphan_entity=true")
+        assert resp.status_code == 204
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_orphan").status_code == 404
+
+    def test_delete_annotation_keeps_shared_entity(self, static_image_client: TestClient):
+        """An entity with another annotation left survives; it goes only on the last one."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_shared", ["bbox_shared_a", "bbox_shared_b"])
+
+        static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_shared_a?prune_orphan_entity=true")
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_shared").status_code == 200
+
+        static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_shared_b?prune_orphan_entity=true")
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_shared").status_code == 404
+
+    def test_delete_without_prune_flag_keeps_entity(self, static_image_client: TestClient):
+        """Plain delete (no flag) leaves the entity untouched, even when orphaned."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_noprune", ["bbox_noprune"])
+
+        resp = static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_noprune")
+        assert resp.status_code == 204
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_noprune").status_code == 200
+
 
 # ===========================================================================
 # Scenario 2: Multi-view image (rgb + thermal) with annotations on both views

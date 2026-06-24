@@ -109,11 +109,17 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
         )
         def delete_resource(
             id: str,
+            prune_orphan_entity: bool = False,
             dataset: Dataset = Depends(get_dataset_dep),
         ) -> None:
-            """Delete a resource by id."""
+            """Delete a resource by id.
+
+            When ``prune_orphan_entity`` is set and the resource is an annotation,
+            its parent entity is also deleted if this was the entity's last
+            annotation. Off by default so plain DELETE semantics are unchanged.
+            """
             service = BaseService(dataset, resource)
-            service.delete(id)
+            service.delete(id, prune_orphan_entity=prune_orphan_entity)
 
     return router
 

@@ -272,12 +272,44 @@ class BaseService:
 
         return self._response(updated_rows[0])
 
-    def delete(self, id: str) -> None:
-        """Delete a resource by ID."""
+    def delete(self, id: str, prune_orphan_entity: bool = False) -> None:
+        """Delete a resource by ID.
+
+        When ``prune_orphan_entity`` is set and this resource is an annotation,
+        the parent entity is also deleted if the removed annotation was its last
+        one. The check runs server-side because only the backend sees every
+        annotation referencing the entity (the front-end loads one record at a
+        time). Kind-agnostic: works for any annotation resource.
+        """
         resolved_table = self.resolve_table()
+
+        entity_id: str | None = None
+        if prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION:
+            row = self.dataset.get_data(resolved_table, ids=id)
+            if row is not None and hasattr(row, "entity_id"):
+                entity_id = row.entity_id
+
         ids_not_found = self.dataset.delete_data(resolved_table, [id])
         if ids_not_found:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
+
+        # The annotation row is gone now, so an empty count means it was the last.
+        if entity_id and not self._entity_has_annotations(entity_id):
+            self._delete_orphan_entity(entity_id)
+
+    def _entity_has_annotations(self, entity_id: str) -> bool:
+        """Whether any annotation in any table still references the entity."""
+        for table in self.dataset.info.groups.get(SchemaGroup.ANNOTATION, []):
+            if self.dataset.open_table(table).count_rows(f"entity_id = '{entity_id}'") > 0:
+                return True
+        return False
+
+    def _delete_orphan_entity(self, entity_id: str) -> None:
+        """Delete the entity row from whichever entity table holds it (idempotent)."""
+        for table in self.dataset.info.groups.get(SchemaGroup.ENTITY, []):
+            if self.dataset.get_data(table, ids=entity_id) is not None:
+                self.dataset.delete_data(table, [entity_id])
+                return
 
 
 __all__ = ["BaseService"]

@@ -308,6 +308,44 @@ describe("WorkspaceManager entity visibility", () => {
   });
 });
 
+describe("WorkspaceManager.deleteAnnotation", () => {
+  it("queues a single backend delete for a persisted annotation and removes it", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b1",
+      entityId: "e1",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      persisted: true,
+    });
+
+    manager.deleteAnnotation(manager.annotations.find("b1")!, "w1");
+
+    expect(manager.annotations.find("b1")).toBeUndefined();
+    // Only the annotation row; the orphan entity is pruned server-side.
+    expect(manager.pendingMutations).toHaveLength(1);
+    expect(manager.pendingMutations[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "b1" });
+  });
+
+  it("drops pending creates for an unsaved annotation instead of queueing a delete", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "draft",
+      entityId: "",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      persisted: false,
+    });
+
+    manager.deleteAnnotation(manager.annotations.find("draft")!, "w1");
+
+    expect(manager.annotations.find("draft")).toBeUndefined();
+    expect(manager.pendingMutations).toHaveLength(0);
+  });
+});
+
 describe("WorkspaceManager.selectRecordInDataset", () => {
   it("creates one widget per renderable view, in dataset order", async () => {
     const dataset = makeDataset({

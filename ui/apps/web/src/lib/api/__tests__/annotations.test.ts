@@ -245,13 +245,13 @@ describe("updateAnnotation", () => {
 // ─── deleteAnnotation ────────────────────────────────────────────────────────
 
 describe("deleteAnnotation", () => {
-  it("DELETEs the annotation by resource and id", async () => {
+  it("DELETEs the annotation by resource and id, asking the backend to prune an orphan entity", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await deleteAnnotation(DS, "bboxes", "b1");
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`/datasets/${DS}/bboxes/b1`);
+    expect(url).toBe(`/datasets/${DS}/bboxes/b1?prune_orphan_entity=true`);
     expect((init as RequestInit).method).toBe("DELETE");
   });
 

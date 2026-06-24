@@ -4,7 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
+import type { AnnotationCollection, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
 import type {
   PendingAnnotation,
   PendingEntityChoice,
@@ -189,6 +190,16 @@ export class WorkspaceManager {
   /** Queue a resource mutation for the next `flushSave`. */
   queueMutation(mutation: ResourceMutation): void {
     this.mutations.queue(mutation);
+  }
+
+  /**
+   * Delete an annotation (any kind) from the shared record: queues the backend
+   * delete for a persisted one, or drops its not-yet-flushed creates, then
+   * removes it from the collection. The parent entity is pruned server-side
+   * when this was its last annotation. One path for 2D tools and 3D widgets.
+   */
+  deleteAnnotation(annotation: LocalAnnotation, widgetId: string): void {
+    deleteLocalAnnotation(annotation, this.session.annotations, this.mutations, widgetId);
   }
 
   /** Queue an update, or replace the body of a pending update for the same resource+id. */

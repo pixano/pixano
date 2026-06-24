@@ -81,11 +81,10 @@ describe("bbox3d payload builder", () => {
 });
 
 describe("buildDeleteMutations", () => {
-  it("deletes the annotation row then its parent entity", () => {
+  it("deletes only the annotation row; the orphan entity is pruned server-side", () => {
     const mutations = buildDeleteMutations(BBOX, "w1");
     expect(mutations).toEqual([
-      expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1" }),
-      expect.objectContaining({ op: "delete", resource: "entities", id: "ent-1" }),
+      expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1", localAnnotationId: "ann-1" }),
     ]);
   });
 });

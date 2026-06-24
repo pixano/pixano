@@ -188,6 +188,15 @@ License: CECILL-C
     sceneRef?.reset();
   }
 
+  function handleConfirmDelete(): void {
+    if (!confirmEditingId) return;
+    const annotation = manager.annotations.find(confirmEditingId);
+    if (annotation) manager.deleteAnnotation(annotation, stableWidgetId);
+    confirmCoords = null;
+    confirmEditingId = null;
+    sceneRef?.reset();
+  }
+
   const allBboxes3d = $derived<LocalBBox3D[]>(
     manager.annotations
       .byKind("bbox3d")
@@ -323,6 +332,16 @@ License: CECILL-C
             >
               Cancel
             </button>
+            {#if confirmEditingId}
+              <button
+                type="button"
+                onclick={handleConfirmDelete}
+                title="Delete this 3D box"
+                class="rounded border border-destructive/40 px-2.5 py-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                Delete
+              </button>
+            {/if}
             <div class="mx-1 h-4 w-px bg-border"></div>
             {#each GIZMO_TOGGLES as toggle (toggle.key)}
               <button

@@ -80,7 +80,7 @@ describe("selectTool2D", () => {
     expect(collection.selectedId).toBeNull();
   });
 
-  it("Delete queues backend deletes for a persisted selection and removes it", () => {
+  it("Delete queues the backend delete for a persisted selection and removes it", () => {
     const collection = new AnnotationCollection([makeBBox("a", true)]);
     collection.select("a");
     const { ctx } = makeContext(collection);
@@ -89,13 +89,10 @@ describe("selectTool2D", () => {
     expect(handler.onKeyDown!(new KeyboardEvent("keydown", { key: "Delete" }))).toBe(true);
 
     expect(collection.find("a")).toBeUndefined();
-    // One delete for the bbox row, one for its parent entity.
-    expect(ctx.mutations.queue).toHaveBeenCalledTimes(2);
+    // Only the bbox row; the parent entity is pruned server-side if now orphaned.
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(1);
     expect(ctx.mutations.queue).toHaveBeenCalledWith(
       expect.objectContaining({ op: "delete", resource: "bboxes", id: "a" }),
-    );
-    expect(ctx.mutations.queue).toHaveBeenCalledWith(
-      expect.objectContaining({ op: "delete", resource: "entities", id: "e-a" }),
     );
   });
 
