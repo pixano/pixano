@@ -151,6 +151,17 @@ License: CECILL-C
     }
   }
 
+  // Shared dependencies for the kind-agnostic entity helpers; each caller adds
+  // its own `mutations` (commit needs `queue`, reassign also `upsertUpdate`).
+  function entityCtx() {
+    return {
+      collection: manager.annotations,
+      buildContext: { datasetId, recordId, viewId },
+      widgetId: stableWidgetId,
+      findEntity: (id: string) => manager.entities.find((e) => e.id === id),
+    };
+  }
+
   function handleNewBoxSave(
     coords: [number, number, number, number, number, number],
     rotation: number[] | undefined,
@@ -172,11 +183,8 @@ License: CECILL-C
       label: "3D box",
       onConfirm: (choice: PendingEntityChoice) =>
         commitDraftWithEntity(draft, choice, {
-          collection: manager.annotations,
+          ...entityCtx(),
           mutations: { queue: (m) => manager.queueMutation(m) },
-          buildContext: { datasetId, recordId, viewId },
-          widgetId: stableWidgetId,
-          findEntity: (id) => manager.entities.find((e) => e.id === id),
         }),
       onCancel: () => manager.annotations.remove(localId),
     });
@@ -208,14 +216,11 @@ License: CECILL-C
       label: "3D box entity",
       onConfirm: (choice: PendingEntityChoice) =>
         reassignEntity(annotation, choice, {
-          collection: manager.annotations,
+          ...entityCtx(),
           mutations: {
             queue: (m) => manager.queueMutation(m),
             upsertUpdate: (m) => manager.upsertUpdateMutation(m),
           },
-          buildContext: { datasetId, recordId, viewId },
-          widgetId: stableWidgetId,
-          findEntity: (id) => manager.entities.find((e) => e.id === id),
         }),
       onCancel: () => {},
     });
