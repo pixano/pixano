@@ -225,7 +225,7 @@ describe("updateAnnotation", () => {
     await updateAnnotation(DS, "bboxes", "b1", { id: "b1", coords: [0, 0, 0.5, 0.5] });
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`/datasets/${DS}/bboxes/b1`);
+    expect(url).toBe(`/datasets/${DS}/bboxes/b1?prune_orphan_entity=true`);
     expect(init.method).toBe("PUT");
     const sent = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(sent).not.toHaveProperty("id");

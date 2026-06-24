@@ -195,8 +195,11 @@ export function updateAnnotation(
 ): Promise<Record<string, unknown>> {
   const { id: _ignored, ...patch } = body;
   void _ignored;
+  // Ask the backend to prune the previously attached entity when an entity_id
+  // change leaves it orphaned (no-op for geometry-only edits).
+  const url = `${resourceUrl(datasetId, resource, id)}?prune_orphan_entity=true`;
   return requestJson<Record<string, unknown>>(
-    resourceUrl(datasetId, resource, id),
+    url,
     { headers: JSON_HEADERS, method: "PUT", body: JSON.stringify(patch) },
     `updateAnnotation(${resource})`,
   );

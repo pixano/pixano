@@ -249,12 +249,20 @@ class BaseService:
 
         return self._response(created_rows[0])
 
-    def update(self, id: str, data: dict[str, Any]) -> BaseModel:
-        """Update an existing resource row."""
+    def update(self, id: str, data: dict[str, Any], prune_orphan_entity: bool = False) -> BaseModel:
+        """Update an existing resource row.
+
+        When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
+        changes, the previously attached entity is deleted if it has no
+        remaining annotations — the server-side orphan check shared with delete.
+        """
         resolved_table = self.resolve_table()
         existing = self.dataset.get_data(resolved_table, ids=id)
         if existing is None:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
+
+        prune_old_entity = prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION
+        old_entity_id = getattr(existing, "entity_id", None) if prune_old_entity else None
 
         merged = merge_update_payload(existing, data)
         schema = self.dataset.info.tables[resolved_table]
@@ -269,6 +277,12 @@ class BaseService:
             raise HTTPException(status_code=400, detail=f"Integrity error: {err}")
         except ValueError as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
+
+        # The annotation now points at the new entity, so the old one's count
+        # excludes it: an empty count means the reassignment orphaned it.
+        new_entity_id = getattr(updated_rows[0], "entity_id", None)
+        if old_entity_id and old_entity_id != new_entity_id and not self._entity_has_annotations(old_entity_id):
+            self._delete_orphan_entity(old_entity_id)
 
         return self._response(updated_rows[0])
 

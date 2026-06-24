@@ -92,11 +92,18 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
         def update_resource(
             id: str,
             body: update_model,  # type: ignore[valid-type]
+            prune_orphan_entity: bool = False,
             dataset: Dataset = Depends(get_dataset_dep),
         ) -> Any:
-            """Update a resource by id."""
+            """Update a resource by id.
+
+            When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
+            changes, the previously attached entity is deleted if it is now
+            orphaned. Off by default so plain PUT semantics are unchanged.
+            """
             service = BaseService(dataset, resource)
-            return service.update(id, body.model_dump(exclude_unset=True))  # type: ignore[attr-defined]
+            payload = body.model_dump(exclude_unset=True)  # type: ignore[attr-defined]
+            return service.update(id, payload, prune_orphan_entity=prune_orphan_entity)
 
     if resource.allow_delete:
 

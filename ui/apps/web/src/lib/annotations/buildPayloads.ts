@@ -78,6 +78,28 @@ const DEFAULT_SOURCE = {
 } as const;
 
 /**
+ * The create mutation for a new entity. Entities carry only
+ * `{ id, record_id, parent_id }` plus any user-supplied fields (the `Entity`
+ * schema rejects unknown columns). Shared by every kind's create builder and by
+ * the entity-reassignment flow, so the entity body lives in exactly one place.
+ */
+export function buildEntityCreateMutation(
+  ctx: BuildContext,
+  entityId: string,
+  entityFields: Record<string, unknown> | undefined,
+  widgetId: string | undefined,
+  localAnnotationId: string | undefined,
+): ResourceMutation {
+  return {
+    op: "create",
+    resource: ENTITY_RESOURCE,
+    body: { id: entityId, record_id: ctx.recordId, parent_id: "", ...entityFields },
+    widgetId,
+    localAnnotationId,
+  };
+}
+
+/**
  * Build the (entity, bbox) create mutation pair for a new 2D box annotation.
  *
  * The payloads match what the pixano backend `EntityCreate` / `BBoxCreate`
@@ -95,13 +117,6 @@ export function buildBBoxCreate(
 ): BuildBBoxResult {
   const entityId = opts.entityId ?? generateShortId();
   const bboxId = opts.bboxId ?? generateShortId();
-
-  const entityBody: Record<string, unknown> = {
-    id: entityId,
-    record_id: ctx.recordId,
-    parent_id: "",
-    ...opts.entityFields,
-  };
 
   const bboxBody: Record<string, unknown> = {
     id: bboxId,
@@ -127,15 +142,7 @@ export function buildBBoxCreate(
     // entity-create is skipped (the chosen entityId is supplied in opts).
     ...(opts.linkExisting
       ? []
-      : [
-          {
-            op: "create" as const,
-            resource: ENTITY_RESOURCE,
-            body: entityBody,
-            widgetId: opts.widgetId,
-            localAnnotationId: opts.localAnnotationId,
-          },
-        ]),
+      : [buildEntityCreateMutation(ctx, entityId, opts.entityFields, opts.widgetId, opts.localAnnotationId)]),
     {
       op: "create",
       resource: BBOX_RESOURCE,
@@ -208,13 +215,6 @@ export function buildBBox3DCreate(
   const entityId = opts.entityId ?? generateShortId();
   const bboxId = opts.bboxId ?? generateShortId();
 
-  const entityBody: Record<string, unknown> = {
-    id: entityId,
-    record_id: ctx.recordId,
-    parent_id: "",
-    ...opts.entityFields,
-  };
-
   const bboxBody: Record<string, unknown> = {
     ...buildBBox3DUpdate(ctx, bboxId, entityId, coordsLance, opts.rotation),
     frame_id: ctx.viewId,
@@ -226,15 +226,7 @@ export function buildBBox3DCreate(
   const mutations: ResourceMutation[] = [
     ...(opts.linkExisting
       ? []
-      : [
-          {
-            op: "create" as const,
-            resource: ENTITY_RESOURCE,
-            body: entityBody,
-            widgetId: opts.widgetId,
-            localAnnotationId: opts.localAnnotationId,
-          },
-        ]),
+      : [buildEntityCreateMutation(ctx, entityId, opts.entityFields, opts.widgetId, opts.localAnnotationId)]),
     {
       op: "create",
       resource: BBOX3D_RESOURCE,

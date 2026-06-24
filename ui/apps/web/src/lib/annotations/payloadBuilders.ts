@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { generateShortId } from "./buildPayloads.js";
+import { buildEntityCreateMutation, generateShortId } from "./buildPayloads.js";
 import type {
   AnnotationKind,
   AnnotationStore,
@@ -133,5 +133,60 @@ export function commitDraftWithEntity(
   for (const m of builder.buildCreate(ctx.buildContext, committed, ctx.widgetId, entityOpts)) {
     ctx.mutations.queue(m);
   }
+  ctx.requestRedraw?.();
+}
+
+/**
+ * Dependencies for reassigning a *persisted* annotation's entity. Like
+ * `DraftCommitContext` but the annotation mutation is an update (not a create),
+ * so the queue must expose `upsertUpdate` too.
+ */
+export interface ReassignEntityContext {
+  readonly collection: AnnotationStore;
+  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate">;
+  readonly buildContext: BuildContext;
+  readonly widgetId: string;
+  findEntity(entityId: string): Record<string, unknown> | undefined;
+  requestRedraw?(): void;
+}
+
+/**
+ * Kind-agnostic reassignment of an existing annotation's entity: point it at a
+ * different entity (an existing one, or a freshly created one), then queue the
+ * annotation update carrying the new `entity_id`. The previously attached
+ * entity is pruned server-side when this leaves it with no annotations — the
+ * update is sent with `?prune_orphan_entity=true` (see `updateAnnotation`).
+ * Mirrors `commitDraftWithEntity` for the edit lifecycle.
+ */
+export function reassignEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: ReassignEntityContext,
+): void {
+  if (!annotation.persisted) return;
+  const builder = payloadBuilderFor(annotation.kind);
+
+  if (choice.mode === "existing") {
+    ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
+  } else {
+    const entityId = generateShortId();
+    ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
+    ctx.mutations.queue(
+      buildEntityCreateMutation(ctx.buildContext, entityId, choice.entityFields, ctx.widgetId, annotation.id),
+    );
+  }
+
+  // Re-read so the update body carries the just-assigned entityId.
+  const updated = ctx.collection.find(annotation.id);
+  if (!updated) return;
+
+  ctx.mutations.upsertUpdate({
+    op: "update",
+    resource: builder.resource,
+    id: annotation.id,
+    body: builder.buildUpdate(ctx.buildContext, updated),
+    widgetId: ctx.widgetId,
+    localAnnotationId: annotation.id,
+  });
   ctx.requestRedraw?.();
 }

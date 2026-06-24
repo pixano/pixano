@@ -401,6 +401,69 @@ class TestStaticImage:
         assert resp.status_code == 204
         assert static_image_client.get(f"{STATIC_BASE}/entities/entity_noprune").status_code == 200
 
+    def _reassign_bbox_entity(self, client: TestClient, bbox_id: str, new_entity_id: str, prune: bool = True):
+        return client.put(
+            f"{STATIC_BASE}/bboxes/{bbox_id}",
+            params={"prune_orphan_entity": str(prune).lower()},
+            json={
+                "id": bbox_id,
+                "record_id": "record_0",
+                "entity_id": new_entity_id,
+                "coords": [0.0, 0.0, 0.1, 0.1],
+                "format": "xywh",
+                "is_normalized": True,
+            },
+        )
+
+    def test_reassign_entity_prunes_old_orphan(self, static_image_client: TestClient):
+        """Reassigning a box's only annotation to another entity deletes the old one."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_from", ["bbox_reassign"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_to", ["bbox_keepalive"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_reassign", "entity_to")
+        assert resp.status_code == 200
+        # The previous entity is now orphaned → gone; the new one stays.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_from").status_code == 404
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_to").status_code == 200
+
+    def test_reassign_entity_keeps_old_when_still_referenced(self, static_image_client: TestClient):
+        """The old entity survives reassignment when another annotation still uses it."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_multi", ["bbox_move", "bbox_stay"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_dest", ["bbox_dest_anchor"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_move", "entity_dest")
+        assert resp.status_code == 200
+        # bbox_stay still references entity_multi → kept.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_multi").status_code == 200
+
+    def test_reassign_without_prune_flag_keeps_old_entity(self, static_image_client: TestClient):
+        """Without the flag, the old entity is left even if reassignment orphaned it."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_np_from", ["bbox_np_reassign"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_np_to", ["bbox_np_anchor"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_np_reassign", "entity_np_to", prune=False)
+        assert resp.status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_np_from").status_code == 200
+
+    def test_geometry_only_update_keeps_entity(self, static_image_client: TestClient):
+        """A geometry edit (entity_id unchanged) never prunes the entity."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_geom", ["bbox_geom"])
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/bbox_geom",
+            params={"prune_orphan_entity": "true"},
+            json={
+                "id": "bbox_geom",
+                "record_id": "record_0",
+                "entity_id": "entity_geom",
+                "coords": [0.2, 0.2, 0.3, 0.3],
+                "format": "xywh",
+                "is_normalized": True,
+            },
+        )
+        assert resp.status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_geom").status_code == 200
+
 
 # ===========================================================================
 # Scenario 2: Multi-view image (rgb + thermal) with annotations on both views

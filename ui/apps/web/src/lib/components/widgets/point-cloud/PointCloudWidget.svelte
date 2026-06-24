@@ -18,7 +18,7 @@ License: CECILL-C
     BBOX3D_RESOURCE,
     bbox3dPayloadBuilder,
   } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
-  import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
+  import { commitDraftWithEntity, reassignEntity } from "$lib/annotations/payloadBuilders.js";
   import { DEFAULT_TOOL_3D, TOOLS_3D } from "$lib/annotations/tools/registry3d.js";
   import type { PendingEntityChoice, PointCloudWidgetStorage } from "$lib/annotations/types.js";
   import type { LocalBBox3D } from "$lib/api/annotations.js";
@@ -197,6 +197,34 @@ License: CECILL-C
     sceneRef?.reset();
   }
 
+  function handleChangeEntity(): void {
+    if (!confirmEditingId) return;
+    const annotation = manager.annotations.find(confirmEditingId);
+    if (!annotation) return;
+
+    // Reuse the entity picker (Inspector form); on confirm, reassign the box to
+    // the chosen entity — the backend prunes the previous one if it's orphaned.
+    manager.beginPendingAnnotation({
+      label: "3D box entity",
+      onConfirm: (choice: PendingEntityChoice) =>
+        reassignEntity(annotation, choice, {
+          collection: manager.annotations,
+          mutations: {
+            queue: (m) => manager.queueMutation(m),
+            upsertUpdate: (m) => manager.upsertUpdateMutation(m),
+          },
+          buildContext: { datasetId, recordId, viewId },
+          widgetId: stableWidgetId,
+          findEntity: (id) => manager.entities.find((e) => e.id === id),
+        }),
+      onCancel: () => {},
+    });
+
+    confirmCoords = null;
+    confirmEditingId = null;
+    sceneRef?.reset();
+  }
+
   const allBboxes3d = $derived<LocalBBox3D[]>(
     manager.annotations
       .byKind("bbox3d")
@@ -332,6 +360,16 @@ License: CECILL-C
             >
               Cancel
             </button>
+            {#if confirmEditingId && manager.annotations.find(confirmEditingId)?.persisted}
+              <button
+                type="button"
+                onclick={handleChangeEntity}
+                title="Attach this 3D box to a different entity"
+                class="rounded border border-border px-2.5 py-1 text-xs hover:bg-accent"
+              >
+                Change entity
+              </button>
+            {/if}
             {#if confirmEditingId}
               <button
                 type="button"
