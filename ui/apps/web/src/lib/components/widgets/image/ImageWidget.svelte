@@ -9,6 +9,8 @@ License: CECILL-C
   import { Trash2 } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
 
+  import AnnotationToolbar from "../AnnotationToolbar.svelte";
+  import { buildSeam } from "../sceneSeam.js";
   import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
   import {
     DEFAULT_TOOL_2D,
@@ -16,14 +18,14 @@ License: CECILL-C
     RENDERER_FACTORIES_2D,
     TOOLS_2D,
   } from "$lib/annotations/scene/registry2d.js";
-  import type { AnnotationEditor2D, AnnotationRenderer2D } from "$lib/annotations/scene/renderer.js";
+  import type {
+    AnnotationEditor2D,
+    AnnotationRenderer2D,
+  } from "$lib/annotations/scene/renderer.js";
   import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
   import type { ToolHandler2D } from "$lib/annotations/scene/tool.js";
   import type { ImageWidgetOptions, ImageWidgetStorage } from "$lib/annotations/types.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
-
-  import AnnotationToolbar from "../AnnotationToolbar.svelte";
-  import { buildSeam } from "../sceneSeam.js";
 
   interface Props {
     widgetId: string;
@@ -100,29 +102,50 @@ License: CECILL-C
 
   function drawPlaceholder(layer: Konva.Layer, width: number, height: number) {
     const gridSize = 30;
-    const add = (node: Konva.Node) => { layer.add(node as Konva.Shape); placeholderShapes.push(node); };
+    const add = (node: Konva.Node) => {
+      layer.add(node as Konva.Shape);
+      placeholderShapes.push(node);
+    };
     for (let x = 0; x < width; x += gridSize) {
-      add(new Konva.Line({ points: [x, 0, x, height], stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }));
+      add(
+        new Konva.Line({
+          points: [x, 0, x, height],
+          stroke: "rgba(255,255,255,0.05)",
+          strokeWidth: 1,
+        }),
+      );
     }
     for (let y = 0; y < height; y += gridSize) {
-      add(new Konva.Line({ points: [0, y, width, y], stroke: "rgba(255,255,255,0.05)", strokeWidth: 1 }));
+      add(
+        new Konva.Line({
+          points: [0, y, width, y],
+          stroke: "rgba(255,255,255,0.05)",
+          strokeWidth: 1,
+        }),
+      );
     }
-    add(new Konva.Text({
-      text: "Image Canvas",
-      x: 0,
-      y: height / 2 - 12,
-      width,
-      align: "center",
-      fontSize: 16,
-      fill: "rgba(255,255,255,0.3)",
-      fontFamily: "system-ui, sans-serif",
-    }));
+    add(
+      new Konva.Text({
+        text: "Image Canvas",
+        x: 0,
+        y: height / 2 - 12,
+        width,
+        align: "center",
+        fontSize: 16,
+        fill: "rgba(255,255,255,0.3)",
+        fontFamily: "system-ui, sans-serif",
+      }),
+    );
     layer.draw();
   }
 
   function onWindowKeyDown(e: KeyboardEvent) {
     const target = e.target as HTMLElement | null;
-    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+    if (
+      target &&
+      (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+    )
+      return;
     if (activeHandler?.onKeyDown?.(e)) e.preventDefault();
   }
 
@@ -171,7 +194,9 @@ License: CECILL-C
         imageLoaded = true;
         syncRenderers();
       };
-      img.onerror = () => { imageError = true; };
+      img.onerror = () => {
+        imageError = true;
+      };
       img.src = imageUrl;
     } else {
       drawPlaceholder(imageLayer, stage.width(), stage.height());
@@ -231,6 +256,8 @@ License: CECILL-C
   $effect(() => {
     void annotations.items.length;
     void annotations.selectedId;
+    // Re-render when the visible-entity filter changes (show/hide annotations).
+    void manager.visibleEntityIds;
     if (imageLoaded) syncRenderers();
   });
 

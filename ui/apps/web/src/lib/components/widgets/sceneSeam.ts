@@ -53,5 +53,8 @@ export function buildSeam(
       opts.storage.activeToolId = id;
     },
     requestRedraw: opts.requestRedraw ?? (() => {}),
+    beginPendingAnnotation: (pending) => manager.beginPendingAnnotation(pending),
+    findEntity: (entityId) => manager.entities.find((e) => e.id === entityId),
+    isEntityVisible: (entityId) => manager.isEntityVisible(entityId),
   };
 }

@@ -35,6 +35,10 @@ License: CECILL-C
     ctx.collection
       .byKind("bbox3d")
       .filter((a) => a.id !== ctx.editingId)
+      // Entity-driven visibility: a persisted box whose entity is hidden gets no
+      // wireframe; drafts (still being created) always show. Same filter the 2D
+      // bbox renderer applies.
+      .filter((a) => !a.persisted || ctx.isEntityVisible(a.entityId))
       .map((a) => {
         const t = bboxTransform(a.geometry);
         const q = t.quaternion;
@@ -43,11 +47,11 @@ License: CECILL-C
           position: t.position,
           quaternionArr: [q.x, q.y, q.z, q.w] as [number, number, number, number],
           size: t.size,
-          labelPos: [t.position[0], t.position[1] + t.size[1] / 2 + LABEL_OFFSET, t.position[2]] as [
-            number,
-            number,
-            number,
-          ],
+          labelPos: [
+            t.position[0],
+            t.position[1] + t.size[1] / 2 + LABEL_OFFSET,
+            t.position[2],
+          ] as [number, number, number],
           label: pickEntityLabel(a.entity),
         };
       }),

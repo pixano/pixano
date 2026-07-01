@@ -8,6 +8,7 @@ License: CECILL-C
   import { Eye, EyeOff, Layers, MessageSquare, ScanSearch } from "lucide-svelte";
 
   import EntitiesPanel from "./EntitiesPanel.svelte";
+  import SaveAnnotationForm from "./SaveAnnotationForm.svelte";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
   interface Props {
@@ -17,6 +18,11 @@ License: CECILL-C
   let { manager }: Props = $props();
 
   let activeTab = $state<"inspector" | "entities" | "agent">("inspector");
+
+  // Surface the entity form as soon as a drawn box is awaiting its entity.
+  $effect(() => {
+    if (manager.pendingAnnotation) activeTab = "entities";
+  });
 
   const tabs = [
     { id: "inspector" as const, label: "Inspector", icon: ScanSearch },
@@ -46,8 +52,9 @@ License: CECILL-C
   <!-- Tab content -->
   <div class="flex-1 overflow-y-auto">
     {#if activeTab === "entities"}
+      <SaveAnnotationForm {manager} />
       {#if manager.recordId !== null}
-        <EntitiesPanel entities={manager.entities} entitySchemaName={manager.entitySchemaName} />
+        <EntitiesPanel {manager} />
       {:else}
         <div class="p-3">
           <p class="text-xs text-muted-foreground">Open a record to inspect its entities.</p>
@@ -86,7 +93,9 @@ License: CECILL-C
                   >
                     {widget.title}
                   </span>
-                  <span class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  <span
+                    class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                  >
                     {widget.extensionName}
                   </span>
                 </div>

@@ -398,3 +398,60 @@ describe("RecordLoader.load", () => {
     expect(capturedEntitiesById?.get("e1")).toEqual(entity);
   });
 });
+
+describe("RecordLoader.reloadEntities", () => {
+  it("refreshes session.entities for the current record", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const session = new WorkspaceSession();
+    let call = 0;
+    const gateway = makeGateway({ dataset });
+    gateway.listEntities = () => {
+      call++;
+      return Promise.resolve(
+        call === 1 ? [{ id: "e-old", record_id: "rec-1" }] : [{ id: "e-new", record_id: "rec-1" }],
+      );
+    };
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway,
+      session,
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+    expect(session.entities.map((e) => e.id)).toEqual(["e-old"]);
+
+    await loader.reloadEntities();
+    expect(session.entities.map((e) => e.id)).toEqual(["e-new"]);
+  });
+
+  it("discards a stale reload when a newer record load started during the fetch", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const session = new WorkspaceSession();
+
+    let call = 0;
+    let resolveReload!: (rows: EntityRow[]) => void;
+    const gateway = makeGateway({ dataset });
+    gateway.listEntities = () => {
+      call++;
+      // 1: load rec-A, 2: the reload (held in-flight), 3: load rec-B.
+      if (call === 2) return new Promise<EntityRow[]>((res) => (resolveReload = res));
+      return Promise.resolve(call === 1 ? [{ id: "e-A", record_id: "rec-A" }] : [{ id: "e-B", record_id: "rec-B" }]);
+    };
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway,
+      session,
+    });
+
+    await loader.load("ds-1", "rec-A", VIEWPORT);
+    const reloadPromise = loader.reloadEntities(); // captures the current token, then awaits
+    await loader.load("ds-1", "rec-B", VIEWPORT); // bumps loadToken, sets entities to rec-B
+    resolveReload([{ id: "e-A", record_id: "rec-A" }]); // stale fetch resolves last
+    await reloadPromise;
+
+    // The stale reload must NOT clobber record B's entities.
+    expect(session.entities.map((e) => e.id)).toEqual(["e-B"]);
+  });
+});

@@ -98,6 +98,8 @@ export interface AnnotationStore {
   remove(id: string): void;
   select(id: string | null): void;
   setGeometry<G>(id: string, geometry: G): void;
+  /** Assign the annotation's parent entity (id + optional label snapshot). */
+  setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void;
 }
 
 /**
@@ -146,6 +148,14 @@ export class AnnotationCollection implements AnnotationStore {
   setGeometry<G>(id: string, geometry: G): void {
     const annotation = this.find(id);
     if (annotation) annotation.geometry = geometry;
+  }
+
+  setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void {
+    const annotation = this.find(id);
+    if (annotation) {
+      annotation.entityId = entityId;
+      annotation.entity = entity;
+    }
   }
 }
 
@@ -211,5 +221,9 @@ export class ViewScopedAnnotations implements AnnotationStore {
 
   setGeometry<G>(id: string, geometry: G): void {
     this.getParent().setGeometry(id, geometry);
+  }
+
+  setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void {
+    this.getParent().setEntity(id, entityId, entity);
   }
 }

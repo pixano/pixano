@@ -9,6 +9,7 @@ import {
   buildBBox3DCreate,
   buildBBox3DUpdate,
   type BuildContext,
+  type EntityCreateChoice,
 } from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
 import { BBOX3D_RESOURCE } from "$lib/api/resourceNames.js";
@@ -28,6 +29,7 @@ export const bbox3dPayloadBuilder = {
     ctx: BuildContext,
     annotation: LocalAnnotation<BBox3DGeometry>,
     widgetId: string,
+    entity: EntityCreateChoice = {},
   ): ResourceMutation[] {
     return buildBBox3DCreate(ctx, annotation.geometry.coords, {
       widgetId,
@@ -35,6 +37,8 @@ export const bbox3dPayloadBuilder = {
       entityId: annotation.entityId,
       bboxId: annotation.id,
       rotation: annotation.geometry.rotation,
+      entityFields: entity.entityFields,
+      linkExisting: entity.linkExisting,
     }).mutations;
   },
 

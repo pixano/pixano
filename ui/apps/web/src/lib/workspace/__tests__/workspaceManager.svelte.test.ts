@@ -208,6 +208,144 @@ describe("WorkspaceManager.toggleWidgetVisibility", () => {
   });
 });
 
+describe("WorkspaceManager entity visibility", () => {
+  it("defaults to all entities visible (null filter)", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("any")).toBe(true);
+  });
+
+  it("toggleEntityVisible isolates a single entity", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+
+    expect(manager.isEntityVisible("e1")).toBe(true);
+    expect(manager.isEntityVisible("e2")).toBe(false);
+    expect([...(manager.visibleEntityIds ?? [])]).toEqual(["e1"]);
+  });
+
+  it("toggling a different entity switches the isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.toggleEntityVisible("e2");
+
+    expect(manager.isEntityVisible("e1")).toBe(false);
+    expect(manager.isEntityVisible("e2")).toBe(true);
+  });
+
+  it("toggling the already-isolated entity returns to show-all", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.toggleEntityVisible("e1");
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("anything")).toBe(true);
+  });
+
+  it("showAllEntities clears any isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.showAllEntities();
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("e2")).toBe(true);
+  });
+
+  it("clears a selection that isolation has just hidden (no delete on an unseen box)", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b-eB",
+      entityId: "eB",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    manager.annotations.select("b-eB");
+
+    // Isolate a different entity → the selected box is now hidden.
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("keeps a selection that stays visible after isolation", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b-eA",
+      entityId: "eA",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    manager.annotations.select("b-eA");
+
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBe("b-eA");
+  });
+
+  it("keeps a draft selected even when its entity isn't in the visible set", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "draft",
+      entityId: "",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: false,
+    });
+    manager.annotations.select("draft");
+
+    manager.toggleEntityVisible("eA");
+
+    expect(manager.annotations.selectedId).toBe("draft");
+  });
+});
+
+describe("WorkspaceManager.deleteAnnotation", () => {
+  it("queues a single backend delete for a persisted annotation and removes it", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b1",
+      entityId: "e1",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      persisted: true,
+    });
+
+    manager.deleteAnnotation(manager.annotations.find("b1")!, "w1");
+
+    expect(manager.annotations.find("b1")).toBeUndefined();
+    // Only the annotation row; the orphan entity is pruned server-side.
+    expect(manager.pendingMutations).toHaveLength(1);
+    expect(manager.pendingMutations[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "b1" });
+  });
+
+  it("drops pending creates for an unsaved annotation instead of queueing a delete", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "draft",
+      entityId: "",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      persisted: false,
+    });
+
+    manager.deleteAnnotation(manager.annotations.find("draft")!, "w1");
+
+    expect(manager.annotations.find("draft")).toBeUndefined();
+    expect(manager.pendingMutations).toHaveLength(0);
+  });
+});
+
 describe("WorkspaceManager.selectRecordInDataset", () => {
   it("creates one widget per renderable view, in dataset order", async () => {
     const dataset = makeDataset({
@@ -326,6 +464,34 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     // Svelte 5 wraps session state in a $state proxy, so we compare by value
     // rather than reference identity.
     expect(annotation!.entity).toStrictEqual(entity);
+  });
+
+  it("refreshes the entity list after a successful flushSave", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const state = {
+      dataset,
+      entities: [{ id: "ent-old", record_id: "rec-1" } as EntityRow],
+      imagesByLogicalName: new Map([
+        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    };
+    const { gateway, calls } = makeGateway(state);
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    expect(manager.entities.map((e) => e.id)).toEqual(["ent-old"]);
+
+    // Simulate the backend having created one entity and pruned the old one
+    // during the flush; the post-save refetch should pick this up.
+    state.entities = [{ id: "ent-new", record_id: "rec-1" } as EntityRow];
+    manager.queueMutation({ op: "delete", resource: "bbox3ds", id: "x", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(calls.listEntities).toBe(2); // once on load, once after save
+    expect(manager.entities.map((e) => e.id)).toEqual(["ent-new"]);
   });
 
   it("throws when the dataset has no renderable views", async () => {

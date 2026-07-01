@@ -8,12 +8,19 @@ import type Konva from "konva";
 import { describe, expect, it, vi } from "vitest";
 
 import { AnnotationCollection, type LocalBBox } from "../../annotationCollection.svelte.js";
-import { selectTool2D } from "../selectTool2D.js";
 import type { Scene2DContext } from "../sceneContext.js";
+import { selectTool2D } from "../selectTool2D.js";
 import { DEFAULT_TOOL_2D } from "../tool.js";
 
 function makeBBox(id: string, persisted = true): LocalBBox {
-  return { id, entityId: `e-${id}`, kind: "bbox", viewId: "view", geometry: [0.1, 0.1, 0.2, 0.2], persisted };
+  return {
+    id,
+    entityId: `e-${id}`,
+    kind: "bbox",
+    viewId: "view",
+    geometry: [0.1, 0.1, 0.2, 0.2],
+    persisted,
+  };
 }
 
 function makeContext(collection: AnnotationCollection) {
@@ -35,6 +42,9 @@ function makeContext(collection: AnnotationCollection) {
     getKonvaImage: () => null,
     setActiveTool: vi.fn(),
     requestRedraw: vi.fn(),
+    beginPendingAnnotation: vi.fn(),
+    findEntity: vi.fn(),
+    isEntityVisible: () => true,
   };
   return { ctx, stage };
 }
@@ -50,7 +60,9 @@ describe("selectTool2D", () => {
     const { ctx, stage } = makeContext(collection);
     const handler = selectTool2D.createHandler(ctx);
 
-    handler.onPointerDown!({ target: stage } as Parameters<NonNullable<typeof handler.onPointerDown>>[0]);
+    handler.onPointerDown!({ target: stage } as Parameters<
+      NonNullable<typeof handler.onPointerDown>
+    >[0]);
 
     expect(collection.selectedId).toBeNull();
     expect(ctx.requestRedraw).toHaveBeenCalled();
@@ -79,7 +91,7 @@ describe("selectTool2D", () => {
     expect(collection.selectedId).toBeNull();
   });
 
-  it("Delete queues backend deletes for a persisted selection and removes it", () => {
+  it("Delete queues the backend delete for a persisted selection and removes it", () => {
     const collection = new AnnotationCollection([makeBBox("a", true)]);
     collection.select("a");
     const { ctx } = makeContext(collection);
@@ -88,13 +100,10 @@ describe("selectTool2D", () => {
     expect(handler.onKeyDown!(new KeyboardEvent("keydown", { key: "Delete" }))).toBe(true);
 
     expect(collection.find("a")).toBeUndefined();
-    // One delete for the bbox row, one for its parent entity.
-    expect(ctx.mutations.queue).toHaveBeenCalledTimes(2);
+    // Only the bbox row; the parent entity is pruned server-side if now orphaned.
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(1);
     expect(ctx.mutations.queue).toHaveBeenCalledWith(
       expect.objectContaining({ op: "delete", resource: "bboxes", id: "a" }),
-    );
-    expect(ctx.mutations.queue).toHaveBeenCalledWith(
-      expect.objectContaining({ op: "delete", resource: "entities", id: "e-a" }),
     );
   });
 

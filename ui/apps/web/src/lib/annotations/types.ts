@@ -87,6 +87,28 @@ export interface PointCloudWidgetStorage {
 }
 
 /**
+ * The user's entity decision for a freshly drawn box, collected by the
+ * Inspector's SaveAnnotationForm: either link to an existing entity or create
+ * a new one with the given (schema-derived) feature fields.
+ */
+export type PendingEntityChoice =
+  | { mode: "existing"; entityId: string }
+  | { mode: "new"; entityFields: Record<string, unknown> };
+
+/**
+ * A box that has been drawn but not yet committed: it waits for the user to
+ * pick or create its entity in the Inspector. The originating widget supplies
+ * the callbacks so the domain logic (building mutations) stays widget-local
+ * while the form stays presentational. Mirrors pixano's `newShape("saving")`.
+ */
+export interface PendingAnnotation {
+  /** Human label for the form header, e.g. "box" or "3D box". */
+  label: string;
+  onConfirm: (choice: PendingEntityChoice) => void;
+  onCancel: () => void;
+}
+
+/**
  * A pending mutation to be flushed to the backend by WorkspaceManager.flushSave.
  * Modeled after pixano's ResourceMutation in apps/pixano/src/lib/api/resourcePayloads.ts.
  */

@@ -43,6 +43,10 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
     const activeIds = new Set<string>();
 
     for (const bbox of this.ctx.collection.byKind("bbox")) {
+      // Entity-driven visibility: a persisted box whose entity is hidden gets
+      // no node, so it is invisible AND non-clickable/non-editable. Drafts
+      // (still being created) are always shown.
+      if (bbox.persisted && !this.ctx.isEntityVisible(bbox.entityId)) continue;
       activeIds.add(bbox.id);
       let rect = this.rectByBBoxId.get(bbox.id);
       if (!rect) {

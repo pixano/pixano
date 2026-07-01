@@ -195,8 +195,11 @@ export function updateAnnotation(
 ): Promise<Record<string, unknown>> {
   const { id: _ignored, ...patch } = body;
   void _ignored;
+  // Ask the backend to prune the previously attached entity when an entity_id
+  // change leaves it orphaned (no-op for geometry-only edits).
+  const url = `${resourceUrl(datasetId, resource, id)}?prune_orphan_entity=true`;
   return requestJson<Record<string, unknown>>(
-    resourceUrl(datasetId, resource, id),
+    url,
     { headers: JSON_HEADERS, method: "PUT", body: JSON.stringify(patch) },
     `updateAnnotation(${resource})`,
   );
@@ -207,7 +210,10 @@ export async function deleteAnnotation(
   resource: string,
   id: string,
 ): Promise<void> {
-  const res = await fetch(resourceUrl(datasetId, resource, id), { method: "DELETE" });
+  // Ask the backend to also delete the parent entity when this was its last
+  // annotation — the server is the only place that sees every reference.
+  const url = `${resourceUrl(datasetId, resource, id)}?prune_orphan_entity=true`;
+  const res = await fetch(url, { method: "DELETE" });
   if (!res.ok && res.status !== 404) {
     throw new Error(`deleteAnnotation(${resource}) failed with ${res.status} ${res.statusText}`);
   }

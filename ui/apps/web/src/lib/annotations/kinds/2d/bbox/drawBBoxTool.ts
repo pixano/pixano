@@ -7,7 +7,9 @@ License: CECILL-C
 import Konva from "konva";
 import { Square } from "lucide-svelte";
 
-import { commitNewAnnotation } from "$lib/annotations/payloadBuilders.js";
+import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
+import { generateShortId } from "$lib/annotations/buildPayloads.js";
+import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import {
   BBOX_COLOR_DRAFT,
   getPixelFrame,
@@ -15,11 +17,7 @@ import {
   pixelToNormalized,
 } from "$lib/annotations/scene/scene2dGeometry.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-import {
-  DEFAULT_TOOL_2D,
-  type Tool2D,
-  type ToolHandler2D,
-} from "$lib/annotations/scene/tool.js";
+import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
 /**
  * Rubber-band bbox drawing. Pointer down anchors a corner, move stretches
@@ -97,10 +95,31 @@ class DrawBBoxHandler implements ToolHandler2D {
 
     const coordsNorm = pixelToNormalized(clampedLeft, clampedTop, clampedW, clampedH, frame);
 
-    const bbox = commitNewAnnotation(this.ctx, "bbox", coordsNorm);
-
+    // Show the box right away as an unsaved draft; its entity (and the create
+    // mutations) are assigned once the user confirms in the Inspector form.
+    const bbox: LocalBBox = {
+      id: generateShortId(),
+      entityId: "",
+      kind: "bbox",
+      viewId: this.ctx.buildContext.viewId,
+      geometry: coordsNorm,
+      persisted: false,
+    };
+    this.ctx.collection.add(bbox);
     this.ctx.setActiveTool(DEFAULT_TOOL_2D);
     this.ctx.collection.select(bbox.id);
+    this.ctx.requestRedraw();
+
+    this.ctx.beginPendingAnnotation({
+      label: "box",
+      onConfirm: (choice) => commitDraftWithEntity(bbox, choice, this.ctx),
+      onCancel: () => this._discardDraft(bbox.id),
+    });
+  }
+
+  /** Remove an unconfirmed draft box (user cancelled the entity form). */
+  private _discardDraft(localId: string): void {
+    this.ctx.collection.remove(localId);
     this.ctx.requestRedraw();
   }
 
