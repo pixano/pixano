@@ -90,10 +90,12 @@ describe("bboxTransform — xyzwhd", () => {
     expect(position).toEqual([1, 3, -2]);
   });
 
-  it("passes w/h/d extents through unchanged as Three.js size", () => {
+  it("applies the Lance→Three axis swap to extents: [w, d, h]", () => {
+    // coords size = [Lance X-ext=4, Lance Y-ext=5, Lance Z-ext=6].
+    // Three.js size: [Lance X-ext, Lance Z-ext, Lance Y-ext] = [4, 6, 5].
     const bbox = makeBbox({ coords: [0, 0, 0, 4, 5, 6], format: "xyzwhd" });
     const { size } = bboxTransform(bbox);
-    expect(size).toEqual([4, 5, 6]);
+    expect(size).toEqual([4, 6, 5]);
   });
 });
 
@@ -159,11 +161,12 @@ describe("threeBoxToLanceXYZWHD", () => {
     expect(lz).toBeCloseTo(3);
   });
 
-  it("passes size through unchanged as Lance w/h/d", () => {
+  it("swaps Three.js Y/Z extents back to Lance size_y/size_z", () => {
+    // Three.js size [X=4, Y=5, Z=6] → Lance [X-ext=4, Y-ext=Three Z=6, Z-ext=Three Y=5].
     const coords = threeBoxToLanceXYZWHD([0, 0, 0], [4, 5, 6]);
-    expect(coords[3]).toBeCloseTo(4); // w
-    expect(coords[4]).toBeCloseTo(5); // h
-    expect(coords[5]).toBeCloseTo(6); // d
+    expect(coords[3]).toBeCloseTo(4); // Lance X-extent
+    expect(coords[4]).toBeCloseTo(6); // Lance Y-extent (Three.js Z)
+    expect(coords[5]).toBeCloseTo(5); // Lance Z-extent (Three.js Y, up)
   });
 
   it("round-trips with bboxTransform xyzwhd", () => {
