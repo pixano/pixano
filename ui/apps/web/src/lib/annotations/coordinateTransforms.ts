@@ -47,10 +47,13 @@ export function bboxTransform(bbox: BBox3DGeometry): {
       quaternion: lanceRotationToThree(bbox.rotation),
     };
   }
-  // xyzwhd: center (x,y,z) + extents (w,h,d) where h=LanceZ-extent = Three.js Y-extent.
+  // xyzwhd: center (x,y,z) + extents (w,h,d) along Lance axes X, Y, Z — the
+  // exact convention the backend uses to build the box corners
+  // (BBox3D.get_3dbbox_corners). Same axis swap as xyzxyz: the Lance Z-extent
+  // (c[5]) is the up direction and must land on Three.js Y.
   return {
     position: lanceToThree(c[0], c[1], c[2]),
-    size: [c[3], c[4], c[5]],
+    size: [c[3], c[5], c[4]],
     quaternion: lanceRotationToThree(bbox.rotation),
   };
 }
@@ -79,8 +82,10 @@ export function threeQuaternionToLanceRotation(q: THREE.Quaternion): number[] {
  * lanceToThree(lx, ly, lz) = [lx, lz, -ly]
  * Inverse:  lx = three.x,  ly = -three.z,  lz = three.y
  *
- * Size mapping (xyzwhd, no axis swap):
- *   w = Three.js X-extent,  h = Three.js Y-extent,  d = Three.js Z-extent
+ * Size mapping (inverse of bboxTransform's xyzwhd axis swap [c3, c5, c4]):
+ *   Lance X-extent = Three.js X-extent, Lance Y-extent = Three.js Z-extent,
+ *   Lance Z-extent = Three.js Y-extent. Stored as [w, d, h] so the Lance
+ *   coords match the backend's own [size_x, size_y, size_z] convention.
  */
 export function threeBoxToLanceXYZWHD(
   center: [number, number, number],
@@ -88,5 +93,5 @@ export function threeBoxToLanceXYZWHD(
 ): [number, number, number, number, number, number] {
   const [tx, ty, tz] = center;
   const [w, h, d] = size;
-  return [tx, -tz, ty, w, h, d];
+  return [tx, -tz, ty, w, d, h];
 }
