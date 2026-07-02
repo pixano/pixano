@@ -4,8 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-/** Canonical resource identifier for entity mutations. */
+/** Canonical resource identifiers for mutation routing — single source of truth. */
 export const ENTITY_RESOURCE = "entities";
+export const BBOX_RESOURCE = "bboxes";
+export const BBOX3D_RESOURCE = "bbox3ds";
 
 const TABLE_TO_RESOURCE_PATH: Record<string, string> = {
   entity_dynamic_states: "entity-dynamic-states",

@@ -11,25 +11,6 @@ License: CECILL-C
 export type CoordsNorm = [number, number, number, number];
 
 /**
- * Per-widget local box state. This is the source of truth for what the user sees
- * on the canvas; mutations to the backend are queued separately on the
- * WorkspaceManager's save queue.
- */
-export interface LocalBBox {
-  id: string;
-  entityId: string;
-  coordsNorm: CoordsNorm;
-  /** True once the bbox (and its entity) have been POSTed to the backend. */
-  persisted: boolean;
-  /**
-   * Snapshot of the parent entity's fields. Populated for persisted boxes so
-   * UIs can display labels (e.g. `category` for VOCEntity) without an extra
-   * fetch. Dataset-specific fields sit on the index signature.
-   */
-  entity?: Record<string, unknown>;
-}
-
-/**
  * Pick a human-friendly label from an entity row. Returns the first non-empty
  * string field that isn't an id / linkage column. Falls back to the entity id
  * (truncated) when no descriptive field exists so the user still has a handle.
@@ -86,36 +67,22 @@ export interface ImageWidgetOptions {
 
 /**
  * Mutable per-instance storage for the image widget (managed via addStorage).
- * Lives in WorkspaceManager.storageMap, keyed by widget id.
+ * Lives in WorkspaceManager.storageMap, keyed by widget id. Annotation state
+ * is NOT here — it lives on the record's shared collection
+ * (`WorkspaceSession.annotations`); storage holds genuinely per-widget state.
  */
 export interface ImageWidgetStorage {
-  mode: "select" | "draw-bbox";
-  selectedId: string | null;
-  bboxes: LocalBBox[];
+  /** Id of the active tool from the 2D tool registry. */
+  activeToolId: string;
   [key: string]: unknown;
-}
-
-/**
- * In-flight 3D box before the backend POST succeeds.
- */
-export interface DraftBBox3D {
-  id: string;
-  entityId: string;
-  coordsLance: [number, number, number, number, number, number];
-  /** Lance 3×3 rotation matrix (row-major). Omitted means identity. */
-  rotation?: number[];
-  persisted: boolean;
-  entity?: Record<string, unknown>;
 }
 
 /**
  * Mutable per-instance storage for the point-cloud widget.
  */
 export interface PointCloudWidgetStorage {
-  mode: "navigate" | "draw-bbox3d";
-  drafts: DraftBBox3D[];
-  /** Optimistic overrides for persisted boxes that have been edited but not yet saved. */
-  overrides: Record<string, { coords: [number, number, number, number, number, number]; rotation?: number[] }>;
+  /** Id of the active tool from the 3D tool registry. */
+  activeToolId: string;
   [key: string]: unknown;
 }
 
@@ -130,8 +97,8 @@ export type ResourceMutation =
       body: Record<string, unknown>;
       /** Widget this mutation belongs to; used to flip `persisted` after success. */
       widgetId?: string;
-      /** Local bbox id this mutation belongs to (for create/update/delete pairing). */
-      localBBoxId?: string;
+      /** Local annotation id this mutation belongs to (for create/update/delete pairing). */
+      localAnnotationId?: string;
     }
   | {
       op: "update";
@@ -139,12 +106,12 @@ export type ResourceMutation =
       id: string;
       body: Record<string, unknown>;
       widgetId?: string;
-      localBBoxId?: string;
+      localAnnotationId?: string;
     }
   | {
       op: "delete";
       resource: string;
       id: string;
       widgetId?: string;
-      localBBoxId?: string;
+      localAnnotationId?: string;
     };

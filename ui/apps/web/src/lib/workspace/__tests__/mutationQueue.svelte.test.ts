@@ -10,7 +10,7 @@ import type { ResourceMutation } from "$lib/annotations/types.js";
 import { ApiError } from "$lib/api/apiClient.js";
 
 import type { MutationGateway } from "../datasetGateway.js";
-import { MutationQueue, type LocalBBoxLocator } from "../mutationQueue.svelte.js";
+import { MutationQueue, type LocalAnnotationLocator } from "../mutationQueue.svelte.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 
 // ─── Test scaffolding ───────────────────────────────────────────────────────
@@ -60,11 +60,90 @@ function makeSession(datasetId: string | null = "ds-1"): WorkspaceSession {
   return session;
 }
 
-const noopLocator: LocalBBoxLocator = {
-  findLocalBBox: () => undefined,
+const noopLocator: LocalAnnotationLocator = {
+  findLocalAnnotation: () => undefined,
 };
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
+
+describe("MutationQueue.upsertUpdate", () => {
+  function update(id: string, body: Record<string, unknown>): Extract<ResourceMutation, { op: "update" }> {
+    return { op: "update", resource: "bboxes", id, body };
+  }
+
+  it("queues an update when none is pending for that resource+id", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.upsertUpdate(update("b1", { coords: [0, 0, 1, 1] }));
+
+    expect(queue.count).toBe(1);
+    expect(queue.pending[0]).toMatchObject({ op: "update", id: "b1", body: { coords: [0, 0, 1, 1] } });
+  });
+
+  it("replaces the body of the pending update instead of adding a second one", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.upsertUpdate(update("b1", { coords: [0, 0, 1, 1] }));
+    queue.upsertUpdate(update("b1", { coords: [9, 9, 2, 2] }));
+
+    expect(queue.count).toBe(1);
+    expect(queue.pending[0]).toMatchObject({ body: { coords: [9, 9, 2, 2] } });
+  });
+
+  it("keeps updates for different ids separate", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.upsertUpdate(update("b1", { v: 1 }));
+    queue.upsertUpdate(update("b2", { v: 2 }));
+
+    expect(queue.count).toBe(2);
+  });
+});
+
+describe("MutationQueue.patchPendingCreate", () => {
+  it("merges the patch into a pending create's body", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue({
+      op: "create",
+      resource: "bboxes",
+      body: { id: "b1", coords: [0, 0, 1, 1] },
+      localAnnotationId: "b1",
+    } as ResourceMutation);
+
+    queue.patchPendingCreate("b1", "bboxes", { coords: [5, 5, 2, 2] });
+
+    expect(queue.count).toBe(1);
+    expect(queue.pending[0]).toMatchObject({ op: "create", body: { id: "b1", coords: [5, 5, 2, 2] } });
+  });
+
+  it("is a no-op when no matching pending create exists", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.patchPendingCreate("ghost", "bboxes", { coords: [1, 2, 3, 4] });
+
+    expect(queue.count).toBe(0);
+  });
+
+  it("does not patch a create of a different resource or id", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue({
+      op: "create",
+      resource: "bbox3ds",
+      body: { id: "b1", coords: [0, 0, 0, 1, 1, 1] },
+      localAnnotationId: "b1",
+    } as ResourceMutation);
+
+    queue.patchPendingCreate("b1", "bboxes", { coords: [9, 9, 9, 9] });
+
+    expect(queue.pending[0]).toMatchObject({ body: { coords: [0, 0, 0, 1, 1, 1] } });
+  });
+});
 
 describe("MutationQueue.flush", () => {
   it("does nothing when there's no dataset selected", async () => {
@@ -113,12 +192,11 @@ describe("MutationQueue.flush", () => {
     expect(queue.saveError).toBeNull();
   });
 
-  it("marks the LocalBBox as persisted after a successful create", async () => {
+  it("marks the local annotation as persisted after a successful create", async () => {
     const { gateway } = makeGateway();
     const bbox = { persisted: false };
-    const locator: LocalBBoxLocator = {
-      findLocalBBox: (widgetId, localBBoxId) =>
-        widgetId === "w-1" && localBBoxId === "lb-1" ? bbox : undefined,
+    const locator: LocalAnnotationLocator = {
+      findLocalAnnotation: (localAnnotationId) => (localAnnotationId === "lb-1" ? bbox : undefined),
     };
     const queue = new MutationQueue(gateway, makeSession(), locator);
 
@@ -127,7 +205,7 @@ describe("MutationQueue.flush", () => {
       resource: "bboxes",
       body: {},
       widgetId: "w-1",
-      localBBoxId: "lb-1",
+      localAnnotationId: "lb-1",
     } as ResourceMutation);
 
     await queue.flush();
@@ -197,7 +275,7 @@ describe("MutationQueue.flush", () => {
   });
 });
 
-describe("MutationQueue.dropForLocalBBox", () => {
+describe("MutationQueue.dropForLocalAnnotation", () => {
   it("removes every queued mutation referencing the given local bbox id", () => {
     const { gateway } = makeGateway();
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
@@ -206,26 +284,26 @@ describe("MutationQueue.dropForLocalBBox", () => {
       op: "create",
       resource: "bboxes",
       body: {},
-      localBBoxId: "lb-doomed",
+      localAnnotationId: "lb-doomed",
     } as ResourceMutation);
     queue.queue({
       op: "update",
       resource: "bboxes",
       id: "x",
       body: {},
-      localBBoxId: "lb-doomed",
+      localAnnotationId: "lb-doomed",
     } as ResourceMutation);
     queue.queue({
       op: "create",
       resource: "bboxes",
       body: {},
-      localBBoxId: "lb-keep",
+      localAnnotationId: "lb-keep",
     } as ResourceMutation);
 
-    const dropped = queue.dropForLocalBBox("lb-doomed");
+    const dropped = queue.dropForLocalAnnotation("lb-doomed");
 
     expect(dropped).toHaveLength(2);
     expect(queue.count).toBe(1);
-    expect(queue.pending[0].localBBoxId).toBe("lb-keep");
+    expect(queue.pending[0].localAnnotationId).toBe("lb-keep");
   });
 });

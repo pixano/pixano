@@ -93,16 +93,6 @@ export interface WidgetExtensionConfig<
    * `WorkspaceManager` can ask the next extension.
    */
   addRecordSeed?: (ctx: SeedContext) => Promise<RecordWidgetSeed<TStorage> | null>;
-
-  /**
-   * Optional: locate a draft annotation in this widget's storage by local id.
-   * Used by `WorkspaceManager` to flip `persisted` after a successful create
-   * without the manager needing to know the storage shape of each widget type.
-   */
-  findLocalDraft?: (
-    storage: Record<string, unknown>,
-    localId: string,
-  ) => { persisted: boolean } | undefined;
 }
 
 /** A widget instance in the workspace */

@@ -36,6 +36,13 @@ export function normalizedToPixel(
   };
 }
 
+export function normalizedPointToPixel(x: number, y: number, frame: PixelFrame): { x: number; y: number } | null {
+    return {
+      x: frame.x + x * frame.w,
+      y: frame.y + y * frame.h,
+    };
+  }
+
 export function pixelToNormalized(
   rectX: number,
   rectY: number,

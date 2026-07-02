@@ -27,7 +27,7 @@ import {
   RING_LOCAL_QUATS,
   TRANSLATE_ARROW_DEFS,
 } from "./boxEditorConstants.js";
-import type { BBoxRenderData, GizmoVisibility } from "./pointCloudTypes.js";
+import type { BBoxRenderData, GizmoVisibility } from "./bbox3dTypes.js";
 
 type DrawPhase = "idle" | "confirming" | "moving" | "resizing-face" | "rotating";
 
@@ -83,7 +83,7 @@ export class BoxEditor {
       this._ringWorldQuat.multiplyQuaternions(this.previewQuaternion, RING_LOCAL_QUATS[i]);
       return {
         color: ring.color,
-        quat: [this._ringWorldQuat.x, this._ringWorldQuat.y, this._ringWorldQuat.z, this._ringWorldQuat.w],
+        quat: [this._ringWorldQuat.x, this._ringWorldQuat.y, this._ringWorldQuat.z, this._ringWorldQuat.w] as [number, number, number, number],
       };
     }),
   );
@@ -232,6 +232,7 @@ export class BoxEditor {
       void this.getDrawMode();
 
       const el = ref.domElement;
+      if (!el) return;
 
       const setupRay = (clientX: number, clientY: number) => {
         const rect = el.getBoundingClientRect();

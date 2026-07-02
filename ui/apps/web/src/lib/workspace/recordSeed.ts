@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { SchemaDescriptor } from "$lib/types/dataset";
 
@@ -52,6 +53,11 @@ export interface SeedContext {
  * `seed.storage` is merged into whatever `WidgetExtensionConfig.addStorage`
  * produces, atomically with widget creation, so the widget mounts already
  * populated.
+ *
+ * `seed.view` describes the claimed view (canonical row id, logical name,
+ * media dimensions). The loader indexes every claimed view and hands the
+ * index to the per-kind `SEED_LOADERS`, which fetch and map the record's
+ * annotations once — extensions never fetch annotations themselves.
  */
 export interface RecordWidgetSeed<
   TStorage extends Record<string, unknown> = Record<string, unknown>,
@@ -61,4 +67,5 @@ export interface RecordWidgetSeed<
   options?: Record<string, unknown>;
   data?: Record<string, unknown>;
   storage?: Partial<TStorage>;
+  view?: ViewInfo;
 }

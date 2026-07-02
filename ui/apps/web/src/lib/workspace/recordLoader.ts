@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
+import { SEED_LOADERS, type ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
@@ -80,6 +82,7 @@ export class RecordLoader {
     this.session.recordId = recordId;
     this.session.entities = [];
     this.session.entitySchemaName = null;
+    this.session.annotations = new AnnotationCollection();
 
     // Kick off both the dataset metadata fetch and the entities listing in
     // parallel — they don't depend on each other and the entities call is
@@ -146,6 +149,29 @@ export class RecordLoader {
     if (claimed.length === 0) {
       throw new Error(`No renderable views for record "${recordId}" in dataset "${datasetId}".`);
     }
+
+    // Index every claimed view by row id AND logical name (legacy rows used
+    // the camera name as view_id), then run each kind's seed loader once for
+    // the whole record. REST→local mapping lives in the kind modules — the
+    // loader only orchestrates (docs/ARCHITECTURE_TOOLING.md, seed-loader registry).
+    const views = new Map<string, ViewInfo>();
+    for (const { seed } of claimed) {
+      if (!seed.view) continue;
+      if (seed.view.id) views.set(seed.view.id, seed.view);
+      views.set(seed.view.logicalName, seed.view);
+    }
+    const seedContext = {
+      datasetId,
+      recordId,
+      gateway: this.readGateway,
+      entitiesById,
+      views,
+    };
+    const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+
+    // A newer load() was started while annotations were fetching.
+    if (token !== this.loadToken) return;
+    this.session.annotations = new AnnotationCollection(loaded.flat());
 
     const layouts = planViewportLayouts(claimed.length, viewport);
 

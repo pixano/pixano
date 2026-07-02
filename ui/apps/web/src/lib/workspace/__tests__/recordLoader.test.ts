@@ -111,6 +111,78 @@ const VIEWPORT = { width: 1600, height: 900 };
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("RecordLoader.load", () => {
+  it("runs the per-kind seed loaders once per record against the claimed views", async () => {
+    const dataset = makeDataset({ cam_a: { base: "Image" }, cam_b: { base: "Image" } });
+    const listBBoxes = vi.fn().mockResolvedValue([
+      {
+        id: "bb-a",
+        record_id: "rec-1",
+        entity_id: "e-a",
+        view_id: "img-a",
+        coords: [0.1, 0.1, 0.2, 0.2],
+        format: "xywh",
+        is_normalized: true,
+      },
+      {
+        id: "bb-hidden",
+        record_id: "rec-1",
+        entity_id: "e-x",
+        view_id: "not-displayed",
+        coords: [0.1, 0.1, 0.2, 0.2],
+        format: "xywh",
+        is_normalized: true,
+      },
+    ] as BBoxRow[]);
+    const ext: WidgetExtensionConfig = {
+      ...makeImageExtension(),
+      addRecordSeed: async ({ viewName, viewDef }) => {
+        if (viewDef.base !== "Image") return null;
+        return {
+          title: viewName,
+          view: { id: `img-${viewName.slice(-1)}`, logicalName: viewName, width: 100, height: 100 },
+        };
+      },
+    };
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(ext),
+      gateway: { ...makeGateway({ dataset }), listBBoxes },
+      session,
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    // One record-scoped fetch, not one per view.
+    expect(listBBoxes).toHaveBeenCalledTimes(1);
+    // The displayed view's row is seeded; the undisplayed one is skipped.
+    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-a"]);
+    expect(session.annotations.find("bb-a")).toMatchObject({ viewId: "img-a", persisted: true });
+  });
+
+  it("resets the shared collection at the start of a new load", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    const session = new WorkspaceSession();
+    session.annotations.add({
+      id: "stale",
+      entityId: "e",
+      kind: "bbox",
+      viewId: "old",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(makeImageExtension()),
+      gateway: makeGateway({ dataset }),
+      session,
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    expect(session.annotations.find("stale")).toBeUndefined();
+  });
+
   it("sets datasetId and recordId on the session", async () => {
     const dataset = makeDataset({ cam: { base: "Image" } });
     const { sink } = makeSink();

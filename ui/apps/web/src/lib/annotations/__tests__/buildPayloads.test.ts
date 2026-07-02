@@ -61,15 +61,15 @@ describe("buildBBoxCreate", () => {
     expect(bboxBody.view_id).toBe("view-1");
   });
 
-  it("propagates widgetId and localBBoxId onto every generated mutation", () => {
+  it("propagates widgetId and localAnnotationId onto every generated mutation", () => {
     const { mutations } = buildBBoxCreate(CTX, [0, 0, 0.5, 0.5], {
       widgetId: "widget-1",
-      localBBoxId: "local-1",
+      localAnnotationId: "local-1",
     });
 
     for (const m of mutations) {
       expect(m.widgetId).toBe("widget-1");
-      expect(m.localBBoxId).toBe("local-1");
+      expect(m.localAnnotationId).toBe("local-1");
     }
   });
 

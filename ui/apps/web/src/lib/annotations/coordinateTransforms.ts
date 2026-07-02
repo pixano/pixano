@@ -6,7 +6,7 @@ License: CECILL-C
 
 import * as THREE from "three";
 
-import type { LocalBBox3D } from "$lib/api/annotations";
+import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 
 // S maps Lance coords → Three.js coords: lanceToThree(x,y,z) = [x, z, -y].
 // Correct change of basis for rotation matrices: R_three = S * R_lance * S⁻¹ = S * R_lance * Sᵀ
@@ -27,7 +27,7 @@ export function lanceRotationToThree(rotation: number[] | undefined): THREE.Quat
   return new THREE.Quaternion().setFromRotationMatrix(composed);
 }
 
-export function bboxTransform(bbox: LocalBBox3D): {
+export function bboxTransform(bbox: BBox3DGeometry): {
   position: [number, number, number];
   size: [number, number, number];
   quaternion: THREE.Quaternion;

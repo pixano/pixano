@@ -13,20 +13,15 @@ import type { MutationGateway } from "./datasetGateway.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 
 /**
- * Lookup the queue uses to mark a `LocalBBox` as persisted after a
- * successful create. The queue stays widget-storage-agnostic; the wiring
- * code that constructs the queue supplies a closure that knows where to
- * look.
+ * Lookup the queue uses to mark a local annotation as persisted after a
+ * successful create. Annotations live on the record's shared collection,
+ * so the lookup needs only the local annotation id.
  *
- * Returning `undefined` is fine — it just means the storage was already
- * cleared (e.g. user navigated away mid-flush) and the persistence flag
- * doesn't need flipping.
+ * Returning `undefined` is fine — it just means the record was switched
+ * mid-flush and the persistence flag doesn't need flipping.
  */
-export interface LocalBBoxLocator {
-  findLocalBBox(
-    widgetId: string,
-    localBBoxId: string,
-  ): { persisted: boolean } | undefined;
+export interface LocalAnnotationLocator {
+  findLocalAnnotation(localAnnotationId: string): { persisted: boolean } | undefined;
 }
 
 /**
@@ -45,7 +40,7 @@ export class MutationQueue {
   constructor(
     private gateway: MutationGateway,
     private session: WorkspaceSession,
-    private locator: LocalBBoxLocator,
+    private locator: LocalAnnotationLocator,
   ) {}
 
   /** Append a mutation to the queue. Order matters; `flush` re-orders only
@@ -56,14 +51,47 @@ export class MutationQueue {
   }
 
   /**
+   * Queue an update, or — if an update for the same resource+id is already
+   * pending — replace its body. Lets an annotation be edited repeatedly before
+   * a save without piling up redundant updates for the same row. Owning this
+   * here keeps the "find-pending-update-or-queue" logic out of renderers and
+   * widgets (it was duplicated in both).
+   */
+  upsertUpdate(mutation: Extract<ResourceMutation, { op: "update" }>): void {
+    const existing = this.pending.find(
+      (m) => m.op === "update" && m.resource === mutation.resource && m.id === mutation.id,
+    );
+    if (existing && existing.op === "update") existing.body = mutation.body;
+    else this.pending.push(mutation);
+  }
+
+  /**
+   * Merge `patch` into the body of a still-pending *create* for the given local
+   * annotation, if one exists (no-op otherwise). Lets a freshly drawn,
+   * not-yet-saved annotation be re-edited so its queued create carries the
+   * latest geometry. Owning this here keeps callers from reaching into
+   * `pending` and mutating a queued mutation's body in place.
+   */
+  patchPendingCreate(
+    localAnnotationId: string,
+    resource: string,
+    patch: Record<string, unknown>,
+  ): void {
+    const pending = this.pending.find(
+      (m) => m.op === "create" && m.resource === resource && m.localAnnotationId === localAnnotationId,
+    );
+    if (pending && pending.op === "create") Object.assign(pending.body, patch);
+  }
+
+  /**
    * Drop every queued mutation that references the given local bbox id.
    * Used when a bbox is deleted locally before it has been persisted, so
    * we don't POST-then-DELETE it for nothing.
    */
-  dropForLocalBBox(localBBoxId: string): ResourceMutation[] {
+  dropForLocalAnnotation(localAnnotationId: string): ResourceMutation[] {
     const dropped: ResourceMutation[] = [];
     this.pending = this.pending.filter((m) => {
-      if (m.localBBoxId === localBBoxId) {
+      if (m.localAnnotationId === localAnnotationId) {
         dropped.push(m);
         return false;
       }
@@ -80,8 +108,8 @@ export class MutationQueue {
 
   /**
    * Flush every queued mutation to the backend. Entities are created
-   * before the bboxes that reference them; deletes run last. On success,
-   * the corresponding `LocalBBox` (if any) is marked `persisted: true`
+   * before the annotations that reference them; deletes run last. On success,
+   * the corresponding local annotation (if any) is marked `persisted: true`
    * via the locator the manager provided.
    */
   async flush(): Promise<void> {
@@ -109,14 +137,10 @@ export class MutationQueue {
         if (
           mutation.op === "create" &&
           mutation.resource !== ENTITY_RESOURCE &&
-          mutation.widgetId &&
-          mutation.localBBoxId
+          mutation.localAnnotationId
         ) {
-          const bbox = this.locator.findLocalBBox(
-            mutation.widgetId,
-            mutation.localBBoxId,
-          );
-          if (bbox) bbox.persisted = true;
+          const annotation = this.locator.findLocalAnnotation(mutation.localAnnotationId);
+          if (annotation) annotation.persisted = true;
         }
       }
     } catch (err) {

@@ -6,41 +6,39 @@ License: CECILL-C
 
 <script lang="ts">
   import { T, useThrelte } from "@threlte/core";
-  import { HTML, OrbitControls } from "@threlte/extras";
+  import { OrbitControls } from "@threlte/extras";
   import { onMount } from "svelte";
   import * as THREE from "three";
 
   import { parsePointCloud } from "$lib/annotations/pointCloudParser";
-  import { pickEntityLabel } from "$lib/annotations/types";
-  import { bboxTransform } from "$lib/annotations/coordinateTransforms";
-  import type { LocalBBox3D } from "$lib/api/annotations";
+  import { RENDERER_FACTORIES_3D, TOOLS_3D } from "$lib/annotations/scene/registry3d.js";
+  import type { SceneContextBase, Scene3DContext } from "$lib/annotations/scene/sceneContext.js";
+  import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
   import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-  import { RING_DEFS } from "./boxEditorConstants.js";
+  // RING_DEFS is the orbit-indicator's ring geometry (camera UI), not annotation logic.
+  import { RING_DEFS } from "$lib/annotations/kinds/3d/bbox3d/boxEditorConstants.js";
   import { PointCloudCamera } from "./usePointCloudCamera.svelte.js";
-  import { BoxEditor } from "./useBoxEditor.svelte.js";
-  import type { BBoxRenderData, GizmoVisibility } from "./pointCloudTypes.js";
 
   interface Props {
     pointCloudUrl?: string;
-    bboxes3d?: LocalBBox3D[];
-    drawMode?: boolean;
+    /** Agnostic seam from the host widget; the scene completes it into a Scene3DContext. */
+    seam: SceneContextBase;
+    /** Active tool id from the 3D tool registry. */
+    activeToolId?: string;
     cameraMode?: "orbit" | "first-person";
-    onReadyToConfirm?: (coords: [number, number, number, number, number, number], rotation?: number[], editingId?: string) => void;
-    onDrawCanceled?: () => void;
     onLoadError?: (message: string) => void;
-    gizmoVisibility?: GizmoVisibility;
+    /** Per-tool host props keyed by tool id; forwarded opaquely to each overlay. */
+    toolProps?: Record<string, Record<string, unknown>>;
   }
 
   let {
     pointCloudUrl,
-    bboxes3d = [],
-    drawMode = false,
+    seam,
+    activeToolId = "",
     cameraMode = "orbit",
-    onReadyToConfirm,
-    onDrawCanceled,
     onLoadError,
-    gizmoVisibility = { rings: true, resizeArrows: true, translateArrows: true },
+    toolProps = {},
   }: Props = $props();
 
   // ─── Rendering state ──────────────────────────────────────────────────────
@@ -49,17 +47,18 @@ License: CECILL-C
   let loading = $state(true);
   let floorY = $state(0);
   let controlsRef = $state<ThreeOrbitControls | null>(null);
+  // Each tool publishes its handle by id; the scene reads the active one (camera
+  // drag-lock + which box a renderer must skip). Keyed by id so a second editing
+  // tool can't clobber the first — previously a single shared handle (DEBT-6).
+  let toolHandles = $state<Record<string, ToolHandle3D | undefined>>({});
+  const activeHandle = $derived(toolHandles[activeToolId]);
 
   const AMBIENT_LIGHT_INTENSITY = 0.6;
   const POINT_RENDER_SIZE = 0.05;
-  const BOX_LINE_WIDTH = 2;
-  const BOX_COLOR_PERSISTED = "#22d3ee";
-  const BOX_COLOR_PREVIEW = "#f59e0b";
   const GRID_SIZE = 100;
   const GRID_DIVISIONS = 50;
   const GRID_COLOR_CENTER = "#333333";
   const GRID_COLOR_LINES = "#222222";
-  const LABEL_OFFSET = 0.3;
   const FETCH_TIMEOUT_MS = 30_000;
 
   const { camera } = useThrelte();
@@ -70,57 +69,33 @@ License: CECILL-C
     () => controlsRef,
     camera,
     () => cameraMode,
-    () => editor.activeDragging,
+    () => activeHandle?.activeDragging ?? false,
   );
 
-  // Convert LocalBBox3D → BBoxRenderData before passing to the editor so the
-  // editor and the scene template stay free of domain format knowledge.
-  const bboxesForEditor = $derived<BBoxRenderData[]>(
-    bboxes3d.map((bbox) => {
-      const t = bboxTransform(bbox);
-      return {
-        id: bbox.id,
-        position: t.position,
-        size: t.size,
-        quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w },
-        label: pickEntityLabel(bbox.entity),
-      };
-    }),
-  );
-
-  const editor = new BoxEditor(
+  // The scene finishes the agnostic seam into a full Scene3DContext, adding the
+  // engine handles only it owns (camera, controls, floor, orbit pivot). Tools
+  // and renderers read this; the scene itself names no annotation kind.
+  // svelte-ignore state_referenced_locally
+  const ctx: Scene3DContext = {
+    ...seam,
+    get editingId() {
+      return activeHandle?.editingId ?? null;
+    },
     camera,
-    () => controlsRef,
-    () => bboxesForEditor,
-    () => drawMode,
-    () => floorY,
-    () => cam.cameraTarget,
-    () => cam.orbitCenterDist,
-    () => gizmoVisibility,
-    (...args) => onReadyToConfirm?.(...args),
-    () => onDrawCanceled?.(),
-  );
-
-  /** Exposed so the Widget can reset the FSM via bind:this. */
-  export function reset(): void { editor.reset(); }
-
-  // ─── Box renders ──────────────────────────────────────────────────────────
-  const boxRenders = $derived(
-    bboxesForEditor
-      .filter((b) => b.id !== editor.editingBoxId)
-      .map((bbox) => {
-        const q = bbox.quaternion;
-        const boxGeometry = new THREE.BoxGeometry(bbox.size[0], bbox.size[1], bbox.size[2]);
-        return {
-          id: bbox.id,
-          position: bbox.position,
-          quaternionArr: [q.x, q.y, q.z, q.w] as [number, number, number, number],
-          boxGeometry,
-          labelPos: [bbox.position[0], bbox.position[1] + bbox.size[1] / 2 + LABEL_OFFSET, bbox.position[2]] as [number, number, number],
-          label: bbox.label,
-        };
-      }),
-  );
+    getControls: () => controlsRef,
+    get floorY() {
+      return floorY;
+    },
+    get cameraTarget() {
+      return cam.cameraTarget;
+    },
+    get orbitCenterDist() {
+      return cam.orbitCenterDist;
+    },
+    get activeToolId() {
+      return activeToolId;
+    },
+  };
 
   // ─── Point cloud loading ──────────────────────────────────────────────────
   onMount(() => {
@@ -184,89 +159,22 @@ License: CECILL-C
   </T.Points>
 {/if}
 
-{#each boxRenders as render (render.id)}
-  <T.LineSegments position={render.position} quaternion={render.quaternionArr}>
-    <T.EdgesGeometry
-      args={[render.boxGeometry]}
-      oncreate={() => render.boxGeometry.dispose()}
-    />
-    <T.LineBasicMaterial color={BOX_COLOR_PERSISTED} linewidth={BOX_LINE_WIDTH} />
-  </T.LineSegments>
-
-  {#if render.label}
-    <HTML position={render.labelPos} center pointerEvents="none">
-      <div class="pointer-events-none -translate-y-1 whitespace-nowrap rounded-sm bg-cyan-400/90 px-1.5 py-0.5 text-[10px] font-medium text-black shadow-sm">
-        {render.label}
-      </div>
-    </HTML>
-  {/if}
+<!-- Registered 3D renderers — one component per annotation kind, each pulling
+     its kind from the shared collection via ctx. The scene names no kind. -->
+{#each RENDERER_FACTORIES_3D as factory (factory.kind)}
+  {@const Renderer = factory.component}
+  <Renderer {ctx} />
 {/each}
 
-<!-- Draft preview box -->
-{#if editor.previewVisible && editor.previewEdgesGeometry}
-  <T.LineSegments
-    position={editor.previewCenter}
-    quaternion={[editor.previewQuaternion.x, editor.previewQuaternion.y, editor.previewQuaternion.z, editor.previewQuaternion.w]}
-    geometry={editor.previewEdgesGeometry}
-  >
-    <T.LineBasicMaterial color={BOX_COLOR_PREVIEW} linewidth={BOX_LINE_WIDTH} />
-  </T.LineSegments>
-{/if}
-
-<!-- Rotation gizmo rings -->
-{#if editor.previewVisible && gizmoVisibility.rings && (editor.drawPhase === "confirming" || editor.drawPhase === "rotating")}
-  {#each editor.ringGizmos as ring, axis (axis)}
-    <T.Mesh position={editor.previewCenter} quaternion={ring.quat}>
-      <T.TorusGeometry args={[editor.gizmoRingRadius, editor.gizmoTubeRadius, 6, 64]} />
-      <T.MeshBasicMaterial color={ring.color} transparent opacity={0.75} />
-    </T.Mesh>
-  {/each}
-{/if}
-
-{#snippet arrowGizmo(arrow: { id: string; pos: [number, number, number]; quat: [number, number, number, number]; color: string })}
-  <T.Group position={arrow.pos} quaternion={arrow.quat}>
-    <T.Mesh position={[0, editor.arrowShaftOffsetY, 0]}>
-      <T.CylinderGeometry args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]} />
-      <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-    </T.Mesh>
-    <T.Mesh position={[0, editor.arrowHeadOffsetY, 0]}>
-      <T.ConeGeometry args={[editor.arrowRadius, editor.arrowHeadLength, 8]} />
-      <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
-    </T.Mesh>
-  </T.Group>
-{/snippet}
-
-<!-- Translation gizmo arrows -->
-{#if editor.previewVisible && gizmoVisibility.translateArrows && (editor.drawPhase === "confirming" || (editor.drawPhase === "moving" && editor.moveMode === "axis"))}
-  {#each editor.translateArrowGizmos as arrow (arrow.id)}
-    {@render arrowGizmo(arrow)}
-  {/each}
-{/if}
-
-<!-- Resize arrows -->
-{#if editor.previewVisible && gizmoVisibility.resizeArrows && (editor.drawPhase === "confirming" || editor.drawPhase === "resizing-face")}
-  {#each editor.arrowGizmos as arrow (arrow.id)}
-    {@render arrowGizmo(arrow)}
-  {/each}
-{/if}
-
-<!-- Drag hint -->
-{#if editor.activeDragging}
-  <HTML position={cam.cameraTarget} center pointerEvents="none">
-    <div
-      class="pointer-events-none rounded bg-black/60 px-2 py-1 text-[10px] text-white"
-      style="transform: translate(-50%, calc(-50% - 60px));"
-    >
-      {#if editor.drawPhase === "moving"}
-        {editor.moveMode === "axis" ? "Drag to translate · Release to lock" : "Drag to reposition · Release to lock"}
-      {:else if editor.drawPhase === "resizing-face"}
-        Drag to resize · Release to lock
-      {:else if editor.drawPhase === "rotating"}
-        {["X", "Y", "Z"][editor.rotAxis]}: {editor.rotWorldAngleDeg.toFixed(1)}°
-      {/if}
-    </div>
-  </HTML>
-{/if}
+<!-- Active tool overlays — each tool owns its interactive editor + transient
+     preview. The scene forwards ctx + opaque per-tool host props and binds the
+     tool's handle (drag-lock + edited-box id). The scene names no kind. -->
+{#each TOOLS_3D as tool (tool.id)}
+  {#if tool.overlay}
+    {@const Overlay = tool.overlay}
+    <Overlay {ctx} {...(toolProps[tool.id] ?? {})} reportHandle={(h) => (toolHandles[tool.id] = h)} />
+  {/if}
+{/each}
 
 <T.GridHelper args={[GRID_SIZE, GRID_DIVISIONS, GRID_COLOR_CENTER, GRID_COLOR_LINES]} />
 

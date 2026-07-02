@@ -99,20 +99,10 @@ function makeRegistry(): WidgetRegistry {
     priority: 100,
     defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
     component: stubComponent,
-    addStorage: () => ({ bboxes: [] }),
-    addRecordSeed: async ({
-      datasetId,
-      recordId,
-      viewName,
-      viewDef,
-      entitiesById,
-      gateway,
-    }) => {
+    addStorage: () => ({ activeToolId: "select" }),
+    addRecordSeed: async ({ datasetId, recordId, viewName, viewDef, gateway }) => {
       if (viewDef.base !== "Image" && viewDef.base !== "CalibratedImage") return null;
       const image = await gateway.loadImageByLogicalName(datasetId, recordId, viewName);
-      const bboxes = image?.id
-        ? await gateway.listBBoxes(datasetId, { recordId, viewId: image.id })
-        : [];
       return {
         title: viewName,
         options: {
@@ -124,14 +114,11 @@ function makeRegistry(): WidgetRegistry {
           imageHeight: image?.height ?? 0,
         },
         data: { imageUrl: image?.src },
-        storage: {
-          bboxes: bboxes.map((b) => ({
-            id: b.id,
-            entityId: b.entity_id,
-            coordsNorm: [...b.coords],
-            persisted: true,
-            entity: entitiesById.get(b.entity_id),
-          })),
+        view: {
+          id: image?.id ?? "",
+          logicalName: viewName,
+          width: image?.width ?? 0,
+          height: image?.height ?? 0,
         },
       };
     },
@@ -144,22 +131,14 @@ function makeRegistry(): WidgetRegistry {
     priority: 90,
     defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
     component: stubComponent,
-    addRecordSeed: async ({ datasetId, recordId, viewName, viewDef, entitiesById, gateway }) => {
+    addRecordSeed: async ({ datasetId, recordId, viewName, viewDef, gateway }) => {
       if (viewDef.base !== "PointCloud" && viewDef.base !== "CalibratedPointCloud") return null;
-      const [pointCloud, bboxes3d] = await Promise.all([
-        gateway.loadPointCloudByLogicalName(datasetId, recordId, viewName),
-        gateway.listBBox3Ds(datasetId, { recordId }),
-      ]);
+      const pointCloud = await gateway.loadPointCloudByLogicalName(datasetId, recordId, viewName);
       return {
         title: viewName,
         options: {},
-        data: {
-          pointCloudUrl: pointCloud?.src,
-          bboxes3d: bboxes3d.map((b) => ({
-            ...b,
-            entity: b.entity_id ? entitiesById.get(b.entity_id) : undefined,
-          })),
-        },
+        data: { pointCloudUrl: pointCloud?.src },
+        view: { id: pointCloud?.id ?? "", logicalName: viewName, width: 0, height: 0 },
       };
     },
   };
@@ -267,7 +246,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(manager.recordId).toBe("rec-1");
   });
 
-  it("seeds the image widget storage with persisted bboxes (and attaches entities)", async () => {
+  it("seeds the shared collection with persisted bboxes (and attaches entities)", async () => {
     const dataset = makeDataset({ cam_front: { base: "Image" } });
     const entity: EntityRow = {
       id: "ent-1",
@@ -304,20 +283,16 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(calls.listEntities).toBe(1);
     expect(calls.listBBoxes).toBe(1);
 
-    const widget = manager.widgets[0];
-    const storage = manager.getStorage(widget.id) as
-      | { bboxes: Array<{ id: string; entity?: EntityRow }> }
-      | undefined;
-    expect(storage?.bboxes).toHaveLength(1);
-    expect(storage?.bboxes[0]).toMatchObject({
-      id: "bb-1",
+    expect(manager.annotations.byKind("bbox")).toHaveLength(1);
+    expect(manager.annotations.find("bb-1")).toMatchObject({
       entityId: "ent-1",
+      viewId: "img-front",
       persisted: true,
     });
-    expect(storage?.bboxes[0].entity).toStrictEqual(entity);
+    expect(manager.annotations.find("bb-1")!.entity).toStrictEqual(entity);
   });
 
-  it("forwards 3D boxes (with entity attached) to the point-cloud widget data", async () => {
+  it("seeds 3D boxes (with entity attached) into the shared collection", async () => {
     const dataset = makeDataset({ lidar_top: { base: "PointCloud" } });
     const entity = { id: "ent-3d" } as EntityRow;
     const box3d: BBox3DRow = {
@@ -345,13 +320,12 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     const manager = new WorkspaceManager(makeRegistry(), gateway);
     await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
 
-    const widget = manager.widgets[0];
-    const data = widget.data as { bboxes3d?: Array<BBox3DRow & { entity?: EntityRow }> };
-    expect(data.bboxes3d).toHaveLength(1);
-    expect(data.bboxes3d?.[0].id).toBe("box-1");
-    // Svelte 5 wraps widget data in a $state proxy, so we compare by value
+    expect(manager.annotations.byKind("bbox3d")).toHaveLength(1);
+    const annotation = manager.annotations.find("box-1");
+    expect(annotation).toBeDefined();
+    // Svelte 5 wraps session state in a $state proxy, so we compare by value
     // rather than reference identity.
-    expect(data.bboxes3d?.[0].entity).toStrictEqual(entity);
+    expect(annotation!.entity).toStrictEqual(entity);
   });
 
   it("throws when the dataset has no renderable views", async () => {

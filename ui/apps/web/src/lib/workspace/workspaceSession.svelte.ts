@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 
 /**
@@ -16,6 +17,10 @@ import type { EntityRow } from "$lib/api/annotations.js";
  * each sub-service depend on this narrow type instead of the full manager
  * class.
  *
+ * The annotation collection lives here because annotations are record-scoped
+ * truth: every widget viewing the record reads and writes the same instance
+ * (see docs/ARCHITECTURE_TOOLING.md, Phase 6).
+ *
  * Lives in a `.svelte.ts` file so the runes compiler picks up `$state`.
  */
 export class WorkspaceSession {
@@ -23,6 +28,8 @@ export class WorkspaceSession {
   recordId = $state<string | null>(null);
   entities = $state<EntityRow[]>([]);
   entitySchemaName = $state<string | null>(null);
+  /** Shared annotations of the loaded record; replaced on every load. */
+  annotations = $state(new AnnotationCollection());
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
@@ -30,5 +37,6 @@ export class WorkspaceSession {
     this.recordId = null;
     this.entities = [];
     this.entitySchemaName = null;
+    this.annotations = new AnnotationCollection();
   }
 }
