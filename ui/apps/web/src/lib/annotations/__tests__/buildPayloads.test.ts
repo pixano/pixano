@@ -7,6 +7,7 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import {
+  buildBBox3DCreate,
   buildBBoxCreate,
   buildBBoxUpdate,
   mutationPriority,
@@ -87,6 +88,65 @@ describe("buildBBoxCreate", () => {
     expect(bboxBody.id).toBe("my-bbox");
     expect(bboxBody.entity_id).toBe("my-entity");
   });
+
+  it("merges entityFields onto the new entity body", () => {
+    const { mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1], {
+      entityFields: { category: "car", is_difficult: false },
+    });
+    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
+
+    expect(entityBody.category).toBe("car");
+    expect(entityBody.is_difficult).toBe(false);
+    // System fields are still present.
+    expect(entityBody.parent_id).toBe("");
+  });
+
+  it("omits the entity create when linking to an existing entity", () => {
+    const { mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1], {
+      entityId: "existing-1",
+      linkExisting: true,
+    });
+
+    expect(mutations).toHaveLength(1);
+    expect(mutations[0].resource).toBe("bboxes");
+    const bboxBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
+    expect(bboxBody.entity_id).toBe("existing-1");
+  });
+});
+
+describe("buildBBox3DCreate", () => {
+  const coords: [number, number, number, number, number, number] = [1, 2, 3, 4, 5, 6];
+
+  it("returns (entity, bbox3d) create mutations with a matching entity_id", () => {
+    const { entityId, mutations } = buildBBox3DCreate(CTX, coords);
+
+    expect(mutations).toHaveLength(2);
+    expect(mutations[0].resource).toBe("entities");
+    expect(mutations[1].resource).toBe("bbox3ds");
+    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
+    expect(bboxBody.entity_id).toBe(entityId);
+    expect(bboxBody.format).toBe("xyzwhd");
+  });
+
+  it("merges entityFields onto the new entity body", () => {
+    const { mutations } = buildBBox3DCreate(CTX, coords, {
+      entityFields: { category: "pedestrian" },
+    });
+    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
+    expect(entityBody.category).toBe("pedestrian");
+  });
+
+  it("omits the entity create when linking to an existing entity", () => {
+    const { mutations } = buildBBox3DCreate(CTX, coords, {
+      entityId: "existing-3d",
+      linkExisting: true,
+    });
+
+    expect(mutations).toHaveLength(1);
+    expect(mutations[0].resource).toBe("bbox3ds");
+    const bboxBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
+    expect(bboxBody.entity_id).toBe("existing-3d");
+  });
 });
 
 describe("buildBBoxUpdate", () => {
@@ -152,11 +212,6 @@ describe("mutationPriority / sortMutations", () => {
       return `delete:${m.resource}`;
     });
 
-    expect(order).toEqual([
-      "create:entities",
-      "create:bboxes",
-      "delete:bboxes",
-      "delete:entities",
-    ]);
+    expect(order).toEqual(["create:entities", "create:bboxes", "delete:bboxes", "delete:entities"]);
   });
 });

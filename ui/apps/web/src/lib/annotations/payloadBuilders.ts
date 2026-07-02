@@ -4,18 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
-
 import type {
   AnnotationKind,
   AnnotationStore,
   LocalAnnotation,
 } from "./annotationCollection.svelte.js";
-import { generateShortId, type BuildContext } from "./buildPayloads.js";
+import { buildEntityCreateMutation, generateShortId } from "./buildPayloads.js";
+import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./scene/sceneContext.js";
-import type { ResourceMutation } from "./types.js";
+import type { PendingEntityChoice, ResourceMutation } from "./types.js";
 
 /**
  * Per-kind knowledge of how a `LocalAnnotation` becomes backend payloads.
@@ -26,8 +25,17 @@ export interface PayloadBuilder<G = unknown> {
   kind: AnnotationKind;
   /** Backend collection name, e.g. "bboxes". */
   resource: string;
-  /** Mutations creating the annotation and its parent entity. */
-  buildCreate(ctx: BuildContext, annotation: LocalAnnotation<G>, widgetId: string): ResourceMutation[];
+  /**
+   * Mutations creating the annotation and its parent entity. `entity` carries
+   * the user's entity choice (new fields, or link-existing to skip the
+   * entity-create); omitted means a new anonymous entity.
+   */
+  buildCreate(
+    ctx: BuildContext,
+    annotation: LocalAnnotation<G>,
+    widgetId: string,
+    entity?: EntityCreateChoice,
+  ): ResourceMutation[];
   /** Update body for an existing annotation whose geometry changed. */
   buildUpdate(ctx: BuildContext, annotation: LocalAnnotation<G>): Record<string, unknown>;
 }
@@ -92,11 +100,7 @@ export function commitNewAnnotation<G>(
  * which is a superset of the create body's geometry fields, so patching a
  * pending create with it only changes the geometry.
  */
-export function commitGeometryEdit<G>(
-  ctx: CommitContext,
-  annotationId: string,
-  geometry: G,
-): void {
+export function commitGeometryEdit<G>(ctx: CommitContext, annotationId: string, geometry: G): void {
   const annotation = ctx.collection.find(annotationId);
   if (!annotation) return;
   ctx.collection.setGeometry(annotationId, geometry);
@@ -123,9 +127,11 @@ export function commitGeometryEdit<G>(
 }
 
 /**
- * Delete mutations for a persisted annotation: the annotation row plus its
- * parent entity. Kind-agnostic — only the resource name comes from the
- * kind's builder.
+ * Delete mutation for a persisted annotation: just the annotation row. The
+ * parent entity is pruned server-side when this was its last annotation (the
+ * backend is the only place that sees every annotation referencing the
+ * entity); the API delete opts in via `?prune_orphan_entity=true`. Kind-agnostic
+ * — only the resource name comes from the kind's builder.
  */
 export function buildDeleteMutations(
   annotation: LocalAnnotation,
@@ -134,13 +140,6 @@ export function buildDeleteMutations(
   const { resource } = payloadBuilderFor(annotation.kind);
   return [
     { op: "delete", resource, id: annotation.id, widgetId, localAnnotationId: annotation.id },
-    {
-      op: "delete",
-      resource: ENTITY_RESOURCE,
-      id: annotation.entityId,
-      widgetId,
-      localAnnotationId: annotation.id,
-    },
   ];
 }
 
@@ -161,4 +160,113 @@ export function deleteLocalAnnotation(
     mutations.dropForLocalAnnotation(annotation.id);
   }
   collection.remove(annotation.id);
+}
+
+/**
+ * The dependencies a draft-commit needs, satisfied as-is by `Scene2DContext`
+ * (the 2D tool passes itself) and assembled from the manager by 3D widgets.
+ */
+export interface DraftCommitContext {
+  readonly collection: AnnotationStore;
+  readonly mutations: Pick<MutationSink, "queue">;
+  readonly buildContext: BuildContext;
+  readonly widgetId: string;
+  /** Resolve an existing entity row for the annotation's label snapshot. */
+  findEntity(entityId: string): Record<string, unknown> | undefined;
+  /** Optional: nudge the renderer after the entity/label changes (2D). */
+  requestRedraw?(): void;
+}
+
+/**
+ * Kind-agnostic commit of a freshly drawn draft once the user has picked its
+ * entity in the Inspector form: assign the entity (new id + snapshot, or link
+ * an existing one), then queue the kind's create mutations. Mirrors
+ * `deleteLocalAnnotation` so every drawable kind shares one commit path
+ * instead of re-implementing it in its tool/widget.
+ */
+export function commitDraftWithEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: DraftCommitContext,
+): void {
+  const builder = payloadBuilderFor(annotation.kind);
+
+  if (choice.mode === "existing") {
+    ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
+  } else {
+    const entityId = generateShortId();
+    ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
+  }
+
+  // Re-read so the builder sees the just-assigned entityId.
+  const committed = ctx.collection.find(annotation.id);
+  if (!committed) return;
+
+  const entityOpts =
+    choice.mode === "existing" ? { linkExisting: true } : { entityFields: choice.entityFields };
+  for (const m of builder.buildCreate(ctx.buildContext, committed, ctx.widgetId, entityOpts)) {
+    ctx.mutations.queue(m);
+  }
+  ctx.requestRedraw?.();
+}
+
+/**
+ * Dependencies for reassigning a *persisted* annotation's entity. Like
+ * `DraftCommitContext` but the annotation mutation is an update (not a create),
+ * so the queue must expose `upsertUpdate` too.
+ */
+export interface ReassignEntityContext {
+  readonly collection: AnnotationStore;
+  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate">;
+  readonly buildContext: BuildContext;
+  readonly widgetId: string;
+  findEntity(entityId: string): Record<string, unknown> | undefined;
+  requestRedraw?(): void;
+}
+
+/**
+ * Kind-agnostic reassignment of an existing annotation's entity: point it at a
+ * different entity (an existing one, or a freshly created one), then queue the
+ * annotation update carrying the new `entity_id`. The previously attached
+ * entity is pruned server-side when this leaves it with no annotations — the
+ * update is sent with `?prune_orphan_entity=true` (see `updateAnnotation`).
+ * Mirrors `commitDraftWithEntity` for the edit lifecycle.
+ */
+export function reassignEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: ReassignEntityContext,
+): void {
+  if (!annotation.persisted) return;
+  const builder = payloadBuilderFor(annotation.kind);
+
+  if (choice.mode === "existing") {
+    ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
+  } else {
+    const entityId = generateShortId();
+    ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
+    ctx.mutations.queue(
+      buildEntityCreateMutation(
+        ctx.buildContext,
+        entityId,
+        choice.entityFields,
+        ctx.widgetId,
+        annotation.id,
+      ),
+    );
+  }
+
+  // Re-read so the update body carries the just-assigned entityId.
+  const updated = ctx.collection.find(annotation.id);
+  if (!updated) return;
+
+  ctx.mutations.upsertUpdate({
+    op: "update",
+    resource: builder.resource,
+    id: annotation.id,
+    body: builder.buildUpdate(ctx.buildContext, updated),
+    widgetId: ctx.widgetId,
+    localAnnotationId: annotation.id,
+  });
+  ctx.requestRedraw?.();
 }

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { EntityRow } from "$lib/api/annotations.js";
+import type { FieldInfo } from "$lib/types/dataset.js";
 
 /**
  * Reactive "what record is currently loaded?" state, shared by the
@@ -28,8 +29,16 @@ export class WorkspaceSession {
   recordId = $state<string | null>(null);
   entities = $state<EntityRow[]>([]);
   entitySchemaName = $state<string | null>(null);
+  /** Field definitions of the dataset's entity table, used to generate the entity form. */
+  entitySchemaFields = $state<Record<string, FieldInfo> | null>(null);
   /** Shared annotations of the loaded record; replaced on every load. */
   annotations = $state(new AnnotationCollection());
+  /**
+   * Entity ids whose annotations are currently shown. `null` means "all
+   * visible" (the default). A set isolates the listed entities. Record-scoped
+   * shared state so every widget viewing the record filters identically.
+   */
+  visibleEntityIds = $state<Set<string> | null>(null);
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
@@ -37,6 +46,8 @@ export class WorkspaceSession {
     this.recordId = null;
     this.entities = [];
     this.entitySchemaName = null;
+    this.entitySchemaFields = null;
     this.annotations = new AnnotationCollection();
+    this.visibleEntityIds = null;
   }
 }

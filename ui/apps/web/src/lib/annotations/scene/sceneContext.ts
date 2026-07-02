@@ -10,7 +10,7 @@ import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/con
 
 import type { AnnotationStore } from "../annotationCollection.svelte.js";
 import type { BuildContext } from "../buildPayloads.js";
-import type { CameraCalibration, ResourceMutation } from "../types.js";
+import type { CameraCalibration, PendingAnnotation, ResourceMutation } from "../types.js";
 
 /**
  * Narrow view of the mutation queue handed to tools and renderers: enough to
@@ -23,7 +23,11 @@ export interface MutationSink {
   /** Queue an update, or replace the body of a pending update for the same resource+id. */
   upsertUpdate(mutation: Extract<ResourceMutation, { op: "update" }>): void;
   /** Merge a patch into a still-pending create's body for the given local annotation. */
-  patchPendingCreate(localAnnotationId: string, resource: string, patch: Record<string, unknown>): void;
+  patchPendingCreate(
+    localAnnotationId: string,
+    resource: string,
+    patch: Record<string, unknown>,
+  ): void;
   dropForLocalAnnotation(localAnnotationId: string): void;
 }
 
@@ -46,6 +50,15 @@ export interface SceneContextBase {
   setActiveTool(id: string): void;
   /** Ask the host to re-sync annotation rendering. */
   requestRedraw(): void;
+  /**
+   * Register a freshly drawn annotation awaiting its entity choice: the host
+   * surfaces the Inspector's entity form, then calls back to commit or discard.
+   */
+  beginPendingAnnotation(pending: PendingAnnotation): void;
+  /** Resolve an existing entity row, for the label snapshot on entity assignment. */
+  findEntity(entityId: string): Record<string, unknown> | undefined;
+  /** Whether an entity's persisted annotations should currently be shown. */
+  isEntityVisible(entityId: string): boolean;
 }
 
 /**
@@ -75,6 +88,8 @@ export interface Scene2DReadContext {
   readonly camera: Scene2DCamera;
   getKonvaImage(): Konva.Image | null;
   requestRedraw(): void;
+  /** Whether an entity's persisted annotations should currently be shown. */
+  isEntityVisible(entityId: string): boolean;
 }
 
 /**

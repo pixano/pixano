@@ -80,6 +80,9 @@ function makeHarness(opts: { image?: Konva.Image | null } = {}) {
     getKonvaImage: () => ("image" in opts ? (opts.image ?? null) : fakeImage()),
     setActiveTool: vi.fn(),
     requestRedraw: vi.fn(),
+    beginPendingAnnotation: vi.fn(),
+    findEntity: vi.fn(),
+    isEntityVisible: () => true,
   };
   return { ctx, collection, setPointer: (p: { x: number; y: number } | null) => (pointer = p) };
 }
@@ -115,21 +118,54 @@ describe("drawBBoxTool", () => {
     handler = drawBBoxTool.createHandler(harness.ctx);
   });
 
-  it("commits a normalized bbox + queues the entity/bbox create pair, then hands back to select", () => {
+  it("adds a draft (no entity yet), selects it, and opens the entity-assignment flow", () => {
     drag(handler, harness.setPointer, { x: 10, y: 20 }, { x: 60, y: 80 });
 
     expect(harness.collection.count).toBe(1);
     const bbox = harness.collection.items[0];
-    expect(bbox).toMatchObject({ kind: "bbox", viewId: "view-1", persisted: false });
+    expect(bbox).toMatchObject({ kind: "bbox", viewId: "view-1", persisted: false, entityId: "" });
     // (10,20)→(60,80) on a 100×100 frame at origin → x,y,w,h normalized.
     expect(bbox.geometry as CoordsNorm).toEqual([0.1, 0.2, 0.5, 0.6]);
 
-    // entity create + bbox create.
-    expect(harness.ctx.mutations.queue).toHaveBeenCalledTimes(2);
-    // The freshly drawn box is selected and the tool returns to select.
+    // The draft is shown immediately; nothing is queued until the user confirms.
+    expect(harness.ctx.mutations.queue).not.toHaveBeenCalled();
     expect(harness.collection.selectedId).toBe(bbox.id);
     expect(harness.ctx.setActiveTool).toHaveBeenCalledWith("select");
-    expect(harness.ctx.requestRedraw).toHaveBeenCalled();
+    expect(harness.ctx.beginPendingAnnotation).toHaveBeenCalledTimes(1);
+  });
+
+  it("on confirm with a new entity, sets the entityId and queues the entity + bbox creates", () => {
+    drag(handler, harness.setPointer, { x: 10, y: 20 }, { x: 60, y: 80 });
+    const pending = vi.mocked(harness.ctx.beginPendingAnnotation).mock.calls[0][0];
+
+    pending.onConfirm({ mode: "new", entityFields: { category: "car" } });
+
+    const bbox = harness.collection.items[0];
+    expect(bbox.entityId).not.toBe("");
+    expect(bbox.entity).toMatchObject({ category: "car" });
+    expect(harness.ctx.mutations.queue).toHaveBeenCalledTimes(2); // entity + bbox
+  });
+
+  it("on confirm linking an existing entity, reuses its id and queues only the bbox create", () => {
+    vi.mocked(harness.ctx.findEntity).mockReturnValue({ id: "ent-9", category: "bus" });
+    drag(handler, harness.setPointer, { x: 10, y: 20 }, { x: 60, y: 80 });
+    const pending = vi.mocked(harness.ctx.beginPendingAnnotation).mock.calls[0][0];
+
+    pending.onConfirm({ mode: "existing", entityId: "ent-9" });
+
+    const bbox = harness.collection.items[0];
+    expect(bbox.entityId).toBe("ent-9");
+    expect(harness.ctx.mutations.queue).toHaveBeenCalledTimes(1); // bbox only; entity already exists
+  });
+
+  it("on cancel, discards the draft", () => {
+    drag(handler, harness.setPointer, { x: 10, y: 20 }, { x: 60, y: 80 });
+    const pending = vi.mocked(harness.ctx.beginPendingAnnotation).mock.calls[0][0];
+
+    pending.onCancel();
+
+    expect(harness.collection.count).toBe(0);
+    expect(harness.ctx.mutations.queue).not.toHaveBeenCalled();
   });
 
   it("clamps a box drawn partly outside the image to the frame", () => {

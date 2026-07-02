@@ -11,11 +11,7 @@ import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 
 import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
-import {
-  measureGridViewport,
-  planViewportLayouts,
-  type Viewport,
-} from "./layoutPlanner.js";
+import { measureGridViewport, planViewportLayouts, type Viewport } from "./layoutPlanner.js";
 import type { RecordWidgetSeed } from "./recordSeed.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 
@@ -67,6 +63,28 @@ export class RecordLoader {
     this.session = deps.session;
   }
 
+  /**
+   * Refetch the current record's entities and refresh `session.entities`.
+   * Called after a save so the entity list (right-panel list + picker) reflects
+   * entities the flush created or the backend pruned, without a full reload.
+   */
+  async reloadEntities(): Promise<void> {
+    const datasetId = this.session.datasetId;
+    const recordId = this.session.recordId;
+    if (!datasetId || !recordId) return;
+    // Observe (don't bump) the load token: if a record switch starts while we're
+    // fetching, discard our result so a stale list can't overwrite the newer
+    // record's entities — same guard load() uses for its async writes.
+    const token = this.loadToken;
+    try {
+      const entities = await this.readGateway.listEntities(datasetId, { recordId });
+      if (token !== this.loadToken) return;
+      this.session.entities = entities;
+    } catch (err) {
+      console.error("Failed to reload entities:", err);
+    }
+  }
+
   async load(
     datasetId: string,
     recordId: string,
@@ -82,7 +100,9 @@ export class RecordLoader {
     this.session.recordId = recordId;
     this.session.entities = [];
     this.session.entitySchemaName = null;
+    this.session.entitySchemaFields = null;
     this.session.annotations = new AnnotationCollection();
+    this.session.visibleEntityIds = null;
 
     // Kick off both the dataset metadata fetch and the entities listing in
     // parallel — they don't depend on each other and the entities call is
@@ -105,9 +125,11 @@ export class RecordLoader {
     const entitiesById = new Map<string, EntityRow>();
     for (const entity of entityRows) entitiesById.set(entity.id, entity);
 
-    // Expose entities and their schema name to consumers (e.g. the right panel).
+    // Expose entities and their schema (name + fields) to consumers (e.g. the
+    // right panel's entity form, which generates inputs from the fields).
     this.session.entities = entityRows;
     this.session.entitySchemaName = dataset.schema.schemas?.["entities"]?.schema ?? null;
+    this.session.entitySchemaFields = dataset.schema.schemas?.["entities"]?.fields ?? null;
 
     const candidates = Object.entries(dataset.info.views ?? {});
     const extensions = this.registry.getAll();

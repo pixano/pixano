@@ -4,10 +4,18 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { AnnotationCollection } from "../annotationCollection.svelte.js";
 import type { LocalBBox, LocalBBox3DAnnotation } from "../annotationCollection.svelte.js";
-import { buildDeleteMutations, payloadBuilderFor } from "../payloadBuilders.js";
+import {
+  buildDeleteMutations,
+  commitDraftWithEntity,
+  payloadBuilderFor,
+  reassignEntity,
+  type DraftCommitContext,
+  type ReassignEntityContext,
+} from "../payloadBuilders.js";
 
 const CTX = { datasetId: "ds", recordId: "rec", viewId: "view" };
 
@@ -75,11 +83,122 @@ describe("bbox3d payload builder", () => {
 });
 
 describe("buildDeleteMutations", () => {
-  it("deletes the annotation row then its parent entity", () => {
+  it("deletes only the annotation row; the orphan entity is pruned server-side", () => {
     const mutations = buildDeleteMutations(BBOX, "w1");
     expect(mutations).toEqual([
-      expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1" }),
-      expect.objectContaining({ op: "delete", resource: "entities", id: "ent-1" }),
+      expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1", localAnnotationId: "ann-1" }),
     ]);
+  });
+});
+
+describe("commitDraftWithEntity (shared draft-commit)", () => {
+  function makeDraft(): LocalBBox {
+    return { id: "d1", entityId: "", kind: "bbox", viewId: "view", geometry: [0, 0, 1, 1], persisted: false };
+  }
+
+  function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): DraftCommitContext {
+    return {
+      collection,
+      mutations: { queue: vi.fn() },
+      buildContext: CTX,
+      widgetId: "w1",
+      findEntity,
+      requestRedraw: vi.fn(),
+    };
+  }
+
+  it("new entity: assigns a generated id + field snapshot and queues entity + bbox creates", () => {
+    const collection = new AnnotationCollection([makeDraft()]);
+    const ctx = makeCtx(collection);
+
+    commitDraftWithEntity(collection.find("d1")!, { mode: "new", entityFields: { category: "car" } }, ctx);
+
+    const draft = collection.find("d1")!;
+    expect(draft.entityId).not.toBe("");
+    expect(draft.entity).toMatchObject({ category: "car" });
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(2); // entity + bbox
+    expect(ctx.requestRedraw).toHaveBeenCalled();
+  });
+
+  it("existing entity: reuses the id, snapshots via findEntity, and queues only the bbox create", () => {
+    const collection = new AnnotationCollection([makeDraft()]);
+    const findEntity = vi.fn().mockReturnValue({ id: "ent-9", category: "bus" });
+    const ctx = makeCtx(collection, findEntity);
+
+    commitDraftWithEntity(collection.find("d1")!, { mode: "existing", entityId: "ent-9" }, ctx);
+
+    const draft = collection.find("d1")!;
+    expect(draft.entityId).toBe("ent-9");
+    expect(draft.entity).toMatchObject({ category: "bus" });
+    expect(findEntity).toHaveBeenCalledWith("ent-9");
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(1); // bbox only; entity already exists
+  });
+});
+
+describe("reassignEntity (change a persisted annotation's entity)", () => {
+  function makePersisted(): LocalBBox3DAnnotation {
+    return {
+      id: "box-1",
+      entityId: "old-ent",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      persisted: true,
+    };
+  }
+
+  function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): ReassignEntityContext {
+    return {
+      collection,
+      mutations: { queue: vi.fn(), upsertUpdate: vi.fn() },
+      buildContext: CTX,
+      widgetId: "w1",
+      findEntity,
+      requestRedraw: vi.fn(),
+    };
+  }
+
+  it("existing entity: repoints the box and upserts a single update, no create", () => {
+    const collection = new AnnotationCollection([makePersisted()]);
+    const findEntity = vi.fn().mockReturnValue({ id: "new-ent", category: "bus" });
+    const ctx = makeCtx(collection, findEntity);
+
+    reassignEntity(collection.find("box-1")!, { mode: "existing", entityId: "new-ent" }, ctx);
+
+    expect(collection.find("box-1")!.entityId).toBe("new-ent");
+    expect(ctx.mutations.queue).not.toHaveBeenCalled();
+    expect(ctx.mutations.upsertUpdate).toHaveBeenCalledTimes(1);
+    expect(ctx.mutations.upsertUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ op: "update", resource: "bbox3ds", id: "box-1" }),
+    );
+    expect(vi.mocked(ctx.mutations.upsertUpdate).mock.calls[0][0].body).toMatchObject({ entity_id: "new-ent" });
+  });
+
+  it("new entity: queues an entity create + the box update with the generated id", () => {
+    const collection = new AnnotationCollection([makePersisted()]);
+    const ctx = makeCtx(collection);
+
+    reassignEntity(collection.find("box-1")!, { mode: "new", entityFields: { category: "car" } }, ctx);
+
+    const box = collection.find("box-1")!;
+    expect(box.entityId).not.toBe("old-ent");
+    expect(box.entity).toMatchObject({ category: "car" });
+    expect(ctx.mutations.queue).toHaveBeenCalledTimes(1); // the new entity create
+    expect(ctx.mutations.queue).toHaveBeenCalledWith(
+      expect.objectContaining({ op: "create", resource: "entities" }),
+    );
+    expect(ctx.mutations.upsertUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a non-persisted (draft) annotation", () => {
+    const draft = { ...makePersisted(), persisted: false };
+    const collection = new AnnotationCollection([draft]);
+    const ctx = makeCtx(collection);
+
+    reassignEntity(collection.find("box-1")!, { mode: "existing", entityId: "new-ent" }, ctx);
+
+    expect(ctx.mutations.queue).not.toHaveBeenCalled();
+    expect(ctx.mutations.upsertUpdate).not.toHaveBeenCalled();
+    expect(collection.find("box-1")!.entityId).toBe("old-ent");
   });
 });
