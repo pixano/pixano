@@ -89,6 +89,8 @@ path = "src/pixano/__version__.py"
 testpaths = ["tests"]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
+    "slow: Long-running scale/soak tests, excluded from the default CI run",
+    "hub: Tests downloading from the Hugging Face hub, excluded from the default CI run",
 ]
 
 [tool.ruff]
