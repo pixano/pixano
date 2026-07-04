@@ -6,7 +6,7 @@
 
 import warnings
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.schemas import SchemaGroup, canonical_table_name_for_slot
@@ -188,6 +188,7 @@ def validate_batch(
     dataset: "Dataset",
     raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     pending_ids: dict[str, set[str]] | None = None,
+    fk_lookup: Callable[[str, set[str]], dict[str, bool]] | None = None,
 ) -> None:
     """Validate a batch of schemas before insertion using in-memory ID tracking.
 
@@ -203,6 +204,9 @@ def validate_batch(
         pending_ids: Mapping of table_name -> set of IDs that are buffered for insertion
             in this flush cycle. Used only for FK checks so sibling tables that haven't
             been flushed yet can be resolved.
+        fk_lookup: Optional replacement for the bulk DB lookup, called as
+            ``fk_lookup(target_table, values) -> {value: found}``. An import engine
+            can answer from its id ledger to skip DB scans on fresh builds.
     """
     errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
 
@@ -239,11 +243,12 @@ def validate_batch(
                 for t in target_tables:
                     fk_values_by_target.setdefault(t, set()).add(field_value)
 
-    # Bulk DB queries: one per target table
+    # Bulk lookups: one per target table (DB by default, or the caller's ledger)
+    lookup = fk_lookup if fk_lookup is not None else dataset.find_ids_in_table
     db_found: dict[str, set[str]] = {}
     for target_table, values in fk_values_by_target.items():
         try:
-            result = dataset.find_ids_in_table(target_table, values)
+            result = lookup(target_table, values)
             db_found[target_table] = {v for v, found in result.items() if found}
         except Exception:
             db_found[target_table] = set()

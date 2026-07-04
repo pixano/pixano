@@ -41,16 +41,23 @@ class DatasetFeaturesValues(BaseModel):
     """Constraints for the dataset features values.
 
     Attributes:
-        item: Constraints for the dataset item table.
+        item: Constraints for the dataset item table (legacy name, kept for
+            on-disk compatibility with existing ``features_values.json`` files).
+        records: Constraints for the dataset record table.
         views: Constraints for the dataset view tables.
         entities: Constraints for the dataset entity tables.
+        entity_dynamic_states: Constraints for the entity dynamic state table.
         annotations: Constraints for the dataset annotation tables.
+        embeddings: Constraints for the dataset embedding tables.
     """
 
     item: ConstraintDict = {}
+    records: ConstraintDict = {}
     views: ConstraintDict = {}
     entities: ConstraintDict = {}
+    entity_dynamic_states: ConstraintDict = {}
     annotations: ConstraintDict = {}
+    embeddings: ConstraintDict = {}
 
     def to_json(self, json_fp: Path) -> None:
         """Save DatasetFeaturesValues to json file."""
