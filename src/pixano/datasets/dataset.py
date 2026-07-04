@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import io
+import json
+import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -38,6 +40,7 @@ from pixano.schemas import (
     ViewEmbedding,
     is_image,
     is_sequence_frame,
+    is_video,
     is_view_embedding,
     validate_canonical_table_map,
 )
@@ -50,6 +53,9 @@ from .dataset_stat import DatasetStatistic
 
 if TYPE_CHECKING:
     pass
+
+
+logger = logging.getLogger(__name__)
 
 
 def _combine_where_clauses(*clauses: str | None) -> str | None:
@@ -139,7 +145,59 @@ class Dataset:
         self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
+        if self.info.spec_version < self._CURRENT_SPEC_VERSION:
+            try:
+                self._migrate_storage_to_spec_version_2()
+            except Exception as exc:
+                # A read-only dataset stays readable at the old layout; writes will
+                # surface the missing columns explicitly.
+                logger.warning(
+                    "Dataset %s: spec version %d migration failed, continuing unmigrated: %s",
+                    self.path,
+                    self._CURRENT_SPEC_VERSION,
+                    exc,
+                )
         self._num_rows_cache: int | None = None
+
+    # ------------------------------------------------------------------
+    # Storage-layout migrations
+    # ------------------------------------------------------------------
+
+    _CURRENT_SPEC_VERSION: int = 2
+
+    def _migrate_storage_to_spec_version_2(self) -> None:
+        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+
+        Concurrency-safe: when several processes open the same pre-migration
+        dataset, losers of the ``add_columns`` race converge by re-reading the
+        table schema, and the ``info.json`` rewrite is atomic and idempotent
+        (all writers produce identical content).
+        """
+        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        for table_name, schema_cls in self.info.tables.items():
+            if not is_video(schema_cls):
+                continue
+            table = self.open_table(table_name)
+            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            if not missing:
+                continue
+            try:
+                table.add_columns(missing)
+            except Exception:
+                still_missing = [
+                    column for column in missing if column not in self.open_table(table_name).schema.names
+                ]
+                if still_missing:
+                    raise
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory
