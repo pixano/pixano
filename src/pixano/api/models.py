@@ -17,6 +17,7 @@ from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
     BBox3D,
+    Classification,
     CompressedRLE,
     Embedding,
     Entity,
@@ -25,6 +26,7 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    Relation,
     TextSpan,
     Tracklet,
 )
@@ -320,6 +322,35 @@ KeyPointsUpdate = _create_transport_model(
 )
 KeyPointsResponse = _create_transport_model("KeyPointsResponse", KeyPoints)
 
+ClassificationCreate = _create_transport_model(
+    "ClassificationCreate",
+    Classification,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+ClassificationUpdate = _create_transport_model(
+    "ClassificationUpdate",
+    Classification,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+ClassificationResponse = _create_transport_model("ClassificationResponse", Classification)
+
+RelationCreate = _create_transport_model(
+    "RelationCreate",
+    Relation,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+RelationUpdate = _create_transport_model(
+    "RelationUpdate",
+    Relation,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+RelationResponse = _create_transport_model("RelationResponse", Relation)
+
+
 TextSpanCreate = _create_transport_model(
     "TextSpanCreate",
     TextSpan,
@@ -379,6 +410,8 @@ class DatasetInfoResponse(DatasetInfo):
         "mask",
         "multi_path",
         "keypoint",
+        "classification",
+        "relation",
         "tracklet",
         "message",
         "text_span",
@@ -434,6 +467,9 @@ __all__ = [
     "BBox3DCreate",
     "BBox3DResponse",
     "BBox3DUpdate",
+    "ClassificationCreate",
+    "ClassificationResponse",
+    "ClassificationUpdate",
     "DatasetInfoResponse",
     "DatasetResponse",
     "EmbeddingCreate",
@@ -462,6 +498,9 @@ __all__ = [
     "MessageUpdate",
     "PaginatedResponse",
     "CalibratedImageResponse",
+    "RelationCreate",
+    "RelationResponse",
+    "RelationUpdate",
     "ImageResponse",
     "PointCloudResponse",
     "SFrameResponse",
