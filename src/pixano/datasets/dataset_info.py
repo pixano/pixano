@@ -28,6 +28,7 @@ from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 from pixano.schemas import (
     BBox,
     BBox3D,
+    Classification,
     CompressedRLE,
     Entity,
     EntityDynamicState,
@@ -36,6 +37,7 @@ from pixano.schemas import (
     MultiPath,
     Record,
     RecordComponent,
+    Relation,
     TextSpan,
     Tracklet,
     View,
@@ -60,6 +62,8 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "mask": CompressedRLE,
     "multi_path": MultiPath,
     "keypoint": KeyPoints,
+    "classification": Classification,
+    "relation": Relation,
     "tracklet": Tracklet,
     "message": Message,
     "text_span": TextSpan,
@@ -88,6 +92,8 @@ class DatasetInfo(BaseModel):
         bbox3d: 3D bounding box schema.
         mask: Mask schema.
         keypoint: Keypoint schema.
+        classification: Classification schema.
+        relation: Relation schema.
         tracklet: Tracklet schema.
         message: Message schema.
         text_span: Text span schema.
@@ -109,6 +115,8 @@ class DatasetInfo(BaseModel):
     mask: type[CompressedRLE] | None = None
     multi_path: type[MultiPath] | None = None
     keypoint: type[KeyPoints] | None = None
+    classification: type[Classification] | None = None
+    relation: type[Relation] | None = None
     tracklet: type[Tracklet] | None = None
     message: type[Message] | None = None
     text_span: type[TextSpan] | None = None
