@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRouter
 
 from pixano.api.routers.bboxes import router as bboxes_router
+from pixano.api.routers.classification import router as classification_router
 from pixano.api.routers.conversations import router as conversations_router
 from pixano.api.routers.datasets import router as datasets_router
 from pixano.api.routers.embeddings import router as embeddings_router
@@ -21,6 +22,7 @@ from pixano.api.routers.masks import router as masks_router
 from pixano.api.routers.messages import router as messages_router
 from pixano.api.routers.multi_paths import router as multi_paths_router
 from pixano.api.routers.records import router as records_router
+from pixano.api.routers.relation import router as relation_router
 from pixano.api.routers.text_spans import router as text_spans_router
 from pixano.api.routers.tracklets import router as tracklets_router
 from pixano.api.routers.views import router as views_router
@@ -36,6 +38,8 @@ RESOURCE_ROUTERS: tuple[APIRouter, ...] = (
     masks_router,
     multi_paths_router,
     keypoints_router,
+    classification_router,
+    relation_router,
     messages_router,
     conversations_router,
     text_spans_router,
