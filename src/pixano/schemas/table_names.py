@@ -10,7 +10,17 @@ from dataclasses import dataclass
 
 from lancedb.pydantic import LanceModel
 
-from .annotations import BBox, CompressedRLE, KeyPoints, Message, MultiPath, TextSpan, Tracklet
+from .annotations import (
+    BBox,
+    Classification,
+    CompressedRLE,
+    KeyPoints,
+    Message,
+    MultiPath,
+    Relation,
+    TextSpan,
+    Tracklet,
+)
 from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
@@ -44,6 +54,10 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
     CanonicalResourceFamily("bbox", "bboxes", "bboxes", SchemaGroup.ANNOTATION, BBox),
     CanonicalResourceFamily("mask", "masks", "masks", SchemaGroup.ANNOTATION, CompressedRLE),
     CanonicalResourceFamily("keypoint", "keypoints", "keypoints", SchemaGroup.ANNOTATION, KeyPoints),
+    CanonicalResourceFamily(
+        "classification", "classifications", "classifications", SchemaGroup.ANNOTATION, Classification
+    ),
+    CanonicalResourceFamily("relation", "relations", "relations", SchemaGroup.ANNOTATION, Relation),
     CanonicalResourceFamily("tracklet", "tracklets", "tracklets", SchemaGroup.ANNOTATION, Tracklet),
     CanonicalResourceFamily("message", "messages", "messages", SchemaGroup.ANNOTATION, Message),
     CanonicalResourceFamily("multi_path", "multi-paths", "multi_paths", SchemaGroup.ANNOTATION, MultiPath),
@@ -86,6 +100,8 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "mask",
             "multi_path",
             "keypoint",
+            "classification",
+            "relation",
             "tracklet",
             "message",
             "text_span",
