@@ -5,24 +5,10 @@
 # =====================================
 
 from .dataset_builder import DatasetBuilder
-from .folders import (
-    FolderBaseBuilder,
-    ImageFolderBuilder,
-    MelFolderBuilder,
-    PointCloudFolderBuilder,
-    VideoFolderBuilder,
-    VQAFolderBuilder,
-)
 
 
 __all__ = [
     "DatasetBuilder",
-    "FolderBaseBuilder",
-    "ImageFolderBuilder",
-    "MelFolderBuilder",
-    "PointCloudFolderBuilder",
-    "VideoFolderBuilder",
-    "VQAFolderBuilder",
 ]
 
 try:

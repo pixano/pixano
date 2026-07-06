@@ -6,6 +6,7 @@
 
 import logging
 import shutil
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterator, Literal
@@ -45,6 +46,12 @@ class DatasetBuilder(ABC):
             target_dir: The target directory for the dataset.
             info: Dataset information including table→schema mapping.
         """
+        warnings.warn(
+            "DatasetBuilder is deprecated and will be removed in 0.9; implement a "
+            "pixano.datasets.io.DatasetImporter instead (docs/specs/data-import-export.md §7.4).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.target_dir: Path = Path(target_dir)
         self.previews_path: Path = self.target_dir / Dataset._PREVIEWS_PATH
 
