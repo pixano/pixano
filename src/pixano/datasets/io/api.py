@@ -28,7 +28,7 @@ from .importer import DatasetImporter, SourceRef
 from .plan import AnalyzeLimits, ImportPlan
 from .progress import ProgressSink
 from .registry import FORMATS
-from .spec import ImportSpec, resolve_dataset_info
+from .spec import ImportSpec
 
 
 def _resolve_importer(source: SourceRef, spec: ImportSpec, importer: DatasetImporter | None) -> DatasetImporter:
@@ -94,7 +94,7 @@ def import_dataset(
         )
 
     if info is None:
-        info = resolve_dataset_info(spec)
+        info = resolved.resolve_info(spec)
     if spec.dataset.name:
         info.name = spec.dataset.name
     if spec.dataset.description:

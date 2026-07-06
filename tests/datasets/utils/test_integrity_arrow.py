@@ -45,9 +45,7 @@ class TestValidateArrowBatch:
 
     def test_known_ids_flag_cross_flush_duplicates(self, dataset: Dataset):
         with pytest.raises(DatasetIntegrityError, match="e1"):
-            validate_arrow_batch(
-                "entities", _entities(["e1"], ["rec1"]), {"entities": {"e1"}}, dataset
-            )
+            validate_arrow_batch("entities", _entities(["e1"], ["rec1"]), {"entities": {"e1"}}, dataset)
 
     def test_empty_fk_sentinel_is_skipped(self, dataset: Dataset):
         validate_arrow_batch("entities", _entities(["e1"], [""]), {}, dataset)
@@ -69,9 +67,7 @@ class TestValidateArrowBatch:
             calls.append((target, values))
             return {value: value == "ledger_rec" for value in values}
 
-        validate_arrow_batch(
-            "entities", _entities(["e1"], ["ledger_rec"]), {}, dataset, fk_lookup=ledger_lookup
-        )
+        validate_arrow_batch("entities", _entities(["e1"], ["ledger_rec"]), {}, dataset, fk_lookup=ledger_lookup)
         assert calls == [("records", {"ledger_rec"})]
 
     def test_warn_mode_does_not_raise(self, dataset: Dataset):
