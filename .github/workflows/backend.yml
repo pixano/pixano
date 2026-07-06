@@ -25,6 +25,9 @@ on:
       - ".pre-commit-config.yaml"
     branches:
       - "main"
+      - "arch/**"
+      - "spec/**"
+      - "feat/**"
 
 permissions:
   contents: read
