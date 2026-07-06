@@ -11,6 +11,8 @@ API, and the Python API: declarative specs, format registry, importer
 contract, and the import engine.
 """
 
+from .api import analyze, import_dataset
+from .engine import ImportEngine, ImportResult, replay_journals
 from .errors import (
     FormatDetectionError,
     JobStateError,
@@ -34,6 +36,8 @@ from .spec import ExportSpec, IdPolicy, ImportSpec, MediaPolicy, SchemaSpec, wor
 
 __all__ = [
     "AnalyzeLimits",
+    "ImportEngine",
+    "ImportResult",
     "BatchBundle",
     "Capabilities",
     "Cursor",
@@ -72,9 +76,12 @@ __all__ = [
     "UnsupportedStorageError",
     "VideoProbe",
     "ffprobe_available",
+    "analyze",
+    "import_dataset",
     "namespace_prefix",
     "probe_image",
     "probe_video",
+    "replay_journals",
     "stable_id",
     "workspace_preset",
 ]
