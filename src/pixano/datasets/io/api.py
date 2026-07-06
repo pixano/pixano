@@ -14,9 +14,13 @@ tqdm sink; the REST layer does the same with a job-store sink.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from pixano.datasets.dataset_info import DatasetInfo
+
+
+if TYPE_CHECKING:
+    from pixano.datasets.dataset import Dataset
 
 from .engine import ImportEngine, ImportResult
 from .errors import SpecValidationError
@@ -98,3 +102,28 @@ def import_dataset(
 
     engine = engine or ImportEngine(Path(data_dir))
     return engine.run(resolved, source_ref, spec, plan, info, sinks=sinks)
+
+
+def export_dataset(
+    dataset: "Dataset | Path | str",
+    destination: str | Path,
+    format: str = "pixano_jsonl",
+    media: str = "files",
+) -> Path:
+    """Export a dataset to a data format (spec §10).
+
+    ``pixano_jsonl`` emits exactly the import grammar with explicit ids, so
+    import → export → import is id-equal. Other formats arrive with their
+    exporters (plan P3).
+    """
+    from pixano.datasets.dataset import Dataset
+
+    if format != "pixano_jsonl":
+        raise SpecValidationError(f"Export format '{format}' is not available yet; only 'pixano_jsonl' is.")
+    if media not in ("files", "uris"):
+        raise SpecValidationError("media must be 'files' or 'uris'.")
+
+    from .formats.pixano_jsonl.exporter import PixanoJsonlExporter
+
+    resolved = dataset if isinstance(dataset, Dataset) else Dataset(Path(dataset))
+    return PixanoJsonlExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
