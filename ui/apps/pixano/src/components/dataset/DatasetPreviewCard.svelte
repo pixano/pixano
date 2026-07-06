@@ -119,70 +119,76 @@ License: CECILL-C
 </script>
 
 <div class="relative group w-96">
-  <!-- Tooltip -->
+  <!-- Info overlay (appears on hover at half height) -->
   <div
-    class="absolute bottom-full mb-2 w-96 bg-gray-800 text-white text-sm rounded-md px-4 py-2 shadow-lg whitespace-pre-line hidden group-hover:block z-10"
+    class="absolute left-2 right-2 top-full mt-1 bg-white text-gray-800 text-sm rounded-md px-4 py-3 shadow-[0_12px_50px_rgba(0,0,0,0.45)] border border-slate-300 whitespace-pre-line hidden group-hover:block z-10"
   >
-    Name: {dataset.name}
-    Description: {dataset.description}
-    {additionalInfo ? `\n\n${additionalInfo}` : ""}
+    <span class="font-semibold">{dataset.name}</span>
+    <br />
+    {dataset.description}
+    {#if additionalInfo}
+      <hr class="my-1 border-slate-200" />
+      {additionalInfo}
+    {/if}
   </div>
 
-  <button
+    <button
     class="w-96 h-72 flex flex-col text-left font-Montserrat
     bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
     on:click={handleSelectDataset}
   >
-    <!-- Bookmark buttons -->
-    <div
-      class="absolute top-2 right-2 flex gap-1 z-20"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
-    >
-      {#each BOOKMARK_TYPES as btype}
-        <button
-          class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
-          style="color: {bookmarkColors[btype]}"
-          on:click={() => toggleBookmark(btype)}
-          aria-label="{btype} bookmark"
-        >
+    <!-- Infos + bookmarks + arrow -->
+    <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
+      <div class="flex items-start">
+        <!-- Title and stats -->
+        <div class="w-5/6">
+          <h3 class="text-lg font-semibold truncate text-primary">
+            {dataset.name}
+          </h3>
+          <p class="text-sm text-slate-500 font-medium">
+            {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
+            {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
+              ? " - " + dataset.size
+              : ""}
+          </p>
+        </div>
+
+        <!-- Right area: bookmarks horizontally + arrow below -->
+        <div class="flex flex-col items-center ml-auto">
+          <div class="flex flex-row gap-1">
+            {#each BOOKMARK_TYPES as btype}
+              <button
+                title={btype}
+                class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
+                style="color: {bookmarkColors[btype]}"
+                on:click|stopPropagation={() => toggleBookmark(btype)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="20"
+                  viewBox="0 -960 960 960"
+                  width="20"
+                >
+                  <path
+                    d={dataset.bookmarks.includes(btype) ? svg_bookmark_filled : svg_bookmark_outline}
+                    fill="currentcolor"
+                  />
+                </svg>
+              </button>
+            {/each}
+          </div>
+
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="20"
+            height="48"
             viewBox="0 -960 960 960"
-            width="20"
+            width="48"
+            class="mt-1 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
           >
-            <path
-              d={dataset.bookmarks.includes(btype) ? svg_bookmark_filled : svg_bookmark_outline}
-              fill="currentcolor"
-            />
+            <path d={svg_right_arrow} fill="currentcolor" />
           </svg>
-        </button>
-      {/each}
-    </div>
-
-    <!-- Infos -->
-    <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
-      <h3 class="text-lg w-5/6 font-semibold truncate text-primary">
-        {dataset.name}
-      </h3>
-
-      <p class="text-sm text-slate-500 font-medium">
-        {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
-        {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
-          ? " - " + dataset.size
-          : ""}
-      </p>
-
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        height="48"
-        viewBox="0 -960 960 960"
-        width="48"
-        class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
-      >
-        <path d={svg_right_arrow} fill="currentcolor" />
-      </svg>
+        </div>
+      </div>
     </div>
 
     <!-- Thumbnail -->
