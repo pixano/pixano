@@ -179,3 +179,21 @@ class TestCocoRoundTrip:
         box_first = sorted(first.get_data("bboxes", limit=100), key=lambda b: b.coords[0])[0]
         box_second = sorted(second.get_data("bboxes", limit=100), key=lambda b: b.coords[0])[0]
         assert box_second.coords == pytest.approx(box_first.coords, abs=1e-3)
+
+
+class TestDefaultDatasetName:
+    def test_name_defaults_from_the_source_folder(self, tmp_path: Path):
+        from pixano.datasets import Dataset
+
+        source = tmp_path / "2014"
+        source.mkdir()
+        shutil.copy(FIXTURE / "instances_val.json", source / "instances_val.json")
+        (source / "val").mkdir()
+        for image in (FIXTURE / "image" / "val").iterdir():
+            shutil.copy(image, source / "val" / image.name)
+
+        spec = ImportSpec.model_validate({"format": "coco"})  # no name anywhere
+        result = import_dataset(source, tmp_path / "data", spec, importer=CocoImporter())
+        dataset = Dataset(result.dataset_path)
+        assert dataset.info.name == "2014"
+        assert result.dataset_path.name == "2014"
