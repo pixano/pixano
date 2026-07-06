@@ -6,7 +6,7 @@
 
 """Declarative import/export specs (spec §4) — the GUI-safe replacement for `--info file.py:attr`.
 
-One Pydantic model built identically from a YAML/JSON file (`pixano.yaml`),
+One Pydantic model built identically from a YAML/JSON file (`dataset.yaml`),
 CLI flags, a GUI form (rendered from ``model_json_schema()``), or Python
 kwargs. Workspace presets replace the folder builders' ``DEFAULT_INFO``
 Python objects with data.
@@ -104,6 +104,10 @@ def _attr_field(attr_name: str, value: Any) -> tuple[Any, Any]:
     if payload.get("required"):
         return annotation, ...
     if "default" in payload:
+        if payload.get("collection") and not isinstance(payload["default"], list):
+            raise SpecValidationError(
+                f"Attr '{attr_name}': a collection default must be a list, got {payload['default']!r}."
+            )
         return annotation, payload["default"]
     if payload.get("collection"):
         # A plain [] default (pydantic v2 deep-copies) — default_factory does not
@@ -180,10 +184,11 @@ class SchemaSpec(BaseModel):
                 continue
             payload[slot] = getattr(info, slot)
 
+        # Attrs extend the preset's classes (e.g. MEL's MelEntity keeps its `name`), not the bare bases.
         if self.record.get("attrs"):
-            payload["record"] = _synthesize(Record, self.record["attrs"])
+            payload["record"] = _synthesize(info.record or Record, self.record["attrs"])
         if self.entity.get("attrs"):
-            payload["entity"] = _synthesize(Entity, self.entity["attrs"])
+            payload["entity"] = _synthesize(info.entity or Entity, self.entity["attrs"])
         if self.entity_dynamic_state is not None:
             payload["entity_dynamic_state"] = (
                 _synthesize(EntityDynamicState, self.entity_dynamic_state["attrs"])
@@ -298,7 +303,7 @@ class ImportSpec(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: Path) -> "ImportSpec":
-        """Load a spec from a `pixano.yaml` file with provenance-carrying errors."""
+        """Load a spec from a `dataset.yaml` file with provenance-carrying errors."""
         provenance = Provenance(file=str(path))
         try:
             payload = yaml.safe_load(path.read_text(encoding="utf-8"))
