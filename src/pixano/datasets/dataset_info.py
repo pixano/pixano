@@ -328,8 +328,10 @@ class DatasetInfo(BaseModel):
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
-        # Browse directory
+        # Browse directory (dot-directories such as engine staging/trash are not datasets)
         for json_fp in sorted(directory.glob("*/info.json")):
+            if json_fp.parent.name.startswith("."):
+                continue
             try:
                 info: DatasetInfo = DatasetInfo.from_json(json_fp)
             except Exception as e:
@@ -391,6 +393,8 @@ class DatasetInfo(BaseModel):
             The DatasetInfo.
         """
         for json_fp in directory.glob("*/info.json"):
+            if json_fp.parent.name.startswith("."):
+                continue
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 try:
