@@ -27,7 +27,15 @@ from .errors import (
 from .ids import IdLedger, namespace_prefix, stable_id
 from .importer import BatchBundle, Cursor, DatasetImporter, DetectResult, SourceRef
 from .manifest import ImportManifest
-from .media import MediaResolver, ResolvedMedia, VideoProbe, ffprobe_available, probe_image, probe_video
+from .media import (
+    MediaResolver,
+    ResolvedMedia,
+    VideoProbe,
+    ffmpeg_available,
+    ffprobe_available,
+    probe_image,
+    probe_video,
+)
 from .plan import AnalyzeLimits, Finding, ImportPlan, PreflightReport, Provenance, SamplePreview
 from .progress import ProgressEvent, ProgressSink, ThrottledSink, TqdmSink
 from .reader import RecordBundle, RecordBundleReader
@@ -78,6 +86,8 @@ __all__ = [
     "TqdmSink",
     "UnsupportedStorageError",
     "VideoProbe",
+    "ffmpeg_available",
+    "ffmpeg_available",
     "ffprobe_available",
     "analyze",
     "export_dataset",
@@ -94,8 +104,10 @@ __all__ = [
 
 # Built-in formats register on package import (entry-point plugins load lazily).
 from .formats.coco.importer import COCO  # noqa: E402
+from .formats.lerobot.importer import LEROBOT  # noqa: E402
 from .formats.pixano_jsonl.importer import PIXANO_JSONL  # noqa: E402
 
 
 FORMATS.register(PIXANO_JSONL)
 FORMATS.register(COCO)
+FORMATS.register(LEROBOT)

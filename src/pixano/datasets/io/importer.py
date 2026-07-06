@@ -117,12 +117,13 @@ class DatasetImporter(ABC):
         """
         return None
 
-    def resolve_info(self, spec: "ImportSpec") -> "DatasetInfo":
+    def resolve_info(self, spec: "ImportSpec", source: SourceRef | None = None) -> "DatasetInfo":
         """Resolve the target schema for this format.
 
         The default honors the user's spec (schema block, manifest, or
         workspace preset). Formats with an intrinsic schema (COCO, LeRobot)
-        override this to supply it when the spec declares none.
+        override this to supply it when the spec declares none; ``source``
+        is provided so source-dependent schemas (LeRobot cameras) can look.
         """
         from .spec import resolve_dataset_info
 

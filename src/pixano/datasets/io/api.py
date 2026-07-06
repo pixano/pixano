@@ -94,7 +94,7 @@ def import_dataset(
         )
 
     if info is None:
-        info = resolved.resolve_info(spec)
+        info = resolved.resolve_info(spec, source_ref)
     if spec.dataset.name:
         info.name = spec.dataset.name
     if spec.dataset.description:
