@@ -101,3 +101,29 @@ class TestMigrateJsonlCommand:
         assert migrated["attrs"]["status"] == "validated"
         kinds = [a["kind"] for a in migrated["entities"][0]["annotations"]]
         assert kinds == ["bbox", "keypoints"]
+
+
+class TestJobsCommand:
+    def test_cli_import_records_into_the_shared_store(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        assert runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"]).exit_code == 0
+
+        from pixano.datasets.io.jobs import JobStore
+
+        jobs = JobStore.for_data_dir(data_dir).list_jobs()
+        assert jobs and jobs[0].status == "done" and jobs[0].kind == "import"
+
+        listing = runner.invoke(app, ["data", "jobs", str(data_dir), "list"])
+        assert listing.exit_code == 0 and "done" in listing.output
+
+        shown = runner.invoke(app, ["data", "jobs", str(data_dir), "show", jobs[0].id])
+        assert shown.exit_code == 0 and jobs[0].id in shown.output
+
+    def test_cancel_terminal_job_errors(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
+        from pixano.datasets.io.jobs import JobStore
+
+        job = JobStore.for_data_dir(data_dir).list_jobs()[0]
+        result = runner.invoke(app, ["data", "jobs", str(data_dir), "cancel", job.id])
+        assert result.exit_code == 1 and "already" in result.output

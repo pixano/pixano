@@ -4,6 +4,9 @@
 # License: CECILL-C
 # =====================================
 
+import logging
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
@@ -26,6 +29,16 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     """
     # Create app
     app = FastAPI(title="Pixano", version=__version__, default_response_class=ORJSONResponse)
+
+    # Boot recovery: replay interrupted staging journals and mark orphaned
+    # import jobs as interrupted (spec §8/§9).
+    if isinstance(settings.library_dir, Path) and settings.library_dir.name == "library":
+        try:
+            from pixano.datasets.io.jobs import boot_recover
+
+            boot_recover(settings.library_dir.parent)
+        except Exception:  # pragma: no cover - recovery must never block boot
+            logging.getLogger(__name__).warning("Data IO boot recovery failed", exc_info=True)
     app.add_middleware(GZipMiddleware, minimum_size=500)
     if settings.cors_origins:
         app.add_middleware(

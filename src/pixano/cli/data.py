@@ -6,6 +6,7 @@
 
 """Pixano data import/export CLI (spec §9) — a thin shell over the shared io core."""
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -146,18 +147,38 @@ def import_command(
     if not yes and not typer.confirm("Proceed with the import?", default=True):
         raise typer.Exit(code=0)
 
+    from pixano.datasets.io.jobs import JobSink, JobStore
+
+    store = JobStore.for_data_dir(data_dir)
+    job = store.create_job("import", dataset=spec.dataset.name, spec=spec.model_dump(mode="json", by_alias=True))
+    store.update_job(job.id, status="running")
     sink = TqdmSink()
     try:
-        result = import_dataset(source, data_dir, spec, plan=plan, info=info, importer=importer, sinks=[sink])
+        result = import_dataset(
+            source,
+            data_dir,
+            spec,
+            plan=plan,
+            info=info,
+            importer=importer,
+            sinks=[sink, JobSink(store, job.id)],
+        )
     except PixanoDataError as error:
+        store.update_job(job.id, status="error", error={"type": type(error).__name__, "message": str(error)})
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
     finally:
         sink.close()
+    store.update_job(
+        job.id,
+        status="done",
+        dataset=result.dataset_id,
+        progress={"phase": "done", "table_counts": result.table_counts, "final": True},
+    )
     records = result.table_counts.get("records", 0)
     typer.echo(
         f"Dataset '{result.dataset_path.name}' imported successfully "
-        f"({records} record(s), storage: {result.storage_mode}, job {result.job_id})."
+        f"({records} record(s), storage: {result.storage_mode}, job {job.id})."
     )
 
 
@@ -192,6 +213,41 @@ def formats_command() -> None:
         )
         typer.echo(f"- {data_format.name} ({data_format.title}): {directions or 'unavailable'}")
     typer.echo("(pixano_jsonl also exports through 'pixano data export'.)")
+
+
+@data_app.command(name="jobs")
+def jobs_command(
+    data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Pixano data directory."),
+    action: str = typer.Argument("list", help="list, show, or cancel."),
+    job_id: str = typer.Argument("", help="Job id (for show/cancel)."),
+) -> None:
+    """Inspect the shared import/export job store (the same one the GUI polls)."""
+    from pixano.datasets.io.jobs import JobStore
+
+    store = JobStore.for_data_dir(data_dir)
+    if action == "list":
+        for job in store.list_jobs(limit=30):
+            done = job.progress.get("done", "")
+            typer.echo(f"{job.id}  {job.kind:<7} {job.status:<12} {job.dataset:<24} {done}")
+        return
+    if action in ("show", "cancel") and not job_id:
+        raise typer.BadParameter(f"'{action}' needs a job id.")
+    if action == "show":
+        shown = store.get_job(job_id)
+        if shown is None:
+            typer.echo(f"Error: job '{job_id}' not found.", err=True)
+            raise typer.Exit(code=1)
+        typer.echo(json.dumps(shown.__dict__, indent=2, default=str))
+        return
+    if action == "cancel":
+        try:
+            job = store.request_cancel(job_id)
+        except PixanoDataError as error:
+            typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(code=1) from None
+        typer.echo(f"Job '{job_id}' -> {job.status}.")
+        return
+    raise typer.BadParameter(f"Unknown action '{action}' (list, show, cancel).")
 
 
 @data_app.command(name="migrate-jsonl")
