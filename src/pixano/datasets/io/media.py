@@ -57,6 +57,11 @@ class ResolvedMedia:
     raw_bytes: bytes = b""
 
 
+def ffmpeg_available() -> bool:
+    """True when the ffmpeg binary is on PATH (frame extraction, clip embedding)."""
+    return shutil.which("ffmpeg") is not None
+
+
 def ffprobe_available() -> bool:
     """Whether the ffprobe binary is on PATH."""
     return shutil.which("ffprobe") is not None

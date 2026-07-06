@@ -151,7 +151,7 @@ class CocoImporter(DatasetImporter):
             return DetectResult(confidence=0.9, evidence=f"{files[0][1].name}")
         return None
 
-    def resolve_info(self, spec: ImportSpec) -> DatasetInfo:
+    def resolve_info(self, spec: ImportSpec, source: SourceRef | None = None) -> DatasetInfo:
         """COCO has an intrinsic schema; a user-declared schema block still wins."""
         if spec.schema_ is not None or spec.schema_manifest is not None:
             return resolve_dataset_info(spec)
