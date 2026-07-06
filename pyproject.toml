@@ -49,6 +49,9 @@ dependencies = [
   "pyyaml>=6.0,<7.0",
 ]
 
+[project.optional-dependencies]
+coco = ["ijson >= 3.2, < 4.0"]
+
 [dependency-groups]
 docs = [
   "griffe >= 1.0.0",

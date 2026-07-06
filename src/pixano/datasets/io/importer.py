@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Literal
 
+from pixano.datasets.dataset_info import DatasetInfo  # noqa: TC001
+
 from .plan import AnalyzeLimits, ImportPlan, Provenance
 
 
@@ -114,6 +116,17 @@ class DatasetImporter(ABC):
         Returns None when the source does not look like this format.
         """
         return None
+
+    def resolve_info(self, spec: "ImportSpec") -> "DatasetInfo":
+        """Resolve the target schema for this format.
+
+        The default honors the user's spec (schema block, manifest, or
+        workspace preset). Formats with an intrinsic schema (COCO, LeRobot)
+        override this to supply it when the spec declares none.
+        """
+        from .spec import resolve_dataset_info
+
+        return resolve_dataset_info(spec)
 
     @abstractmethod
     def analyze(self, source: SourceRef, spec: "ImportSpec", limits: AnalyzeLimits) -> ImportPlan:
