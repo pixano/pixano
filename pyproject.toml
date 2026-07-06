@@ -51,6 +51,7 @@ dependencies = [
 
 [project.optional-dependencies]
 coco = ["ijson >= 3.2, < 4.0"]
+lerobot = ["huggingface_hub >= 0.20, < 1.0"]
 
 [dependency-groups]
 docs = [

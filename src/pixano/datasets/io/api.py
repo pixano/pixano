@@ -97,9 +97,13 @@ def import_dataset(
         info = resolved.resolve_info(spec, source_ref)
     if spec.dataset.name:
         info.name = spec.dataset.name
-    elif not info.name and source_ref.path is not None:
-        # No --name, no dataset.yaml: default from the source folder, like the id namespace.
-        info.name = source_ref.path.name
+    elif not info.name:
+        # No --name, no dataset.yaml: default from the source folder or hub repo
+        # name, like the id namespace.
+        if source_ref.path is not None:
+            info.name = source_ref.path.name
+        elif source_ref.url:
+            info.name = source_ref.url.rsplit("/", 1)[-1]
     if spec.dataset.description:
         info.description = spec.dataset.description
 
