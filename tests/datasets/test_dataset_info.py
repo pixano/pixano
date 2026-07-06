@@ -40,6 +40,7 @@ class TestDatasetInfo:
             "preview",
             "workspace",
             "storage_mode",
+            "spec_version",
             "record",
             "entity",
             "entity_dynamic_state",
@@ -47,6 +48,8 @@ class TestDatasetInfo:
             "mask",
             "multi_path",
             "keypoint",
+            "classification",
+            "relation",
             "tracklet",
             "message",
             "text_span",
@@ -89,6 +92,7 @@ class TestDatasetInfo:
     "preview": "/preview",
     "workspace": "image",
     "storage_mode": "filesystem",
+    "spec_version": 2,
     "record": {
         "base": "Record",
         "fields": {}
@@ -104,6 +108,8 @@ class TestDatasetInfo:
     },
     "mask": null,
     "keypoint": null,
+    "classification": null,
+    "relation": null,
     "tracklet": null,
     "message": null,
     "multi_path": null,
@@ -161,6 +167,7 @@ class TestDatasetInfo:
             size="8GB",
             preview="/preview",
             workspace=WorkspaceType.IMAGE,
+            spec_version=1,  # absent in the JSON above ⇒ pre-spec_version layout
             record=Record,
             entity=Entity,
             bbox=BBox,
@@ -344,3 +351,24 @@ class TestDatasetInfo:
     def test_rejects_tables_mapping(self):
         with pytest.raises(ValueError, match="no longer accepts a 'tables' mapping"):
             DatasetInfo(tables={"records": Record})
+
+
+class TestSpecVersion:
+    def test_defaults_to_2_for_new_infos(self):
+        assert DatasetInfo().spec_version == 2
+
+    def test_absent_in_json_means_version_1(self):
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        temp_file.write_text(
+            """{
+    "id": "id",
+    "name": "old",
+    "workspace": "image",
+    "record": {
+        "base": "Record",
+        "fields": {}
+    },
+    "views": {}
+}"""
+        )
+        assert DatasetInfo.from_json(temp_file).spec_version == 1

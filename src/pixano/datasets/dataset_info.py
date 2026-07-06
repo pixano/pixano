@@ -27,6 +27,7 @@ from pixano.datasets.workspaces import WorkspaceType
 from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 from pixano.schemas import (
     BBox,
+    Classification,
     CompressedRLE,
     Entity,
     EntityDynamicState,
@@ -35,6 +36,7 @@ from pixano.schemas import (
     MultiPath,
     Record,
     RecordComponent,
+    Relation,
     TextSpan,
     Tracklet,
     View,
@@ -58,6 +60,8 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "mask": CompressedRLE,
     "multi_path": MultiPath,
     "keypoint": KeyPoints,
+    "classification": Classification,
+    "relation": Relation,
     "tracklet": Tracklet,
     "message": Message,
     "text_span": TextSpan,
@@ -79,12 +83,16 @@ class DatasetInfo(BaseModel):
         preview: Path to a preview thumbnail.
         workspace: Workspace type.
         storage_mode: How media data is stored.
+        spec_version: Version of the on-disk dataset layout this dataset conforms to
+            (datasets written before the field existed load as version 1).
         record: Main record schema.
         entity: Entity schema.
         entity_dynamic_state: Entity dynamic state schema.
         bbox: Bounding box schema.
         mask: Mask schema.
         keypoint: Keypoint schema.
+        classification: Classification schema.
+        relation: Relation schema.
         tracklet: Tracklet schema.
         message: Message schema.
         text_span: Text span schema.
@@ -98,6 +106,7 @@ class DatasetInfo(BaseModel):
     preview: str = ""
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
     storage_mode: Literal["filesystem", "embedded", "mixed"] = "filesystem"
+    spec_version: int = 2
     record: type[Record] | None = None
     entity: type[Entity] | None = None
     entity_dynamic_state: type[EntityDynamicState] | None = None
@@ -105,6 +114,8 @@ class DatasetInfo(BaseModel):
     mask: type[CompressedRLE] | None = None
     multi_path: type[MultiPath] | None = None
     keypoint: type[KeyPoints] | None = None
+    classification: type[Classification] | None = None
+    relation: type[Relation] | None = None
     tracklet: type[Tracklet] | None = None
     message: type[Message] | None = None
     text_span: type[TextSpan] | None = None
@@ -263,6 +274,8 @@ class DatasetInfo(BaseModel):
         info_json["workspace"] = (
             WorkspaceType(info_json["workspace"]) if "workspace" in info_json else WorkspaceType.UNDEFINED
         )
+        # Datasets written before spec_version existed are layout version 1.
+        info_json.setdefault("spec_version", 1)
 
         for slot_name in supported_dataset_info_slots():
             schema_payload = info_json.get(slot_name)
@@ -315,8 +328,10 @@ class DatasetInfo(BaseModel):
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
-        # Browse directory
+        # Browse directory (dot-directories such as engine staging/trash are not datasets)
         for json_fp in sorted(directory.glob("*/info.json")):
+            if json_fp.parent.name.startswith("."):
+                continue
             try:
                 info: DatasetInfo = DatasetInfo.from_json(json_fp)
             except Exception as e:
@@ -378,6 +393,8 @@ class DatasetInfo(BaseModel):
             The DatasetInfo.
         """
         for json_fp in directory.glob("*/info.json"):
+            if json_fp.parent.name.startswith("."):
+                continue
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 try:
