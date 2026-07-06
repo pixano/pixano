@@ -77,7 +77,10 @@ class LeRobotImporter(DatasetImporter):
             return resolve_dataset_info(spec)
         layout = parse_layout(self._local_root(source))
         view_kind = "sequence_frames" if self._frames_mode(spec) == "extract" else "video"
-        payload = spec.model_dump(exclude_none=True, by_alias=True)
+        payload = spec.model_dump(mode="json", exclude_none=True, by_alias=True)
+        if payload.get("dataset", {}).get("workspace", "undefined") == "undefined":
+            # Formats know their natural UI workspace; an explicit --workspace wins.
+            payload.setdefault("dataset", {})["workspace"] = "video"
         payload["schema"] = {
             "views": {camera_view_name(key): {"kind": view_kind} for key in layout.video_keys},
             "record": {
