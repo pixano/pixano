@@ -1,0 +1,2 @@
+{"$pixano":"jsonl/2","defaults":{"bbox":{"format":"xywh","is_normalized":true}}}
+{"id":"seq_bear","views":{"camera":{"uri":"videos/bear.mp4","fps":24}},"entities":[{"id":"bear_1","attrs":{"category":"bear"},"tracklets":[{"id":"t1","view":"camera","start_timestep":0,"end_timestep":81}],"states":[{"frame_index":40,"attrs":{"occluded":true}}],"annotations":[{"kind":"bbox","view":"camera","frame_index":0,"coords":[0.10,0.20,0.30,0.40]},{"kind":"bbox","view":"camera","frame_index":12,"coords":[0.12,0.21,0.30,0.40]}]}]}
