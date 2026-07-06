@@ -72,51 +72,34 @@ The key insight: in image datasets, an entity has annotations directly. In video
 
 ## Dataset schema
 
-Here is the `DatasetInfo` used to import a DAVIS dataset:
+The schema lives in a `pixano.yaml` file at the root of the source folder:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import (
-    CompressedRLE, Entity, EntityDynamicState,
-    Record, SequenceFrame, Tracklet,
-)
-
-
-class DAVISEntity(Entity):
-    """A segmented object in a DAVIS video."""
-    category: str = "object"
-
-
-class DAVISEntityDynamicState(EntityDynamicState):
-    """Per-frame dynamic state for a DAVIS entity."""
-    pass
-
-
-dataset_info = DatasetInfo(
-    name="DAVIS 2017 Sample",
-    description="DAVIS 2017 video object segmentation dataset.",
-    workspace=WorkspaceType.VIDEO,
-    record=Record,
-    entity=DAVISEntity,
-    entity_dynamic_state=DAVISEntityDynamicState,
-    tracklet=Tracklet,
-    mask=CompressedRLE,
-    views={"image": SequenceFrame},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: davis_2017
+  workspace: video
+schema:
+  views:
+    image: { kind: sequence_frames }
+  entity:
+    attrs:
+      category: { type: str, default: object }
+  annotations: [mask, tracklet]
 ```
 
 Compared to the image dataset schema, several things are new:
 
-- **`WorkspaceType.VIDEO`** — Switches the UI to video mode with a timeline, frame navigation, and track inspector.
+- **`workspace: video`** — Switches the UI to video mode with a timeline, frame navigation, and track inspector.
 
-- **`SequenceFrame` instead of `Image`** — A `SequenceFrame` extends `Image` with `frame_index` (integer position in the sequence) and `timestamp` (time in seconds). This is how Pixano knows the temporal ordering of frames within a video.
+- **`kind: sequence_frames` instead of `image`** — A sequence-frame view stores one row per frame with `frame_index` (integer position in the sequence) and `timestamp` (time in seconds). This is how Pixano knows the temporal ordering of frames within a video.
 
-- **`tracklet=Tracklet`** — Creates a tracklet table. Each tracklet has `start_timestep`, `end_timestep`, `start_timestamp`, and `end_timestamp` fields that define when the tracked entity is visible. Per-frame masks link back to the tracklet.
+- **`tracklet`** — Creates a tracklet table. Each tracklet has `start_timestep`, `end_timestep`, `start_timestamp`, and `end_timestamp` fields that define when the tracked entity is visible. Per-frame masks link back to the tracklet.
 
-- **`entity_dynamic_state=DAVISEntityDynamicState`** — Creates a table for per-frame entity state. Here we use an empty subclass (DAVIS doesn't have per-frame attributes beyond the mask), but you could add fields like `is_occluded: bool = False` or `visibility: float = 1.0`.
+- **`mask`** — Segmentation masks in compressed run-length encoding. Each mask is a per-frame annotation linked to a tracklet and entity.
 
-- **`mask=CompressedRLE`** — Segmentation masks in compressed run-length encoding. Each mask is a per-frame annotation linked to a tracklet and entity.
+You could also add per-frame entity state (e.g. `entity_dynamic_state: { attrs: { occluded: { type: bool, default: false } } }`) — DAVIS doesn't need it beyond the mask itself. See [Importing Data](/getting_started/importing_data/) for the full reference.
 
 ## Import the dataset
 
@@ -166,27 +149,29 @@ Each line describes one video using **glob patterns** for frames and masks:
 
 ```json
 {
-  "status": "validated",
+  "attrs": { "status": "validated" },
   "views": {
-    "image": { "path": "frames/bear/*.jpg", "fps": 24 }
+    "image": { "frame_pattern": "frames/bear/*.jpg", "fps": 24 }
   },
-  "annotation_files": {
-    "mask": "masks/bear/*.png"
-  }
+  "annotation_files": [
+    { "kind": "mask", "view": "image", "pattern": "masks/bear/*.png", "encoding": "index_png", "entity_map": "auto" }
+  ]
 }
 ```
 
 Notice the differences from image datasets:
-- `"views"` uses an object with `"path"` (a glob pattern) and `"fps"` (frame rate) instead of a simple filename. Pixano expands the glob to discover all frames and creates one `SequenceFrame` per file, ordered alphabetically.
-- `"annotation_files"` is a separate key (not inside `"entities"`) that maps annotation types to glob patterns for mask files. Pixano matches masks to frames by filename (e.g. `00000.png` matches `00000.jpg`).
+- `"views"` uses an object with `"frame_pattern"` (a glob) and `"fps"` (frame rate, required — nothing is inferred) instead of a simple filename. Pixano expands the glob to discover all frames, ordered alphabetically, one sequence frame per file.
+- `"annotation_files"` is a list of typed sidecars. `"encoding": "index_png"` means indexed PNGs where each pixel value is one object (0 = background); Pixano matches masks to frames by filename stem (e.g. `00000.png` matches `00000.jpg`). `"entity_map": "auto"` names the objects `object_1`, `object_2`, … — or map pixel values to names explicitly: `{"1": "bear"}`.
+- Tracklets are derived automatically from the frames each object appears in — no manual bookkeeping.
 
 ### Run the import
 
 ```bash
 pixano init ./my_library
-pixano data import ./my_library ./davis_sample \
-    --info data_importation/davis/info.py:dataset_info
+pixano data import ./my_library ./davis_sample
 ```
+
+Pixano validates every line first and prints a plan; use `--dry-run` to only validate.
 
 ## Launch and explore
 
@@ -238,7 +223,7 @@ Let's connect the dots:
 - **DAVIS** is a video object segmentation benchmark where objects are tracked and segmented with pixel-accurate masks across every frame.
 - Moving from images to video introduces temporal challenges: identity persistence, occlusion handling, and per-frame variation.
 - Pixano handles this with **SequenceFrame** views (ordered frames with timestamps), **Tracklets** (temporal segments linking per-frame annotations to entities), and **EntityDynamicState** (per-frame attributes separate from geometry).
-- The `DatasetInfo` schema for video includes `WorkspaceType.VIDEO`, `SequenceFrame`, `Tracklet`, and optionally `EntityDynamicState` — which together unlock the timeline UI, track management, and temporal annotation tools.
+- The video schema combines `workspace: video`, `sequence_frames` views, and `tracklet` annotations (optionally per-frame `entity_dynamic_state` attrs) — which together unlock the timeline UI, track management, and temporal annotation tools.
 - **SAM in video** combines tracklets for temporal identity with per-frame segmentation, enabling efficient annotation workflows that mirror the DAVIS semi-supervised task.
 
 ## Next steps

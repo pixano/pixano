@@ -37,67 +37,63 @@ Each line in `metadata.jsonl` describes one item with both an image view and a t
 
 ```json
 {
-  "status": "validated",
   "views": {
-    "image": "image_001.jpg",
-    "text": "The Eiffel Tower is a wrought-iron lattice tower in Paris."
+    "image": "images/image_001.jpg",
+    "text": { "content": "The Eiffel Tower is a wrought-iron lattice tower in Paris." }
   },
+  "attrs": { "status": "validated" },
   "entities": [
     {
-      "name": "Eiffel Tower",
-      "annotations": {
-        "image": { "bbox": [0.3, 0.1, 0.4, 0.8] },
-        "text": { "text_span": [4, 16] }
-      }
+      "attrs": { "name": "Eiffel Tower" },
+      "annotations": [
+        { "kind": "bbox", "view": "image", "coords": [0.3, 0.1, 0.4, 0.8], "format": "xywh", "is_normalized": true },
+        { "kind": "text_span", "view": "text", "mention": "Eiffel Tower", "spans_start": [4], "spans_end": [16] }
+      ]
     }
   ]
 }
 ```
 
-- `views.text` is a string (the full text content).
-- `text_span` is a `[start, end]` character offset pair.
-- Each entity can have annotations on both the image and text views.
+- A text view takes `{"content": …}` for inline text **or** `{"uri": "doc.txt"}` for a file — exactly one, always explicit.
+- A `text_span` carries the `mention` string plus parallel `spans_start`/`spans_end` character offsets (a mention can span several ranges).
+- With two views declared, every annotation names its view: the bbox lives on `image`, the span on `text`.
 
-### Review the dataset info
+### Review the schema
 
-The dataset info at `examples/mel/info.py`:
+The schema lives in `pixano.yaml` at the source root:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record, Text, TextSpan
-
-
-class MELEntity(Entity):
-    name: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="MEL Sample",
-    description="Sample import for image-text entity linking datasets.",
-    workspace=WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
-    record=Record,
-    entity=MELEntity,
-    bbox=BBox,
-    mask=CompressedRLE,
-    text_span=TextSpan,
-    views={"image": Image, "text": Text},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: mel_sample
+  workspace: image_text_entity_linking
+schema:
+  views:
+    image: { kind: image }
+    text: { kind: text }
+  entity:
+    attrs:
+      name: str
+  annotations: [bbox, mask, text_span]
 ```
 
 Key elements:
 
-- `WorkspaceType.IMAGE_TEXT_ENTITY_LINKING` enables the image + text panel UI.
-- `views` has two entries: `"image"` (type `Image`) and `"text"` (type `Text`).
-- `TextSpan` is the annotation type that marks character ranges in the text.
-- Entities can be linked to both `BBox` (on the image) and `TextSpan` (on the text).
+- `workspace: image_text_entity_linking` enables the image + text panel UI.
+- `views` has two entries: `"image"` (an image) and `"text"` (a text document).
+- `text_span` is the annotation kind that marks character ranges in the text.
+- Entities can be linked to both a `bbox` (on the image) and a `text_span` (on the text).
+
+See [Importing Data](/getting_started/importing_data/) for the full reference.
 
 ### Run the import
 
 ```bash
-pixano data import ./my_data ./mel_source \
-    --info examples/mel/info.py:dataset_info
+pixano data import ./my_data ./mel_source
 ```
+
+Pixano validates every line first and prints a plan; use `--dry-run` to only validate.
 
 ### Launch the server
 
