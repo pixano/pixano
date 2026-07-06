@@ -36,7 +36,13 @@ def make_v21_dataset(root: Path, episodes: int = 2) -> Path:
         "fps": FPS,
         "chunks_size": 1000,
         "video_path": "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4",
-        "features": {CAMERA_KEY: {"dtype": "video"}, "action": {"dtype": "float32"}},
+        "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+        "features": {
+            CAMERA_KEY: {"dtype": "video"},
+            "action": {"dtype": "float32", "shape": [6]},
+            "observation.state": {"dtype": "float32", "shape": [6]},
+            "timestamp": {"dtype": "float32", "shape": [1]},
+        },
         "total_episodes": episodes,
     }
     (root / "meta" / "info.json").write_text(json.dumps(info))
@@ -49,7 +55,25 @@ def make_v21_dataset(root: Path, episodes: int = 2) -> Path:
         target = root / "videos" / "chunk-000" / CAMERA_KEY / f"episode_{index:06d}.mp4"
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(VIDEO_MP4_ASSET_URL, target)
+        _write_data_parquet(
+            root / "data" / "chunk-000" / f"episode_{index:06d}.parquet", index, rows=200, dim=6
+        )
     return root
+
+
+def _write_data_parquet(path: Path, episode_index: int, rows: int, dim: int, t0: float = 0.0) -> None:
+    """LeRobot-shaped data rows: episode-relative timestamps on the fps grid."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table = pa.table(
+        {
+            "episode_index": pa.array([episode_index] * rows, pa.int64()),
+            "frame_index": pa.array(list(range(rows)), pa.int64()),
+            "timestamp": pa.array([t0 + i / FPS for i in range(rows)], pa.float32()),
+            "action": pa.array([[float(episode_index), float(i)] + [0.0] * (dim - 2) for i in range(rows)]),
+            "observation.state": pa.array([[float(i)] * dim for i in range(rows)]),
+        }
+    )
+    pq.write_table(table, path)
 
 
 def make_v3_dataset(root: Path) -> Path:
@@ -59,7 +83,12 @@ def make_v3_dataset(root: Path) -> Path:
         "codebase_version": "v3.0",
         "fps": FPS,
         "video_path": "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4",
-        "features": {CAMERA_KEY: {"dtype": "video"}},
+        "data_path": "data/chunk-{chunk_index:03d}/file-{file_index:03d}.parquet",
+        "features": {
+            CAMERA_KEY: {"dtype": "video"},
+            "action": {"dtype": "float32", "shape": [4]},
+            "observation.state": {"dtype": "float32", "shape": [4]},
+        },
         "total_episodes": 2,
     }
     (root / "meta" / "info.json").write_text(json.dumps(info))
@@ -67,7 +96,9 @@ def make_v3_dataset(root: Path) -> Path:
         {
             "episode_index": [0, 1],
             "tasks": [["pick"], ["place"]],
-            "length": [90, 88],
+            "length": [85, 100],
+            "data/chunk_index": [0, 0],
+            "data/file_index": [0, 0],
             f"videos/{CAMERA_KEY}/chunk_index": [0, 0],
             f"videos/{CAMERA_KEY}/file_index": [0, 0],
             f"videos/{CAMERA_KEY}/from_timestamp": [0.0, 3.0],
@@ -78,6 +109,23 @@ def make_v3_dataset(root: Path) -> Path:
     shard = root / "videos" / CAMERA_KEY / "chunk-000" / "file-000.mp4"
     shard.parent.mkdir(parents=True)
     shutil.copy(VIDEO_MP4_ASSET_URL, shard)
+    # One shared data shard holding both episodes' rows (episode-relative timestamps).
+    data_file = root / "data" / "chunk-000" / "file-000.parquet"
+    data_file.parent.mkdir(parents=True)
+    tables = []
+    for episode_index, rows in ((0, 85), (1, 100)):
+        tables.append(
+            pa.table(
+                {
+                    "episode_index": pa.array([episode_index] * rows, pa.int64()),
+                    "frame_index": pa.array(list(range(rows)), pa.int64()),
+                    "timestamp": pa.array([i / FPS for i in range(rows)], pa.float32()),
+                    "action": pa.array([[float(episode_index), float(i), 0.0, 0.0] for i in range(rows)]),
+                    "observation.state": pa.array([[float(i)] * 4 for i in range(rows)]),
+                }
+            )
+        )
+    pq.write_table(pa.concat_tables(tables), data_file)
     return root
 
 
@@ -142,7 +190,7 @@ class TestLeRobotImport:
         assert dataset.info.storage_mode == "embedded"
 
     @needs_ffmpeg
-    def test_v3_windows_extract_disjoint_frames(self, tmp_path: Path):
+    def test_v3_windows_extract_row_aligned(self, tmp_path: Path):
         source = make_v3_dataset(tmp_path / "ds")
         spec = _spec("lr_v3", max_frames_per_episode=6)
         result = import_dataset(source, tmp_path / "data", spec, importer=LeRobotImporter())
@@ -151,11 +199,16 @@ class TestLeRobotImport:
         assert dataset.open_table("records").count_rows() == 2
         assert dataset.open_table("sequence_frames").count_rows() == 12
         frames = dataset.get_data("sequence_frames", limit=20)
-        by_record: dict[str, list[float]] = {}
+        by_record: dict[str, list] = {}
         for frame in frames:
-            by_record.setdefault(frame.record_id, []).append(frame.timestamp)
-        first, second = sorted(by_record.values(), key=min)
-        assert max(first) < 3.05 and min(second) >= 2.95  # windows respected
+            by_record.setdefault(frame.record_id, []).append(frame)
+        for record_frames in by_record.values():
+            for frame in record_frames:
+                # Timestamps are the data rows' own (episode-relative, on the fps grid).
+                assert frame.timestamp == pytest.approx(frame.frame_index / FPS, abs=1e-3)
+        # The two windows decode different footage even though timestamps restart at 0.
+        lengths = sorted(max(f.frame_index for f in v) for v in by_record.values())
+        assert lengths[0] <= 85 and lengths[1] <= 100
 
     @needs_ffmpeg
     def test_episode_subset_and_idempotent_rerun(self, tmp_path: Path):
@@ -246,7 +299,9 @@ class TestHubSource:
         spec = _spec("hub_subset", episodes=[1], max_frames_per_episode=4)
         result = import_dataset("hub://acme/robo", tmp_path / "data", spec, importer=LeRobotImporter())
 
-        assert fake_hub["files"] == [[f"videos/chunk-000/{CAMERA_KEY}/episode_000001.mp4"]]
+        assert fake_hub["files"] == [
+            ["data/chunk-000/episode_000001.parquet", f"videos/chunk-000/{CAMERA_KEY}/episode_000001.mp4"]
+        ]
         dataset = Dataset(result.dataset_path)
         assert dataset.open_table("records").count_rows() == 1
         assert dataset.get_data("records")[0].episode_index == 1

@@ -215,8 +215,10 @@ class LeRobotImporter(DatasetImporter):
         episodes = self._select_episodes(layout, spec)
         mode = self._frames_mode(spec)
         if source.kind == "hf_hub" and source.url:
-            needed = sorted({camera.video_path for episode in episodes for camera in episode.cameras.values()})
-            root = materialize_files(source.url, needed)
+            needed = {camera.video_path for episode in episodes for camera in episode.cameras.values()}
+            if mode == "extract":
+                needed |= {episode.data_path for episode in episodes if episode.data_path}
+            root = materialize_files(source.url, sorted(needed))
         namespace = spec.ids.namespace or (source.url or root.name).replace("/", "_")
         resolver = MediaResolver(spec.media, base_dir=root)
         resume_ordinal = int(cursor.get("episode_ordinal", 0)) if cursor else 0
@@ -237,12 +239,21 @@ class LeRobotImporter(DatasetImporter):
                     )
                 ]
             }
+            data_rows = self._episode_rows(root, layout, episode) if mode == "extract" else []
             for key, camera in sorted(episode.cameras.items()):
                 view_name = camera_view_name(key)
                 shard = root / camera.video_path
                 if mode == "extract":
                     rows = self._extract_frames(
-                        info, layout, spec, record_id, view_name, shard, camera.from_timestamp, camera.to_timestamp
+                        info,
+                        layout,
+                        spec,
+                        record_id,
+                        view_name,
+                        shard,
+                        camera.from_timestamp,
+                        camera.to_timestamp,
+                        data_rows,
                     )
                 else:
                     rows = [self._video_row(info, layout, resolver, record_id, view_name, camera, shard, root)]
@@ -254,6 +265,28 @@ class LeRobotImporter(DatasetImporter):
                 provenance=Provenance(file=str(source.path), record_key=str(episode.index)),
             )
 
+    @staticmethod
+    def _episode_rows(root: Path, layout: LeRobotLayout, episode: "Episode") -> list[dict]:
+        """The episode's data-parquet rows (timestamp + float features), frame order.
+
+        These per-row timestamps are LeRobot's ground truth — the values
+        `delta_timestamps` indexes against — so frames and vectors align 1:1.
+        """
+        import pyarrow.parquet as pq
+
+        data_file = root / episode.data_path
+        if not data_file.is_file():
+            raise MetadataError(f"Episode data parquet not found: {data_file}")
+        available = set(pq.read_schema(data_file).names)
+        columns = [name for name in ("timestamp", "frame_index", *layout.feature_dims) if name in available]
+        filters = [("episode_index", "==", episode.index)] if "episode_index" in available else None
+        table = pq.read_table(data_file, columns=columns, filters=filters)
+        rows = table.to_pylist()
+        rows.sort(key=lambda row: row.get("frame_index", row.get("timestamp", 0.0)))
+        if not rows:
+            raise MetadataError(f"No data rows for episode {episode.index} in {data_file}.")
+        return rows
+
     def _extract_frames(
         self,
         info: DatasetInfo,
@@ -264,11 +297,14 @@ class LeRobotImporter(DatasetImporter):
         shard: Path,
         from_timestamp: float,
         to_timestamp: float,
+        data_rows: list[dict],
     ) -> list[LanceModel]:
         if not shard.is_file():
             raise MetadataError(f"Video shard not found: {shard}")
         probe = probe_video(shard)
         fps = layout.fps or probe.fps
+        if not fps:
+            raise MetadataError(f"No fps in meta/info.json or the probe for '{shard.name}'.")
 
         with tempfile.TemporaryDirectory(prefix="pixano-lerobot-") as tmp:
             command = ["ffmpeg", "-nostdin", "-v", "error"]
@@ -277,32 +313,52 @@ class LeRobotImporter(DatasetImporter):
             command += ["-i", str(shard)]
             if to_timestamp > 0:
                 command += ["-t", f"{to_timestamp - from_timestamp:.6f}"]
-            command += ["-vf", f"fps={fps}", "-q:v", "2", f"{tmp}/%06d.jpg"]
+            # Passthrough: every encoded frame, no resampling — frame k sits at
+            # window time k/fps, and rows map onto frames by their own timestamps.
+            command += ["-fps_mode", "passthrough", "-q:v", "2", f"{tmp}/%06d.jpg"]
             result = subprocess.run(command, capture_output=True, text=True)
+            if result.returncode != 0 and "fps_mode" in (result.stderr or ""):
+                command[command.index("-fps_mode")] = "-vsync"  # pre-5.1 ffmpeg
+                result = subprocess.run(command, capture_output=True, text=True)
             if result.returncode != 0:
                 raise MetadataError(f"ffmpeg frame extraction failed on '{shard.name}': {result.stderr.strip()[:200]}")
 
             frame_files = sorted(Path(tmp).glob("*.jpg"))
+            tolerance = 1.0 / (2.0 * fps)
+            selected = data_rows
             cap = self._max_frames(spec)
-            if cap and len(frame_files) > cap:
-                stride = len(frame_files) / cap
-                frame_files = [frame_files[int(position * stride)] for position in range(cap)]
+            if cap and len(selected) > cap:
+                stride = len(selected) / cap
+                selected = [selected[int(position * stride)] for position in range(cap)]
 
             view_cls = info.views[view_name]
             rows: list[LanceModel] = []
-            for frame_index, frame_file in enumerate(frame_files):
+            for ordinal, data_row in enumerate(selected):
+                row_timestamp = float(data_row.get("timestamp", ordinal / fps))
+                k = round(row_timestamp * fps)
+                if abs(k / fps - row_timestamp) > tolerance:
+                    raise MetadataError(
+                        f"timestamp_alignment: row t={row_timestamp:.6f}s is not on the {fps}fps grid "
+                        f"of '{shard.name}' (tolerance {tolerance:.6f}s)."
+                    )
+                if not 0 <= k < len(frame_files):
+                    raise MetadataError(
+                        f"timestamp_alignment: row t={row_timestamp:.6f}s maps to frame {k} but "
+                        f"'{shard.name}' window decoded {len(frame_files)} frames."
+                    )
+                frame_index = int(data_row.get("frame_index", ordinal))
                 rows.append(
                     view_cls(
                         id=stable_id(record_id, "view", view_name, frame_index),
                         record_id=record_id,
                         logical_name=view_name,
                         uri="",
-                        raw_bytes=frame_file.read_bytes(),
+                        raw_bytes=frame_files[k].read_bytes(),
                         width=probe.width,
                         height=probe.height,
                         format="JPEG",
                         frame_index=frame_index,
-                        timestamp=from_timestamp + frame_index / fps if fps else float(frame_index),
+                        timestamp=row_timestamp,
                     )
                 )
             return rows
