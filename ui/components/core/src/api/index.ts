@@ -17,5 +17,6 @@ export * from "./getModels";
 export * from "./getSources";
 export * from "./getViewEmbeddings";
 export * from "./inference";
+export * from "./updateDatasetBookmark";
 export * from "./updateSchema";
 export * from "./updateSchemas";

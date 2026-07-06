@@ -10,7 +10,12 @@ License: CECILL-C
 
   import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import { svg_right_arrow } from "@pixano/core/src/icons";
+  import {
+    svg_bookmark_filled,
+    svg_bookmark_outline,
+    svg_right_arrow,
+  } from "@pixano/core/src/icons";
+  import { updateDatasetInStore } from "$lib/stores/datasetStores";
 
   /**
    * DatasetPreviewCard Component
@@ -93,6 +98,21 @@ License: CECILL-C
       });
   });
 
+  const BOOKMARK_TYPES = ["TODO", "NEW", "FAVORITE"] as const;
+
+  const bookmarkColors: Record<string, string> = {
+    TODO: "#3B82F6",
+    NEW: "#22C55E",
+    FAVORITE: "#EAB308",
+  };
+
+  async function toggleBookmark(bookmark: string) {
+    const updated = await api.updateDatasetBookmark(dataset.id, bookmark);
+    if (updated) {
+      updateDatasetInStore(dataset.id, { bookmarks: updated.bookmarks });
+    }
+  }
+
   onDestroy(() => {
     controller.abort("aborted");
   });
@@ -113,6 +133,34 @@ License: CECILL-C
     bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
     on:click={handleSelectDataset}
   >
+    <!-- Bookmark buttons -->
+    <div
+      class="absolute top-2 right-2 flex gap-1 z-20"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
+      {#each BOOKMARK_TYPES as btype}
+        <button
+          class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
+          style="color: {bookmarkColors[btype]}"
+          on:click={() => toggleBookmark(btype)}
+          aria-label="{btype} bookmark"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="20"
+            viewBox="0 -960 960 960"
+            width="20"
+          >
+            <path
+              d={dataset.bookmarks.includes(btype) ? svg_bookmark_filled : svg_bookmark_outline}
+              fill="currentcolor"
+            />
+          </svg>
+        </button>
+      {/each}
+    </div>
+
     <!-- Infos -->
     <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
       <h3 class="text-lg w-5/6 font-semibold truncate text-primary">

@@ -21,6 +21,8 @@ const datasetInfoSchema = z
     preview: z.string(),
     workspace: z_enumFromArray(Object.values(WorkspaceType)),
     num_items: z.number(),
+    creation_date: z.string(),
+    bookmarks: z.array(z.string()),
     isFiltered: z.optional(z.boolean()),
   })
   .strict();
@@ -34,6 +36,8 @@ export class DatasetInfo implements DatasetInfoType {
   size: string;
   preview: string;
   workspace: WorkspaceType;
+  creation_date: string;
+  bookmarks: string[];
   isFiltered?: boolean;
 
   constructor(obj: DatasetInfoType) {
@@ -45,6 +49,8 @@ export class DatasetInfo implements DatasetInfoType {
     this.size = obj.size;
     this.preview = obj.preview;
     this.workspace = obj.workspace as WorkspaceType;
+    this.creation_date = obj.creation_date;
+    this.bookmarks = obj.bookmarks;
     this.isFiltered = obj.isFiltered;
   }
 }

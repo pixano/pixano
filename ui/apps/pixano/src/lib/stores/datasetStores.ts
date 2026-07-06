@@ -38,3 +38,9 @@ export const saveCurrentItemStore = writable<{ shouldSave: boolean; canSave: boo
   shouldSave: false,
   canSave: false,
 });
+
+export function updateDatasetInStore(datasetId: string, updates: Partial<DatasetInfo>) {
+  datasetsStore.update((datasets) =>
+    datasets.map((d) => (d.id === datasetId ? { ...d, ...updates } : d)),
+  );
+}

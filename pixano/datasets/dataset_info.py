@@ -17,6 +17,9 @@ from pixano.features import Image
 from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 
 
+BOOKMARK_TYPES = {"TODO", "NEW", "FAVORITE"}
+
+
 class DatasetInfo(BaseModel):
     """Information of a dataset.
 
@@ -27,6 +30,8 @@ class DatasetInfo(BaseModel):
         estimated_size: Dataset estimated size.
         preview: Path to a preview thumbnail.
         workspace: Workspace type.
+        creation_date: Dataset creation date (ISO 8601).
+        bookmarks: List of bookmark types applied to this dataset.
     """
 
     id: str = ""
@@ -35,6 +40,8 @@ class DatasetInfo(BaseModel):
     size: str = "Unknown"
     preview: str = ""
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
+    creation_date: str = ""
+    bookmarks: list[str] = []
 
     @field_serializer("workspace")
     def serialize_workspace(self, workspace: WorkspaceType):
@@ -46,6 +53,14 @@ class DatasetInfo(BaseModel):
     def _id_validator(cls, v: str) -> str:
         if " " in v:
             raise ValueError("id must not contain spaces")
+        return v
+
+    @field_validator("bookmarks", mode="after")
+    @classmethod
+    def _bookmarks_validator(cls, v: list[str]) -> list[str]:
+        invalid = set(v) - BOOKMARK_TYPES
+        if invalid:
+            raise ValueError(f"Invalid bookmark types: {invalid}. Allowed: {BOOKMARK_TYPES}")
         return v
 
     def to_json(self, json_fp: Path) -> None:
