@@ -126,6 +126,34 @@ def _stream_array(json_path: Path, key: str) -> tuple[Iterator[dict], bool]:
         return iter(payload.get(key, [])), False
 
 
+def _prefetch_media(
+    numbered: "Iterator[tuple[int, dict]]", spec: ImportSpec, source_dir: Path, split: str, lookahead: int = 16
+) -> "Iterator[tuple[int, dict, bytes | None]]":
+    """Read image bytes ahead with a small thread pool (overlaps disk latency)."""
+    if spec.media.mode != "embed":
+        for ordinal, image in numbered:
+            yield ordinal, image, None
+        return
+
+    from collections import deque
+    from concurrent.futures import ThreadPoolExecutor
+
+    def read(image: dict) -> bytes | None:
+        local = CocoImporter._locate_image(source_dir, split, str(image.get("file_name", "")))
+        return local.read_bytes() if local is not None else None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        window: deque = deque()
+        for ordinal, image in numbered:
+            window.append((ordinal, image, pool.submit(read, image)))
+            if len(window) >= lookahead:
+                queued_ordinal, queued_image, future = window.popleft()
+                yield queued_ordinal, queued_image, future.result()
+        while window:
+            queued_ordinal, queued_image, future = window.popleft()
+            yield queued_ordinal, queued_image, future.result()
+
+
 class CocoImporter(DatasetImporter):
     """Importer for COCO instances JSON (detection, segmentation, keypoints)."""
 
@@ -263,11 +291,14 @@ class CocoImporter(DatasetImporter):
                     index.add(str(annotation.get("image_id", "")), annotation)
 
                 images, _ = _stream_array(json_path, "images")
-                for ordinal, image in enumerate(images, start=1):
-                    if resume_split == split and ordinal <= resume_ordinal:
-                        continue
+                numbered = (
+                    (ordinal, image)
+                    for ordinal, image in enumerate(images, start=1)
+                    if not (resume_split == split and ordinal <= resume_ordinal)
+                )
+                for ordinal, image, media in _prefetch_media(numbered, spec, source.path, split):
                     tables = self._build_image(
-                        info, spec, resolver, source.path, namespace, split, image, index, categories
+                        info, spec, resolver, source.path, namespace, split, image, index, categories, media
                     )
                     yield BatchBundle(
                         tables=tables,
@@ -292,6 +323,7 @@ class CocoImporter(DatasetImporter):
         image: dict,
         index: _AnnotationIndex,
         categories: dict[int, dict],
+        media: bytes | None = None,
     ) -> dict[str, list[LanceModel]]:
         tables: dict[str, list[LanceModel]] = {}
         image_id = str(image.get("id", ""))
@@ -304,13 +336,17 @@ class CocoImporter(DatasetImporter):
         file_name = str(image.get("file_name", ""))
         if spec.media.mode == "uri":
             resolved_uri, raw_bytes = str(image.get("coco_url", "")), b""
+        elif media is not None:
+            resolved_uri, raw_bytes = "", media
         else:
             local = self._locate_image(source_dir, split, file_name)
             if local is None:
                 raise MetadataError(f"Image file '{file_name}' not found for split '{split}'.")
             resolved = resolver.resolve(str(local.relative_to(source_dir)))
             resolved_uri, raw_bytes = resolved.uri, resolved.raw_bytes
-            if not width or not height:
+        if not width or not height:
+            local = self._locate_image(source_dir, split, file_name)
+            if local is not None:
                 width, height, _ = probe_image(local)
         view_cls = info.views["image"]
         view_id = stable_id(record_id, "view", "image")
