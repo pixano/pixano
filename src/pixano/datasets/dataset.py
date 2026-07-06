@@ -29,6 +29,7 @@ from pixano.datasets.utils.integrity import (
     IntegrityCheck,
     check_table_integrity,
     handle_integrity_errors,
+    validate_arrow_batch,
     validate_batch,
 )
 from pixano.features.utils.image import create_mosaic, image_to_base64
@@ -1080,11 +1081,6 @@ class Dataset:
             if rows:
                 row_payloads[table_name] = rows
 
-        if arrow_payloads and check_integrity != "none":
-            raise NotImplementedError(
-                "merge_records only supports Arrow payloads with check_integrity='none' for now. "
-                "Vectorized Arrow integrity checks land with the import engine (spec §8)."
-            )
         if not row_payloads and not arrow_payloads:
             return {}
 
@@ -1118,6 +1114,23 @@ class Dataset:
                     pending_ids=pending_ids,
                 )
                 accumulated.setdefault(table_name, set()).update(row.id for row in rows_to_check if row.id)
+            for table_name in ordered_tables:
+                arrow_batch = arrow_payloads.get(table_name)
+                if arrow_batch is None:
+                    continue
+                upsert_known = {tname: ids for tname, ids in accumulated.items() if tname != table_name}
+                validate_arrow_batch(
+                    table_name,
+                    arrow_batch,
+                    upsert_known,
+                    self,
+                    raise_or_warn=check_integrity,
+                    pending_ids=pending_ids,
+                )
+                if "id" in arrow_batch.schema.names:
+                    accumulated.setdefault(table_name, set()).update(
+                        value.as_py() for value in arrow_batch.column("id") if value.as_py()
+                    )
 
         counts: dict[str, int] = {}
         for table_name in ordered_tables:

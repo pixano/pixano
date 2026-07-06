@@ -44,7 +44,7 @@ from lancedb.pydantic import LanceModel
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.utils.integrity import validate_batch
+from pixano.datasets.utils.integrity import validate_arrow_batch, validate_batch
 from pixano.schemas import SchemaGroup, is_image, is_sequence_frame, is_view, schema_to_group
 from pixano.schemas.views.image import _generate_preview
 from pixano.utils import to_snake_case
@@ -164,6 +164,7 @@ class ImportEngine:
         self.flush_bytes = flush_bytes
         self.checkpoint = checkpoint
         self.cancel_check = cancel_check
+        self._canaried_tables: set[str] = set()
 
     # ------------------------------------------------------------------
     # Entry point
@@ -446,13 +447,34 @@ class ImportEngine:
         census.observe_arrow(dataset, table_name, arrow_table)
         ids = [str(id) for id in arrow_table.column("id").to_pylist() if id]
 
-        # Cross-flush duplicate detection stays ledger-based; vectorized FK checks
-        # land with the first Arrow-producing formats (plan P3.0).
+        # First-batch canary: round-trip one row through Pydantic so a mistyped
+        # or misnamed column fails on the first flush, not rows later.
+        if table_name not in self._canaried_tables:
+            self._canaried_tables.add(table_name)
+            schema_cls = dataset.info.tables.get(table_name)
+            if schema_cls is not None:
+                try:
+                    schema_cls.model_validate(arrow_table.slice(0, 1).to_pylist()[0])
+                except Exception as exc:
+                    raise SpecValidationError(
+                        f"Arrow batch for table '{table_name}' does not match the schema: {exc}"
+                    ) from None
+
+        # Cross-flush duplicate detection stays ledger-based (no DB scans);
+        # vectorized FK/id checks run through validate_arrow_batch.
         duplicate_ids = [id for id, found in ledger.fk_lookup(table_name, set(ids)).items() if found]
         if duplicate_ids and not add_mode:
             raise JobStateError(
                 f"Duplicate ids across flushes in table '{table_name}': {sorted(duplicate_ids)[:5]} ..."
             )
+        validate_arrow_batch(
+            table_name,
+            arrow_table,
+            {},
+            dataset,
+            raise_or_warn="raise",
+            fk_lookup=ledger.fk_lookup,
+        )
 
         if add_mode:
             dataset.merge_records({table_name: arrow_table}, check_integrity="none")
