@@ -4,183 +4,100 @@
 # License: CECILL-C
 # =====================================
 
-import re
+import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
-from PIL import Image as PILImage
+import yaml
 from typer.testing import CliRunner
 
 from pixano.cli import app
 from pixano.datasets import Dataset
+from tests.datasets.io.formats.test_jsonl_importer import SPECS, materialize_corpus
 
 
 runner = CliRunner()
 
-_EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
-_EXAMPLES_AVAILABLE = _EXAMPLES_DIR.is_dir()
 
-VOC_INFO_SPEC = f"{(_EXAMPLES_DIR / 'voc' / 'info.py')}:{'dataset_info'}"
-VQAV2_INFO_SPEC = f"{(_EXAMPLES_DIR / 'vqav2' / 'info.py')}:{'dataset_info'}"
-
-_skip_no_examples = pytest.mark.skipif(not _EXAMPLES_AVAILABLE, reason="examples/ moved to pixano-cookbook repository")
-
-
-@_skip_no_examples
-def test_data_import_dry_run_reports_clean_metadata(tmp_path: Path):
+def _prepare_source(tmp_path: Path, name: str = "voc_like") -> tuple[Path, Path]:
+    """Materialize a golden corpus with its pixano.yaml and an empty data dir."""
+    source = materialize_corpus(name, tmp_path / "src")
+    spec_payload = {"pixano": 2, "format": "pixano_jsonl", **SPECS[name]}
+    (source / "pixano.yaml").write_text(yaml.safe_dump(spec_payload, sort_keys=False))
     data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    source_dir = tmp_path / "voc"
-    split_dir = source_dir / "train"
-    split_dir.mkdir(parents=True)
-    (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
-    (split_dir / "metadata.jsonl").write_text('{"views":{"image":"item_0.jpg"}}\n', encoding="utf-8")
-
-    result = runner.invoke(
-        app,
-        [
-            "data",
-            "import",
-            str(data_dir),
-            str(source_dir),
-            "--info",
-            VOC_INFO_SPEC,
-            "--dry-run",
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert "Metadata validation passed with 0 warnings" in result.output
-    assert "Mapping: image -> logical view 'image'" in result.output
-    assert "Dry-run completed successfully. No dataset was created." in result.output
-    assert not (data_dir / "library" / "voc_2007_sample").exists()
+    (data_dir / "library").mkdir(parents=True)
+    return data_dir, source
 
 
-@_skip_no_examples
-def test_data_import_dry_run_strict_rejects_aliases(tmp_path: Path):
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    source_dir = tmp_path / "voc"
-    split_dir = source_dir / "train"
-    split_dir.mkdir(parents=True)
-    (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
-    (split_dir / "metadata.jsonl").write_text(
-        '{"views":{"image":"item_0.jpg"},"objects":[{"category":"person"}]}\n', encoding="utf-8"
-    )
+class TestImportCommand:
+    def test_dry_run_writes_nothing(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        result = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert "Dry-run completed" in result.output
+        assert not any((data_dir / "library").iterdir())
 
-    result = runner.invoke(
-        app,
-        [
-            "data",
-            "import",
-            str(data_dir),
-            str(source_dir),
-            "--info",
-            VOC_INFO_SPEC,
-            "--dry-run",
-            "--metadata-validation",
-            "strict",
-        ],
-    )
+    def test_import_export_reimport_round_trip(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
 
-    assert result.exit_code == 1
-    assert "Metadata validation passed with 0 warnings" in result.output
-    assert "Error: aliased_metadata_key" in result.output
+        imported = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
+        assert imported.exit_code == 0, imported.output
+        assert "imported successfully" in imported.output
 
+        dataset = Dataset(data_dir / "library" / "voc_like")
+        assert dataset.open_table("records").count_rows() == 1
 
-def test_data_import_requires_info(tmp_path: Path):
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    source_dir = tmp_path / "voc"
-    (source_dir / "train").mkdir(parents=True)
+        destination = tmp_path / "exported"
+        exported = runner.invoke(app, ["data", "export", str(data_dir), "voc_like", str(destination)])
+        assert exported.exit_code == 0, exported.output
+        assert (destination / "pixano.yaml").is_file()
 
-    result = runner.invoke(app, ["data", "import", str(data_dir), str(source_dir)])
+        # The exported folder re-imports via its own pixano.yaml — no flags needed.
+        data_dir_2 = tmp_path / "data2"
+        (data_dir_2 / "library").mkdir(parents=True)
+        reimported = runner.invoke(
+            app, ["data", "import", str(data_dir_2), str(destination), "--yes", "--name", "voc_like"]
+        )
+        assert reimported.exit_code == 0, reimported.output
+        second = Dataset(data_dir_2 / "library" / "voc_like")
+        first_ids = sorted(row["id"] for row in dataset.open_table("bboxes").search().select(["id"]).to_list())
+        second_ids = sorted(row["id"] for row in second.open_table("bboxes").search().select(["id"]).to_list())
+        assert second_ids == first_ids
 
-    assert result.exit_code != 0
-    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
-    assert "--info" in plain
+    def test_invalid_source_fails_with_findings(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        metadata = source / "train" / "metadata.jsonl"
+        metadata.write_text(metadata.read_text() + '{"views": {"imge": "nope.jpg"}}\n')
+        result = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
+        assert result.exit_code == 1
+        assert "undeclared_view" in result.output
+        assert not any((data_dir / "library").iterdir())
 
-
-@_skip_no_examples
-@patch("importlib.import_module")
-def test_data_import_uses_dataset_info_workspace_and_snake_case_name(mock_import_module, tmp_path: Path):
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    source_dir = tmp_path / "voc"
-    split_dir = source_dir / "train"
-    split_dir.mkdir(parents=True)
-    (split_dir / "item_0.jpg").write_bytes(b"fake-image-bytes")
-    (split_dir / "metadata.jsonl").write_text('{"views":{"image":"item_0.jpg"}}\n', encoding="utf-8")
-
-    mock_dataset = MagicMock()
-    mock_dataset.num_rows = 1
-    mock_builder_instance = MagicMock()
-    mock_builder_instance.preflight_metadata.return_value.warning_count = 0
-    mock_builder_instance.preflight_metadata.return_value.normalized_examples = []
-    mock_builder_instance.preflight_metadata.return_value.aliases = {}
-    mock_builder_instance.preflight_metadata.return_value.inferred = {}
-    mock_builder_instance.preflight_metadata.return_value.errors = {}
-    mock_builder_instance.build.return_value = mock_dataset
-    mock_builder_cls = MagicMock(return_value=mock_builder_instance)
-    mock_module = MagicMock()
-    mock_module.ImageFolderBuilder = mock_builder_cls
-    mock_import_module.return_value = mock_module
-
-    result = runner.invoke(
-        app,
-        [
-            "data",
-            "import",
-            str(data_dir),
-            str(source_dir),
-            "--info",
-            VOC_INFO_SPEC,
-        ],
-    )
-
-    assert result.exit_code == 0
-    mock_import_module.assert_called_once_with("pixano.datasets.builders.folders.image")
-    mock_builder_cls.assert_called_once()
-    assert mock_builder_cls.call_args.kwargs["target_name"] == "voc_2007_sample"
+    def test_create_refuses_existing(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        assert runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"]).exit_code == 0
+        again = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
+        assert again.exit_code == 1
+        assert "already exists" in again.output
 
 
-@_skip_no_examples
-def test_data_import_preserves_message_question_type(tmp_path: Path):
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    source_dir = tmp_path / "vqav2"
-    split_dir = source_dir / "validation"
-    split_dir.mkdir(parents=True)
+class TestFormatsCommand:
+    def test_lists_builtin_formats(self):
+        result = runner.invoke(app, ["data", "formats"])
+        assert result.exit_code == 0
+        assert "pixano_jsonl" in result.output
 
-    image_path = split_dir / "item_0.jpg"
-    PILImage.new("RGB", (4, 4), color=(255, 0, 0)).save(image_path)
-    (split_dir / "metadata.jsonl").write_text(
-        (
-            '{"views":{"image":"item_0.jpg"},"messages":[{"question":{"content":"Is this red?",'
-            '"question_type":"open"},"responses":[{"content":"yes"}]}]}\n'
-        ),
-        encoding="utf-8",
-    )
 
-    result = runner.invoke(
-        app,
-        [
-            "data",
-            "import",
-            str(data_dir),
-            str(source_dir),
-            "--info",
-            VQAV2_INFO_SPEC,
-        ],
-    )
+class TestMigrateJsonlCommand:
+    def test_migrates_v1_tree(self, tmp_path: Path):
+        v1_root = Path(__file__).parents[1] / "assets" / "jsonl_v1" / "canonical"
+        destination = tmp_path / "migrated"
+        result = runner.invoke(app, ["data", "migrate-jsonl", str(v1_root), str(destination)])
+        assert result.exit_code == 0, result.output
+        assert "Migrated 1 line(s)" in result.output
 
-    assert result.exit_code == 0, result.output
-
-    dataset = Dataset(data_dir / "library" / "vqav2_sample")
-    rows = dataset.open_table("messages").search().limit(2).to_list()
-
-    assert rows[0]["type"] == "QUESTION"
-    assert rows[0]["question_type"] == "OPEN"
-    assert rows[1]["type"] == "ANSWER"
-    assert rows[1]["question_type"] == ""
+        lines = (destination / "train" / "metadata.jsonl").read_text().splitlines()
+        assert json.loads(lines[0])["$pixano"] == "jsonl/2"
+        migrated = json.loads(lines[1])
+        assert migrated["attrs"]["status"] == "validated"
+        kinds = [a["kind"] for a in migrated["entities"][0]["annotations"]]
+        assert kinds == ["bbox", "keypoints"]

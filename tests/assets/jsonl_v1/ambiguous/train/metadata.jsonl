@@ -1,0 +1,1 @@
+{"views":{"image":"image_001.jpg","text":"The Eiffel Tower is in Paris."},"entities":[{"name":"Eiffel Tower","annotations":{"image":{"bbox":[0.3,0.1,0.4,0.8]},"text":{"text_span":[4,16]}}}]}
