@@ -148,10 +148,9 @@ class MediaResolver:
 
         if self.policy.mode == "embed":
             if is_remote:
-                raise MediaResolutionError(
-                    f"Remote URI '{value}' is not embeddable; use media mode 'uri' for datalake-resident media.",
-                    provenance,
-                )
+                # Remote URIs pass through verbatim: mixed datasets (embedded local
+                # media + datalake URIs) are legal and stamped "mixed" (spec §6).
+                return ResolvedMedia(uri=value)
             path = self._local_path(value, provenance)
             return ResolvedMedia(raw_bytes=path.read_bytes())
 

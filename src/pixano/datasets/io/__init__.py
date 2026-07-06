@@ -86,3 +86,10 @@ __all__ = [
     "stable_id",
     "workspace_preset",
 ]
+
+
+# Built-in formats register on package import (entry-point plugins load lazily).
+from .formats.pixano_jsonl.importer import PIXANO_JSONL  # noqa: E402
+
+
+FORMATS.register(PIXANO_JSONL)

@@ -63,10 +63,10 @@ class TestMediaResolver:
         assert resolved.uri == ""
         assert len(resolved.raw_bytes) == IMAGE_JPG_ASSET_URL.stat().st_size
 
-    def test_embed_rejects_remote_uri(self):
+    def test_embed_passes_remote_uri_through(self):
+        # Mixed datasets are legal (spec §6): local media embeds, datalake URIs stay URIs.
         resolver = MediaResolver(MediaPolicy(mode="embed"))
-        with pytest.raises(MediaResolutionError, match="not embeddable"):
-            resolver.resolve("https://example.com/img.jpg")
+        assert resolver.resolve("https://example.com/img.jpg").uri == "https://example.com/img.jpg"
 
     def test_embed_missing_file(self, tmp_path: Path):
         resolver = MediaResolver(MediaPolicy(mode="embed"), base_dir=tmp_path)
