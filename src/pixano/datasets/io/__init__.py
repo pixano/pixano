@@ -11,7 +11,7 @@ API, and the Python API: declarative specs, format registry, importer
 contract, and the import engine.
 """
 
-from .api import analyze, import_dataset
+from .api import analyze, export_dataset, import_dataset
 from .engine import ImportEngine, ImportResult, replay_journals
 from .errors import (
     FormatDetectionError,
@@ -30,6 +30,7 @@ from .manifest import ImportManifest
 from .media import MediaResolver, ResolvedMedia, VideoProbe, ffprobe_available, probe_image, probe_video
 from .plan import AnalyzeLimits, Finding, ImportPlan, PreflightReport, Provenance, SamplePreview
 from .progress import ProgressEvent, ProgressSink, ThrottledSink, TqdmSink
+from .reader import RecordBundle, RecordBundleReader
 from .registry import FORMATS, Capabilities, DataFormat, FormatRegistry
 from .spec import ExportSpec, IdPolicy, ImportSpec, MediaPolicy, SchemaSpec, resolve_dataset_info, workspace_preset
 
@@ -64,6 +65,8 @@ __all__ = [
     "PreflightReport",
     "ProgressEvent",
     "ProgressSink",
+    "RecordBundle",
+    "RecordBundleReader",
     "Provenance",
     "ResolvedMedia",
     "ResumeError",
@@ -77,6 +80,7 @@ __all__ = [
     "VideoProbe",
     "ffprobe_available",
     "analyze",
+    "export_dataset",
     "import_dataset",
     "namespace_prefix",
     "probe_image",
