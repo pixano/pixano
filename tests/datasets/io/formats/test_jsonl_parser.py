@@ -18,7 +18,7 @@ from pixano.datasets.workspaces import WorkspaceType
 
 CORPUS_ROOT = Path(__file__).parents[3] / "assets" / "jsonl_v2"
 
-# Declared view kinds per corpus (what the pixano.yaml schema block would say).
+# Declared view kinds per corpus (what the dataset.yaml schema block would say).
 CORPUS_VIEWS: dict[str, dict[str, str]] = {
     "voc_like": {"image": "image"},
     "multiview": {"rgb": "image", "thermal": "image"},

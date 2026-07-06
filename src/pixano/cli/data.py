@@ -62,7 +62,7 @@ def _build_spec(
     media: Optional[str],
     namespace: Optional[str],
 ) -> ImportSpec:
-    discovered = source / "pixano.yaml" if source.is_dir() else None
+    discovered = source / "dataset.yaml" if source.is_dir() else None
     if spec_file is not None:
         spec = ImportSpec.from_yaml(spec_file)
     elif discovered is not None and discovered.is_file():
@@ -99,7 +99,7 @@ def import_command(
     source: Path = typer.Argument(..., exists=True, help="Source directory to import."),
     format: str = typer.Option("auto", "--format", help="Data format (auto = detect)."),
     spec_file: Optional[Path] = typer.Option(
-        None, "--spec", exists=True, dir_okay=False, help="pixano.yaml import spec (default: <source>/pixano.yaml)."
+        None, "--spec", exists=True, dir_okay=False, help="dataset.yaml import spec (default: <source>/dataset.yaml)."
     ),
     name: str = typer.Option("", "--name", help="Target dataset name (overrides the spec)."),
     workspace: str = typer.Option("", "--workspace", help="Workspace preset (image, video, image_vqa, ...)."),

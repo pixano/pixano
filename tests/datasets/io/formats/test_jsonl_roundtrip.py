@@ -55,7 +55,7 @@ class TestGoldenRoundTrips:
         dataset = _import(source, tmp_path / "data", "voc_like")
         exported = export_dataset(dataset, tmp_path / "exported")
 
-        spec = ImportSpec.from_yaml(exported / "pixano.yaml")
+        spec = ImportSpec.from_yaml(exported / "dataset.yaml")
         assert spec.format == "pixano_jsonl"
         from pixano.datasets.io.spec import resolve_dataset_info
 

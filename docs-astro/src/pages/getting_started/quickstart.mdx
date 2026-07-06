@@ -12,7 +12,7 @@ By the end of this page, you will have imported your own images into Pixano and 
 
 <Callout type="info" title="What you'll learn">
 
-- How a **pixano.yaml** schema defines your dataset
+- How a **dataset.yaml** schema defines your dataset
 - The role of **records**, **views**, **entities**, and **annotations** in a dataset
 - How to **import** images and **launch** the Pixano app
 
@@ -37,7 +37,7 @@ This sets up your dataset library and runs all internal setup. From now on, `./m
 
 Before importing anything, you need to tell Pixano **what your dataset looks like**. You do this in a small YAML file — no Python required.
 
-Create a folder for your source data with a `pixano.yaml` at its root:
+Create a folder for your source data with a `dataset.yaml` at its root:
 
 ```yaml
 pixano: 2
@@ -72,19 +72,19 @@ Pixano uses your schema to create the right database tables before any data is i
 
 Pixano imports data from a **source folder** organized by **splits**. Each split is a subfolder containing your images.
 
-Create a split folder next to your `pixano.yaml` and put a few images in it:
+Create a split folder next to your `dataset.yaml` and put a few images in it:
 
 ```bash
 mkdir -p my_images/train
 # Copy 3-5 JPEG or PNG images into my_images/train/
-# Move pixano.yaml into my_images/
+# Move dataset.yaml into my_images/
 ```
 
 Your folder should look like this:
 
 ```
 my_images/
-  pixano.yaml
+  dataset.yaml
   train/
     photo1.jpg
     photo2.jpg
@@ -105,7 +105,7 @@ pixano data import ./my_library ./my_images
 
 Here is what this command does:
 
-1. Reads your schema from `my_images/pixano.yaml`
+1. Reads your schema from `my_images/dataset.yaml`
 2. Scans `my_images/` for split folders and images, validates everything, and prints a plan
 3. After you confirm, creates a new dataset in `./my_library` with the tables you defined
 4. Stores each image as a record with its associated view — media bytes embedded, fully self-contained
@@ -114,7 +114,7 @@ Common import options:
 
 | Option | Description |
 |--------|-------------|
-| `--spec` | Path to a `pixano.yaml` outside the source folder. |
+| `--spec` | Path to a `dataset.yaml` outside the source folder. |
 | `--name`, `--workspace` | Override the yaml (or replace it entirely for simple datasets). |
 | `--mode` | `create` (default), `overwrite`, or `add`. |
 | `--dry-run` | Validate and print the plan without creating the dataset. |
@@ -144,7 +144,7 @@ Server options:
 
 Let's connect the dots between what you did and how Pixano sees your data:
 
-- The **pixano.yaml** you wrote became a set of **database tables** — one for records, one for image views, one for entities, one for bounding boxes, and one for masks.
+- The **dataset.yaml** you wrote became a set of **database tables** — one for records, one for image views, one for entities, one for bounding boxes, and one for masks.
 - Each image you placed in `my_images/train/` became a **record** in the `train` split, with an associated **image view**.
 - The **entity** and **annotation** tables are empty for now — they will be populated as you (or a model) annotate objects in the UI.
 - Because you declared `BBox` and `CompressedRLE` in your schema, the annotation workspace knows to offer both bounding box and mask tools when you start labeling.

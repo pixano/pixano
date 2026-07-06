@@ -74,11 +74,11 @@ class PixanoJsonlImporter(DatasetImporter):
     # ------------------------------------------------------------------
 
     def probe(self, source: SourceRef) -> DetectResult | None:
-        """Sniff for pixano.yaml, a $pixano header, or split metadata.jsonl files."""
+        """Sniff for dataset.yaml, a $pixano header, or split metadata.jsonl files."""
         if source.path is None or not source.path.is_dir():
             return None
-        if (source.path / "pixano.yaml").is_file():
-            return DetectResult(confidence=0.95, evidence="pixano.yaml at source root")
+        if (source.path / "dataset.yaml").is_file():
+            return DetectResult(confidence=0.95, evidence="dataset.yaml at source root")
         for split_dir in _splits_of(source.path):
             metadata_file = split_dir / METADATA_FILENAME
             if metadata_file.is_file():

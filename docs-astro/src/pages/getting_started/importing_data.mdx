@@ -14,7 +14,7 @@ Pixano 0.8 imports datasets from plain files — no Python required. You describ
 
 - The folder layout Pixano imports from
 - The `metadata.jsonl` line format (JSONL v2): views, entities, annotations, conversations
-- The `pixano.yaml` schema spec
+- The `dataset.yaml` schema spec
 - How media storage works: embedded by default, URIs for datalake data
 - The CLI: `import`, `export`, `formats`, and `migrate-jsonl`
 
@@ -26,7 +26,7 @@ A Pixano source is a folder with one subfolder per split. Each split holds a `me
 
 ```
 my_dataset/
-├── pixano.yaml            # the dataset + schema spec
+├── dataset.yaml            # the dataset + schema spec
 ├── train/
 │   ├── metadata.jsonl
 │   └── images/…
@@ -77,7 +77,7 @@ With bbox defaults declared, annotations can omit `format`/`is_normalized`. With
 
 ### Views
 
-Views are declared in `pixano.yaml` (name + kind) and referenced by name on each line. The payload shape depends on the declared kind:
+Views are declared in `dataset.yaml` (name + kind) and referenced by name on each line. The payload shape depends on the declared kind:
 
 | Kind | Payload |
 |------|---------|
@@ -147,7 +147,7 @@ Dense per-frame annotations can live in separate files, stem-matched to frames:
 
 `index_png` files are indexed PNGs where each pixel value is one object (0 = background). `entity_map` names them; `"auto"` derives `object_1`, `object_2`, …
 
-## The schema spec: pixano.yaml
+## The schema spec: dataset.yaml
 
 The YAML file names the dataset, picks a workspace, and declares views and custom attributes:
 
@@ -197,7 +197,7 @@ pixano data export /path/to/data_dir voc_2007 ./exported
 pixano data import /path/to/data_dir ./exported   # id-identical dataset
 ```
 
-The export emits exactly this format, with explicit ids and its own `pixano.yaml`. Export output *is* import input.
+The export emits exactly this format, with explicit ids and its own `dataset.yaml`. Export output *is* import input.
 
 ## Migrating from Pixano 0.7
 
