@@ -151,3 +151,31 @@ class TestCocoImporter:
         dataset = Dataset(result.dataset_path)
         assert dataset.get_data("images")[0].uri == "https://cdn.example.com/a.jpg"
         assert dataset.info.storage_mode == "filesystem"
+
+
+class TestCocoRoundTrip:
+    def test_import_export_reimport_preserves_counts_and_categories(self, tmp_path: Path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.io import export_dataset
+
+        first, _ = _case().run_import(tmp_path / "data1")
+        exported = export_dataset(first, tmp_path / "exported", format="coco")
+
+        assert (exported / "instances_val.json").is_file()
+        document = json.loads((exported / "instances_val.json").read_text())
+        assert document["categories"], "categories must be populated (v1 exported them empty)"
+        assert len(document["images"]) == 3 and len(document["annotations"]) == 39
+        assert all("pixano_id" in image for image in document["images"])
+
+        result = import_dataset(exported, tmp_path / "data2", _spec("coco_rt"), importer=CocoImporter())
+        second = Dataset(result.dataset_path)
+        for table, expected in EXPECTED_COUNTS.items():
+            assert second.open_table(table).count_rows() == expected, table
+
+        first_categories = {entity.category for entity in first.get_data("entities", limit=100)}
+        second_categories = {entity.category for entity in second.get_data("entities", limit=100)}
+        assert second_categories == first_categories
+
+        box_first = sorted(first.get_data("bboxes", limit=100), key=lambda b: b.coords[0])[0]
+        box_second = sorted(second.get_data("bboxes", limit=100), key=lambda b: b.coords[0])[0]
+        assert box_second.coords == pytest.approx(box_first.coords, abs=1e-3)
