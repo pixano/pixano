@@ -30,6 +30,9 @@ def _generate_preview(pil_image: PILImage) -> bytes:
     Returns:
         PNG-encoded thumbnail bytes.
     """
+    # draft() decodes JPEGs directly at reduced scale (~8x faster); it is a
+    # no-op for other formats and must run before pixel access.
+    pil_image.draft("RGB", (64, 64))
     thumb = pil_image.copy()
     thumb.thumbnail((64, 64))
     buf = io.BytesIO()

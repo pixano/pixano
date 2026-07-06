@@ -61,7 +61,7 @@ from .spec import ImportSpec
 logger = logging.getLogger(__name__)
 
 PIXANO_STATE_DIR = ".pixano"
-DEFAULT_FLUSH_ROWS = 1024
+DEFAULT_FLUSH_ROWS = 4096
 DEFAULT_FLUSH_BYTES = 256 * 1024 * 1024
 
 
