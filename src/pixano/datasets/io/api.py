@@ -28,7 +28,7 @@ from .importer import DatasetImporter, SourceRef
 from .plan import AnalyzeLimits, ImportPlan
 from .progress import ProgressSink
 from .registry import FORMATS
-from .spec import ImportSpec, resolve_dataset_info
+from .spec import ImportSpec
 
 
 def _resolve_importer(source: SourceRef, spec: ImportSpec, importer: DatasetImporter | None) -> DatasetImporter:
@@ -94,7 +94,7 @@ def import_dataset(
         )
 
     if info is None:
-        info = resolve_dataset_info(spec)
+        info = resolved.resolve_info(spec)
     if spec.dataset.name:
         info.name = spec.dataset.name
     if spec.dataset.description:
@@ -118,12 +118,16 @@ def export_dataset(
     """
     from pixano.datasets.dataset import Dataset
 
-    if format != "pixano_jsonl":
-        raise SpecValidationError(f"Export format '{format}' is not available yet; only 'pixano_jsonl' is.")
     if media not in ("files", "uris"):
         raise SpecValidationError("media must be 'files' or 'uris'.")
 
-    from .formats.pixano_jsonl.exporter import PixanoJsonlExporter
-
     resolved = dataset if isinstance(dataset, Dataset) else Dataset(Path(dataset))
-    return PixanoJsonlExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
+    if format == "pixano_jsonl":
+        from .formats.pixano_jsonl.exporter import PixanoJsonlExporter
+
+        return PixanoJsonlExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
+    if format == "coco":
+        from .formats.coco.exporter import CocoExporter
+
+        return CocoExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
+    raise SpecValidationError(f"Export format '{format}' is not available; use 'pixano_jsonl' or 'coco'.")

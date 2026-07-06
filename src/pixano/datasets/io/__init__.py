@@ -93,7 +93,9 @@ __all__ = [
 
 
 # Built-in formats register on package import (entry-point plugins load lazily).
+from .formats.coco.importer import COCO  # noqa: E402
 from .formats.pixano_jsonl.importer import PIXANO_JSONL  # noqa: E402
 
 
 FORMATS.register(PIXANO_JSONL)
+FORMATS.register(COCO)
