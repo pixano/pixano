@@ -208,3 +208,55 @@ class TestLeRobotImport:
                 _spec("lr_bad", frames="explode"),
                 __import__("pixano.datasets.io.plan", fromlist=["AnalyzeLimits"]).AnalyzeLimits(),
             )
+
+
+class TestHubSource:
+    @pytest.fixture()
+    def fake_hub(self, tmp_path: Path, monkeypatch):
+        """A synthetic v2.1 dataset served through mocked hub materialization."""
+        dataset_root = make_v21_dataset(tmp_path / "hub_ds")
+        calls: dict[str, list] = {"meta": [], "files": []}
+
+        def fake_meta(repo_id: str, revision=None) -> Path:
+            calls["meta"].append(repo_id)
+            return dataset_root
+
+        def fake_files(repo_id: str, relative_paths: list[str], revision=None) -> Path:
+            calls["files"].append(sorted(relative_paths))
+            return dataset_root
+
+        import pixano.datasets.io.formats.lerobot.importer as importer_module
+
+        monkeypatch.setattr(importer_module, "materialize_meta", fake_meta)
+        monkeypatch.setattr(importer_module, "materialize_files", fake_files)
+        return calls
+
+    def test_analyze_is_meta_only(self, fake_hub):
+        plan = LeRobotImporter().analyze(
+            SourceRef.from_string("hub://acme/robo"),
+            _spec("hub_plan"),
+            __import__("pixano.datasets.io.plan", fromlist=["AnalyzeLimits"]).AnalyzeLimits(),
+        )
+        assert plan.totals.records == 2 and plan.report.is_valid
+        assert fake_hub["meta"] == ["acme/robo"]
+        assert fake_hub["files"] == []  # no shard downloads at analyze
+
+    @needs_ffmpeg
+    def test_ingest_downloads_only_selected_episodes(self, fake_hub, tmp_path: Path):
+        spec = _spec("hub_subset", episodes=[1], max_frames_per_episode=4)
+        result = import_dataset("hub://acme/robo", tmp_path / "data", spec, importer=LeRobotImporter())
+
+        assert fake_hub["files"] == [[f"videos/chunk-000/{CAMERA_KEY}/episode_000001.mp4"]]
+        dataset = Dataset(result.dataset_path)
+        assert dataset.open_table("records").count_rows() == 1
+        assert dataset.get_data("records")[0].episode_index == 1
+
+    def test_missing_hf_hub_is_a_typed_error(self, monkeypatch):
+        import pixano.datasets.io.formats.lerobot.hub as hub_module
+
+        monkeypatch.setattr(hub_module, "_require_hf_hub", hub_module._require_hf_hub)
+        monkeypatch.setitem(__import__("sys").modules, "huggingface_hub", None)
+        # is_hub_id stays available without the dependency
+        assert hub_module.is_hub_id("lerobot/pusht")
+        assert not hub_module.is_hub_id("not a hub id")
+        assert not hub_module.is_hub_id("/absolute/path")

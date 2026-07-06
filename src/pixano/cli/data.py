@@ -97,7 +97,7 @@ def _build_spec(
 @data_app.command(name="import")
 def import_command(
     data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Pixano data directory."),
-    source: Path = typer.Argument(..., exists=True, help="Source directory to import."),
+    source: str = typer.Argument(..., help="Source directory, or a Hugging Face dataset id (org/name)."),
     format: str = typer.Option("auto", "--format", help="Data format (auto = detect)."),
     spec_file: Optional[Path] = typer.Option(
         None, "--spec", exists=True, dir_okay=False, help="dataset.yaml import spec (default: <source>/dataset.yaml)."
@@ -107,6 +107,10 @@ def import_command(
     mode: str = typer.Option("create", "--mode", help="create, overwrite, or add."),
     media: Optional[str] = typer.Option(None, "--media", help="Media storage: embed (default) or uri."),
     namespace: Optional[str] = typer.Option(None, "--namespace", help="Id namespace (default: source identity)."),
+    episodes: Optional[str] = typer.Option(None, "--episodes", help="LeRobot: episode subset, e.g. '0:4' or '1,3'."),
+    max_frames: Optional[int] = typer.Option(
+        None, "--max-frames", help="LeRobot: cap extracted frames per episode (uniform stride)."
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Analyze and print the plan without importing."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip the plan confirmation prompt."),
     importer_spec: Optional[str] = typer.Option(
@@ -117,7 +121,27 @@ def import_command(
     ),
 ) -> None:
     """Import a dataset: analyze, confirm the plan, then ingest atomically."""
-    spec = _build_spec(source, spec_file, format, name, workspace, mode, media, namespace)
+    from pixano.datasets.io.formats.lerobot.hub import is_hub_id
+
+    source_path = Path(source)
+    if source_path.exists():
+        resolved_source = str(source_path)
+    elif source.startswith("hub://") or is_hub_id(source):
+        resolved_source = source if source.startswith("hub://") else f"hub://{source}"
+        if format == "auto":
+            format = "lerobot"  # the only hub-capable format today
+    else:
+        typer.echo(f"Error: source '{source}' is neither a local directory nor a Hub dataset id.", err=True)
+        raise typer.Exit(code=1)
+
+    spec = _build_spec(source_path, spec_file, format, name, workspace, mode, media, namespace)
+    option_updates = dict(spec.options)
+    if episodes is not None:
+        option_updates["episodes"] = episodes
+    if max_frames is not None:
+        option_updates["max_frames_per_episode"] = max_frames
+    if option_updates != spec.options:
+        spec = spec.model_copy(update={"options": option_updates})
 
     importer = None
     if importer_spec is not None:
@@ -132,7 +156,7 @@ def import_command(
         info = load_info(info_py)
 
     try:
-        plan = analyze(source, spec, importer=importer)
+        plan = analyze(resolved_source, spec, importer=importer)
     except PixanoDataError as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
@@ -155,7 +179,7 @@ def import_command(
     sink = TqdmSink()
     try:
         result = import_dataset(
-            source,
+            resolved_source,
             data_dir,
             spec,
             plan=plan,

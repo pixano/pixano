@@ -35,6 +35,7 @@ from ...media import MediaResolver, ffmpeg_available, ffprobe_available, probe_v
 from ...plan import AnalyzeLimits, ImportPlan, Provenance, SamplePreview
 from ...registry import Capabilities, DataFormat
 from ...spec import ImportSpec, resolve_dataset_info
+from .hub import materialize_files, materialize_meta
 from .layout import Episode, LeRobotLayout, camera_view_name, parse_episode_selection, parse_layout
 
 
@@ -53,6 +54,14 @@ class LeRobotImporter(DatasetImporter):
     # Detection & schema
     # ------------------------------------------------------------------
 
+    def _local_root(self, source: SourceRef) -> Path:
+        """The layout root: the local path, or the hub snapshot (meta downloaded)."""
+        if source.path is not None:
+            return source.path
+        if source.kind == "hf_hub" and source.url:
+            return materialize_meta(source.url)
+        raise MetadataError(f"Unsupported LeRobot source: {source.location()}")
+
     def probe(self, source: SourceRef) -> DetectResult | None:
         """Sniff for meta/info.json carrying a LeRobot codebase_version."""
         if source.path is None or not (source.path / "meta" / "info.json").is_file():
@@ -64,9 +73,9 @@ class LeRobotImporter(DatasetImporter):
 
     def resolve_info(self, spec: ImportSpec, source: SourceRef | None = None) -> DatasetInfo:
         """LeRobot's schema depends on the source's cameras; a user schema still wins."""
-        if spec.schema_ is not None or spec.schema_manifest is not None or source is None or source.path is None:
+        if spec.schema_ is not None or spec.schema_manifest is not None or source is None:
             return resolve_dataset_info(spec)
-        layout = parse_layout(source.path)
+        layout = parse_layout(self._local_root(source))
         view_kind = "sequence_frames" if self._frames_mode(spec) == "extract" else "video"
         payload = spec.model_dump(exclude_none=True, by_alias=True)
         payload["schema"] = {
@@ -96,18 +105,24 @@ class LeRobotImporter(DatasetImporter):
     def analyze(self, source: SourceRef, spec: ImportSpec, limits: AnalyzeLimits) -> ImportPlan:
         """Parse the layout, validate tooling and codecs, and estimate the extract size."""
         plan = ImportPlan(format=self.format_name, importer_version=self.importer_version)
-        if source.path is None or not source.path.is_dir():
+        try:
+            root = self._local_root(source)
+        except MetadataError as error:
+            plan.report.add("invalid_source", Provenance(file=source.location()), suggestion=str(error))
+            return plan
+        if not root.is_dir():
             plan.report.add("invalid_source", Provenance(file=source.location()), suggestion="Expected a directory.")
             return plan
         try:
-            layout = parse_layout(source.path)
+            layout = parse_layout(root)
         except MetadataError as error:
-            plan.report.add("invalid_layout", Provenance(file=str(source.path)), suggestion=str(error))
+            plan.report.add("invalid_layout", Provenance(file=str(root)), suggestion=str(error))
             return plan
+        is_hub = source.kind == "hf_hub"
 
         episodes = self._select_episodes(layout, spec)
         mode = self._frames_mode(spec)
-        provenance = Provenance(file=str(source.path / "meta" / "info.json"))
+        provenance = Provenance(file=str(root / "meta" / "info.json"))
 
         if mode == "extract" and not (ffmpeg_available() and ffprobe_available()):
             plan.report.add(
@@ -123,8 +138,10 @@ class LeRobotImporter(DatasetImporter):
             first = next((episode.cameras[key] for episode in episodes if key in episode.cameras), None)
             if first is None:
                 continue
-            shard = source.path / first.video_path
+            shard = root / first.video_path
             if not shard.is_file():
+                if is_hub:
+                    continue  # shards download at ingest; meta-only analyze stays fast
                 plan.report.add(
                     "missing_media",
                     Provenance(file=str(shard)),
@@ -189,13 +206,16 @@ class LeRobotImporter(DatasetImporter):
         cursor: Cursor | None = None,
     ) -> Iterator[BatchBundle]:
         """One bundle per episode; frames extracted (default) or window rows emitted."""
-        assert source.path is not None
+        root = self._local_root(source)
         info = self.resolve_info(spec, source)
-        layout = parse_layout(source.path)
+        layout = parse_layout(root)
         episodes = self._select_episodes(layout, spec)
         mode = self._frames_mode(spec)
-        namespace = spec.ids.namespace or source.path.name
-        resolver = MediaResolver(spec.media, base_dir=source.path)
+        if source.kind == "hf_hub" and source.url:
+            needed = sorted({camera.video_path for episode in episodes for camera in episode.cameras.values()})
+            root = materialize_files(source.url, needed)
+        namespace = spec.ids.namespace or (source.url or root.name).replace("/", "_")
+        resolver = MediaResolver(spec.media, base_dir=root)
         resume_ordinal = int(cursor.get("episode_ordinal", 0)) if cursor else 0
 
         for ordinal, episode in enumerate(episodes, start=1):
@@ -216,13 +236,13 @@ class LeRobotImporter(DatasetImporter):
             }
             for key, camera in sorted(episode.cameras.items()):
                 view_name = camera_view_name(key)
-                shard = source.path / camera.video_path
+                shard = root / camera.video_path
                 if mode == "extract":
                     rows = self._extract_frames(
                         info, layout, spec, record_id, view_name, shard, camera.from_timestamp, camera.to_timestamp
                     )
                 else:
-                    rows = [self._video_row(info, layout, resolver, record_id, view_name, camera, shard, source.path)]
+                    rows = [self._video_row(info, layout, resolver, record_id, view_name, camera, shard, root)]
                 for row in rows:
                     tables.setdefault(canonical_table_name_for_schema(type(row)), []).append(row)
             yield BatchBundle(
