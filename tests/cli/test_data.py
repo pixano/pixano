@@ -19,10 +19,10 @@ runner = CliRunner()
 
 
 def _prepare_source(tmp_path: Path, name: str = "voc_like") -> tuple[Path, Path]:
-    """Materialize a golden corpus with its pixano.yaml and an empty data dir."""
+    """Materialize a golden corpus with its dataset.yaml and an empty data dir."""
     source = materialize_corpus(name, tmp_path / "src")
     spec_payload = {"pixano": 2, "format": "pixano_jsonl", **SPECS[name]}
-    (source / "pixano.yaml").write_text(yaml.safe_dump(spec_payload, sort_keys=False))
+    (source / "dataset.yaml").write_text(yaml.safe_dump(spec_payload, sort_keys=False))
     data_dir = tmp_path / "data"
     (data_dir / "library").mkdir(parents=True)
     return data_dir, source
@@ -49,9 +49,9 @@ class TestImportCommand:
         destination = tmp_path / "exported"
         exported = runner.invoke(app, ["data", "export", str(data_dir), "voc_like", str(destination)])
         assert exported.exit_code == 0, exported.output
-        assert (destination / "pixano.yaml").is_file()
+        assert (destination / "dataset.yaml").is_file()
 
-        # The exported folder re-imports via its own pixano.yaml — no flags needed.
+        # The exported folder re-imports via its own dataset.yaml — no flags needed.
         data_dir_2 = tmp_path / "data2"
         (data_dir_2 / "library").mkdir(parents=True)
         reimported = runner.invoke(

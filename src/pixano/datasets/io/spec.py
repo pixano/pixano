@@ -6,7 +6,7 @@
 
 """Declarative import/export specs (spec §4) — the GUI-safe replacement for `--info file.py:attr`.
 
-One Pydantic model built identically from a YAML/JSON file (`pixano.yaml`),
+One Pydantic model built identically from a YAML/JSON file (`dataset.yaml`),
 CLI flags, a GUI form (rendered from ``model_json_schema()``), or Python
 kwargs. Workspace presets replace the folder builders' ``DEFAULT_INFO``
 Python objects with data.
@@ -298,7 +298,7 @@ class ImportSpec(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: Path) -> "ImportSpec":
-        """Load a spec from a `pixano.yaml` file with provenance-carrying errors."""
+        """Load a spec from a `dataset.yaml` file with provenance-carrying errors."""
         provenance = Provenance(file=str(path))
         try:
             payload = yaml.safe_load(path.read_text(encoding="utf-8"))

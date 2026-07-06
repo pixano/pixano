@@ -75,7 +75,7 @@ class PixanoJsonlExporter:
         return destination
 
     # ------------------------------------------------------------------
-    # pixano.yaml
+    # dataset.yaml
     # ------------------------------------------------------------------
 
     def _write_spec_yaml(self, dataset: Dataset, destination: Path) -> None:
@@ -98,7 +98,7 @@ class PixanoJsonlExporter:
             for logical_name, view_cls in dataset.info.views.items():
                 manifest["views"][logical_name] = _serialize_table_schema(view_cls)
             spec_payload["schema_manifest"] = manifest
-        (destination / "pixano.yaml").write_text(yaml.safe_dump(spec_payload, sort_keys=False), encoding="utf-8")
+        (destination / "dataset.yaml").write_text(yaml.safe_dump(spec_payload, sort_keys=False), encoding="utf-8")
 
     # ------------------------------------------------------------------
     # Row -> line reverse mapping

@@ -43,7 +43,7 @@ options: {}
 
 class TestImportSpec:
     def test_yaml_equals_kwargs(self, tmp_path: Path):
-        spec_file = tmp_path / "pixano.yaml"
+        spec_file = tmp_path / "dataset.yaml"
         spec_file.write_text(EXAMPLE_YAML)
         from_yaml = ImportSpec.from_yaml(spec_file)
 
@@ -74,13 +74,13 @@ class TestImportSpec:
         assert spec.format == "auto"
 
     def test_unknown_keys_rejected(self, tmp_path: Path):
-        spec_file = tmp_path / "pixano.yaml"
+        spec_file = tmp_path / "dataset.yaml"
         spec_file.write_text("pixano: 2\nmedia_root: /somewhere\n")
         with pytest.raises(SpecValidationError, match="media_root"):
             ImportSpec.from_yaml(spec_file)
 
     def test_invalid_yaml_carries_file_provenance(self, tmp_path: Path):
-        spec_file = tmp_path / "pixano.yaml"
+        spec_file = tmp_path / "dataset.yaml"
         spec_file.write_text("pixano: [unclosed")
         with pytest.raises(SpecValidationError, match=str(spec_file)):
             ImportSpec.from_yaml(spec_file)

@@ -158,7 +158,7 @@ class TestSerializerHardError:
 
 class TestSpecExampleYamlStillValid:
     def test_full_yaml_with_schema_compiles(self, tmp_path: Path):
-        spec_file = tmp_path / "pixano.yaml"
+        spec_file = tmp_path / "dataset.yaml"
         spec_file.write_text(
             """
 pixano: 2

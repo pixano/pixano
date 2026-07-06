@@ -132,10 +132,10 @@ Layered `analyze → plan → ingest` pipeline. Entry points build the same decl
 
 ## 4. The declarative ImportSpec (replaces `--info file.py:attr`)
 
-`ImportSpec` (`datasets/io/spec.py`): one Pydantic model built identically from a YAML/JSON file (`pixano.yaml`, auto-discovered at the source root), CLI flags, a GUI form (rendered from `model_json_schema()` served by `GET /io/formats`), or Python kwargs.
+`ImportSpec` (`datasets/io/spec.py`): one Pydantic model built identically from a YAML/JSON file (`dataset.yaml`, auto-discovered at the source root), CLI flags, a GUI form (rendered from `model_json_schema()` served by `GET /io/formats`), or Python kwargs.
 
 ```yaml
-# pixano.yaml
+# dataset.yaml
 pixano: 2
 dataset:
   name: "FLIR ADAS"
@@ -174,7 +174,7 @@ Workspace presets (the current builders' `DEFAULT_INFO`s, e.g. `folders/image.py
 
 **Principles.** One JSON object per line = one record. **Strict, closed vocabulary**: unknown top-level keys, unknown annotation kinds, and undeclared views are errors with `file:line:json-pointer` provenance and did-you-mean suggestions. **No aliases, no shape inference** — the declared schema drives parsing (a bare-string view value is *schema-resolved*: declared `Image` ⇒ URI; never shape-guessed). One parser (`json.loads` per line) shared by analyze and ingest — killing the preflight-vs-build divergence. **Kind payload keys are exactly the canonical schema field names** (`coords`, `format`, `is_normalized`, `confidence`, `rle.size/counts`, `template_id/coords/states`, `mention/spans_start/spans_end`, …) — the format is self-documenting against the schema reference and needs no renaming layer.
 
-**File layout.** `source/<split>/metadata.jsonl` (split = folder name) or any `*.jsonl` whose lines carry `"split"`. Relative media paths resolve against **the metadata file's directory only** (the dual-root leniency of `folder_base_builder.py:338-356` is dropped). If a split has no `metadata.jsonl`, every file with a declared-view extension auto-imports as one record (media-only mode — replaces the GUI unlabeled path). Optional `pixano.yaml` at the source root is the import spec (§4).
+**File layout.** `source/<split>/metadata.jsonl` (split = folder name) or any `*.jsonl` whose lines carry `"split"`. Relative media paths resolve against **the metadata file's directory only** (the dual-root leniency of `folder_base_builder.py:338-356` is dropped). If a split has no `metadata.jsonl`, every file with a declared-view extension auto-imports as one record (media-only mode — replaces the GUI unlabeled path). Optional `dataset.yaml` at the source root is the import spec (§4).
 
 **Optional header (line 1)** — file-scoped defaults so hand-authored lines stay terse without inference:
 
@@ -224,7 +224,7 @@ annotation_files? [Sidecar]
 - `{"kind": "mask", "view": "...", "pattern": "masks/bear/*.png", "encoding": "index_png", "entity_map": {"1": "bear_1"} | "auto"}` — indexed PNGs decoded **once** per file and split by pixel value (pixel value → entity key)
 - `{"kind": "bbox", "view": "...", "pattern": "bboxes/vid0/*.json", "encoding": "track_json"}` — per-frame files with the now-normative shape `{"view_name"?, "objects": [{"track_id", "bbox", "category", ...}]}` (stem-matched to frames; `track_id` stitches tracklets)
 
-**Determinism & round-trip.** Absent ids derive as: record `stable_id(ns, split, file_stem, line_no)`; view `stable_id(record_id, "view", logical_name, frame_index?)`; entity `stable_id(record_id, "ent", ordinal)`; annotation `stable_id(entity_id, kind, ordinal)`. The `pixano_jsonl` **exporter emits exactly this grammar** (ids included, plus a `pixano.yaml` with the compiled schema), so import → export → import is id-equal — the CI round-trip test. Re-running the same source is a no-op under `add` mode (upsert on equal ids); *editing* a file shifts derived line-ordinal ids by design — users needing edit-stable identity author explicit `id`s (documented).
+**Determinism & round-trip.** Absent ids derive as: record `stable_id(ns, split, file_stem, line_no)`; view `stable_id(record_id, "view", logical_name, frame_index?)`; entity `stable_id(record_id, "ent", ordinal)`; annotation `stable_id(entity_id, kind, ordinal)`. The `pixano_jsonl` **exporter emits exactly this grammar** (ids included, plus a `dataset.yaml` with the compiled schema), so import → export → import is id-equal — the CI round-trip test. Re-running the same source is a no-op under `add` mode (upsert on equal ids); *editing* a file shifts derived line-ordinal ids by design — users needing edit-stable identity author explicit `id`s (documented).
 
 **Example lines** (each one physical line; wrapped here for readability; these become committed test fixtures):
 
@@ -292,7 +292,7 @@ FORMATS = FormatRegistry(builtin=[PIXANO_JSONL, COCO, LEROBOT])
 # third parties: [project.entry-points."pixano.formats"] my_fmt = "pkg.mod:MY_FORMAT"
 ```
 
-One record gives import/export symmetry (FiftyOne's best pattern minus the class-tree explosion and dotted-string resolution), the GUI picker with capability-based greying (COCO export disabled for VQA datasets), and a nearly-free `convert` in 0.8.x. **Auto-detection** (`--format auto`, GUI default): `meta/info.json` with `codebase_version` ⇒ lerobot; a JSON with `images`+`annotations`+`categories` keys ⇒ coco; `pixano.yaml`, a `$pixano` header, or v2 `metadata.jsonl` ⇒ pixano_jsonl. Ties/no-match ⇒ `FormatDetectionError` listing candidates — never a guess.
+One record gives import/export symmetry (FiftyOne's best pattern minus the class-tree explosion and dotted-string resolution), the GUI picker with capability-based greying (COCO export disabled for VQA datasets), and a nearly-free `convert` in 0.8.x. **Auto-detection** (`--format auto`, GUI default): `meta/info.json` with `codebase_version` ⇒ lerobot; a JSON with `images`+`annotations`+`categories` keys ⇒ coco; `dataset.yaml`, a `$pixano` header, or v2 `metadata.jsonl` ⇒ pixano_jsonl. Ties/no-match ⇒ `FormatDetectionError` listing candidates — never a guess.
 
 ### 7.1 `pixano_jsonl`
 
@@ -361,7 +361,7 @@ POST   /datasets/import               # deprecated alias, one release
 **CLI** (`src/pixano/cli/data.py` rewritten):
 
 ```
-pixano data import  DATA_DIR SOURCE [--format auto] [--spec pixano.yaml] [--mode create|overwrite|add]
+pixano data import  DATA_DIR SOURCE [--format auto] [--spec dataset.yaml] [--mode create|overwrite|add]
                     [--media embed|uri] [--dry-run] [--yes] [--max-records N] [--resume JOB_ID]
                     [--importer file.py:Class] [--info-py file.py:attr]      # advanced escapes
 pixano data export  DATA_DIR DATASET DEST --format pixano_jsonl|coco [--media files|uris]

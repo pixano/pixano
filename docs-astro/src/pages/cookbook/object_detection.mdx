@@ -53,7 +53,7 @@ This separation is intentional. By keeping records, views, entities, and annotat
 
 ## Dataset schema
 
-The schema lives in a `pixano.yaml` file at the root of the source folder — no Python required:
+The schema lives in a `dataset.yaml` file at the root of the source folder — no Python required:
 
 ```yaml
 pixano: 2
@@ -79,7 +79,7 @@ Let's look at each piece:
 
 - **`workspace: image`** — Provides the single-image view named `"image"` and tells the UI to use the single-image viewer with annotation tools.
 
-See [Importing Data](/getting_started/importing_data/) for the full `pixano.yaml` and JSONL reference.
+See [Importing Data](/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
 
 ## Import the dataset
 
@@ -131,7 +131,7 @@ Each line in `metadata.jsonl` describes one image and its annotations:
 
 Notice the structure:
 - `"views"` maps view names to filenames — Pixano uses this to find the image
-- `"entities"` is a list of objects, each carrying the custom `attrs` declared in `pixano.yaml`
+- `"entities"` is a list of objects, each carrying the custom `attrs` declared in `dataset.yaml`
 - `"annotations"` is a flat list discriminated by `"kind"` — `{"kind": "bbox"}` maps to the `BBox` table. Coordinates are explicit: `"format"` and `"is_normalized"` are required (or declared once as file-scoped defaults in a header line) — Pixano never guesses them from value ranges.
 
 ### Run the import
@@ -187,7 +187,7 @@ Let's connect the dots:
 
 - **Pascal VOC** is an object detection benchmark where each image contains objects localized with bounding boxes and classified into 20 categories.
 - In Pixano, this maps to **records** (images), **entities** (objects with `category` and `is_difficult`), and **annotations** (bounding boxes and optionally masks).
-- The `pixano.yaml` schema defines which tables Pixano creates — adding `mask` alongside `bbox` enables multi-type annotation and AI segmentation tools.
+- The `dataset.yaml` schema defines which tables Pixano creates — adding `mask` alongside `bbox` enables multi-type annotation and AI segmentation tools.
 - **Provenance fields** on annotations let you combine human labels, model predictions, and AI-assisted masks in a single dataset.
 
 ## Next steps
