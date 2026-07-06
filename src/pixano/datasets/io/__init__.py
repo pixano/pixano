@@ -31,7 +31,7 @@ from .media import MediaResolver, ResolvedMedia, VideoProbe, ffprobe_available, 
 from .plan import AnalyzeLimits, Finding, ImportPlan, PreflightReport, Provenance, SamplePreview
 from .progress import ProgressEvent, ProgressSink, ThrottledSink, TqdmSink
 from .registry import FORMATS, Capabilities, DataFormat, FormatRegistry
-from .spec import ExportSpec, IdPolicy, ImportSpec, MediaPolicy, SchemaSpec, workspace_preset
+from .spec import ExportSpec, IdPolicy, ImportSpec, MediaPolicy, SchemaSpec, resolve_dataset_info, workspace_preset
 
 
 __all__ = [
@@ -82,6 +82,7 @@ __all__ = [
     "probe_image",
     "probe_video",
     "replay_journals",
+    "resolve_dataset_info",
     "stable_id",
     "workspace_preset",
 ]

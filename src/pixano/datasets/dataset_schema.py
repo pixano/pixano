@@ -288,6 +288,11 @@ def _deserialize_table_schema(payload: dict[str, Any]) -> type[LanceModel]:
 
     model_name = payload.get("name")
     if model_name is None:
+        if payload.get("fields"):
+            raise ValueError(
+                f"Schema manifest for base '{base_name}' declares custom fields but no subclass 'name'; "
+                "refusing to silently drop them."
+            )
         return base_type
 
     fields = {
