@@ -106,7 +106,9 @@ def _attr_field(attr_name: str, value: Any) -> tuple[Any, Any]:
     if "default" in payload:
         return annotation, payload["default"]
     if payload.get("collection"):
-        return annotation, Field(default_factory=list)
+        # A plain [] default (pydantic v2 deep-copies) — default_factory does not
+        # survive the info.json manifest dialect.
+        return annotation, []
     if type_name in _ZERO_DEFAULTS:
         return annotation, _ZERO_DEFAULTS[type_name]
     return annotation, ...  # no sensible zero-value: the attr is required

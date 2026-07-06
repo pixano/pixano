@@ -6,6 +6,7 @@
 
 """Pixano JSONL v2 — the canonical, hand-authorable annotation format (spec §5)."""
 
+from .importer import PIXANO_JSONL, PixanoJsonlImporter
 from .parser import ParsedLine, parse_file, view_kinds_of
 from .spec import (
     HEADER_KEY,
@@ -29,7 +30,9 @@ __all__ = [
     "HeaderLine",
     "LineModel",
     "MessageSpec",
+    "PIXANO_JSONL",
     "ParsedLine",
+    "PixanoJsonlImporter",
     "SidecarSpec",
     "parse_file",
     "view_kinds_of",

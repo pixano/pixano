@@ -201,7 +201,7 @@ class MultiPathAnn(_AnnBase):
     kind: Literal["multi_path"]
     coords: list[float]
     num_points: list[int]
-    closed: bool
+    is_closed: bool
 
 
 class TextSpanAnn(_AnnBase):
