@@ -112,21 +112,17 @@ def create_video(
     if id is None:
         id = shortuuid.uuid()
     if width is None:
-        try:
-            import ffmpeg
-        except ImportError:
-            raise ImportError("To load video files metadata, install ffmpeg")
-        try:
-            metadata = ffmpeg.probe(str(uri.resolve()), cmd="ffprobe")["streams"][0]
-        except FileNotFoundError:
-            raise FileNotFoundError("File not found or ffprobe is not installed.")
-        r_frame_rate = metadata["r_frame_rate"].split("/")
-        fps = float(r_frame_rate[0]) / float(r_frame_rate[1])
-        num_frames = int(metadata["nb_frames"])
-        width = int(metadata["width"])
-        height = int(metadata["height"])
-        format = uri.suffix[1:]
-        duration = float(metadata["duration"])
+        # Lazy import: pixano.datasets imports pixano.schemas at package init,
+        # so a module-level import here would be circular.
+        from pixano.datasets.io.media import probe_video
+
+        probe = probe_video(uri)
+        fps = probe.fps
+        num_frames = probe.num_frames
+        width = probe.width
+        height = probe.height
+        format = probe.format
+        duration = probe.duration
     return Video(
         id=id,
         record_id=record_id,
