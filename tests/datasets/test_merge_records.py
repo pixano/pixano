@@ -111,12 +111,13 @@ class TestMergeRecords:
         assert counts == {"bboxes": 1}
         assert dataset.open_table("bboxes").count_rows() == 2
 
-    def test_arrow_payload_requires_integrity_none(self, tmp_path: Path):
+    def test_arrow_payload_is_validated(self, tmp_path: Path):
+        # P3.0 flipped the P0.5 typed refusal: Arrow payloads now validate vectorized.
         dataset = _make_dataset(tmp_path / "ds")
-        batch = pa.record_batch({"id": pa.array(["rec1"])})
+        dangling = pa.record_batch({"id": pa.array(["ent1"]), "record_id": pa.array(["ghost"])})
 
-        with pytest.raises(NotImplementedError, match="check_integrity='none'"):
-            dataset.merge_records({"records": batch}, check_integrity="raise")
+        with pytest.raises(DatasetIntegrityError, match="ghost"):
+            dataset.merge_records({"entities": dangling}, check_integrity="raise")
 
     def test_arrow_payload_appends_timestamp_columns(self, tmp_path: Path):
         dataset = _make_dataset(tmp_path / "ds")
