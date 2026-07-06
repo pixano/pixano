@@ -52,6 +52,7 @@ class TestDatasetInfo:
             "relation",
             "tracklet",
             "message",
+            "timeseries",
             "text_span",
             "views",
             "tables",
@@ -114,6 +115,7 @@ class TestDatasetInfo:
     "message": null,
     "multi_path": null,
     "text_span": null,
+    "timeseries": null,
     "views": {
         "image": {
             "base": "Image",
@@ -151,6 +153,7 @@ class TestDatasetInfo:
     "tracklet": null,
     "message": null,
     "text_span": null,
+    "timeseries": null,
     "views": {
         "image": {
             "base": "Image",
@@ -288,13 +291,13 @@ class TestDatasetInfo:
         ).to_json(info_fp)
 
         payload = json.loads(info_fp.read_text(encoding="utf-8"))
-        payload["views"]["timeseries"] = {"base": "TimeSeries", "fields": {}}
+        payload["views"]["hologram"] = {"base": "HologramView", "fields": {}}
         info_fp.write_text(json.dumps(payload, indent=4), encoding="utf-8")
 
         info = DatasetInfo.from_json(info_fp)
 
         assert "image" in info.views
-        assert "timeseries" not in info.views
+        assert "hologram" not in info.views
 
     def test_load_id(self):
         temp_dir = Path(tempfile.TemporaryDirectory().name)

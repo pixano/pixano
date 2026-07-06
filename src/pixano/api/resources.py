@@ -26,6 +26,7 @@ from pixano.schemas import (
     Relation,
     SchemaGroup,
     TextSpan,
+    TimeSeries,
     Tracklet,
     canonical_table_name_for_schema,
 )
@@ -66,6 +67,7 @@ from .models import (
     TextSpanCreate,
     TextSpanResponse,
     TextSpanUpdate,
+    TimeSeriesResponse,
     TrackletCreate,
     TrackletResponse,
     TrackletUpdate,
@@ -333,6 +335,22 @@ MESSAGE_RESOURCE = ResourceSpec(
     validate_create=_validate_message_create,
 )
 
+TIMESERIES_RESOURCE = ResourceSpec(
+    name="timeseries",
+    path="timeseries",
+    tag="Time Series",
+    schema_group=SchemaGroup.TIMESERIES,
+    schema_cls=TimeSeries,
+    canonical_table_name=canonical_table_name_for_schema(TimeSeries),
+    create_model=None,
+    update_model=None,
+    response_model=TimeSeriesResponse,
+    list_filters=("record_id", "view_name", "frame_index", "where"),
+    allow_create=False,
+    allow_update=False,
+    allow_delete=False,
+)
+
 EMBEDDING_RESOURCE = ResourceSpec(
     name="embedding",
     path="embeddings",
@@ -391,6 +409,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     RELATION_RESOURCE,
     MESSAGE_RESOURCE,
     TEXT_SPAN_RESOURCE,
+    TIMESERIES_RESOURCE,
     EMBEDDING_RESOURCE,
 )
 
@@ -399,6 +418,7 @@ __all__ = [
     "BBOX_RESOURCE",
     "CLASSIFICATION_RESOURCE",
     "EMBEDDING_RESOURCE",
+    "TIMESERIES_RESOURCE",
     "ENTITY_DYNAMIC_STATE_RESOURCE",
     "ENTITY_RESOURCE",
     "RECORD_RESOURCE",

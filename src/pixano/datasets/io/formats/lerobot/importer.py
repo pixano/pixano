@@ -92,7 +92,41 @@ class LeRobotImporter(DatasetImporter):
             },
             "annotations": ["bbox", "mask", "tracklet"],
         }
-        return resolve_dataset_info(ImportSpec.model_validate(payload))
+        info = resolve_dataset_info(ImportSpec.model_validate(payload))
+        if layout.feature_dims and self._frames_mode(spec) == "extract":
+            # State/action vectors ride a timeseries table (fixed-size Vector
+            # columns are outside the YAML dialect, so attach programmatically).
+            from pixano.schemas import create_timeseries_schema
+            from pixano.utils import to_snake_case
+
+            vector_fields = {to_snake_case(key.replace(".", "_")): dim for key, dim in layout.feature_dims.items()}
+            slots = {
+                slot: getattr(info, slot)
+                for slot in (
+                    "record",
+                    "entity",
+                    "entity_dynamic_state",
+                    "bbox",
+                    "mask",
+                    "multi_path",
+                    "keypoint",
+                    "classification",
+                    "relation",
+                    "tracklet",
+                    "message",
+                    "text_span",
+                )
+                if getattr(info, slot, None) is not None
+            }
+            info = DatasetInfo(
+                name=info.name,
+                description=info.description,
+                workspace=info.workspace,
+                views=info.views,
+                timeseries=create_timeseries_schema(vector_fields),
+                **slots,
+            )
+        return info
 
     @staticmethod
     def _frames_mode(spec: ImportSpec) -> str:
@@ -240,6 +274,31 @@ class LeRobotImporter(DatasetImporter):
                 ]
             }
             data_rows = self._episode_rows(root, layout, episode) if mode == "extract" else []
+            if data_rows and info.timeseries is not None and layout.feature_dims:
+                from pixano.utils import to_snake_case
+
+                cap = self._max_frames(spec)
+                selected = data_rows
+                if cap and len(selected) > cap:
+                    stride = len(selected) / cap
+                    selected = [selected[int(position * stride)] for position in range(cap)]
+                series_rows = []
+                for ordinal, data_row in enumerate(selected):
+                    frame_index = int(data_row.get("frame_index", ordinal))
+                    values = {
+                        to_snake_case(key.replace(".", "_")): [float(v) for v in data_row.get(key, [])]
+                        for key in layout.feature_dims
+                    }
+                    series_rows.append(
+                        info.timeseries(
+                            id=stable_id(record_id, "ts", frame_index),
+                            record_id=record_id,
+                            frame_index=frame_index,
+                            timestamp=float(data_row.get("timestamp", ordinal)),
+                            **values,
+                        )
+                    )
+                tables["timeseries"] = series_rows
             for key, camera in sorted(episode.cameras.items()):
                 view_name = camera_view_name(key)
                 shard = root / camera.video_path
@@ -324,7 +383,9 @@ class LeRobotImporter(DatasetImporter):
                 raise MetadataError(f"ffmpeg frame extraction failed on '{shard.name}': {result.stderr.strip()[:200]}")
 
             frame_files = sorted(Path(tmp).glob("*.jpg"))
-            tolerance = 1.0 / (2.0 * fps)
+            # LeRobot's delta_timestamps discipline: row timestamps must sit ON
+            # the decoded frame grid (default tolerance_s=1e-4, like LeRobot).
+            tolerance = float(spec.options.get("tolerance_s", 1e-4))
             selected = data_rows
             cap = self._max_frames(spec)
             if cap and len(selected) > cap:
@@ -338,8 +399,9 @@ class LeRobotImporter(DatasetImporter):
                 k = round(row_timestamp * fps)
                 if abs(k / fps - row_timestamp) > tolerance:
                     raise MetadataError(
-                        f"timestamp_alignment: row t={row_timestamp:.6f}s is not on the {fps}fps grid "
-                        f"of '{shard.name}' (tolerance {tolerance:.6f}s)."
+                        f"timestamp_alignment: row t={row_timestamp:.6f}s is not on the {fps}fps frame grid "
+                        f"of '{shard.name}' (off by {abs(k / fps - row_timestamp):.6f}s > tolerance {tolerance}s). "
+                        "Set options.tolerance_s to relax."
                     )
                 if not 0 <= k < len(frame_files):
                     raise MetadataError(

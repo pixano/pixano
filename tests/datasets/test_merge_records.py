@@ -211,7 +211,7 @@ class TestValidateBatchFkLookup:
             {},
             dataset,
             raise_or_warn="raise",
-            fk_lookup=lambda table, values: {value: True for value in values},
+            fk_lookup=lambda table, values: dict.fromkeys(values, True),
         )
 
         # Ledger says they don't: same call fails.
@@ -222,7 +222,7 @@ class TestValidateBatchFkLookup:
                 {},
                 dataset,
                 raise_or_warn="raise",
-                fk_lookup=lambda table, values: {value: False for value in values},
+                fk_lookup=lambda table, values: dict.fromkeys(values, False),
             )
 
 
