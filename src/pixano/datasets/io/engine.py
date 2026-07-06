@@ -25,6 +25,7 @@ Responsibilities the format importers never carry:
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
@@ -35,6 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator, Literal, Sequence
 
+import PIL.Image
 import pyarrow as pa
 import pyarrow.compute as pc
 import shortuuid
@@ -43,7 +45,8 @@ from lancedb.pydantic import LanceModel
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.utils.integrity import validate_batch
-from pixano.schemas import SchemaGroup, is_view, schema_to_group
+from pixano.schemas import SchemaGroup, is_image, is_sequence_frame, is_view, schema_to_group
+from pixano.schemas.views.image import _generate_preview
 from pixano.utils import to_snake_case
 
 from .errors import JobStateError, SpecValidationError, UnsupportedStorageError
@@ -400,6 +403,7 @@ class ImportEngine:
         if not batch:
             return
         for table, rows in batch.items():
+            _stamp_image_previews(dataset, table, rows)
             census.observe_rows(dataset, table, rows)
 
         if add_mode:
@@ -546,6 +550,29 @@ def _approx_row_bytes(row: LanceModel) -> int:
         if isinstance(value, (bytes, str)):
             size += len(value)
     return size
+
+
+def _stamp_image_previews(dataset: Dataset, table_name: str, rows: list[LanceModel]) -> None:
+    """Stamp 64x64 PNG grid thumbnails on embedded image rows (spec finalize step).
+
+    Runs at flush time so every importer inherits it. A corrupt image skips its
+    thumbnail — the grid shows no preview, the import never fails. Video posters
+    are the P3.5 ffmpeg work; the Arrow flush path (first used by LeRobot) is
+    covered there too.
+    """
+    schema = dataset.info.tables.get(table_name)
+    if schema is None or not (is_image(schema) or is_sequence_frame(schema)):
+        return
+    for row in rows:
+        raw_bytes = getattr(row, "raw_bytes", b"")
+        if not raw_bytes or row.preview:
+            continue
+        try:
+            with PIL.Image.open(io.BytesIO(raw_bytes)) as pil_image:
+                row.preview = _generate_preview(pil_image)
+            row.preview_format = "png"
+        except Exception:  # noqa: BLE001 - a bad image must never fail the import
+            continue
 
 
 class _MediaCensus:
