@@ -158,3 +158,112 @@ class TestLegacyAliasParity:
         client, _, _ = client_and_dirs
         assert client.post("/datasets/import", json={"source_dir": "/tmp", "import_type": "bogus"}).status_code == 400
         assert client.post("/datasets/import", json={"source_dir": "/nope/missing"}).status_code == 400
+
+
+class TestTimeSeriesDatasetSerialization:
+    def test_datasets_listing_survives_a_timeseries_slot(self, tmp_path: Path):
+        # Regression: the timeseries slot class leaked into JSON serialization
+        # and 500'd GET /datasets for the whole library.
+        from pixano.datasets import Dataset, DatasetInfo
+        from pixano.schemas import Record, SequenceFrame, create_timeseries_schema
+
+        library = tmp_path / "lib" / "library"
+        library.mkdir(parents=True)
+        info = DatasetInfo(
+            name="robo",
+            record=Record,
+            timeseries=create_timeseries_schema({"action": 3, "observation_state": 3}),
+            views={"top": SequenceFrame},
+        )
+        Dataset.create(library / "robo", info)
+
+        settings = Settings(library_dir=str(library))
+        app = create_app(settings)
+        app.dependency_overrides[get_settings] = lambda: settings
+        client = TestClient(app)
+
+        listing = client.get("/datasets")
+        assert listing.status_code == 200
+        payload = listing.json()[0]
+        assert payload["timeseries"]["fields"]["action"]["type"] == "FixedSizeList"
+        assert payload["timeseries"]["fields"]["action"]["dim"] == 3
+
+        detail = client.get(f"/datasets/{payload['id']}/info")
+        assert detail.status_code == 200
+        assert detail.json()["timeseries"]["fields"]["observation_state"]["dim"] == 3
+
+
+class TestSframeBatchPagination:
+    def test_all_chunks_of_a_long_episode_are_served(self, tmp_path: Path):
+        # Regression: lancedb plain scans apply `limit` pre-filter, so batches
+        # past the first (and any record whose rows aren't at the table head)
+        # returned 404 — playback appeared truncated at 128 frames.
+        import io
+
+        from pixano.datasets import Dataset, DatasetInfo
+        from pixano.schemas import Record, SequenceFrame
+
+        library = tmp_path / "lib" / "library"
+        library.mkdir(parents=True)
+        info = DatasetInfo(name="clips", record=Record, views={"cam": SequenceFrame})
+        dataset = Dataset.create(library / "clips", info)
+
+        jpeg = PIL.Image.new("RGB", (4, 4), (5, 6, 7))
+        buffer = io.BytesIO()
+        jpeg.save(buffer, "JPEG")
+        blob = buffer.getvalue()
+        for record_index in range(2):
+            record = Record(id=f"rec{record_index}", split="train")
+            frames = [
+                SequenceFrame(
+                    id=f"r{record_index}f{i}",
+                    record_id=record.id,
+                    logical_name="cam",
+                    uri="",
+                    raw_bytes=blob,
+                    width=4,
+                    height=4,
+                    format="JPEG",
+                    frame_index=i,
+                    timestamp=i / 10,
+                )
+                for i in range(150)
+            ]
+            dataset.add_records({"records": record, "sequence_frames": frames}, check_integrity="none")
+
+        settings = Settings(library_dir=str(library))
+        app = create_app(settings)
+        app.dependency_overrides[get_settings] = lambda: settings
+        client = TestClient(app)
+        dataset_id = dataset.info.id
+
+        # rec1's rows live past the first 150 table rows — the old code 404'd
+        # for every one of its batches beyond the scan head.
+        for record_id, starts in (("rec0", (0, 128)), ("rec1", (0, 128))):
+            served = 0
+            for start in starts:
+                response = client.get(
+                    f"/datasets/{dataset_id}/records/{record_id}/sframes/batch",
+                    params={"view_name": "cam", "start_frame": start, "batch_size": 128},
+                )
+                assert response.status_code == 200, (record_id, start)
+                served += response.content.count(b"X-Frame-Index") + response.content.count(b"x-frame-index")
+            assert served == 150, record_id
+
+    def test_filtered_list_of_a_non_head_record_is_complete(self, tmp_path: Path):
+        from pixano.datasets import Dataset, DatasetInfo
+        from pixano.datasets.queries import TableQueryBuilder
+        from pixano.schemas import Entity, Record
+
+        library = tmp_path / "lib2" / "library"
+        library.mkdir(parents=True)
+        info = DatasetInfo(name="ents", record=Record, entity=Entity)
+        dataset = Dataset.create(library / "ents", info)
+        for record_index in range(3):
+            record = Record(id=f"rec{record_index}", split="train")
+            entities = [Entity(id=f"r{record_index}e{i}", record_id=record.id) for i in range(120)]
+            dataset.add_records({"records": record, "entities": entities}, check_integrity="none")
+
+        table = dataset.open_table("entities")
+        rows = TableQueryBuilder(table).select(["id"]).where("record_id = 'rec2'").limit(100).to_list()
+        assert len(rows) == 100  # previously 0: rec2's rows sit past the first 100 scanned

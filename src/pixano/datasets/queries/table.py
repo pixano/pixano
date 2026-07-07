@@ -230,15 +230,22 @@ class TableQueryBuilder:
         needs_duckdb = len(self._order_by) > 0 or (self._offset is not None and self._offset > 0)
 
         if not needs_duckdb:
-            # LanceDB native path — pushes predicates to storage layer, avoids full table materialization
-            if self._limit is None:
-                limit = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            # LanceDB native path. CAUTION: in lancedb 0.29 plain scans apply
+            # `limit` to the rows SCANNED, before the `where` filter — a filtered
+            # query whose matches are not at the head of the table silently
+            # under-returns. With a filter we must scan the whole table (late
+            # materialization keeps this cheap) and slice the limit afterwards.
+            if self._where is not None:
+                scan_limit = self.table.count_rows()
             else:
-                limit = self._limit
-            query = self.table.search(None).select(columns).limit(limit)
+                scan_limit = self._limit if self._limit is not None else self.table.count_rows()
+            query = self.table.search(None).select(columns).limit(scan_limit)
             if self._where is not None:
                 query = query.where(self._where)
-            return query.to_arrow()
+            result = query.to_arrow()
+            if self._where is not None and self._limit is not None:
+                result = result.slice(0, self._limit)
+            return result
         elif not has_count_join:
             # Optimized path: avoid full table.to_arrow() by fetching bounded set from LanceDB
             # then sorting/slicing with DuckDB over only that subset
@@ -246,17 +253,22 @@ class TableQueryBuilder:
             limit = self._limit
 
             if len(self._order_by) == 0:
-                # No ORDER BY, just OFFSET — use LanceDB native with overfetch + slice
-                fetch_limit = offset + limit if limit is not None else self.table.count_rows()
+                # No ORDER BY, just OFFSET — overfetch + slice. Same scan-limit
+                # caveat as the native path: with a filter, scan everything.
+                if self._where is not None:
+                    fetch_limit = self.table.count_rows()
+                else:
+                    fetch_limit = offset + limit if limit is not None else self.table.count_rows()
                 query = self.table.search(None).select(columns).limit(fetch_limit)
                 if self._where is not None:
                     query = query.where(self._where)
                 arrow_table = query.to_arrow()
-                return arrow_table.slice(offset, limit) if offset > 0 else arrow_table
+                return arrow_table.slice(offset, limit if limit is not None else max(arrow_table.num_rows - offset, 0))
             else:
                 # ORDER BY on a regular column — need to fetch all matching rows, sort, then slice
-                # But we only fetch the columns we need via LanceDB native (no full to_arrow())
-                total = self.table.count_rows(self._where) if self._where is not None else self.table.count_rows()
+                # But we only fetch the columns we need via LanceDB native (no full to_arrow()).
+                # Scan the FULL table when filtered (limit applies pre-filter, see above).
+                total = self.table.count_rows()
                 query = self.table.search(None).select(columns).limit(total)
                 if self._where is not None:
                     query = query.where(self._where)
