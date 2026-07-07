@@ -11,6 +11,7 @@ License: CECILL-C
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
+  import ImportJobsTray from "../components/library/import-wizard/ImportJobsTray.svelte";
   import ImportWizard from "../components/library/import-wizard/ImportWizard.svelte";
   import type { LayoutProps } from "./$types";
   import { goto } from "$app/navigation";
@@ -142,6 +143,8 @@ License: CECILL-C
       </div>
     </main>
   </div>
+
+  <ImportJobsTray hidden={showImportModal} />
 
   {#if showImportModal}
     <ImportWizard

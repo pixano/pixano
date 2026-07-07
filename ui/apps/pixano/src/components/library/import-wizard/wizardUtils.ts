@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ImportPlanResponse, IoFinding } from "$lib/api/restTypes";
+import type { ImportPlanResponse, IoFinding, IoJobResponse } from "$lib/api/restTypes";
 
 /** Friendly form fields the wizard collects before the Advanced overrides. */
 export interface WizardFields {
@@ -125,4 +125,66 @@ export function sampleLocation(sample: { file?: string | null; line?: number | n
 /** Source step gating: a source plus valid Advanced JSON. */
 export function canAnalyze(fields: WizardFields, advancedJson: string): boolean {
   return fields.source.trim().length > 0 && !parseAdvancedSpec(advancedJson).error;
+}
+
+/** One background import tracked by the jobs tray. */
+export interface ImportJobEntry {
+  jobId: string;
+  dataset: string;
+  job: IoJobResponse;
+  cancelRequested: boolean;
+  dismissed: boolean;
+}
+
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
+  "done",
+  "error",
+  "cancelled",
+  "interrupted",
+  "rolled_back",
+]);
+
+/** True when the job will never progress again (polling can stop). */
+export function isTerminalJob(status: string): boolean {
+  return TERMINAL_STATUSES.has(status);
+}
+
+/**
+ * Merge a polled job into the tracked entries.
+ *
+ * Returns the new entries plus whether this update just crossed into a
+ * SUCCESSFUL terminal state (the moment the library list must refresh).
+ */
+export function applyJobUpdate(
+  entries: ImportJobEntry[],
+  job: IoJobResponse,
+): { entries: ImportJobEntry[]; completedNow: boolean } {
+  let completedNow = false;
+  const next = entries.map((entry) => {
+    if (entry.jobId !== job.job_id) return entry;
+    if (!isTerminalJob(entry.job.status) && (job.status === "done" || job.status === "cancelled")) {
+      completedNow = true;
+    }
+    return { ...entry, job };
+  });
+  return { entries: next, completedNow };
+}
+
+/** Entries the tray should render (not dismissed). */
+export function visibleJobEntries(entries: ImportJobEntry[]): ImportJobEntry[] {
+  return entries.filter((entry) => !entry.dismissed);
+}
+
+/** Entries that still need polling. */
+export function activeJobEntries(entries: ImportJobEntry[]): ImportJobEntry[] {
+  return entries.filter((entry) => !isTerminalJob(entry.job.status));
+}
+
+/** A short human label for a tray entry's state. */
+export function jobStateLabel(entry: ImportJobEntry): string {
+  if (entry.job.status === "done") return "Imported";
+  if (entry.job.status === "cancelled") return "Cancelled";
+  if (entry.job.status === "error" || entry.job.status === "interrupted") return "Failed";
+  if (entry.cancelRequested) return "Cancelling…";
+  return entry.job.progress?.phase || "Running";
 }

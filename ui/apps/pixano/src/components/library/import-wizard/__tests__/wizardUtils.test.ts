@@ -122,3 +122,60 @@ describe("canAnalyze", () => {
     expect(canAnalyze(fields({ source: "/data" }), "{bad")).toBe(false);
   });
 });
+
+describe("background job tracking", () => {
+  const makeEntry = (status: string, overrides = {}) =>
+    ({
+      jobId: "j1",
+      dataset: "ds",
+      job: { job_id: "j1", status, progress: {}, error: {} },
+      cancelRequested: false,
+      dismissed: false,
+      ...overrides,
+    }) as never;
+
+  it("applyJobUpdate flags completion exactly once", async () => {
+    const { applyJobUpdate } = await import("../wizardUtils");
+    const running = [makeEntry("running")];
+    const first = applyJobUpdate(running, {
+      job_id: "j1",
+      status: "done",
+      progress: {},
+      error: {},
+    } as never);
+    expect(first.completedNow).toBe(true);
+    const second = applyJobUpdate(first.entries, {
+      job_id: "j1",
+      status: "done",
+      progress: {},
+      error: {},
+    } as never);
+    expect(second.completedNow).toBe(false); // already terminal: no second refresh
+  });
+
+  it("errors are terminal but do not trigger a library refresh", async () => {
+    const { applyJobUpdate, isTerminalJob } = await import("../wizardUtils");
+    const result = applyJobUpdate([makeEntry("running")], {
+      job_id: "j1",
+      status: "error",
+      progress: {},
+      error: { message: "boom" },
+    } as never);
+    expect(result.completedNow).toBe(false);
+    expect(isTerminalJob("error")).toBe(true);
+  });
+
+  it("active/visible selectors partition entries", async () => {
+    const { activeJobEntries, visibleJobEntries } = await import("../wizardUtils");
+    const entries = [makeEntry("running"), makeEntry("done", { jobId: "j2", dismissed: true })];
+    expect(activeJobEntries(entries).map((entry) => entry.jobId)).toEqual(["j1"]);
+    expect(visibleJobEntries(entries).map((entry) => entry.jobId)).toEqual(["j1"]);
+  });
+
+  it("jobStateLabel reflects cancel-requested and terminal states", async () => {
+    const { jobStateLabel } = await import("../wizardUtils");
+    expect(jobStateLabel(makeEntry("running", { cancelRequested: true }))).toBe("Cancelling…");
+    expect(jobStateLabel(makeEntry("done"))).toBe("Imported");
+    expect(jobStateLabel(makeEntry("interrupted"))).toBe("Failed");
+  });
+});

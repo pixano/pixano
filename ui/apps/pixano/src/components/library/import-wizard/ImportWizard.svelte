@@ -8,7 +8,6 @@ License: CECILL-C
   import PrimaryButton from "$components/ui/molecules/PrimaryButton.svelte";
   import { AlertDialog } from "bits-ui";
   import { CircleNotch } from "phosphor-svelte";
-  import { onDestroy } from "svelte";
 
   import AnalyzePreviewStep from "./AnalyzePreviewStep.svelte";
   import DoneStep from "./DoneStep.svelte";
@@ -22,15 +21,8 @@ License: CECILL-C
     mergeSpec,
     type WizardFields,
   } from "./wizardUtils";
-  import { invalidateAll } from "$app/navigation";
-  import {
-    analyzeImportSource,
-    cancelIoJob,
-    getIoJob,
-    listIoFormats,
-    startIoImport,
-  } from "$lib/api/ioApi";
-  import type { ImportPlanResponse, IoFormatResponse, IoJobResponse } from "$lib/api/restTypes";
+  import { analyzeImportSource, listIoFormats, startIoImport } from "$lib/api/ioApi";
+  import type { ImportPlanResponse, IoFormatResponse } from "$lib/api/restTypes";
   import {
     BLOCKING_ALERT_ACTIONS_CLASS,
     BLOCKING_ALERT_CONTENT_CLASS,
@@ -41,6 +33,11 @@ License: CECILL-C
     BLOCKING_ALERT_TITLE_CLASS,
     BLOCKING_ALERT_VIEWPORT_CLASS,
   } from "$lib/constants/modalConstants";
+  import {
+    importJobsStore,
+    requestImportJobCancel,
+    trackImportJob,
+  } from "$lib/stores/importJobsStore.svelte";
 
   interface Props {
     onClose: () => void;
@@ -58,16 +55,21 @@ License: CECILL-C
   let plan = $state<ImportPlanResponse | null>(null);
   let analyzing = $state(false);
   let analyzeError = $state("");
-  let job = $state<IoJobResponse | null>(null);
+  let trackedJobId = $state<string | null>(null);
   let errorMessage = $state("");
-  let cancelRequested = $state(false);
-  let pollHandle = $state<ReturnType<typeof setInterval> | null>(null);
   let analyzeToken = 0;
+
+  const trackedEntry = $derived(
+    trackedJobId
+      ? (importJobsStore.value.find((entry) => entry.jobId === trackedJobId) ?? null)
+      : null,
+  );
+  const job = $derived(trackedEntry?.job ?? null);
+  const cancelRequested = $derived(trackedEntry?.cancelRequested ?? false);
 
   const previouslyFocusedElement =
     typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
 
-  const running = $derived(step === "progress");
   const hasErrors = $derived(plan ? groupFindings(plan).errors.length > 0 : false);
   const canGoAnalyze = $derived(canAnalyze(fields, advancedJson));
 
@@ -83,10 +85,21 @@ License: CECILL-C
     preview: { title: "Review the plan", description: "Analysis runs without writing anything." },
     progress: {
       title: "Importing…",
-      description: "The dataset is being built atomically on the server.",
+      description: "The dataset is built atomically on the server — you can keep using the app.",
     },
     done: { title: "Import Dataset", description: "" },
   };
+
+  $effect(() => {
+    if (step === "progress" && job) {
+      if (job.status === "done" || job.status === "cancelled") {
+        step = "done";
+      } else if (job.status === "error" || job.status === "interrupted") {
+        errorMessage = job.error?.message || "The import stopped unexpectedly.";
+        step = "done";
+      }
+    }
+  });
 
   $effect(() => {
     if (formats === null) {
@@ -95,15 +108,6 @@ License: CECILL-C
         .catch(() => (formats = []));
     }
   });
-
-  function stopPolling() {
-    if (pollHandle) {
-      clearInterval(pollHandle);
-      pollHandle = null;
-    }
-  }
-
-  onDestroy(stopPolling);
 
   async function runAnalyze() {
     step = "preview";
@@ -129,73 +133,36 @@ License: CECILL-C
   async function startImport() {
     step = "progress";
     errorMessage = "";
-    cancelRequested = false;
-    job = null;
     try {
       const started = await startIoImport({
         plan_id: plan?.plan_id,
         source: fields.source.trim(),
         spec: mergeSpec(fields, advancedJson),
       });
-      job = started;
-      pollHandle = setInterval(async () => {
-        if (!job) return;
-        try {
-          const status = await getIoJob(job.job_id);
-          job = status;
-          if (status.status === "done" || status.status === "cancelled") {
-            stopPolling();
-            step = "done";
-            await invalidateAll();
-          } else if (status.status === "error" || status.status === "interrupted") {
-            stopPolling();
-            errorMessage = status.error?.message || "The import stopped unexpectedly.";
-            step = "done";
-          }
-        } catch {
-          stopPolling();
-          errorMessage =
-            "Lost connection to the server (the job keeps running; check the jobs list).";
-          step = "done";
-        }
-      }, 2000);
+      trackedJobId = started.job_id;
+      trackImportJob(started, fields.name.trim() || started.dataset || fields.source.trim());
     } catch (err: unknown) {
       errorMessage = err instanceof Error ? err.message : "Unexpected error starting the import.";
       step = "done";
     }
   }
 
-  async function requestCancel() {
-    if (!job || cancelRequested) return;
-    cancelRequested = true;
-    try {
-      await cancelIoJob(job.job_id);
-    } catch {
-      cancelRequested = false;
-    }
-  }
-
   function handleRetry() {
     errorMessage = "";
-    job = null;
+    trackedJobId = null;
     void runAnalyze();
   }
 
   function handleClose() {
-    stopPolling();
     open = false;
   }
 
   function handleOpenChange(next: boolean) {
-    if (!next && running) return;
     if (!next) handleClose();
   }
 
   function handleOpenChangeComplete(next: boolean) {
-    if (!next) {
-      stopPolling();
-      onClose();
-    }
+    if (!next) onClose();
   }
 
   function handleCloseAutoFocus(event: Event) {
@@ -224,7 +191,7 @@ License: CECILL-C
           preventScroll={true}
           onEscapeKeydown={(e) => {
             e.preventDefault();
-            if (!running) handleClose();
+            handleClose();
           }}
           onCloseAutoFocus={handleCloseAutoFocus}
         >
@@ -311,10 +278,13 @@ License: CECILL-C
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
                 disabled={cancelRequested || !job}
-                onclick={requestCancel}
+                onclick={() => trackedJobId && void requestImportJobCancel(trackedJobId)}
               >
                 Cancel import
               </button>
+              <PrimaryButton class={primaryClass} isSelected={true} onclick={handleClose}>
+                Run in background
+              </PrimaryButton>
             {:else if step === "done"}
               {#if errorMessage}
                 <button
