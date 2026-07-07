@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 
 import { pixanoAliases } from "./pixano-aliases.js";
 
-const proxies_list = ["datasets", "inference", "app", "app_models", "media", "views"];
+const proxies_list = ["datasets", "io", "inference", "app", "app_models", "media", "views"];
 
 export default defineConfig({
   plugins: [sveltekit(), tailwindcss()],

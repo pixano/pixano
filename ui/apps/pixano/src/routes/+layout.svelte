@@ -11,7 +11,7 @@ License: CECILL-C
 
   import pixanoFavicon from "../assets/favicon.ico";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import ImportDatasetModal from "../components/library/ImportDatasetModal.svelte";
+  import ImportWizard from "../components/library/import-wizard/ImportWizard.svelte";
   import type { LayoutProps } from "./$types";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -144,7 +144,7 @@ License: CECILL-C
   </div>
 
   {#if showImportModal}
-    <ImportDatasetModal
+    <ImportWizard
       onClose={() => {
         showImportModal = false;
       }}

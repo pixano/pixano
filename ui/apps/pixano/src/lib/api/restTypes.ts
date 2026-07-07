@@ -116,3 +116,62 @@ export interface SFrameResponse {
 export interface EntityResponse extends RecordComponentResponse {
   parent_id?: string;
 }
+
+/** One data format registered with the import/export registry. */
+export interface IoFormatResponse {
+  name: string;
+  title: string;
+  can_import: boolean;
+  can_export: boolean;
+  capabilities: {
+    media_kinds: string[];
+    annotation_kinds: string[];
+    supports_resume: boolean;
+  };
+}
+
+/** Provenance of one finding sample (file:line style locations). */
+export interface IoProvenance {
+  file?: string | null;
+  line?: number | null;
+  json_pointer?: string | null;
+  record_key?: string | null;
+}
+
+/** One aggregated validation finding from analyze. */
+export interface IoFinding {
+  code: string;
+  severity: "error" | "warning" | "info";
+  count: number;
+  samples: IoProvenance[];
+  suggestion: string;
+}
+
+/** The analyze plan the wizard previews before ingesting. */
+export interface ImportPlanResponse {
+  format: string;
+  importer_version: string;
+  splits: Record<string, number>;
+  totals: { records: number | null; media_bytes: number | null; estimated: boolean };
+  report: { findings: Record<string, IoFinding> };
+  previews: { record: Record<string, unknown>; thumbnails: Record<string, string> }[];
+  plan_id?: string;
+}
+
+/** One durable import/export job as stored. */
+export interface IoJobResponse {
+  job_id: string;
+  kind: string;
+  dataset: string;
+  status: "pending" | "running" | "interrupted" | "done" | "error" | "cancelled" | "rolled_back";
+  progress: {
+    phase?: string;
+    done?: number;
+    total?: number | null;
+    table_counts?: Record<string, number>;
+    message?: string;
+  };
+  error: { type?: string; message?: string };
+  created_at: number;
+  updated_at: number;
+}
