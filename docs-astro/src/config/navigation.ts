@@ -36,6 +36,7 @@ export const sidebarNav: Record<string, NavSection[]> = {
         { title: "Quickstart", href: "/getting_started/quickstart/" },
         { title: "Key Concepts", href: "/getting_started/key_concepts/" },
         { title: "Importing Data", href: "/getting_started/importing_data/" },
+        { title: "Custom Importers", href: "/getting_started/custom_importers/" },
       ],
     },
   ],
