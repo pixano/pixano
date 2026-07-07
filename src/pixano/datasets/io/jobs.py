@@ -429,6 +429,26 @@ class JobRunner:
                     },
                 )
 
+    def rollback(self, job_id: str) -> dict[str, int]:
+        """Roll back a finished add-mode import; the job flips to rolled_back."""
+        from pixano.utils import to_snake_case
+
+        from .engine import ImportEngine
+
+        job = self.store.get_job(job_id)
+        if job is None:
+            raise JobStateError(f"Unknown job '{job_id}'.")
+        if job.kind != "import" or job.status != "done":
+            raise JobStateError(f"Job '{job_id}' is {job.status}; only completed imports roll back.")
+        spec = job.spec
+        dataset_name = to_snake_case(str(spec.get("dataset", {}).get("name", "")) or job.dataset)
+        target_dir = self.data_dir / "library" / dataset_name
+        if job.manifest_path:
+            target_dir = Path(job.manifest_path).parent.parent
+        removed = ImportEngine(self.data_dir).rollback(target_dir, job_id)
+        self.store.update_job(job_id, status="rolled_back", progress={"phase": "rolled_back", "removed": removed})
+        return removed
+
     def join(self, timeout: float | None = None) -> None:
         """Wait for in-flight jobs (tests and CLI teardown)."""
         for thread in self._threads:

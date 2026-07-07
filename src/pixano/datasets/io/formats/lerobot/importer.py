@@ -253,7 +253,7 @@ class LeRobotImporter(DatasetImporter):
             if mode == "extract":
                 needed |= {episode.data_path for episode in episodes if episode.data_path}
             root = materialize_files(source.url, sorted(needed))
-        namespace = spec.ids.namespace or (source.url or root.name).replace("/", "_")
+        namespace = self.effective_namespace(spec, source)
         resolver = MediaResolver(spec.media, base_dir=root)
         resume_ordinal = int(cursor.get("episode_ordinal", 0)) if cursor else 0
 

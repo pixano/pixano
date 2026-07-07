@@ -117,6 +117,18 @@ class DatasetImporter(ABC):
         """
         return None
 
+    def effective_namespace(self, spec: "ImportSpec", source: SourceRef) -> str:
+        """The id namespace actually used for derived ids (rollback anchor).
+
+        Defaults to the spec's namespace, else a source-derived identity —
+        the same rule every built-in importer applies.
+        """
+        if spec.ids.namespace:
+            return spec.ids.namespace
+        if source.path is not None:
+            return source.path.name
+        return (source.url or "source").replace("/", "_")
+
     def resolve_info(self, spec: "ImportSpec", source: SourceRef | None = None) -> "DatasetInfo":
         """Resolve the target schema for this format.
 

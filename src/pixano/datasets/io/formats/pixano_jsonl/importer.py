@@ -100,7 +100,7 @@ class PixanoJsonlImporter(DatasetImporter):
             return plan
 
         info = resolve_dataset_info(spec)
-        namespace = spec.ids.namespace or source.path.name
+        namespace = self.effective_namespace(spec, source)
         total_records = 0
         media_probes = 0
         truncated = False
@@ -215,7 +215,7 @@ class PixanoJsonlImporter(DatasetImporter):
         """Stream rows split by split, line by line, resuming past the cursor."""
         assert source.path is not None
         info = resolve_dataset_info(spec)
-        namespace = spec.ids.namespace or source.path.name
+        namespace = self.effective_namespace(spec, source)
         resume_split = cursor.get("split") if cursor else None
         resume_line = int(cursor.get("line", 0)) if cursor else 0
 
