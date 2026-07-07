@@ -183,7 +183,10 @@ class CocoImporter(DatasetImporter):
         """COCO has an intrinsic schema; a user-declared schema block still wins."""
         if spec.schema_ is not None or spec.schema_manifest is not None:
             return resolve_dataset_info(spec)
-        payload = spec.model_dump(exclude_none=True, by_alias=True)
+        payload = spec.model_dump(mode="json", exclude_none=True, by_alias=True)
+        if payload.get("dataset", {}).get("workspace", "undefined") == "undefined":
+            # Formats know their natural UI workspace; an explicit --workspace wins.
+            payload.setdefault("dataset", {})["workspace"] = "image"
         payload["schema"] = _DEFAULT_SCHEMA
         return resolve_dataset_info(ImportSpec.model_validate(payload))
 

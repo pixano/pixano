@@ -260,3 +260,23 @@ class TestHubSource:
         assert hub_module.is_hub_id("lerobot/pusht")
         assert not hub_module.is_hub_id("not a hub id")
         assert not hub_module.is_hub_id("/absolute/path")
+
+
+class TestWorkspaceDefault:
+    @needs_ffmpeg
+    def test_bare_spec_defaults_to_video_workspace(self, tmp_path: Path):
+        from pixano.datasets.workspaces import WorkspaceType
+
+        source = make_v21_dataset(tmp_path / "ds")
+        spec = ImportSpec.model_validate({"format": "lerobot", "options": {"max_frames_per_episode": 2}})
+        result = import_dataset(source, tmp_path / "data", spec, importer=LeRobotImporter())
+        assert Dataset(result.dataset_path).info.workspace == WorkspaceType.VIDEO
+
+    def test_explicit_workspace_wins(self, tmp_path: Path):
+        from pixano.datasets.io import SourceRef
+        from pixano.datasets.workspaces import WorkspaceType
+
+        source = make_v21_dataset(tmp_path / "ds")
+        spec = ImportSpec.model_validate({"format": "lerobot", "dataset": {"name": "x", "workspace": "image_vqa"}})
+        info = LeRobotImporter().resolve_info(spec, SourceRef.from_string(str(source)))
+        assert info.workspace == WorkspaceType.IMAGE_VQA
