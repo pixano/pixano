@@ -283,15 +283,43 @@ class JobRunner:
         self._lock = threading.Lock()
         self._threads: list[threading.Thread] = []
 
-    def submit_import(self, source: str, spec_payload: dict[str, Any], plan_id: str = "") -> JobRecord:
-        """Create a pending import job and start it on the worker thread."""
+    def submit_import(
+        self,
+        source: str,
+        spec_payload: dict[str, Any],
+        plan_id: str = "",
+        prepare: Callable[[], tuple[str, dict[str, Any]]] | None = None,
+    ) -> JobRecord:
+        """Create a pending import job and start it on the worker thread.
+
+        ``prepare`` (optional) runs FIRST on the job thread and returns the
+        real (source, dataset-extras) pair — heavy source arrangement (e.g.
+        the legacy alias's frame extraction) must never run on a request
+        thread. A prepare failure marks the job errored.
+        """
         job = self.store.create_job(
             "import",
             dataset=str(spec_payload.get("dataset", {}).get("name", "")),
             spec={**spec_payload, "__source": source},  # resume needs the source; stripped before validation
             plan_id=plan_id,
         )
-        thread = threading.Thread(target=self._run_import, args=(job.id, source, spec_payload, plan_id), daemon=True)
+
+        def run() -> None:
+            resolved_source, payload = source, spec_payload
+            if prepare is not None:
+                try:
+                    resolved_source, extras = prepare()
+                    payload = {
+                        **spec_payload,
+                        "dataset": {**spec_payload.get("dataset", {}), **extras},
+                    }
+                    self.store.update_job(job.id, spec={**payload, "__source": resolved_source})
+                except Exception as error:  # noqa: BLE001 - surfaced on the job record
+                    self.store.update_job(job.id, status="error", error={"message": str(error)})
+                    return
+            self._run_import(job.id, resolved_source, payload, plan_id)
+
+        thread = threading.Thread(target=run, daemon=True)
         self._threads.append(thread)
         thread.start()
         return job

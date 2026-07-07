@@ -164,3 +164,54 @@ class TestLibraryGlobHardening:
     def test_workspace_flows_through(self, tmp_path: Path):
         result = _import(tmp_path, ToyImporter(num_records=2), _spec())
         assert Dataset(result.dataset_path).info.workspace == WorkspaceType.IMAGE
+
+
+class TestConcurrencyOptimizations:
+    def test_import_creates_filter_indexes(self, tmp_path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.io import ImportSpec, import_dataset
+        from tests.datasets.io._toy_importer import ToyImporter
+
+        spec = ImportSpec.model_validate({"dataset": {"name": "idx", "workspace": "image"}})
+        result = import_dataset(tmp_path / "src", tmp_path / "data", spec, importer=ToyImporter(num_records=3))
+        dataset = Dataset(result.dataset_path)
+        table = dataset.open_table("images")
+        indexed = {c for i in table.list_indices() for c in (getattr(i, "columns", None) or [])}
+        assert {"id", "record_id"} <= indexed
+        # standard filter columns present in the schema are indexed too
+        assert "record_id" in indexed
+
+    def test_sequence_frames_only_first_frame_gets_a_preview(self, tmp_path):
+        import io as io_module
+
+        import PIL.Image
+
+        from pixano.datasets import Dataset, DatasetInfo
+        from pixano.datasets.io.engine import _stamp_image_previews
+        from pixano.schemas import Record, SequenceFrame
+
+        library = tmp_path / "lib"
+        info = DatasetInfo(name="seq", record=Record, views={"cam": SequenceFrame})
+        dataset = Dataset.create(library / "seq", info)
+
+        buffer = io_module.BytesIO()
+        PIL.Image.new("RGB", (32, 32), (1, 2, 3)).save(buffer, "JPEG")
+        blob = buffer.getvalue()
+        rows = [
+            SequenceFrame(
+                id=f"f{i}",
+                record_id="r",
+                logical_name="cam",
+                uri="",
+                raw_bytes=blob,
+                width=32,
+                height=32,
+                format="JPEG",
+                frame_index=i,
+                timestamp=i / 10,
+            )
+            for i in range(5)
+        ]
+        _stamp_image_previews(dataset, "sequence_frames", rows)
+        assert rows[0].preview  # the grid's poster frame
+        assert all(not row.preview for row in rows[1:])  # no per-frame GIL burn

@@ -751,7 +751,13 @@ def _stamp_image_previews(dataset: Dataset, table_name: str, rows: list[LanceMod
     schema = dataset.info.tables.get(table_name)
     if schema is None or not (is_image(schema) or is_sequence_frame(schema)):
         return
+    sequence = is_sequence_frame(schema)
     for row in rows:
+        # The browse grid shows ONE preview per record/view (the first frame);
+        # stamping all 400+ frames of an episode is pure GIL burn in the import
+        # thread that starves concurrent API requests.
+        if sequence and getattr(row, "frame_index", 0) != 0:
+            continue
         raw_bytes = getattr(row, "raw_bytes", b"")
         if not raw_bytes or row.preview:
             continue

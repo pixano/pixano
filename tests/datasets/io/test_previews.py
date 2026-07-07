@@ -32,10 +32,20 @@ class TestPreviewStamping:
             assert thumbnail.format == "PNG"
             assert max(thumbnail.size) <= 64
 
-    def test_sequence_frames_carry_thumbnails(self, tmp_path: Path):
+    def test_only_first_sequence_frames_carry_thumbnails(self, tmp_path: Path):
+        # One poster per record/view is all the grid uses; stamping every frame
+        # is per-row PIL work that starves concurrent API requests during imports.
         dataset = _import_corpus("frames_masks", tmp_path)
-        rows = dataset.open_table("sequence_frames").search().select(["preview_format"]).limit(None).to_list()
-        assert rows and all(row["preview_format"] == "png" for row in rows)
+        rows = (
+            dataset.open_table("sequence_frames")
+            .search()
+            .select(["frame_index", "preview_format"])
+            .limit(None)
+            .to_list()
+        )
+        assert rows
+        assert all(row["preview_format"] == "png" for row in rows if row["frame_index"] == 0)
+        assert all(row["preview_format"] == "" for row in rows if row["frame_index"] != 0)
 
     def test_uri_mode_rows_have_no_thumbnail(self, tmp_path: Path):
         dataset = _import_corpus("lerobot_window", tmp_path)  # remote videos, nothing embedded

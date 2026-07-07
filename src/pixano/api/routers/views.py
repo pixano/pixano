@@ -7,11 +7,10 @@
 """Subtype-specific view routers."""
 
 import hashlib
-import io
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 
 from pixano.api.media import MULTIPART_BOUNDARY, iter_multipart_frames, media_type_from_format
 from pixano.api.models import ImageResponse, PaginatedResponse, SFrameResponse, TextResponse
@@ -79,7 +78,7 @@ def _get_row(dataset: Dataset, table_name: str, row_id: str) -> Any:
     return row
 
 
-def _stream_blob(dataset: Dataset, table_name: str, row_id: str) -> StreamingResponse:
+def _stream_blob(dataset: Dataset, table_name: str, row_id: str) -> Response:
     try:
         result = dataset.get_view_binary(table_name, row_id)
     except DatasetAccessError as err:
@@ -89,14 +88,11 @@ def _stream_blob(dataset: Dataset, table_name: str, row_id: str) -> StreamingRes
         raise HTTPException(status_code=404, detail=f"Resource '{row_id}' has no embedded blob.")
 
     blob_data, fmt = result
-    return StreamingResponse(
-        io.BytesIO(blob_data),
-        media_type=media_type_from_format(fmt),
-        headers={"Content-Length": str(len(blob_data))},
-    )
+    # In-memory bytes: a plain Response avoids per-chunk threadpool hops.
+    return Response(content=blob_data, media_type=media_type_from_format(fmt))
 
 
-def _stream_preview(dataset: Dataset, table_name: str, row_id: str) -> StreamingResponse:
+def _stream_preview(dataset: Dataset, table_name: str, row_id: str) -> Response:
     row = _get_row(dataset, table_name, row_id)
     preview = getattr(row, "preview", b"") or b""
     preview_format = getattr(row, "preview_format", "") or ""
@@ -104,11 +100,10 @@ def _stream_preview(dataset: Dataset, table_name: str, row_id: str) -> Streaming
         raise HTTPException(status_code=404, detail=f"Resource '{row_id}' has no preview.")
 
     etag = hashlib.sha1(preview).hexdigest()  # noqa: S324
-    return StreamingResponse(
-        io.BytesIO(preview),
+    return Response(
+        content=preview,
         media_type=media_type_from_format(preview_format),
         headers={
-            "Content-Length": str(len(preview)),
             "Cache-Control": "public, max-age=3600",
             "ETag": f'"{etag}"',
         },
@@ -265,13 +260,13 @@ def get_image(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_d
 
 
 @router.get("/images/{id}/blob", operation_id="get_image_blob")
-def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
     """Stream the raw binary blob of an image."""
     return _stream_blob(dataset, IMAGE_TABLE, id)
 
 
 @router.get("/images/{id}/preview", operation_id="get_image_preview")
-def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
     """Stream the preview thumbnail of an image."""
     return _stream_preview(dataset, IMAGE_TABLE, id)
 
@@ -327,13 +322,13 @@ def get_sframe(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_
 
 
 @router.get("/sframes/{id}/blob", operation_id="get_sframe_blob")
-def get_sframe_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+def get_sframe_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
     """Stream the raw binary blob of a sequence frame."""
     return _stream_blob(dataset, SFRAME_TABLE, id)
 
 
 @router.get("/sframes/{id}/preview", operation_id="get_sframe_preview")
-def get_sframe_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+def get_sframe_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
     """Stream the preview thumbnail of a sequence frame."""
     return _stream_preview(dataset, SFRAME_TABLE, id)
 
@@ -424,7 +419,7 @@ def get_record_sframe_batch(
     view_name: str | None = None,
     start_frame: Annotated[int, Query(ge=0)] = 0,
     batch_size: Annotated[int, Query(ge=1, le=1000)] = 100,
-) -> StreamingResponse:
+) -> Response:
     """Stream a batch of temporal frames as a multipart binary response."""
     try:
         frames = dataset.get_temporal_view_batch(
@@ -441,8 +436,11 @@ def get_record_sframe_batch(
         raise HTTPException(status_code=404, detail="No frames found for the given parameters.")
 
     payloads = [(frame_index, data, media_type_from_format(fmt)) for frame_index, data, fmt in frames]
-    return StreamingResponse(
-        iter_multipart_frames(payloads),
+    # The batch is already fully materialized; one Response body avoids a
+    # threadpool hop per multipart chunk (128 hops ~ 30ms of pure overhead).
+    body = b"".join(iter_multipart_frames(payloads))
+    return Response(
+        content=body,
         media_type=f"multipart/x-mixed-replace; boundary={MULTIPART_BOUNDARY.decode()}",
         headers={
             "X-Total-Frames": str(len(frames)),

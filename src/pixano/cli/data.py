@@ -239,6 +239,26 @@ def formats_command() -> None:
     typer.echo("(pixano_jsonl also exports through 'pixano data export'.)")
 
 
+@data_app.command(name="optimize")
+def optimize_dataset(
+    data_dir: Path = typer.Argument(..., help="Pixano data directory."),
+    dataset: str = typer.Argument(..., help="Dataset name (library folder name)."),
+) -> None:
+    """Index the standard filter columns and compact a dataset (fast filtered pagination)."""
+    from pixano.datasets import Dataset
+
+    target = data_dir / "library" / dataset
+    if not target.is_dir():
+        typer.echo(f"Error: no dataset at '{target}'.", err=True)
+        raise typer.Exit(code=1)
+    ds = Dataset(target)
+    ds.create_scalar_indexes()
+    for name in ds.info.tables:
+        ds.open_table(name).optimize()
+    Dataset.invalidate_caches(ds.info.id)
+    typer.echo(f"Dataset '{dataset}' optimized ({len(ds.info.tables)} table(s) indexed and compacted).")
+
+
 @data_app.command(name="jobs")
 def jobs_command(
     data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Pixano data directory."),
