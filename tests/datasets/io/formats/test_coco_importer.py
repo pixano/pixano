@@ -197,3 +197,13 @@ class TestDefaultDatasetName:
         dataset = Dataset(result.dataset_path)
         assert dataset.info.name == "2014"
         assert result.dataset_path.name == "2014"
+
+
+class TestCocoWorkspaceDefault:
+    def test_bare_spec_defaults_to_image_workspace(self, tmp_path: Path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.workspaces import WorkspaceType
+
+        spec = ImportSpec.model_validate({"format": "coco"})
+        result = import_dataset(FIXTURE, tmp_path / "data", spec, importer=CocoImporter())
+        assert Dataset(result.dataset_path).info.workspace == WorkspaceType.IMAGE
