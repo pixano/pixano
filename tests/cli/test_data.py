@@ -127,3 +127,18 @@ class TestJobsCommand:
         job = JobStore.for_data_dir(data_dir).list_jobs()[0]
         result = runner.invoke(app, ["data", "jobs", str(data_dir), "cancel", job.id])
         assert result.exit_code == 1 and "already" in result.output
+
+
+class TestJobsCliRecovery:
+    def test_jobs_command_marks_dead_running_jobs_interrupted(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        from pixano.datasets.io.jobs import JobStore
+
+        store = JobStore.for_data_dir(data_dir)
+        job = store.create_job("import")
+        store.update_job(job.id, status="running", pid=999_999_999)
+
+        result = runner.invoke(app, ["data", "jobs", str(data_dir), "list"])
+        assert result.exit_code == 0
+        assert "interrupted" in result.output
+        assert store.get_job(job.id).status == "interrupted"

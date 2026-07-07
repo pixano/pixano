@@ -39,7 +39,6 @@ class TestOverwriteSwapCrashCells:
         import_dataset(tmp_path / "s1", tmp_path / "data", _spec("ds"), importer=ToyImporter(num_records=3))
         target = tmp_path / "data" / "library" / "ds"
         # Build a fresh staging as an overwrite candidate (5 records).
-        engine = ImportEngine(tmp_path / "data")
         staging = state_dir(tmp_path / "data") / "staging" / "ds-jobX"
         from pixano.datasets.io.spec import resolve_dataset_info
 
