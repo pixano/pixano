@@ -133,6 +133,7 @@ class Dataset:
         self.path = path
 
         self._info_file = self.path / self._INFO_FILE
+        self._table_handles: dict[str, LanceTable] = {}
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
@@ -185,11 +186,14 @@ class Dataset:
             try:
                 table.add_columns(missing)
             except Exception:
+                self._table_handles.pop(table_name, None)  # re-read the live schema, not a cached handle
                 still_missing = [
                     column for column in missing if column not in self.open_table(table_name).schema.names
                 ]
                 if still_missing:
                     raise
+            finally:
+                self._table_handles.pop(table_name, None)
 
         # Patch the raw JSON rather than re-serializing self.info: from_json drops
         # views it cannot deserialize, and a re-serialization would persist that loss.
@@ -476,6 +480,9 @@ class Dataset:
         if name not in self.info.tables:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
+        cached = self._table_handles.get(name)
+        if cached is not None:
+            return cached
         table = self._db_connection.open_table(name)
 
         schema_table = self.info.tables[name]
@@ -485,6 +492,9 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
+        # Handles read the latest table version per query, so caching is safe;
+        # Dataset-level cache invalidation drops the whole instance anyway.
+        self._table_handles[name] = table
         return table
 
     @overload
@@ -1185,21 +1195,40 @@ class Dataset:
                 arrow_table = arrow_table.append_column(field, pa.array([now] * arrow_table.num_rows, type=field.type))
         return arrow_table
 
+    # Standard filter columns the REST/query layers put in where clauses, with
+    # the index type suited to their cardinality. When EVERY predicate column
+    # of a query is index-covered, lancedb applies limit/offset after the
+    # filter — TableQueryBuilder's fast path depends on this census.
+    FILTER_INDEX_COLUMNS: ClassVar[dict[str, str]] = {
+        "id": "BTREE",
+        "record_id": "BTREE",
+        "entity_id": "BTREE",
+        "view_id": "BTREE",
+        "frame_id": "BTREE",
+        "tracklet_id": "BTREE",
+        "frame_index": "BTREE",
+        "logical_name": "BITMAP",
+        "split": "BITMAP",
+        "source_type": "BITMAP",
+    }
+
     def create_scalar_indexes(
         self,
-        columns: Sequence[str] = ("id", "record_id"),
+        columns: Sequence[str] | None = None,
         tables: Sequence[str] | None = None,
     ) -> None:
-        """Create BTree scalar indexes on the given columns of the given tables.
+        """Create scalar indexes on the given columns of the given tables.
 
         Idempotent: columns that are already indexed or absent from a table's
         schema are skipped. Indexes make ``merge_insert``, foreign-key lookups,
-        export paging, and ``record_id`` filters scale past full-table scans.
+        export paging, and filtered pagination scale past full-table scans.
 
         Args:
-            columns: Column names to index where present.
+            columns: Column names to index where present. Defaults to the
+                standard filter columns (``FILTER_INDEX_COLUMNS``).
             tables: Table names to index. Defaults to every dataset table.
         """
+        wanted = list(columns) if columns is not None else list(self.FILTER_INDEX_COLUMNS)
         table_names = list(tables) if tables is not None else list(self.info.tables.keys())
         for table_name in table_names:
             table = self.open_table(table_name)
@@ -1207,9 +1236,9 @@ class Dataset:
             for index in table.list_indices():
                 indexed_columns.update(getattr(index, "columns", None) or [])
             schema_names = set(table.schema.names)
-            for column in columns:
+            for column in wanted:
                 if column in schema_names and column not in indexed_columns:
-                    table.create_scalar_index(column, index_type="BTREE")
+                    table.create_scalar_index(column, index_type=self.FILTER_INDEX_COLUMNS.get(column, "BTREE"))
 
     # ------------------------------------------------------------------
     # Cross-process cache invalidation

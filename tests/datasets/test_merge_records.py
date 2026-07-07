@@ -149,11 +149,17 @@ class TestCreateScalarIndexes:
 
         bbox_indices = list(dataset.open_table("bboxes").list_indices())
         indexed_columns = sorted(column for index in bbox_indices for column in index.columns)
-        assert indexed_columns == ["id", "record_id"]
+        # every standard filter column present in the schema gets an index
+        assert "id" in indexed_columns and "record_id" in indexed_columns
+        expected = sorted(
+            column for column in Dataset.FILTER_INDEX_COLUMNS if column in dataset.open_table("bboxes").schema.names
+        )
+        assert indexed_columns == expected
 
-        # Records table has no record_id column: only id is indexed, absent columns skipped.
+        # Records table has no record_id column: absent columns are skipped.
         record_indices = list(dataset.open_table("records").list_indices())
-        assert sorted(column for index in record_indices for column in index.columns) == ["id"]
+        record_indexed = sorted(column for index in record_indices for column in index.columns)
+        assert "id" in record_indexed and "record_id" not in record_indexed
 
 
 class TestCacheInvalidation:

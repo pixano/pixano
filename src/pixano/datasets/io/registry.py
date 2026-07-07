@@ -122,8 +122,7 @@ class FormatRegistry:
         if not candidates:
             known = ", ".join(self.names()) or "<none>"
             raise FormatDetectionError(
-                f"Could not detect the data format of '{source.location()}'. "
-                f"Pass an explicit format (known: {known})."
+                f"Could not detect the data format of '{source.location()}'. Pass an explicit format (known: {known})."
             )
         candidates.sort(key=lambda c: c[0], reverse=True)
         if len(candidates) > 1 and candidates[0][0] == candidates[1][0]:
