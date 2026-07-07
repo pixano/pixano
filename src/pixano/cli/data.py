@@ -242,7 +242,7 @@ def formats_command() -> None:
 @data_app.command(name="jobs")
 def jobs_command(
     data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Pixano data directory."),
-    action: str = typer.Argument("list", help="list, show, or cancel."),
+    action: str = typer.Argument("list", help="list, show, cancel, or resume."),
     job_id: str = typer.Argument("", help="Job id (for show/cancel)."),
 ) -> None:
     """Inspect the shared import/export job store (the same one the GUI polls)."""
@@ -254,7 +254,7 @@ def jobs_command(
             done = job.progress.get("done", "")
             typer.echo(f"{job.id}  {job.kind:<7} {job.status:<12} {job.dataset:<24} {done}")
         return
-    if action in ("show", "cancel") and not job_id:
+    if action in ("show", "cancel", "resume") and not job_id:
         raise typer.BadParameter(f"'{action}' needs a job id.")
     if action == "show":
         shown = store.get_job(job_id)
@@ -271,7 +271,23 @@ def jobs_command(
             raise typer.Exit(code=1) from None
         typer.echo(f"Job '{job_id}' -> {job.status}.")
         return
-    raise typer.BadParameter(f"Unknown action '{action}' (list, show, cancel).")
+    if action == "resume":
+        from pixano.datasets.io.jobs import JobRunner
+
+        runner = JobRunner(store, data_dir)
+        try:
+            job = runner.submit_resume(job_id)
+        except PixanoDataError as error:
+            typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(code=1) from None
+        typer.echo(
+            f"Job '{job_id}' resuming (status: {job.status}). Poll with: pixano data jobs {data_dir} show {job_id}"
+        )
+        runner.join()
+        final = store.get_job(job_id)
+        typer.echo(f"Job '{job_id}' -> {final.status if final else 'unknown'}.")
+        return
+    raise typer.BadParameter(f"Unknown action '{action}' (list, show, cancel, resume).")
 
 
 @data_app.command(name="migrate-jsonl")
