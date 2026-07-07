@@ -36,7 +36,13 @@ def make_v21_dataset(root: Path, episodes: int = 2) -> Path:
         "fps": FPS,
         "chunks_size": 1000,
         "video_path": "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4",
-        "features": {CAMERA_KEY: {"dtype": "video"}, "action": {"dtype": "float32"}},
+        "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+        "features": {
+            CAMERA_KEY: {"dtype": "video"},
+            "action": {"dtype": "float32", "shape": [6]},
+            "observation.state": {"dtype": "float32", "shape": [6]},
+            "timestamp": {"dtype": "float32", "shape": [1]},
+        },
         "total_episodes": episodes,
     }
     (root / "meta" / "info.json").write_text(json.dumps(info))
@@ -49,7 +55,23 @@ def make_v21_dataset(root: Path, episodes: int = 2) -> Path:
         target = root / "videos" / "chunk-000" / CAMERA_KEY / f"episode_{index:06d}.mp4"
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(VIDEO_MP4_ASSET_URL, target)
+        _write_data_parquet(root / "data" / "chunk-000" / f"episode_{index:06d}.parquet", index, rows=200, dim=6)
     return root
+
+
+def _write_data_parquet(path: Path, episode_index: int, rows: int, dim: int, t0: float = 0.0) -> None:
+    """LeRobot-shaped data rows: episode-relative timestamps on the fps grid."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table = pa.table(
+        {
+            "episode_index": pa.array([episode_index] * rows, pa.int64()),
+            "frame_index": pa.array(list(range(rows)), pa.int64()),
+            "timestamp": pa.array([t0 + i / FPS for i in range(rows)], pa.float32()),
+            "action": pa.array([[float(episode_index), float(i)] + [0.0] * (dim - 2) for i in range(rows)]),
+            "observation.state": pa.array([[float(i)] * dim for i in range(rows)]),
+        }
+    )
+    pq.write_table(table, path)
 
 
 def make_v3_dataset(root: Path) -> Path:
@@ -59,7 +81,12 @@ def make_v3_dataset(root: Path) -> Path:
         "codebase_version": "v3.0",
         "fps": FPS,
         "video_path": "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4",
-        "features": {CAMERA_KEY: {"dtype": "video"}},
+        "data_path": "data/chunk-{chunk_index:03d}/file-{file_index:03d}.parquet",
+        "features": {
+            CAMERA_KEY: {"dtype": "video"},
+            "action": {"dtype": "float32", "shape": [4]},
+            "observation.state": {"dtype": "float32", "shape": [4]},
+        },
         "total_episodes": 2,
     }
     (root / "meta" / "info.json").write_text(json.dumps(info))
@@ -67,7 +94,9 @@ def make_v3_dataset(root: Path) -> Path:
         {
             "episode_index": [0, 1],
             "tasks": [["pick"], ["place"]],
-            "length": [90, 88],
+            "length": [85, 100],
+            "data/chunk_index": [0, 0],
+            "data/file_index": [0, 0],
             f"videos/{CAMERA_KEY}/chunk_index": [0, 0],
             f"videos/{CAMERA_KEY}/file_index": [0, 0],
             f"videos/{CAMERA_KEY}/from_timestamp": [0.0, 3.0],
@@ -78,6 +107,23 @@ def make_v3_dataset(root: Path) -> Path:
     shard = root / "videos" / CAMERA_KEY / "chunk-000" / "file-000.mp4"
     shard.parent.mkdir(parents=True)
     shutil.copy(VIDEO_MP4_ASSET_URL, shard)
+    # One shared data shard holding both episodes' rows (episode-relative timestamps).
+    data_file = root / "data" / "chunk-000" / "file-000.parquet"
+    data_file.parent.mkdir(parents=True)
+    tables = []
+    for episode_index, rows in ((0, 85), (1, 100)):
+        tables.append(
+            pa.table(
+                {
+                    "episode_index": pa.array([episode_index] * rows, pa.int64()),
+                    "frame_index": pa.array(list(range(rows)), pa.int64()),
+                    "timestamp": pa.array([i / FPS for i in range(rows)], pa.float32()),
+                    "action": pa.array([[float(episode_index), float(i), 0.0, 0.0] for i in range(rows)]),
+                    "observation.state": pa.array([[float(i)] * 4 for i in range(rows)]),
+                }
+            )
+        )
+    pq.write_table(pa.concat_tables(tables), data_file)
     return root
 
 
@@ -142,7 +188,7 @@ class TestLeRobotImport:
         assert dataset.info.storage_mode == "embedded"
 
     @needs_ffmpeg
-    def test_v3_windows_extract_disjoint_frames(self, tmp_path: Path):
+    def test_v3_windows_extract_row_aligned(self, tmp_path: Path):
         source = make_v3_dataset(tmp_path / "ds")
         spec = _spec("lr_v3", max_frames_per_episode=6)
         result = import_dataset(source, tmp_path / "data", spec, importer=LeRobotImporter())
@@ -151,11 +197,16 @@ class TestLeRobotImport:
         assert dataset.open_table("records").count_rows() == 2
         assert dataset.open_table("sequence_frames").count_rows() == 12
         frames = dataset.get_data("sequence_frames", limit=20)
-        by_record: dict[str, list[float]] = {}
+        by_record: dict[str, list] = {}
         for frame in frames:
-            by_record.setdefault(frame.record_id, []).append(frame.timestamp)
-        first, second = sorted(by_record.values(), key=min)
-        assert max(first) < 3.05 and min(second) >= 2.95  # windows respected
+            by_record.setdefault(frame.record_id, []).append(frame)
+        for record_frames in by_record.values():
+            for frame in record_frames:
+                # Timestamps are the data rows' own (episode-relative, on the fps grid).
+                assert frame.timestamp == pytest.approx(frame.frame_index / FPS, abs=1e-3)
+        # The two windows decode different footage even though timestamps restart at 0.
+        lengths = sorted(max(f.frame_index for f in v) for v in by_record.values())
+        assert lengths[0] <= 85 and lengths[1] <= 100
 
     @needs_ffmpeg
     def test_episode_subset_and_idempotent_rerun(self, tmp_path: Path):
@@ -246,7 +297,9 @@ class TestHubSource:
         spec = _spec("hub_subset", episodes=[1], max_frames_per_episode=4)
         result = import_dataset("hub://acme/robo", tmp_path / "data", spec, importer=LeRobotImporter())
 
-        assert fake_hub["files"] == [[f"videos/chunk-000/{CAMERA_KEY}/episode_000001.mp4"]]
+        assert fake_hub["files"] == [
+            ["data/chunk-000/episode_000001.parquet", f"videos/chunk-000/{CAMERA_KEY}/episode_000001.mp4"]
+        ]
         dataset = Dataset(result.dataset_path)
         assert dataset.open_table("records").count_rows() == 1
         assert dataset.get_data("records")[0].episode_index == 1
@@ -280,3 +333,110 @@ class TestWorkspaceDefault:
         spec = ImportSpec.model_validate({"format": "lerobot", "dataset": {"name": "x", "workspace": "image_vqa"}})
         info = LeRobotImporter().resolve_info(spec, SourceRef.from_string(str(source)))
         assert info.workspace == WorkspaceType.IMAGE_VQA
+
+
+class TestRowAlignedSampling:
+    @needs_ffmpeg
+    def test_frame_timestamps_are_the_data_rows_own(self, tmp_path: Path):
+        source = make_v3_dataset(tmp_path / "ds")
+        spec = _spec("lr_align")  # no cap: every row becomes a frame
+        result = import_dataset(source, tmp_path / "data", spec, importer=LeRobotImporter())
+        dataset = Dataset(result.dataset_path)
+
+        # 85 + 100 rows -> exactly that many frames ("sample every frame").
+        assert dataset.open_table("sequence_frames").count_rows() == 185
+        frames = dataset.get_data("sequence_frames", limit=300)
+        for frame in frames:
+            assert frame.timestamp == pytest.approx(frame.frame_index / FPS, abs=1e-3)
+
+    @needs_ffmpeg
+    def test_off_grid_timestamp_is_a_hard_error(self, tmp_path: Path):
+        from pixano.datasets.io.errors import MetadataError
+
+        source = make_v21_dataset(tmp_path / "ds", episodes=1)
+        # Corrupt one timestamp far off the fps grid.
+        data_file = source / "data" / "chunk-000" / "episode_000000.parquet"
+        table = pq.read_table(data_file).to_pylist()
+        table[5]["timestamp"] = table[5]["timestamp"] + 0.4 * (1.0 / FPS)
+        pq.write_table(pa.Table.from_pylist(table), data_file)
+
+        spec = _spec("lr_offgrid")
+        with pytest.raises(MetadataError, match="timestamp_alignment"):
+            list(
+                LeRobotImporter().iter_batches(
+                    SourceRef.from_string(str(source)),
+                    spec,
+                    __import__("pixano.datasets.io.plan", fromlist=["ImportPlan"]).ImportPlan(
+                        format="lerobot", importer_version="1.0.0"
+                    ),
+                )
+            )
+
+
+class TestTimeSeriesTable:
+    @needs_ffmpeg
+    def test_vectors_align_with_frames(self, tmp_path: Path):
+        source = make_v3_dataset(tmp_path / "ds")
+        spec = _spec("lr_ts", max_frames_per_episode=10)
+        result = import_dataset(source, tmp_path / "data", spec, importer=LeRobotImporter())
+        dataset = Dataset(result.dataset_path)
+
+        assert dataset.open_table("timeseries").count_rows() == 20  # 10 per episode
+        rows = (
+            dataset.open_table("timeseries")
+            .search()
+            .select(["record_id", "frame_index", "timestamp", "action", "observation_state"])
+            .limit(None)
+            .to_list()
+        )
+        for row in rows:
+            assert len(row["action"]) == 4 and len(row["observation_state"]) == 4
+            # values encode (episode, frame): action = [ep, i, 0, 0]; state = [i]*4
+            assert row["action"][1] == row["frame_index"]
+            assert row["observation_state"][0] == row["frame_index"]
+            assert row["timestamp"] == pytest.approx(row["frame_index"] / FPS, abs=1e-3)
+
+        # timeseries rows pair exactly with kept frames (same stride).
+        frame_indices = sorted(
+            f["frame_index"]
+            for f in dataset.open_table("sequence_frames")
+            .search()
+            .select(["frame_index", "record_id"])
+            .limit(None)
+            .to_list()
+        )
+        series_indices = sorted(r["frame_index"] for r in rows)
+        assert series_indices == frame_indices
+
+    @needs_ffmpeg
+    def test_vector_schema_survives_reopen(self, tmp_path: Path):
+        source = make_v3_dataset(tmp_path / "ds")
+        result = import_dataset(
+            source, tmp_path / "data", _spec("lr_reopen", max_frames_per_episode=4), importer=LeRobotImporter()
+        )
+        reopened = Dataset(result.dataset_path)  # info.json manifest round-trip
+        fields = reopened.info.tables["timeseries"].model_fields
+        assert "action" in fields and "observation_state" in fields
+
+    @needs_ffmpeg
+    def test_rest_timeseries_route(self, tmp_path: Path):
+        from fastapi.testclient import TestClient
+
+        from pixano.api.main import create_app
+        from pixano.api.settings import Settings, get_settings
+
+        source = make_v3_dataset(tmp_path / "ds")
+        (tmp_path / "data" / "library").mkdir(parents=True)
+        result = import_dataset(
+            source, tmp_path / "data", _spec("lr_rest", max_frames_per_episode=4), importer=LeRobotImporter()
+        )
+        settings = Settings(library_dir=str(tmp_path / "data" / "library"))
+        app = create_app(settings)
+        app.dependency_overrides[get_settings] = lambda: settings
+        client = TestClient(app)
+
+        dataset_id = Dataset(result.dataset_path).info.id
+        response = client.get(f"/datasets/{dataset_id}/timeseries")
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert items and len(items[0]["action"]) == 4

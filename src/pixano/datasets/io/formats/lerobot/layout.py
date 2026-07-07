@@ -32,12 +32,13 @@ class EpisodeCamera:
 
 @dataclass
 class Episode:
-    """One episode: record attrs plus per-camera video references."""
+    """One episode: record attrs plus per-camera video and data references."""
 
     index: int
     tasks: list[str] = field(default_factory=list)
     length: int = 0
     cameras: dict[str, EpisodeCamera] = field(default_factory=dict)
+    data_path: str = ""  # parquet holding this episode's rows, relative to the root
 
 
 @dataclass
@@ -49,6 +50,22 @@ class LeRobotLayout:
     video_keys: list[str]
     episodes: list[Episode]
     robot_type: str = ""
+    feature_dims: dict[str, int] = field(default_factory=dict)  # 1-D float features -> vector dim
+
+
+_BOOKKEEPING_KEYS = frozenset({"timestamp", "frame_index", "episode_index", "index", "task_index"})
+
+
+def float_feature_dims(info: dict) -> dict[str, int]:
+    """1-D float features (action, observation.state, ...) -> vector dim, bookkeeping excluded."""
+    dims: dict[str, int] = {}
+    for key, feature in (info.get("features", {}) or {}).items():
+        shape = feature.get("shape") or []
+        if key in _BOOKKEEPING_KEYS or feature.get("dtype") not in ("float32", "float64"):
+            continue
+        if len(shape) == 1 and int(shape[0]) > 1:
+            dims[key] = int(shape[0])
+    return dims
 
 
 def camera_view_name(video_key: str) -> str:
@@ -82,6 +99,7 @@ def parse_layout(root: Path) -> LeRobotLayout:
         video_keys=video_keys,
         episodes=episodes,
         robot_type=str(info.get("robot_type", "") or ""),
+        feature_dims=float_feature_dims(info),
     )
 
 
@@ -92,6 +110,7 @@ def _parse_v21_episodes(root: Path, info: dict, video_keys: list[str]) -> list[E
     template = str(
         info.get("video_path", "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4")
     )
+    data_template = str(info.get("data_path", "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet"))
     chunks_size = int(info.get("chunks_size", 1000) or 1000)
 
     episodes: list[Episode] = []
@@ -113,6 +132,7 @@ def _parse_v21_episodes(root: Path, info: dict, video_keys: list[str]) -> list[E
                 tasks=list(tasks) if isinstance(tasks, list) else [str(tasks)],
                 length=int(payload.get("length", 0) or 0),
                 cameras=cameras,
+                data_path=data_template.format(episode_chunk=index // chunks_size, episode_index=index),
             )
         )
     return sorted(episodes, key=lambda episode: episode.index)
@@ -126,6 +146,7 @@ def _parse_v3_episodes(root: Path, info: dict, video_keys: list[str]) -> list[Ep
     if not parquet_files:
         raise MetadataError("v3 layout: no parquet files under meta/episodes/.", Provenance(file=str(episodes_dir)))
     template = str(info.get("video_path", "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4"))
+    data_template = str(info.get("data_path", "data/chunk-{chunk_index:03d}/file-{file_index:03d}.parquet"))
 
     episodes: list[Episode] = []
     for parquet_file in parquet_files:
@@ -151,6 +172,10 @@ def _parse_v3_episodes(root: Path, info: dict, video_keys: list[str]) -> list[Ep
                     tasks=list(tasks) if isinstance(tasks, list) else [str(tasks)],
                     length=int(payload.get("length", 0) or 0),
                     cameras=cameras,
+                    data_path=data_template.format(
+                        chunk_index=int(payload.get("data/chunk_index", 0) or 0),
+                        file_index=int(payload.get("data/file_index", 0) or 0),
+                    ),
                 )
             )
     return sorted(episodes, key=lambda episode: episode.index)

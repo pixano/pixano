@@ -930,6 +930,7 @@ class Dataset:
     _INSERT_ORDER: list[SchemaGroup] = [
         SchemaGroup.RECORD,
         SchemaGroup.VIEW,
+        SchemaGroup.TIMESERIES,
         SchemaGroup.ENTITY,
         SchemaGroup.ENTITY_DYNAMIC_STATE,
         SchemaGroup.ANNOTATION,
