@@ -249,6 +249,11 @@ def jobs_command(
     from pixano.datasets.io.jobs import JobStore
 
     store = JobStore.for_data_dir(data_dir)
+    # CLI-side boot recovery: jobs whose process died flip to interrupted here
+    # too, not only at server start — otherwise a killed import can't resume.
+    flipped = store.mark_interrupted_on_boot()
+    for interrupted_id in flipped:
+        typer.echo(f"(job {interrupted_id} marked interrupted: its process is gone)")
     if action == "list":
         for job in store.list_jobs(limit=30):
             done = job.progress.get("done", "")
