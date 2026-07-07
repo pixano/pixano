@@ -9,5 +9,6 @@ export * from "./records";
 export * from "./workspace";
 export * from "./schemaApi";
 export * from "./inferenceApi";
+export * from "./ioApi";
 export * from "./viewsApi";
 export * from "./saveOrchestration";

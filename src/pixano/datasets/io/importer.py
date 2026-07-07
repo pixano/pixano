@@ -55,12 +55,18 @@ class SourceRef:
     def from_string(cls, source: str) -> "SourceRef":
         """Build a SourceRef from a CLI/API source string.
 
-        ``hub://org/repo`` targets the Hugging Face hub; anything else is a
-        local path (directory or file).
+        ``hub://org/repo`` targets the Hugging Face hub; a bare ``org/repo``
+        that is not an existing local path resolves to the hub too (the GUI
+        and REST clients pass ids verbatim); anything else is a local path.
         """
         if source.startswith("hub://"):
             return cls(kind="hf_hub", url=source.removeprefix("hub://"))
         path = Path(source)
+        if not path.exists():
+            from .formats.lerobot.hub import is_hub_id
+
+            if is_hub_id(source):
+                return cls(kind="hf_hub", url=source.strip())
         return cls(kind="local_dir" if path.is_dir() else "local_file", path=path)
 
     def location(self) -> str:

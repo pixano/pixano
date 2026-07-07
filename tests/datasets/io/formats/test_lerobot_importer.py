@@ -440,3 +440,31 @@ class TestTimeSeriesTable:
         assert response.status_code == 200
         items = response.json()["items"]
         assert items and len(items[0]["action"]) == 4
+
+
+class TestBareHubIdRouting:
+    """A bare org/name (as the GUI wizard sends it) routes to the hub + lerobot."""
+
+    def test_from_string_resolves_bare_ids_to_the_hub(self):
+        ref = SourceRef.from_string("allenai/MolmoAct2-BimanualYAM-Dataset")
+        assert ref.kind == "hf_hub"
+        assert ref.url == "allenai/MolmoAct2-BimanualYAM-Dataset"
+        # Existing local paths always win over hub-id lookalikes.
+        assert SourceRef.from_string("/tmp").kind == "local_dir"
+
+    def test_probe_detects_hub_sources(self):
+        result = LeRobotImporter().probe(SourceRef(kind="hf_hub", url="org/name"))
+        assert result is not None and "hub" in result.evidence
+
+    def test_analyze_auto_detects_a_bare_hub_id(self, tmp_path: Path, monkeypatch):
+        dataset_root = make_v21_dataset(tmp_path / "hub_ds")
+        import pixano.datasets.io.formats.lerobot.importer as importer_module
+
+        monkeypatch.setattr(importer_module, "materialize_meta", lambda repo_id, revision=None: dataset_root)
+
+        from pixano.datasets.io import ImportSpec, analyze
+
+        spec = ImportSpec.model_validate({"dataset": {"name": "hub_ds", "workspace": "video"}})
+        plan = analyze("org/hub_ds", spec)  # bare id, format auto
+        assert plan.format == "lerobot"
+        assert plan.totals.records

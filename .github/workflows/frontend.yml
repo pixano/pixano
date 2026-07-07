@@ -23,6 +23,7 @@ on:
       - ".pre-commit-config.yaml"
     branches:
       - "main"
+      - "arch/**"
 
 permissions:
   contents: read
