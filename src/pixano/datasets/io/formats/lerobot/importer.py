@@ -64,6 +64,10 @@ class LeRobotImporter(DatasetImporter):
 
     def probe(self, source: SourceRef) -> DetectResult | None:
         """Sniff for meta/info.json carrying a LeRobot codebase_version."""
+        if source.kind == "hf_hub":
+            # The only hub-capable format today; analyze materializes meta/ and
+            # fails loud there if the repo is not a LeRobot dataset.
+            return DetectResult(confidence=0.6, evidence="Hugging Face hub dataset id")
         if source.path is None or not (source.path / "meta" / "info.json").is_file():
             return None
         content = (source.path / "meta" / "info.json").read_text(encoding="utf-8")
