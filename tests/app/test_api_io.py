@@ -110,9 +110,9 @@ class TestIoRoutes:
         restarted = TestClient(app2)
         assert restarted.get(f"/io/jobs/{orphan.id}").json()["status"] == "interrupted"
 
-    def test_resume_and_rollback_are_501(self, client_and_dirs):
+    def test_resume_conflicts_on_unknown_job_and_rollback_is_501(self, client_and_dirs):
         client, _, _ = client_and_dirs
-        assert client.post("/io/jobs/x/resume").status_code == 501
+        assert client.post("/io/jobs/x/resume").status_code == 409  # unknown job
         assert client.delete("/io/jobs/x").status_code == 501
 
 

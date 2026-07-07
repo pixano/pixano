@@ -227,10 +227,14 @@ def cancel_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]
         raise HTTPException(status_code=409, detail=str(error)) from None
 
 
-@router.post("/jobs/{job_id}/resume", status_code=501, operation_id="resume_io_job")
-def resume_job(job_id: str) -> dict[str, str]:
-    """Resume lands with the P5 checkpointing slice."""
-    return {"detail": "resume is not implemented yet (planned: 0.8.x)"}
+@router.post("/jobs/{job_id}/resume", status_code=202, operation_id="resume_io_job")
+def resume_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
+    """Resume an interrupted/errored import from its last committed checkpoint."""
+    _, runner = _runner(settings)
+    try:
+        return _job_response(runner.submit_resume(job_id))
+    except (JobStateError, PixanoDataError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
 
 
 @router.delete("/jobs/{job_id}", status_code=501, operation_id="rollback_io_job")
