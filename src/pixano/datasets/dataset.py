@@ -675,8 +675,7 @@ class Dataset:
         )
         assert where is not None
 
-        query = table.search(None).select(columns).where(where).limit(batch_size)
-        rows = query.to_list()
+        rows = TableQueryBuilder(table).select(columns).where(where).limit(batch_size).to_list()
         rows.sort(key=lambda row: int(row.get("frame_index", -1)))
 
         result = []

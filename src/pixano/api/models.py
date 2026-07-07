@@ -418,6 +418,7 @@ class DatasetInfoResponse(DatasetInfo):
         "tracklet",
         "message",
         "text_span",
+        "timeseries",
         when_used="json",
     )
     def serialize_schema_slot(self, schema_cls: type[LanceModel] | None) -> dict[str, Any] | None:
