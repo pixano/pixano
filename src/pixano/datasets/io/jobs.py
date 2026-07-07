@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sqlite3
 import threading
 import time
@@ -456,9 +457,25 @@ class JobRunner:
 
 
 def boot_recover(data_dir: Path) -> Sequence[str]:
-    """Server-boot hook: replay staged journals, then mark orphaned jobs interrupted."""
-    from .engine import replay_journals
+    """Server-boot hook: replay journals, mark orphaned jobs, reclaim dead state dirs."""
+    from .engine import replay_journals, state_dir
 
-    replay_journals(Path(data_dir))
-    store = JobStore.for_data_dir(Path(data_dir))
-    return store.mark_interrupted_on_boot()
+    data_dir = Path(data_dir)
+    replay_journals(data_dir)
+    store = JobStore.for_data_dir(data_dir)
+    flipped = store.mark_interrupted_on_boot()
+
+    # Trash is always garbage after journal replay; staging dirs are kept only
+    # while their job can still resume (interrupted/pending/running).
+    state = state_dir(data_dir)
+    shutil.rmtree(state / "trash", ignore_errors=True)
+    staging_root = state / "staging"
+    if staging_root.is_dir():
+        resumable_ids = {
+            job.id for job in store.list_jobs(limit=1000) if job.status in ("interrupted", "pending", "running")
+        }
+        for staged in staging_root.iterdir():
+            job_id = staged.name.rsplit("-", 1)[-1]
+            if job_id not in resumable_ids:
+                shutil.rmtree(staged, ignore_errors=True)
+    return flipped

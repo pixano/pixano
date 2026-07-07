@@ -63,6 +63,18 @@ logger = logging.getLogger(__name__)
 PIXANO_STATE_DIR = ".pixano"
 
 
+def _rename_with_retry(source: Path, target: Path, attempts: int = 5, base_delay_s: float = 0.1) -> None:
+    """os.rename with exponential backoff on PermissionError (Windows file locks — D15)."""
+    for attempt in range(attempts):
+        try:
+            os.rename(source, target)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(base_delay_s * (2**attempt))
+
+
 class _CancelledImport(JobStateError):
     """Cooperative cancellation observed at a flush boundary (deliberate stop)."""
 
@@ -318,7 +330,7 @@ class ImportEngine:
     def _promote(self, staging_dir: Path, target_dir: Path, job_id: str) -> None:
         """Atomically move the staged dataset into the library (journaled for overwrite)."""
         if not target_dir.exists():
-            os.rename(staging_dir, target_dir)
+            _rename_with_retry(staging_dir, target_dir)
             return
 
         journal_dir = state_dir(self.data_dir) / "journal"
@@ -330,8 +342,8 @@ class ImportEngine:
             json.dumps({"target": str(target_dir), "staging": str(staging_dir), "trash": str(trash_dir)}),
             encoding="utf-8",
         )
-        os.rename(target_dir, trash_dir)
-        os.rename(staging_dir, target_dir)
+        _rename_with_retry(target_dir, trash_dir)
+        _rename_with_retry(staging_dir, target_dir)
         shutil.rmtree(trash_dir, ignore_errors=True)
         journal_file.unlink(missing_ok=True)
 
