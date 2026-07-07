@@ -39,6 +39,7 @@ from pixano.schemas import (
     RecordComponent,
     Relation,
     TextSpan,
+    TimeSeries,
     Tracklet,
     View,
     canonical_table_name_for_schema,
@@ -66,6 +67,7 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "relation": Relation,
     "tracklet": Tracklet,
     "message": Message,
+    "timeseries": TimeSeries,
     "text_span": TextSpan,
 }
 
@@ -122,6 +124,7 @@ class DatasetInfo(BaseModel):
     relation: type[Relation] | None = None
     tracklet: type[Tracklet] | None = None
     message: type[Message] | None = None
+    timeseries: type[TimeSeries] | None = None
     text_span: type[TextSpan] | None = None
     views: dict[str, type[View]] = Field(default_factory=dict)
     tables: dict[str, type[LanceModel]] = Field(default_factory=dict, exclude=True)

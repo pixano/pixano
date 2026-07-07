@@ -66,6 +66,7 @@ from .table_names import (
     supported_dataset_info_slots,
     validate_canonical_table_map,
 )
+from .timeseries import TimeSeries, create_timeseries_schema
 from .views import (
     PDF,
     CalibratedImage,
@@ -118,6 +119,7 @@ __all__ = [
     "MultiPath",
     "QuestionType",
     "TextSpan",
+    "TimeSeries",
     "PDF",
     "PointCloud",
     "PointCloudFrame",
@@ -143,6 +145,7 @@ __all__ = [
     "create_point_cloud_frame",
     "create_relation",
     "create_text",
+    "create_timeseries_schema",
     "create_video",
     "create_view_embedding_function",
     "canonical_table_name_for_schema",

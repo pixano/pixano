@@ -28,6 +28,7 @@ from pixano.schemas import (
     Record,
     Relation,
     TextSpan,
+    TimeSeries,
     Tracklet,
 )
 
@@ -394,6 +395,8 @@ EmbeddingCreate = _create_transport_model(
     required_fields={"id"},
 )
 EmbeddingResponse = _create_transport_model("EmbeddingResponse", Embedding, exclude_fields={"vector"})
+
+TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
 
 
 class DatasetInfoResponse(DatasetInfo):
