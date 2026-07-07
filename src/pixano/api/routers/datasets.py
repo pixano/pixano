@@ -11,8 +11,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.api.models import DatasetInfoResponse, DatasetResponse
+from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
-from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets import DatasetInfo
 from pixano.schemas.schema_group import SchemaGroup
 
 
@@ -94,10 +95,7 @@ def get_dataset_stats(
     Returns:
         Dict of group_name -> {table_name: count}.
     """
-    try:
-        dataset = Dataset.find(id, settings.library_dir)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+    dataset = get_dataset_dep(id, settings)
     result: dict[str, dict[str, int]] = {}
     for group, tables in dataset.info.groups.items():
         if group == SchemaGroup.RECORD:
@@ -128,8 +126,5 @@ def get_dataset(
     Returns:
         Dataset model.
     """
-    try:
-        dataset = Dataset.find(id, settings.library_dir)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+    dataset = get_dataset_dep(id, settings)
     return DatasetResponse.from_dataset(dataset)

@@ -350,17 +350,14 @@ def legacy_start_import(
 
     name = request.dataset_name.strip() or source_dir.name
     staging = Path(tempfile.mkdtemp(prefix="pixano-gui-import-"))
-    try:
-        source, dataset_extras = _prepare_legacy_source(source_dir, request.import_type, staging)
-    except (PixanoDataError, ImportError) as error:
-        job = store.create_job("import", dataset=to_snake_case(name))
-        store.update_job(job.id, status="error", error={"message": str(error)})
-        refreshed = store.get_job(job.id)
-        assert refreshed is not None
-        return _legacy_response(refreshed)
 
-    spec_payload = {"dataset": {"name": name, **dataset_extras}, "format": "pixano_jsonl"}
-    job = runner.submit_import(str(source), spec_payload)
+    def prepare() -> tuple[str, dict[str, Any]]:
+        # Frame extraction (cv2) is heavy — it runs on the job thread, never here.
+        source, dataset_extras = _prepare_legacy_source(source_dir, request.import_type, staging)
+        return str(source), dataset_extras
+
+    spec_payload = {"dataset": {"name": name}, "format": "pixano_jsonl"}
+    job = runner.submit_import(str(source_dir), spec_payload, prepare=prepare)
     return _legacy_response(job)
 
 

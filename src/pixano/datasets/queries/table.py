@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import re
 from typing import Any, TypeVar
 
 import duckdb
@@ -194,6 +195,29 @@ class TableQueryBuilder:
         self._descending = descending
         return self
 
+    def _filter_is_index_covered(self) -> bool:
+        """True when every column the where clause references has a scalar index.
+
+        Conservative: identifier tokens are matched against the table schema;
+        any schema column appearing in the filter must be indexed. Unknown or
+        unparsable filters return False (callers fall back to the full scan).
+        """
+        if self._where is None:
+            return True
+        try:
+            schema_names = set(self.table.schema.names)
+            referenced = {
+                token for token in re.findall(r"[A-Za-z_][A-Za-z0-9_.]*", self._where) if token in schema_names
+            }
+            if not referenced:
+                return False
+            indexed: set[str] = set()
+            for index in self.table.list_indices():
+                indexed.update(getattr(index, "columns", None) or [])
+            return referenced <= indexed
+        except Exception:  # pragma: no cover - lancedb introspection failure
+            return False
+
     def _execute(self) -> pa.Table:
         """Builds the LanceQueryBuilder.
 
@@ -228,20 +252,26 @@ class TableQueryBuilder:
 
         # Determine if we need the DuckDB path
         needs_duckdb = len(self._order_by) > 0 or (self._offset is not None and self._offset > 0)
+        if needs_duckdb and len(self._order_by) == 0 and self._filter_is_index_covered():
+            # Indexed filters page natively (limit/offset apply post-filter).
+            needs_duckdb = False
 
         if not needs_duckdb:
             # LanceDB native path. CAUTION: in lancedb 0.29 plain scans apply
-            # `limit` to the rows SCANNED, before the `where` filter — a filtered
-            # query whose matches are not at the head of the table silently
-            # under-returns. With a filter we must scan the whole table (late
-            # materialization keeps this cheap) and slice the limit afterwards.
-            if self._where is not None:
+            # `limit` BEFORE any non-index-covered part of the `where` filter —
+            # a filtered query whose matches are not at the head of the table
+            # silently under-returns. When every predicate column carries a
+            # scalar index the limit/offset apply post-filter (fast path);
+            # otherwise scan the whole table and slice afterwards.
+            if self._where is not None and not self._filter_is_index_covered():
                 scan_limit = self.table.count_rows()
             else:
                 scan_limit = self._limit if self._limit is not None else self.table.count_rows()
             query = self.table.search(None).select(columns).limit(scan_limit)
             if self._where is not None:
                 query = query.where(self._where)
+            if self._offset:
+                query = query.offset(self._offset)
             result = query.to_arrow()
             if self._where is not None and self._limit is not None:
                 result = result.slice(0, self._limit)
@@ -254,7 +284,8 @@ class TableQueryBuilder:
 
             if len(self._order_by) == 0:
                 # No ORDER BY, just OFFSET — overfetch + slice. Same scan-limit
-                # caveat as the native path: with a filter, scan everything.
+                # caveat as the native path: with a non-index-covered filter,
+                # scan everything (index-covered filters took the native path).
                 if self._where is not None:
                     fetch_limit = self.table.count_rows()
                 else:
