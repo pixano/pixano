@@ -278,7 +278,7 @@ class CocoImporter(DatasetImporter):
         """Two passes per split: index annotations, then stream images joining the index."""
         assert source.path is not None
         info = self.resolve_info(spec)
-        namespace = spec.ids.namespace or source.path.name
+        namespace = self.effective_namespace(spec, source)
         resolver = MediaResolver(spec.media, base_dir=source.path)
         resume_split = cursor.get("split") if cursor else None
         resume_ordinal = int(cursor.get("image_ordinal", 0)) if cursor else 0

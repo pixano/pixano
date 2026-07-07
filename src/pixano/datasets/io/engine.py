@@ -366,7 +366,7 @@ class ImportEngine:
                 dataset_id=dataset.info.id,
                 spec_fingerprint=spec.fingerprint(),
                 plan_fingerprint=plan.plan_fingerprint,
-                id_namespace=spec.ids.namespace or "",
+                id_namespace=importer.effective_namespace(spec, source),
                 importer_version=importer.importer_version,
                 pre_import_versions={name: dataset.open_table(name).version for name in dataset.info.tables},
             )
@@ -626,6 +626,81 @@ class ImportEngine:
             sink.emit(
                 ProgressEvent(phase="ingest", done=done, total=plan.totals.records, table_counts=dict(table_counts))
             )
+
+    def rollback(self, target_dir: Path, job_id: str) -> dict[str, int]:
+        """Undo an add-mode import (spec §8, deviation D12).
+
+        Fast path: when every table still sits at the manifest's post-import
+        version, `checkout + restore` snaps back to the pre-import version.
+        Any drift (concurrent edits since the import) switches to the surgical
+        path: delete the import's namespace-prefixed rows in reverse FK order,
+        leaving later edits intact. Re-derives storage_mode afterwards.
+
+        Returns:
+            Rows removed per table (empty dict on the version-restore path).
+        """
+        from .ids import namespace_prefix
+
+        manifest_path = target_dir / "imports" / f"{job_id}.manifest.json"
+        if not manifest_path.is_file():
+            raise JobStateError(f"No import manifest for job '{job_id}' — only add-mode imports roll back.")
+        manifest = ImportManifest.load(manifest_path)
+        if not manifest.post_import_versions:
+            raise JobStateError(f"Job '{job_id}' never finished its first flush; nothing to roll back.")
+        dataset = Dataset(target_dir)
+
+        untouched = all(
+            dataset.open_table(name).version == version
+            for name, version in manifest.post_import_versions.items()
+            if name in dataset.info.tables
+        )
+        removed: dict[str, int] = {}
+        if untouched:
+            for name, pre_version in manifest.pre_import_versions.items():
+                if name not in dataset.info.tables:
+                    continue
+                table = dataset.open_table(name)
+                table.checkout(pre_version)
+                table.restore()
+        else:
+            prefix = namespace_prefix(manifest.id_namespace) if manifest.id_namespace else ""
+            if not prefix:
+                raise JobStateError(
+                    f"Job '{job_id}' has no id namespace recorded and the dataset changed since the "
+                    "import — cannot roll back safely."
+                )
+            for name in reversed(dataset._table_insert_order(list(dataset.info.tables))):
+                table = dataset.open_table(name)
+                predicate = f"id LIKE '{prefix}-%'"
+                before = table.count_rows(predicate)
+                if before:
+                    table.delete(predicate)
+                    removed[name] = before
+
+        self._restamp_storage_mode(dataset)
+        manifest_path.unlink(missing_ok=True)
+        Dataset.invalidate_caches(dataset.info.id)
+        return removed
+
+    def _restamp_storage_mode(self, dataset: Dataset) -> None:
+        """Re-derive storage_mode from the remaining view rows (cheap count pushdowns)."""
+        has_embedded = has_uri = False
+        for group_tables in (dataset.info.groups.get(SchemaGroup.VIEW, set()),):
+            for name in group_tables:
+                table = dataset.open_table(name)
+                if "uri" not in table.schema.names:
+                    continue
+                if table.count_rows("uri = ''"):
+                    has_embedded = True
+                if table.count_rows("uri != ''"):
+                    has_uri = True
+        if has_embedded and has_uri:
+            dataset.info.storage_mode = "mixed"
+        elif has_uri:
+            dataset.info.storage_mode = "filesystem"
+        elif has_embedded:
+            dataset.info.storage_mode = "embedded"
+        dataset.info.to_json(dataset._info_file)
 
     def _check_cancelled(self) -> None:
         if self.cancel_check is not None and self.cancel_check():

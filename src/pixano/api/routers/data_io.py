@@ -237,10 +237,17 @@ def resume_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]
         raise HTTPException(status_code=409, detail=str(error)) from None
 
 
-@router.delete("/jobs/{job_id}", status_code=501, operation_id="rollback_io_job")
-def rollback_job(job_id: str) -> dict[str, str]:
-    """Rollback lands with the P5 hardening slice."""
-    return {"detail": "rollback is not implemented yet (planned: 0.8.x)"}
+@router.delete("/jobs/{job_id}", operation_id="rollback_io_job")
+def rollback_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
+    """Roll back a completed add-mode import (version restore, else namespace delete)."""
+    store, runner = _runner(settings)
+    try:
+        runner.rollback(job_id)
+    except (JobStateError, PixanoDataError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
+    job = store.get_job(job_id)
+    assert job is not None
+    return _job_response(job)
 
 
 # ----------------------------------------------------------------------
