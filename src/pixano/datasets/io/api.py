@@ -66,6 +66,8 @@ def import_dataset(
     importer: DatasetImporter | None = None,
     sinks: Sequence[ProgressSink] = (),
     engine: ImportEngine | None = None,
+    job_id: str | None = None,
+    resume_cursor: dict | None = None,
 ) -> ImportResult:
     """Import a source into the data directory's library (analyze → validate → ingest).
 
@@ -78,6 +80,8 @@ def import_dataset(
         importer: Explicit importer instance (advanced; bypasses the registry).
         sinks: Progress sinks (e.g. a tqdm sink).
         engine: Preconfigured engine (jobs wire checkpoints/cancellation through it).
+        job_id: External job id (names the staging dir so crashed builds resume).
+        resume_cursor: Last committed cursor; re-enters the importer past done work.
 
     Returns:
         The import result (dataset id/path, per-table row counts).
@@ -108,7 +112,7 @@ def import_dataset(
         info.description = spec.dataset.description
 
     engine = engine or ImportEngine(Path(data_dir))
-    return engine.run(resolved, source_ref, spec, plan, info, sinks=sinks)
+    return engine.run(resolved, source_ref, spec, plan, info, sinks=sinks, job_id=job_id, resume_cursor=resume_cursor)
 
 
 def export_dataset(

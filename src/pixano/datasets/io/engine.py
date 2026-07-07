@@ -49,7 +49,7 @@ from pixano.schemas import SchemaGroup, is_image, is_sequence_frame, is_view, sc
 from pixano.schemas.views.image import _generate_preview
 from pixano.utils import to_snake_case
 
-from .errors import JobStateError, SpecValidationError, UnsupportedStorageError
+from .errors import JobStateError, ResumeError, SpecValidationError, UnsupportedStorageError
 from .ids import IdLedger
 from .importer import Cursor, DatasetImporter, SourceRef
 from .manifest import ImportManifest
@@ -61,6 +61,12 @@ from .spec import ImportSpec
 logger = logging.getLogger(__name__)
 
 PIXANO_STATE_DIR = ".pixano"
+
+
+class _CancelledImport(JobStateError):
+    """Cooperative cancellation observed at a flush boundary (deliberate stop)."""
+
+
 DEFAULT_FLUSH_ROWS = 4096
 DEFAULT_FLUSH_BYTES = 256 * 1024 * 1024
 
@@ -178,10 +184,23 @@ class ImportEngine:
         plan: ImportPlan,
         info: DatasetInfo,
         sinks: Sequence[ProgressSink] = (),
+        job_id: str | None = None,
+        resume_cursor: Cursor | None = None,
     ) -> ImportResult:
-        """Execute the plan: stream, validate, write, finalize — atomically per mode."""
+        """Execute the plan: stream, validate, write, finalize — atomically per mode.
+
+        ``job_id`` lets a job store name the run (staging dirs become
+        discoverable for resume); ``resume_cursor`` re-enters the importer past
+        already-committed work — requires ``importer.supports_resume`` and
+        ``deterministic_ids`` (boundary flushes upsert, so replays converge).
+        """
         started_at = time.monotonic()
-        job_id = shortuuid.uuid()
+        job_id = job_id or shortuuid.uuid()
+        if resume_cursor is not None and not (importer.supports_resume and importer.deterministic_ids):
+            raise ResumeError(
+                f"Format '{importer.format_name}' does not support resume "
+                "(needs supports_resume and deterministic ids); restart the import instead."
+            )
         dataset_name = to_snake_case(spec.dataset.name or info.name)
         if not dataset_name:
             raise SpecValidationError("dataset.name must contain at least one alphanumeric character.")
@@ -190,8 +209,22 @@ class ImportEngine:
         replay_journals(self.data_dir)
 
         if spec.mode == "add":
-            return self._run_add(importer, source, spec, plan, job_id, target_dir, sinks, started_at)
-        return self._run_build(importer, source, spec, plan, info, job_id, dataset_name, target_dir, sinks, started_at)
+            return self._run_add(
+                importer, source, spec, plan, job_id, target_dir, sinks, started_at, resume_cursor=resume_cursor
+            )
+        return self._run_build(
+            importer,
+            source,
+            spec,
+            plan,
+            info,
+            job_id,
+            dataset_name,
+            target_dir,
+            sinks,
+            started_at,
+            resume_cursor=resume_cursor,
+        )
 
     # ------------------------------------------------------------------
     # create / overwrite: staged build + atomic promotion
@@ -209,8 +242,9 @@ class ImportEngine:
         target_dir: Path,
         sinks: Sequence[ProgressSink],
         started_at: float,
+        resume_cursor: Cursor | None = None,
     ) -> ImportResult:
-        if spec.mode == "create" and target_dir.exists():
+        if spec.mode == "create" and target_dir.exists() and resume_cursor is None:
             raise SpecValidationError(
                 f"Dataset '{dataset_name}' already exists at '{target_dir}'. Use mode 'overwrite' or 'add'."
             )
@@ -220,22 +254,50 @@ class ImportEngine:
         self.library_dir.mkdir(parents=True, exist_ok=True)
         self._assert_same_filesystem(staging_dir.parent, self.library_dir)
 
-        if not info.id:
-            info.id = shortuuid.uuid()
-        dataset = Dataset.create(staging_dir, info)
+        resuming = resume_cursor is not None and staging_dir.exists()
+        if resume_cursor is not None and not staging_dir.exists():
+            raise ResumeError(
+                f"No staging directory for job '{job_id}' — the build cannot resume; restart the import."
+            )
+        if resuming:
+            # Continue inside the never-promoted staging dataset; boundary
+            # flushes upsert, so the last (possibly replayed) bundle converges.
+            dataset = Dataset(staging_dir)
+            dataset.create_scalar_indexes()
+        else:
+            if not info.id:
+                info.id = shortuuid.uuid()
+            dataset = Dataset.create(staging_dir, info)
         ledger = IdLedger(spill_dir=staging_dir / ".ledger")
         table_counts: dict[str, int] = {}
         census = _MediaCensus()
 
         try:
-            for cursor in self._stream(importer, source, spec, plan, dataset, ledger, table_counts, census, sinks):
+            for cursor in self._stream(
+                importer,
+                source,
+                spec,
+                plan,
+                dataset,
+                ledger,
+                table_counts,
+                census,
+                sinks,
+                add_mode=resuming,  # resumed flushes upsert (at-least-once -> exactly-once)
+                start_cursor=resume_cursor,
+            ):
                 if self.checkpoint is not None:
                     self.checkpoint(cursor, dict(table_counts))
                 self._check_cancelled()
             self._finalize(dataset, spec, plan, importer, job_id, table_counts, census, sinks, add_mode=False)
-        except BaseException:
+        except _CancelledImport:
             ledger.close()
-            shutil.rmtree(staging_dir, ignore_errors=True)
+            shutil.rmtree(staging_dir, ignore_errors=True)  # cancel = deliberate: drop staging
+            raise
+        except BaseException:
+            # Preserve staging: a crashed/failed build resumes from the last
+            # committed flush (trash GC reclaims abandoned staging dirs).
+            ledger.close()
             raise
         ledger.close()
         shutil.rmtree(staging_dir / ".ledger", ignore_errors=True)
@@ -287,22 +349,28 @@ class ImportEngine:
         target_dir: Path,
         sinks: Sequence[ProgressSink],
         started_at: float,
+        resume_cursor: Cursor | None = None,
     ) -> ImportResult:
         if not target_dir.exists():
             raise SpecValidationError(f"Dataset '{target_dir.name}' does not exist; use mode 'create'.")
         dataset = Dataset(target_dir)
 
-        manifest = ImportManifest(
-            job_id=job_id,
-            dataset_id=dataset.info.id,
-            spec_fingerprint=spec.fingerprint(),
-            plan_fingerprint=plan.plan_fingerprint,
-            id_namespace=spec.ids.namespace or "",
-            importer_version=importer.importer_version,
-            pre_import_versions={name: dataset.open_table(name).version for name in dataset.info.tables},
-        )
         manifest_path = target_dir / "imports" / f"{job_id}.manifest.json"
-        manifest.save(manifest_path)
+        if resume_cursor is not None and manifest_path.is_file():
+            # Resume: keep the original manifest so pre-import versions (the
+            # rollback anchor) still describe the state before the FIRST run.
+            manifest = ImportManifest.load(manifest_path)
+        else:
+            manifest = ImportManifest(
+                job_id=job_id,
+                dataset_id=dataset.info.id,
+                spec_fingerprint=spec.fingerprint(),
+                plan_fingerprint=plan.plan_fingerprint,
+                id_namespace=spec.ids.namespace or "",
+                importer_version=importer.importer_version,
+                pre_import_versions={name: dataset.open_table(name).version for name in dataset.info.tables},
+            )
+            manifest.save(manifest_path)
 
         # Indexes make the upserting merge path scale past full-table scans.
         dataset.create_scalar_indexes()
@@ -312,7 +380,17 @@ class ImportEngine:
         census = _MediaCensus()
         try:
             for cursor in self._stream(
-                importer, source, spec, plan, dataset, ledger, table_counts, census, sinks, add_mode=True
+                importer,
+                source,
+                spec,
+                plan,
+                dataset,
+                ledger,
+                table_counts,
+                census,
+                sinks,
+                add_mode=True,
+                start_cursor=resume_cursor,
             ):
                 if self.checkpoint is not None:
                     self.checkpoint(cursor, dict(table_counts))
@@ -351,6 +429,7 @@ class ImportEngine:
         census: "_MediaCensus",
         sinks: Sequence[ProgressSink],
         add_mode: bool = False,
+        start_cursor: Cursor | None = None,
     ) -> Iterator[Cursor]:
         """Consume importer bundles through bounded buffers; yield committed cursors."""
         row_buffers: dict[str, list[LanceModel]] = {}
@@ -368,7 +447,7 @@ class ImportEngine:
             buffered_bytes = 0
             self._emit_progress(sinks, plan, table_counts)
 
-        for bundle in importer.iter_batches(source, spec, plan):
+        for bundle in importer.iter_batches(source, spec, plan, cursor=start_cursor):
             for table_name, payload in bundle.tables.items():
                 if isinstance(payload, (pa.RecordBatch, pa.Table)):
                     # Arrow payloads are pre-batched by the importer: write through.
@@ -550,7 +629,7 @@ class ImportEngine:
 
     def _check_cancelled(self) -> None:
         if self.cancel_check is not None and self.cancel_check():
-            raise JobStateError("Import cancelled.")
+            raise _CancelledImport("Import cancelled.")
 
     def _assert_same_filesystem(self, staging_parent: Path, library_dir: Path) -> None:
         if staging_parent.stat().st_dev != library_dir.stat().st_dev:

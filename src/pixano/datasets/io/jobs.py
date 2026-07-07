@@ -285,14 +285,52 @@ class JobRunner:
     def submit_import(self, source: str, spec_payload: dict[str, Any], plan_id: str = "") -> JobRecord:
         """Create a pending import job and start it on the worker thread."""
         job = self.store.create_job(
-            "import", dataset=str(spec_payload.get("dataset", {}).get("name", "")), spec=spec_payload, plan_id=plan_id
+            "import",
+            dataset=str(spec_payload.get("dataset", {}).get("name", "")),
+            spec={**spec_payload, "__source": source},  # resume needs the source; stripped before validation
+            plan_id=plan_id,
         )
         thread = threading.Thread(target=self._run_import, args=(job.id, source, spec_payload, plan_id), daemon=True)
         self._threads.append(thread)
         thread.start()
         return job
 
-    def _run_import(self, job_id: str, source: str, spec_payload: dict[str, Any], plan_id: str) -> None:
+    def submit_resume(self, job_id: str) -> JobRecord:
+        """Resume an interrupted/errored job from its last committed cursor."""
+        job = self.store.get_job(job_id)
+        if job is None:
+            raise JobStateError(f"Unknown job '{job_id}'.")
+        if job.kind != "import" or job.status not in ("interrupted", "error"):
+            raise JobStateError(f"Job '{job_id}' is {job.status}; only interrupted/errored imports resume.")
+        if not job.cursor:
+            raise JobStateError(f"Job '{job_id}' has no committed checkpoint; restart the import instead.")
+        source = str(job.spec.get("__source", "")) or ""
+        stored_plan = self.store.get_plan(job.plan_id) if job.plan_id else None
+        if not source and stored_plan is not None:
+            source = stored_plan[1]
+        if not source:
+            raise JobStateError(f"Job '{job_id}' recorded no source; restart the import instead.")
+        self.store.update_job(job_id, status="pending", error={})
+        thread = threading.Thread(
+            target=self._run_import,
+            args=(job_id, source, {k: v for k, v in job.spec.items() if k != "__source"}, job.plan_id),
+            kwargs={"resume_cursor": dict(job.cursor)},
+            daemon=True,
+        )
+        self._threads.append(thread)
+        thread.start()
+        refreshed = self.store.get_job(job_id)
+        assert refreshed is not None
+        return refreshed
+
+    def _run_import(
+        self,
+        job_id: str,
+        source: str,
+        spec_payload: dict[str, Any],
+        plan_id: str,
+        resume_cursor: dict[str, Any] | None = None,
+    ) -> None:
         from .api import import_dataset
         from .engine import ImportEngine
         from .spec import ImportSpec
@@ -303,7 +341,7 @@ class JobRunner:
                 return
             self.store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=time.time())
             try:
-                spec = ImportSpec.model_validate(spec_payload)
+                spec = ImportSpec.model_validate({k: v for k, v in spec_payload.items() if k != "__source"})
                 plan = None
                 if plan_id:
                     stored = self.store.get_plan(plan_id)
@@ -317,7 +355,16 @@ class JobRunner:
                     cancel_check=lambda: self.store.cancel_requested(job_id),
                 )
                 sink = JobSink(self.store, job_id)
-                result = import_dataset(source, self.data_dir, spec, plan=plan, sinks=[sink], engine=engine)
+                result = import_dataset(
+                    source,
+                    self.data_dir,
+                    spec,
+                    plan=plan,
+                    sinks=[sink],
+                    engine=engine,
+                    job_id=job_id,
+                    resume_cursor=resume_cursor,
+                )
                 sink.close()
                 self.store.update_job(
                     job_id,
