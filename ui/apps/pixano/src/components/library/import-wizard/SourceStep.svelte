@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, FolderOpen } from "phosphor-svelte";
 
+  import FolderBrowser from "./FolderBrowser.svelte";
   import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
   import { parseAdvancedSpec, showsLerobotFields, type WizardFields } from "./wizardUtils";
 
@@ -18,6 +19,7 @@ License: CECILL-C
   let { fields = $bindable(), advancedJson = $bindable() }: Props = $props();
 
   let showAdvanced = $state(false);
+  let showBrowser = $state(false);
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
   const showLerobot = $derived(showsLerobotFields(fields));
 
@@ -25,9 +27,14 @@ License: CECILL-C
     fields.intent === "lerobot"
       ? "A local LeRobot folder, or a Hugging Face dataset id (org/name)."
       : fields.intent === "raw"
-        ? "A folder on the server holding your media files."
-        : "A folder path on the server, or a Hugging Face dataset id for LeRobot sources.",
+        ? "A folder on this machine holding your media files."
+        : "A folder path on this machine, or a Hugging Face dataset id for LeRobot sources.",
   );
+
+  function handleBrowseSelect(path: string) {
+    fields.source = path;
+    showBrowser = false;
+  }
 
   const labelClass = "text-xs font-semibold uppercase tracking-widest text-muted-foreground";
   const inputClass =
@@ -38,21 +45,38 @@ License: CECILL-C
 <div class="px-6 sm:px-7 pb-2 space-y-4">
   <div class="space-y-1.5">
     <label class={labelClass} for="wizard-source">Source</label>
-    <div class="relative">
-      <FolderOpen
-        weight="regular"
-        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-      />
-      <input
-        id="wizard-source"
-        type="text"
-        class="{inputClass} pl-9"
-        placeholder={fields.intent === "lerobot"
-          ? "/path/on/server or org/name (Hugging Face)"
-          : "/path/on/server"}
-        bind:value={fields.source}
-      />
+    <div class="flex gap-2">
+      <div class="relative min-w-0 flex-1">
+        <FolderOpen
+          weight="regular"
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <input
+          id="wizard-source"
+          type="text"
+          class="{inputClass} pl-9"
+          placeholder={fields.intent === "lerobot"
+            ? "/path/to/folder or org/name (Hugging Face)"
+            : "/path/to/folder"}
+          bind:value={fields.source}
+        />
+      </div>
+      <button
+        type="button"
+        class="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"
+        aria-expanded={showBrowser}
+        onclick={() => (showBrowser = !showBrowser)}
+      >
+        Browse…
+      </button>
     </div>
+    {#if showBrowser}
+      <FolderBrowser
+        initialPath={fields.source}
+        onSelect={handleBrowseSelect}
+        onClose={() => (showBrowser = false)}
+      />
+    {/if}
     <p class="text-xs text-muted-foreground">{sourceHint}</p>
   </div>
 

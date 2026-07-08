@@ -6,7 +6,14 @@ License: CECILL-C
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { analyzeImportSource, cancelIoJob, getIoJob, listIoFormats, startIoImport } from "../ioApi";
+import {
+  analyzeImportSource,
+  browseServerFolders,
+  cancelIoJob,
+  getIoJob,
+  listIoFormats,
+  startIoImport,
+} from "../ioApi";
 
 const fetchMock = vi.fn();
 
@@ -32,6 +39,22 @@ describe("ioApi", () => {
     );
     await expect(listIoFormats()).resolves.toMatchObject([{ name: "coco" }]);
     expect(fetchMock).toHaveBeenCalledWith("/io/formats", expect.anything());
+  });
+
+  it("browses server folders with an encoded path (empty = home)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ path: "/home/me", parent: "/home", entries: [] }),
+    );
+    await expect(browseServerFolders()).resolves.toMatchObject({ path: "/home/me" });
+    expect(fetchMock).toHaveBeenCalledWith("/io/browse", expect.anything());
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ path: "/data/my sets", parent: "/data", entries: [] }),
+    );
+    await browseServerFolders("/data/my sets");
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/io/browse?path=%2Fdata%2Fmy%20sets",
+      expect.anything(),
+    );
   });
 
   it("analyzes with a source + spec body", async () => {

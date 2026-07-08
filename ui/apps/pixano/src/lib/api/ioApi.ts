@@ -5,11 +5,22 @@ License: CECILL-C
 -------------------------------------*/
 
 import { JSON_HEADERS, requestJson } from "./apiClient";
-import type { ImportPlanResponse, IoFormatResponse, IoJobResponse } from "./restTypes";
+import type {
+  FolderBrowseResponse,
+  ImportPlanResponse,
+  IoFormatResponse,
+  IoJobResponse,
+} from "./restTypes";
 
 /** List the registered data formats (import wizard format picker). */
 export async function listIoFormats(): Promise<IoFormatResponse[]> {
   return requestJson<IoFormatResponse[]>("/io/formats", {}, "listIoFormats");
+}
+
+/** List a server directory's subfolders (source picker); empty path = server home. */
+export async function browseServerFolders(path = ""): Promise<FolderBrowseResponse> {
+  const query = path ? `?path=${encodeURIComponent(path)}` : "";
+  return requestJson<FolderBrowseResponse>(`/io/browse${query}`, {}, "browseServerFolders");
 }
 
 /** Analyze a source without side effects; returns the plan (+ plan_id). */

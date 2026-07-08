@@ -149,6 +149,20 @@ export interface IoFinding {
   suggestion: string;
 }
 
+/** One browsable subfolder of a server directory (wizard source picker). */
+export interface FolderEntry {
+  name: string;
+  path: string;
+  hint: string; // "pixano" | "lerobot" | ""
+}
+
+/** A server directory listing (GET /io/browse). */
+export interface FolderBrowseResponse {
+  path: string;
+  parent: string | null;
+  entries: FolderEntry[];
+}
+
 /** The resolved schema an import would create (plan `inferred_schema`). */
 export interface InferredSchemaResponse {
   workspace?: string;
