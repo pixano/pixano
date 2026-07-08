@@ -159,6 +159,55 @@ def list_formats() -> list[dict[str, Any]]:
     ]
 
 
+class FolderEntry(BaseModel):
+    """One browsable subfolder of a server directory."""
+
+    name: str
+    path: str
+    hint: str = ""  # "pixano" | "lerobot" | "" — shallow source markers for the picker
+
+
+class FolderBrowseResponse(BaseModel):
+    """A server directory listing for the wizard's source picker."""
+
+    path: str
+    parent: str | None
+    entries: list[FolderEntry]
+
+
+_BROWSE_MAX_ENTRIES = 500
+
+
+@router.get("/browse", operation_id="browse_server_folders")
+def browse_folders(path: str = "") -> FolderBrowseResponse:
+    """List a server directory's subfolders (the wizard's source picker).
+
+    Directories only — import sources are folders; defaults to the server
+    user's home directory. This exposes no surface the import API does not
+    already have: /io/analyze accepts arbitrary server paths.
+    """
+    base = (Path(path).expanduser() if path.strip() else Path.home()).resolve()
+    if not base.is_dir():
+        raise HTTPException(status_code=404, detail=f"Not a directory on the server: {base}")
+    try:
+        children = sorted(p for p in base.iterdir() if p.is_dir() and not p.name.startswith("."))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail=f"Permission denied: {base}") from None
+    entries: list[FolderEntry] = []
+    for child in children[:_BROWSE_MAX_ENTRIES]:
+        hint = ""
+        try:
+            if (child / "dataset.yaml").is_file():
+                hint = "pixano"
+            elif (child / "meta" / "info.json").is_file():
+                hint = "lerobot"
+        except OSError:
+            hint = ""
+        entries.append(FolderEntry(name=child.name, path=str(child), hint=hint))
+    parent = str(base.parent) if base.parent != base else None
+    return FolderBrowseResponse(path=str(base), parent=parent, entries=entries)
+
+
 @router.post("/analyze", operation_id="analyze_import_source")
 def analyze_source(request: AnalyzeRequest, settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, Any]:
     """Analyze a source; returns the plan JSON (and a plan_id for later execution)."""

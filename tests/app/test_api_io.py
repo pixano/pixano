@@ -93,6 +93,29 @@ class TestIoRoutes:
         assert final["progress"]["table_counts"] == {"records": 2, "images": 4}
         assert (data_dir / "library" / "raw_ds").is_dir()
 
+    def test_browse_server_folders(self, client_and_dirs, tmp_path: Path):
+        client, _, _ = client_and_dirs
+        root = tmp_path / "browse"
+        (root / "plain").mkdir(parents=True)
+        (root / "pix_source").mkdir()
+        (root / "pix_source" / "dataset.yaml").write_text("pixano: 2\n")
+        (root / "robot" / "meta").mkdir(parents=True)
+        (root / "robot" / "meta" / "info.json").write_text("{}")
+        (root / ".hidden").mkdir()
+        (root / "a_file.txt").write_text("x")
+
+        listing = client.get("/io/browse", params={"path": str(root)}).json()
+        assert listing["path"] == str(root)
+        assert listing["parent"] == str(root.parent)
+        assert [e["name"] for e in listing["entries"]] == ["pix_source", "plain", "robot"]
+        hints = {e["name"]: e["hint"] for e in listing["entries"]}
+        assert hints == {"pix_source": "pixano", "plain": "", "robot": "lerobot"}
+
+        assert client.get("/io/browse", params={"path": str(root / "missing")}).status_code == 404
+        assert client.get("/io/browse", params={"path": str(root / "a_file.txt")}).status_code == 404
+        default = client.get("/io/browse").json()
+        assert default["path"] == str(Path.home())
+
     def test_analyze_refuses_user_python(self, client_and_dirs):
         client, _, source = client_and_dirs
         response = client.post("/io/analyze", json={"source": str(source), "spec": {"importer": "evil.py:Cls"}})
