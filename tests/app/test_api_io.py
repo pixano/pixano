@@ -55,6 +55,8 @@ class TestIoRoutes:
         analyzed = client.post("/io/analyze", json={"source": str(source), "spec": {}}).json()
         assert analyzed["totals"]["records"] == 3
         assert analyzed["plan_id"]
+        assert analyzed["inferred_schema"]["record"]["base"] == "Record"
+        assert analyzed["inferred_schema"]["views"]["image"]["base"] == "Image"
 
         started = client.post("/io/imports", json={"plan_id": analyzed["plan_id"], "source": str(source)})
         assert started.status_code == 202
@@ -62,6 +64,34 @@ class TestIoRoutes:
         assert final["status"] == "done", final["error"]
         assert final["progress"]["table_counts"]["records"] == 3
         assert (data_dir / "library" / "io_ds").is_dir()
+
+    def test_analyze_raw_folder_with_custom_entity_attrs(self, client_and_dirs, tmp_path: Path):
+        """The wizard's raw-media flow: bare view folders + a UI-built schema."""
+        client, data_dir, _ = client_and_dirs
+        raw = tmp_path / "raw_views"
+        for view in ("left", "right"):
+            (raw / view).mkdir(parents=True)
+            for stem in ("a", "b"):
+                PIL.Image.new("RGB", (16, 16), (10, 120, 200)).save(raw / view / f"{stem}.jpg")
+        spec = {
+            "format": "pixano_jsonl",
+            "dataset": {"name": "raw_ds", "workspace": "image"},
+            "schema": {"entity": {"attrs": {"category": "str"}}, "annotations": ["bbox", "classification"]},
+        }
+
+        analyzed = client.post("/io/analyze", json={"source": str(raw), "spec": spec}).json()
+        assert analyzed["totals"]["records"] == 2
+        schema = analyzed["inferred_schema"]
+        assert set(schema["views"]) == {"left", "right"}
+        assert schema["entity"]["fields"]["category"]["type"] == "str"
+        assert "classification" in schema and "keypoint" not in schema
+
+        started = client.post("/io/imports", json={"plan_id": analyzed["plan_id"], "source": str(raw), "spec": spec})
+        assert started.status_code == 202
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        assert final["progress"]["table_counts"] == {"records": 2, "images": 4}
+        assert (data_dir / "library" / "raw_ds").is_dir()
 
     def test_analyze_refuses_user_python(self, client_and_dirs):
         client, _, source = client_and_dirs

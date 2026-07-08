@@ -13,7 +13,9 @@ two storage modes (§6): local paths embed, remote URIs pass through.
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Iterator
 
 from lancedb.pydantic import LanceModel
@@ -22,23 +24,27 @@ from pydantic import ValidationError
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.schemas import canonical_table_name_for_schema, canonical_table_name_for_slot
 
-from ...errors import MetadataError, SpecValidationError
+from ...errors import MetadataError, PixanoDataError, SpecValidationError
 from ...ids import stable_id
 from ...importer import BatchBundle, Cursor, DatasetImporter, DetectResult, SourceRef
-from ...media import MediaResolver, probe_image, probe_video
+from ...media import MediaResolver, ffmpeg_available, ffprobe_available, probe_image, probe_video
 from ...plan import AnalyzeLimits, ImportPlan, PreflightReport, Provenance, SamplePreview
 from ...registry import Capabilities, DataFormat
 from ...spec import ImportSpec, resolve_dataset_info
+from .media_only import (
+    classify_media,
+    decode_video_frames,
+    discover_layout,
+    frames_mode,
+    is_media_only_source,
+    thumbnail_data_url,
+)
 from .parser import ParsedLine, parse_file, view_kinds_of
 from .sidecars import decode_index_png, decode_track_json
 from .spec import HEADER_KEY, EntitySpec, SidecarSpec
 
 
 METADATA_FILENAME = "metadata.jsonl"
-
-# Media-only mode: files with these suffixes become one record each when a
-# split has no metadata.jsonl (single image view only).
-_IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"})
 
 
 def _splits_of(source_dir: Path) -> list[Path]:
@@ -86,7 +92,44 @@ class PixanoJsonlImporter(DatasetImporter):
                 if HEADER_KEY in first_line:
                     return DetectResult(confidence=0.95, evidence="$pixano header")
                 return DetectResult(confidence=0.6, evidence=f"{split_dir.name}/{METADATA_FILENAME}")
+        if is_media_only_source(source.path):
+            return DetectResult(confidence=0.3, evidence="media files without metadata (media-only mode)")
         return None
+
+    # ------------------------------------------------------------------
+    # Schema resolution
+    # ------------------------------------------------------------------
+
+    def resolve_info(self, spec: ImportSpec, source: SourceRef | None = None) -> DatasetInfo:
+        """Media-only sources infer their views from the folder layout; a user schema still wins."""
+        declared_views = spec.schema_ is not None and bool(spec.schema_.views)
+        if spec.schema_manifest is not None or declared_views:
+            return resolve_dataset_info(spec)
+        if source is None or source.path is None or not is_media_only_source(source.path):
+            return resolve_dataset_info(spec)
+
+        layout = discover_layout(source.path, None, PreflightReport())
+        if not layout.view_kinds:
+            return resolve_dataset_info(spec)
+
+        # File kind -> view kind: video files extract to annotatable frames by
+        # default (like LeRobot); "reference" keeps browse-scale Video rows.
+        video_kind = "sequence_frames" if frames_mode(spec) == "extract" else "video"
+        view_kind_map = {"image": "image", "video": video_kind, "text": "text"}
+        payload = spec.model_dump(mode="json", exclude_none=True, by_alias=True)
+        schema_payload = dict(payload.get("schema") or {})
+        schema_payload["views"] = {name: {"kind": view_kind_map[kind]} for name, kind in layout.view_kinds.items()}
+        file_kinds = set(layout.view_kinds.values())
+        if file_kinds == {"text"} and not schema_payload.get("annotations"):
+            schema_payload["annotations"] = ["classification", "text_span"]
+        payload["schema"] = schema_payload
+        if payload.get("dataset", {}).get("workspace", "undefined") == "undefined":
+            # Formats know their natural UI workspace; an explicit --workspace wins.
+            if "video" in file_kinds:
+                payload.setdefault("dataset", {})["workspace"] = "video"
+            elif "image" in file_kinds:
+                payload.setdefault("dataset", {})["workspace"] = "image"
+        return resolve_dataset_info(ImportSpec.model_validate(payload))
 
     # ------------------------------------------------------------------
     # Analyze
@@ -98,8 +141,10 @@ class PixanoJsonlImporter(DatasetImporter):
         if source.path is None or not source.path.is_dir():
             plan.report.add("invalid_source", Provenance(file=source.location()), suggestion="Expected a directory.")
             return plan
+        if is_media_only_source(source.path):
+            return self._analyze_media_only(source, spec, limits, plan)
 
-        info = resolve_dataset_info(spec)
+        info = self.resolve_info(spec, source)
         namespace = self.effective_namespace(spec, source)
         total_records = 0
         media_probes = 0
@@ -135,16 +180,95 @@ class PixanoJsonlImporter(DatasetImporter):
         plan.totals.estimated = truncated
         return plan
 
+    def _analyze_media_only(
+        self, source: SourceRef, spec: ImportSpec, limits: AnalyzeLimits, plan: ImportPlan
+    ) -> ImportPlan:
+        """Analyze a bare media folder: discover the layout, count, preview, estimate."""
+        assert source.path is not None
+        if spec.schema_manifest is not None or (spec.schema_ is not None and spec.schema_.views):
+            try:
+                declared = view_kinds_of(resolve_dataset_info(spec))
+            except SpecValidationError as error:
+                plan.report.add("invalid_spec", Provenance(file=source.location()), suggestion=str(error))
+                return plan
+            layout = discover_layout(source.path, declared, plan.report)
+            extracts_frames = "sequence_frames" in declared.values()
+        else:
+            # Inference: layout findings (mixed kinds, ambiguity) land in the plan.
+            layout = discover_layout(source.path, None, plan.report)
+            extracts_frames = "video" in layout.view_kinds.values() and frames_mode(spec) == "extract"
+
+        if extracts_frames and not (ffmpeg_available() and ffprobe_available()):
+            plan.report.add(
+                "ffmpeg_required",
+                Provenance(file=source.location()),
+                suggestion="Frame extraction needs ffmpeg+ffprobe on PATH; install ffmpeg or use "
+                'options {"frames": "reference"}.',
+            )
+
+        max_frames = self._max_frames_per_video(spec)
+        estimate = 0
+        for split in layout.splits:
+            plan.splits[split.name] = len(split.records)
+            if extracts_frames and ffprobe_available():
+                estimate += self._extract_size_estimate(split, layout, max_frames)
+            for group in split.records:
+                if len(plan.previews) >= limits.max_previews:
+                    continue
+                thumbnails = {
+                    view: url
+                    for view, file in sorted(group.files.items())
+                    if layout.view_kinds.get(view) == "image" and (url := thumbnail_data_url(file)) is not None
+                }
+                plan.previews.append(
+                    SamplePreview(
+                        record={
+                            "split": split.name,
+                            "record": group.key,
+                            **{view: file.name for view, file in sorted(group.files.items())},
+                        },
+                        thumbnails=thumbnails,
+                    )
+                )
+        plan.totals.records = layout.total_records
+        plan.totals.media_bytes = layout.media_bytes
+        if estimate:
+            plan.media_size_estimate_bytes = estimate
+        return plan
+
+    @staticmethod
+    def _max_frames_per_video(spec: ImportSpec) -> int:
+        return int(spec.options.get("max_frames_per_video", 0) or 0)
+
+    @staticmethod
+    def _extract_size_estimate(split: Any, layout: Any, max_frames: int) -> int:
+        """Rough JPEG bytes for frame extraction: probe one video per view, scale by count."""
+        estimate = 0.0
+        for view, kind in layout.view_kinds.items():
+            if kind != "video":
+                continue
+            videos = [group.files[view] for group in split.records if view in group.files]
+            if not videos:
+                continue
+            try:
+                probe = probe_video(videos[0])
+            except PixanoDataError:
+                continue
+            frames = min(probe.num_frames, max_frames) if max_frames else probe.num_frames
+            estimate += len(videos) * frames * probe.width * probe.height * 0.12
+        return int(estimate)
+
     def _media_only_files(self, context: _LineContext, report: PreflightReport, split_dir: Path) -> list[Path] | None:
+        """Metadata-less splits inside a mixed JSONL source (single image view only)."""
         if context.single_view is None or context.view_kinds.get(context.single_view) != "image":
             report.add(
                 "media_only_needs_single_image_view",
                 Provenance(file=str(split_dir)),
-                suggestion="A split without metadata.jsonl imports only when the schema declares exactly "
-                "one image view.",
+                suggestion="A split without metadata.jsonl inside a JSONL source imports only when the "
+                "schema declares exactly one image view.",
             )
             return None
-        return sorted(p for p in split_dir.rglob("*") if p.is_file() and p.suffix.lower() in _IMAGE_SUFFIXES)
+        return sorted(p for p in split_dir.rglob("*") if p.is_file() and classify_media(p) == "image")
 
     def _check_attrs(self, context: _LineContext, line: ParsedLine, report: PreflightReport) -> None:
         record_fields = set(context.info.record.model_fields) if context.info.record else set()
@@ -214,7 +338,10 @@ class PixanoJsonlImporter(DatasetImporter):
     ) -> Iterator[BatchBundle]:
         """Stream rows split by split, line by line, resuming past the cursor."""
         assert source.path is not None
-        info = resolve_dataset_info(spec)
+        if is_media_only_source(source.path):
+            yield from self._iter_media_only_source(source, spec, cursor)
+            return
+        info = self.resolve_info(spec, source)
         namespace = self.effective_namespace(spec, source)
         resume_split = cursor.get("split") if cursor else None
         resume_line = int(cursor.get("line", 0)) if cursor else 0
@@ -269,6 +396,90 @@ class PixanoJsonlImporter(DatasetImporter):
                 tables={"records": [record], "images": [image_row]},
                 cursor={"split": split_dir.name, "line": ordinal},
             )
+
+    def _iter_media_only_source(
+        self, source: SourceRef, spec: ImportSpec, cursor: Cursor | None
+    ) -> Iterator[BatchBundle]:
+        """Ingest a bare media folder: one bundle per discovered record group."""
+        assert source.path is not None
+        info = self.resolve_info(spec, source)
+        namespace = self.effective_namespace(spec, source)
+        report = PreflightReport()
+        layout = discover_layout(source.path, view_kinds_of(info), report)
+        if not report.is_valid:
+            first = next(iter(report.errors))
+            raise SpecValidationError(f"Invalid media-only source: {first.code} — {first.suggestion}")
+        max_frames = self._max_frames_per_video(spec)
+        resume_split = cursor.get("split") if cursor else None
+        resume_line = int(cursor.get("line", 0)) if cursor else 0
+
+        for split in layout.splits:
+            if resume_split is not None and split.name < resume_split:
+                continue
+            context = _LineContext(info, spec, split.root, namespace)
+            record_cls = info.record
+            assert record_cls is not None  # resolve_dataset_info always sets a record schema
+            for group in split.records:
+                if resume_split == split.name and group.ordinal <= resume_line:
+                    continue
+                record_id = stable_id(namespace, split.name, group.key, group.ordinal)
+                tables: dict[str, list[LanceModel]] = {"records": [record_cls(id=record_id, split=split.name)]}
+                for view_name, media_file in sorted(group.files.items()):
+                    relative = str(media_file.relative_to(split.root))
+                    kind = context.view_kinds[view_name]
+                    if kind == "image":
+                        rows = [self._image_row(context, record_id, view_name, relative, None, None)]
+                    elif kind == "text":
+                        rows = [
+                            self._text_row(context, record_id, view_name, SimpleNamespace(content=None, uri=relative))
+                        ]
+                    elif kind == "video":
+                        payload = SimpleNamespace(uri=relative, fps=None, from_timestamp=0.0, to_timestamp=-1.0)
+                        rows = [self._video_row(context, record_id, view_name, payload)]
+                    elif kind == "sequence_frames":
+                        rows = self._media_only_frames(context, record_id, view_name, media_file, max_frames)
+                    else:  # pragma: no cover - discovery rejects unscannable kinds
+                        raise SpecValidationError(f"View '{view_name}' kind '{kind}' has no media-only ingest.")
+                    for row in rows:
+                        tables.setdefault(canonical_table_name_for_schema(type(row)), []).append(row)
+                yield BatchBundle(
+                    tables=tables,
+                    cursor={"split": split.name, "line": group.ordinal},
+                    provenance=Provenance(file=str(split.root), record_key=group.key),
+                )
+
+    def _media_only_frames(
+        self, context: _LineContext, record_id: str, view_name: str, video_file: Path, max_frames: int
+    ) -> list[LanceModel]:
+        """Extract a raw video's frames to SequenceFrame rows (uniform stride under the cap)."""
+        probe = probe_video(video_file)
+        fps = probe.fps
+        if not fps:
+            raise MetadataError(f"Could not determine the frame rate of '{video_file.name}'.")
+        view_cls = context.info.views[view_name]
+        rows: list[LanceModel] = []
+        with tempfile.TemporaryDirectory(prefix="pixano-media-only-") as tmp:
+            frame_files = decode_video_frames(video_file, tmp)
+            indices = list(range(len(frame_files)))
+            if max_frames and len(indices) > max_frames:
+                stride = len(indices) / max_frames
+                indices = [int(position * stride) for position in range(max_frames)]
+            for index in indices:
+                rows.append(
+                    view_cls(
+                        id=stable_id(record_id, "view", view_name, index),
+                        record_id=record_id,
+                        logical_name=view_name,
+                        uri="",
+                        raw_bytes=frame_files[index].read_bytes(),
+                        width=probe.width,
+                        height=probe.height,
+                        format="JPEG",
+                        frame_index=index,
+                        timestamp=index / fps,
+                    )
+                )
+        return rows
 
     # ------------------------------------------------------------------
     # Row construction
