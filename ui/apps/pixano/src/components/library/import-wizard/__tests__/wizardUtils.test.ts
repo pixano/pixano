@@ -143,6 +143,16 @@ describe("mergeSpec", () => {
     expect(mergeSpec(raw, "").media).toBeUndefined();
   });
 
+  it("defaults the dataset name to the uploaded folder's name", () => {
+    const spec = mergeSpec(fields({ intent: "coco", sourceLabel: "flir_adas" }), "");
+    expect(spec.dataset).toEqual({ name: "flir_adas" });
+    const named = mergeSpec(
+      fields({ intent: "coco", sourceLabel: "flir_adas", name: "My DS" }),
+      "",
+    );
+    expect(named.dataset).toEqual({ name: "My DS" });
+  });
+
   it("advanced JSON wins over fields, deep on objects", () => {
     const spec = mergeSpec(
       fields({ name: "from_field", intent: "coco" }),

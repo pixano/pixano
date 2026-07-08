@@ -8,8 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   analyzeImportSource,
-  browseServerFolders,
   cancelIoJob,
+  createUploadSession,
   getIoJob,
   listIoFormats,
   startIoImport,
@@ -41,20 +41,14 @@ describe("ioApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/io/formats", expect.anything());
   });
 
-  it("browses server folders with an encoded path (empty = home)", async () => {
+  it("creates an upload session", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ path: "/home/me", parent: "/home", entries: [] }),
+      jsonResponse({ upload_id: "u1", source: "/data/.pixano/uploads/u1" }, 201),
     );
-    await expect(browseServerFolders()).resolves.toMatchObject({ path: "/home/me" });
-    expect(fetchMock).toHaveBeenCalledWith("/io/browse", expect.anything());
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({ path: "/data/my sets", parent: "/data", entries: [] }),
-    );
-    await browseServerFolders("/data/my sets");
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      "/io/browse?path=%2Fdata%2Fmy%20sets",
-      expect.anything(),
-    );
+    await expect(createUploadSession()).resolves.toMatchObject({ upload_id: "u1" });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/io/uploads");
+    expect(init.method).toBe("POST");
   });
 
   it("analyzes with a source + spec body", async () => {

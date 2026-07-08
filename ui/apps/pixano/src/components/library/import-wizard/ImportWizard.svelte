@@ -91,7 +91,7 @@ License: CECILL-C
     },
     source: {
       title: "Import Dataset",
-      description: "Point at the source and describe the data.",
+      description: "Pick the data on your computer and describe it.",
     },
     review: {
       title: "Review the plan",
@@ -160,7 +160,10 @@ License: CECILL-C
         spec: mergeSpec(fields, advancedJson),
       });
       trackedJobId = started.job_id;
-      trackImportJob(started, fields.name.trim() || started.dataset || fields.source.trim());
+      trackImportJob(
+        started,
+        fields.name.trim() || fields.sourceLabel.trim() || started.dataset || fields.source.trim(),
+      );
     } catch (err: unknown) {
       errorMessage = err instanceof Error ? err.message : "Unexpected error starting the import.";
       step = "done";

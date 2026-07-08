@@ -6,10 +6,10 @@ License: CECILL-C
 
 import { JSON_HEADERS, requestJson } from "./apiClient";
 import type {
-  FolderBrowseResponse,
   ImportPlanResponse,
   IoFormatResponse,
   IoJobResponse,
+  UploadSessionResponse,
 } from "./restTypes";
 
 /** List the registered data formats (import wizard format picker). */
@@ -17,10 +17,21 @@ export async function listIoFormats(): Promise<IoFormatResponse[]> {
   return requestJson<IoFormatResponse[]>("/io/formats", {}, "listIoFormats");
 }
 
-/** List a server directory's subfolders (source picker); empty path = server home. */
-export async function browseServerFolders(path = ""): Promise<FolderBrowseResponse> {
-  const query = path ? `?path=${encodeURIComponent(path)}` : "";
-  return requestJson<FolderBrowseResponse>(`/io/browse${query}`, {}, "browseServerFolders");
+/** Create a staging session for a client-side folder upload. */
+export async function createUploadSession(): Promise<UploadSessionResponse> {
+  return requestJson<UploadSessionResponse>(
+    "/io/uploads",
+    { method: "POST" },
+    "createUploadSession",
+  );
+}
+
+/** Discard a staged upload (wizard cancelled before importing). */
+export async function deleteUploadSession(uploadId: string): Promise<void> {
+  const response = await fetch(`/io/uploads/${uploadId}`, { method: "DELETE" });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`deleteUploadSession failed (${response.status}).`);
+  }
 }
 
 /** Analyze a source without side effects; returns the plan (+ plan_id). */

@@ -31,7 +31,8 @@ export function intentToFormat(intent: ImportIntent): string {
 /** Friendly form fields the wizard collects before the Advanced overrides. */
 export interface WizardFields {
   intent: ImportIntent;
-  source: string;
+  source: string; // staged upload path or a Hugging Face id — never shown as-is
+  sourceLabel: string; // the uploaded folder's name (display + default dataset name)
   name: string;
   mode: "create" | "overwrite";
   media: "embed" | "uri";
@@ -43,6 +44,7 @@ export interface WizardFields {
 export const DEFAULT_FIELDS: WizardFields = {
   intent: "auto",
   source: "",
+  sourceLabel: "",
   name: "",
   mode: "create",
   media: "embed",
@@ -74,6 +76,7 @@ export function mergeSpec(fields: WizardFields, advancedJson: string): Record<st
   if (fields.media !== "embed" && fields.intent !== "raw") spec.media = { mode: fields.media };
   const dataset: Record<string, unknown> = {};
   if (fields.name.trim()) dataset.name = fields.name.trim();
+  else if (fields.sourceLabel.trim()) dataset.name = fields.sourceLabel.trim(); // staged dirs have opaque names
   const options: Record<string, unknown> = {};
   if (showsLerobotFields(fields)) {
     if (fields.episodes.trim()) options.episodes = fields.episodes.trim();
