@@ -9,23 +9,25 @@ License: CECILL-C
   import { AlertDialog } from "bits-ui";
   import { CircleNotch } from "phosphor-svelte";
 
-  import AnalyzePreviewStep from "./AnalyzePreviewStep.svelte";
   import DoneStep from "./DoneStep.svelte";
-  import FormatPickerStep from "./FormatPickerStep.svelte";
+  import IntentStep from "./IntentStep.svelte";
   import ProgressStep from "./ProgressStep.svelte";
-  import SourceParamsStep from "./SourceParamsStep.svelte";
+  import ReviewStep from "./ReviewStep.svelte";
+  import SourceStep from "./SourceStep.svelte";
+  import WizardStepIndicator from "./WizardStepIndicator.svelte";
   import {
     canAnalyze,
     DEFAULT_FIELDS,
     groupFindings,
     mergeSpec,
+    type ImportIntent,
     type WizardFields,
   } from "./wizardUtils";
   import { analyzeImportSource, listIoFormats, startIoImport } from "$lib/api/ioApi";
   import type { ImportPlanResponse, IoFormatResponse } from "$lib/api/restTypes";
   import {
     BLOCKING_ALERT_ACTIONS_CLASS,
-    BLOCKING_ALERT_CONTENT_CLASS,
+    BLOCKING_ALERT_CONTENT_WIDE_CLASS,
     BLOCKING_ALERT_HEADER_CLASS,
     BLOCKING_ALERT_OVERLAY_CLASS,
     BLOCKING_ALERT_SECONDARY_BUTTON_CLASS,
@@ -45,12 +47,21 @@ License: CECILL-C
 
   let { onClose }: Props = $props();
 
-  type Step = "format" | "source" | "preview" | "progress" | "done";
+  type Step = "intent" | "source" | "review" | "progress" | "done";
+
+  const STEP_LABELS = ["Type", "Source", "Review", "Import"];
+  const STEP_INDEX: Record<Step, number> = {
+    intent: 0,
+    source: 1,
+    review: 2,
+    progress: 3,
+    done: 3,
+  };
 
   let open = $state(true);
-  let step = $state<Step>("format");
+  let step = $state<Step>("intent");
   let formats = $state<IoFormatResponse[] | null>(null);
-  let fields = $state<WizardFields>({ ...DEFAULT_FIELDS });
+  let fields = $state<WizardFields>(structuredClone(DEFAULT_FIELDS));
   let advancedJson = $state("");
   let plan = $state<ImportPlanResponse | null>(null);
   let analyzing = $state(false);
@@ -74,15 +85,19 @@ License: CECILL-C
   const canGoAnalyze = $derived(canAnalyze(fields, advancedJson));
 
   const STEP_META: Record<Step, { title: string; description: string }> = {
-    format: {
+    intent: {
       title: "Import Dataset",
-      description: "Choose the data format, or let Pixano detect it.",
+      description: "What are you importing?",
     },
     source: {
       title: "Import Dataset",
-      description: "Point at the source and set the import options.",
+      description: "Point at the source and describe the data.",
     },
-    preview: { title: "Review the plan", description: "Analysis runs without writing anything." },
+    review: {
+      title: "Review the plan",
+      description:
+        "Analysis runs without writing anything — this is the schema the import creates.",
+    },
     progress: {
       title: "Importing…",
       description: "The dataset is built atomically on the server — you can keep using the app.",
@@ -109,8 +124,13 @@ License: CECILL-C
     }
   });
 
+  function handleIntentSelect(intent: ImportIntent) {
+    fields.intent = intent;
+    step = "source";
+  }
+
   async function runAnalyze() {
-    step = "preview";
+    step = "review";
     analyzing = true;
     analyzeError = "";
     plan = null;
@@ -186,7 +206,7 @@ License: CECILL-C
     <div class={BLOCKING_ALERT_VIEWPORT_CLASS}>
       <div class="flex min-h-full items-center justify-center">
         <AlertDialog.Content
-          class={BLOCKING_ALERT_CONTENT_CLASS}
+          class={BLOCKING_ALERT_CONTENT_WIDE_CLASS}
           trapFocus={true}
           preventScroll={true}
           onEscapeKeydown={(e) => {
@@ -208,19 +228,14 @@ License: CECILL-C
             {/if}
           </div>
 
-          {#if step === "format"}
-            <FormatPickerStep
-              {formats}
-              selected={fields.format}
-              onSelect={(format: string) => {
-                fields.format = format;
-                step = "source";
-              }}
-            />
+          <WizardStepIndicator steps={STEP_LABELS} current={STEP_INDEX[step]} />
+
+          {#if step === "intent"}
+            <IntentStep {formats} onSelect={handleIntentSelect} />
           {:else if step === "source"}
-            <SourceParamsStep bind:fields bind:advancedJson />
-          {:else if step === "preview"}
-            <AnalyzePreviewStep {analyzing} {analyzeError} {plan} />
+            <SourceStep bind:fields bind:advancedJson />
+          {:else if step === "review"}
+            <ReviewStep {analyzing} {analyzeError} {plan} />
           {:else if step === "progress"}
             <ProgressStep {job} {cancelRequested} />
           {:else if step === "done"}
@@ -228,7 +243,7 @@ License: CECILL-C
           {/if}
 
           <div class={BLOCKING_ALERT_ACTIONS_CLASS}>
-            {#if step === "format" || step === "source" || step === "preview"}
+            {#if step === "intent" || step === "source" || step === "review"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
@@ -242,7 +257,7 @@ License: CECILL-C
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
-                onclick={() => (step = "format")}
+                onclick={() => (step = "intent")}
               >
                 Back
               </button>
@@ -254,7 +269,7 @@ License: CECILL-C
               >
                 Analyze
               </PrimaryButton>
-            {:else if step === "preview"}
+            {:else if step === "review"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}

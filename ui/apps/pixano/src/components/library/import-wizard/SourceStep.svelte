@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, FolderOpen } from "phosphor-svelte";
 
+  import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
   import { parseAdvancedSpec, showsLerobotFields, type WizardFields } from "./wizardUtils";
 
   interface Props {
@@ -19,6 +20,14 @@ License: CECILL-C
   let showAdvanced = $state(false);
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
   const showLerobot = $derived(showsLerobotFields(fields));
+
+  const sourceHint = $derived(
+    fields.intent === "lerobot"
+      ? "A local LeRobot folder, or a Hugging Face dataset id (org/name)."
+      : fields.intent === "raw"
+        ? "A folder on the server holding your media files."
+        : "A folder path on the server, or a Hugging Face dataset id for LeRobot sources.",
+  );
 
   const labelClass = "text-xs font-semibold uppercase tracking-widest text-muted-foreground";
   const inputClass =
@@ -38,13 +47,13 @@ License: CECILL-C
         id="wizard-source"
         type="text"
         class="{inputClass} pl-9"
-        placeholder="/path/on/server or org/name (Hugging Face)"
+        placeholder={fields.intent === "lerobot"
+          ? "/path/on/server or org/name (Hugging Face)"
+          : "/path/on/server"}
         bind:value={fields.source}
       />
     </div>
-    <p class="text-xs text-muted-foreground">
-      A folder path on the server, or a Hugging Face dataset id for LeRobot sources.
-    </p>
+    <p class="text-xs text-muted-foreground">{sourceHint}</p>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">
@@ -67,13 +76,23 @@ License: CECILL-C
     </div>
   </div>
 
-  <div class="space-y-1.5">
-    <label class={labelClass} for="wizard-media">Media storage</label>
-    <select id="wizard-media" class={inputClass} bind:value={fields.media}>
-      <option value="embed">Embed in the dataset (self-contained, default)</option>
-      <option value="uri">Keep URIs (media served by your storage)</option>
-    </select>
-  </div>
+  {#if fields.intent === "raw"}
+    <RawSchemaBuilder bind:raw={fields.raw} />
+  {:else}
+    <div class="space-y-1.5">
+      <label class={labelClass} for="wizard-media">Media storage</label>
+      <select id="wizard-media" class={inputClass} bind:value={fields.media}>
+        <option value="embed">Embed in the dataset (self-contained, default)</option>
+        <option value="uri">Keep URIs (media served by your storage)</option>
+      </select>
+      {#if fields.intent === "coco" && fields.media === "uri"}
+        <p class="text-xs text-muted-foreground">
+          URI mode needs a <span class="font-mono">coco_url</span>
+          per image in the annotations file.
+        </p>
+      {/if}
+    </div>
+  {/if}
 
   {#if showLerobot}
     <div class="grid gap-4 sm:grid-cols-2">
@@ -119,7 +138,9 @@ License: CECILL-C
         <p class="text-xs text-muted-foreground">
           Optional overrides merged over the fields above — the same keys as
           <span class="font-mono">dataset.yaml</span>
-          (dataset, schema with any attributes, ids, options).
+          (dataset, schema with any attributes, ids, options). A
+          <span class="font-mono">schema</span>
+          key here replaces the one built by the form.
         </p>
         <textarea
           class="h-36 w-full resize-y rounded-lg border border-border bg-card p-3 font-mono text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

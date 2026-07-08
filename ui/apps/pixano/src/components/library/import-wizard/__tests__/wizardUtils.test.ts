@@ -11,14 +11,20 @@ import {
   DEFAULT_FIELDS,
   formatBytes,
   groupFindings,
+  intentToFormat,
   isHubId,
   mergeSpec,
   parseAdvancedSpec,
+  schemaSections,
   showsLerobotFields,
+  type WizardFields,
 } from "../wizardUtils";
-import type { ImportPlanResponse } from "$lib/api/restTypes";
+import type { ImportPlanResponse, InferredSchemaResponse } from "$lib/api/restTypes";
 
-const fields = (overrides: Partial<typeof DEFAULT_FIELDS>) => ({ ...DEFAULT_FIELDS, ...overrides });
+const fields = (overrides: Partial<WizardFields>): WizardFields => ({
+  ...structuredClone(DEFAULT_FIELDS),
+  ...overrides,
+});
 
 describe("isHubId", () => {
   it("accepts org/name ids and rejects paths", () => {
@@ -31,20 +37,30 @@ describe("isHubId", () => {
   });
 });
 
+describe("intentToFormat", () => {
+  it("maps intents onto backend formats", () => {
+    expect(intentToFormat("raw")).toBe("pixano_jsonl");
+    expect(intentToFormat("pixano_jsonl")).toBe("pixano_jsonl");
+    expect(intentToFormat("coco")).toBe("coco");
+    expect(intentToFormat("lerobot")).toBe("lerobot");
+    expect(intentToFormat("auto")).toBe("");
+  });
+});
+
 describe("showsLerobotFields", () => {
   it("shows for explicit lerobot or auto-detected hub ids", () => {
-    expect(showsLerobotFields(fields({ format: "lerobot" }))).toBe(true);
-    expect(showsLerobotFields(fields({ format: "", source: "org/name" }))).toBe(true);
-    expect(showsLerobotFields(fields({ format: "coco", source: "org/name" }))).toBe(false);
-    expect(showsLerobotFields(fields({ format: "", source: "/local/dir" }))).toBe(false);
+    expect(showsLerobotFields(fields({ intent: "lerobot" }))).toBe(true);
+    expect(showsLerobotFields(fields({ intent: "auto", source: "org/name" }))).toBe(true);
+    expect(showsLerobotFields(fields({ intent: "coco", source: "org/name" }))).toBe(false);
+    expect(showsLerobotFields(fields({ intent: "auto", source: "/local/dir" }))).toBe(false);
   });
 });
 
 describe("mergeSpec", () => {
-  it("builds the friendly-field spec", () => {
+  it("builds the lerobot spec", () => {
     const spec = mergeSpec(
       fields({
-        format: "lerobot",
+        intent: "lerobot",
         name: "My DS",
         mode: "overwrite",
         media: "uri",
@@ -62,13 +78,74 @@ describe("mergeSpec", () => {
     });
   });
 
-  it("omits defaults entirely", () => {
+  it("omits defaults entirely for auto-detect", () => {
     expect(mergeSpec(fields({}), "")).toEqual({});
+  });
+
+  it("builds the raw-images spec with entity attrs and annotations", () => {
+    const base = fields({ intent: "raw" });
+    base.raw.viewsMode = "named";
+    base.raw.viewNames = "left, right";
+    base.raw.entityAttrs = [
+      { name: "category", type: "str", list: false, required: false, defaultValue: "" },
+      { name: "tags", type: "str", list: true, required: false, defaultValue: "" },
+    ];
+    base.raw.annotations = ["bbox", "classification"];
+    expect(mergeSpec(base, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "image" },
+      schema: {
+        views: { left: "image", right: "image" },
+        entity: { attrs: { category: { type: "str" }, tags: { type: "str", collection: true } } },
+        annotations: ["bbox", "classification"],
+      },
+    });
+  });
+
+  it("builds the raw-videos spec: extract default with cap, reference opt-in", () => {
+    const extract = fields({ intent: "raw" });
+    extract.raw.kind = "videos";
+    extract.raw.maxFrames = "200";
+    extract.raw.annotations = ["bbox", "tracklet"];
+    expect(mergeSpec(extract, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "video" },
+      schema: { annotations: ["bbox", "tracklet"] },
+      options: { max_frames_per_video: 200 },
+    });
+
+    const reference = fields({ intent: "raw" });
+    reference.raw.kind = "videos";
+    reference.raw.framesMode = "reference";
+    reference.raw.annotations = ["bbox"];
+    expect(mergeSpec(reference, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "video" },
+      schema: { annotations: ["bbox"] },
+      options: { frames: "reference" },
+    });
+  });
+
+  it("builds the raw-text spec without a workspace", () => {
+    const base = fields({ intent: "raw" });
+    base.raw.kind = "texts";
+    base.raw.annotations = ["text_span", "classification"];
+    expect(mergeSpec(base, "")).toEqual({
+      format: "pixano_jsonl",
+      schema: { annotations: ["text_span", "classification"] },
+    });
+  });
+
+  it("ignores lerobot options outside lerobot intents and raw media mode", () => {
+    const spec = mergeSpec(fields({ intent: "coco", episodes: "0:4", media: "uri" }), "");
+    expect(spec).toEqual({ format: "coco", media: { mode: "uri" } });
+    const raw = fields({ intent: "raw", media: "uri" });
+    expect(mergeSpec(raw, "").media).toBeUndefined();
   });
 
   it("advanced JSON wins over fields, deep on objects", () => {
     const spec = mergeSpec(
-      fields({ name: "from_field", format: "coco" }),
+      fields({ name: "from_field", intent: "coco" }),
       JSON.stringify({
         dataset: { workspace: "image" },
         format: "pixano_jsonl",
@@ -78,6 +155,36 @@ describe("mergeSpec", () => {
     expect(spec.format).toBe("pixano_jsonl");
     expect(spec.dataset).toEqual({ name: "from_field", workspace: "image" });
     expect(spec.schema).toEqual({ annotations: ["bbox"] });
+  });
+});
+
+describe("schemaSections", () => {
+  it("orders Views / Record / Entity / Annotations and flattens attrs", () => {
+    const schema: InferredSchemaResponse = {
+      workspace: "image",
+      views: { left: { base: "Image", fields: {} }, right: { base: "Image", fields: {} } },
+      record: { base: "Record", fields: {} },
+      entity: {
+        base: "Entity",
+        name: "CustomEntity",
+        fields: {
+          category: { type: "str", collection: false, required: false },
+          tags: { type: "str", collection: true, required: false },
+        },
+      },
+      bbox: { base: "BBox", fields: {} },
+      classification: { base: "Classification", fields: {} },
+    };
+    const sections = schemaSections(schema);
+    expect(sections.map((s) => s.title)).toEqual(["Views", "Record", "Entity", "Annotations"]);
+    expect(sections[0].entries.map((e) => e.name)).toEqual(["left", "right"]);
+    const entity = sections[2].entries[0];
+    expect(entity.base).toBe("Entity");
+    expect(entity.attrs).toEqual([
+      { name: "category", type: "str", collection: false, required: false },
+      { name: "tags", type: "str", collection: true, required: false },
+    ]);
+    expect(sections[3].entries.map((e) => e.name)).toEqual(["bbox", "classification"]);
   });
 });
 
@@ -120,6 +227,19 @@ describe("canAnalyze", () => {
     expect(canAnalyze(fields({}), "")).toBe(false);
     expect(canAnalyze(fields({ source: "/data" }), "")).toBe(true);
     expect(canAnalyze(fields({ source: "/data" }), "{bad")).toBe(false);
+  });
+
+  it("gates on the raw form when the intent is raw", () => {
+    const bad = fields({ intent: "raw", source: "/data" });
+    bad.raw.entityAttrs = [
+      { name: "Bad Name", type: "str", list: false, required: false, defaultValue: "" },
+    ];
+    expect(canAnalyze(bad, "")).toBe(false);
+    const good = fields({ intent: "raw", source: "/data" });
+    good.raw.entityAttrs = [
+      { name: "category", type: "str", list: false, required: false, defaultValue: "" },
+    ];
+    expect(canAnalyze(good, "")).toBe(true);
   });
 });
 
