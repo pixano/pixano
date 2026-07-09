@@ -50,10 +50,34 @@ def analyze(
     importer: DatasetImporter | None = None,
 ) -> ImportPlan:
     """Analyze a source without side effects and return its import plan."""
+    from pixano.datasets.dataset_schema import serialize_dataset_info_schema
+
+    from .errors import PixanoDataError
+
     spec = spec or ImportSpec()
     source_ref = SourceRef.from_string(str(source))
     resolved = _resolve_importer(source_ref, spec, importer)
-    return resolved.analyze(source_ref, spec, limits or AnalyzeLimits())
+    plan = resolved.analyze(source_ref, spec, limits or AnalyzeLimits())
+    if plan.inferred_schema is None:
+        # The schema the import would create, shown for confirmation (spec §4);
+        # when it cannot resolve, the plan's findings already explain why.
+        try:
+            plan.inferred_schema = serialize_dataset_info_schema(resolved.resolve_info(spec, source_ref))
+        except PixanoDataError:
+            pass
+    if plan.totals.records == 0 and plan.report.is_valid:
+        # A source that yields nothing to import is never a success: surface it
+        # loudly (a stray metadata.jsonl next to bare media, a wrong layout, an
+        # empty folder) instead of building a 0-record dataset silently.
+        from .plan import Provenance
+
+        plan.report.add(
+            "empty_source",
+            Provenance(file=source_ref.location()),
+            suggestion="No records were found to import. Check the source layout — e.g. images directly "
+            "in the folder or in per-view subfolders, and no stray metadata.jsonl in a raw-media folder.",
+        )
+    return plan
 
 
 def import_dataset(

@@ -402,6 +402,7 @@ class JobRunner:
                     manifest_path=str(result.manifest_path or ""),
                     progress={"phase": "done", "table_counts": result.table_counts, "final": True},
                 )
+                self._discard_upload_source(source)
             except PixanoDataError as error:
                 cancelled = self.store.cancel_requested(job_id)
                 self.store.update_job(
@@ -409,6 +410,8 @@ class JobRunner:
                     status="cancelled" if cancelled else "error",
                     error={"type": type(error).__name__, "message": str(error)},
                 )
+                if cancelled:  # cancelled imports cannot resume; errored ones keep their upload
+                    self._discard_upload_source(source)
             except Exception as error:  # pragma: no cover - defensive
                 self.store.update_job(
                     job_id,
@@ -419,6 +422,18 @@ class JobRunner:
                         "trace": traceback.format_exc()[-2000:],
                     },
                 )
+
+    def _discard_upload_source(self, source: str) -> None:
+        """Remove a staged client upload once its import can never resume again."""
+        from .engine import state_dir
+
+        uploads_root = state_dir(self.data_dir) / "uploads"
+        try:
+            session_dir = Path(source).resolve()
+            if session_dir.parent == uploads_root.resolve():
+                shutil.rmtree(session_dir, ignore_errors=True)
+        except OSError:  # pragma: no cover - defensive
+            pass
 
     def submit_export(self, dataset_path: str, destination: str, format: str, media: str) -> JobRecord:
         """Create a pending export job and start it on the worker thread."""
@@ -497,13 +512,28 @@ def boot_recover(data_dir: Path) -> Sequence[str]:
     # while their job can still resume (interrupted/pending/running).
     state = state_dir(data_dir)
     shutil.rmtree(state / "trash", ignore_errors=True)
+    resumable = [job for job in store.list_jobs(limit=1000) if job.status in ("interrupted", "pending", "running")]
     staging_root = state / "staging"
     if staging_root.is_dir():
-        resumable_ids = {
-            job.id for job in store.list_jobs(limit=1000) if job.status in ("interrupted", "pending", "running")
-        }
+        resumable_ids = {job.id for job in resumable}
         for staged in staging_root.iterdir():
             job_id = staged.name.rsplit("-", 1)[-1]
             if job_id not in resumable_ids:
                 shutil.rmtree(staged, ignore_errors=True)
+
+    # Staged client uploads: kept while a resumable job imports from them, or
+    # while fresh (an open wizard may still be uploading); orphans are garbage.
+    uploads_root = state / "uploads"
+    if uploads_root.is_dir():
+        resumable_sources = {str(job.spec.get("__source", "")) for job in resumable}
+        cutoff = time.time() - 24 * 3600
+        for session_dir in uploads_root.iterdir():
+            if str(session_dir) in resumable_sources:
+                continue
+            try:
+                if session_dir.stat().st_mtime >= cutoff:
+                    continue
+            except OSError:
+                continue
+            shutil.rmtree(session_dir, ignore_errors=True)
     return flipped

@@ -40,6 +40,7 @@ def _render_plan(plan: ImportPlan) -> None:
         typer.echo(f"- Split '{split}': {count} record(s){' (estimated)' if plan.totals.estimated else ''}")
     if plan.totals.records is not None:
         typer.echo(f"Total: {plan.totals.records} record(s)")
+    _render_inferred_schema(plan.inferred_schema)
 
     for finding in plan.report.warnings:
         samples = ", ".join(sample.location() for sample in finding.samples[:_SAMPLE_LIMIT])
@@ -51,6 +52,33 @@ def _render_plan(plan: ImportPlan) -> None:
         typer.echo(f"- Error: {finding.code} ({finding.count} occurrence(s); e.g. {samples})", err=True)
         if finding.suggestion:
             typer.echo(f"  {finding.suggestion}", err=True)
+
+
+def _attr_summary(descriptor: dict) -> str:
+    """One-line `name: type[]` summary of a schema slot's custom fields."""
+    return ", ".join(
+        f"{field}: {payload.get('type', '?')}{'[]' if payload.get('collection') else ''}"
+        for field, payload in (descriptor.get("fields") or {}).items()
+    )
+
+
+def _render_inferred_schema(schema: Optional[dict]) -> None:
+    """Render the plan's resolved schema: views, custom attrs, annotation slots."""
+    if not schema:
+        return
+    typer.echo(f"Schema (workspace: {schema.get('workspace', 'undefined')}):")
+    for view_name, descriptor in (schema.get("views") or {}).items():
+        attrs = _attr_summary(descriptor)
+        typer.echo(f"- View '{view_name}': {descriptor.get('base', '?')}{f' ({attrs})' if attrs else ''}")
+    for slot in ("record", "entity", "entity_dynamic_state"):
+        descriptor = schema.get(slot)
+        if descriptor and descriptor.get("fields"):
+            typer.echo(f"- {slot.capitalize()} attrs: {_attr_summary(descriptor)}")
+    annotation_slots = sorted(
+        slot for slot in schema if slot not in ("workspace", "views", "record", "entity", "entity_dynamic_state")
+    )
+    if annotation_slots:
+        typer.echo(f"- Annotations: {', '.join(annotation_slots)}")
 
 
 def _build_spec(

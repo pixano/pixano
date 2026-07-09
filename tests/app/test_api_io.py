@@ -55,6 +55,8 @@ class TestIoRoutes:
         analyzed = client.post("/io/analyze", json={"source": str(source), "spec": {}}).json()
         assert analyzed["totals"]["records"] == 3
         assert analyzed["plan_id"]
+        assert analyzed["inferred_schema"]["record"]["base"] == "Record"
+        assert analyzed["inferred_schema"]["views"]["image"]["base"] == "Image"
 
         started = client.post("/io/imports", json={"plan_id": analyzed["plan_id"], "source": str(source)})
         assert started.status_code == 202
@@ -62,6 +64,92 @@ class TestIoRoutes:
         assert final["status"] == "done", final["error"]
         assert final["progress"]["table_counts"]["records"] == 3
         assert (data_dir / "library" / "io_ds").is_dir()
+
+    def test_analyze_raw_folder_with_custom_entity_attrs(self, client_and_dirs, tmp_path: Path):
+        """The wizard's raw-media flow: bare view folders + a UI-built schema."""
+        client, data_dir, _ = client_and_dirs
+        raw = tmp_path / "raw_views"
+        for view in ("left", "right"):
+            (raw / view).mkdir(parents=True)
+            for stem in ("a", "b"):
+                PIL.Image.new("RGB", (16, 16), (10, 120, 200)).save(raw / view / f"{stem}.jpg")
+        spec = {
+            "format": "pixano_jsonl",
+            "dataset": {"name": "raw_ds", "workspace": "image"},
+            "schema": {"entity": {"attrs": {"category": "str"}}, "annotations": ["bbox", "classification"]},
+        }
+
+        analyzed = client.post("/io/analyze", json={"source": str(raw), "spec": spec}).json()
+        assert analyzed["totals"]["records"] == 2
+        schema = analyzed["inferred_schema"]
+        assert set(schema["views"]) == {"left", "right"}
+        assert schema["entity"]["fields"]["category"]["type"] == "str"
+        assert "classification" in schema and "keypoint" not in schema
+
+        started = client.post("/io/imports", json={"plan_id": analyzed["plan_id"], "source": str(raw), "spec": spec})
+        assert started.status_code == 202
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        assert final["progress"]["table_counts"] == {"records": 2, "images": 4}
+        assert (data_dir / "library" / "raw_ds").is_dir()
+
+    def test_upload_analyze_import_and_eager_gc(self, client_and_dirs):
+        """The wizard's client-upload flow: stage files, import, session removed."""
+        import io
+
+        client, data_dir, _ = client_and_dirs
+        session = client.post("/io/uploads").json()
+        source = Path(session["source"])
+        assert source.is_dir() and source.parent.name == "uploads"
+
+        jpeg = io.BytesIO()
+        PIL.Image.new("RGB", (16, 16), (10, 120, 200)).save(jpeg, format="JPEG")
+        for rel in ("left/a.jpg", "left/b.jpg", "right/a.jpg", "right/b.jpg"):
+            put = client.put(f"/io/uploads/{session['upload_id']}/files/{rel}", content=jpeg.getvalue())
+            assert put.status_code == 200
+            assert put.json() == {"path": rel, "bytes": len(jpeg.getvalue())}
+
+        spec = {"format": "pixano_jsonl", "dataset": {"name": "uploaded_ds", "workspace": "image"}}
+        analyzed = client.post("/io/analyze", json={"source": str(source), "spec": spec}).json()
+        assert analyzed["totals"]["records"] == 2
+        assert set(analyzed["inferred_schema"]["views"]) == {"left", "right"}
+
+        started = client.post(
+            "/io/imports", json={"plan_id": analyzed["plan_id"], "source": str(source), "spec": spec}
+        )
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        assert (data_dir / "library" / "uploaded_ds").is_dir()
+        assert not source.exists()  # eager GC: the staged upload is disposable after import
+
+    def test_upload_session_validation(self, client_and_dirs):
+        client, _, _ = client_and_dirs
+        session = client.post("/io/uploads").json()
+        upload_id = session["upload_id"]
+        # Traversal must be encoded to reach the route (the HTTP layer already
+        # normalizes literal ".." away); the validator rejects what gets through.
+        for bad in ("%2E%2E%2Fevil.txt", "a%2F..%2F..%2Fevil.txt", "a%2F%2Fb.txt", "a%5C..%5Cb.txt"):
+            assert client.put(f"/io/uploads/{upload_id}/files/{bad}", content=b"x").status_code == 400
+        assert client.put("/io/uploads/ghost/files/ok.txt", content=b"x").status_code == 404
+        assert client.delete(f"/io/uploads/{upload_id}").status_code == 204
+        assert not Path(session["source"]).exists()
+        assert client.delete(f"/io/uploads/{upload_id}").status_code == 404
+
+    def test_upload_boot_gc_removes_stale_orphans(self, client_and_dirs):
+        import os
+
+        from pixano.datasets.io.jobs import boot_recover
+
+        client, data_dir, _ = client_and_dirs
+        stale = Path(client.post("/io/uploads").json()["source"])
+        fresh = Path(client.post("/io/uploads").json()["source"])
+        (stale / "old.jpg").write_bytes(b"x")
+        two_days_ago = time.time() - 48 * 3600
+        os.utime(stale, (two_days_ago, two_days_ago))
+
+        boot_recover(data_dir)
+        assert not stale.exists()
+        assert fresh.exists()
 
     def test_analyze_refuses_user_python(self, client_and_dirs):
         client, _, source = client_and_dirs
