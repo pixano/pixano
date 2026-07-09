@@ -45,6 +45,8 @@ export interface DatasetResponse {
 export interface SchemaFieldDescriptor {
   type?: string;
   collection?: boolean;
+  required?: boolean;
+  default?: unknown;
 }
 
 export interface SchemaDescriptor {
@@ -147,12 +149,30 @@ export interface IoFinding {
   suggestion: string;
 }
 
+/** A staged client-upload session (POST /io/uploads). */
+export interface UploadSessionResponse {
+  upload_id: string;
+  source: string;
+}
+
+/** The resolved schema an import would create (plan `inferred_schema`). */
+export interface InferredSchemaResponse {
+  workspace?: string;
+  views?: Record<string, SchemaDescriptor>;
+  record?: SchemaDescriptor | null;
+  entity?: SchemaDescriptor | null;
+  entity_dynamic_state?: SchemaDescriptor | null;
+  [slot: string]: unknown; // bbox, mask, keypoint, classification, tracklet, ...
+}
+
 /** The analyze plan the wizard previews before ingesting. */
 export interface ImportPlanResponse {
   format: string;
   importer_version: string;
   splits: Record<string, number>;
   totals: { records: number | null; media_bytes: number | null; estimated: boolean };
+  inferred_schema?: InferredSchemaResponse | null;
+  media_size_estimate_bytes?: number | null;
   report: { findings: Record<string, IoFinding> };
   previews: { record: Record<string, unknown>; thumbnails: Record<string, string> }[];
   plan_id?: string;
