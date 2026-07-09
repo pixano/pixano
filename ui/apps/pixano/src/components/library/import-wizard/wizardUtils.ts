@@ -4,27 +4,53 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ImportPlanResponse, IoFinding, IoJobResponse } from "$lib/api/restTypes";
+import {
+  buildRawSchemaSpec,
+  DEFAULT_RAW_FIELDS,
+  validateRawFields,
+  type RawFields,
+} from "./rawSchema";
+import type {
+  ImportPlanResponse,
+  InferredSchemaResponse,
+  IoFinding,
+  IoJobResponse,
+  SchemaDescriptor,
+} from "$lib/api/restTypes";
+
+/** What the user is importing — the wizard leads with intent, not format names. */
+export type ImportIntent = "raw" | "pixano_jsonl" | "coco" | "lerobot" | "auto";
+
+/** The backend format each intent maps to ("" = auto-detect). */
+export function intentToFormat(intent: ImportIntent): string {
+  if (intent === "raw" || intent === "pixano_jsonl") return "pixano_jsonl";
+  if (intent === "auto") return "";
+  return intent;
+}
 
 /** Friendly form fields the wizard collects before the Advanced overrides. */
 export interface WizardFields {
-  format: string; // "" = auto-detect
-  source: string;
+  intent: ImportIntent;
+  source: string; // staged upload path or a Hugging Face id — never shown as-is
+  sourceLabel: string; // the uploaded folder's name (display + default dataset name)
   name: string;
   mode: "create" | "overwrite";
   media: "embed" | "uri";
   episodes: string; // LeRobot: "0:4" or "1,3"
   maxFrames: string; // LeRobot: cap per episode
+  raw: RawFields; // raw-media schema builder state
 }
 
 export const DEFAULT_FIELDS: WizardFields = {
-  format: "",
+  intent: "auto",
   source: "",
+  sourceLabel: "",
   name: "",
   mode: "create",
   media: "embed",
   episodes: "",
   maxFrames: "",
+  raw: structuredClone(DEFAULT_RAW_FIELDS),
 };
 
 /** A bare `org/name` Hugging Face dataset id (mirrors the backend rule). */
@@ -35,7 +61,7 @@ export function isHubId(source: string): boolean {
 
 /** True when the LeRobot-specific fields should be shown. */
 export function showsLerobotFields(fields: WizardFields): boolean {
-  return fields.format === "lerobot" || (fields.format === "" && isHubId(fields.source));
+  return fields.intent === "lerobot" || (fields.intent === "auto" && isHubId(fields.source));
 }
 
 /**
@@ -44,15 +70,25 @@ export function showsLerobotFields(fields: WizardFields): boolean {
  */
 export function mergeSpec(fields: WizardFields, advancedJson: string): Record<string, unknown> {
   const spec: Record<string, unknown> = {};
-  if (fields.format) spec.format = fields.format;
+  const format = intentToFormat(fields.intent);
+  if (format) spec.format = format;
   if (fields.mode !== "create") spec.mode = fields.mode;
-  if (fields.media !== "embed") spec.media = { mode: fields.media };
+  if (fields.media !== "embed" && fields.intent !== "raw") spec.media = { mode: fields.media };
   const dataset: Record<string, unknown> = {};
   if (fields.name.trim()) dataset.name = fields.name.trim();
-  if (Object.keys(dataset).length) spec.dataset = dataset;
+  else if (fields.sourceLabel.trim()) dataset.name = fields.sourceLabel.trim(); // staged dirs have opaque names
   const options: Record<string, unknown> = {};
-  if (fields.episodes.trim()) options.episodes = fields.episodes.trim();
-  if (fields.maxFrames.trim()) options.max_frames_per_episode = Number(fields.maxFrames);
+  if (showsLerobotFields(fields)) {
+    if (fields.episodes.trim()) options.episodes = fields.episodes.trim();
+    if (fields.maxFrames.trim()) options.max_frames_per_episode = Number(fields.maxFrames);
+  }
+  if (fields.intent === "raw") {
+    const raw = buildRawSchemaSpec(fields.raw);
+    if (Object.keys(raw.schema).length) spec.schema = raw.schema;
+    if (raw.workspace) dataset.workspace = raw.workspace;
+    Object.assign(options, raw.options ?? {});
+  }
+  if (Object.keys(dataset).length) spec.dataset = dataset;
   if (Object.keys(options).length) spec.options = options;
 
   const advanced = parseAdvancedSpec(advancedJson);
@@ -122,9 +158,69 @@ export function sampleLocation(sample: { file?: string | null; line?: number | n
   return sample.line ? `${file}:${sample.line}` : file;
 }
 
-/** Source step gating: a source plus valid Advanced JSON. */
+/** Source step gating: a source, valid Advanced JSON, and a clean raw form. */
 export function canAnalyze(fields: WizardFields, advancedJson: string): boolean {
-  return fields.source.trim().length > 0 && !parseAdvancedSpec(advancedJson).error;
+  if (!fields.source.trim() || parseAdvancedSpec(advancedJson).error) return false;
+  return fields.intent !== "raw" || validateRawFields(fields.raw) === "";
+}
+
+/** One attribute chip of a schema entry. */
+export interface SchemaAttr {
+  name: string;
+  type: string;
+  collection: boolean;
+  required: boolean;
+}
+
+/** One named schema element (a view, the record, the entity, an annotation slot). */
+export interface SchemaEntry {
+  name: string;
+  base: string;
+  attrs: SchemaAttr[];
+}
+
+/** One SchemaPanel section. */
+export interface SchemaSection {
+  title: string;
+  entries: SchemaEntry[];
+}
+
+const SCHEMA_META_KEYS = new Set(["workspace", "views", "record", "entity"]);
+
+function schemaEntry(name: string, descriptor: SchemaDescriptor): SchemaEntry {
+  return {
+    name,
+    base: descriptor.base ?? "?",
+    attrs: Object.entries(descriptor.fields ?? {}).map(([attrName, field]) => ({
+      name: attrName,
+      type: field.type ?? "?",
+      collection: field.collection === true,
+      required: field.required === true,
+    })),
+  };
+}
+
+/** Massage a plan's inferred_schema into ordered sections for the SchemaPanel. */
+export function schemaSections(schema: InferredSchemaResponse): SchemaSection[] {
+  const sections: SchemaSection[] = [];
+  const views = Object.entries(schema.views ?? {}).map(([name, descriptor]) =>
+    schemaEntry(name, descriptor),
+  );
+  if (views.length) sections.push({ title: "Views", entries: views });
+  if (schema.record)
+    sections.push({ title: "Record", entries: [schemaEntry("record", schema.record)] });
+  if (schema.entity)
+    sections.push({ title: "Entity", entries: [schemaEntry("entity", schema.entity)] });
+  const annotations = Object.keys(schema)
+    .filter((key) => !SCHEMA_META_KEYS.has(key) && isDescriptor(schema[key]))
+    .sort()
+    .map((slot) => schemaEntry(slot, schema[slot] as SchemaDescriptor));
+  if (annotations.length) sections.push({ title: "Annotations", entries: annotations });
+  return sections;
+}
+
+function isDescriptor(value: unknown): value is SchemaDescriptor {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /** One background import tracked by the jobs tray. */

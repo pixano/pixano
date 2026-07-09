@@ -6,7 +6,14 @@ License: CECILL-C
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { analyzeImportSource, cancelIoJob, getIoJob, listIoFormats, startIoImport } from "../ioApi";
+import {
+  analyzeImportSource,
+  cancelIoJob,
+  createUploadSession,
+  getIoJob,
+  listIoFormats,
+  startIoImport,
+} from "../ioApi";
 
 const fetchMock = vi.fn();
 
@@ -32,6 +39,16 @@ describe("ioApi", () => {
     );
     await expect(listIoFormats()).resolves.toMatchObject([{ name: "coco" }]);
     expect(fetchMock).toHaveBeenCalledWith("/io/formats", expect.anything());
+  });
+
+  it("creates an upload session", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ upload_id: "u1", source: "/data/.pixano/uploads/u1" }, 201),
+    );
+    await expect(createUploadSession()).resolves.toMatchObject({ upload_id: "u1" });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/io/uploads");
+    expect(init.method).toBe("POST");
   });
 
   it("analyzes with a source + spec body", async () => {

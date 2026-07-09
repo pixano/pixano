@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import SchemaPanel from "$components/dataset/SchemaPanel.svelte";
   import { CircleNotch, Warning, WarningCircle } from "phosphor-svelte";
 
   import { formatBytes, groupFindings, sampleLocation } from "./wizardUtils";
@@ -22,6 +23,7 @@ License: CECILL-C
   const splitEntries = $derived(Object.entries(plan?.splits ?? {}));
   const totalRecords = $derived(plan?.totals?.records ?? null);
   const mediaEstimate = $derived(formatBytes(plan?.totals?.media_bytes));
+  const extractEstimate = $derived(formatBytes(plan?.media_size_estimate_bytes));
   const previewRows = $derived((plan?.previews ?? []).slice(0, 3));
 </script>
 
@@ -52,6 +54,9 @@ License: CECILL-C
         {#if mediaEstimate}
           <p class="text-sm text-muted-foreground">~{mediaEstimate} of media</p>
         {/if}
+        {#if extractEstimate}
+          <p class="text-sm text-muted-foreground">~{extractEstimate} after frame extraction</p>
+        {/if}
         <p class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           {plan.format}
         </p>
@@ -68,6 +73,10 @@ License: CECILL-C
         </div>
       {/if}
     </div>
+
+    {#if plan.inferred_schema}
+      <SchemaPanel schema={plan.inferred_schema} />
+    {/if}
 
     {#each grouped.errors as finding (finding.code)}
       <div class="rounded-xl border border-destructive/40 bg-destructive/5 p-3">
@@ -103,18 +112,30 @@ License: CECILL-C
         <p class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Sample records
         </p>
-        <div class="max-h-40 space-y-1.5 overflow-y-auto">
+        <div class="max-h-48 space-y-1.5 overflow-y-auto">
           {#each previewRows as preview, index (index)}
-            <div
-              class="rounded-lg border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground"
-            >
-              {#each Object.entries(preview.record).slice(0, 6) as [key, value] (key)}
-                <span class="mr-3 inline-block">
-                  <span class="text-foreground/70">{key}</span>
-                  =
-                  <span>{JSON.stringify(value)}</span>
-                </span>
-              {/each}
+            <div class="rounded-lg border border-border bg-card px-3 py-2">
+              {#if Object.keys(preview.thumbnails ?? {}).length}
+                <div class="mb-1.5 flex gap-1.5">
+                  {#each Object.entries(preview.thumbnails) as [view, url] (view)}
+                    <img
+                      src={url}
+                      alt={view}
+                      title={view}
+                      class="h-12 w-12 rounded-md border border-border object-cover"
+                    />
+                  {/each}
+                </div>
+              {/if}
+              <div class="font-mono text-[11px] text-muted-foreground">
+                {#each Object.entries(preview.record).slice(0, 6) as [key, value] (key)}
+                  <span class="mr-3 inline-block">
+                    <span class="text-foreground/70">{key}</span>
+                    =
+                    <span>{JSON.stringify(value)}</span>
+                  </span>
+                {/each}
+              </div>
             </div>
           {/each}
         </div>
