@@ -113,7 +113,7 @@ License: CECILL-C
           TODO
         </h2>
         <div class="flex flex-wrap justify-center gap-6">
-          {#each todoDatasets as dataset}
+          {#each todoDatasets as dataset (dataset.id)}
             <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
           {/each}
         </div>
@@ -128,7 +128,7 @@ License: CECILL-C
           NEW
         </h2>
         <div class="flex flex-wrap justify-center gap-6">
-          {#each newDatasets as dataset}
+          {#each newDatasets as dataset (dataset.id)}
             <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
           {/each}
         </div>
@@ -143,7 +143,7 @@ License: CECILL-C
           FAVORITE
         </h2>
         <div class="flex flex-wrap justify-center gap-6">
-          {#each favoriteDatasets as dataset}
+          {#each favoriteDatasets as dataset (dataset.id)}
             <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
           {/each}
         </div>
@@ -158,7 +158,7 @@ License: CECILL-C
           {hasAnyBookmark ? "Autres datasets" : "Tous les datasets"}
         </h2>
         <div class="flex flex-wrap justify-center gap-6">
-          {#each noBookmarkDatasets as dataset}
+          {#each noBookmarkDatasets as dataset (dataset.id)}
             <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
           {/each}
         </div>

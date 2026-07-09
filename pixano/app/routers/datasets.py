@@ -14,6 +14,7 @@ from pixano.app.models.dataset_info import DatasetInfoModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import DatasetInfo
 from pixano.datasets.dataset_info import BOOKMARK_TYPES
+from pixano.datasets.dataset_stat import SplitStatusCount
 from pixano.datasets.utils.errors import DatasetAccessError
 
 from .utils import get_dataset as get_dataset_utils
@@ -115,6 +116,24 @@ async def toggle_dataset_bookmark(
     json_fp = path / "info.json"
     info.to_json(json_fp)
     return DatasetInfoModel.from_dataset_info(info, path)
+
+
+@router.get("/info/{id}/splits", response_model=list[SplitStatusCount])
+async def get_dataset_splits(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[SplitStatusCount]:
+    """Get item count per split and per status for a dataset.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        List of (split, status, count) rows.
+    """
+    dataset = get_dataset_utils(id, settings.library_dir, settings.media_dir)
+    return dataset.get_splits_count()
 
 
 @router.get("/{id}", response_model=DatasetModel)

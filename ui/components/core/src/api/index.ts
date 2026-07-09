@@ -11,6 +11,7 @@ export * from "./getBrowser";
 export * from "./getDataset";
 export * from "./getDatasetItem";
 export * from "./getDatasetItemsIds";
+export * from "./getDatasetSplits";
 export * from "./getDatasetsInfo";
 export * from "./getItemsInfo";
 export * from "./getModels";

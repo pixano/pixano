@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
-  import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
+  import { api, WorkspaceType, type DatasetInfo, type SplitStatusCount } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
   import {
     svg_bookmark_filled,
@@ -29,6 +29,7 @@ License: CECILL-C
   export let dataset: DatasetInfo;
 
   let additionalInfo: string | undefined = undefined;
+  let splitData: SplitStatusCount[] = [];
   const controller = new AbortController();
 
   const dispatch = createEventDispatcher();
@@ -96,6 +97,17 @@ License: CECILL-C
       .catch((err) => {
         console.log("Error collecting additional dataset infos", err);
       });
+
+    // Get split / status distribution
+    api
+      .getDatasetSplits(dataset.id)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        splitData = data;
+      })
+      .catch((err) => {
+        console.log("Error collecting split data", err);
+      });
   });
 
   const BOOKMARK_TYPES = ["TODO", "NEW", "FAVORITE"] as const;
@@ -105,6 +117,40 @@ License: CECILL-C
     NEW: "#22C55E",
     FAVORITE: "#EAB308",
   };
+
+  const statusColors: Record<string, string> = {
+    done: "#22C55E",
+    validated: "#22C55E",
+    todo: "#EF4444",
+    review: "#EAB308",
+    inReview: "#EAB308",
+    wip: "#3B82F6",
+    inProgress: "#3B82F6",
+  };
+
+  function colorForStatus(s: string): string {
+    return statusColors[s] ?? "#94A3B8";
+  }
+
+  $: groupedSplits = (() => {
+    const map = new Map<string, { statuses: { status: string; count: number; pct: number }[] }>();
+    const splitTotals = new Map<string, number>();
+    for (const row of splitData) {
+      splitTotals.set(row.split, (splitTotals.get(row.split) ?? 0) + row.count);
+    }
+    for (const row of splitData) {
+      if (!map.has(row.split)) {
+        map.set(row.split, { statuses: [] });
+      }
+      const total = splitTotals.get(row.split) ?? 1;
+      map.get(row.split)!.statuses.push({
+        status: row.status,
+        count: row.count,
+        pct: Math.round((row.count / total) * 100),
+      });
+    }
+    return [...map.entries()].map(([name, v]) => ({ name, ...v }));
+  })();
 
   async function toggleBookmark(bookmark: string) {
     const updated = await api.updateDatasetBookmark(dataset.id, bookmark);
@@ -130,10 +176,31 @@ License: CECILL-C
       <hr class="my-1 border-slate-200" />
       {additionalInfo}
     {/if}
+    {#if splitData.length > 0}
+      <hr class="my-1 border-slate-200" />
+      <table class="w-full text-xs text-left">
+        <thead>
+          <tr class="text-slate-400 font-medium">
+            <th class="pr-2">Split</th>
+            <th class="pr-2">Status</th>
+            <th class="pr-2 text-right">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each splitData as row}
+            <tr class="text-slate-700">
+              <td class="pr-2 font-medium">{row.split}</td>
+              <td class="pr-2">{row.status}</td>
+              <td class="pr-2 text-right">{row.count}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
   </div>
 
     <button
-    class="w-96 h-72 flex flex-col text-left font-Montserrat
+    class="w-96 flex flex-col text-left font-Montserrat
     bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
     on:click={handleSelectDataset}
   >
@@ -199,6 +266,29 @@ License: CECILL-C
         class="w-[350px] h-[150px] rounded-sm object-contain object-center"
       />
     </div>
+
+    <!-- Split / status progress bars -->
+    {#if splitData.length > 0}
+      <div class="px-4 pt-1 space-y-1">
+        {#each groupedSplits as split}
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-8 font-medium text-slate-500 truncate">{split.name}</span>
+            <div
+              class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden flex"
+              title={split.statuses.map((s) => `${s.status}: ${s.count} (${s.pct}%)`).join(", ")}
+            >
+              {#each split.statuses as s}
+                <div
+                  style="width: {s.pct}%; background: {colorForStatus(s.status)}"
+                  class="h-full transition-all"
+                  title="{s.status}: {s.count}"
+                ></div>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     <!-- Workspace -->
     {#if dataset.workspace != WorkspaceType.UNDEFINED}
