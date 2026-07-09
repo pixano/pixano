@@ -22,7 +22,7 @@ import threading
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from pixano.api.settings import Settings, get_settings
@@ -157,6 +157,80 @@ def list_formats() -> list[dict[str, Any]]:
         }
         for data_format in FORMATS
     ]
+
+
+class UploadSessionResponse(BaseModel):
+    """One staged client upload: the wizard imports from `source` when done."""
+
+    upload_id: str
+    source: str
+
+
+def _uploads_root(settings: Settings) -> Path:
+    from pixano.datasets.io.engine import state_dir
+
+    return state_dir(_data_dir(settings)) / "uploads"
+
+
+def _upload_dir(settings: Settings, upload_id: str) -> Path:
+    if not upload_id or "/" in upload_id or upload_id.startswith("."):
+        raise HTTPException(status_code=404, detail=f"Unknown upload session '{upload_id}'.")
+    session_dir = _uploads_root(settings) / upload_id
+    if not session_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"Unknown upload session '{upload_id}'.")
+    return session_dir
+
+
+def _staged_path(session_dir: Path, rel_path: str) -> Path:
+    """Validate a client-supplied relative path (no traversal, no absolutes)."""
+    if not rel_path or rel_path.startswith("/") or "\\" in rel_path:
+        raise HTTPException(status_code=400, detail=f"Invalid upload path '{rel_path}'.")
+    parts = rel_path.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        raise HTTPException(status_code=400, detail=f"Invalid upload path '{rel_path}'.")
+    return session_dir.joinpath(*parts)
+
+
+@router.post("/uploads", status_code=201, operation_id="create_upload_session")
+def create_upload_session(settings: Annotated[Settings, Depends(get_settings)]) -> UploadSessionResponse:
+    """Create a staging folder for a client-side folder upload (the wizard's source picker).
+
+    Users browse and pick a folder on THEIR machine; the files stream into this
+    session and the import runs against the staged copy. The session is removed
+    when its import finishes (or by boot GC after 24h if abandoned).
+    """
+    import shortuuid
+
+    upload_id = shortuuid.uuid()
+    session_dir = _uploads_root(settings) / upload_id
+    session_dir.mkdir(parents=True)
+    return UploadSessionResponse(upload_id=upload_id, source=str(session_dir))
+
+
+@router.put("/uploads/{upload_id}/files/{rel_path:path}", operation_id="upload_session_file")
+async def upload_session_file(
+    upload_id: str,
+    rel_path: str,
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, Any]:
+    """Stream one file's raw body into the session, preserving its relative path."""
+    target = _staged_path(_upload_dir(settings, upload_id), rel_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    written = 0
+    with target.open("wb") as sink:
+        async for chunk in request.stream():
+            sink.write(chunk)
+            written += len(chunk)
+    return {"path": rel_path, "bytes": written}
+
+
+@router.delete("/uploads/{upload_id}", status_code=204, operation_id="delete_upload_session")
+def delete_upload_session(upload_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
+    """Discard a staged upload (wizard cancelled before importing)."""
+    import shutil
+
+    shutil.rmtree(_upload_dir(settings, upload_id))
 
 
 @router.post("/analyze", operation_id="analyze_import_source")
