@@ -65,6 +65,18 @@ def analyze(
             plan.inferred_schema = serialize_dataset_info_schema(resolved.resolve_info(spec, source_ref))
         except PixanoDataError:
             pass
+    if plan.totals.records == 0 and plan.report.is_valid:
+        # A source that yields nothing to import is never a success: surface it
+        # loudly (a stray metadata.jsonl next to bare media, a wrong layout, an
+        # empty folder) instead of building a 0-record dataset silently.
+        from .plan import Provenance
+
+        plan.report.add(
+            "empty_source",
+            Provenance(file=source_ref.location()),
+            suggestion="No records were found to import. Check the source layout — e.g. images directly "
+            "in the folder or in per-view subfolders, and no stray metadata.jsonl in a raw-media folder.",
+        )
     return plan
 
 

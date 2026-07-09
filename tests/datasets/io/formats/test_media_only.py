@@ -258,3 +258,30 @@ class TestInferredSchemaStamping:
         assert plan.inferred_schema["record"]["fields"]["license"]["type"] == "str"
         assert plan.inferred_schema["entity"]["fields"]["is_difficult"]["type"] == "bool"
         assert plan.inferred_schema["views"]["image"]["base"] == "Image"
+
+
+class TestEmptySourceGuard:
+    def test_stray_metadata_jsonl_next_to_flat_images_is_flagged(self, tmp_path: Path):
+        """A raw-image folder with a stray root metadata.jsonl must not import 0 records silently."""
+        source = tmp_path / "raw"
+        _seed_images(source, ("a", "b", "c"))
+        (source / "metadata.jsonl").write_text('{"$pixano": "jsonl/2"}\n', encoding="utf-8")
+        assert not is_media_only_source(source)  # the stray file disables media-only mode
+        plan = analyze(source, _spec({"dataset": {"name": "raw", "workspace": "image"}}))
+        assert plan.totals.records == 0
+        assert not plan.report.is_valid
+        assert "empty_source" in plan.report.findings
+
+    def test_empty_folder_is_flagged(self, tmp_path: Path):
+        source = tmp_path / "empty"
+        source.mkdir()
+        plan = analyze(source, _spec({"dataset": {"name": "empty", "workspace": "image"}}))
+        assert not plan.report.is_valid  # no_media_found or empty_source — either way, loud
+
+    def test_clean_flat_images_do_not_trip_the_guard(self, tmp_path: Path):
+        source = tmp_path / "raw"
+        _seed_images(source, ("a", "b"))
+        plan = analyze(source, _spec({"dataset": {"name": "raw", "workspace": "image"}}))
+        assert plan.totals.records == 2
+        assert plan.report.is_valid
+        assert "empty_source" not in plan.report.findings
