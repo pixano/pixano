@@ -51,6 +51,25 @@ export function splitFolderSelection(files: readonly File[]): FolderSelection {
   return { folderName, entries, totalBytes };
 }
 
+/**
+ * Keep only the entries whose file name passes `keep`.
+ *
+ * Raw-media imports upload just the media matching the chosen kind, so stray
+ * files (a leftover `metadata.jsonl`, `.DS_Store`, a README) never reach the
+ * server — where a `metadata.jsonl` would silently disable media-only mode.
+ */
+export function filterSelection(
+  selection: FolderSelection,
+  keep: (name: string) => boolean,
+): FolderSelection {
+  const entries = selection.entries.filter((entry) => keep(entry.file.name));
+  return {
+    folderName: selection.folderName,
+    entries,
+    totalBytes: entries.reduce((sum, entry) => sum + entry.file.size, 0),
+  };
+}
+
 const UPLOAD_CONCURRENCY = 3;
 
 /** PUT one file's raw body with byte-accurate progress (XHR: fetch cannot report upload progress). */

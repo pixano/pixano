@@ -4,9 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { matchesMediaKind } from "$components/library/import-wizard/rawSchema";
 import { describe, expect, it } from "vitest";
 
-import { splitFolderSelection } from "../uploadClient";
+import { filterSelection, splitFolderSelection } from "../uploadClient";
 
 const fakeFile = (webkitRelativePath: string, size = 10) =>
   ({ webkitRelativePath, name: webkitRelativePath.split("/").pop(), size }) as unknown as File;
@@ -37,5 +38,32 @@ describe("splitFolderSelection", () => {
     const selection = splitFolderSelection([]);
     expect(selection.entries).toEqual([]);
     expect(selection.totalBytes).toBe(0);
+  });
+});
+
+describe("filterSelection with matchesMediaKind", () => {
+  const selection = splitFolderSelection([
+    fakeFile("set/left/a.jpg", 100),
+    fakeFile("set/right/a.JPG", 100),
+    fakeFile("set/metadata.jsonl", 20),
+    fakeFile("set/.DS_Store", 5),
+    fakeFile("set/notes.txt", 10),
+  ]);
+
+  it("drops the stray metadata.jsonl and junk for an images import", () => {
+    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "images"));
+    expect(filtered.entries.map((e) => e.relPath)).toEqual(["left/a.jpg", "right/a.JPG"]);
+    expect(filtered.totalBytes).toBe(200); // metadata.jsonl / .DS_Store / notes.txt excluded
+    expect(filtered.folderName).toBe("set");
+  });
+
+  it("keeps only text files for a text import", () => {
+    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "texts"));
+    expect(filtered.entries.map((e) => e.relPath)).toEqual(["notes.txt"]);
+  });
+
+  it("yields an empty selection when nothing matches (caller shows an error)", () => {
+    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "videos"));
+    expect(filtered.entries).toEqual([]);
   });
 });

@@ -43,6 +43,19 @@ export const ANNOTATION_CHOICES: Record<RawMediaKind, string[]> = {
   texts: ["text_span", "classification", "message", "relation"],
 };
 
+/** File extensions the backend imports per media kind (mirrors media_only.py). */
+export const MEDIA_KIND_EXTENSIONS: Record<RawMediaKind, string[]> = {
+  images: [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"],
+  videos: [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".vob"],
+  texts: [".txt", ".md"],
+};
+
+/** True when a file name carries one of the media kind's extensions (case-insensitive). */
+export function matchesMediaKind(name: string, kind: RawMediaKind): boolean {
+  const lower = name.toLowerCase();
+  return MEDIA_KIND_EXTENSIONS[kind].some((ext) => lower.endsWith(ext));
+}
+
 export const ENTITY_ATTR_TYPES: EntityAttrType[] = ["str", "int", "float", "bool"];
 
 export const DEFAULT_RAW_FIELDS: RawFields = {

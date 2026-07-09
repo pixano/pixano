@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, CheckCircle, FolderOpen, UploadSimple } from "phosphor-svelte";
 
+  import { matchesMediaKind } from "./rawSchema";
   import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
   import {
     formatBytes,
@@ -16,6 +17,7 @@ License: CECILL-C
   } from "./wizardUtils";
   import { deleteUploadSession } from "$lib/api/ioApi";
   import {
+    filterSelection,
     splitFolderSelection,
     uploadFolder,
     type FolderSelection,
@@ -40,6 +42,7 @@ License: CECILL-C
   let fileInput = $state<HTMLInputElement | null>(null);
   let abortController: AbortController | null = null;
   let uploadId = "";
+  let uploadedKind = $state(fields.raw.kind);
 
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
   const showLerobot = $derived(showsLerobotFields(fields));
@@ -52,6 +55,15 @@ License: CECILL-C
 
   $effect(() => {
     return () => abortController?.abort();
+  });
+
+  $effect(() => {
+    // Raw uploads are filtered by media kind; if the user changes the kind
+    // after uploading, the staged files no longer match — drop them so the
+    // next pick re-filters. (Guarded so the reset can't re-trigger itself.)
+    if (fields.intent === "raw" && uploadState !== "idle" && fields.raw.kind !== uploadedKind) {
+      discardStagedUpload();
+    }
   });
 
   function discardStagedUpload() {
@@ -86,13 +98,29 @@ License: CECILL-C
 
     abortController?.abort();
     discardStagedUpload();
-    const picked = splitFolderSelection(files);
+    let picked = splitFolderSelection(files);
+    if (fields.intent === "raw") {
+      // Upload only the media of the chosen kind: a stray metadata.jsonl,
+      // .DS_Store, or README must not be staged (a metadata.jsonl would flip
+      // the source out of media-only mode and import nothing).
+      const kind = fields.raw.kind;
+      const before = picked.entries.length;
+      picked = filterSelection(picked, (name) => matchesMediaKind(name, kind));
+      if (!picked.entries.length) {
+        uploadState = "error";
+        uploadError = `The selected folder has no ${kind} files (found ${before} other file${
+          before === 1 ? "" : "s"
+        }).`;
+        return;
+      }
+    }
     if (!picked.entries.length) {
       uploadState = "error";
       uploadError = "The selected folder contains no files.";
       return;
     }
     selection = picked;
+    uploadedKind = fields.raw.kind;
     uploadState = "uploading";
     uploadError = "";
     progress = {
