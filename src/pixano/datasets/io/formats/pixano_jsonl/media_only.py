@@ -159,16 +159,34 @@ def discover_layout(source_dir: Path, declared_views: dict[str, str] | None, rep
 
 
 def _declared_layout(source_dir: Path, view_kinds: dict[str, str], report: PreflightReport) -> list[SplitLayout]:
+    reserved = sorted(name for name in view_kinds if name.lower() in _SPLIT_DIR_NAMES)
+    if reserved:
+        report.add(
+            "view_name_reserved",
+            Provenance(file=str(source_dir)),
+            suggestion=f"View name(s) {reserved} collide with split folder names "
+            f"({', '.join(sorted(_SPLIT_DIR_NAMES))}); rename the view(s).",
+        )
+        return []
+
     subdirs = _subdirs(source_dir)
     split_named = bool(subdirs) and all(d.name.lower() in _SPLIT_DIR_NAMES for d in subdirs)
 
     if len(view_kinds) >= 2:
-        matched = _match_view_dirs(source_dir, view_kinds)
+        matched = _match_view_dirs(source_dir, view_kinds, report)
+        if matched is None:
+            return []
         if matched and not split_named:
             # View folders at the root (missing ones surface per-view findings).
             return [_view_dir_split("default", source_dir, matched, view_kinds, report)]
         if split_named:
-            return [_view_dir_split(d.name, d, _match_view_dirs(d, view_kinds), view_kinds, report) for d in subdirs]
+            splits = []
+            for subdir in subdirs:
+                split_matched = _match_view_dirs(subdir, view_kinds, report)
+                if split_matched is None:
+                    return []
+                splits.append(_view_dir_split(subdir.name, subdir, split_matched, view_kinds, report))
+            return splits
         report.add(
             "view_folder_missing",
             Provenance(file=str(source_dir)),
@@ -181,8 +199,10 @@ def _declared_layout(source_dir: Path, view_kinds: dict[str, str], report: Prefl
     (view_name, file_kind) = next(iter(view_kinds.items()))
     if split_named:
         _warn_root_files(source_dir, report)
-        return [_flat_split(d.name, d, view_name, file_kind) for d in subdirs]
-    matched = _match_view_dirs(source_dir, view_kinds)
+        return [_flat_split(d.name, d, view_name, file_kind, report) for d in subdirs]
+    matched = _match_view_dirs(source_dir, view_kinds, report)
+    if matched is None:
+        return []
     if view_name in matched:
         # <source>/<view>/ at the root: one 'default' split (mirrors inference).
         per_view = {view_name: _keyed_files(matched[view_name], file_kind, report)}
@@ -190,17 +210,47 @@ def _declared_layout(source_dir: Path, view_kinds: dict[str, str], report: Prefl
     if subdirs:
         # Legacy layout: every subdir is a split, scanned recursively.
         _warn_root_files(source_dir, report)
-        return [_flat_split(d.name, d, view_name, file_kind) for d in subdirs]
-    return [_flat_split("default", source_dir, view_name, file_kind)]
+        for subdir in subdirs:
+            if subdir.name.lower() not in _SPLIT_DIR_NAMES:
+                report.add(
+                    "subdirs_treated_as_splits",
+                    Provenance(file=str(subdir)),
+                    severity="warning",
+                    suggestion=f"Folder '{subdir.name}' becomes a split because the schema declares the single "
+                    f"view '{view_name}' and no folder matches it; use split names (train/val/test) or a "
+                    f"'{view_name}/' folder if this is not intended.",
+                )
+        return [_flat_split(d.name, d, view_name, file_kind, report) for d in subdirs]
+    return [_flat_split("default", source_dir, view_name, file_kind, report)]
 
 
-def _match_view_dirs(root: Path, view_kinds: dict[str, str]) -> dict[str, Path]:
-    """Resolve declared view names to subfolders (exact or snake_cased folder names)."""
-    lookup: dict[str, Path] = {}
+def _match_view_dirs(root: Path, view_kinds: dict[str, str], report: PreflightReport) -> dict[str, Path] | None:
+    """Resolve declared view names to subfolders (exact or snake_cased folder names).
+
+    A declared name claimed by more than one folder (e.g. ``Left Cam/`` and
+    ``left_cam/`` both snake-casing to ``left_cam``) is reported as an error
+    and returns ``None`` — never a silent first-match pick.
+    """
+    claims: dict[str, list[Path]] = {}
     for subdir in _subdirs(root):
-        lookup.setdefault(subdir.name, subdir)
-        lookup.setdefault(to_snake_case(subdir.name), subdir)
-    return {name: lookup[name] for name in view_kinds if name in lookup}
+        for name in {subdir.name, to_snake_case(subdir.name)}:
+            claims.setdefault(name, []).append(subdir)
+    matched: dict[str, Path] = {}
+    collided = False
+    for name in view_kinds:
+        candidates = claims.get(name, [])
+        if len(candidates) > 1:
+            folders = ", ".join(f"'{d.name}'" for d in sorted(candidates))
+            report.add(
+                "view_name_collision",
+                Provenance(file=str(root)),
+                suggestion=f"Folders {folders} all match declared view '{name}'; rename or remove the extras.",
+            )
+            collided = True
+            continue
+        if candidates:
+            matched[name] = candidates[0]
+    return None if collided else matched
 
 
 def _view_dir_split(
@@ -224,9 +274,12 @@ def _view_dir_split(
     return SplitLayout(name=split_name, root=split_root, records=_group_by_key(per_view, report))
 
 
-def _flat_split(split_name: str, split_root: Path, view_name: str, file_kind: str) -> SplitLayout:
+def _flat_split(
+    split_name: str, split_root: Path, view_name: str, file_kind: str, report: PreflightReport
+) -> SplitLayout:
     """A recursively scanned single-view split, keyed by stem (the legacy grouping)."""
     files = _scan_files(split_root, file_kind)
+    _report_duplicate_stems(files, split_root, report)
     records = [
         RecordGroup(key=f.stem, ordinal=ordinal, files={view_name: f}) for ordinal, f in enumerate(files, start=1)
     ]
@@ -306,13 +359,24 @@ def _infer_split_views(
         return {kind: (kind, keyed)}
 
     views: dict[str, tuple[str, dict[str, Path]]] = {}
+    named_dirs: dict[str, Path] = {}
     for view_dir in sorted(view_dirs):
         files = sorted(p for p in view_dir.rglob("*") if p.is_file() and classify_media(p) is not None)
         kind = _sole_kind(files, view_dir, report)
         if kind is None:
             return None
+        name = to_snake_case(view_dir.name)
+        if name in views:
+            report.add(
+                "view_name_collision",
+                Provenance(file=str(view_dir)),
+                suggestion=f"Folders '{named_dirs[name].name}' and '{view_dir.name}' both map to view "
+                f"'{name}'; rename one.",
+            )
+            return None
         keyed = _keyed_files(view_dir, kind, report)
-        views[to_snake_case(view_dir.name)] = (kind, keyed)
+        views[name] = (kind, keyed)
+        named_dirs[name] = view_dir
     return views
 
 
