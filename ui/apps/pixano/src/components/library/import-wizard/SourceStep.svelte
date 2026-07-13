@@ -7,7 +7,9 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, CheckCircle, FolderOpen, UploadSimple } from "phosphor-svelte";
 
-  import { matchesMediaKind } from "./rawSchema";
+  import { matchesUseCase, preflightLayout } from "./layoutPreflight";
+  import LayoutPreviewPanel from "./LayoutPreviewPanel.svelte";
+  import { USE_CASE_CARDS } from "./rawSchema";
   import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
   import {
     formatBytes,
@@ -42,11 +44,16 @@ License: CECILL-C
   let fileInput = $state<HTMLInputElement | null>(null);
   let abortController: AbortController | null = null;
   let uploadId = "";
-  let uploadedKind = $state(fields.raw.kind);
+  let uploadedUseCase = $state(fields.raw.useCase);
 
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
   const showLerobot = $derived(showsLerobotFields(fields));
   const offersHub = $derived(fields.intent === "lerobot" || fields.intent === "auto");
+  const layoutHint = $derived(
+    fields.intent === "raw"
+      ? (USE_CASE_CARDS.find((card) => card.useCase === fields.raw.useCase)?.layoutHint ?? "")
+      : "",
+  );
   const progressPercent = $derived(
     progress && progress.totalBytes > 0
       ? Math.min(100, Math.round((progress.uploadedBytes / progress.totalBytes) * 100))
@@ -58,10 +65,14 @@ License: CECILL-C
   });
 
   $effect(() => {
-    // Raw uploads are filtered by media kind; if the user changes the kind
-    // after uploading, the staged files no longer match — drop them so the
+    // Raw uploads are filtered by use case; if the user changes the use case
+    // after picking, the staged files no longer match — drop them so the
     // next pick re-filters. (Guarded so the reset can't re-trigger itself.)
-    if (fields.intent === "raw" && uploadState !== "idle" && fields.raw.kind !== uploadedKind) {
+    if (
+      fields.intent === "raw" &&
+      (uploadState !== "idle" || fields.raw.layout !== null) &&
+      fields.raw.useCase !== uploadedUseCase
+    ) {
       discardStagedUpload();
     }
   });
@@ -71,6 +82,7 @@ License: CECILL-C
       void deleteUploadSession(uploadId).catch(() => undefined);
       uploadId = "";
     }
+    fields.raw.layout = null;
     if (uploadState !== "idle") {
       fields.source = "";
       fields.sourceLabel = "";
@@ -100,19 +112,20 @@ License: CECILL-C
     discardStagedUpload();
     let picked = splitFolderSelection(files);
     if (fields.intent === "raw") {
-      // Upload only the media of the chosen kind: a stray metadata.jsonl,
+      // Preflight the layout on the client BEFORE uploading anything: a bad
+      // folder structure must not cost a multi-gigabyte upload to discover.
+      const layout = preflightLayout(picked.entries, fields.raw.useCase);
+      fields.raw.layout = layout;
+      uploadedUseCase = fields.raw.useCase;
+      if (!layout.ok) {
+        uploadState = "idle";
+        uploadError = "";
+        return; // the layout panel shows what to fix; pick the folder again
+      }
+      // Upload only the use case's media kinds: a stray metadata.jsonl,
       // .DS_Store, or README must not be staged (a metadata.jsonl would flip
       // the source out of media-only mode and import nothing).
-      const kind = fields.raw.kind;
-      const before = picked.entries.length;
-      picked = filterSelection(picked, (name) => matchesMediaKind(name, kind));
-      if (!picked.entries.length) {
-        uploadState = "error";
-        uploadError = `The selected folder has no ${kind} files (found ${before} other file${
-          before === 1 ? "" : "s"
-        }).`;
-        return;
-      }
+      picked = filterSelection(picked, (name) => matchesUseCase(name, fields.raw.useCase));
     }
     if (!picked.entries.length) {
       uploadState = "error";
@@ -120,7 +133,7 @@ License: CECILL-C
       return;
     }
     selection = picked;
-    uploadedKind = fields.raw.kind;
+    uploadedUseCase = fields.raw.useCase;
     uploadState = "uploading";
     uploadError = "";
     progress = {
@@ -220,13 +233,17 @@ License: CECILL-C
           onclick={() => fileInput?.click()}
         >
           <UploadSimple weight="regular" class="h-5 w-5 shrink-0 text-primary" />
-          <span>
+          <span class="min-w-0 flex-1">
             <span class="block text-sm font-medium text-foreground">
               Choose a folder on your computer…
             </span>
             <span class="mt-0.5 block text-xs text-muted-foreground">
               The folder uploads to Pixano and imports from there — nothing else to configure.
             </span>
+            {#if layoutHint}
+              <pre
+                class="mt-2 overflow-x-auto rounded-lg bg-surface-2 px-2.5 py-2 font-mono text-[10px] leading-relaxed text-muted-foreground">{layoutHint}</pre>
+            {/if}
           </span>
         </button>
         {#if uploadError}
@@ -282,6 +299,10 @@ License: CECILL-C
           </button>
         </div>
       {/if}
+    {/if}
+
+    {#if fields.intent === "raw" && fields.raw.layout}
+      <LayoutPreviewPanel layout={fields.raw.layout} />
     {/if}
   </div>
 

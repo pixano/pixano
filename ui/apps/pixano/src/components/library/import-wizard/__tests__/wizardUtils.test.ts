@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { preflightLayout } from "../layoutPreflight";
 import {
   canAnalyze,
   DEFAULT_FIELDS,
@@ -82,10 +83,15 @@ describe("mergeSpec", () => {
     expect(mergeSpec(fields({}), "")).toEqual({});
   });
 
-  it("builds the raw-images spec with entity attrs and annotations", () => {
+  it("builds the raw multi-view image spec: preflight views + record/entity attrs", () => {
     const base = fields({ intent: "raw" });
-    base.raw.viewsMode = "named";
-    base.raw.viewNames = "left, right";
+    base.raw.layout = preflightLayout(
+      ["left/a.jpg", "right/a.jpg"].map((relPath) => ({ relPath })),
+      "image",
+    );
+    base.raw.recordAttrs = [
+      { name: "weather", type: "str", list: false, required: false, defaultValue: "" },
+    ];
     base.raw.entityAttrs = [
       { name: "category", type: "str", list: false, required: false, defaultValue: "" },
       { name: "tags", type: "str", list: true, required: false, defaultValue: "" },
@@ -95,7 +101,8 @@ describe("mergeSpec", () => {
       format: "pixano_jsonl",
       dataset: { workspace: "image" },
       schema: {
-        views: { left: "image", right: "image" },
+        views: { left: { kind: "image" }, right: { kind: "image" } },
+        record: { attrs: { weather: { type: "str" } } },
         entity: { attrs: { category: { type: "str" }, tags: { type: "str", collection: true } } },
         annotations: ["bbox", "classification"],
       },
@@ -104,7 +111,7 @@ describe("mergeSpec", () => {
 
   it("builds the raw-videos spec: extract default with cap, reference opt-in", () => {
     const extract = fields({ intent: "raw" });
-    extract.raw.kind = "videos";
+    extract.raw.useCase = "video";
     extract.raw.maxFrames = "200";
     extract.raw.annotations = ["bbox", "tracklet"];
     expect(mergeSpec(extract, "")).toEqual({
@@ -115,7 +122,7 @@ describe("mergeSpec", () => {
     });
 
     const reference = fields({ intent: "raw" });
-    reference.raw.kind = "videos";
+    reference.raw.useCase = "video";
     reference.raw.framesMode = "reference";
     reference.raw.annotations = ["bbox"];
     expect(mergeSpec(reference, "")).toEqual({
@@ -126,13 +133,30 @@ describe("mergeSpec", () => {
     });
   });
 
-  it("builds the raw-text spec without a workspace", () => {
-    const base = fields({ intent: "raw" });
-    base.raw.kind = "texts";
-    base.raw.annotations = ["text_span", "classification"];
-    expect(mergeSpec(base, "")).toEqual({
+  it("builds the VQA and MEL specs with their workspaces and locked slots", () => {
+    const vqa = fields({ intent: "raw" });
+    vqa.raw.useCase = "image_vqa";
+    vqa.raw.annotations = ["message"];
+    expect(mergeSpec(vqa, "")).toEqual({
       format: "pixano_jsonl",
-      schema: { annotations: ["text_span", "classification"] },
+      dataset: { workspace: "image_vqa" },
+      schema: { annotations: ["message"] },
+    });
+
+    const mel = fields({ intent: "raw" });
+    mel.raw.useCase = "image_text_entity_linking";
+    mel.raw.annotations = ["text_span", "bbox", "mask"];
+    mel.raw.layout = preflightLayout(
+      ["image/a.jpg", "text/a.txt"].map((relPath) => ({ relPath })),
+      "image_text_entity_linking",
+    );
+    expect(mergeSpec(mel, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "image_text_entity_linking" },
+      schema: {
+        views: { image: { kind: "image" }, text: { kind: "text" } },
+        annotations: ["text_span", "bbox", "mask"],
+      },
     });
   });
 
@@ -250,6 +274,16 @@ describe("canAnalyze", () => {
       { name: "category", type: "str", list: false, required: false, defaultValue: "" },
     ];
     expect(canAnalyze(good, "")).toBe(true);
+  });
+
+  it("gates on a failed layout preflight", () => {
+    const blocked = fields({ intent: "raw", source: "/data" });
+    blocked.raw.layout = preflightLayout(
+      ["Left Cam/a.jpg", "left_cam/a.jpg"].map((relPath) => ({ relPath })),
+      "image",
+    );
+    expect(blocked.raw.layout.ok).toBe(false);
+    expect(canAnalyze(blocked, "")).toBe(false);
   });
 });
 

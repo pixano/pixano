@@ -6,13 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   import AnnotationSlotsPicker from "./AnnotationSlotsPicker.svelte";
-  import EntityAttrsEditor from "./EntityAttrsEditor.svelte";
+  import AttrsEditor from "./AttrsEditor.svelte";
   import {
     ANNOTATION_CHOICES,
-    DEFAULT_ANNOTATIONS,
+    LOCKED_ANNOTATIONS,
     validateRawFields,
     type RawFields,
-    type RawMediaKind,
   } from "./rawSchema";
 
   interface Props {
@@ -21,18 +20,7 @@ License: CECILL-C
 
   let { raw = $bindable() }: Props = $props();
 
-  const KINDS: { kind: RawMediaKind; label: string }[] = [
-    { kind: "images", label: "Images" },
-    { kind: "videos", label: "Videos" },
-    { kind: "texts", label: "Text" },
-  ];
-
   const validationError = $derived(validateRawFields(raw));
-
-  function setKind(kind: RawMediaKind) {
-    raw.kind = kind;
-    raw.annotations = [...DEFAULT_ANNOTATIONS[kind]];
-  }
 
   const labelClass = "text-xs font-semibold uppercase tracking-widest text-muted-foreground";
   const inputClass =
@@ -47,65 +35,7 @@ License: CECILL-C
 </script>
 
 <div class="space-y-4 rounded-xl border border-border p-4">
-  <div class="space-y-1.5">
-    <p class={labelClass}>Media type</p>
-    <div class="flex gap-1.5" role="radiogroup" aria-label="Media type">
-      {#each KINDS as entry (entry.kind)}
-        <button
-          type="button"
-          class={segmentClass(raw.kind === entry.kind)}
-          role="radio"
-          aria-checked={raw.kind === entry.kind}
-          onclick={() => setKind(entry.kind)}
-        >
-          {entry.label}
-        </button>
-      {/each}
-    </div>
-  </div>
-
-  {#if raw.kind === "images"}
-    <div class="space-y-1.5">
-      <p class={labelClass}>Views</p>
-      <div class="flex gap-1.5">
-        <button
-          type="button"
-          class={segmentClass(raw.viewsMode === "auto")}
-          onclick={() => (raw.viewsMode = "auto")}
-        >
-          Auto from folders
-        </button>
-        <button
-          type="button"
-          class={segmentClass(raw.viewsMode === "named")}
-          onclick={() => (raw.viewsMode = "named")}
-        >
-          Name them
-        </button>
-      </div>
-      {#if raw.viewsMode === "auto"}
-        <p class="text-xs text-muted-foreground">
-          Subfolders become views (e.g. <span class="font-mono">left/</span>
-          ,
-          <span class="font-mono">right/</span>
-          , matched by file name); a flat folder becomes one view.
-        </p>
-      {:else}
-        <input
-          type="text"
-          class="{inputClass} font-mono"
-          placeholder="left, right"
-          bind:value={raw.viewNames}
-          aria-label="View names"
-        />
-        <p class="text-xs text-muted-foreground">
-          Comma-separated snake_case names; each needs a matching folder in the source.
-        </p>
-      {/if}
-    </div>
-  {/if}
-
-  {#if raw.kind === "videos"}
+  {#if raw.useCase === "video"}
     <div class="space-y-1.5">
       <p class={labelClass}>Video handling</p>
       <div class="flex gap-1.5">
@@ -121,7 +51,7 @@ License: CECILL-C
           class={segmentClass(raw.framesMode === "reference")}
           onclick={() => (raw.framesMode = "reference")}
         >
-          Reference clips (browse)
+          Reference clips (metadata only)
         </button>
       </div>
       {#if raw.framesMode === "extract"}
@@ -140,20 +70,37 @@ License: CECILL-C
         </div>
       {:else}
         <p class="text-xs text-muted-foreground">
-          Clips play in the explorer but cannot be annotated frame by frame in this release.
+          Clips import as references (metadata + file). In-app playback is not available in this
+          release — choose Extract frames to annotate or browse them.
         </p>
       {/if}
     </div>
   {/if}
 
   <div class="space-y-1.5">
-    <p class={labelClass}>Entity attributes</p>
-    <EntityAttrsEditor bind:rows={raw.entityAttrs} />
+    <p class={labelClass}>Record attributes</p>
+    <AttrsEditor
+      bind:rows={raw.recordAttrs}
+      hint="One value per item (e.g. weather: str, captured_at: str). Values are filled in Pixano after import."
+      allowRequired={false}
+    />
+  </div>
+
+  <div class="space-y-1.5">
+    <p class={labelClass}>Object attributes</p>
+    <AttrsEditor
+      bind:rows={raw.entityAttrs}
+      hint="Attributes each annotated object carries (e.g. category: str)."
+    />
   </div>
 
   <div class="space-y-1.5">
     <p class={labelClass}>Annotations</p>
-    <AnnotationSlotsPicker choices={ANNOTATION_CHOICES[raw.kind]} bind:selected={raw.annotations} />
+    <AnnotationSlotsPicker
+      choices={ANNOTATION_CHOICES[raw.useCase]}
+      locked={LOCKED_ANNOTATIONS[raw.useCase]}
+      bind:selected={raw.annotations}
+    />
   </div>
 
   {#if validationError}

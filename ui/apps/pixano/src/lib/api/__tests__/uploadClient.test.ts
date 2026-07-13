@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { matchesMediaKind } from "$components/library/import-wizard/rawSchema";
+import { matchesUseCase } from "$components/library/import-wizard/layoutPreflight";
 import { describe, expect, it } from "vitest";
 
 import { filterSelection, splitFolderSelection } from "../uploadClient";
@@ -41,29 +41,38 @@ describe("splitFolderSelection", () => {
   });
 });
 
-describe("filterSelection with matchesMediaKind", () => {
+describe("filterSelection with matchesUseCase", () => {
   const selection = splitFolderSelection([
     fakeFile("set/left/a.jpg", 100),
     fakeFile("set/right/a.JPG", 100),
     fakeFile("set/metadata.jsonl", 20),
     fakeFile("set/.DS_Store", 5),
     fakeFile("set/notes.txt", 10),
+    fakeFile("set/clip.mp4", 50),
   ]);
 
-  it("drops the stray metadata.jsonl and junk for an images import", () => {
-    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "images"));
+  it("drops the stray metadata.jsonl and junk for an image import", () => {
+    const filtered = filterSelection(selection, (name) => matchesUseCase(name, "image"));
     expect(filtered.entries.map((e) => e.relPath)).toEqual(["left/a.jpg", "right/a.JPG"]);
     expect(filtered.totalBytes).toBe(200); // metadata.jsonl / .DS_Store / notes.txt excluded
     expect(filtered.folderName).toBe("set");
   });
 
-  it("keeps only text files for a text import", () => {
-    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "texts"));
-    expect(filtered.entries.map((e) => e.relPath)).toEqual(["notes.txt"]);
+  it("keeps BOTH images and texts for a MEL import, dropping the rest", () => {
+    const filtered = filterSelection(selection, (name) =>
+      matchesUseCase(name, "image_text_entity_linking"),
+    );
+    expect(filtered.entries.map((e) => e.relPath)).toEqual([
+      "left/a.jpg",
+      "right/a.JPG",
+      "notes.txt",
+    ]);
+    expect(filtered.totalBytes).toBe(210);
   });
 
   it("yields an empty selection when nothing matches (caller shows an error)", () => {
-    const filtered = filterSelection(selection, (name) => matchesMediaKind(name, "videos"));
+    const noVideos = splitFolderSelection([fakeFile("set/a.jpg", 1)]);
+    const filtered = filterSelection(noVideos, (name) => matchesUseCase(name, "video"));
     expect(filtered.entries).toEqual([]);
   });
 });

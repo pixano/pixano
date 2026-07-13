@@ -6,15 +6,16 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { preflightLayout } from "../layoutPreflight";
 import {
   buildRawSchemaSpec,
   DEFAULT_ANNOTATIONS,
   DEFAULT_RAW_FIELDS,
+  parseTypedListValue,
   parseTypedValue,
-  parseViewNames,
-  validateEntityAttrs,
+  validateAttrRows,
   validateRawFields,
-  type EntityAttrRow,
+  type AttrRow,
   type RawFields,
 } from "../rawSchema";
 
@@ -23,7 +24,7 @@ const raw = (overrides: Partial<RawFields>): RawFields => ({
   ...overrides,
 });
 
-const attr = (overrides: Partial<EntityAttrRow>): EntityAttrRow => ({
+const attr = (overrides: Partial<AttrRow>): AttrRow => ({
   name: "category",
   type: "str",
   list: false,
@@ -32,15 +33,7 @@ const attr = (overrides: Partial<EntityAttrRow>): EntityAttrRow => ({
   ...overrides,
 });
 
-describe("parseViewNames", () => {
-  it("splits, trims, and validates snake_case names", () => {
-    expect(parseViewNames("left, right")).toEqual({ names: ["left", "right"], error: "" });
-    expect(parseViewNames("")).toEqual({ names: [], error: "" });
-    expect(parseViewNames("Left").error).toContain("snake_case");
-    expect(parseViewNames("a b").error).toContain("snake_case");
-    expect(parseViewNames("left, left").error).toContain("unique");
-  });
-});
+const entries = (...paths: string[]) => paths.map((relPath) => ({ relPath }));
 
 describe("parseTypedValue", () => {
   it("parses per type and rejects mismatches", () => {
@@ -54,65 +47,153 @@ describe("parseTypedValue", () => {
   });
 });
 
-describe("validateEntityAttrs", () => {
+describe("parseTypedListValue", () => {
+  it("parses comma-separated lists per element type", () => {
+    expect(parseTypedListValue("str", "a, b")).toEqual(["a", "b"]);
+    expect(parseTypedListValue("int", "1, 2, 3")).toEqual([1, 2, 3]);
+    expect(parseTypedListValue("int", "1, oops")).toBeUndefined();
+    expect(parseTypedListValue("str", "")).toEqual([]);
+  });
+});
+
+describe("validateAttrRows", () => {
   it("rejects bad names, duplicates, and untyped defaults", () => {
-    expect(validateEntityAttrs([attr({})])).toBe("");
-    expect(validateEntityAttrs([attr({ name: "Bad Name" })])).toContain("snake_case");
-    expect(validateEntityAttrs([attr({}), attr({})])).toContain("twice");
-    expect(validateEntityAttrs([attr({ type: "int", defaultValue: "x" })])).toContain(
-      "not a valid int",
+    expect(validateAttrRows([attr({})])).toBe("");
+    expect(validateAttrRows([attr({ name: "Bad Name" })])).toContain("snake_case");
+    expect(validateAttrRows([attr({}), attr({})])).toContain("twice");
+    expect(validateAttrRows([attr({ type: "int", defaultValue: "x" })])).toContain("not a valid");
+  });
+
+  it("validates list defaults as comma-separated lists", () => {
+    expect(validateAttrRows([attr({ list: true, defaultValue: "a, b" })])).toBe("");
+    expect(validateAttrRows([attr({ type: "int", list: true, defaultValue: "1, x" })])).toContain(
+      "comma-separated int list",
+    );
+  });
+
+  it("prefixes messages with the given label", () => {
+    expect(validateAttrRows([attr({ name: "Bad" })], "Record attribute")).toContain(
+      "Record attribute",
     );
   });
 });
 
 describe("validateRawFields", () => {
-  it("requires named views to be present and max frames numeric", () => {
-    expect(validateRawFields(raw({}))).toBe("");
-    expect(validateRawFields(raw({ viewsMode: "named", viewNames: "" }))).toContain("at least one");
-    expect(validateRawFields(raw({ kind: "videos", maxFrames: "abc" }))).toContain("whole number");
-    expect(validateRawFields(raw({ kind: "videos", maxFrames: "100" }))).toBe("");
+  it("requires a whole number for max frames on video", () => {
+    expect(validateRawFields(raw({ useCase: "video", maxFrames: "12.5" }))).toContain(
+      "whole number",
+    );
+    expect(validateRawFields(raw({ useCase: "video", maxFrames: "100" }))).toBe("");
+  });
+
+  it("requires at least one annotation type", () => {
+    expect(validateRawFields(raw({ annotations: [] }))).toContain("at least one annotation");
+  });
+
+  it("validates record and entity attrs separately", () => {
+    expect(validateRawFields(raw({ recordAttrs: [attr({ name: "Bad" })] }))).toContain(
+      "Record attribute",
+    );
+    expect(validateRawFields(raw({ entityAttrs: [attr({ name: "Bad" })] }))).toContain(
+      "Object attribute",
+    );
   });
 });
 
 describe("buildRawSchemaSpec", () => {
-  it("omits views in auto mode and declares them in named mode", () => {
-    expect(buildRawSchemaSpec(raw({})).schema.views).toBeUndefined();
-    const named = buildRawSchemaSpec(raw({ viewsMode: "named", viewNames: "left,right" }));
-    expect(named.schema.views).toEqual({ left: "image", right: "image" });
+  it("always emits the use case as the workspace", () => {
+    expect(buildRawSchemaSpec(raw({ useCase: "image" })).workspace).toBe("image");
+    expect(buildRawSchemaSpec(raw({ useCase: "video" })).workspace).toBe("video");
+    expect(buildRawSchemaSpec(raw({ useCase: "image_vqa" })).workspace).toBe("image_vqa");
+    expect(buildRawSchemaSpec(raw({ useCase: "image_text_entity_linking" })).workspace).toBe(
+      "image_text_entity_linking",
+    );
   });
 
-  it("types defaults and honours list/required flags", () => {
-    const built = buildRawSchemaSpec(
+  it("omits views for single-view layouts (backend inference applies)", () => {
+    const layout = preflightLayout(entries("a.jpg", "b.jpg"), "image");
+    expect(buildRawSchemaSpec(raw({ layout })).schema.views).toBeUndefined();
+  });
+
+  it("declares views from the preflight for multi-view layouts", () => {
+    const layout = preflightLayout(entries("left/a.jpg", "right/a.jpg"), "image");
+    expect(buildRawSchemaSpec(raw({ layout })).schema.views).toEqual({
+      left: { kind: "image" },
+      right: { kind: "image" },
+    });
+  });
+
+  it("maps video views to sequence_frames or video by frames mode", () => {
+    const layout = preflightLayout(entries("front/v.mp4", "side/v.mp4"), "video");
+    const extract = buildRawSchemaSpec(raw({ useCase: "video", layout }));
+    expect(extract.schema.views).toEqual({
+      front: { kind: "sequence_frames" },
+      side: { kind: "sequence_frames" },
+    });
+    const reference = buildRawSchemaSpec(
+      raw({ useCase: "video", layout, framesMode: "reference" }),
+    );
+    expect(reference.schema.views).toEqual({ front: { kind: "video" }, side: { kind: "video" } });
+    expect(reference.options).toEqual({ frames: "reference" });
+  });
+
+  it("declares MEL views with their kinds", () => {
+    const layout = preflightLayout(
+      entries("image/a.jpg", "text/a.txt"),
+      "image_text_entity_linking",
+    );
+    const spec = buildRawSchemaSpec(
       raw({
+        useCase: "image_text_entity_linking",
+        layout,
+        annotations: [...DEFAULT_ANNOTATIONS.image_text_entity_linking],
+      }),
+    );
+    expect(spec.workspace).toBe("image_text_entity_linking");
+    expect(spec.schema.views).toEqual({ image: { kind: "image" }, text: { kind: "text" } });
+    expect(spec.schema.annotations).toEqual(["text_span", "bbox", "mask"]);
+  });
+
+  it("always re-adds locked slots (a non-empty list replaces the preset backend-side)", () => {
+    const spec = buildRawSchemaSpec(raw({ useCase: "image_vqa", annotations: ["bbox"] }));
+    expect(spec.schema.annotations).toEqual(["message", "bbox"]);
+  });
+
+  it("emits record and entity attrs, with list defaults as arrays", () => {
+    const spec = buildRawSchemaSpec(
+      raw({
+        recordAttrs: [attr({ name: "weather" })],
         entityAttrs: [
-          attr({ name: "count", type: "int", defaultValue: "3" }),
-          attr({ name: "label", required: true }),
-          attr({ name: "tags", list: true }),
+          attr({ name: "category", required: true }),
+          attr({ name: "tags", list: true, defaultValue: "a, b" }),
         ],
       }),
     );
-    expect(built.schema.entity).toEqual({
+    expect(spec.schema.record).toEqual({ attrs: { weather: { type: "str" } } });
+    expect(spec.schema.entity).toEqual({
       attrs: {
-        count: { type: "int", default: 3 },
-        label: { type: "str", required: true },
-        tags: { type: "str", collection: true },
+        category: { type: "str", required: true },
+        tags: { type: "str", collection: true, default: ["a", "b"] },
       },
     });
   });
 
-  it("maps media kinds to workspaces and video options", () => {
-    expect(buildRawSchemaSpec(raw({})).workspace).toBe("image");
-    const videos = buildRawSchemaSpec(raw({ kind: "videos", maxFrames: "50" }));
-    expect(videos.workspace).toBe("video");
-    expect(videos.options).toEqual({ max_frames_per_video: 50 });
-    const reference = buildRawSchemaSpec(raw({ kind: "videos", framesMode: "reference" }));
-    expect(reference.options).toEqual({ frames: "reference" });
-    expect(buildRawSchemaSpec(raw({ kind: "texts" })).workspace).toBeUndefined();
+  it("passes the max-frames cap through for extract mode", () => {
+    expect(buildRawSchemaSpec(raw({ useCase: "video", maxFrames: "200" })).options).toEqual({
+      max_frames_per_video: 200,
+    });
   });
 
-  it("keeps per-kind annotation defaults distinct", () => {
-    expect(DEFAULT_ANNOTATIONS.images).toContain("bbox");
-    expect(DEFAULT_ANNOTATIONS.videos).toContain("tracklet");
-    expect(DEFAULT_ANNOTATIONS.texts).toContain("text_span");
+  it("emits no views from a failed preflight", () => {
+    const layout = preflightLayout(entries("Left Cam/a.jpg", "left_cam/a.jpg"), "image");
+    expect(layout.ok).toBe(false);
+    expect(buildRawSchemaSpec(raw({ layout })).schema.views).toBeUndefined();
+  });
+
+  it("keeps per-use-case annotation defaults distinct", () => {
+    expect(DEFAULT_ANNOTATIONS.image).toContain("bbox");
+    expect(DEFAULT_ANNOTATIONS.video).toContain("tracklet");
+    expect(DEFAULT_ANNOTATIONS.image_vqa).toContain("message");
+    expect(DEFAULT_ANNOTATIONS.image_text_entity_linking).toContain("text_span");
   });
 });

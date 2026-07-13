@@ -11,7 +11,10 @@ License: CECILL-C
 
   import DoneStep from "./DoneStep.svelte";
   import IntentStep from "./IntentStep.svelte";
+  import type { RawUseCase } from "./layoutPreflight";
   import ProgressStep from "./ProgressStep.svelte";
+  import { DEFAULT_ANNOTATIONS } from "./rawSchema";
+  import RawUseCaseStep from "./RawUseCaseStep.svelte";
   import ReviewStep from "./ReviewStep.svelte";
   import SourceStep from "./SourceStep.svelte";
   import WizardStepIndicator from "./WizardStepIndicator.svelte";
@@ -47,16 +50,7 @@ License: CECILL-C
 
   let { onClose }: Props = $props();
 
-  type Step = "intent" | "source" | "review" | "progress" | "done";
-
-  const STEP_LABELS = ["Type", "Source", "Review", "Import"];
-  const STEP_INDEX: Record<Step, number> = {
-    intent: 0,
-    source: 1,
-    review: 2,
-    progress: 3,
-    done: 3,
-  };
+  type Step = "intent" | "usecase" | "source" | "review" | "progress" | "done";
 
   let open = $state(true);
   let step = $state<Step>("intent");
@@ -83,11 +77,38 @@ License: CECILL-C
 
   const hasErrors = $derived(plan ? groupFindings(plan).errors.length > 0 : false);
   const canGoAnalyze = $derived(canAnalyze(fields, advancedJson));
+  const isRaw = $derived(fields.intent === "raw");
+  const referenceMode = $derived(
+    isRaw && fields.raw.useCase === "video" && fields.raw.framesMode === "reference",
+  );
+
+  // The raw flow adds a "Use case" step between Type and Source.
+  const stepLabels = $derived(
+    isRaw
+      ? ["Type", "Use case", "Source", "Review", "Import"]
+      : ["Type", "Source", "Review", "Import"],
+  );
+  const stepIndex = $derived.by(() => {
+    const offset = isRaw ? 1 : 0;
+    const index: Record<Step, number> = {
+      intent: 0,
+      usecase: 1,
+      source: 1 + offset,
+      review: 2 + offset,
+      progress: 3 + offset,
+      done: 3 + offset,
+    };
+    return index[step];
+  });
 
   const STEP_META: Record<Step, { title: string; description: string }> = {
     intent: {
       title: "Import Dataset",
       description: "What are you importing?",
+    },
+    usecase: {
+      title: "Import raw media",
+      description: "What are you building? This sets the views, workspace, and annotation types.",
     },
     source: {
       title: "Import Dataset",
@@ -126,6 +147,14 @@ License: CECILL-C
 
   function handleIntentSelect(intent: ImportIntent) {
     fields.intent = intent;
+    step = intent === "raw" ? "usecase" : "source";
+  }
+
+  function handleUseCaseSelect(useCase: RawUseCase) {
+    if (fields.raw.useCase !== useCase) {
+      fields.raw.useCase = useCase;
+      fields.raw.annotations = [...DEFAULT_ANNOTATIONS[useCase]];
+    }
     step = "source";
   }
 
@@ -231,14 +260,16 @@ License: CECILL-C
             {/if}
           </div>
 
-          <WizardStepIndicator steps={STEP_LABELS} current={STEP_INDEX[step]} />
+          <WizardStepIndicator steps={stepLabels} current={stepIndex} />
 
           {#if step === "intent"}
             <IntentStep {formats} onSelect={handleIntentSelect} />
+          {:else if step === "usecase"}
+            <RawUseCaseStep onSelect={handleUseCaseSelect} />
           {:else if step === "source"}
             <SourceStep bind:fields bind:advancedJson />
           {:else if step === "review"}
-            <ReviewStep {analyzing} {analyzeError} {plan} />
+            <ReviewStep {analyzing} {analyzeError} {plan} {referenceMode} />
           {:else if step === "progress"}
             <ProgressStep {job} {cancelRequested} />
           {:else if step === "done"}
@@ -246,7 +277,7 @@ License: CECILL-C
           {/if}
 
           <div class={BLOCKING_ALERT_ACTIONS_CLASS}>
-            {#if step === "intent" || step === "source" || step === "review"}
+            {#if step === "intent" || step === "usecase" || step === "source" || step === "review"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
@@ -256,11 +287,21 @@ License: CECILL-C
               </button>
             {/if}
 
-            {#if step === "source"}
+            {#if step === "usecase"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
                 onclick={() => (step = "intent")}
+              >
+                Back
+              </button>
+            {/if}
+
+            {#if step === "source"}
+              <button
+                type="button"
+                class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
+                onclick={() => (step = isRaw ? "usecase" : "intent")}
               >
                 Back
               </button>
