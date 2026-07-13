@@ -189,7 +189,15 @@ export function toDatasetBrowser(
   const rows: TableRow[] = items.map((record) => {
     const row: TableRow = {};
     for (const [key, value] of Object.entries(record)) {
-      if (typeof value === "object" && value !== null) continue;
+      if (Array.isArray(value)) {
+        // List attributes (e.g. LeRobot `tasks`) render as a joined string —
+        // the table can only show primitives, and an instruction reads best
+        // as text. The raw array stays available in the single-item view.
+        row[key] = value.map((item) => (item == null ? "" : String(item))).join("; ");
+        if (!columnsMap.has(key)) columnsMap.set(key, "list");
+        continue;
+      }
+      if (typeof value === "object" && value !== null) continue; // nested objects aren't renderable
       row[key] = (value ?? "") as string | number | boolean;
       if (!columnsMap.has(key)) {
         columnsMap.set(key, inferColumnType(value));
