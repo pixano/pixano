@@ -7,13 +7,16 @@ License: CECILL-C
 <script lang="ts">
   import { Plus, Trash } from "phosphor-svelte";
 
-  import { ENTITY_ATTR_TYPES, type EntityAttrRow } from "./rawSchema";
+  import { ATTR_TYPES, type AttrRow } from "./rawSchema";
 
   interface Props {
-    rows: EntityAttrRow[];
+    rows: AttrRow[];
+    hint: string;
+    /** Record attrs forbid `required`: media-only imports create records with no attr values. */
+    allowRequired?: boolean;
   }
 
-  let { rows = $bindable() }: Props = $props();
+  let { rows = $bindable(), hint, allowRequired = true }: Props = $props();
 
   function addRow() {
     rows = [...rows, { name: "", type: "str", list: false, required: false, defaultValue: "" }];
@@ -23,16 +26,20 @@ License: CECILL-C
     rows = rows.filter((_, i) => i !== index);
   }
 
+  const ZERO_DEFAULTS: Record<string, string> = {
+    str: '""',
+    int: "0",
+    float: "0.0",
+    bool: "false",
+  };
+
   const inputClass =
     "rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground " +
     "placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 </script>
 
 <div class="space-y-2">
-  <p class="text-xs text-muted-foreground">
-    Attributes each annotated object carries (e.g. <span class="font-mono">category: str</span>
-    ).
-  </p>
+  <p class="text-xs text-muted-foreground">{hint}</p>
 
   {#each rows as row, index (index)}
     <div class="flex flex-wrap items-center gap-2">
@@ -44,7 +51,7 @@ License: CECILL-C
         aria-label="Attribute name"
       />
       <select class={inputClass} bind:value={row.type} aria-label="Attribute type">
-        {#each ENTITY_ATTR_TYPES as type (type)}
+        {#each ATTR_TYPES as type (type)}
           <option value={type}>{type}</option>
         {/each}
       </select>
@@ -52,18 +59,25 @@ License: CECILL-C
         <input type="checkbox" bind:checked={row.list} />
         list
       </label>
-      <label class="flex items-center gap-1 text-xs text-muted-foreground">
-        <input type="checkbox" bind:checked={row.required} />
-        required
-      </label>
+      {#if allowRequired}
+        <label class="flex items-center gap-1 text-xs text-muted-foreground">
+          <input type="checkbox" bind:checked={row.required} />
+          required
+        </label>
+      {/if}
       {#if !row.required}
         <input
           type="text"
-          class="{inputClass} w-24 font-mono"
-          placeholder="default"
+          class="{inputClass} w-28 font-mono"
+          placeholder={row.list ? "a, b, c" : "default"}
           bind:value={row.defaultValue}
           aria-label="Default value"
         />
+        {#if !row.defaultValue.trim()}
+          <span class="text-[10px] text-muted-foreground/70">
+            defaults to {row.list ? "[]" : ZERO_DEFAULTS[row.type]}
+          </span>
+        {/if}
       {/if}
       <button
         type="button"
