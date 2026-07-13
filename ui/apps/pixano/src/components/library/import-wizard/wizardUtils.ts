@@ -158,10 +158,12 @@ export function sampleLocation(sample: { file?: string | null; line?: number | n
   return sample.line ? `${file}:${sample.line}` : file;
 }
 
-/** Source step gating: a source, valid Advanced JSON, and a clean raw form. */
+/** Source step gating: a source, valid Advanced JSON, a clean raw form, and a sound layout. */
 export function canAnalyze(fields: WizardFields, advancedJson: string): boolean {
   if (!fields.source.trim() || parseAdvancedSpec(advancedJson).error) return false;
-  return fields.intent !== "raw" || validateRawFields(fields.raw) === "";
+  if (fields.intent !== "raw") return true;
+  if (fields.raw.layout !== null && !fields.raw.layout.ok) return false;
+  return validateRawFields(fields.raw) === "";
 }
 
 /** One attribute chip of a schema entry. */

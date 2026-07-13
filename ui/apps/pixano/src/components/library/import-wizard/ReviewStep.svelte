@@ -15,9 +15,11 @@ License: CECILL-C
     analyzing: boolean;
     analyzeError: string;
     plan: ImportPlanResponse | null;
+    /** Raw video "reference clips" mode: imports succeed but clips don't play in-app yet. */
+    referenceMode?: boolean;
   }
 
-  let { analyzing, analyzeError, plan }: Props = $props();
+  let { analyzing, analyzeError, plan, referenceMode = false }: Props = $props();
 
   const grouped = $derived(plan ? groupFindings(plan) : { errors: [], warnings: [] });
   const splitEntries = $derived(Object.entries(plan?.splits ?? {}));
@@ -76,6 +78,19 @@ License: CECILL-C
 
     {#if plan.inferred_schema}
       <SchemaPanel schema={plan.inferred_schema} />
+    {/if}
+
+    {#if referenceMode}
+      <div class="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
+        <p class="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
+          <Warning weight="fill" class="h-4 w-4 shrink-0" />
+          Reference clips will not play in the explorer in this release
+        </p>
+        <p class="mt-1 text-xs text-foreground/80">
+          The videos import as metadata + file references. To annotate or browse frames, go back and
+          choose “Extract frames” instead.
+        </p>
+      </div>
     {/if}
 
     {#each grouped.errors as finding (finding.code)}
