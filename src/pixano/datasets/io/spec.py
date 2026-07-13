@@ -104,6 +104,10 @@ def _attr_field(attr_name: str, value: Any) -> tuple[Any, Any]:
     if payload.get("required"):
         return annotation, ...
     if "default" in payload:
+        if payload.get("collection") and not isinstance(payload["default"], list):
+            raise SpecValidationError(
+                f"Attr '{attr_name}': a collection default must be a list, got {payload['default']!r}."
+            )
         return annotation, payload["default"]
     if payload.get("collection"):
         # A plain [] default (pydantic v2 deep-copies) — default_factory does not
@@ -180,10 +184,11 @@ class SchemaSpec(BaseModel):
                 continue
             payload[slot] = getattr(info, slot)
 
+        # Attrs extend the preset's classes (e.g. MEL's MelEntity keeps its `name`), not the bare bases.
         if self.record.get("attrs"):
-            payload["record"] = _synthesize(Record, self.record["attrs"])
+            payload["record"] = _synthesize(info.record or Record, self.record["attrs"])
         if self.entity.get("attrs"):
-            payload["entity"] = _synthesize(Entity, self.entity["attrs"])
+            payload["entity"] = _synthesize(info.entity or Entity, self.entity["attrs"])
         if self.entity_dynamic_state is not None:
             payload["entity_dynamic_state"] = (
                 _synthesize(EntityDynamicState, self.entity_dynamic_state["attrs"])

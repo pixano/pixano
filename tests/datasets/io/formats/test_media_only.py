@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from pixano.datasets.io import FORMATS, ImportSpec, SourceRef, analyze, ffmpeg_available, ffprobe_available
+from pixano.datasets.io.errors import MetadataError
 from pixano.datasets.io.formats.pixano_jsonl import PixanoJsonlImporter
 from pixano.datasets.io.formats.pixano_jsonl.media_only import discover_layout, is_media_only_source
 from pixano.datasets.io.plan import PreflightReport
@@ -91,6 +92,49 @@ class TestDiscovery:
         assert report.is_valid
         assert layout.total_records == 1
         assert set(layout.splits[0].records[0].files) == {"my_left", "my_right"}
+
+    def test_inferred_view_folder_collision_is_reported(self, tmp_path: Path):
+        """Two folders snake-casing to the same view must not silently drop one folder's files."""
+        _seed_images(tmp_path / "Left Cam", ("a",))
+        _seed_images(tmp_path / "left_cam", ("a",))
+        report = PreflightReport()
+        layout = discover_layout(tmp_path, None, report)
+        assert "view_name_collision" in report.findings
+        assert layout.total_records == 0  # ambiguous: nothing imports minus a view
+
+    def test_declared_view_matched_by_two_folders_is_reported(self, tmp_path: Path):
+        _seed_images(tmp_path / "Left Cam", ("a",))
+        _seed_images(tmp_path / "left_cam", ("a",))
+        report = PreflightReport()
+        layout = discover_layout(tmp_path, {"left_cam": "image", "right": "image"}, report)
+        assert "view_name_collision" in report.findings
+        assert layout.total_records == 0
+
+    def test_declared_split_named_view_is_rejected(self, tmp_path: Path):
+        _seed_images(tmp_path / "train", ("a",))
+        report = PreflightReport()
+        layout = discover_layout(tmp_path, {"train": "image"}, report)
+        assert "view_name_reserved" in report.findings
+        assert layout.total_records == 0
+
+    def test_single_declared_view_with_odd_subdirs_warns(self, tmp_path: Path):
+        """The legacy every-subdir-is-a-split behavior stays, but stops being silent."""
+        _seed_images(tmp_path / "day1", ("a",))
+        _seed_images(tmp_path / "day2", ("b",))
+        report = PreflightReport()
+        layout = discover_layout(tmp_path, {"image": "image"}, report)
+        assert report.findings["subdirs_treated_as_splits"].severity == "warning"
+        assert report.is_valid  # a warning, not an error: the layout still imports
+        assert {split.name for split in layout.splits} == {"day1", "day2"}
+        assert layout.total_records == 2
+
+    def test_flat_declared_view_duplicate_stems_are_reported(self, tmp_path: Path):
+        """The legacy stem-keyed path detects a.jpg + a.png like inference does."""
+        _seed_images(tmp_path, ("a",))
+        _seed_images(tmp_path, ("a",), asset=IMAGE_PNG_ASSET_URL)
+        report = PreflightReport()
+        discover_layout(tmp_path, {"image": "image"}, report)
+        assert "duplicate_view_stem" in report.findings
 
 
 class TestRawImages:
@@ -198,6 +242,17 @@ class TestRawVideos:
         assert all(row["timestamp"] >= 0 for row in frames)
 
     @needs_ffmpeg
+    def test_garbage_video_fails_analyze(self, tmp_path: Path):
+        """An unprobeable video is an analyze error, not a silent empty record at ingest."""
+        source = tmp_path / "vids"
+        source.mkdir()
+        shutil.copy(VIDEO_MP4_ASSET_URL, source / "ok.mp4")
+        (source / "bad.mp4").write_bytes(b"not really a video")
+        plan = analyze(source, _spec({"dataset": {"name": "vids"}}))
+        assert "unreadable_video" in plan.report.findings
+        assert not plan.report.is_valid
+
+    @needs_ffmpeg
     def test_reference_mode_emits_video_rows(self, tmp_path: Path):
         source = tmp_path / "vids"
         source.mkdir()
@@ -232,6 +287,55 @@ class TestRawText:
         case.assert_counts(dataset)
         contents = {row.content for row in dataset.get_data("texts")}
         assert contents == {"hello x", "hello y"}
+
+    def test_non_utf8_text_fails_analyze(self, tmp_path: Path):
+        source = tmp_path / "notes"
+        source.mkdir()
+        (source / "ok.txt").write_text("fine", encoding="utf-8")
+        (source / "bad.txt").write_bytes(b"\xff\xfe broken \xff")
+        plan = analyze(source, _spec({"dataset": {"name": "notes"}}))
+        assert "unreadable_text" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_non_utf8_text_beyond_probe_budget_fails_at_ingest(self, tmp_path: Path):
+        """Past the bounded analyze probes, the ingest read still fails loudly, not with a stacktrace-less row."""
+        source = tmp_path / "notes"
+        source.mkdir()
+        for index in range(40):  # AnalyzeLimits.max_media_probes is 32
+            (source / f"n{index:03d}.txt").write_text("fine", encoding="utf-8")
+        (source / "z_bad.txt").write_bytes(b"\xff\xfe broken")
+        spec = _spec({"dataset": {"name": "notes"}})
+        plan = analyze(source, spec)
+        assert plan.report.is_valid  # the bad file sorts past the probe budget
+        case = DatasetImporterTestCase(importer=PixanoJsonlImporter(), source=source, spec=spec)
+        with pytest.raises(MetadataError, match="not valid UTF-8"):
+            case.run_import(tmp_path / "data")
+
+
+class TestRequiredRecordAttrs:
+    def test_required_record_attr_flagged_in_media_only_analyze(self, tmp_path: Path):
+        """Media-only ingest creates records with no attr values: a required record attr can never be satisfied."""
+        source = tmp_path / "raw"
+        _seed_images(source, ("a",))
+        spec = _spec(
+            {
+                "dataset": {"name": "raw", "workspace": "image"},
+                "schema": {"record": {"attrs": {"weather": {"type": "str", "required": True}}}},
+            }
+        )
+        plan = analyze(source, spec)
+        assert "required_record_attr" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_defaulted_record_attr_is_fine(self, tmp_path: Path):
+        source = tmp_path / "raw"
+        _seed_images(source, ("a",))
+        spec = _spec(
+            {"dataset": {"name": "raw", "workspace": "image"}, "schema": {"record": {"attrs": {"weather": "str"}}}}
+        )
+        plan = analyze(source, spec)
+        assert plan.report.is_valid
+        assert "required_record_attr" not in plan.report.findings
 
 
 class TestInferredSchemaStamping:

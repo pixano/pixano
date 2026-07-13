@@ -84,6 +84,32 @@ class TestSchemaSpecCompile:
         with pytest.raises(SpecValidationError, match="identical attrs"):
             schema.compile(WorkspaceType.IMAGE)
 
+    def test_mel_entity_attrs_extend_the_preset_entity(self):
+        """Entity attrs land on the workspace preset's entity class, not bare Entity (MEL keeps `name`)."""
+        schema = SchemaSpec.model_validate({"entity": {"attrs": {"category": "str"}}})
+        info = schema.compile(WorkspaceType.IMAGE_TEXT_ENTITY_LINKING)
+        assert "name" in info.entity.model_fields
+        assert "category" in info.entity.model_fields
+
+    def test_collection_default_must_be_list(self):
+        with pytest.raises(SpecValidationError, match="collection default must be a list"):
+            SchemaSpec.model_validate(
+                {"entity": {"attrs": {"tags": {"type": "str", "collection": True, "default": "foo"}}}}
+            ).compile(WorkspaceType.IMAGE)
+
+    def test_collection_list_default_compiles(self):
+        info = SchemaSpec.model_validate(
+            {"entity": {"attrs": {"tags": {"type": "str", "collection": True, "default": ["a"]}}}}
+        ).compile(WorkspaceType.IMAGE)
+        assert info.entity.model_fields["tags"].default == ["a"]
+
+    def test_vqa_annotations_list_controls_message_slot(self):
+        """A non-empty annotations list replaces the preset's slots — callers must re-list `message` to keep it."""
+        keeps = SchemaSpec.model_validate({"annotations": ["message"]}).compile(WorkspaceType.IMAGE_VQA)
+        assert keeps.message is not None
+        drops = SchemaSpec.model_validate({"annotations": ["bbox"]}).compile(WorkspaceType.IMAGE_VQA)
+        assert drops.message is None
+
 
 class TestFromDatasetInfoInverse:
     @pytest.mark.parametrize(

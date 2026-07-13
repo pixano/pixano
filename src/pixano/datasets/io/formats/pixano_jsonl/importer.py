@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.schemas import canonical_table_name_for_schema, canonical_table_name_for_slot
 
-from ...errors import MetadataError, PixanoDataError, SpecValidationError
+from ...errors import MediaResolutionError, MetadataError, PixanoDataError, SpecValidationError
 from ...ids import stable_id
 from ...importer import BatchBundle, Cursor, DatasetImporter, DetectResult, SourceRef
 from ...media import MediaResolver, ffmpeg_available, ffprobe_available, probe_image, probe_video
@@ -206,6 +206,8 @@ class PixanoJsonlImporter(DatasetImporter):
                 'options {"frames": "reference"}.',
             )
 
+        self._check_media_only_record_attrs(spec, source, plan.report)
+        self._probe_media_only_files(layout, limits, plan.report)
         max_frames = self._max_frames_per_video(spec)
         estimate = 0
         for split in layout.splits:
@@ -235,6 +237,72 @@ class PixanoJsonlImporter(DatasetImporter):
         if estimate:
             plan.media_size_estimate_bytes = estimate
         return plan
+
+    def _check_media_only_record_attrs(self, spec: ImportSpec, source: SourceRef, report: PreflightReport) -> None:
+        """Media-only ingest builds records with no attr values: required record attrs can never be satisfied."""
+        from pixano.schemas import Record
+
+        try:
+            info = self.resolve_info(spec, source)
+        except (SpecValidationError, ValidationError):
+            return  # a broken spec surfaces through its own finding/error path
+        if info.record is None:
+            return
+        base_fields = set(Record.model_fields)
+        required = sorted(
+            name for name, field in info.record.model_fields.items() if name not in base_fields and field.is_required()
+        )
+        if required:
+            report.add(
+                "required_record_attr",
+                Provenance(file=source.location()),
+                suggestion="Media-only imports create records without attribute values; give "
+                f"{', '.join(repr(name) for name in required)} a default or drop 'required'.",
+            )
+
+    @staticmethod
+    def _probe_media_only_files(layout: Any, limits: AnalyzeLimits, report: PreflightReport) -> None:
+        """Bounded readability probes so bad media fails analyze, not mid-ingest."""
+        window = 64 * 1024
+        probes = 0
+        can_probe_video = ffprobe_available()
+        for split in layout.splits:
+            for group in split.records:
+                for view, media_file in sorted(group.files.items()):
+                    if probes >= limits.max_media_probes:
+                        return
+                    kind = layout.view_kinds.get(view)
+                    if kind == "text":
+                        probes += 1
+                        data = media_file.read_bytes()[:window]
+                        try:
+                            data.decode("utf-8")
+                        except UnicodeDecodeError as error:
+                            if len(data) == window and error.start >= window - 4:
+                                continue  # a multi-byte char cut by the probe window, not a bad file
+                            report.add(
+                                "unreadable_text",
+                                Provenance(file=str(media_file)),
+                                suggestion=f"'{media_file.name}' is not valid UTF-8; re-encode it or remove it.",
+                            )
+                    elif kind == "video" and can_probe_video:
+                        probes += 1
+                        try:
+                            probe = probe_video(media_file)
+                        except PixanoDataError as error:
+                            report.add(
+                                "unreadable_video",
+                                Provenance(file=str(media_file)),
+                                suggestion=f"'{media_file.name}' cannot be read as a video ({error}); "
+                                "re-encode it or remove it.",
+                            )
+                            continue
+                        if probe.num_frames <= 0:
+                            report.add(
+                                "unreadable_video",
+                                Provenance(file=str(media_file)),
+                                suggestion=f"'{media_file.name}' has no decodable frames; re-encode it or remove it.",
+                            )
 
     @staticmethod
     def _max_frames_per_video(spec: ImportSpec) -> int:
@@ -460,6 +528,8 @@ class PixanoJsonlImporter(DatasetImporter):
         rows: list[LanceModel] = []
         with tempfile.TemporaryDirectory(prefix="pixano-media-only-") as tmp:
             frame_files = decode_video_frames(video_file, tmp)
+            if not frame_files:
+                raise MediaResolutionError(f"'{video_file.name}' decoded to zero frames; re-encode it or remove it.")
             indices = list(range(len(frame_files)))
             if max_frames and len(indices) > max_frames:
                 stride = len(indices) / max_frames
@@ -666,7 +736,10 @@ class PixanoJsonlImporter(DatasetImporter):
         elif payload.uri.startswith(("http://", "https://", "s3://")):
             content, uri = "", payload.uri
         else:
-            content, uri = context.resolver.local_path(payload.uri).read_text(encoding="utf-8"), ""
+            try:
+                content, uri = context.resolver.local_path(payload.uri).read_text(encoding="utf-8"), ""
+            except UnicodeDecodeError as error:
+                raise MetadataError(f"Text file '{payload.uri}' is not valid UTF-8: {error}.") from None
         return view_cls(
             id=stable_id(record_id, "view", view_name),
             record_id=record_id,

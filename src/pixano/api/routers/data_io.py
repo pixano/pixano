@@ -259,7 +259,18 @@ def start_import(request: ImportRequestIO, settings: Annotated[Settings, Depends
     if request.plan_id and store.get_plan(request.plan_id) is None:
         raise HTTPException(status_code=409, detail=f"Plan '{request.plan_id}' not found or expired (re-analyze).")
     source = request.source or (store.get_plan(request.plan_id) or (None, ""))[1]
-    job = runner.submit_import(source, _spec_payload_for_source(source, request.spec), plan_id=request.plan_id)
+    spec_payload = _spec_payload_for_source(source, request.spec)
+    if not (spec_payload.get("dataset") or {}).get("name"):
+        try:
+            staged = Path(source).resolve().is_relative_to(_uploads_root(settings).resolve())
+        except (OSError, ValueError):
+            staged = False
+        if staged:
+            raise HTTPException(
+                status_code=422,
+                detail="Imports from a staged upload need dataset.name (the upload folder name is opaque).",
+            )
+    job = runner.submit_import(source, spec_payload, plan_id=request.plan_id)
     return _job_response(job)
 
 

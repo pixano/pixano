@@ -122,6 +122,21 @@ class TestIoRoutes:
         assert (data_dir / "library" / "uploaded_ds").is_dir()
         assert not source.exists()  # eager GC: the staged upload is disposable after import
 
+    def test_upload_import_without_dataset_name_is_rejected(self, client_and_dirs):
+        """A staged upload's folder name is an opaque id — never a dataset name."""
+        import io
+
+        client, _, _ = client_and_dirs
+        session = client.post("/io/uploads").json()
+        jpeg = io.BytesIO()
+        PIL.Image.new("RGB", (16, 16), (10, 120, 200)).save(jpeg, format="JPEG")
+        client.put(f"/io/uploads/{session['upload_id']}/files/a.jpg", content=jpeg.getvalue())
+
+        spec = {"format": "pixano_jsonl", "dataset": {"workspace": "image"}}
+        started = client.post("/io/imports", json={"source": session["source"], "spec": spec})
+        assert started.status_code == 422
+        assert "dataset.name" in started.json()["detail"]
+
     def test_upload_session_validation(self, client_and_dirs):
         client, _, _ = client_and_dirs
         session = client.post("/io/uploads").json()
