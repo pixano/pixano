@@ -35,7 +35,7 @@ License: CECILL-C
 </script>
 
 <div class="space-y-4 rounded-xl border border-border p-4">
-  {#if raw.useCase === "video"}
+  {#if raw.task === "video"}
     <div class="space-y-1.5">
       <p class={labelClass}>Video handling</p>
       <div class="flex gap-1.5">
@@ -97,8 +97,8 @@ License: CECILL-C
   <div class="space-y-1.5">
     <p class={labelClass}>Annotations</p>
     <AnnotationSlotsPicker
-      choices={ANNOTATION_CHOICES[raw.useCase]}
-      locked={LOCKED_ANNOTATIONS[raw.useCase]}
+      choices={ANNOTATION_CHOICES[raw.task]}
+      locked={LOCKED_ANNOTATIONS[raw.task]}
       bind:selected={raw.annotations}
     />
   </div>

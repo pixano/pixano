@@ -7,16 +7,16 @@ License: CECILL-C
 <script lang="ts">
   import { ChatsCircle, Images, LinkSimple, VideoCamera } from "phosphor-svelte";
 
-  import type { RawUseCase } from "./layoutPreflight";
-  import { USE_CASE_CARDS } from "./rawSchema";
+  import type { RawTask } from "./layoutPreflight";
+  import { TASK_CARDS } from "./rawSchema";
 
   interface Props {
-    onSelect: (useCase: RawUseCase) => void;
+    onSelect: (task: RawTask) => void;
   }
 
   let { onSelect }: Props = $props();
 
-  const ICONS: Record<RawUseCase, typeof Images> = {
+  const ICONS: Record<RawTask, typeof Images> = {
     image: Images,
     video: VideoCamera,
     image_vqa: ChatsCircle,
@@ -26,12 +26,12 @@ License: CECILL-C
 
 <div class="px-6 sm:px-7 pb-2 space-y-3">
   <div class="grid gap-2 sm:grid-cols-2">
-    {#each USE_CASE_CARDS as card (card.useCase)}
-      {@const Icon = ICONS[card.useCase]}
+    {#each TASK_CARDS as card (card.task)}
+      {@const Icon = ICONS[card.task]}
       <button
         type="button"
         class="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50"
-        onclick={() => onSelect(card.useCase)}
+        onclick={() => onSelect(card.task)}
       >
         <span class="flex items-center gap-2 text-sm font-medium text-foreground">
           <Icon weight="regular" class="h-5 w-5 shrink-0 text-primary" />

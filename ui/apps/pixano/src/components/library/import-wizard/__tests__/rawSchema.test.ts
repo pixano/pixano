@@ -80,10 +80,8 @@ describe("validateAttrRows", () => {
 
 describe("validateRawFields", () => {
   it("requires a whole number for max frames on video", () => {
-    expect(validateRawFields(raw({ useCase: "video", maxFrames: "12.5" }))).toContain(
-      "whole number",
-    );
-    expect(validateRawFields(raw({ useCase: "video", maxFrames: "100" }))).toBe("");
+    expect(validateRawFields(raw({ task: "video", maxFrames: "12.5" }))).toContain("whole number");
+    expect(validateRawFields(raw({ task: "video", maxFrames: "100" }))).toBe("");
   });
 
   it("requires at least one annotation type", () => {
@@ -101,11 +99,11 @@ describe("validateRawFields", () => {
 });
 
 describe("buildRawSchemaSpec", () => {
-  it("always emits the use case as the workspace", () => {
-    expect(buildRawSchemaSpec(raw({ useCase: "image" })).workspace).toBe("image");
-    expect(buildRawSchemaSpec(raw({ useCase: "video" })).workspace).toBe("video");
-    expect(buildRawSchemaSpec(raw({ useCase: "image_vqa" })).workspace).toBe("image_vqa");
-    expect(buildRawSchemaSpec(raw({ useCase: "image_text_entity_linking" })).workspace).toBe(
+  it("always emits the task as the workspace", () => {
+    expect(buildRawSchemaSpec(raw({ task: "image" })).workspace).toBe("image");
+    expect(buildRawSchemaSpec(raw({ task: "video" })).workspace).toBe("video");
+    expect(buildRawSchemaSpec(raw({ task: "image_vqa" })).workspace).toBe("image_vqa");
+    expect(buildRawSchemaSpec(raw({ task: "image_text_entity_linking" })).workspace).toBe(
       "image_text_entity_linking",
     );
   });
@@ -125,14 +123,12 @@ describe("buildRawSchemaSpec", () => {
 
   it("maps video views to sequence_frames or video by frames mode", () => {
     const layout = preflightLayout(entries("front/v.mp4", "side/v.mp4"), "video");
-    const extract = buildRawSchemaSpec(raw({ useCase: "video", layout }));
+    const extract = buildRawSchemaSpec(raw({ task: "video", layout }));
     expect(extract.schema.views).toEqual({
       front: { kind: "sequence_frames" },
       side: { kind: "sequence_frames" },
     });
-    const reference = buildRawSchemaSpec(
-      raw({ useCase: "video", layout, framesMode: "reference" }),
-    );
+    const reference = buildRawSchemaSpec(raw({ task: "video", layout, framesMode: "reference" }));
     expect(reference.schema.views).toEqual({ front: { kind: "video" }, side: { kind: "video" } });
     expect(reference.options).toEqual({ frames: "reference" });
   });
@@ -144,7 +140,7 @@ describe("buildRawSchemaSpec", () => {
     );
     const spec = buildRawSchemaSpec(
       raw({
-        useCase: "image_text_entity_linking",
+        task: "image_text_entity_linking",
         layout,
         annotations: [...DEFAULT_ANNOTATIONS.image_text_entity_linking],
       }),
@@ -155,7 +151,7 @@ describe("buildRawSchemaSpec", () => {
   });
 
   it("always re-adds locked slots (a non-empty list replaces the preset backend-side)", () => {
-    const spec = buildRawSchemaSpec(raw({ useCase: "image_vqa", annotations: ["bbox"] }));
+    const spec = buildRawSchemaSpec(raw({ task: "image_vqa", annotations: ["bbox"] }));
     expect(spec.schema.annotations).toEqual(["message", "bbox"]);
   });
 
@@ -179,7 +175,7 @@ describe("buildRawSchemaSpec", () => {
   });
 
   it("passes the max-frames cap through for extract mode", () => {
-    expect(buildRawSchemaSpec(raw({ useCase: "video", maxFrames: "200" })).options).toEqual({
+    expect(buildRawSchemaSpec(raw({ task: "video", maxFrames: "200" })).options).toEqual({
       max_frames_per_video: 200,
     });
   });
@@ -190,7 +186,7 @@ describe("buildRawSchemaSpec", () => {
     expect(buildRawSchemaSpec(raw({ layout })).schema.views).toBeUndefined();
   });
 
-  it("keeps per-use-case annotation defaults distinct", () => {
+  it("keeps per-task annotation defaults distinct", () => {
     expect(DEFAULT_ANNOTATIONS.image).toContain("bbox");
     expect(DEFAULT_ANNOTATIONS.video).toContain("tracklet");
     expect(DEFAULT_ANNOTATIONS.image_vqa).toContain("message");
