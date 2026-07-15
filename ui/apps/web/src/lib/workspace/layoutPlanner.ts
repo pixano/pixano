@@ -39,9 +39,7 @@ export function pickRenderableViews(
   isSupportedBase: (base: string) => boolean,
 ): Array<[string, SchemaDescriptor]> {
   if (!views) return [];
-  return Object.entries(views).filter(
-    ([, def]) => !!def.base && isSupportedBase(def.base),
-  );
+  return Object.entries(views).filter(([, def]) => !!def.base && isSupportedBase(def.base));
 }
 
 /**
@@ -57,10 +55,7 @@ export function pickRenderableViews(
  * also restrict cols to divisors of 12 (≤ `GRID_MAX_COLS`) so each row
  * fills the full width.
  */
-export function planViewportLayouts(
-  count: number,
-  viewport: Viewport,
-): WidgetLayout[] {
+export function planViewportLayouts(count: number, viewport: Viewport): WidgetLayout[] {
   if (count <= 0) return [];
 
   const containerW = Math.max(1, viewport.width);
@@ -90,14 +85,24 @@ export function planViewportLayouts(
  * downstream consumes the resulting numbers as plain data, so layout
  * decisions are testable without a DOM.
  *
+ * Height is read from the grid's *parent* (the fixed, overflow-hidden
+ * viewport wrapper) rather than from `.grid-stack` itself: GridStack
+ * overrides the grid element's inline height to its content height
+ * (`rows × cellHeight`), so measuring the grid would feed the current
+ * widget sizes back into the next record's layout — enlarging a widget
+ * would then ratchet every subsequent record larger until it runs
+ * off-screen. The parent's height is stable and reflects the real
+ * on-screen area. Width is unaffected (GridStack never rewrites it).
+ *
  * Falls back to a reasonable 16:9 default when called from a non-browser
  * context (SSR) or before the grid has mounted.
  */
 export function measureGridViewport(): Viewport {
   if (typeof document === "undefined") return { width: 1600, height: 900 };
   const el = document.querySelector<HTMLElement>(".grid-stack");
+  const heightSource = el?.parentElement ?? el;
   return {
     width: el?.clientWidth ?? 1600,
-    height: el?.clientHeight ?? 900,
+    height: heightSource?.clientHeight ?? 900,
   };
 }
