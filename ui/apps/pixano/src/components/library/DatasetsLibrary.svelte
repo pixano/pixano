@@ -19,19 +19,19 @@ License: CECILL-C
   import { icons } from "$lib/ui";
   import { getExplorerRoute } from "$lib/utils/routes";
 
-/**
- * DatasetsLibrary Component
- *
- * This component displays a list of datasets. Each dataset is represented by a
- * DatasetPreviewCard component. When a dataset is selected, the user is navigated
- * to the dataset's detail page.
- *
- * Data comes from datasetsStore
- *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
- *
- * Events:
- *   - selectDataset: Triggered when a dataset is selected.
- */
+  /**
+   * DatasetsLibrary Component
+   *
+   * This component displays a list of datasets. Each dataset is represented by a
+   * DatasetPreviewCard component. When a dataset is selected, the user is navigated
+   * to the dataset's detail page.
+   *
+   * Data comes from datasetsStore
+   *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
+   *
+   * Events:
+   *   - selectDataset: Triggered when a dataset is selected.
+   */
 
   let showImport = $state(false);
 
