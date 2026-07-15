@@ -11,7 +11,7 @@ License: CECILL-C
   import * as api from "$lib/api";
   import { pixanoLogo } from "$lib/assets";
   import { updateDatasetInStore } from "$lib/stores/appStores.svelte";
-  import { WorkspaceType, type DatasetInfo } from "$lib/ui";
+  import { WorkspaceType, type DatasetInfo, type SplitStatusCount } from "$lib/ui";
 
   /**
    * DatasetPreviewCard Component
@@ -32,12 +32,61 @@ License: CECILL-C
     annotations: Record<string, number>;
   } | null = $state(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  let splitData: SplitStatusCount[] = $state([]);
+
   const BOOKMARK_TYPES = ["TODO", "NEW", "FAVORITE"] as const;
   const BOOKMARK_COLORS: Record<string, string> = {
     TODO: "#3B82F6",
     NEW: "#22C55E",
     FAVORITE: "#EAB308",
   };
+
+  const STATUS_COLORS: Record<string, string> = {
+    done: "#22C55E",
+    validated: "#22C55E",
+    todo: "#EF4444",
+    review: "#EAB308",
+    inReview: "#EAB308",
+    wip: "#3B82F6",
+    inProgress: "#3B82F6",
+  };
+  const STATUS_DEFAULT_COLOR = "#94A3B8";
+
+  type SplitGroup = {
+    split: string;
+    total: number;
+    statuses: { status: string; count: number; pct: number; color: string }[];
+  };
+
+  const splitGroups: SplitGroup[] = $derived(
+    splitData.length > 0
+      ? (() => {
+          const bySplit = new Map<string, { total: number; items: SplitStatusCount[] }>();
+          for (const row of splitData) {
+            const existing = bySplit.get(row.split);
+            if (existing) {
+              existing.total += row.count;
+              existing.items.push(row);
+            } else {
+              bySplit.set(row.split, { total: row.count, items: [row] });
+            }
+          }
+          return Array.from(bySplit.entries()).map(([split, { total, items }]) => ({
+            split,
+            total,
+            statuses: items
+              .map((r) => ({
+                status: r.status,
+                count: r.count,
+                pct: total > 0 ? Math.round((r.count / total) * 100) : 0,
+                color: STATUS_COLORS[r.status] ?? STATUS_DEFAULT_COLOR,
+              }))
+              .sort((a, b) => b.pct - a.pct),
+          }));
+        })()
+      : [],
+  );
 
   function handleSelectDataset() {
     onSelectDataset?.();
@@ -97,6 +146,18 @@ License: CECILL-C
       .catch((err) => {
         if (err.name !== "AbortError") {
           console.log("Error collecting additional dataset infos", err);
+        }
+      });
+    api
+      .getDatasetSplits(dataset.id, { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          splitData = data;
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.log("Error collecting split data", err);
         }
       });
     return () => controller.abort("aborted");
@@ -247,6 +308,62 @@ License: CECILL-C
           </div>
         {/if}
       </div>
+
+      <!-- Split / Status Progress Bars -->
+      {#if splitGroups.length > 0}
+        <div class="flex flex-col gap-1.5 pt-3">
+          {#each splitGroups as sg (sg.split)}
+            <div class="flex items-center gap-2">
+              <span class="w-8 text-[8px] font-bold text-muted-foreground truncate shrink-0">
+                {sg.split}
+              </span>
+              <div class="flex-1 h-[10px] rounded bg-slate-100 flex overflow-hidden">
+                {#each sg.statuses as st (st.status)}
+                  <div
+                    class="h-full"
+                    style="width: {st.pct}%; background-color: {st.color};"
+                    title="{st.status}: {st.count} ({st.pct}%)"
+                  ></div>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Detailed Split/Status Table (extends card vertically) -->
+      {#if splitGroups.length > 0}
+        <div class="mt-3 pt-3 border-t border-border/40">
+          <table class="w-full text-[10px]">
+            <thead>
+              <tr class="text-muted-foreground font-bold uppercase tracking-wider">
+                <th class="text-left py-0.5">Split</th>
+                <th class="text-left py-0.5">Status</th>
+                <th class="text-right py-0.5">Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each splitGroups as sg (sg.split)}
+                {#each sg.statuses as st (st.status)}
+                  <tr class="text-foreground/80">
+                    <td class="py-0.5 truncate max-w-[40px]">{sg.split}</td>
+                    <td class="py-0.5">
+                      <span class="inline-flex items-center gap-1">
+                        <span
+                          class="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                          style="background-color: {st.color};"
+                        ></span>
+                        {st.status}
+                      </span>
+                    </td>
+                    <td class="py-0.5 text-right tabular-nums">{st.count}</td>
+                  </tr>
+                {/each}
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     </div>
   </div>
 </div>

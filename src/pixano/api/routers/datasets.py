@@ -14,6 +14,7 @@ from pixano.api.models import DatasetInfoResponse, DatasetResponse
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.dataset_info import BOOKMARK_TYPES
+from pixano.datasets.dataset_stat import SplitStatusCount
 from pixano.schemas.schema_group import SchemaGroup
 
 
@@ -113,6 +114,27 @@ def get_dataset_stats(
         if group_counts:
             result[group.value] = group_counts
     return result
+
+
+@router.get("/info/{id}/splits", response_model=list[SplitStatusCount], operation_id="get_dataset_splits")
+def get_dataset_splits(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[SplitStatusCount]:
+    """Get split/status record counts for a dataset.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        List of split-status-count entries.
+    """
+    try:
+        dataset = Dataset.find(id, settings.library_dir)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+    return dataset.get_splits_count()
 
 
 @router.get("/{id}", response_model=DatasetResponse, operation_id="get_dataset")

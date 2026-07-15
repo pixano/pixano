@@ -7,7 +7,7 @@ License: CECILL-C
 import { toDataset, toDatasetInfo } from "./adapters";
 import { apiFetch, JSON_HEADERS, requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
-import type { Dataset, DatasetInfo } from "$lib/types/dataset";
+import type { Dataset, DatasetInfo, SplitStatusCount } from "$lib/types/dataset";
 
 export interface ImportJobStatus {
   job_id: string;
@@ -58,6 +58,17 @@ export async function getDatasetStats(
     `/datasets/${datasetId}/stats`,
     { method: "GET", signal: options?.signal },
     "getDatasetStats",
+  );
+}
+
+export async function getDatasetSplits(
+  datasetId: string,
+  options?: { signal?: AbortSignal },
+): Promise<SplitStatusCount[]> {
+  return requestJson<SplitStatusCount[]>(
+    `/datasets/info/${datasetId}/splits`,
+    { method: "GET", signal: options?.signal },
+    "getDatasetSplits",
   );
 }
 

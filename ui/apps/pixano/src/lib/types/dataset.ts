@@ -988,3 +988,11 @@ export interface Dataset {
   featureValues: object; //not used right now, maybe we will make a real type if needed
   info: DatasetInfo;
 }
+
+// ─── SplitStatusCount ────────────────────────────────────────────────────────
+
+export interface SplitStatusCount {
+  split: string;
+  status: string;
+  count: number;
+}
