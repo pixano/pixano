@@ -8,9 +8,14 @@ License: CECILL-C
   // Imports
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
 
-  import { api, WorkspaceType, type DatasetInfo } from "@pixano/core/src";
+  import { api, WorkspaceType, type DatasetInfo, type SplitStatusCount } from "@pixano/core/src";
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import { svg_right_arrow } from "@pixano/core/src/icons";
+  import {
+    svg_bookmark_filled,
+    svg_bookmark_outline,
+    svg_right_arrow,
+  } from "@pixano/core/src/icons";
+  import { updateDatasetInStore } from "$lib/stores/datasetStores";
 
   /**
    * DatasetPreviewCard Component
@@ -24,6 +29,7 @@ License: CECILL-C
   export let dataset: DatasetInfo;
 
   let additionalInfo: string | undefined = undefined;
+  let splitData: SplitStatusCount[] = [];
   const controller = new AbortController();
 
   const dispatch = createEventDispatcher();
@@ -91,7 +97,67 @@ License: CECILL-C
       .catch((err) => {
         console.log("Error collecting additional dataset infos", err);
       });
+
+    // Get split / status distribution
+    api
+      .getDatasetSplits(dataset.id)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        splitData = data;
+      })
+      .catch((err) => {
+        console.log("Error collecting split data", err);
+      });
   });
+
+  const BOOKMARK_TYPES = ["TODO", "NEW", "FAVORITE"] as const;
+
+  const bookmarkColors: Record<string, string> = {
+    TODO: "#3B82F6",
+    NEW: "#22C55E",
+    FAVORITE: "#EAB308",
+  };
+
+  const statusColors: Record<string, string> = {
+    done: "#22C55E",
+    validated: "#22C55E",
+    todo: "#EF4444",
+    review: "#EAB308",
+    inReview: "#EAB308",
+    wip: "#3B82F6",
+    inProgress: "#3B82F6",
+  };
+
+  function colorForStatus(s: string): string {
+    return statusColors[s] ?? "#94A3B8";
+  }
+
+  $: groupedSplits = (() => {
+    const map = new Map<string, { statuses: { status: string; count: number; pct: number }[] }>();
+    const splitTotals = new Map<string, number>();
+    for (const row of splitData) {
+      splitTotals.set(row.split, (splitTotals.get(row.split) ?? 0) + row.count);
+    }
+    for (const row of splitData) {
+      if (!map.has(row.split)) {
+        map.set(row.split, { statuses: [] });
+      }
+      const total = splitTotals.get(row.split) ?? 1;
+      map.get(row.split)!.statuses.push({
+        status: row.status,
+        count: row.count,
+        pct: Math.round((row.count / total) * 100),
+      });
+    }
+    return [...map.entries()].map(([name, v]) => ({ name, ...v }));
+  })();
+
+  async function toggleBookmark(bookmark: string) {
+    const updated = await api.updateDatasetBookmark(dataset.id, bookmark);
+    if (updated) {
+      updateDatasetInStore(dataset.id, { bookmarks: updated.bookmarks });
+    }
+  }
 
   onDestroy(() => {
     controller.abort("aborted");
@@ -99,42 +165,97 @@ License: CECILL-C
 </script>
 
 <div class="relative group w-96">
-  <!-- Tooltip -->
+  <!-- Info overlay (appears on hover at half height) -->
   <div
-    class="absolute bottom-full mb-2 w-96 bg-gray-800 text-white text-sm rounded-md px-4 py-2 shadow-lg whitespace-pre-line hidden group-hover:block z-10"
+    class="absolute left-2 right-2 top-full mt-1 bg-white text-gray-800 text-sm rounded-md px-4 py-3 shadow-[0_12px_50px_rgba(0,0,0,0.45)] border border-slate-300 whitespace-pre-line hidden group-hover:block z-10"
   >
-    Name: {dataset.name}
-    Description: {dataset.description}
-    {additionalInfo ? `\n\n${additionalInfo}` : ""}
+    <span class="font-semibold">{dataset.name}</span>
+    <br />
+    {dataset.description}
+    {#if additionalInfo}
+      <hr class="my-1 border-slate-200" />
+      {additionalInfo}
+    {/if}
+    {#if splitData.length > 0}
+      <hr class="my-1 border-slate-200" />
+      <table class="w-full text-xs text-left">
+        <thead>
+          <tr class="text-slate-400 font-medium">
+            <th class="pr-2">Split</th>
+            <th class="pr-2">Status</th>
+            <th class="pr-2 text-right">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each splitData as row}
+            <tr class="text-slate-700">
+              <td class="pr-2 font-medium">{row.split}</td>
+              <td class="pr-2">{row.status}</td>
+              <td class="pr-2 text-right">{row.count}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
   </div>
 
-  <button
-    class="w-96 h-72 flex flex-col text-left font-Montserrat
+    <button
+    class="w-96 flex flex-col text-left font-Montserrat
     bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
     on:click={handleSelectDataset}
   >
-    <!-- Infos -->
+    <!-- Infos + bookmarks + arrow -->
     <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
-      <h3 class="text-lg w-5/6 font-semibold truncate text-primary">
-        {dataset.name}
-      </h3>
+      <div class="flex items-start">
+        <!-- Title and stats -->
+        <div class="w-5/6">
+          <h3 class="text-lg font-semibold truncate text-primary">
+            {dataset.name}
+          </h3>
+          <p class="text-sm text-slate-500 font-medium">
+            {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
+            {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
+              ? " - " + dataset.size
+              : ""}
+          </p>
+        </div>
 
-      <p class="text-sm text-slate-500 font-medium">
-        {dataset.num_items} item{dataset.num_items > 1 ? "s" : ""}
-        {dataset.size && dataset.size != "Unknown" && dataset.size != "N/A"
-          ? " - " + dataset.size
-          : ""}
-      </p>
+        <!-- Right area: bookmarks horizontally + arrow below -->
+        <div class="flex flex-col items-center ml-auto">
+          <div class="flex flex-row gap-1">
+            {#each BOOKMARK_TYPES as btype}
+              <button
+                title={btype}
+                class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100"
+                style="color: {bookmarkColors[btype]}"
+                on:click|stopPropagation={() => toggleBookmark(btype)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="20"
+                  viewBox="0 -960 960 960"
+                  width="20"
+                >
+                  <path
+                    d={dataset.bookmarks.includes(btype) ? svg_bookmark_filled : svg_bookmark_outline}
+                    fill="currentcolor"
+                  />
+                </svg>
+              </button>
+            {/each}
+          </div>
 
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        height="48"
-        viewBox="0 -960 960 960"
-        width="48"
-        class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
-      >
-        <path d={svg_right_arrow} fill="currentcolor" />
-      </svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="mt-1 h-8 w-8 mx-auto p-1 border text-slate-800 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
+          >
+            <path d={svg_right_arrow} fill="currentcolor" />
+          </svg>
+        </div>
+      </div>
     </div>
 
     <!-- Thumbnail -->
@@ -145,6 +266,29 @@ License: CECILL-C
         class="w-[350px] h-[150px] rounded-sm object-contain object-center"
       />
     </div>
+
+    <!-- Split / status progress bars -->
+    {#if splitData.length > 0}
+      <div class="px-4 pt-1 space-y-1">
+        {#each groupedSplits as split}
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-8 font-medium text-slate-500 truncate">{split.name}</span>
+            <div
+              class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden flex"
+              title={split.statuses.map((s) => `${s.status}: ${s.count} (${s.pct}%)`).join(", ")}
+            >
+              {#each split.statuses as s}
+                <div
+                  style="width: {s.pct}%; background: {colorForStatus(s.status)}"
+                  class="h-full transition-all"
+                  title="{s.status}: {s.count}"
+                ></div>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     <!-- Workspace -->
     {#if dataset.workspace != WorkspaceType.UNDEFINED}

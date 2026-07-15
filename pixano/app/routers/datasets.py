@@ -7,12 +7,14 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models import DatasetModel
 from pixano.app.models.dataset_info import DatasetInfoModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import DatasetInfo
+from pixano.datasets.dataset_info import BOOKMARK_TYPES
+from pixano.datasets.dataset_stat import SplitStatusCount
 from pixano.datasets.utils.errors import DatasetAccessError
 
 from .utils import get_dataset as get_dataset_utils
@@ -74,6 +76,64 @@ async def get_dataset_info(
         )
 
     return DatasetInfoModel.from_dataset_info(info, path)
+
+
+@router.patch("/info/{id}/bookmark", response_model=DatasetInfoModel)
+async def toggle_dataset_bookmark(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    bookmark: str = Query(description=f"Bookmark type. One of {BOOKMARK_TYPES}"),
+) -> DatasetInfoModel:
+    """Toggle a bookmark on a dataset (add if absent, remove if present).
+
+    Args:
+        id: Dataset ID.
+        bookmark: Bookmark type to toggle.
+        settings: App settings.
+
+    Returns:
+        Updated dataset info.
+    """
+    if bookmark not in BOOKMARK_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid bookmark type '{bookmark}'. Must be one of {BOOKMARK_TYPES}.",
+        )
+
+    try:
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dataset {id} not found in {settings.library_dir.absolute()}.",
+        )
+
+    if bookmark in info.bookmarks:
+        info.bookmarks.remove(bookmark)
+    else:
+        info.bookmarks.append(bookmark)
+
+    json_fp = path / "info.json"
+    info.to_json(json_fp)
+    return DatasetInfoModel.from_dataset_info(info, path)
+
+
+@router.get("/info/{id}/splits", response_model=list[SplitStatusCount])
+async def get_dataset_splits(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[SplitStatusCount]:
+    """Get item count per split and per status for a dataset.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        List of (split, status, count) rows.
+    """
+    dataset = get_dataset_utils(id, settings.library_dir, settings.media_dir)
+    return dataset.get_splits_count()
 
 
 @router.get("/{id}", response_model=DatasetModel)

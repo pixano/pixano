@@ -6,6 +6,7 @@ License: CECILL-C
 
 export * from "./annotations";
 export * from "./BaseSchema";
+export * from "./SplitStatusCount";
 export * from "./DatasetInfo";
 export * from "./DatasetItem";
 export * from "./datasetTypes";

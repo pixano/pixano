@@ -26,6 +26,7 @@ export const currentDatasetStore = writable<DatasetInfo>();
 export const datasetSchema = writable<DatasetSchema>();
 export const datasetsStore = writable<DatasetInfo[]>([]);
 export const datasetFilter = writable<string>("");
+export const datasetSortMode = writable<"name" | "creation_date">("creation_date");
 export const modelsStore = writable<string[]>([]);
 export const isLocalSegmentationModel = writable<boolean>(false);
 export const sourcesStore = writable<Source[]>([]);
@@ -38,3 +39,9 @@ export const saveCurrentItemStore = writable<{ shouldSave: boolean; canSave: boo
   shouldSave: false,
   canSave: false,
 });
+
+export function updateDatasetInStore(datasetId: string, updates: Partial<DatasetInfo>) {
+  datasetsStore.update((datasets) =>
+    datasets.map((d) => (d.id === datasetId ? { ...d, ...updates } : d)),
+  );
+}

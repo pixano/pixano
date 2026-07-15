@@ -36,6 +36,8 @@ class DatasetInfoModel(DatasetInfo):
                     "preview": "path/to/preview.jpg",
                     "num_items": 100,
                     "workspace": "image",
+                    "creation_date": "2024-01-15",
+                    "bookmarks": ["TODO", "FAVORITE"],
                 }
             ]
         },

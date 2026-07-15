@@ -19,9 +19,11 @@ class Item(BaseSchema):
 
     Attributes:
         split: Split of the item.
+        status: Status of the item (custom, e.g. done, todo, review).
     """
 
     split: str = "default"
+    status: str = ""
 
 
 def is_item(cls: type, strict: bool = False) -> bool:

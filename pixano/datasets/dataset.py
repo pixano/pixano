@@ -29,7 +29,7 @@ from pixano.utils.python import to_sql_list
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from .dataset_stat import DatasetStatistic
+from .dataset_stat import DatasetStatistic, SplitStatusCount
 
 
 if TYPE_CHECKING:
@@ -539,6 +539,29 @@ class Dataset:
         if sortcol is not None and order is not None:
             query = query.order_by(order_by=sortcol, descending=order == "desc")
         return [row["id"] for row in query.to_list()]
+
+    def get_splits_count(self) -> list[SplitStatusCount]:
+        """Get item count per split and per status.
+
+        Returns:
+            List of (split, status, count) rows.
+        """
+        try:
+            arrow_table = self.open_table(SchemaGroup.ITEM.value).to_arrow()
+        except DatasetAccessError:
+            return []
+
+        if "status" not in arrow_table.column_names:
+            return []
+
+        result = (
+            arrow_table.group_by(["split", "status"])
+            .aggregate([("id", "count")])
+            .rename_columns(["split", "status", "count"])
+            .sort_by([("split", "ascending"), ("status", "ascending")])
+        )
+
+        return [SplitStatusCount(**row) for row in result.to_pylist()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the [view embeddings][pixano.features.ViewEmbedding] via the

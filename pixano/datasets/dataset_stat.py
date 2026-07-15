@@ -10,6 +10,14 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
+class SplitStatusCount(BaseModel):
+    """Count of items for a (split, status) pair."""
+
+    split: str
+    status: str
+    count: int
+
+
 class DatasetStatistic(BaseModel):
     """A statistic of a dataset.
 
