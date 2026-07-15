@@ -60,3 +60,15 @@ export async function getDatasetStats(
     "getDatasetStats",
   );
 }
+
+export async function updateDatasetBookmark(
+  datasetId: string,
+  bookmark: string,
+): Promise<DatasetInfo> {
+  const dto = await requestJson<DatasetInfoResponse>(
+    `/datasets/info/${datasetId}/bookmark?bookmark=${encodeURIComponent(bookmark)}`,
+    { method: "PATCH" },
+    "updateDatasetBookmark",
+  );
+  return toDatasetInfo(dto);
+}

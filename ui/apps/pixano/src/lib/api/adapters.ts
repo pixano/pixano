@@ -90,6 +90,8 @@ export function toDatasetInfo(dto: DatasetInfoResponse): DatasetInfo {
     description: dto.description,
     size: dto.size,
     preview: dto.preview,
+    creation_date: dto.creation_date,
+    bookmarks: dto.bookmarks,
     workspace: mapWorkspace(dto.workspace),
     num_items: dto.num_records,
   };

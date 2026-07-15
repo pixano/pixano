@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, overload
 
@@ -47,6 +48,8 @@ from pixano.schemas import (
 from pixano.schemas.schema_group import SchemaGroup, schema_to_group
 
 
+BOOKMARK_TYPES: tuple[str, ...] = ("TODO", "NEW", "FAVORITE")
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,6 +80,8 @@ class DatasetInfo(BaseModel):
         description: Dataset description.
         size: Dataset estimated size.
         preview: Path to a preview thumbnail.
+        creation_date: ISO creation date string. Auto-populated if empty.
+        bookmarks: List of bookmark labels (e.g. TODO, NEW, FAVORITE).
         workspace: Workspace type.
         storage_mode: How media data is stored.
         record: Main record schema.
@@ -96,6 +101,8 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+    creation_date: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    bookmarks: list[str] = Field(default_factory=list)
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
     storage_mode: Literal["filesystem", "embedded", "mixed"] = "filesystem"
     record: type[Record] | None = None
@@ -127,6 +134,13 @@ class DatasetInfo(BaseModel):
     def _id_validator(cls, v: str) -> str:
         if " " in v:
             raise ValueError("id must not contain spaces")
+        return v
+
+    @field_validator("creation_date", mode="before")
+    @classmethod
+    def _creation_date_validator(cls, v: str) -> str:
+        if not v:
+            return datetime.now(timezone.utc).isoformat()
         return v
 
     @model_validator(mode="before")

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pixano.api.models import DatasetInfoResponse, DatasetResponse
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets.dataset_info import BOOKMARK_TYPES
 from pixano.schemas.schema_group import SchemaGroup
 
 
@@ -133,3 +134,42 @@ def get_dataset(
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
     return DatasetResponse.from_dataset(dataset)
+
+
+@router.patch("/info/{id}/bookmark", response_model=DatasetInfoResponse, operation_id="toggle_dataset_bookmark")
+def toggle_dataset_bookmark(
+    id: str,
+    bookmark: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DatasetInfoResponse:
+    """Toggle a bookmark on a dataset.
+
+    If the bookmark is already present it is removed; otherwise it is added.
+
+    Args:
+        id: Dataset ID.
+        bookmark: Bookmark type (must be one of TODO, NEW, FAVORITE).
+        settings: App settings.
+
+    Returns:
+        Updated dataset info.
+    """
+    if bookmark not in BOOKMARK_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid bookmark type '{bookmark}'. Must be one of {BOOKMARK_TYPES}.",
+        )
+
+    try:
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+
+    if bookmark in info.bookmarks:
+        info.bookmarks.remove(bookmark)
+    else:
+        info.bookmarks.append(bookmark)
+
+    info.to_json(path / "info.json")
+
+    return DatasetInfoResponse.from_dataset_info(info, path)

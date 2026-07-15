@@ -10,6 +10,7 @@ License: CECILL-C
 
   import * as api from "$lib/api";
   import { pixanoLogo } from "$lib/assets";
+  import { updateDatasetInStore } from "$lib/stores/appStores.svelte";
   import { WorkspaceType, type DatasetInfo } from "$lib/ui";
 
   /**
@@ -31,8 +32,33 @@ License: CECILL-C
     annotations: Record<string, number>;
   } | null = $state(null);
 
+  const BOOKMARK_TYPES = ["TODO", "NEW", "FAVORITE"] as const;
+  const BOOKMARK_COLORS: Record<string, string> = {
+    TODO: "#3B82F6",
+    NEW: "#22C55E",
+    FAVORITE: "#EAB308",
+  };
+
   function handleSelectDataset() {
     onSelectDataset?.();
+  }
+
+  async function toggleBookmark(type: string) {
+    try {
+      const updated = await api.updateDatasetBookmark(dataset.id, type);
+      updateDatasetInStore(dataset.id, { bookmarks: updated.bookmarks });
+    } catch (err) {
+      console.error("Failed to toggle bookmark", err);
+    }
+  }
+
+  function handleBookmarkClick(e: MouseEvent, type: string) {
+    e.stopPropagation();
+    void toggleBookmark(type);
+  }
+
+  function isBookmarked(type: string): boolean {
+    return dataset.bookmarks.includes(type);
   }
 
   function displayWorkspaceType(workspace: WorkspaceType) {
@@ -78,9 +104,13 @@ License: CECILL-C
 </script>
 
 <div class="relative group h-full font-sans">
-  <button
-    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card"
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card cursor-pointer"
     onclick={handleSelectDataset}
+    onkeydown={(e) => {
+      if (e.key === "Enter" || e.key === " ") handleSelectDataset();
+    }}
   >
     <div class="relative aspect-video w-full overflow-hidden bg-muted">
       <img
@@ -148,6 +178,35 @@ License: CECILL-C
         </div>
       {/if}
 
+      <!-- Bookmark Icons -->
+      <div class="absolute top-3 right-3 flex items-center gap-1.5">
+        {#each BOOKMARK_TYPES as type (type)}
+          {@const active = isBookmarked(type)}
+          {@const color = BOOKMARK_COLORS[type]}
+          <button
+            class="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md border transition-all duration-200 hover:scale-110 {active
+              ? 'bg-background/80 border-white/20 shadow-lg'
+              : 'bg-background/40 border-white/10 opacity-60 hover:opacity-100'}"
+            onclick={(e) => handleBookmarkClick(e, type)}
+            title={type}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="14"
+              viewBox="0 -960 960 960"
+              width="14"
+              fill={active ? color : "none"}
+              stroke={color}
+              stroke-width="80"
+            >
+              <path
+                d="M200-120v-640h560v640l-280-120-280 120Zm80-122 200-86 200 86v-478H280v478Z"
+              />
+            </svg>
+          </button>
+        {/each}
+      </div>
+
       <!-- Open Indicator -->
       <div
         class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover/card:opacity-100 transform translate-x-4 group-hover/card:translate-x-0 transition-all duration-300 shadow-xl"
@@ -189,5 +248,5 @@ License: CECILL-C
         {/if}
       </div>
     </div>
-  </button>
+  </div>
 </div>

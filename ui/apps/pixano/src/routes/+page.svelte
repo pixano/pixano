@@ -7,22 +7,20 @@ License: CECILL-C
 <script lang="ts">
   import ModelsPanel from "../components/inference/ModelsPanel.svelte";
   import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
-  import type { PageProps } from "./$types";
+  import { datasetsStore } from "$lib/stores/appStores.svelte";
 
-  let { data }: PageProps = $props();
-
-  const isEmpty = $derived(data.datasets && data.datasets.length === 0);
+  const isEmpty = $derived(datasetsStore.value && datasetsStore.value.length === 0);
 </script>
 
 <div class="h-full flex">
   <div class="flex-1 min-w-0 overflow-y-auto px-6 py-8">
     {#if isEmpty}
       <div class="h-full">
-        <DatasetsLibrary datasets={data.datasets} />
+        <DatasetsLibrary />
       </div>
     {:else}
       <div class="max-w-[1200px] mx-auto">
-        <DatasetsLibrary datasets={data.datasets} />
+        <DatasetsLibrary />
       </div>
     {/if}
   </div>

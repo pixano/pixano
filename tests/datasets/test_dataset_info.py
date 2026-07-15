@@ -11,16 +11,25 @@ from pathlib import Path
 
 import pytest
 
-from pixano.datasets.dataset_info import DatasetInfo
+from pixano.datasets.dataset_info import BOOKMARK_TYPES, DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import BBox, Entity, Image, Record
 
 
+FIXED_CREATION_DATE = "2025-01-01T00:00:00+00:00"
+
+
 class TestDatasetInfo:
     def test_init(self):
-        info = DatasetInfo()
+        info = DatasetInfo(creation_date=FIXED_CREATION_DATE)
         assert info == DatasetInfo(
-            id="", name="", description="", size="Unknown", preview="", workspace=WorkspaceType.UNDEFINED
+            id="",
+            name="",
+            description="",
+            size="Unknown",
+            preview="",
+            creation_date=FIXED_CREATION_DATE,
+            workspace=WorkspaceType.UNDEFINED,
         )
 
         info = DatasetInfo(
@@ -38,6 +47,8 @@ class TestDatasetInfo:
             "description",
             "size",
             "preview",
+            "creation_date",
+            "bookmarks",
             "workspace",
             "storage_mode",
             "record",
@@ -79,43 +90,27 @@ class TestDatasetInfo:
         )
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
         info.to_json(temp_file)
-        assert (
-            Path(temp_file).read_text()
-            == """{
-    "id": "id",
-    "name": "pascal",
-    "description": "PASCAL VOC 2007",
-    "size": "8GB",
-    "preview": "/preview",
-    "workspace": "image",
-    "storage_mode": "filesystem",
-    "record": {
-        "base": "Record",
-        "fields": {}
-    },
-    "entity": {
-        "base": "Entity",
-        "fields": {}
-    },
-    "entity_dynamic_state": null,
-    "bbox": {
-        "base": "BBox",
-        "fields": {}
-    },
-    "mask": null,
-    "keypoint": null,
-    "tracklet": null,
-    "message": null,
-    "multi_path": null,
-    "text_span": null,
-    "views": {
-        "image": {
-            "base": "Image",
-            "fields": {}
-        }
-    }
-}"""
-        )
+        dumped = json.loads(temp_file.read_text())
+        assert dumped["id"] == "id"
+        assert dumped["name"] == "pascal"
+        assert dumped["description"] == "PASCAL VOC 2007"
+        assert dumped["size"] == "8GB"
+        assert dumped["preview"] == "/preview"
+        assert dumped["workspace"] == "image"
+        assert dumped["storage_mode"] == "filesystem"
+        assert isinstance(dumped["creation_date"], str) and dumped["creation_date"]
+        assert dumped["bookmarks"] == []
+        assert dumped["record"] == {"base": "Record", "fields": {}}
+        assert dumped["entity"] == {"base": "Entity", "fields": {}}
+        assert dumped["entity_dynamic_state"] is None
+        assert dumped["bbox"] == {"base": "BBox", "fields": {}}
+        assert dumped["mask"] is None
+        assert dumped["keypoint"] is None
+        assert dumped["tracklet"] is None
+        assert dumped["message"] is None
+        assert dumped["multi_path"] is None
+        assert dumped["text_span"] is None
+        assert dumped["views"] == {"image": {"base": "Image", "fields": {}}}
 
     def test_from_json(self):
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
@@ -126,6 +121,7 @@ class TestDatasetInfo:
     "description": "PASCAL VOC 2007",
     "size": "8GB",
     "preview": "/preview",
+    "creation_date": "2025-06-01T12:00:00+00:00",
     "workspace": "image",
     "record": {
         "base": "Record",
@@ -160,6 +156,7 @@ class TestDatasetInfo:
             description="PASCAL VOC 2007",
             size="8GB",
             preview="/preview",
+            creation_date="2025-06-01T12:00:00+00:00",
             workspace=WorkspaceType.IMAGE,
             record=Record,
             entity=Entity,
@@ -178,6 +175,7 @@ class TestDatasetInfo:
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
                 preview="/preview",
+                creation_date=FIXED_CREATION_DATE,
                 workspace=WorkspaceType.IMAGE,
                 record=Record,
                 entity=Entity,
@@ -195,7 +193,8 @@ class TestDatasetInfo:
                 name=f"pascal_{i}",
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
-                preview=info.preview,  # TODO: remove hard coded value
+                preview=info.preview,
+                creation_date=FIXED_CREATION_DATE,
                 workspace=WorkspaceType.IMAGE,
                 record=Record,
                 entity=Entity,
@@ -212,7 +211,8 @@ class TestDatasetInfo:
                 name=f"pascal_{i}",
                 description=f"PASCAL VOC 2007_{i}",
                 size="8GB",
-                preview=info.preview,  # TODO: remove hard coded value
+                preview=info.preview,
+                creation_date=FIXED_CREATION_DATE,
                 workspace=WorkspaceType.IMAGE,
                 record=Record,
                 entity=Entity,
@@ -226,8 +226,6 @@ class TestDatasetInfo:
             DatasetInfo.load_directory(temp_dir)
 
     def test_load_directory_skips_unloadable(self):
-        # A dataset whose stored schema references a base schema not registered in this build
-        # (e.g. unfinished work on another branch) must not break loading of the other datasets.
         temp_dir = Path(tempfile.TemporaryDirectory().name)
 
         valid_dir = temp_dir / "valid"
@@ -245,7 +243,6 @@ class TestDatasetInfo:
             views={"image": Image},
         ).to_json(valid_dir / "info.json")
 
-        # Reuse the valid serialization and only corrupt the record schema's base.
         broken_dir = temp_dir / "broken"
         broken_dir.mkdir(parents=True, exist_ok=False)
         broken_payload = json.loads((valid_dir / "info.json").read_text(encoding="utf-8"))
@@ -260,9 +257,6 @@ class TestDatasetInfo:
         assert library[0].id == "valid_id"
 
     def test_from_json_drops_unsupported_view(self):
-        # A view whose stored schema references a base not registered in this build (e.g.
-        # unfinished schema work on another branch) must be dropped, leaving the rest of the
-        # dataset loadable instead of failing every endpoint that opens it.
         temp_dir = Path(tempfile.TemporaryDirectory().name)
         temp_dir.mkdir(parents=True, exist_ok=False)
         info_fp = temp_dir / "info.json"
@@ -299,6 +293,7 @@ class TestDatasetInfo:
             description="PASCAL VOC 2007",
             size="8GB",
             preview="/preview",
+            creation_date=FIXED_CREATION_DATE,
             workspace=WorkspaceType.IMAGE,
             record=Record,
             entity=Entity,
@@ -314,7 +309,8 @@ class TestDatasetInfo:
             name="pascal",
             description="PASCAL VOC 2007",
             size="8GB",
-            preview=loaded_info.preview,  # TODO: remove hard coded value
+            preview=loaded_info.preview,
+            creation_date=FIXED_CREATION_DATE,
             workspace=WorkspaceType.IMAGE,
             record=Record,
             entity=Entity,
@@ -329,7 +325,8 @@ class TestDatasetInfo:
             name="pascal",
             description="PASCAL VOC 2007",
             size="8GB",
-            preview=loaded_info.preview,  # TODO: remove hard coded value
+            preview=loaded_info.preview,
+            creation_date=FIXED_CREATION_DATE,
             workspace=WorkspaceType.IMAGE,
             record=Record,
             entity=Entity,
@@ -344,3 +341,28 @@ class TestDatasetInfo:
     def test_rejects_tables_mapping(self):
         with pytest.raises(ValueError, match="no longer accepts a 'tables' mapping"):
             DatasetInfo(tables={"records": Record})
+
+    def test_creation_date_auto_populated(self):
+        info = DatasetInfo(id="test", name="test")
+        assert info.creation_date != ""
+        from datetime import datetime
+
+        datetime.fromisoformat(info.creation_date)
+
+    def test_creation_date_preserved_when_set(self):
+        info = DatasetInfo(id="test", name="test", creation_date="2025-01-15T10:00:00+00:00")
+        assert info.creation_date == "2025-01-15T10:00:00+00:00"
+
+    def test_bookmarks_round_trip(self):
+        info = DatasetInfo(
+            id="id",
+            name="pascal",
+            bookmarks=["TODO", "FAVORITE"],
+        )
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        info.to_json(temp_file)
+        loaded = DatasetInfo.from_json(temp_file)
+        assert loaded.bookmarks == ["TODO", "FAVORITE"]
+
+    def test_bookmarks_constant(self):
+        assert BOOKMARK_TYPES == ("TODO", "NEW", "FAVORITE")

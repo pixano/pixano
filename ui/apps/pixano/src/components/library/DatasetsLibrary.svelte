@@ -13,32 +13,85 @@ License: CECILL-C
   import { panTool } from "../workspace";
   import ImportDatasetModal from "./ImportDatasetModal.svelte";
   import { goto } from "$app/navigation";
-  import { datasetFilter, datasetsStore } from "$lib/stores/appStores.svelte";
+  import { datasetFilter, datasetSortMode, datasetsStore } from "$lib/stores/appStores.svelte";
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import type { DatasetInfo } from "$lib/ui";
   import { icons } from "$lib/ui";
   import { getExplorerRoute } from "$lib/utils/routes";
 
-  interface Props {
-    /**
-     * DatasetsLibrary Component
-     *
-     * This component displays a list of datasets. Each dataset is represented by a
-     * DatasetPreviewCard component. When a dataset is selected, the user is navigated
-     * to the dataset's detail page.
-     *
-     * Props:
-     *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
-     *
-     * Events:
-     *   - selectDataset: Triggered when a dataset is selected.
-     */
-    datasets: Array<DatasetInfo>;
-  }
-
-  let { datasets }: Props = $props();
+/**
+ * DatasetsLibrary Component
+ *
+ * This component displays a list of datasets. Each dataset is represented by a
+ * DatasetPreviewCard component. When a dataset is selected, the user is navigated
+ * to the dataset's detail page.
+ *
+ * Data comes from datasetsStore
+ *   - datasets: Array<DatasetInfo> - An array of dataset information objects.
+ *
+ * Events:
+ *   - selectDataset: Triggered when a dataset is selected.
+ */
 
   let showImport = $state(false);
+
+  const BOOKMARK_SECTIONS: {
+    key: string;
+    label: string;
+    color: string;
+    bgClass: string;
+    textClass: string;
+  }[] = [
+    {
+      key: "TODO",
+      label: "TODO",
+      color: "#3B82F6",
+      bgClass: "bg-blue-500/10",
+      textClass: "text-blue-500",
+    },
+    {
+      key: "NEW",
+      label: "NEW",
+      color: "#22C55E",
+      bgClass: "bg-green-500/10",
+      textClass: "text-green-500",
+    },
+    {
+      key: "FAVORITE",
+      label: "FAVORITE",
+      color: "#EAB308",
+      bgClass: "bg-yellow-500/10",
+      textClass: "text-yellow-500",
+    },
+  ];
+
+  function sortDatasets(list: DatasetInfo[], mode: "name" | "creation_date"): DatasetInfo[] {
+    return [...list].sort((a, b) => {
+      if (mode === "name") return a.name.localeCompare(b.name);
+      return a.creation_date.localeCompare(b.creation_date);
+    });
+  }
+
+  const allDatasets = $derived(datasetsStore.value);
+
+  const filteredDatasets = $derived(allDatasets.filter((d) => !d.isFiltered));
+
+  const sortedDatasets = $derived(sortDatasets(filteredDatasets, datasetSortMode.value));
+
+  const datasetsByBookmark = $derived(
+    Object.fromEntries(
+      BOOKMARK_SECTIONS.map((s) => [
+        s.key,
+        sortedDatasets.filter((d) => d.bookmarks.includes(s.key)),
+      ]),
+    ),
+  );
+
+  const hasAnyBookmarks = $derived(sortedDatasets.some((d) => d.bookmarks.length > 0));
+
+  const remainingDatasets = $derived(
+    hasAnyBookmarks ? sortedDatasets.filter((d) => d.bookmarks.length === 0) : sortedDatasets,
+  );
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     await goto(getExplorerRoute(dataset.id));
@@ -58,14 +111,12 @@ License: CECILL-C
   $effect(() => {
     untrack(() => {
       resetColorScale();
-      //reset interactive segmentation model & table
       modelsUiStore.value = {
         currentModalOpen: "none",
         selectedModelName: "",
         selectedTableName: "",
         yetToLoadEmbedding: true,
       };
-      //reset Tool
       selectedTool.value = panTool;
     });
   });
@@ -79,9 +130,9 @@ License: CECILL-C
   />
 {/if}
 
-{#if datasets && datasets.length > 0}
+{#if allDatasets && allDatasets.length > 0}
   <div class="flex flex-col gap-8">
-    <!-- Toolbar: search + stats -->
+    <!-- Toolbar: search + sort + stats -->
     <div class="flex items-center justify-between gap-6 flex-wrap pb-2 border-b border-border/50">
       <div class="relative flex items-center group">
         <input
@@ -104,6 +155,27 @@ License: CECILL-C
         </svg>
       </div>
       <div class="flex items-center gap-4">
+        <!-- Sort controls -->
+        <div class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm">
+          <button
+            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors {datasetSortMode.value ===
+            'name'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => (datasetSortMode.value = "name")}
+          >
+            Nom
+          </button>
+          <button
+            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors {datasetSortMode.value ===
+            'creation_date'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => (datasetSortMode.value = "creation_date")}
+          >
+            Date
+          </button>
+        </div>
         <div
           class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
         >
@@ -111,7 +183,7 @@ License: CECILL-C
             Datasets
           </span>
           <span class="text-sm font-black text-primary tabular-nums">
-            {datasets.length}
+            {allDatasets.length}
           </span>
         </div>
         <div
@@ -121,25 +193,66 @@ License: CECILL-C
             Total Items
           </span>
           <span class="text-sm font-black text-primary tabular-nums">
-            {datasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
+            {allDatasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Dataset grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {#each datasets as dataset}
-        {#if !dataset.isFiltered}
+    <!-- Bookmark sections -->
+    {#each BOOKMARK_SECTIONS as section (section.key)}
+      {#if datasetsByBookmark[section.key].length > 0}
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-2.5">
+            <span
+              class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-widest {section.bgClass} {section.textClass}"
+            >
+              {section.label}
+            </span>
+            <span class="text-xs text-muted-foreground font-medium">
+              {datasetsByBookmark[section.key].length} dataset{datasetsByBookmark[section.key]
+                .length > 1
+                ? "s"
+                : ""}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {#each datasetsByBookmark[section.key] as dataset (dataset.id)}
+              <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <DatasetPreviewCard
+                  {dataset}
+                  onSelectDataset={() => handleSelectDataset(dataset)}
+                />
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    {/each}
+
+    <!-- All / Other datasets -->
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center gap-2.5">
+        <span
+          class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-muted text-muted-foreground"
+        >
+          {hasAnyBookmarks ? "Other datasets" : "All datasets"}
+        </span>
+        <span class="text-xs text-muted-foreground font-medium">
+          {remainingDatasets.length} dataset{remainingDatasets.length > 1 ? "s" : ""}
+        </span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {#each remainingDatasets as dataset (dataset.id)}
           <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <DatasetPreviewCard {dataset} onSelectDataset={() => handleSelectDataset(dataset)} />
           </div>
-        {/if}
-      {/each}
+        {/each}
+      </div>
     </div>
   </div>
-{:else if datasets}
-  <!-- Empty library — full-space centered -->
+{:else if allDatasets}
+  <!-- Empty library -->
   <div class="flex flex-col items-center justify-center h-full text-center">
     <div class="w-20 h-20 rounded-2xl bg-primary/5 flex items-center justify-center mb-8">
       <Database weight="thin" size={44} class="text-primary/40" />

@@ -243,6 +243,8 @@ export interface DatasetInfoType {
   description: string;
   size: string;
   preview: string;
+  creation_date: string;
+  bookmarks: string[];
   workspace: string;
   num_items: number;
   isFiltered?: boolean;
@@ -255,6 +257,8 @@ export class DatasetInfo implements DatasetInfoType {
   num_items: number;
   size: string;
   preview: string;
+  creation_date: string;
+  bookmarks: string[];
   workspace: WorkspaceType;
   isFiltered?: boolean;
 
@@ -265,6 +269,8 @@ export class DatasetInfo implements DatasetInfoType {
     this.num_items = obj.num_items;
     this.size = obj.size;
     this.preview = obj.preview;
+    this.creation_date = obj.creation_date;
+    this.bookmarks = obj.bookmarks;
     this.workspace = obj.workspace as WorkspaceType;
     this.isFiltered = obj.isFiltered;
   }
