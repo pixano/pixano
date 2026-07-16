@@ -154,6 +154,25 @@ def _resolve_view_previews(
                 excerpt=content[:_TEXT_EXCERPT_LENGTH],
             )
 
+    # Point clouds render a bird's-eye-view PNG at ingestion, served through
+    # `/point-clouds/{id}/preview`. `kind="image"` so the same UI preview path
+    # (an <img> tag) displays it — it is a raster after all.
+    for row in _query_preview_rows(dataset, "point_clouds", ["id", "record_id", "logical_name"], record_ids):
+        record_id = str(row.get("record_id", "") or "")
+        logical_name = str(row.get("logical_name", "") or "")
+        row_id = str(row.get("id", "") or "")
+        if not record_id or not logical_name or not row_id:
+            continue
+        logical_previews = previews_by_record.setdefault(record_id, {})
+        if logical_name in logical_previews:
+            continue
+        logical_previews[logical_name] = PreviewDescriptor(
+            resource="point-clouds",
+            id=row_id,
+            kind="image",
+            preview_url=f"/datasets/{dataset_id}/point-clouds/{row_id}/preview",
+        )
+
     return previews_by_record
 
 

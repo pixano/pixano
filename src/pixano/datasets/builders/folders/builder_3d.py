@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import logging
 from pathlib import Path
 from typing import Dict, Iterator
 
@@ -14,6 +15,10 @@ from tri3d.datasets import Dataset as Tri3dDataset
 import pixano.features as pix_types
 from pixano.datasets import DatasetInfo
 from pixano.datasets.builders import DatasetBuilder
+from pixano.features.utils.point_cloud import PREVIEW_FORMAT, generate_bev_preview
+
+
+logger = logging.getLogger(__name__)
 
 
 class CategoryEntity(pix_types.Entity):
@@ -146,10 +151,20 @@ class Dataset3DBuilder(DatasetBuilder):
             world_points = sensor2world.apply(self.tri3d_dataset.points(seq, frame, sensor)[:, :3])
             points = np.hstack((world_points, self.tri3d_dataset.points(seq, frame, sensor)[:, 3:]), dtype=np.float32)
             raw_bytes = points.tobytes()
+            # A preview is a best-effort thumbnail; never let it abort an import.
+            try:
+                preview = generate_bev_preview(points[:, :3])
+            except Exception:
+                logger.warning(
+                    "Failed to generate BEV preview for point cloud %s_%s_%s", sensor, seq, frame, exc_info=True
+                )
+                preview = None
             pcd = self.info.views[sensor](
                 record_id=record.id,
                 logical_name=sensor,
                 raw_bytes=raw_bytes,
+                preview=preview or b"",
+                preview_format=PREVIEW_FORMAT if preview else "",
                 id=f"{sensor}_{seq}_{frame}",
                 extrinsic_matrix=self.get_transformation_matrix(seq, sensor, frame),
                 ego_to_world=self.get_transformation_matrix(seq, ego_sensor, frame),

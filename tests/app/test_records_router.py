@@ -59,6 +59,19 @@ class TestResolveViewPreviews:
         )
         assert result["rec_0"]["CAM_BACK"].preview_url == "/datasets/ds/images/CAM_BACK_0/preview"
 
+    def test_point_clouds_produce_previews_via_point_clouds_route(self):
+        # Lidar views yield a BEV thumbnail served through /point-clouds/{id}/preview,
+        # tagged kind="image" so the UI's <img> preview path renders it.
+        rows = {"point_clouds": [{"id": "LIDAR_TOP_0", "record_id": "rec_0", "logical_name": "LIDAR_TOP"}]}
+        with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
+            result = _resolve_view_previews("ds", object(), ["rec_0"])
+        assert result["rec_0"]["LIDAR_TOP"] == PreviewDescriptor(
+            resource="point-clouds",
+            id="LIDAR_TOP_0",
+            kind="image",
+            preview_url="/datasets/ds/point-clouds/LIDAR_TOP_0/preview",
+        )
+
     def test_calibrated_images_win_when_both_tables_share_a_logical_name(self):
         rows = {
             "calibrated_images": [{"id": "cal_0", "record_id": "rec_0", "logical_name": "cam"}],
