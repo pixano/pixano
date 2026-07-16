@@ -5,17 +5,17 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { ArrowLeft, FolderOpen, LayoutGrid, Loader2, Search } from "lucide-svelte";
+  import { ArrowLeft, Box, FolderOpen, LayoutGrid, Loader2, Search } from "lucide-svelte";
   import { onMount } from "svelte";
 
+  import { intersect } from "$lib/actions/intersect";
+  import { listDatasets, listRecords } from "$lib/api/datasets";
+  import type { RecordResponse } from "$lib/api/restTypes";
   import WidgetPalette from "$lib/components/sidebar/WidgetPalette.svelte";
   import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
-  import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
-  import { measureGridViewport } from "$lib/workspace/layoutPlanner.js";
-  import { listDatasets, listRecords } from "$lib/api/datasets";
   import type { DatasetInfo } from "$lib/types/dataset";
-  import type { RecordResponse } from "$lib/api/restTypes";
-  import { intersect } from "$lib/actions/intersect";
+  import { measureGridViewport } from "$lib/workspace/layoutPlanner.js";
+  import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
   interface Props {
     activeSection: string;
@@ -38,6 +38,65 @@ License: CECILL-C
   }
 
   const RECORDS_PAGE_SIZE = 50;
+
+  // Records can expose several image views (e.g. nuScenes' 6 cameras); we compose
+  // at most this many previews into the record's collage cell.
+  const MAX_RECORD_PREVIEWS = 4;
+  // Saturation/lightness for the fallback color tile shown when a record has no
+  // image preview. Kept named so the tile reads clearly and stays consistent.
+  const TILE_SATURATION = 55;
+  const TILE_LIGHTNESS = 45;
+  const HUE_RANGE = 360;
+  // Odd prime multiplier for the record-id string hash (classic 31·h + c).
+  const HASH_PRIME = 31;
+
+  // Preview URLs whose <img> failed to load (missing/empty preview blob, 404…).
+  // Excluded from the collage so a broken thumbnail falls back to the remaining
+  // images, or to the color tile when none load — never the browser's broken
+  // image glyph. Reassigned (not mutated) so the read below stays reactive.
+  let failedPreviewUrls = $state<Set<string>>(new Set());
+
+  function markPreviewFailed(url: string): void {
+    if (failedPreviewUrls.has(url)) return;
+    failedPreviewUrls = new Set(failedPreviewUrls).add(url);
+  }
+
+  /** The first few loadable image-view preview URLs, in declared view order. */
+  function recordPreviewUrls(record: RecordResponse): string[] {
+    return Object.values(record.view_previews ?? {})
+      .filter((preview) => preview.kind === "image" && !failedPreviewUrls.has(preview.preview_url))
+      .slice(0, MAX_RECORD_PREVIEWS)
+      .map((preview) => preview.preview_url);
+  }
+
+  /**
+   * A stable hue derived from a record id, so preview-less records still get a
+   * distinct color tile (same id → same color, different ids → different colors).
+   */
+  function recordHue(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * HASH_PRIME + id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % HUE_RANGE;
+  }
+
+  /** CSS background for a record's fallback tile. */
+  function recordTileColor(id: string): string {
+    return `hsl(${recordHue(id)} ${TILE_SATURATION}% ${TILE_LIGHTNESS}%)`;
+  }
+
+  /**
+   * Grid span for one preview slot so the 2×2 collage cell is always fully
+   * filled: 1 → whole cell, 2 → two full-height halves, 3 → two on top + one
+   * spanning the bottom, 4 → an even 2×2.
+   */
+  function previewSlotClass(count: number, index: number): string {
+    if (count === 1) return "col-span-2 row-span-2";
+    if (count === 2) return "row-span-2";
+    if (count === 3 && index === 2) return "col-span-2";
+    return "";
+  }
 
   type ExplorerView = "datasets" | "records";
   let explorerView = $state<ExplorerView>("datasets");
@@ -68,6 +127,9 @@ License: CECILL-C
     selectedDataset = dataset;
     explorerView = "records";
     records = [];
+    // New dataset → drop any preview failures recorded for the previous one so
+    // the set can't grow across a session or exclude an unrelated URL.
+    failedPreviewUrls = new Set();
     recordsOffset = 0;
     recordsTotal = 0;
     loading = true;
@@ -180,11 +242,41 @@ License: CECILL-C
           {:else}
             <div class="space-y-1">
               {#each records as record (record.id)}
+                {@const previews = recordPreviewUrls(record)}
                 <button
                   onclick={() => openRecord(record.id)}
                   class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
                 >
-                  <span class="truncate font-mono text-muted-foreground">{record.id}</span>
+                  <div
+                    class="grid h-12 w-12 shrink-0 grid-cols-2 grid-rows-2 gap-px overflow-hidden rounded bg-border"
+                  >
+                    {#if previews.length === 0}
+                      <div
+                        class="col-span-2 row-span-2 flex items-center justify-center"
+                        style="background: {recordTileColor(record.id)}"
+                      >
+                        <Box class="h-5 w-5 text-white/80" />
+                      </div>
+                    {:else}
+                      {#each previews as url, i (url)}
+                        <img
+                          src={url}
+                          alt=""
+                          loading="lazy"
+                          onerror={() => markPreviewFailed(url)}
+                          class="h-full w-full object-cover {previewSlotClass(previews.length, i)}"
+                        />
+                      {/each}
+                    {/if}
+                  </div>
+                  <span class="flex min-w-0 flex-col">
+                    <span class="truncate font-mono text-muted-foreground">{record.id}</span>
+                    {#if record.split}
+                      <span class="truncate text-[10px] text-muted-foreground/70">
+                        {record.split}
+                      </span>
+                    {/if}
+                  </span>
                 </button>
               {/each}
             </div>
