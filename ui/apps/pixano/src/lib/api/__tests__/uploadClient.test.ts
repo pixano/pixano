@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { matchesUseCase } from "$components/library/import-wizard/layoutPreflight";
+import { matchesTask } from "$components/library/import-wizard/layoutPreflight";
 import { describe, expect, it } from "vitest";
 
 import { filterSelection, splitFolderSelection } from "../uploadClient";
@@ -41,7 +41,7 @@ describe("splitFolderSelection", () => {
   });
 });
 
-describe("filterSelection with matchesUseCase", () => {
+describe("filterSelection with matchesTask", () => {
   const selection = splitFolderSelection([
     fakeFile("set/left/a.jpg", 100),
     fakeFile("set/right/a.JPG", 100),
@@ -52,7 +52,7 @@ describe("filterSelection with matchesUseCase", () => {
   ]);
 
   it("drops the stray metadata.jsonl and junk for an image import", () => {
-    const filtered = filterSelection(selection, (name) => matchesUseCase(name, "image"));
+    const filtered = filterSelection(selection, (name) => matchesTask(name, "image"));
     expect(filtered.entries.map((e) => e.relPath)).toEqual(["left/a.jpg", "right/a.JPG"]);
     expect(filtered.totalBytes).toBe(200); // metadata.jsonl / .DS_Store / notes.txt excluded
     expect(filtered.folderName).toBe("set");
@@ -60,7 +60,7 @@ describe("filterSelection with matchesUseCase", () => {
 
   it("keeps BOTH images and texts for a MEL import, dropping the rest", () => {
     const filtered = filterSelection(selection, (name) =>
-      matchesUseCase(name, "image_text_entity_linking"),
+      matchesTask(name, "image_text_entity_linking"),
     );
     expect(filtered.entries.map((e) => e.relPath)).toEqual([
       "left/a.jpg",
@@ -72,7 +72,7 @@ describe("filterSelection with matchesUseCase", () => {
 
   it("yields an empty selection when nothing matches (caller shows an error)", () => {
     const noVideos = splitFolderSelection([fakeFile("set/a.jpg", 1)]);
-    const filtered = filterSelection(noVideos, (name) => matchesUseCase(name, "video"));
+    const filtered = filterSelection(noVideos, (name) => matchesTask(name, "video"));
     expect(filtered.entries).toEqual([]);
   });
 });

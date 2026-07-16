@@ -6,7 +6,7 @@ License: CECILL-C
 
 /** The raw-media schema builder: pure helpers turning wizard fields into a spec `schema`. */
 
-import type { LayoutPreflight, RawUseCase } from "./layoutPreflight";
+import type { LayoutPreflight, RawTask } from "./layoutPreflight";
 
 export type RawFramesMode = "extract" | "reference";
 export type AttrType = "str" | "int" | "float" | "bool";
@@ -20,7 +20,7 @@ export interface AttrRow {
 }
 
 export interface RawFields {
-  useCase: RawUseCase;
+  task: RawTask;
   framesMode: RawFramesMode; // video only
   maxFrames: string; // video, extract mode
   recordAttrs: AttrRow[];
@@ -29,51 +29,51 @@ export interface RawFields {
   layout: LayoutPreflight | null; // derived from the picked folder before upload
 }
 
-/** The use-case cards: labels + the folder layout each one expects. */
-export const USE_CASE_CARDS: {
-  useCase: RawUseCase;
+/** The task cards: labels + the folder layout each one expects. */
+export const TASK_CARDS: {
+  task: RawTask;
   title: string;
   blurb: string;
   layoutHint: string;
 }[] = [
   {
-    useCase: "image",
+    task: "image",
     title: "Image annotation",
     blurb: "Detect, segment, classify objects on images — one or several views per record.",
     layoutHint:
       "photos/\n├─ a.jpg  b.jpg …      (single view)\n└─ or left/ right/ …   (views, same file names pair up)",
   },
   {
-    useCase: "video",
+    task: "video",
     title: "Video annotation",
     blurb: "Track objects across frames — videos import as annotatable frame sequences.",
     layoutHint:
       "clips/\n├─ v1.mp4  v2.mp4 …    (single view)\n└─ or front/ side/ …   (views, same file names pair up)",
   },
   {
-    useCase: "image_vqa",
+    task: "image_vqa",
     title: "Visual Q&A",
     blurb: "Ask and answer questions about images — conversations attach to each record.",
     layoutHint: "photos/\n└─ a.jpg  b.jpg …      (questions are added in Pixano)",
   },
   {
-    useCase: "image_text_entity_linking",
+    task: "image_text_entity_linking",
     title: "Image–text linking",
     blurb: "Link mentions in a text to regions in an image (multimodal entity linking).",
     layoutHint: "pairs/\n├─ image/  a.jpg  b.jpg\n└─ text/   a.txt  b.txt  (same names pair up)",
   },
 ];
 
-/** Annotation slots pre-selected per use case (what most users annotate). */
-export const DEFAULT_ANNOTATIONS: Record<RawUseCase, string[]> = {
+/** Annotation slots pre-selected per task (what most users annotate). */
+export const DEFAULT_ANNOTATIONS: Record<RawTask, string[]> = {
   image: ["bbox", "mask", "keypoint", "classification"],
   video: ["bbox", "mask", "keypoint", "tracklet"],
   image_vqa: ["message"],
   image_text_entity_linking: ["text_span", "bbox", "mask"],
 };
 
-/** Annotation slots offered per use case (the declarative-dialect subset that fits each). */
-export const ANNOTATION_CHOICES: Record<RawUseCase, string[]> = {
+/** Annotation slots offered per task (the declarative-dialect subset that fits each). */
+export const ANNOTATION_CHOICES: Record<RawTask, string[]> = {
   image: ["bbox", "mask", "keypoint", "multi_path", "classification", "relation"],
   video: ["bbox", "mask", "keypoint", "multi_path", "classification", "tracklet", "relation"],
   image_vqa: ["message", "bbox", "mask", "classification"],
@@ -81,11 +81,11 @@ export const ANNOTATION_CHOICES: Record<RawUseCase, string[]> = {
 };
 
 /**
- * Slots the use case cannot work without (non-removable chips). A non-empty
+ * Slots the task cannot work without (non-removable chips). A non-empty
  * `schema.annotations` REPLACES the workspace preset's slots backend-side, so
  * the wizard must always re-list these.
  */
-export const LOCKED_ANNOTATIONS: Record<RawUseCase, string[]> = {
+export const LOCKED_ANNOTATIONS: Record<RawTask, string[]> = {
   image: [],
   video: [],
   image_vqa: ["message"],
@@ -95,7 +95,7 @@ export const LOCKED_ANNOTATIONS: Record<RawUseCase, string[]> = {
 export const ATTR_TYPES: AttrType[] = ["str", "int", "float", "bool"];
 
 export const DEFAULT_RAW_FIELDS: RawFields = {
-  useCase: "image",
+  task: "image",
   framesMode: "extract",
   maxFrames: "",
   recordAttrs: [],
@@ -153,7 +153,7 @@ export function validateAttrRows(rows: AttrRow[], label = "Attribute"): string {
 
 /** One validation message for the whole raw form; "" when analyzable. */
 export function validateRawFields(raw: RawFields): string {
-  if (raw.useCase === "video" && raw.maxFrames.trim() && !/^\d+$/.test(raw.maxFrames.trim())) {
+  if (raw.task === "video" && raw.maxFrames.trim() && !/^\d+$/.test(raw.maxFrames.trim())) {
     return "Max frames per video must be a whole number.";
   }
   if (!raw.annotations.length) {
@@ -183,7 +183,7 @@ function attrsPayload(rows: AttrRow[]): Record<string, unknown> {
 /**
  * Compile the raw form into spec fragments.
  *
- * The workspace is always the use case — that is what routes the dataset to
+ * The workspace is always the task — that is what routes the dataset to
  * the right annotation UI. Views are declared only when the preflight found
  * several (per-view folders); single-view sources rely on backend inference.
  * Annotations are always sent: a non-empty list replaces the preset's slots,
@@ -210,20 +210,20 @@ export function buildRawSchemaSpec(raw: RawFields): {
   if (raw.recordAttrs.length) schema.record = { attrs: attrsPayload(raw.recordAttrs) };
   if (raw.entityAttrs.length) schema.entity = { attrs: attrsPayload(raw.entityAttrs) };
   const annotations = [
-    ...LOCKED_ANNOTATIONS[raw.useCase].filter((slot) => !raw.annotations.includes(slot)),
+    ...LOCKED_ANNOTATIONS[raw.task].filter((slot) => !raw.annotations.includes(slot)),
     ...raw.annotations,
   ];
   if (annotations.length) schema.annotations = annotations;
 
   const options: Record<string, unknown> = {};
-  if (raw.useCase === "video") {
+  if (raw.task === "video") {
     if (raw.framesMode === "reference") options.frames = "reference";
     else if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
   }
 
   return {
     schema,
-    workspace: raw.useCase,
+    workspace: raw.task,
     options: Object.keys(options).length ? options : undefined,
   };
 }

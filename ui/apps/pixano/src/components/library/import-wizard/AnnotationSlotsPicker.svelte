@@ -8,7 +8,7 @@ License: CECILL-C
   interface Props {
     choices: string[];
     selected: string[];
-    /** Slots the use case cannot work without — always selected, not toggleable. */
+    /** Slots the task cannot work without — always selected, not toggleable. */
     locked?: string[];
   }
 
@@ -35,7 +35,7 @@ License: CECILL-C
         } ${isLocked ? "cursor-default" : ""}`}
         aria-pressed={active}
         aria-disabled={isLocked}
-        title={isLocked ? "This use case needs this annotation type." : undefined}
+        title={isLocked ? "This task needs this annotation type." : undefined}
         onclick={() => toggle(slot)}
       >
         {slot}{#if isLocked}<span class="ml-1 opacity-60">•</span>{/if}

@@ -14,7 +14,7 @@ License: CECILL-C
  */
 
 /** What the user is building — maps 1:1 onto the backend workspace values. */
-export type RawUseCase = "image" | "video" | "image_vqa" | "image_text_entity_linking";
+export type RawTask = "image" | "video" | "image_vqa" | "image_text_entity_linking";
 
 /** On-disk media kinds the media-only importer scans. */
 export type MediaFileKind = "image" | "video" | "text";
@@ -26,8 +26,8 @@ export const FILE_KIND_EXTENSIONS: Record<MediaFileKind, string[]> = {
   text: [".txt", ".md"],
 };
 
-/** The media kinds each use case imports (MEL pairs images with texts). */
-export const USE_CASE_FILE_KINDS: Record<RawUseCase, MediaFileKind[]> = {
+/** The media kinds each task imports (MEL pairs images with texts). */
+export const TASK_FILE_KINDS: Record<RawTask, MediaFileKind[]> = {
   image: ["image"],
   video: ["video"],
   image_vqa: ["image"],
@@ -54,10 +54,10 @@ export function classifyMediaName(name: string): MediaFileKind | null {
   return null;
 }
 
-/** True when a file belongs to the use case's upload (drives the upload filter). */
-export function matchesUseCase(name: string, useCase: RawUseCase): boolean {
+/** True when a file belongs to the task's upload (drives the upload filter). */
+export function matchesTask(name: string, task: RawTask): boolean {
   const kind = classifyMediaName(name);
-  return kind !== null && USE_CASE_FILE_KINDS[useCase].includes(kind);
+  return kind !== null && TASK_FILE_KINDS[task].includes(kind);
 }
 
 /** Mirror of the backend's `to_snake_case` (folder → view name). */
@@ -108,15 +108,15 @@ interface KeptFile {
  *
  * `entries` are the files' paths inside the picked folder (the folder's own
  * name already stripped, as `splitFolderSelection` does). Only files matching
- * the use case's media kinds are laid out — everything else is counted as
+ * the task's media kinds are laid out — everything else is counted as
  * ignored, exactly like the upload filter drops it.
  */
 export function preflightLayout(
   entries: readonly { relPath: string }[],
-  useCase: RawUseCase,
+  task: RawTask,
 ): LayoutPreflight {
   const findings: LayoutFinding[] = [];
-  const allowed = USE_CASE_FILE_KINDS[useCase];
+  const allowed = TASK_FILE_KINDS[task];
   const kept: KeptFile[] = [];
   let ignoredFiles = 0;
   const wrongKindCounts = new Map<MediaFileKind, number>();
@@ -144,7 +144,7 @@ export function preflightLayout(
     findings.push({
       code: "ignored_files",
       severity: "warning",
-      message: `${count} ${kind} file${count === 1 ? "" : "s"} will not be uploaded for this use case.`,
+      message: `${count} ${kind} file${count === 1 ? "" : "s"} will not be uploaded for this task.`,
     });
   }
 
@@ -152,7 +152,7 @@ export function preflightLayout(
     findings.push({
       code: "no_media_found",
       severity: "error",
-      message: "The selected folder has no importable media files for this use case.",
+      message: "The selected folder has no importable media files for this task.",
     });
     return result([], [], 0, kept.length, ignoredFiles, findings);
   }
@@ -203,7 +203,7 @@ export function preflightLayout(
   const viewTotals = new Map<string, { kind: MediaFileKind; fileCount: number }>();
 
   for (const split of splitInputs) {
-    const splitViews = splitLayout(split.name, split.files, useCase, findings);
+    const splitViews = splitLayout(split.name, split.files, task, findings);
     if (splitViews === null) {
       return result([], [], 0, kept.length, ignoredFiles, findings);
     }
@@ -233,7 +233,7 @@ export function preflightLayout(
     fileCount: view.fileCount,
   }));
 
-  if (useCase === "image_text_entity_linking") {
+  if (task === "image_text_entity_linking") {
     const textViews = views.filter((view) => view.kind === "text").length;
     const imageViews = views.filter((view) => view.kind === "image").length;
     if (textViews !== 1 || imageViews < 1) {
@@ -255,7 +255,7 @@ export function preflightLayout(
 function splitLayout(
   splitName: string,
   files: KeptFile[],
-  useCase: RawUseCase,
+  task: RawTask,
   findings: LayoutFinding[],
 ): { views: Map<string, { kind: MediaFileKind; fileCount: number }>; recordCount: number } | null {
   const where = splitName === "default" ? "the folder" : `'${splitName}/'`;
@@ -275,7 +275,7 @@ function splitLayout(
 
   if (!inDirs.length) {
     // Flat folder: one view named after the sole media kind.
-    const kind = soleKind(direct, where, useCase, findings);
+    const kind = soleKind(direct, where, task, findings);
     if (kind === null) return null;
     if (
       !uniqueStems(
@@ -302,7 +302,7 @@ function splitLayout(
   for (const [dir, dirFiles] of [...byDir.entries()].sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
-    const kind = soleKind(dirFiles, `'${dir}/'`, useCase, findings);
+    const kind = soleKind(dirFiles, `'${dir}/'`, task, findings);
     if (kind === null) return null;
     const name = toSnakeCase(dir);
     if (views.has(name)) {
@@ -347,13 +347,13 @@ function splitLayout(
 function soleKind(
   files: KeptFile[],
   where: string,
-  useCase: RawUseCase,
+  task: RawTask,
   findings: LayoutFinding[],
 ): MediaFileKind | null {
   const kinds = [...new Set(files.map((file) => file.kind))].sort();
   if (kinds.length === 1) return kinds[0];
   const hint =
-    useCase === "image_text_entity_linking"
+    task === "image_text_entity_linking"
       ? " For image–text linking, put images and texts in separate view folders (image/ + text/)."
       : "";
   findings.push({

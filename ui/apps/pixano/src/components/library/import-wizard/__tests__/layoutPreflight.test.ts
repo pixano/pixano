@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyMediaName,
-  matchesUseCase,
+  matchesTask,
   preflightLayout,
   toSnakeCase,
   type LayoutPreflight,
@@ -18,7 +18,7 @@ const entries = (...paths: string[]) => paths.map((relPath) => ({ relPath }));
 
 const codes = (layout: LayoutPreflight) => layout.findings.map((finding) => finding.code);
 
-describe("classifyMediaName / matchesUseCase", () => {
+describe("classifyMediaName / matchesTask", () => {
   it("classifies by extension, case-insensitively", () => {
     expect(classifyMediaName("a.JPG")).toBe("image");
     expect(classifyMediaName("v.mp4")).toBe("video");
@@ -28,10 +28,10 @@ describe("classifyMediaName / matchesUseCase", () => {
   });
 
   it("MEL keeps both images and texts; image keeps only images", () => {
-    expect(matchesUseCase("a.jpg", "image_text_entity_linking")).toBe(true);
-    expect(matchesUseCase("a.txt", "image_text_entity_linking")).toBe(true);
-    expect(matchesUseCase("a.mp4", "image_text_entity_linking")).toBe(false);
-    expect(matchesUseCase("a.txt", "image")).toBe(false);
+    expect(matchesTask("a.jpg", "image_text_entity_linking")).toBe(true);
+    expect(matchesTask("a.txt", "image_text_entity_linking")).toBe(true);
+    expect(matchesTask("a.mp4", "image_text_entity_linking")).toBe(false);
+    expect(matchesTask("a.txt", "image")).toBe(false);
   });
 });
 
@@ -177,7 +177,7 @@ describe("preflightLayout — blocking errors (mirror media_only.py)", () => {
     expect(codes(layout)).toContain("mel_needs_image_and_text");
   });
 
-  it("nothing importable for the use case", () => {
+  it("nothing importable for the task", () => {
     const layout = preflightLayout(entries("a.mp4", "notes.csv"), "image");
     expect(layout.ok).toBe(false);
     expect(codes(layout)).toContain("no_media_found");

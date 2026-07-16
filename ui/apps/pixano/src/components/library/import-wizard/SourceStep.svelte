@@ -7,9 +7,9 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, CheckCircle, FolderOpen, UploadSimple } from "phosphor-svelte";
 
-  import { matchesUseCase, preflightLayout } from "./layoutPreflight";
+  import { matchesTask, preflightLayout } from "./layoutPreflight";
   import LayoutPreviewPanel from "./LayoutPreviewPanel.svelte";
-  import { USE_CASE_CARDS } from "./rawSchema";
+  import { TASK_CARDS } from "./rawSchema";
   import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
   import {
     formatBytes,
@@ -44,14 +44,14 @@ License: CECILL-C
   let fileInput = $state<HTMLInputElement | null>(null);
   let abortController: AbortController | null = null;
   let uploadId = "";
-  let uploadedUseCase = $state(fields.raw.useCase);
+  let uploadedTask = $state(fields.raw.task);
 
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
   const showLerobot = $derived(showsLerobotFields(fields));
   const offersHub = $derived(fields.intent === "lerobot" || fields.intent === "auto");
   const layoutHint = $derived(
     fields.intent === "raw"
-      ? (USE_CASE_CARDS.find((card) => card.useCase === fields.raw.useCase)?.layoutHint ?? "")
+      ? (TASK_CARDS.find((card) => card.task === fields.raw.task)?.layoutHint ?? "")
       : "",
   );
   const progressPercent = $derived(
@@ -65,13 +65,13 @@ License: CECILL-C
   });
 
   $effect(() => {
-    // Raw uploads are filtered by use case; if the user changes the use case
+    // Raw uploads are filtered by task; if the user changes the task
     // after picking, the staged files no longer match — drop them so the
     // next pick re-filters. (Guarded so the reset can't re-trigger itself.)
     if (
       fields.intent === "raw" &&
       (uploadState !== "idle" || fields.raw.layout !== null) &&
-      fields.raw.useCase !== uploadedUseCase
+      fields.raw.task !== uploadedTask
     ) {
       discardStagedUpload();
     }
@@ -114,18 +114,18 @@ License: CECILL-C
     if (fields.intent === "raw") {
       // Preflight the layout on the client BEFORE uploading anything: a bad
       // folder structure must not cost a multi-gigabyte upload to discover.
-      const layout = preflightLayout(picked.entries, fields.raw.useCase);
+      const layout = preflightLayout(picked.entries, fields.raw.task);
       fields.raw.layout = layout;
-      uploadedUseCase = fields.raw.useCase;
+      uploadedTask = fields.raw.task;
       if (!layout.ok) {
         uploadState = "idle";
         uploadError = "";
         return; // the layout panel shows what to fix; pick the folder again
       }
-      // Upload only the use case's media kinds: a stray metadata.jsonl,
+      // Upload only the task's media kinds: a stray metadata.jsonl,
       // .DS_Store, or README must not be staged (a metadata.jsonl would flip
       // the source out of media-only mode and import nothing).
-      picked = filterSelection(picked, (name) => matchesUseCase(name, fields.raw.useCase));
+      picked = filterSelection(picked, (name) => matchesTask(name, fields.raw.task));
     }
     if (!picked.entries.length) {
       uploadState = "error";
@@ -133,7 +133,7 @@ License: CECILL-C
       return;
     }
     selection = picked;
-    uploadedUseCase = fields.raw.useCase;
+    uploadedTask = fields.raw.task;
     uploadState = "uploading";
     uploadError = "";
     progress = {
