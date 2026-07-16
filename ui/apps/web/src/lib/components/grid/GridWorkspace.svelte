@@ -190,7 +190,14 @@ License: CECILL-C
     mountedWidgets.clear();
 
     if (grid) {
-      grid.destroy();
+      // The grid element may already be detached when we tear down (a parent
+      // removed first, or the test harness clearing the DOM); destroy() would
+      // then throw on removeChild. The grid is going away regardless, so ignore it.
+      try {
+        grid.destroy();
+      } catch {
+        grid = undefined as unknown as GridStack;
+      }
     }
   });
 </script>

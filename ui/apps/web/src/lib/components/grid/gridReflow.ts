@@ -41,7 +41,10 @@ export function placeWidget(
     element,
     spotIsFree ? { x, y, w, h, minH, minW } : { autoPosition: true, w, h, minH, minW },
   );
-  if (!spotIsFree) writeBack(widgetId, placed, sink);
+  // Persist the resolved position unconditionally: even when we ask for the stored
+  // spot GridStack may clamp it (e.g. x+w past the column count), so the manager
+  // must reflect what actually landed on screen. Grid = single source of truth.
+  writeBack(widgetId, placed, sink);
   return placed;
 }
 

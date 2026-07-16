@@ -55,12 +55,13 @@ afterEach(() => {
 });
 
 describe("placeWidget", () => {
-  it("keeps the stored position when the spot is free", () => {
-    const { sink, updateLayout } = makeSink();
+  it("keeps the stored position when the spot is free, and persists it", () => {
+    const { sink, layouts } = makeSink();
     place("a", { x: 3, y: 2, w: 3, h: 2 }, sink);
     expect(nodeOf("a")).toMatchObject({ x: 3, y: 2, w: 3, h: 2 });
-    // Nothing to persist when it landed exactly where asked.
-    expect(updateLayout).not.toHaveBeenCalled();
+    // The resolved position is written back unconditionally (grid = source of
+    // truth); here it matches the stored spot since it was free.
+    expect(layouts.get("a")).toMatchObject({ x: 3, y: 2, w: 3, h: 2 });
   });
 
   it("drops into the next free spot (same size) when the stored spot is taken", () => {
