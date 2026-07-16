@@ -10,6 +10,7 @@ License: CECILL-C
   import { GridStack, type GridStackNode } from "gridstack";
   import { mount, onDestroy, onMount, unmount } from "svelte";
 
+  import { fillGapAndSync, placeWidget } from "./gridReflow.js";
   import WidgetFrame from "./WidgetFrame.svelte";
   import type { WidgetInstance } from "$lib/extensions/types.js";
   import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
@@ -52,14 +53,9 @@ License: CECILL-C
     const minW = Math.min(widget.layout.w, config.defaultLayout.minW ?? 2);
     const minH = Math.min(widget.layout.h, config.defaultLayout.minH ?? 2);
 
-    grid.makeWidget(element, {
-      x: widget.layout.x,
-      y: widget.layout.y,
-      w: widget.layout.w,
-      h: widget.layout.h,
-      minH,
-      minW,
-    });
+    // Keep the stored spot when free, else drop into the next free spot (used
+    // when a re-shown widget's original slot was filled by a prior compaction).
+    placeWidget(grid, element, widget.id, widget.layout, minW, minH, manager);
   }
 
   function unmountWidget(widgetId: string) {
@@ -156,17 +152,30 @@ License: CECILL-C
     if (!grid) return;
 
     const currentIds = new Set(mountedWidgets.keys());
+    const managerIds = new Set(manager.widgets.map((w) => w.id));
     const visibleWidgets = manager.widgets.filter((w) => !w.hidden);
     const visibleIds = new Set(visibleWidgets.map((w) => w.id));
 
-    // Remove widgets no longer in manager or now hidden
+    // Remove widgets no longer visible. Distinguish a *hide* (widget still owned
+    // by the manager, just toggled off) from a *removal* (record switch / delete):
+    // only a hide should reflow the remaining widgets to fill the freed space.
+    let didHide = false;
     for (const id of currentIds) {
       if (!visibleIds.has(id)) {
         unmountWidget(id);
+        if (managerIds.has(id)) didHide = true;
       }
     }
 
-    // Add new visible widgets from manager
+    // Fill the hole left by a hidden widget without resizing anything, then
+    // persist the shifted positions (compact() moves items programmatically, so
+    // GridStack's user-drag persistence path never sees them).
+    if (didHide) {
+      fillGapAndSync(grid, manager);
+    }
+
+    // Add newly visible widgets. mountWidget places a re-shown widget in the next
+    // free spot when its original position is now taken.
     for (const widget of visibleWidgets) {
       if (!currentIds.has(widget.id)) {
         mountWidget(widget);
