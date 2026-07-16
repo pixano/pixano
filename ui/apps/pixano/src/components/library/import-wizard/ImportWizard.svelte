@@ -11,10 +11,10 @@ License: CECILL-C
 
   import DoneStep from "./DoneStep.svelte";
   import IntentStep from "./IntentStep.svelte";
-  import type { RawUseCase } from "./layoutPreflight";
+  import type { RawTask } from "./layoutPreflight";
   import ProgressStep from "./ProgressStep.svelte";
   import { DEFAULT_ANNOTATIONS } from "./rawSchema";
-  import RawUseCaseStep from "./RawUseCaseStep.svelte";
+  import RawTaskStep from "./RawTaskStep.svelte";
   import ReviewStep from "./ReviewStep.svelte";
   import SourceStep from "./SourceStep.svelte";
   import WizardStepIndicator from "./WizardStepIndicator.svelte";
@@ -50,7 +50,7 @@ License: CECILL-C
 
   let { onClose }: Props = $props();
 
-  type Step = "intent" | "usecase" | "source" | "review" | "progress" | "done";
+  type Step = "intent" | "task" | "source" | "review" | "progress" | "done";
 
   let open = $state(true);
   let step = $state<Step>("intent");
@@ -79,20 +79,18 @@ License: CECILL-C
   const canGoAnalyze = $derived(canAnalyze(fields, advancedJson));
   const isRaw = $derived(fields.intent === "raw");
   const referenceMode = $derived(
-    isRaw && fields.raw.useCase === "video" && fields.raw.framesMode === "reference",
+    isRaw && fields.raw.task === "video" && fields.raw.framesMode === "reference",
   );
 
-  // The raw flow adds a "Use case" step between Type and Source.
+  // The raw flow adds a "Task" step between Type and Source.
   const stepLabels = $derived(
-    isRaw
-      ? ["Type", "Use case", "Source", "Review", "Import"]
-      : ["Type", "Source", "Review", "Import"],
+    isRaw ? ["Type", "Task", "Source", "Review", "Import"] : ["Type", "Source", "Review", "Import"],
   );
   const stepIndex = $derived.by(() => {
     const offset = isRaw ? 1 : 0;
     const index: Record<Step, number> = {
       intent: 0,
-      usecase: 1,
+      task: 1,
       source: 1 + offset,
       review: 2 + offset,
       progress: 3 + offset,
@@ -106,7 +104,7 @@ License: CECILL-C
       title: "Import Dataset",
       description: "What are you importing?",
     },
-    usecase: {
+    task: {
       title: "Import raw media",
       description: "What are you building? This sets the views, workspace, and annotation types.",
     },
@@ -147,13 +145,13 @@ License: CECILL-C
 
   function handleIntentSelect(intent: ImportIntent) {
     fields.intent = intent;
-    step = intent === "raw" ? "usecase" : "source";
+    step = intent === "raw" ? "task" : "source";
   }
 
-  function handleUseCaseSelect(useCase: RawUseCase) {
-    if (fields.raw.useCase !== useCase) {
-      fields.raw.useCase = useCase;
-      fields.raw.annotations = [...DEFAULT_ANNOTATIONS[useCase]];
+  function handleTaskSelect(task: RawTask) {
+    if (fields.raw.task !== task) {
+      fields.raw.task = task;
+      fields.raw.annotations = [...DEFAULT_ANNOTATIONS[task]];
     }
     step = "source";
   }
@@ -264,8 +262,8 @@ License: CECILL-C
 
           {#if step === "intent"}
             <IntentStep {formats} onSelect={handleIntentSelect} />
-          {:else if step === "usecase"}
-            <RawUseCaseStep onSelect={handleUseCaseSelect} />
+          {:else if step === "task"}
+            <RawTaskStep onSelect={handleTaskSelect} />
           {:else if step === "source"}
             <SourceStep bind:fields bind:advancedJson />
           {:else if step === "review"}
@@ -277,7 +275,7 @@ License: CECILL-C
           {/if}
 
           <div class={BLOCKING_ALERT_ACTIONS_CLASS}>
-            {#if step === "intent" || step === "usecase" || step === "source" || step === "review"}
+            {#if step === "intent" || step === "task" || step === "source" || step === "review"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
@@ -287,7 +285,7 @@ License: CECILL-C
               </button>
             {/if}
 
-            {#if step === "usecase"}
+            {#if step === "task"}
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
@@ -301,7 +299,7 @@ License: CECILL-C
               <button
                 type="button"
                 class={BLOCKING_ALERT_SECONDARY_BUTTON_CLASS}
-                onclick={() => (step = isRaw ? "usecase" : "intent")}
+                onclick={() => (step = isRaw ? "task" : "intent")}
               >
                 Back
               </button>

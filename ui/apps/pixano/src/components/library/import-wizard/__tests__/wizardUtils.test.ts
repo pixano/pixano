@@ -111,7 +111,7 @@ describe("mergeSpec", () => {
 
   it("builds the raw-videos spec: extract default with cap, reference opt-in", () => {
     const extract = fields({ intent: "raw" });
-    extract.raw.useCase = "video";
+    extract.raw.task = "video";
     extract.raw.maxFrames = "200";
     extract.raw.annotations = ["bbox", "tracklet"];
     expect(mergeSpec(extract, "")).toEqual({
@@ -122,7 +122,7 @@ describe("mergeSpec", () => {
     });
 
     const reference = fields({ intent: "raw" });
-    reference.raw.useCase = "video";
+    reference.raw.task = "video";
     reference.raw.framesMode = "reference";
     reference.raw.annotations = ["bbox"];
     expect(mergeSpec(reference, "")).toEqual({
@@ -135,7 +135,7 @@ describe("mergeSpec", () => {
 
   it("builds the VQA and MEL specs with their workspaces and locked slots", () => {
     const vqa = fields({ intent: "raw" });
-    vqa.raw.useCase = "image_vqa";
+    vqa.raw.task = "image_vqa";
     vqa.raw.annotations = ["message"];
     expect(mergeSpec(vqa, "")).toEqual({
       format: "pixano_jsonl",
@@ -144,7 +144,7 @@ describe("mergeSpec", () => {
     });
 
     const mel = fields({ intent: "raw" });
-    mel.raw.useCase = "image_text_entity_linking";
+    mel.raw.task = "image_text_entity_linking";
     mel.raw.annotations = ["text_span", "bbox", "mask"];
     mel.raw.layout = preflightLayout(
       ["image/a.jpg", "text/a.txt"].map((relPath) => ({ relPath })),
