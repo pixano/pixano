@@ -113,12 +113,13 @@ describe("mergeSpec", () => {
     const extract = fields({ intent: "raw" });
     extract.raw.task = "video";
     extract.raw.maxFrames = "200";
+    extract.raw.fps = "10";
     extract.raw.annotations = ["bbox", "tracklet"];
     expect(mergeSpec(extract, "")).toEqual({
       format: "pixano_jsonl",
       dataset: { workspace: "video" },
       schema: { annotations: ["bbox", "tracklet"] },
-      options: { max_frames_per_video: 200 },
+      options: { max_frames_per_video: 200, fps: 10 },
     });
 
     const reference = fields({ intent: "raw" });

@@ -249,6 +249,51 @@ class TestRawVideos:
         assert all(row["timestamp"] >= 0 for row in frames)
 
     @needs_ffmpeg
+    def test_extract_resamples_at_requested_fps(self, tmp_path: Path):
+        """options.fps on video FILES is a sampling rate: fewer frames, timestamps on the fps grid."""
+        source = tmp_path / "vids"
+        source.mkdir()
+        shutil.copy(VIDEO_MP4_ASSET_URL, source / "clip.mp4")  # ~30 fps, ~7 s, 209 frames
+        spec = _spec({"dataset": {"name": "sampled"}, "options": {"fps": 2}})
+        case = DatasetImporterTestCase(importer=PixanoJsonlImporter(), source=source, spec=spec)
+        dataset, _ = case.run_import(tmp_path / "data")
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index", "timestamp"]).to_list()
+        assert 12 <= len(frames) <= 16  # ~7 s at 2 fps, NOT 209 native frames
+        for row in frames:
+            assert row["timestamp"] == pytest.approx(row["frame_index"] / 2)
+
+    @needs_ffmpeg
+    def test_extract_fps_with_cap_keeps_sampling_grid(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        source.mkdir()
+        shutil.copy(VIDEO_MP4_ASSET_URL, source / "clip.mp4")
+        spec = _spec({"dataset": {"name": "capped"}, "options": {"fps": 2, "max_frames_per_video": 5}})
+        plan = analyze(source, spec)
+        assert plan.report.is_valid
+        assert plan.media_size_estimate_bytes  # estimate follows the sampled count
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(),
+            source=source,
+            spec=spec,
+            expected_counts={"records": 1, "sequence_frames": 5},
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index", "timestamp"]).to_list()
+        for row in frames:
+            assert row["timestamp"] == pytest.approx(row["frame_index"] / 2)
+
+    def test_invalid_fps_rejected_for_extract(self, tmp_path: Path):
+        from pixano.datasets.io import SpecValidationError
+
+        source = tmp_path / "vids"
+        source.mkdir()
+        shutil.copy(VIDEO_MP4_ASSET_URL, source / "clip.mp4")
+        spec = _spec({"dataset": {"name": "bad"}, "options": {"fps": -1}})
+        with pytest.raises(SpecValidationError, match="fps"):
+            analyze(source, spec)
+
+    @needs_ffmpeg
     def test_garbage_video_fails_analyze(self, tmp_path: Path):
         """An unprobeable video is an analyze error, not a silent empty record at ingest."""
         source = tmp_path / "vids"

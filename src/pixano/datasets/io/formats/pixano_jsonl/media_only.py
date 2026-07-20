@@ -105,11 +105,14 @@ def frames_mode(spec: ImportSpec) -> str:
     return mode
 
 
-def folder_frames_fps(spec: ImportSpec) -> float:
-    """The optional ``options.fps`` for frame-folder sources; 0.0 when absent.
+def frames_fps(spec: ImportSpec) -> float:
+    """The optional ``options.fps`` for raw-video sources; 0.0 when absent.
 
-    With an fps, frame timestamps are ``frame_index / fps``; without one they
-    are all 0.0 (the explicit-frames JSONL form has the same default).
+    For video FILES the fps is the extraction SAMPLING rate (ffmpeg resamples
+    to that grid); unset keeps the native frame rate. For frame FOLDERS it
+    stamps the timestamps (``frame_index / fps``); unset stamps 0.0 (the
+    explicit-frames JSONL form has the same default). Playback derives its
+    rate from the stored timestamps.
     """
     raw = spec.options.get("fps")
     if raw is None:
@@ -686,10 +689,19 @@ def _warn_root_files(source_dir: Path, report: PreflightReport) -> None:
 # ---------------------------------------------------------------------------
 
 
-def decode_video_frames(video: Path, tmp_dir: str) -> list[Path]:
-    """Decode every encoded frame of a video to JPEG files (LeRobot's passthrough recipe)."""
+def decode_video_frames(video: Path, tmp_dir: str, fps: float | None = None) -> list[Path]:
+    """Decode a video's frames to JPEG files.
+
+    Without ``fps``, every encoded frame is decoded (LeRobot's passthrough
+    recipe). With ``fps``, ffmpeg resamples onto a constant-rate grid — frame
+    N of the output sits at media time ``N / fps``, which is exactly what
+    ingest stamps as the frame timestamp.
+    """
     command = ["ffmpeg", "-nostdin", "-v", "error", "-i", str(video)]
-    command += ["-fps_mode", "passthrough", "-q:v", "2", f"{tmp_dir}/%06d.jpg"]
+    if fps:
+        command += ["-vf", f"fps={fps}", "-q:v", "2", f"{tmp_dir}/%06d.jpg"]
+    else:
+        command += ["-fps_mode", "passthrough", "-q:v", "2", f"{tmp_dir}/%06d.jpg"]
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0 and "fps_mode" in (result.stderr or ""):
         command[command.index("-fps_mode")] = "-vsync"  # pre-5.1 ffmpeg
