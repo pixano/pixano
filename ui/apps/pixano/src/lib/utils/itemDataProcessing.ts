@@ -51,7 +51,12 @@ function flattenWorkspaceEntities(entitiesByTable: WorkspaceData["entities"]): E
 }
 
 /**
- * Compute video speed from views (time between frames).
+ * The playback interval in MILLISECONDS per frame, derived from the stored
+ * frame timestamps (seconds, stamped at import as frame_index / fps).
+ *
+ * Undefined when the rate cannot be known — fewer than two frames, or
+ * timestamps all zero (fps-unknown imports) — so the caller keeps the
+ * playback default instead of racing at setInterval(0).
  */
 export function computeWorkspaceVideoSpeed(
   views: Record<string, View | View[]>,
@@ -59,9 +64,10 @@ export function computeWorkspaceVideoSpeed(
   for (const view in views) {
     if (isSequenceFrameArray(views[view])) {
       const video = views[view];
-      return Math.round(
-        (video[video.length - 1].data.timestamp - video[0].data.timestamp) / video.length,
-      );
+      if (video.length < 2) return undefined;
+      const spanSeconds = video[video.length - 1].data.timestamp - video[0].data.timestamp;
+      if (!(spanSeconds > 0)) return undefined;
+      return Math.max(1, Math.round((spanSeconds * 1000) / (video.length - 1)));
     }
   }
   return undefined;
