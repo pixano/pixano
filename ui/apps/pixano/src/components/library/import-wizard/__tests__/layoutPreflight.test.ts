@@ -228,6 +228,44 @@ describe("preflightLayout — video frame folders", () => {
     ]);
   });
 
+  it("split folders wrap multi-view frame folders", () => {
+    const layout = preflightLayout(
+      entries(
+        "train/front/v1/f0.jpg",
+        "train/side/v1/f0.jpg",
+        "val/front/v2/f0.jpg",
+        "val/side/v2/f0.jpg",
+      ),
+      "video",
+    );
+    expect(layout.ok).toBe(true);
+    expect(layout.encoding).toBe("folders");
+    expect(layout.totalRecords).toBe(2);
+    expect(layout.views.map((view) => view.name).sort()).toEqual(["front", "side"]);
+  });
+
+  it("split folders wrap view folders of video files", () => {
+    const layout = preflightLayout(
+      entries("train/front/a.mp4", "train/side/a.mp4", "val/front/b.mp4", "val/side/b.mp4"),
+      "video",
+    );
+    expect(layout.ok).toBe(true);
+    expect(layout.encoding).toBe("files");
+    expect(layout.splits).toEqual([
+      { name: "train", recordCount: 1 },
+      { name: "val", recordCount: 1 },
+    ]);
+    expect(layout.views.map((view) => view.name).sort()).toEqual(["front", "side"]);
+  });
+
+  it("split folders with video files directly form a single default view", () => {
+    const layout = preflightLayout(entries("train/a.mp4", "val/b.mp4"), "video");
+    expect(layout.ok).toBe(true);
+    expect(layout.encoding).toBe("files");
+    expect(layout.views).toEqual([{ name: "video", kind: "video", fileCount: 2 }]);
+    expect(layout.totalRecords).toBe(2);
+  });
+
   it("mixing video files and frame images blocks the upload", () => {
     const layout = preflightLayout(entries("v1.mp4", "clip/f0.jpg"), "video");
     expect(layout.ok).toBe(false);

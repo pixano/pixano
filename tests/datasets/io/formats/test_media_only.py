@@ -276,6 +276,71 @@ class TestRawVideos:
         assert video.fps > 0 and video.to_timestamp == -1.0
 
 
+def _seed_layout(root: Path, rel_files: list[str]) -> None:
+    """Copy assets to relative paths — videos for .mp4 names, images otherwise."""
+    for rel in rel_files:
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(VIDEO_MP4_ASSET_URL if rel.endswith(".mp4") else IMAGE_JPG_ASSET_URL, target)
+
+
+class TestVideoLayoutMatrix:
+    """The eight acceptable raw-video layouts, pinned exactly as specified.
+
+    Video files:   root/{split}/{views}/*.mp4 · root/{views}/*.mp4 ·
+                   root/{split}/*.mp4 · root/*.mp4
+    Frame folders: root/{split}/{views}/{video}/*.jpg · root/{views}/{video}/*.jpg ·
+                   root/{split}/{video}/*.jpg · root/{video}/*.jpg
+    """
+
+    FILES_LAYOUTS = [
+        (
+            "split_views",
+            ["train/front/a.mp4", "train/side/a.mp4", "val/front/b.mp4", "val/side/b.mp4"],
+            {"train", "val"},
+            2,
+        ),
+        ("views_only", ["front/a.mp4", "side/a.mp4"], {"default"}, 1),
+        ("split_only", ["train/a.mp4", "val/b.mp4"], {"train", "val"}, 2),
+        ("flat", ["a.mp4", "b.mp4"], {"default"}, 2),
+    ]
+    FOLDER_LAYOUTS = [
+        (
+            "split_views",
+            ["train/front/v1/f0.jpg", "train/side/v1/f0.jpg", "val/front/v2/f0.jpg", "val/side/v2/f0.jpg"],
+            {"train", "val"},
+            2,
+        ),
+        ("views_only", ["front/v1/f0.jpg", "side/v1/f0.jpg"], {"default"}, 1),
+        ("split_only", ["train/v1/f0.jpg", "val/v2/f0.jpg"], {"train", "val"}, 2),
+        ("flat", ["v1/f0.jpg", "v2/f0.jpg"], {"default"}, 2),
+    ]
+
+    def _check(self, tmp_path: Path, files: list[str], options: dict, splits: set[str], records: int) -> None:
+        source = tmp_path / "src"
+        _seed_layout(source, files)
+        spec = _spec({"dataset": {"name": "layout", "workspace": "video"}, "options": options})
+        plan = analyze(source, spec)
+        assert plan.report.is_valid, plan.report.findings
+        assert set(plan.splits) == splits
+        assert plan.totals.records == records
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(), source=source, spec=spec, expected_counts={"records": records}
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        assert dataset.open_table("sequence_frames").count_rows() > 0
+
+    @needs_ffmpeg
+    @pytest.mark.parametrize(("name", "files", "splits", "records"), FILES_LAYOUTS)
+    def test_video_file_layouts(self, tmp_path: Path, name: str, files: list, splits: set, records: int):
+        self._check(tmp_path, files, {"max_frames_per_video": 2}, splits, records)
+
+    @pytest.mark.parametrize(("name", "files", "splits", "records"), FOLDER_LAYOUTS)
+    def test_frame_folder_layouts(self, tmp_path: Path, name: str, files: list, splits: set, records: int):
+        self._check(tmp_path, files, {"frames": "folders"}, splits, records)
+
+
 class TestFrameFolders:
     """Pre-extracted frame folders: options {frames: folders} — no ffmpeg involved."""
 
