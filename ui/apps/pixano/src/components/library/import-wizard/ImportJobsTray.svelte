@@ -14,16 +14,10 @@ License: CECILL-C
     requestImportJobCancel,
   } from "$lib/stores/importJobsStore.svelte";
 
-  interface Props {
-    hidden?: boolean;
-  }
-
-  let { hidden = false }: Props = $props();
-
   const entries = $derived(visibleJobEntries(importJobsStore.value));
 </script>
 
-{#if !hidden && entries.length}
+{#if entries.length}
   <div class="fixed bottom-4 right-4 z-40 flex w-80 flex-col gap-2">
     {#each entries as entry (entry.jobId)}
       {@const terminal = isTerminalJob(entry.job.status)}
