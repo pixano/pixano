@@ -133,6 +133,27 @@ describe("mergeSpec", () => {
     });
   });
 
+  it("builds the raw frame-folders video spec", () => {
+    const base = fields({ intent: "raw" });
+    base.raw.task = "video";
+    base.raw.annotations = ["bbox", "tracklet"];
+    base.raw.maxFrames = "20";
+    base.raw.fps = "30";
+    base.raw.layout = preflightLayout(
+      ["front/v1/f0.jpg", "side/v1/f0.jpg"].map((relPath) => ({ relPath })),
+      "video",
+    );
+    expect(mergeSpec(base, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "video" },
+      schema: {
+        views: { front: { kind: "sequence_frames" }, side: { kind: "sequence_frames" } },
+        annotations: ["bbox", "tracklet"],
+      },
+      options: { frames: "folders", max_frames_per_video: 20, fps: 30 },
+    });
+  });
+
   it("builds the VQA and MEL specs with their workspaces and locked slots", () => {
     const vqa = fields({ intent: "raw" });
     vqa.raw.task = "image_vqa";

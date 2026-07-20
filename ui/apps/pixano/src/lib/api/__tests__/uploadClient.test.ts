@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { matchesTask } from "$components/library/import-wizard/layoutPreflight";
+import { matchesTask, matchesUpload } from "$components/library/import-wizard/layoutPreflight";
 import { describe, expect, it } from "vitest";
 
 import { filterSelection, splitFolderSelection } from "../uploadClient";
@@ -74,5 +74,10 @@ describe("filterSelection with matchesTask", () => {
     const noVideos = splitFolderSelection([fakeFile("set/a.jpg", 1)]);
     const filtered = filterSelection(noVideos, (name) => matchesTask(name, "video"));
     expect(filtered.entries).toEqual([]);
+  });
+
+  it("keeps only frame images for a folders-encoding video upload", () => {
+    const filtered = filterSelection(selection, (name) => matchesUpload(name, "video", "folders"));
+    expect(filtered.entries.map((e) => e.relPath)).toEqual(["left/a.jpg", "right/a.JPG"]);
   });
 });

@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { CaretDown, CaretRight, CheckCircle, FolderOpen, UploadSimple } from "phosphor-svelte";
 
-  import { matchesTask, preflightLayout } from "./layoutPreflight";
+  import { matchesUpload, preflightLayout } from "./layoutPreflight";
   import LayoutPreviewPanel from "./LayoutPreviewPanel.svelte";
   import { TASK_CARDS } from "./rawSchema";
   import RawSchemaBuilder from "./RawSchemaBuilder.svelte";
@@ -124,8 +124,11 @@ License: CECILL-C
       }
       // Upload only the task's media kinds: a stray metadata.jsonl,
       // .DS_Store, or README must not be staged (a metadata.jsonl would flip
-      // the source out of media-only mode and import nothing).
-      picked = filterSelection(picked, (name) => matchesTask(name, fields.raw.task));
+      // the source out of media-only mode and import nothing). Frame-folder
+      // video sources upload their frame images, not video files.
+      picked = filterSelection(picked, (name) =>
+        matchesUpload(name, fields.raw.task, layout.encoding),
+      );
     }
     if (!picked.entries.length) {
       uploadState = "error";

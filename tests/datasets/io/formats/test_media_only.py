@@ -29,6 +29,13 @@ def _seed_images(directory: Path, stems: tuple[str, ...], asset: Path = IMAGE_JP
         shutil.copy(asset, directory / f"{stem}{asset.suffix}")
 
 
+def _seed_frames(directory: Path, names: tuple[str, ...], asset: Path = IMAGE_JPG_ASSET_URL) -> None:
+    """Copy the asset to full file NAMES (extension included) — frame folders control their names."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        shutil.copy(asset, directory / name)
+
+
 def _spec(payload: dict) -> ImportSpec:
     return ImportSpec.model_validate({"format": "pixano_jsonl", **payload})
 
@@ -267,6 +274,222 @@ class TestRawVideos:
         case.assert_counts(dataset)
         video = dataset.get_data("videos")[0]
         assert video.fps > 0 and video.to_timestamp == -1.0
+
+
+def _seed_layout(root: Path, rel_files: list[str]) -> None:
+    """Copy assets to relative paths — videos for .mp4 names, images otherwise."""
+    for rel in rel_files:
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(VIDEO_MP4_ASSET_URL if rel.endswith(".mp4") else IMAGE_JPG_ASSET_URL, target)
+
+
+class TestVideoLayoutMatrix:
+    """The eight acceptable raw-video layouts, pinned exactly as specified.
+
+    Video files:   root/{split}/{views}/*.mp4 · root/{views}/*.mp4 ·
+                   root/{split}/*.mp4 · root/*.mp4
+    Frame folders: root/{split}/{views}/{video}/*.jpg · root/{views}/{video}/*.jpg ·
+                   root/{split}/{video}/*.jpg · root/{video}/*.jpg
+    """
+
+    FILES_LAYOUTS = [
+        (
+            "split_views",
+            ["train/front/a.mp4", "train/side/a.mp4", "val/front/b.mp4", "val/side/b.mp4"],
+            {"train", "val"},
+            2,
+        ),
+        ("views_only", ["front/a.mp4", "side/a.mp4"], {"default"}, 1),
+        ("split_only", ["train/a.mp4", "val/b.mp4"], {"train", "val"}, 2),
+        ("flat", ["a.mp4", "b.mp4"], {"default"}, 2),
+    ]
+    FOLDER_LAYOUTS = [
+        (
+            "split_views",
+            ["train/front/v1/f0.jpg", "train/side/v1/f0.jpg", "val/front/v2/f0.jpg", "val/side/v2/f0.jpg"],
+            {"train", "val"},
+            2,
+        ),
+        ("views_only", ["front/v1/f0.jpg", "side/v1/f0.jpg"], {"default"}, 1),
+        ("split_only", ["train/v1/f0.jpg", "val/v2/f0.jpg"], {"train", "val"}, 2),
+        ("flat", ["v1/f0.jpg", "v2/f0.jpg"], {"default"}, 2),
+    ]
+
+    def _check(self, tmp_path: Path, files: list[str], options: dict, splits: set[str], records: int) -> None:
+        source = tmp_path / "src"
+        _seed_layout(source, files)
+        spec = _spec({"dataset": {"name": "layout", "workspace": "video"}, "options": options})
+        plan = analyze(source, spec)
+        assert plan.report.is_valid, plan.report.findings
+        assert set(plan.splits) == splits
+        assert plan.totals.records == records
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(), source=source, spec=spec, expected_counts={"records": records}
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        assert dataset.open_table("sequence_frames").count_rows() > 0
+
+    @needs_ffmpeg
+    @pytest.mark.parametrize(("name", "files", "splits", "records"), FILES_LAYOUTS)
+    def test_video_file_layouts(self, tmp_path: Path, name: str, files: list, splits: set, records: int):
+        self._check(tmp_path, files, {"max_frames_per_video": 2}, splits, records)
+
+    @pytest.mark.parametrize(("name", "files", "splits", "records"), FOLDER_LAYOUTS)
+    def test_frame_folder_layouts(self, tmp_path: Path, name: str, files: list, splits: set, records: int):
+        self._check(tmp_path, files, {"frames": "folders"}, splits, records)
+
+
+class TestFrameFolders:
+    """Pre-extracted frame folders: options {frames: folders} — no ffmpeg involved."""
+
+    def test_single_view_folder_frames(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip_a", ("f0.jpg", "f1.jpg", "f2.jpg"))
+        _seed_frames(source / "clip_b", ("f0.jpg", "f1.jpg"))
+        spec = _spec({"dataset": {"name": "folders"}, "options": {"frames": "folders"}})
+        plan = analyze(source, spec)
+        assert plan.report.is_valid, plan.report.findings
+        assert "ffmpeg_required" not in plan.report.findings
+        assert not plan.media_size_estimate_bytes  # frames are already counted in media_bytes
+        assert plan.totals.media_bytes and plan.totals.media_bytes > 0
+        assert plan.splits == {"default": 2}
+        assert plan.inferred_schema["workspace"] == "video"
+        assert plan.inferred_schema["views"]["video"]["base"] == "SequenceFrame"
+        assert plan.previews and plan.previews[0].thumbnails["video"].startswith("data:image/jpeg;base64,")
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(),
+            source=source,
+            spec=spec,
+            expected_counts={"records": 2, "sequence_frames": 5},
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        case.assert_idempotent_rerun(dataset, tmp_path / "data")
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index", "timestamp"]).to_list()
+        assert all(row["timestamp"] == 0.0 for row in frames)  # no fps given
+
+    def test_multi_view_split_folder_frames(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        for split in ("train", "val"):
+            for view in ("front", "side"):
+                _seed_frames(source / split / view / "v1", ("f0.jpg", "f1.jpg"))
+        spec = _spec(
+            {
+                "dataset": {"name": "mv", "workspace": "video"},
+                "schema": {"views": {"front": "sequence_frames", "side": "sequence_frames"}},
+                "options": {"frames": "folders"},
+            }
+        )
+        plan = analyze(source, spec)
+        assert plan.report.is_valid, plan.report.findings
+        assert plan.splits == {"train": 1, "val": 1}
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(),
+            source=source,
+            spec=spec,
+            expected_counts={"records": 2, "sequence_frames": 8},
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        case.assert_idempotent_rerun(dataset, tmp_path / "data")
+
+    def test_missing_video_in_one_view_warns(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "front" / "v1", ("f0.jpg", "f1.jpg"))
+        _seed_frames(source / "front" / "v2", ("f0.jpg", "f1.jpg"))
+        _seed_frames(source / "side" / "v1", ("f0.jpg", "f1.jpg"))
+        spec = _spec({"dataset": {"name": "mv"}, "options": {"frames": "folders"}})
+        plan = analyze(source, spec)
+        assert plan.report.findings["missing_view_file"].severity == "warning"
+        assert plan.report.is_valid
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(),
+            source=source,
+            spec=spec,
+            expected_counts={"records": 2, "sequence_frames": 6},
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+
+    def test_folder_frames_cap_keeps_original_indices(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip", tuple(f"f{i:02d}.jpg" for i in range(10)))
+        spec = _spec({"dataset": {"name": "cap"}, "options": {"frames": "folders", "max_frames_per_video": 4}})
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(),
+            source=source,
+            spec=spec,
+            expected_counts={"records": 1, "sequence_frames": 4},
+        )
+        dataset, _ = case.run_import(tmp_path / "data")
+        case.assert_counts(dataset)
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index"]).to_list()
+        assert sorted(row["frame_index"] for row in frames) == [0, 2, 5, 7]
+
+    def test_folder_frames_lexicographic_order(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip", ("b_second.jpg",))
+        _seed_frames(source / "clip", ("a_first.png",), asset=IMAGE_PNG_ASSET_URL)
+        spec = _spec({"dataset": {"name": "order"}, "options": {"frames": "folders"}})
+        case = DatasetImporterTestCase(importer=PixanoJsonlImporter(), source=source, spec=spec)
+        dataset, _ = case.run_import(tmp_path / "data")
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index", "format"]).to_list()
+        by_index = {row["frame_index"]: row["format"] for row in frames}
+        assert by_index == {0: "PNG", 1: "JPEG"}  # name order, not pick order
+
+    def test_folder_frames_fps_stamps_timestamps(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip", ("f0.jpg", "f1.jpg", "f2.jpg"))
+        spec = _spec({"dataset": {"name": "fps"}, "options": {"frames": "folders", "fps": 10}})
+        case = DatasetImporterTestCase(importer=PixanoJsonlImporter(), source=source, spec=spec)
+        dataset, _ = case.run_import(tmp_path / "data")
+        frames = dataset.open_table("sequence_frames").search().select(["frame_index", "timestamp"]).to_list()
+        for row in frames:
+            assert row["timestamp"] == pytest.approx(row["frame_index"] / 10)
+
+    def test_invalid_fps_rejected(self, tmp_path: Path):
+        from pixano.datasets.io import SpecValidationError
+
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip", ("f0.jpg",))
+        spec = _spec({"dataset": {"name": "bad"}, "options": {"frames": "folders", "fps": 0}})
+        with pytest.raises(SpecValidationError, match="fps"):
+            analyze(source, spec)
+
+    def test_mixed_videos_and_frame_folders_error(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip", ("f0.jpg",))
+        shutil.copy(VIDEO_MP4_ASSET_URL, source / "stray.mp4")
+        plan = analyze(source, _spec({"dataset": {"name": "mixed"}, "options": {"frames": "folders"}}))
+        assert "mixed_media_kinds" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_images_at_split_root_error(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_images(source, ("loose",))
+        plan = analyze(source, _spec({"dataset": {"name": "loose"}, "options": {"frames": "folders"}}))
+        assert "frames_folder_required" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_mixed_depth_error(self, tmp_path: Path):
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip_a", ("f0.jpg",))
+        _seed_frames(source / "front" / "clip_b", ("f0.jpg",))
+        plan = analyze(source, _spec({"dataset": {"name": "depths"}, "options": {"frames": "folders"}}))
+        assert "frames_depth_mismatch" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_folders_mode_never_inferred(self, tmp_path: Path):
+        """The same tree WITHOUT the option is plain multi-view images — never guessed as videos."""
+        source = tmp_path / "vids"
+        _seed_frames(source / "clip_a", ("f0.jpg", "f1.jpg"))
+        _seed_frames(source / "clip_b", ("f0.jpg", "f1.jpg"))
+        plan = analyze(source, _spec({"dataset": {"name": "plain"}}))
+        assert plan.report.is_valid
+        assert plan.inferred_schema["workspace"] == "image"
+        assert set(plan.inferred_schema["views"]) == {"clip_a", "clip_b"}
 
 
 class TestRawText:

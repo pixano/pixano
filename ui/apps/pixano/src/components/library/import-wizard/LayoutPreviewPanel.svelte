@@ -27,13 +27,25 @@ License: CECILL-C
   {#if layout.ok}
     <div class="flex flex-wrap items-center gap-1.5 text-xs">
       <span class="font-medium text-foreground">
-        {layout.totalRecords} record{layout.totalRecords === 1 ? "" : "s"}
+        {#if layout.encoding === "folders"}
+          {layout.totalRecords} video{layout.totalRecords === 1 ? "" : "s"} · {layout.keptFiles} frame{layout.keptFiles ===
+          1
+            ? ""
+            : "s"}
+        {:else}
+          {layout.totalRecords} record{layout.totalRecords === 1 ? "" : "s"}
+        {/if}
       </span>
       {#each layout.views as view (view.name)}
         <span
           class="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
         >
-          {view.name} · {view.kind} · {view.fileCount} file{view.fileCount === 1 ? "" : "s"}
+          {#if layout.encoding === "folders"}
+            {view.name} · {view.groupCount ?? 0} video{(view.groupCount ?? 0) === 1 ? "" : "s"} · {view.fileCount}
+            frame{view.fileCount === 1 ? "" : "s"}
+          {:else}
+            {view.name} · {view.kind} · {view.fileCount} file{view.fileCount === 1 ? "" : "s"}
+          {/if}
         </span>
       {/each}
       {#if layout.splits.length > 1}
