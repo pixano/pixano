@@ -229,8 +229,12 @@ export function buildRawSchemaSpec(raw: RawFields): {
     if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
     if (raw.fps.trim()) options.fps = Number(raw.fps.trim());
   } else if (raw.task === "video") {
-    if (raw.framesMode === "reference") options.frames = "reference";
-    else if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
+    if (raw.framesMode === "reference") {
+      options.frames = "reference";
+    } else {
+      if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
+      if (raw.fps.trim()) options.fps = Number(raw.fps.trim()); // extraction sampling rate
+    }
   }
 
   return {

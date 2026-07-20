@@ -187,6 +187,13 @@ describe("buildRawSchemaSpec", () => {
     });
   });
 
+  it("files encoding emits a sampling fps for extraction, never for reference", () => {
+    const extract = buildRawSchemaSpec(raw({ task: "video", maxFrames: "50", fps: "5" }));
+    expect(extract.options).toEqual({ max_frames_per_video: 50, fps: 5 });
+    const reference = buildRawSchemaSpec(raw({ task: "video", framesMode: "reference", fps: "5" }));
+    expect(reference.options).toEqual({ frames: "reference" });
+  });
+
   it("folders encoding emits frames=folders with cap and fps", () => {
     const layout = preflightLayout(entries("clip_a/f0.jpg", "clip_b/f0.jpg"), "video");
     const spec = buildRawSchemaSpec(raw({ task: "video", layout, maxFrames: "50", fps: "12.5" }));

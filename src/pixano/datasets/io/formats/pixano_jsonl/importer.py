@@ -35,8 +35,8 @@ from .media_only import (
     classify_media,
     decode_video_frames,
     discover_layout,
-    folder_frames_fps,
     frame_folder_files,
+    frames_fps,
     frames_mode,
     is_media_only_source,
     thumbnail_data_url,
@@ -191,8 +191,7 @@ class PixanoJsonlImporter(DatasetImporter):
         assert source.path is not None
         mode = frames_mode(spec)
         folder_frames = mode == "folders"
-        if folder_frames:
-            folder_frames_fps(spec)  # invalid options.fps fails analyze, not mid-ingest
+        sampling_fps = frames_fps(spec)  # invalid options.fps fails analyze, not mid-ingest
         if spec.schema_manifest is not None or (spec.schema_ is not None and spec.schema_.views):
             try:
                 declared = view_kinds_of(resolve_dataset_info(spec))
@@ -221,7 +220,7 @@ class PixanoJsonlImporter(DatasetImporter):
         for split in layout.splits:
             plan.splits[split.name] = len(split.records)
             if extracts_frames and ffprobe_available():
-                estimate += self._extract_size_estimate(split, layout, max_frames)
+                estimate += self._extract_size_estimate(split, layout, max_frames, sampling_fps)
             for group in split.records:
                 if len(plan.previews) >= limits.max_previews:
                     continue
@@ -338,7 +337,7 @@ class PixanoJsonlImporter(DatasetImporter):
         return int(spec.options.get("max_frames_per_video", 0) or 0)
 
     @staticmethod
-    def _extract_size_estimate(split: Any, layout: Any, max_frames: int) -> int:
+    def _extract_size_estimate(split: Any, layout: Any, max_frames: int, sampling_fps: float = 0.0) -> int:
         """Rough JPEG bytes for frame extraction: probe one video per view, scale by count."""
         estimate = 0.0
         for view, kind in layout.view_kinds.items():
@@ -351,7 +350,9 @@ class PixanoJsonlImporter(DatasetImporter):
                 probe = probe_video(videos[0])
             except PixanoDataError:
                 continue
-            frames = min(probe.num_frames, max_frames) if max_frames else probe.num_frames
+            frames = int(probe.duration * sampling_fps) if sampling_fps else probe.num_frames
+            if max_frames:
+                frames = min(frames, max_frames)
             estimate += len(videos) * frames * probe.width * probe.height * 0.12
         return int(estimate)
 
@@ -508,7 +509,7 @@ class PixanoJsonlImporter(DatasetImporter):
             first = next(iter(report.errors))
             raise SpecValidationError(f"Invalid media-only source: {first.code} — {first.suggestion}")
         max_frames = self._max_frames_per_video(spec)
-        fps = folder_frames_fps(spec) if folders else 0.0
+        fps = frames_fps(spec)
         resume_split = cursor.get("split") if cursor else None
         resume_line = int(cursor.get("line", 0)) if cursor else 0
 
@@ -541,7 +542,7 @@ class PixanoJsonlImporter(DatasetImporter):
                                 context, record_id, view_name, media_file, max_frames, fps
                             )
                         else:
-                            rows = self._media_only_frames(context, record_id, view_name, media_file, max_frames)
+                            rows = self._media_only_frames(context, record_id, view_name, media_file, max_frames, fps)
                     else:  # pragma: no cover - discovery rejects unscannable kinds
                         raise SpecValidationError(f"View '{view_name}' kind '{kind}' has no media-only ingest.")
                     for row in rows:
@@ -553,17 +554,28 @@ class PixanoJsonlImporter(DatasetImporter):
                 )
 
     def _media_only_frames(
-        self, context: _LineContext, record_id: str, view_name: str, video_file: Path, max_frames: int
+        self,
+        context: _LineContext,
+        record_id: str,
+        view_name: str,
+        video_file: Path,
+        max_frames: int,
+        sampling_fps: float = 0.0,
     ) -> list[LanceModel]:
-        """Extract a raw video's frames to SequenceFrame rows (uniform stride under the cap)."""
+        """Extract a raw video's frames to SequenceFrame rows (uniform stride under the cap).
+
+        With ``sampling_fps`` (``options.fps``), ffmpeg resamples onto that
+        constant-rate grid and timestamps sit on it; otherwise every encoded
+        frame is decoded at the probed native rate.
+        """
         probe = probe_video(video_file)
-        fps = probe.fps
+        fps = sampling_fps or probe.fps
         if not fps:
             raise MetadataError(f"Could not determine the frame rate of '{video_file.name}'.")
         view_cls = context.info.views[view_name]
         rows: list[LanceModel] = []
         with tempfile.TemporaryDirectory(prefix="pixano-media-only-") as tmp:
-            frame_files = decode_video_frames(video_file, tmp)
+            frame_files = decode_video_frames(video_file, tmp, fps=sampling_fps or None)
             if not frame_files:
                 raise MediaResolutionError(f"'{video_file.name}' decoded to zero frames; re-encode it or remove it.")
             indices = list(range(len(frame_files)))

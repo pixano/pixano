@@ -99,6 +99,19 @@ License: CECILL-C
               Max frames per video (uniform stride) — long videos can extract a lot of frames.
             </p>
           </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              inputmode="decimal"
+              class="{inputClass} w-32"
+              placeholder="FPS (optional)"
+              bind:value={raw.fps}
+              aria-label="Sampling frames per second"
+            />
+            <p class="text-xs text-muted-foreground">
+              Sampling FPS — resamples the video at this rate; empty keeps the native frame rate.
+            </p>
+          </div>
         {:else}
           <p class="text-xs text-muted-foreground">
             Clips import as references (metadata + file). In-app playback is not available in this
