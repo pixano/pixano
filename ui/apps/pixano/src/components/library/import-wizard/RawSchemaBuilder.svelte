@@ -21,6 +21,7 @@ License: CECILL-C
   let { raw = $bindable() }: Props = $props();
 
   const validationError = $derived(validateRawFields(raw));
+  const folderEncoding = $derived(raw.layout?.ok === true && raw.layout.encoding === "folders");
 
   const labelClass = "text-xs font-semibold uppercase tracking-widest text-muted-foreground";
   const inputClass =
@@ -38,41 +39,72 @@ License: CECILL-C
   {#if raw.task === "video"}
     <div class="space-y-1.5">
       <p class={labelClass}>Video handling</p>
-      <div class="flex gap-1.5">
-        <button
-          type="button"
-          class={segmentClass(raw.framesMode === "extract")}
-          onclick={() => (raw.framesMode = "extract")}
-        >
-          Extract frames (annotate)
-        </button>
-        <button
-          type="button"
-          class={segmentClass(raw.framesMode === "reference")}
-          onclick={() => (raw.framesMode = "reference")}
-        >
-          Reference clips (metadata only)
-        </button>
-      </div>
-      {#if raw.framesMode === "extract"}
+      {#if folderEncoding}
+        <p class="text-xs text-muted-foreground">
+          The folder holds pre-extracted frames — each video folder imports as an annotatable frame
+          sequence (no extraction needed).
+        </p>
         <div class="flex items-center gap-2">
           <input
-            type="number"
-            min="1"
+            type="text"
+            inputmode="numeric"
             class="{inputClass} w-32"
             placeholder="All frames"
             bind:value={raw.maxFrames}
             aria-label="Max frames per video"
           />
+          <p class="text-xs text-muted-foreground">Max frames per video (uniform stride).</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            type="text"
+            inputmode="decimal"
+            class="{inputClass} w-32"
+            placeholder="FPS (optional)"
+            bind:value={raw.fps}
+            aria-label="Frames per second"
+          />
           <p class="text-xs text-muted-foreground">
-            Max frames per video (uniform stride) — long videos can extract a lot of frames.
+            Stamps frame timestamps (frame ÷ fps); leave empty if unknown.
           </p>
         </div>
       {:else}
-        <p class="text-xs text-muted-foreground">
-          Clips import as references (metadata + file). In-app playback is not available in this
-          release — choose Extract frames to annotate or browse them.
-        </p>
+        <div class="flex gap-1.5">
+          <button
+            type="button"
+            class={segmentClass(raw.framesMode === "extract")}
+            onclick={() => (raw.framesMode = "extract")}
+          >
+            Extract frames (annotate)
+          </button>
+          <button
+            type="button"
+            class={segmentClass(raw.framesMode === "reference")}
+            onclick={() => (raw.framesMode = "reference")}
+          >
+            Reference clips (metadata only)
+          </button>
+        </div>
+        {#if raw.framesMode === "extract"}
+          <div class="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              class="{inputClass} w-32"
+              placeholder="All frames"
+              bind:value={raw.maxFrames}
+              aria-label="Max frames per video"
+            />
+            <p class="text-xs text-muted-foreground">
+              Max frames per video (uniform stride) — long videos can extract a lot of frames.
+            </p>
+          </div>
+        {:else}
+          <p class="text-xs text-muted-foreground">
+            Clips import as references (metadata + file). In-app playback is not available in this
+            release — choose Extract frames to annotate or browse them.
+          </p>
+        {/if}
       {/if}
     </div>
   {/if}

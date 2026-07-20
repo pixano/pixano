@@ -96,11 +96,46 @@ def classify_media(path: Path) -> str | None:
 
 
 def frames_mode(spec: ImportSpec) -> str:
-    """The raw-video handling mode: extract frames (default) or reference clips."""
+    """The raw-video handling mode: extract frames from video files (default),
+    reference clips, or import pre-extracted frame folders ("folders").
+    """
     mode = str(spec.options.get("frames", "extract"))
-    if mode not in ("extract", "reference"):
-        raise SpecValidationError(f"Invalid frames mode '{mode}' (extract or reference).")
+    if mode not in ("extract", "reference", "folders"):
+        raise SpecValidationError(f"Invalid frames mode '{mode}' (extract, reference, or folders).")
     return mode
+
+
+def folder_frames_fps(spec: ImportSpec) -> float:
+    """The optional ``options.fps`` for frame-folder sources; 0.0 when absent.
+
+    With an fps, frame timestamps are ``frame_index / fps``; without one they
+    are all 0.0 (the explicit-frames JSONL form has the same default).
+    """
+    raw = spec.options.get("fps")
+    if raw is None:
+        return 0.0
+    try:
+        fps = float(raw)
+    except (TypeError, ValueError):
+        raise SpecValidationError(f"Invalid fps {raw!r} (must be a positive number).") from None
+    if fps <= 0:
+        raise SpecValidationError(f"Invalid fps {raw!r} (must be a positive number).")
+    return fps
+
+
+def frame_folder_files(folder: Path) -> list[Path]:
+    """A frame folder's images in lexicographic name order — THE frame-order invariant.
+
+    Mirrors the JSONL ``frame_pattern`` rule (spec §5): frames sort by plain
+    string order, and ``frame_index`` is the position in this list. Every
+    consumer (media size, probes, previews, ingest) must go through here so
+    analyze and ingest cannot disagree.
+    """
+    return sorted(
+        p
+        for p in folder.iterdir()
+        if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in _IMAGE_SUFFIXES
+    )
 
 
 def is_media_only_source(source_dir: Path) -> bool:
@@ -117,16 +152,35 @@ def is_media_only_source(source_dir: Path) -> bool:
     return any(classify_media(p) is not None for p in source_dir.rglob("*") if p.is_file())
 
 
-def discover_layout(source_dir: Path, declared_views: dict[str, str] | None, report: PreflightReport) -> MediaLayout:
+def discover_layout(
+    source_dir: Path,
+    declared_views: dict[str, str] | None,
+    report: PreflightReport,
+    *,
+    folder_frames: bool = False,
+) -> MediaLayout:
     """Discover a media-only source's splits, views, and record groups.
 
     ``declared_views`` maps logical view names to schema view kinds when the
-    spec declares them; ``None`` infers views from the folder layout. Layout
-    problems land in ``report`` as findings; the returned layout holds
-    whatever was unambiguously discovered.
+    spec declares them; ``None`` infers views from the folder layout. With
+    ``folder_frames`` (``options.frames == "folders"``), sequence_frames views
+    consume one FOLDER of frame images per record instead of one video file —
+    never inferred, always opted into, because ``{video}/{frame*}`` is
+    indistinguishable from multi-view images. Layout problems land in
+    ``report`` as findings; the returned layout holds whatever was
+    unambiguously discovered.
     """
     layout = MediaLayout()
-    if declared_views:
+    if folder_frames:
+        if declared_views and any(kind != "sequence_frames" for kind in declared_views.values()):
+            report.add(
+                "unsupported_view_kind_for_media_only",
+                Provenance(file=str(source_dir)),
+                suggestion="Frame-folder sources (options frames=folders) only support sequence_frames views.",
+            )
+            return layout
+        _frames_layout(source_dir, declared_views or None, layout, report)
+    elif declared_views:
         unsupported = {v: k for v, k in declared_views.items() if k not in _FILE_KIND_OF_VIEW_KIND}
         if unsupported:
             report.add(
@@ -148,9 +202,16 @@ def discover_layout(source_dir: Path, declared_views: dict[str, str] | None, rep
             suggestion="No importable media files were found under the source folder.",
         )
     layout.media_bytes = sum(
-        f.stat().st_size for split in layout.splits for group in split.records for f in group.files.values()
+        _media_path_bytes(f) for split in layout.splits for group in split.records for f in group.files.values()
     )
     return layout
+
+
+def _media_path_bytes(path: Path) -> int:
+    """Size of one grouped media path: a file's bytes, or a frame folder's summed frames."""
+    if path.is_dir():
+        return sum(f.stat().st_size for f in frame_folder_files(path))
+    return path.stat().st_size
 
 
 # ---------------------------------------------------------------------------
@@ -378,6 +439,149 @@ def _infer_split_views(
         views[name] = (kind, keyed)
         named_dirs[name] = view_dir
     return views
+
+
+# ---------------------------------------------------------------------------
+# Frame-folder discovery (options frames=folders)
+# ---------------------------------------------------------------------------
+
+
+def _frames_layout(
+    source_dir: Path, declared: dict[str, str] | None, layout: MediaLayout, report: PreflightReport
+) -> None:
+    """Frame-folder layouts: video/frame*.jpg (single view) or view/video/frame*.jpg."""
+    subdirs = _subdirs(source_dir)
+    media_subdirs = [d for d in subdirs if _has_media(d)]
+    split_like = [d for d in media_subdirs if d.name.lower() in _SPLIT_DIR_NAMES]
+    if split_like and len(split_like) != len(media_subdirs):
+        report.add(
+            "ambiguous_media_layout",
+            Provenance(file=str(source_dir)),
+            suggestion="Folders mix split names (train/val/test) with other media folders; "
+            "reorganize the source or declare schema.views.",
+        )
+        return
+
+    split_roots = {d.name: d for d in split_like} if split_like else {"default": source_dir}
+    if split_like:
+        _warn_root_files(source_dir, report)
+
+    for split_name, split_root in sorted(split_roots.items()):
+        per_view = _frames_split_views(split_root, declared, report)
+        if per_view is None:
+            return
+        view_kinds = {name: "frames" for name in per_view}
+        if layout.splits and view_kinds != layout.view_kinds:
+            report.add(
+                "inconsistent_split_views",
+                Provenance(file=str(split_root)),
+                suggestion=f"Split '{split_name}' implies views {sorted(view_kinds)} but "
+                f"'{layout.splits[0].name}' implied {sorted(layout.view_kinds)}; make splits uniform "
+                "or declare schema.views.",
+            )
+            return
+        layout.view_kinds = view_kinds
+        layout.splits.append(SplitLayout(name=split_name, root=split_root, records=_group_by_key(per_view, report)))
+
+
+def _frames_split_views(
+    split_root: Path, declared: dict[str, str] | None, report: PreflightReport
+) -> dict[str, dict[str, Path]] | None:
+    """One split's frame-folder views as {view: {video_name: folder}}, or None on a blocking problem."""
+    files = _split_media_files(split_root)
+    kinds = sorted({kind for f in files if (kind := classify_media(f)) is not None})
+    if kinds and kinds != ["image"]:
+        report.add(
+            "mixed_media_kinds",
+            Provenance(file=str(split_root)),
+            suggestion=f"'{split_root.name}' holds {', '.join(kinds)} files; a frame-folder import "
+            "(options frames=folders) scans image files only.",
+        )
+        return None
+    images = [f for f in files if classify_media(f) == "image"]
+    if not images:
+        return {}  # nothing importable here; the caller reports no_media_found
+
+    depths = sorted({len(f.relative_to(split_root).parts) for f in images})
+    if 1 in depths:
+        report.add(
+            "frames_folder_required",
+            Provenance(file=str(split_root)),
+            suggestion="Frame images must sit inside one folder per video: video_name/frame.jpg, "
+            "or view_name/video_name/frame.jpg for several views.",
+        )
+        return None
+    if depths not in ([2], [3]):
+        report.add(
+            "frames_depth_mismatch",
+            Provenance(file=str(split_root)),
+            suggestion="Use ONE shape per split: video folders directly (single view) or one extra "
+            "view-folder level (several views) — not a mixture or deeper nesting.",
+        )
+        return None
+
+    if depths == [2]:
+        if declared and len(declared) >= 2:
+            report.add(
+                "view_folder_missing",
+                Provenance(file=str(split_root)),
+                suggestion=f"The declared views {sorted(declared)} each need a view folder above the "
+                "video folders (view_name/video_name/frame.jpg); this split has video folders directly.",
+            )
+            return None
+        view_name = next(iter(declared)) if declared else "video"
+        video_dirs = sorted({f.parent for f in images})
+        return {view_name: {d.name: d for d in video_dirs}}
+
+    # Depth 3: top-level folders are views, second-level folders are videos.
+    if declared:
+        matched = _match_view_dirs(split_root, declared, report)
+        if matched is None:
+            return None
+        per_view: dict[str, dict[str, Path]] = {}
+        for view_name in sorted(declared):
+            view_dir = matched.get(view_name)
+            if view_dir is None:
+                report.add(
+                    "view_folder_missing",
+                    Provenance(file=str(split_root / view_name)),
+                    suggestion=f"Declared view '{view_name}' has no folder under '{split_root}'.",
+                )
+                continue
+            per_view[view_name] = _video_folders_of(view_dir)
+        return per_view
+
+    inferred: dict[str, dict[str, Path]] = {}
+    named_dirs: dict[str, Path] = {}
+    for view_dir in sorted({f.parents[1] for f in images}):
+        name = to_snake_case(view_dir.name)
+        if name in inferred:
+            report.add(
+                "view_name_collision",
+                Provenance(file=str(view_dir)),
+                suggestion=f"Folders '{named_dirs[name].name}' and '{view_dir.name}' both map to view "
+                f"'{name}'; rename one.",
+            )
+            return None
+        inferred[name] = _video_folders_of(view_dir)
+        named_dirs[name] = view_dir
+    return inferred
+
+
+def _video_folders_of(view_dir: Path) -> dict[str, Path]:
+    """A view folder's video folders (those directly holding frame images), keyed by name."""
+    return {d.name: d for d in _subdirs(view_dir) if frame_folder_files(d)}
+
+
+def _split_media_files(split_root: Path) -> list[Path]:
+    """Every media file under the split root, skipping dot segments (mirrors the client preflight)."""
+    return sorted(
+        p
+        for p in split_root.rglob("*")
+        if p.is_file()
+        and classify_media(p) is not None
+        and not any(part.startswith(".") for part in p.relative_to(split_root).parts)
+    )
 
 
 # ---------------------------------------------------------------------------

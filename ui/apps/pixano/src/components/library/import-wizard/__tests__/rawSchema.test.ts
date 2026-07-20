@@ -88,6 +88,13 @@ describe("validateRawFields", () => {
     expect(validateRawFields(raw({ annotations: [] }))).toContain("at least one annotation");
   });
 
+  it("requires a positive fps when one is given", () => {
+    expect(validateRawFields(raw({ task: "video", fps: "0" }))).toContain("FPS");
+    expect(validateRawFields(raw({ task: "video", fps: "abc" }))).toContain("FPS");
+    expect(validateRawFields(raw({ task: "video", fps: "24" }))).toBe("");
+    expect(validateRawFields(raw({ task: "video", fps: "" }))).toBe("");
+  });
+
   it("validates record and entity attrs separately", () => {
     expect(validateRawFields(raw({ recordAttrs: [attr({ name: "Bad" })] }))).toContain(
       "Record attribute",
@@ -178,6 +185,23 @@ describe("buildRawSchemaSpec", () => {
     expect(buildRawSchemaSpec(raw({ task: "video", maxFrames: "200" })).options).toEqual({
       max_frames_per_video: 200,
     });
+  });
+
+  it("folders encoding emits frames=folders with cap and fps", () => {
+    const layout = preflightLayout(entries("clip_a/f0.jpg", "clip_b/f0.jpg"), "video");
+    const spec = buildRawSchemaSpec(raw({ task: "video", layout, maxFrames: "50", fps: "12.5" }));
+    expect(spec.schema.views).toBeUndefined(); // single view: backend inference
+    expect(spec.options).toEqual({ frames: "folders", max_frames_per_video: 50, fps: 12.5 });
+  });
+
+  it("folders encoding declares sequence_frames views, ignoring framesMode", () => {
+    const layout = preflightLayout(entries("front/v1/f0.jpg", "side/v1/f0.jpg"), "video");
+    const spec = buildRawSchemaSpec(raw({ task: "video", layout, framesMode: "reference" }));
+    expect(spec.schema.views).toEqual({
+      front: { kind: "sequence_frames" },
+      side: { kind: "sequence_frames" },
+    });
+    expect(spec.options).toEqual({ frames: "folders" });
   });
 
   it("emits no views from a failed preflight", () => {

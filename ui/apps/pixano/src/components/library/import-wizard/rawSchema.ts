@@ -21,8 +21,9 @@ export interface AttrRow {
 
 export interface RawFields {
   task: RawTask;
-  framesMode: RawFramesMode; // video only
-  maxFrames: string; // video, extract mode
+  framesMode: RawFramesMode; // video only, files encoding
+  maxFrames: string; // video only
+  fps: string; // video only, folders encoding (stamps frame timestamps)
   recordAttrs: AttrRow[];
   entityAttrs: AttrRow[];
   annotations: string[];
@@ -48,7 +49,7 @@ export const TASK_CARDS: {
     title: "Video annotation",
     blurb: "Track objects across frames — videos import as annotatable frame sequences.",
     layoutHint:
-      "clips/\n├─ v1.mp4  v2.mp4 …    (single view)\n└─ or front/ side/ …   (views, same file names pair up)",
+      "clips/\n├─ v1.mp4  v2.mp4 …    (video files)\n├─ or v1/ v2/ …        (one folder of frame images per video)\n└─ or front/ side/ …   (views, same names pair up)",
   },
   {
     task: "image_vqa",
@@ -98,6 +99,7 @@ export const DEFAULT_RAW_FIELDS: RawFields = {
   task: "image",
   framesMode: "extract",
   maxFrames: "",
+  fps: "",
   recordAttrs: [],
   entityAttrs: [],
   annotations: [...DEFAULT_ANNOTATIONS.image],
@@ -156,6 +158,9 @@ export function validateRawFields(raw: RawFields): string {
   if (raw.task === "video" && raw.maxFrames.trim() && !/^\d+$/.test(raw.maxFrames.trim())) {
     return "Max frames per video must be a whole number.";
   }
+  if (raw.task === "video" && raw.fps.trim() && !(Number(raw.fps.trim()) > 0)) {
+    return "FPS must be a positive number.";
+  }
   if (!raw.annotations.length) {
     return "Select at least one annotation type.";
   }
@@ -196,13 +201,16 @@ export function buildRawSchemaSpec(raw: RawFields): {
 } {
   const schema: Record<string, unknown> = {};
 
+  const encoding = raw.task === "video" && raw.layout?.ok ? raw.layout.encoding : "files";
   const layoutViews = raw.layout?.ok ? raw.layout.views : [];
   if (layoutViews.length >= 2) {
-    const videoKind = raw.framesMode === "reference" ? "video" : "sequence_frames";
+    const videoKind =
+      encoding === "folders" || raw.framesMode !== "reference" ? "sequence_frames" : "video";
     schema.views = Object.fromEntries(
       layoutViews.map((view) => [
         view.name,
-        { kind: view.kind === "video" ? videoKind : view.kind },
+        // Frame-folder views hold image files client-side but ARE sequence frames.
+        { kind: encoding === "folders" || view.kind === "video" ? videoKind : view.kind },
       ]),
     );
   }
@@ -216,7 +224,11 @@ export function buildRawSchemaSpec(raw: RawFields): {
   if (annotations.length) schema.annotations = annotations;
 
   const options: Record<string, unknown> = {};
-  if (raw.task === "video") {
+  if (raw.task === "video" && encoding === "folders") {
+    options.frames = "folders";
+    if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
+    if (raw.fps.trim()) options.fps = Number(raw.fps.trim());
+  } else if (raw.task === "video") {
     if (raw.framesMode === "reference") options.frames = "reference";
     else if (raw.maxFrames.trim()) options.max_frames_per_video = Number(raw.maxFrames.trim());
   }
