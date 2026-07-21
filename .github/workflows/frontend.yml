@@ -24,6 +24,7 @@ on:
     branches:
       - "main"
       - "arch/**"
+      - "releases/**"
 
 permissions:
   contents: read

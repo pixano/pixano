@@ -28,6 +28,7 @@ on:
       - "arch/**"
       - "spec/**"
       - "feat/**"
+      - "releases/**"
 
 permissions:
   contents: read
