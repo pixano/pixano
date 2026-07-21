@@ -66,12 +66,19 @@ def _query_preview_rows(
         raise HTTPException(status_code=500, detail=f"Internal server error. {err}") from err
 
 
+def _preview_url(dataset_id: str, resource: str, row_id: str, uri: object) -> str:
+    """Datalake rows (spec §6 uri mode) are browser-loadable directly; embedded rows go through /preview."""
+    if isinstance(uri, str) and uri.startswith(("http://", "https://")):
+        return uri
+    return f"/datasets/{dataset_id}/{resource}/{row_id}/preview"
+
+
 def _resolve_view_previews(
     dataset_id: str, dataset: Dataset, record_ids: list[str]
 ) -> dict[str, dict[str, PreviewDescriptor]]:
     previews_by_record: dict[str, dict[str, PreviewDescriptor]] = {record_id: {} for record_id in record_ids}
 
-    image_rows = _query_preview_rows(dataset, "images", ["id", "record_id", "logical_name"], record_ids)
+    image_rows = _query_preview_rows(dataset, "images", ["id", "record_id", "logical_name", "uri"], record_ids)
     for row in image_rows:
         record_id = str(row.get("record_id", "") or "")
         logical_name = str(row.get("logical_name", "") or "")
@@ -82,13 +89,13 @@ def _resolve_view_previews(
             resource="images",
             id=row_id,
             kind="image",
-            preview_url=f"/datasets/{dataset_id}/images/{row_id}/preview",
+            preview_url=_preview_url(dataset_id, "images", row_id, row.get("uri")),
         )
 
     sframe_rows = _query_preview_rows(
         dataset,
         "sequence_frames",
-        ["id", "record_id", "logical_name", "frame_index"],
+        ["id", "record_id", "logical_name", "frame_index", "uri"],
         record_ids,
         order_by="frame_index",
     )
@@ -105,7 +112,7 @@ def _resolve_view_previews(
             resource="sframes",
             id=row_id,
             kind="image",
-            preview_url=f"/datasets/{dataset_id}/sframes/{row_id}/preview",
+            preview_url=_preview_url(dataset_id, "sframes", row_id, row.get("uri")),
         )
 
     return previews_by_record

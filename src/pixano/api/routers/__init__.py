@@ -8,12 +8,14 @@ from fastapi import FastAPI
 from fastapi.routing import APIRouter
 
 from pixano.api.routers.bboxes import router as bboxes_router
+from pixano.api.routers.classification import router as classification_router
 from pixano.api.routers.conversations import router as conversations_router
+from pixano.api.routers.data_io import legacy_router as legacy_import_router
+from pixano.api.routers.data_io import router as data_io_router
 from pixano.api.routers.datasets import router as datasets_router
 from pixano.api.routers.embeddings import router as embeddings_router
 from pixano.api.routers.entities import router as entities_router
 from pixano.api.routers.entity_dynamic_states import router as entity_dynamic_states_router
-from pixano.api.routers.import_datasets import router as import_datasets_router
 from pixano.api.routers.inference import app_router as inference_app_router
 from pixano.api.routers.inference import router as inference_router
 from pixano.api.routers.keypoints import router as keypoints_router
@@ -21,7 +23,9 @@ from pixano.api.routers.masks import router as masks_router
 from pixano.api.routers.messages import router as messages_router
 from pixano.api.routers.multi_paths import router as multi_paths_router
 from pixano.api.routers.records import router as records_router
+from pixano.api.routers.relation import router as relation_router
 from pixano.api.routers.text_spans import router as text_spans_router
+from pixano.api.routers.timeseries import router as timeseries_router
 from pixano.api.routers.tracklets import router as tracklets_router
 from pixano.api.routers.views import router as views_router
 
@@ -36,14 +40,18 @@ RESOURCE_ROUTERS: tuple[APIRouter, ...] = (
     masks_router,
     multi_paths_router,
     keypoints_router,
+    classification_router,
+    relation_router,
     messages_router,
     conversations_router,
     text_spans_router,
     embeddings_router,
+    timeseries_router,
 )
 
 API_ROUTERS: tuple[APIRouter, ...] = (
-    import_datasets_router,
+    data_io_router,
+    legacy_import_router,
     datasets_router,
     inference_app_router,
     inference_router,

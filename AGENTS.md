@@ -18,6 +18,8 @@ Backend modules are organized as follows:
 - `src/pixano/utils`: shared utilities.
 - `tests`: unit and e2e test modules.
 
+Design specifications live in `docs/specs/`. Before planning or implementing changes to dataset import/export, read [docs/specs/data-import-export.md](./docs/specs/data-import-export.md) — the accepted architecture reference for the 0.8.0 data import/export redesign.
+
 ## Tech Stack
 
 The backend uses FastAPI for the server, LanceDB as the dataset engine, Python for implementation, and `uv` for dependency management and builds. The frontend uses SvelteKit 5, Svelte 5, TypeScript, and `pnpm`. Important UI libraries include bits-ui, Tailwind CSS, phosphor-svelte, KonvaJS, ThretleJS, and Tiptap.
@@ -91,6 +93,7 @@ When committing changes:
 
 - Use short, imperative commit subjects. Recent history commonly uses conventional prefixes such as `fix:`, `feat:`, `docs:`, `refactor:`, `ci:`, and `chore:`. Keep commits focused on one logical change.
 - DCO sign-off: All commits MUST use the `-s` flag (otherwise CI will reject them)
+- Do NOT add `Co-Authored-By` trailers (or any other co-author lines) to commit messages.
 - Pre-commit hooks: Run before committing (see [Pre-commit Hooks](#pre-commit-hooks))
 
 ```bash

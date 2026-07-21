@@ -150,3 +150,11 @@ def unique_list(sequence: Sequence[Any]) -> list[Any]:
         List of unique elements.
     """
     return list(OrderedDict.fromkeys(sequence))
+
+
+def to_snake_case(value: str) -> str:
+    """Transform a string into a snake_case identifier (used for dataset folder names)."""
+    import re
+
+    snake = re.sub(r"[^a-zA-Z0-9]+", "_", value.strip().lower())
+    return re.sub(r"_+", "_", snake).strip("_")

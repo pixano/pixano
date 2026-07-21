@@ -43,6 +43,7 @@ License: CECILL-C
   };
 
   const STATUS_COLORS: Record<string, string> = {
+    new: "#EF4444",
     done: "#22C55E",
     validated: "#22C55E",
     todo: "#EF4444",

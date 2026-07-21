@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 import io
+import json
+import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
 
 import lancedb
 import PIL.Image
@@ -27,6 +29,7 @@ from pixano.datasets.utils.integrity import (
     IntegrityCheck,
     check_table_integrity,
     handle_integrity_errors,
+    validate_arrow_batch,
     validate_batch,
 )
 from pixano.features.utils.image import create_mosaic, image_to_base64
@@ -38,6 +41,7 @@ from pixano.schemas import (
     ViewEmbedding,
     is_image,
     is_sequence_frame,
+    is_video,
     is_view_embedding,
     validate_canonical_table_map,
 )
@@ -50,6 +54,9 @@ from .dataset_stat import DatasetStatistic, SplitStatusCount
 
 if TYPE_CHECKING:
     pass
+
+
+logger = logging.getLogger(__name__)
 
 
 def _combine_where_clauses(*clauses: str | None) -> str | None:
@@ -93,8 +100,8 @@ class Dataset:
     It is a collection of tables that can be queried and manipulated with LanceDB.
 
     Tables are defined by the :class:`DatasetInfo` ``tables`` mapping, which maps
-    table names to :class:`LanceModel` schema classes.  The main table is always
-    named ``"record"`` and its schema must inherit from :class:`Record`.  All
+    table names to :class:`LanceModel` schema classes. The main table is always
+    named ``"records"`` and its schema must inherit from :class:`Record`.  All
     auxiliary tables must have schemas that inherit from :class:`RecordComponent`.
 
     Attributes:
@@ -126,6 +133,7 @@ class Dataset:
         self.path = path
 
         self._info_file = self.path / self._INFO_FILE
+        self._table_handles: dict[str, LanceTable] = {}
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
@@ -139,7 +147,62 @@ class Dataset:
         self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
+        if self.info.spec_version < self._CURRENT_SPEC_VERSION:
+            try:
+                self._migrate_storage_to_spec_version_2()
+            except Exception as exc:
+                # A read-only dataset stays readable at the old layout; writes will
+                # surface the missing columns explicitly.
+                logger.warning(
+                    "Dataset %s: spec version %d migration failed, continuing unmigrated: %s",
+                    self.path,
+                    self._CURRENT_SPEC_VERSION,
+                    exc,
+                )
         self._num_rows_cache: int | None = None
+
+    # ------------------------------------------------------------------
+    # Storage-layout migrations
+    # ------------------------------------------------------------------
+
+    _CURRENT_SPEC_VERSION: int = 2
+
+    def _migrate_storage_to_spec_version_2(self) -> None:
+        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+
+        Concurrency-safe: when several processes open the same pre-migration
+        dataset, losers of the ``add_columns`` race converge by re-reading the
+        table schema, and the ``info.json`` rewrite is atomic and idempotent
+        (all writers produce identical content).
+        """
+        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        for table_name, schema_cls in self.info.tables.items():
+            if not is_video(schema_cls):
+                continue
+            table = self.open_table(table_name)
+            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            if not missing:
+                continue
+            try:
+                table.add_columns(missing)
+            except Exception:
+                self._table_handles.pop(table_name, None)  # re-read the live schema, not a cached handle
+                still_missing = [
+                    column for column in missing if column not in self.open_table(table_name).schema.names
+                ]
+                if still_missing:
+                    raise
+            finally:
+                self._table_handles.pop(table_name, None)
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory
@@ -414,7 +477,7 @@ class Dataset:
             schema = self.info.tables.get(table_name)
         if schema is None:
             return set()
-        return {"blob"} if "blob" in schema.model_fields else set()
+        return {column for column in ("blob", "raw_bytes") if column in schema.model_fields}
 
     def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
         """Open the dataset tables with LanceDB.
@@ -448,6 +511,9 @@ class Dataset:
         if name not in self.info.tables:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
+        cached = self._table_handles.get(name)
+        if cached is not None:
+            return cached
         table = self._db_connection.open_table(name)
 
         schema_table = self.info.tables[name]
@@ -457,6 +523,9 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
+        # Handles read the latest table version per query, so caching is safe;
+        # Dataset-level cache invalidation drops the whole instance anyway.
+        self._table_handles[name] = table
         return table
 
     @overload
@@ -647,8 +716,7 @@ class Dataset:
         )
         assert where is not None
 
-        query = table.search(None).select(columns).where(where).limit(batch_size)
-        rows = query.to_list()
+        rows = TableQueryBuilder(table).select(columns).where(where).limit(batch_size).to_list()
         rows.sort(key=lambda row: int(row.get("frame_index", -1)))
 
         result = []
@@ -902,6 +970,7 @@ class Dataset:
     _INSERT_ORDER: list[SchemaGroup] = [
         SchemaGroup.RECORD,
         SchemaGroup.VIEW,
+        SchemaGroup.TIMESERIES,
         SchemaGroup.ENTITY,
         SchemaGroup.ENTITY_DYNAMIC_STATE,
         SchemaGroup.ANNOTATION,
@@ -994,12 +1063,234 @@ class Dataset:
         # Insert into LanceDB in dependency order
         for table_name in ordered_tables:
             rows = normalized[table_name]
+            for row in rows:
+                if hasattr(row, "created_at"):
+                    row.created_at = datetime.now()
+                if hasattr(row, "updated_at"):
+                    row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
             table = self.open_table(table_name)
             table.add(rows)
 
         # Invalidate row-count cache if records were touched
         if SchemaGroup.RECORD.value in normalized:
             self._num_rows_cache = None
+
+    def merge_records(
+        self,
+        data: dict[str, LanceModel | list[LanceModel] | pa.RecordBatch | pa.Table],
+        check_integrity: Literal["raise", "warn", "none"] = "raise",
+        known_ids: dict[str, set[str]] | None = None,
+    ) -> dict[str, int]:
+        """Upsert rows into multiple tables in a single call.
+
+        The multi-table counterpart of :meth:`update_data` and the idempotent
+        counterpart of :meth:`add_records`: rows whose ``id`` already exists
+        are updated, new ids are inserted, so re-running the same payload
+        converges instead of duplicating. Tables are processed in FK
+        dependency order (record → view → entity → … → annotation).
+
+        Args:
+            data: Mapping of table name to one or more rows, or to an Arrow
+                ``RecordBatch``/``Table``. Arrow payloads currently require
+                ``check_integrity="none"`` — vectorized Arrow integrity checks
+                land with the import engine (spec §8); missing
+                ``created_at``/``updated_at`` columns are appended to Arrow
+                payloads so the LanceDB schema cast cannot fail on them.
+            check_integrity: Integrity-check mode for row payloads. Uniqueness
+                against already-stored ids is intentionally not enforced
+                (existing ids are updates by design); in-batch duplicates,
+                missing ids, and foreign keys are checked.
+            known_ids: Optional ``table → ids`` mapping (e.g. an import
+                engine's id ledger) used to resolve foreign keys without DB
+                lookups.
+
+        Returns:
+            Mapping of table name to number of rows upserted.
+        """
+        row_payloads: dict[str, list[LanceModel]] = {}
+        arrow_payloads: dict[str, pa.Table] = {}
+        for table_name, value in data.items():
+            if value is None:
+                continue
+            if isinstance(value, pa.RecordBatch):
+                value = pa.Table.from_batches([value])
+            if isinstance(value, pa.Table):
+                if value.num_rows:
+                    arrow_payloads[table_name] = value
+                continue
+            rows = value if isinstance(value, list) else [value]
+            if rows:
+                row_payloads[table_name] = rows
+
+        if not row_payloads and not arrow_payloads:
+            return {}
+
+        ordered_tables = self._table_insert_order([*row_payloads.keys(), *arrow_payloads.keys()])
+
+        # Sort temporal row batches by timestamp for storage co-locality.
+        for table_name, rows in row_payloads.items():
+            schema_type = self.info.tables.get(table_name)
+            if schema_type is not None and "timestamp" in schema_type.model_fields:
+                row_payloads[table_name] = sorted(rows, key=lambda s: (getattr(s, "timestamp", 0),))
+
+        if check_integrity != "none":
+            pending_ids: dict[str, set[str]] = {
+                tname: {row.id for row in rows if row.id} for tname, rows in row_payloads.items()
+            }
+            accumulated: dict[str, set[str]] = {tname: set(ids) for tname, ids in (known_ids or {}).items()}
+            for table_name in ordered_tables:
+                rows_to_check = row_payloads.get(table_name)
+                if rows_to_check is None:
+                    continue
+                # Upsert semantics: ids already known for the target table are
+                # legal (they are updates), so uniqueness applies only inside
+                # the batch; other tables' known ids still resolve FKs.
+                upsert_known = {tname: ids for tname, ids in accumulated.items() if tname != table_name}
+                validate_batch(
+                    table_name,
+                    rows_to_check,
+                    upsert_known,
+                    self,
+                    raise_or_warn=check_integrity,
+                    pending_ids=pending_ids,
+                )
+                accumulated.setdefault(table_name, set()).update(row.id for row in rows_to_check if row.id)
+            for table_name in ordered_tables:
+                arrow_batch = arrow_payloads.get(table_name)
+                if arrow_batch is None:
+                    continue
+                upsert_known = {tname: ids for tname, ids in accumulated.items() if tname != table_name}
+                validate_arrow_batch(
+                    table_name,
+                    arrow_batch,
+                    upsert_known,
+                    self,
+                    raise_or_warn=check_integrity,
+                    pending_ids=pending_ids,
+                )
+                if "id" in arrow_batch.schema.names:
+                    accumulated.setdefault(table_name, set()).update(
+                        value.as_py() for value in arrow_batch.column("id") if value.as_py()
+                    )
+
+        counts: dict[str, int] = {}
+        for table_name in ordered_tables:
+            table = self.open_table(table_name)
+            if table_name in row_payloads:
+                rows = row_payloads[table_name]
+                self._stamp_upsert_timestamps(table, rows)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(rows)
+                counts[table_name] = len(rows)
+            else:
+                arrow_table = self._with_timestamp_columns(table, arrow_payloads[table_name])
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(arrow_table)
+                counts[table_name] = arrow_table.num_rows
+
+        if SchemaGroup.RECORD.value in counts:
+            self._num_rows_cache = None
+        return counts
+
+    def _stamp_upsert_timestamps(self, table: LanceTable, rows: list[LanceModel]) -> None:
+        """Stamp ``updated_at`` and preserve stored ``created_at`` for existing rows."""
+        if not rows or not (hasattr(rows[0], "created_at") or hasattr(rows[0], "updated_at")):
+            return
+
+        stored_created_at: dict[str, datetime | None] = {}
+        if hasattr(rows[0], "created_at"):
+            row_ids = {row.id for row in rows if row.id}
+            if row_ids:
+                stored_created_at = {
+                    stored["id"]: stored["created_at"]
+                    for stored in TableQueryBuilder(table, self._db_connection)
+                    .select(["id", "created_at"])
+                    .where(f"id in {to_sql_list(row_ids)}")
+                    .to_list()
+                }
+
+        for row in rows:
+            now = datetime.now()
+            if hasattr(row, "updated_at"):
+                row.updated_at = now
+            if hasattr(row, "created_at"):
+                existing = stored_created_at.get(row.id)
+                row.created_at = existing if existing is not None else now
+
+    def _with_timestamp_columns(self, table: LanceTable, arrow_table: pa.Table) -> pa.Table:
+        """Append missing ``created_at``/``updated_at`` columns to an Arrow payload."""
+        table_schema = table.schema
+        present = set(arrow_table.schema.names)
+        now = datetime.now()
+        for column in ("created_at", "updated_at"):
+            if column in table_schema.names and column not in present:
+                field = table_schema.field(column)
+                arrow_table = arrow_table.append_column(field, pa.array([now] * arrow_table.num_rows, type=field.type))
+        return arrow_table
+
+    # Standard filter columns the REST/query layers put in where clauses, with
+    # the index type suited to their cardinality. When EVERY predicate column
+    # of a query is index-covered, lancedb applies limit/offset after the
+    # filter — TableQueryBuilder's fast path depends on this census.
+    FILTER_INDEX_COLUMNS: ClassVar[dict[str, str]] = {
+        "id": "BTREE",
+        "record_id": "BTREE",
+        "entity_id": "BTREE",
+        "view_id": "BTREE",
+        "frame_id": "BTREE",
+        "tracklet_id": "BTREE",
+        "frame_index": "BTREE",
+        "logical_name": "BITMAP",
+        "split": "BITMAP",
+        "source_type": "BITMAP",
+    }
+
+    def create_scalar_indexes(
+        self,
+        columns: Sequence[str] | None = None,
+        tables: Sequence[str] | None = None,
+    ) -> None:
+        """Create scalar indexes on the given columns of the given tables.
+
+        Idempotent: columns that are already indexed or absent from a table's
+        schema are skipped. Indexes make ``merge_insert``, foreign-key lookups,
+        export paging, and filtered pagination scale past full-table scans.
+
+        Args:
+            columns: Column names to index where present. Defaults to the
+                standard filter columns (``FILTER_INDEX_COLUMNS``).
+            tables: Table names to index. Defaults to every dataset table.
+        """
+        wanted = list(columns) if columns is not None else list(self.FILTER_INDEX_COLUMNS)
+        table_names = list(tables) if tables is not None else list(self.info.tables.keys())
+        for table_name in table_names:
+            table = self.open_table(table_name)
+            indexed_columns: set[str] = set()
+            for index in table.list_indices():
+                indexed_columns.update(getattr(index, "columns", None) or [])
+            schema_names = set(table.schema.names)
+            for column in wanted:
+                if column in schema_names and column not in indexed_columns:
+                    table.create_scalar_index(column, index_type=self.FILTER_INDEX_COLUMNS.get(column, "BTREE"))
+
+    # ------------------------------------------------------------------
+    # Cross-process cache invalidation
+    # ------------------------------------------------------------------
+
+    _cache_invalidation_hooks: ClassVar[list[Callable[[str], None]]] = []
+
+    @classmethod
+    def register_cache_invalidation_hook(cls, hook: Callable[[str], None]) -> None:
+        """Register a callable invoked with a dataset id when its caches must be dropped."""
+        if hook not in cls._cache_invalidation_hooks:
+            cls._cache_invalidation_hooks.append(hook)
+
+    @classmethod
+    def invalidate_caches(cls, dataset_id: str) -> None:
+        """Notify registered caches that a dataset changed on disk (e.g. after an import)."""
+        for hook in cls._cache_invalidation_hooks:
+            try:
+                hook(dataset_id)
+            except Exception as exc:
+                logger.warning("Cache invalidation hook %r failed for dataset %s: %s", hook, dataset_id, exc)
 
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.

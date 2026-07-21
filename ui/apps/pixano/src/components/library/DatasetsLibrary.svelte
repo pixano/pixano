@@ -11,7 +11,7 @@ License: CECILL-C
 
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
   import { panTool } from "../workspace";
-  import ImportDatasetModal from "./ImportDatasetModal.svelte";
+  import ImportWizard from "./import-wizard/ImportWizard.svelte";
   import { goto } from "$app/navigation";
   import { datasetFilter, datasetSortMode, datasetsStore } from "$lib/stores/appStores.svelte";
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
@@ -123,7 +123,7 @@ License: CECILL-C
 </script>
 
 {#if showImport}
-  <ImportDatasetModal
+  <ImportWizard
     onClose={() => {
       showImport = false;
     }}
@@ -164,7 +164,7 @@ License: CECILL-C
               : 'bg-background text-muted-foreground hover:text-foreground'}"
             onclick={() => (datasetSortMode.value = "name")}
           >
-            Nom
+            Name
           </button>
           <button
             class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors {datasetSortMode.value ===
@@ -176,6 +176,17 @@ License: CECILL-C
             Date
           </button>
         </div>
+        <button
+          onclick={() => {
+            showImport = true;
+          }}
+          class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground
+            text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-primary/90 active:scale-95
+            transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <UploadSimple weight="bold" size={14} />
+          Import
+        </button>
         <div
           class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
         >

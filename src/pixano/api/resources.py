@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from pixano.schemas import (
     BBox,
+    Classification,
     CompressedRLE,
     Embedding,
     Entity,
@@ -22,8 +23,10 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    Relation,
     SchemaGroup,
     TextSpan,
+    TimeSeries,
     Tracklet,
     canonical_table_name_for_schema,
 )
@@ -32,6 +35,9 @@ from .models import (
     BBoxCreate,
     BBoxResponse,
     BBoxUpdate,
+    ClassificationCreate,
+    ClassificationResponse,
+    ClassificationUpdate,
     EmbeddingCreate,
     EmbeddingResponse,
     EntityCreate,
@@ -55,9 +61,13 @@ from .models import (
     RecordCreate,
     RecordResponse,
     RecordUpdate,
+    RelationCreate,
+    RelationResponse,
+    RelationUpdate,
     TextSpanCreate,
     TextSpanResponse,
     TextSpanUpdate,
+    TimeSeriesResponse,
     TrackletCreate,
     TrackletResponse,
     TrackletUpdate,
@@ -137,6 +147,14 @@ def _validate_message_create(service: Any, data: dict[str, Any]) -> None:
 
     for referenced_entity_id in data.get("entity_ids", []):
         service.validate_entity_exists(referenced_entity_id)
+
+
+def _validate_entity_annotation_create(service: Any, data: dict[str, Any]) -> None:
+    service.validate_record_exists(data["record_id"])
+
+    entity_id = data.get("entity_id", "")
+    if entity_id:
+        service.validate_entity_exists(entity_id)
 
 
 RECORD_RESOURCE = ResourceSpec(
@@ -317,6 +335,22 @@ MESSAGE_RESOURCE = ResourceSpec(
     validate_create=_validate_message_create,
 )
 
+TIMESERIES_RESOURCE = ResourceSpec(
+    name="timeseries",
+    path="timeseries",
+    tag="Time Series",
+    schema_group=SchemaGroup.TIMESERIES,
+    schema_cls=TimeSeries,
+    canonical_table_name=canonical_table_name_for_schema(TimeSeries),
+    create_model=None,
+    update_model=None,
+    response_model=TimeSeriesResponse,
+    list_filters=("record_id", "view_name", "frame_index", "where"),
+    allow_create=False,
+    allow_update=False,
+    allow_delete=False,
+)
+
 EMBEDDING_RESOURCE = ResourceSpec(
     name="embedding",
     path="embeddings",
@@ -332,6 +366,36 @@ EMBEDDING_RESOURCE = ResourceSpec(
     allow_delete=False,
 )
 
+
+CLASSIFICATION_RESOURCE = ResourceSpec(
+    name="classification",
+    path="classifications",
+    tag="Classifications",
+    schema_group=SchemaGroup.ANNOTATION,
+    schema_cls=Classification,
+    canonical_table_name=canonical_table_name_for_schema(Classification),
+    create_model=ClassificationCreate,
+    update_model=ClassificationUpdate,
+    response_model=ClassificationResponse,
+    list_filters=("record_id", "entity_id", "view_name", "source_type", "where"),
+    validate_create=_validate_entity_annotation_create,
+)
+
+RELATION_RESOURCE = ResourceSpec(
+    name="relation",
+    path="relations",
+    tag="Relations",
+    schema_group=SchemaGroup.ANNOTATION,
+    schema_cls=Relation,
+    canonical_table_name=canonical_table_name_for_schema(Relation),
+    create_model=RelationCreate,
+    update_model=RelationUpdate,
+    response_model=RelationResponse,
+    list_filters=("record_id", "entity_id", "view_name", "source_type", "where"),
+    validate_create=_validate_entity_annotation_create,
+)
+
+
 RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     RECORD_RESOURCE,
     ENTITY_RESOURCE,
@@ -341,15 +405,20 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     MASK_RESOURCE,
     MULTI_PATH_RESOURCE,
     KEYPOINTS_RESOURCE,
+    CLASSIFICATION_RESOURCE,
+    RELATION_RESOURCE,
     MESSAGE_RESOURCE,
     TEXT_SPAN_RESOURCE,
+    TIMESERIES_RESOURCE,
     EMBEDDING_RESOURCE,
 )
 
 
 __all__ = [
     "BBOX_RESOURCE",
+    "CLASSIFICATION_RESOURCE",
     "EMBEDDING_RESOURCE",
+    "TIMESERIES_RESOURCE",
     "ENTITY_DYNAMIC_STATE_RESOURCE",
     "ENTITY_RESOURCE",
     "RECORD_RESOURCE",
@@ -357,6 +426,7 @@ __all__ = [
     "MASK_RESOURCE",
     "MESSAGE_RESOURCE",
     "MULTI_PATH_RESOURCE",
+    "RELATION_RESOURCE",
     "ResourceSpec",
     "TEXT_SPAN_RESOURCE",
     "TRACKLET_RESOURCE",

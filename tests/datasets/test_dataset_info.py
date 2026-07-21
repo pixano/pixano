@@ -51,6 +51,7 @@ class TestDatasetInfo:
             "bookmarks",
             "workspace",
             "storage_mode",
+            "spec_version",
             "record",
             "entity",
             "entity_dynamic_state",
@@ -58,8 +59,11 @@ class TestDatasetInfo:
             "mask",
             "multi_path",
             "keypoint",
+            "classification",
+            "relation",
             "tracklet",
             "message",
+            "timeseries",
             "text_span",
             "views",
             "tables",
@@ -98,6 +102,7 @@ class TestDatasetInfo:
         assert dumped["preview"] == "/preview"
         assert dumped["workspace"] == "image"
         assert dumped["storage_mode"] == "filesystem"
+        assert dumped["spec_version"] == 2
         assert isinstance(dumped["creation_date"], str) and dumped["creation_date"]
         assert dumped["bookmarks"] == []
         assert dumped["record"] == {"base": "Record", "fields": {}}
@@ -106,10 +111,13 @@ class TestDatasetInfo:
         assert dumped["bbox"] == {"base": "BBox", "fields": {}}
         assert dumped["mask"] is None
         assert dumped["keypoint"] is None
+        assert dumped["classification"] is None
+        assert dumped["relation"] is None
         assert dumped["tracklet"] is None
         assert dumped["message"] is None
         assert dumped["multi_path"] is None
         assert dumped["text_span"] is None
+        assert dumped["timeseries"] is None
         assert dumped["views"] == {"image": {"base": "Image", "fields": {}}}
 
     def test_from_json(self):
@@ -141,6 +149,7 @@ class TestDatasetInfo:
     "tracklet": null,
     "message": null,
     "text_span": null,
+    "timeseries": null,
     "views": {
         "image": {
             "base": "Image",
@@ -158,6 +167,7 @@ class TestDatasetInfo:
             preview="/preview",
             creation_date="2025-06-01T12:00:00+00:00",
             workspace=WorkspaceType.IMAGE,
+            spec_version=1,  # absent in the JSON above ⇒ pre-spec_version layout
             record=Record,
             entity=Entity,
             bbox=BBox,
@@ -275,13 +285,13 @@ class TestDatasetInfo:
         ).to_json(info_fp)
 
         payload = json.loads(info_fp.read_text(encoding="utf-8"))
-        payload["views"]["timeseries"] = {"base": "TimeSeries", "fields": {}}
+        payload["views"]["hologram"] = {"base": "HologramView", "fields": {}}
         info_fp.write_text(json.dumps(payload, indent=4), encoding="utf-8")
 
         info = DatasetInfo.from_json(info_fp)
 
         assert "image" in info.views
-        assert "timeseries" not in info.views
+        assert "hologram" not in info.views
 
     def test_load_id(self):
         temp_dir = Path(tempfile.TemporaryDirectory().name)
@@ -366,3 +376,24 @@ class TestDatasetInfo:
 
     def test_bookmarks_constant(self):
         assert BOOKMARK_TYPES == ("TODO", "NEW", "FAVORITE")
+
+
+class TestSpecVersion:
+    def test_defaults_to_2_for_new_infos(self):
+        assert DatasetInfo().spec_version == 2
+
+    def test_absent_in_json_means_version_1(self):
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        temp_file.write_text(
+            """{
+    "id": "id",
+    "name": "old",
+    "workspace": "image",
+    "record": {
+        "base": "Record",
+        "fields": {}
+    },
+    "views": {}
+}"""
+        )
+        assert DatasetInfo.from_json(temp_file).spec_version == 1

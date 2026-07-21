@@ -46,46 +46,39 @@ Consider an image dataset for detecting vehicles:
 5. You can later add model predictions (YOLO, GroundingDINO, etc.) as additional annotations — provenance fields on the annotation let you distinguish human labels from model outputs.
 6. You compute embeddings (e.g. OpenCLIP) so the dataset becomes searchable — those go in the **embedding** table.
 
-## DatasetInfo
+## The dataset schema
 
-Every dataset is defined by a `DatasetInfo` that declares its name, workspace type, and schema:
+Every dataset is defined by a schema that declares its name, workspace type, views, and custom attributes. When importing, it lives in a `dataset.yaml` file:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, Entity, Image, Record
-
-
-class Vehicle(Entity):
-    category: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="Vehicle Detection",
-    workspace=WorkspaceType.IMAGE,
-    record=Record,
-    entity=Vehicle,
-    bbox=BBox,
-    views={"image": Image},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: vehicle_detection
+  workspace: image
+schema:
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox]
 ```
 
-The `workspace` selects the UI layout. The schema types you pass (`record`, `entity`, `bbox`, `views`, etc.) determine which tables are created in the database.
+The `workspace` selects the UI layout and provides default views. The `annotations` list determines which annotation tables are created in the database. See [Importing Data](/getting_started/importing_data/) for the full reference.
 
 ### Custom fields
 
-Each schema group maps to a base class you can subclass to add domain-specific fields:
+Records, entities, and per-frame states accept domain-specific attributes with a type and an optional default:
 
-```python
-from pixano.schemas import Entity
-
-class DetectedObject(Entity):
-    category: str = ""
-    is_difficult: bool = False
-    confidence: float = 0.0
+```yaml
+schema:
+  entity:
+    attrs:
+      category: str
+      is_difficult: { type: bool, default: false }
+      confidence: { type: float, default: 0.0 }
 ```
 
-Fields must have default values (Pixano uses Pydantic under the hood).
+(Programmatic users can build the same schema in Python via `DatasetInfo` and Pydantic subclasses — the yaml compiles to exactly that.)
 
 ## Record fields
 

@@ -16,6 +16,7 @@ from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
 from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
+    Classification,
     CompressedRLE,
     Embedding,
     Entity,
@@ -24,7 +25,9 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    Relation,
     TextSpan,
+    TimeSeries,
     Tracklet,
 )
 
@@ -279,6 +282,35 @@ KeyPointsUpdate = _create_transport_model(
 )
 KeyPointsResponse = _create_transport_model("KeyPointsResponse", KeyPoints)
 
+ClassificationCreate = _create_transport_model(
+    "ClassificationCreate",
+    Classification,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+ClassificationUpdate = _create_transport_model(
+    "ClassificationUpdate",
+    Classification,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+ClassificationResponse = _create_transport_model("ClassificationResponse", Classification)
+
+RelationCreate = _create_transport_model(
+    "RelationCreate",
+    Relation,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+RelationUpdate = _create_transport_model(
+    "RelationUpdate",
+    Relation,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+RelationResponse = _create_transport_model("RelationResponse", Relation)
+
+
 TextSpanCreate = _create_transport_model(
     "TextSpanCreate",
     TextSpan,
@@ -323,6 +355,8 @@ EmbeddingCreate = _create_transport_model(
 )
 EmbeddingResponse = _create_transport_model("EmbeddingResponse", Embedding, exclude_fields={"vector"})
 
+TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
+
 
 class DatasetInfoResponse(DatasetInfo):
     """Dataset info plus the number of records."""
@@ -337,9 +371,12 @@ class DatasetInfoResponse(DatasetInfo):
         "mask",
         "multi_path",
         "keypoint",
+        "classification",
+        "relation",
         "tracklet",
         "message",
         "text_span",
+        "timeseries",
         when_used="json",
     )
     def serialize_schema_slot(self, schema_cls: type[LanceModel] | None) -> dict[str, Any] | None:
@@ -389,6 +426,9 @@ __all__ = [
     "BBoxCreate",
     "BBoxResponse",
     "BBoxUpdate",
+    "ClassificationCreate",
+    "ClassificationResponse",
+    "ClassificationUpdate",
     "DatasetInfoResponse",
     "DatasetResponse",
     "EmbeddingCreate",
@@ -416,6 +456,9 @@ __all__ = [
     "MessageResponse",
     "MessageUpdate",
     "PaginatedResponse",
+    "RelationCreate",
+    "RelationResponse",
+    "RelationUpdate",
     "ImageResponse",
     "SFrameResponse",
     "TextResponse",

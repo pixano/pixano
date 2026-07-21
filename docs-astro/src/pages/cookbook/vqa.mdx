@@ -55,38 +55,27 @@ This combination of **language annotation** (Q&A messages) and **spatial annotat
 
 ## Dataset schema
 
-Here is the `DatasetInfo` used to import a VQAv2 dataset:
+The schema lives in a `dataset.yaml` file at the root of the source folder — no Python required:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, CompressedRLE, Entity, Image, Message, Record
-
-
-class VQAv2Entity(Entity):
-    """An entity referenced by VQA questions."""
-    category: str = ""
-    subcategory: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="VQAv2 Sample",
-    description="VQAv2 visual question answering dataset.",
-    workspace=WorkspaceType.IMAGE_VQA,
-    record=Record,
-    entity=VQAv2Entity,
-    message=Message,
-    bbox=BBox,
-    mask=CompressedRLE,
-    views={"image": Image},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: vqav2_sample
+  workspace: image_vqa
+schema:
+  entity:
+    attrs:
+      category: str
+      subcategory: str
+  annotations: [message, bbox, mask]
 ```
 
 Let's break this down:
 
-- **`VQAv2Entity`** — A custom entity with `category` (e.g. `"animal"`, `"furniture"`) and `subcategory` (e.g. `"cat"`, `"couch"`). These entities represent the objects that questions refer to.
+- **`entity.attrs`** — Custom entity fields: `category` (e.g. `"animal"`, `"furniture"`) and `subcategory` (e.g. `"cat"`, `"couch"`). These entities represent the objects that questions refer to.
 
-- **`message=Message`** — Creates a message table for Q&A pairs. Each `Message` has:
+- **`message`** — Creates a message table for Q&A pairs. Each message has:
   - `type` — `"QUESTION"` or `"ANSWER"` (or `"SYSTEM"` for instructions)
   - `content` — the text of the question or answer
   - `question_type` — `"OPEN"` for free-form, `"SINGLE_CHOICE"` or `"MULTI_CHOICE"` for multiple-choice
@@ -95,9 +84,11 @@ Let's break this down:
   - `number` — the message's position within the conversation
   - `entity_ids` — links the message to specific entities in the image
 
-- **`bbox=BBox` and `mask=CompressedRLE`** — The original VQAv2 dataset contains only questions and answers. We include bounding boxes and masks because **Pixano lets you enrich a VQA dataset with entity annotations**. You can draw boxes and masks on the objects that questions refer to, creating a bridge between language understanding and spatial grounding.
+- **`bbox` and `mask`** — The original VQAv2 dataset contains only questions and answers. We include bounding boxes and masks because **Pixano lets you enrich a VQA dataset with entity annotations**. You can draw boxes and masks on the objects that questions refer to, creating a bridge between language understanding and spatial grounding.
 
-- **`workspace=WorkspaceType.IMAGE_VQA`** — Switches the UI to VQA mode: the image is displayed alongside a conversation panel for managing questions and answers.
+- **`workspace: image_vqa`** — Provides the single-image view and switches the UI to VQA mode: the image is displayed alongside a conversation panel for managing questions and answers.
+
+See [Importing Data](/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
 
 ## Import the dataset
 
@@ -130,16 +121,13 @@ Each line describes one image with its questions and answers:
 
 ```json
 {
-  "status": "validated",
   "views": { "image": "000000.jpg" },
-  "messages": [
+  "attrs": { "status": "validated" },
+  "conversations": [
     {
-      "question": {
-        "content": "Where are the kids riding?",
-        "question_type": "OPEN"
-      },
-      "responses": [
-        { "content": "carnival ride" }
+      "messages": [
+        { "type": "QUESTION", "question_type": "OPEN", "content": "Where are the kids riding?" },
+        { "type": "ANSWER", "content": "carnival ride" }
       ]
     }
   ]
@@ -147,9 +135,10 @@ Each line describes one image with its questions and answers:
 ```
 
 Notice the structure:
-- `"messages"` is a list of Q&A exchanges for this image
-- Each exchange has a `"question"` object with `"content"` and `"question_type"`
-- `"responses"` is a list of answers — VQAv2 supports multiple answers per question from different annotators
+- `"conversations"` is a list of exchanges for this image; each holds an ordered `"messages"` list
+- Every message declares its `"type"` — `QUESTION`, `ANSWER`, or `SYSTEM`
+- `"question_type"` is **required** on questions: `OPEN` for free-form, `SINGLE_CHOICE`/`MULTI_CHOICE` for multiple-choice, `YES_NO` for boolean — Pixano never infers it
+- Multiple answers per question (as in VQAv2) are simply consecutive `ANSWER` messages
 
 <Callout type="note" title="Multiple-choice questions" collapsible>
 
@@ -157,12 +146,15 @@ For multiple-choice questions, set `question_type` to `"SINGLE_CHOICE"` or `"MUL
 
 ```json
 {
-  "question": {
-    "content": "What is in the image?",
-    "question_type": "SINGLE_CHOICE",
-    "choices": ["a cat", "a dog", "a bird", "a fish"]
-  },
-  "responses": [{ "content": "a cat" }]
+  "messages": [
+    {
+      "type": "QUESTION",
+      "question_type": "SINGLE_CHOICE",
+      "content": "What is in the image?",
+      "choices": ["a cat", "a dog", "a bird", "a fish"]
+    },
+    { "type": "ANSWER", "content": "a cat" }
+  ]
 }
 ```
 
@@ -172,9 +164,10 @@ For multiple-choice questions, set `question_type` to `"SINGLE_CHOICE"` or `"MUL
 
 ```bash
 pixano init ./my_library
-pixano data import ./my_library ./vqav2_sample \
-    --info data_importation/vqav2/info.py:dataset_info
+pixano data import ./my_library ./vqav2_sample
 ```
+
+Pixano validates every line first and prints a plan; use `--dry-run` to only validate.
 
 ## Launch and explore
 

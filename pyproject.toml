@@ -46,7 +46,12 @@ dependencies = [
   "tqdm >= 4.64.0, < 5.0.0",
   "typer >= 0.9.0, < 1.0.0",
   "uvicorn >= 0.20.0, < 1.0.0",
+  "pyyaml>=6.0,<7.0",
 ]
+
+[project.optional-dependencies]
+coco = ["ijson >= 3.2, < 4.0"]
+lerobot = ["huggingface_hub >= 0.20, < 1.0"]
 
 [dependency-groups]
 docs = [
@@ -88,6 +93,8 @@ path = "src/pixano/__version__.py"
 [tool.pytest.ini_options]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
+    "slow: Long-running scale/soak tests, excluded from the default CI run",
+    "hub: Tests downloading from the Hugging Face hub, excluded from the default CI run",
 ]
 
 [tool.ruff]

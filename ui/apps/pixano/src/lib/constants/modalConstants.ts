@@ -33,3 +33,7 @@ export const BLOCKING_ALERT_ACTIONS_CLASS =
 
 export const BLOCKING_ALERT_SECONDARY_BUTTON_CLASS =
   "inline-flex h-10 w-full items-center justify-center rounded-xl border border-border/60 bg-background/75 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground transition-all duration-200 hover:border-primary/30 hover:bg-accent/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:w-auto";
+
+/** Wider variant for content-heavy dialogs (the import wizard's review/schema steps). */
+export const BLOCKING_ALERT_CONTENT_WIDE_CLASS =
+  "glass-heavy relative my-8 w-full max-w-3xl overflow-hidden rounded-2xl border border-primary/10 text-left text-foreground shadow-glass-lg";

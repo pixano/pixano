@@ -272,6 +272,32 @@ def _serialize_table_schema(schema: type[LanceModel]) -> dict[str, Any]:
     return payload
 
 
+def serialize_dataset_info_schema(info: Any) -> dict[str, Any]:
+    """Serialize a DatasetInfo's resolved schema for display (plan ``inferred_schema``, REST).
+
+    The payload mirrors what ``GET /datasets/{id}/info`` serves per slot: the
+    workspace, each logical view, and every non-``None`` schema slot as a
+    ``{base, name?, fields}`` manifest dict.
+
+    Args:
+        info: The resolved ``DatasetInfo``.
+
+    Returns:
+        JSON-compatible schema payload.
+    """
+    from pixano.schemas import supported_dataset_info_slots
+
+    payload: dict[str, Any] = {
+        "workspace": getattr(info.workspace, "value", str(info.workspace)),
+        "views": {name: _serialize_table_schema(cls) for name, cls in sorted(info.views.items())},
+    }
+    for slot in supported_dataset_info_slots():
+        schema_cls = getattr(info, slot, None)
+        if schema_cls is not None:
+            payload[slot] = _serialize_table_schema(schema_cls)
+    return payload
+
+
 def _deserialize_table_schema(payload: dict[str, Any]) -> type[LanceModel]:
     """Deserialize a JSON dict back into a LanceModel schema class.
 
@@ -288,6 +314,11 @@ def _deserialize_table_schema(payload: dict[str, Any]) -> type[LanceModel]:
 
     model_name = payload.get("name")
     if model_name is None:
+        if payload.get("fields"):
+            raise ValueError(
+                f"Schema manifest for base '{base_name}' declares custom fields but no subclass 'name'; "
+                "refusing to silently drop them."
+            )
         return base_type
 
     fields = {

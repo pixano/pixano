@@ -35,6 +35,8 @@ export const sidebarNav: Record<string, NavSection[]> = {
         },
         { title: "Quickstart", href: "/getting_started/quickstart/" },
         { title: "Key Concepts", href: "/getting_started/key_concepts/" },
+        { title: "Importing Data", href: "/getting_started/importing_data/" },
+        { title: "Custom Importers", href: "/getting_started/custom_importers/" },
       ],
     },
   ],
@@ -109,9 +111,6 @@ export const sidebarNav: Record<string, NavSection[]> = {
           title: "builders",
           children: [
             { title: "dataset_builder", href: "/api_reference/module/datasets/builders/dataset_builder/" },
-            { title: "image", href: "/api_reference/module/datasets/builders/folders/image/" },
-            { title: "video", href: "/api_reference/module/datasets/builders/folders/video/" },
-            { title: "vqa", href: "/api_reference/module/datasets/builders/folders/vqa/" },
           ],
         },
         {

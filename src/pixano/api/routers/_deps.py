@@ -18,6 +18,21 @@ from pixano.datasets import Dataset
 _dataset_cache: dict[str, Dataset] = {}
 
 
+def invalidate_dataset(dataset_id: str) -> None:
+    """Drop cached `Dataset` instances for the given dataset id.
+
+    Registered as a `Dataset` cache-invalidation hook so that rebuilding or
+    overwriting a dataset on disk (e.g. an import job) is picked up by the API
+    without a server restart.
+    """
+    prefix = f"{dataset_id}:"
+    for cache_key in [key for key in _dataset_cache if key.startswith(prefix)]:
+        _dataset_cache.pop(cache_key, None)
+
+
+Dataset.register_cache_invalidation_hook(invalidate_dataset)
+
+
 def get_dataset_dep(
     dataset_id: str,
     settings: Settings = Depends(get_settings),

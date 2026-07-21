@@ -48,7 +48,7 @@ License: CECILL-C
         const val = info.getValue();
         return val == null ? "" : String(val as string | number | boolean);
       },
-      enableSorting: col.type !== "image" && col.type !== "video",
+      enableSorting: col.type !== "image" && col.type !== "video" && col.type !== "list",
     }));
   };
 
