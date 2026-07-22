@@ -6,7 +6,9 @@
 
 """Pixano data import/export CLI (spec §9) — a thin shell over the shared io core."""
 
+import datetime
 import json
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -420,7 +422,7 @@ def fix_creation_dates(
 
             oldest_date = oldest_rows[0].created_at
             if oldest_date.tzinfo is None:
-                oldest_date = oldest_date.replace(tzinfo=timezone.utc)
+                oldest_date = oldest_date.replace(tzinfo=datetime.timezone.utc)
             dataset.info.creation_date = oldest_date.isoformat()
 
             backup_path = info_json.with_suffix(".json.bak")

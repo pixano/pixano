@@ -308,6 +308,12 @@ License: CECILL-C
             <span class="text-xs font-medium uppercase tracking-tighter">{dataset.size}</span>
           </div>
         {/if}
+        <div class="h-1 w-1 rounded-full bg-border"></div>
+        <div class="flex items-center gap-1.5 text-muted-foreground ml-auto">
+          <span class="text-[10px] font-medium tabular-nums">
+            {new Date(dataset.creation_date).toLocaleDateString()}
+          </span>
+        </div>
       </div>
 
       <!-- Split / Status Progress Bars -->
