@@ -12,7 +12,7 @@ from typing import Annotated, Any
 
 import PIL.Image
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from pixano.api.media import MULTIPART_BOUNDARY, iter_multipart_frames, media_type_from_format
 from pixano.api.models import (
