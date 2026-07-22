@@ -296,6 +296,32 @@ The selectable fields are: `status`, `created_at`, `updated_at`, `comment`. Thes
 
 </Callout>
 
+When re-importing an exported dataset that contains record base fields in `"attrs"`, the importer maps them back to the corresponding Record fields automatically — no special flag is needed:
+
+```sh
+pixano data import /path/to/data_dir ./exported
+```
+
+For the importer to accept these fields, declare them in `dataset.yaml` under `schema.record.attrs`. The following exemple declares a supplementary string field named `label` as a record's attribute, that will be imported from the JSONL dataset files :
+
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: my_dataset
+  workspace: image
+schema:
+  record:
+    attrs:
+      label: str
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox]
+```
+
+The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as Record base fields by name and sets them directly. If the value type does not match (e.g. a string where a `datetime` is expected), the import fails with a clear validation error.
+
 ### Deterministic ids and round-trips
 
 You may provide explicit `id`s on any object; everything else gets a **deterministic** id derived from the source (namespace, split, file, line). Re-importing the same source produces the same ids — which makes `pixano data import --mode add` re-runs idempotent, and makes export/import a true round-trip:
