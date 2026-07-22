@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, overload
 
@@ -50,6 +51,8 @@ from pixano.schemas import (
 from pixano.schemas.schema_group import SchemaGroup, schema_to_group
 
 
+BOOKMARK_TYPES: tuple[str, ...] = ("TODO", "NEW", "FAVORITE")
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,6 +86,8 @@ class DatasetInfo(BaseModel):
         description: Dataset description.
         size: Dataset estimated size.
         preview: Path to a preview thumbnail.
+        creation_date: ISO creation date string. Auto-populated if empty.
+        bookmarks: List of bookmark labels (e.g. TODO, NEW, FAVORITE).
         workspace: Workspace type.
         storage_mode: How media data is stored.
         spec_version: Version of the on-disk dataset layout this dataset conforms to
@@ -106,6 +111,8 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+    creation_date: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    bookmarks: list[str] = Field(default_factory=list)
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
     storage_mode: Literal["filesystem", "embedded", "mixed"] = "filesystem"
     spec_version: int = 2
@@ -279,6 +286,9 @@ class DatasetInfo(BaseModel):
         )
         # Datasets written before spec_version existed are layout version 1.
         info_json.setdefault("spec_version", 1)
+        # Datasets written before creation_date existed load a STABLE empty value —
+        # never a fabricated load-time date (the fix-creation-dates CLI backfills it).
+        info_json.setdefault("creation_date", "")
 
         for slot_name in supported_dataset_info_slots():
             schema_payload = info_json.get(slot_name)

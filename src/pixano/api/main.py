@@ -11,7 +11,7 @@ from pathlib import Path
 import anyio.to_thread
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -62,9 +62,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(
-        title="Pixano", version=__version__, default_response_class=ORJSONResponse, lifespan=_widen_threadpool
-    )
+    app = FastAPI(title="Pixano", version=__version__, default_response_class=JSONResponse, lifespan=_widen_threadpool)
 
     # Boot recovery: replay interrupted staging journals and mark orphaned
     # import jobs as interrupted (spec §8/§9).

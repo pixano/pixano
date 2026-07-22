@@ -142,3 +142,49 @@ class TestJobsCliRecovery:
         assert result.exit_code == 0
         assert "interrupted" in result.output
         assert store.get_job(job.id).status == "interrupted"
+
+
+class TestFixCreationDates:
+    def _import_legacy(self, tmp_path: Path) -> Path:
+        """Import a dataset, then strip creation_date to simulate a legacy library."""
+        data_dir, source = _prepare_source(tmp_path)
+        assert runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"]).exit_code == 0
+        info_json = next((data_dir / "library").glob("*/info.json"))
+        raw = json.loads(info_json.read_text(encoding="utf-8"))
+        raw.pop("creation_date", None)
+        raw["custom_note"] = "keep me"  # unknown key: must survive the rewrite
+        info_json.write_text(json.dumps(raw, indent=4), encoding="utf-8")
+        return data_dir
+
+    def test_backfills_from_oldest_record_preserving_unknown_keys(self, tmp_path: Path):
+        from datetime import datetime, timezone
+
+        data_dir = self._import_legacy(tmp_path)
+        result = runner.invoke(app, ["data", "fix-creation-dates", str(data_dir)])
+        assert result.exit_code == 0, result.output
+        assert "Updated" in result.output
+        info_json = next((data_dir / "library").glob("*/info.json"))
+        raw = json.loads(info_json.read_text(encoding="utf-8"))
+        assert raw["creation_date"]
+        assert raw["custom_note"] == "keep me"  # raw-JSON patch, not a lossy model round-trip
+        dataset = Dataset(info_json.parent)
+        oldest = dataset.get_data("records", sortcol="created_at", order="asc", limit=1)[0].created_at
+        assert datetime.fromisoformat(raw["creation_date"]) == oldest.astimezone(timezone.utc)
+        assert info_json.with_suffix(".json.bak").exists()
+
+    def test_second_run_skips(self, tmp_path: Path):
+        data_dir = self._import_legacy(tmp_path)
+        assert runner.invoke(app, ["data", "fix-creation-dates", str(data_dir)]).exit_code == 0
+        second = runner.invoke(app, ["data", "fix-creation-dates", str(data_dir)])
+        assert second.exit_code == 0
+        assert "0 dataset(s) updated" in second.output
+
+    def test_malformed_sibling_does_not_abort(self, tmp_path: Path):
+        data_dir = self._import_legacy(tmp_path)
+        broken = data_dir / "library" / "aaa_broken"  # sorts before the real dataset
+        broken.mkdir()
+        (broken / "info.json").write_text("{not json", encoding="utf-8")
+        result = runner.invoke(app, ["data", "fix-creation-dates", str(data_dir)])
+        assert result.exit_code == 0, result.output
+        assert "Error processing 'aaa_broken'" in result.output
+        assert "1 dataset(s) updated" in result.output

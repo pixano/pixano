@@ -49,7 +49,7 @@ from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
-from .dataset_stat import DatasetStatistic
+from .dataset_stat import DatasetStatistic, SplitStatusCount
 
 
 if TYPE_CHECKING:
@@ -307,6 +307,37 @@ class Dataset:
         """
         table = self.open_table(table_name)
         return table.count_rows(where)
+
+    def get_splits_count(self) -> list[SplitStatusCount]:
+        """Get record counts grouped by split and status.
+
+        Opens the record table as PyArrow, groups by ``["split", "status"]``
+        and aggregates counts.  If the ``status`` column does not exist the
+        table is old-schema and an empty list is returned for backward
+        compatibility.
+
+        Returns:
+            List of SplitStatusCount sorted by split asc then status asc.
+        """
+        try:
+            arrow_table = self.open_table(SchemaGroup.RECORD.value).to_arrow()
+        except Exception:
+            return []
+
+        if "status" not in arrow_table.column_names:
+            return []
+
+        grouped = arrow_table.group_by(["split", "status"]).aggregate([("id", "count")])
+        grouped = grouped.rename_columns(["split", "status", "count"])
+        grouped = grouped.sort_by([("split", "ascending"), ("status", "ascending")])
+
+        result: list[SplitStatusCount] = []
+        splits = grouped.column("split").to_pylist()
+        statuses = grouped.column("status").to_pylist()
+        counts = grouped.column("count").to_pylist()
+        for split, status, count in zip(splits, statuses, counts):
+            result.append(SplitStatusCount(split=split, status=status, count=count))
+        return result
 
     def generate_preview(self) -> str:
         """Generate a preview for the dataset.
@@ -966,6 +997,7 @@ class Dataset:
         self,
         data: dict[str, LanceModel | list[LanceModel]],
         check_integrity: Literal["raise", "warn", "none"] = "raise",
+        stamp_timestamps: bool = True,
     ) -> None:
         """Insert rows into multiple tables in a single call.
 
@@ -981,6 +1013,11 @@ class Dataset:
             check_integrity: Integrity-check mode.
                 ``"raise"`` (default) aborts on the first error,
                 ``"warn"`` emits warnings, ``"none"`` skips validation.
+            stamp_timestamps: Overwrite ``created_at``/``updated_at`` with
+                now (default). Importers pass ``False`` so explicitly
+                provided timestamps (e.g. a re-imported export) survive;
+                rows without explicit values keep their construction-time
+                defaults, which are equally "now".
         """
         # Normalize values to lists and filter empties
         normalized: dict[str, list[LanceModel]] = {}
@@ -1032,11 +1069,12 @@ class Dataset:
         # Insert into LanceDB in dependency order
         for table_name in ordered_tables:
             rows = normalized[table_name]
-            for row in rows:
-                if hasattr(row, "created_at"):
-                    row.created_at = datetime.now()
-                if hasattr(row, "updated_at"):
-                    row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
+            if stamp_timestamps:
+                for row in rows:
+                    if hasattr(row, "created_at"):
+                        row.created_at = datetime.now()
+                    if hasattr(row, "updated_at"):
+                        row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
             table = self.open_table(table_name)
             table.add(rows)
 

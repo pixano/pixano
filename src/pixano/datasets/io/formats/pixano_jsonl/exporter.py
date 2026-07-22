@@ -16,6 +16,7 @@ fails with guidance on embedded-only datasets.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -24,6 +25,8 @@ from lancedb.pydantic import LanceModel
 
 from pixano.datasets.dataset import Dataset
 from pixano.schemas import Entity, EntityDynamicState, Record
+from pixano.schemas.annotations.entity_annotation import EntityAnnotation
+from pixano.schemas.annotations.per_frame_annotation import PerFrameAnnotation
 
 from ...errors import SpecValidationError
 from ...reader import RecordBundle, RecordBundleReader
@@ -44,14 +47,44 @@ _ANNOTATION_TABLE_KINDS = {
     "classifications": "classification",
 }
 
+# Fields that are part of the annotation payload schema (not custom attrs).
+_ANN_KNOWN_FIELDS: dict[str, set[str]] = {
+    "bbox": {"coords", "format", "is_normalized", "confidence"},
+    "mask": {"rle", "polygons", "size", "counts"},
+    "keypoints": {"template_id", "coords", "states"},
+    "multi_path": {"coords", "num_points", "is_closed"},
+    "text_span": {"mention", "spans_start", "spans_end"},
+    "classification": {"labels", "confidences"},
+}
+
+_ANN_BASE_FIELDS = set(EntityAnnotation.model_fields)
+_PFA_BASE_FIELDS = set(PerFrameAnnotation.model_fields)
+
+# Per-frame annotation kinds carry extra temporal fields that must be excluded.
+_PFA_KINDS = {"bbox", "mask", "keypoints", "multi_path"}
+
+
+def _json_default(obj: Any) -> Any:
+    """JSON serializer fallback for non-serializable types (datetime, etc.)."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 
 class PixanoJsonlExporter:
     """Streams a dataset back to the JSONL v2 folder layout."""
 
-    def __init__(self, media: Literal["files", "uris"] = "files", reader: RecordBundleReader | None = None):
+    def __init__(
+        self,
+        media: Literal["files", "uris"] = "files",
+        reader: RecordBundleReader | None = None,
+        *,
+        options: dict[str, Any] | None = None,
+    ):
         """Configure the export media policy."""
         self.media = media
         self.reader = reader or RecordBundleReader()
+        self.options = options or {}
 
     def export(self, dataset: Dataset, destination: Path) -> Path:
         """Export the dataset; returns the destination directory."""
@@ -68,7 +101,7 @@ class PixanoJsonlExporter:
                     handles[split] = (split_dir / "metadata.jsonl").open("w", encoding="utf-8")
                     handles[split].write(json.dumps({HEADER_KEY: "jsonl/2"}) + "\n")
                 line = self._bundle_to_line(bundle, destination / split)
-                handles[split].write(json.dumps(line, ensure_ascii=False) + "\n")
+                handles[split].write(json.dumps(line, ensure_ascii=False, default=_json_default) + "\n")
         finally:
             for handle in handles.values():
                 handle.close()
@@ -85,6 +118,12 @@ class PixanoJsonlExporter:
             "format": "pixano_jsonl",
             "media": {"mode": "uri" if self.media == "uris" else "embed"},
         }
+        include_fields = self.options.get("include_record_fields")
+        if include_fields:
+            # Recorded under `options` so the exported dataset.yaml stays a VALID
+            # import spec (ImportSpec forbids unknown top-level keys); the key is
+            # inert on import and documents how the export was produced.
+            spec_payload["options"] = {"include_record_fields": list(include_fields)}
         try:
             schema = SchemaSpec.from_dataset_info(dataset.info)
             spec_payload["schema"] = schema.model_dump(exclude_defaults=True, exclude_none=True)
@@ -106,7 +145,15 @@ class PixanoJsonlExporter:
 
     def _bundle_to_line(self, bundle: RecordBundle, split_dir: Path) -> dict[str, Any]:
         line: dict[str, Any] = {"id": bundle.record_id}
-        attrs = dict(bundle.record.model_dump(exclude=_RECORD_BASE_FIELDS))
+
+        # Compute which record base fields to exclude from attrs.
+        # Always exclude id/split (handled at the line level), but optionally
+        # include status, created_at, updated_at, comment when requested.
+        include = set(self.options.get("include_record_fields", []))
+        exclude = _RECORD_BASE_FIELDS - include
+        exclude |= {"id", "split"}
+
+        attrs = dict(bundle.record.model_dump(exclude=exclude))
         if attrs:
             line["attrs"] = attrs
 
@@ -241,6 +288,15 @@ class PixanoJsonlExporter:
             payload.update(mention=row.mention, spans_start=row.spans_start, spans_end=row.spans_end)
         elif kind == "classification":
             payload.update(labels=row.labels, confidences=row.confidences)
+
+        # Extract custom attrs (fields not in the base schema or known kind-specific fields).
+        exclude = _ANN_BASE_FIELDS | _ANN_KNOWN_FIELDS.get(kind, set())
+        if kind in _PFA_KINDS:
+            exclude |= _PFA_BASE_FIELDS
+        custom_attrs = row.model_dump(exclude=exclude, exclude_unset=True)
+        if custom_attrs:
+            payload["attrs"] = custom_attrs
+
         return payload
 
     def _conversations_payload(self, bundle: RecordBundle, view_id_to_logical: dict[str, str]) -> list[dict[str, Any]]:

@@ -6,7 +6,9 @@
 
 """Pixano data import/export CLI (spec §9) — a thin shell over the shared io core."""
 
+import datetime
 import json
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -241,13 +243,20 @@ def export_command(
     destination: Path = typer.Argument(..., help="Destination directory."),
     format: str = typer.Option("pixano_jsonl", "--format", help="Export format."),
     media: str = typer.Option("files", "--media", help="files (dump embedded bytes) or uris (write URIs verbatim)."),
+    include_record_field: list[str] = typer.Option(
+        [],
+        "--include-record-field",
+        help="Include a Record base field in exported JSONL attrs (repeatable). "
+        "Choices: status, created_at, updated_at, comment.",
+    ),
 ) -> None:
     """Export a dataset from the library (JSONL v2 output re-imports identically)."""
     library_dir = data_dir / "library"
     dataset_dir = library_dir / to_snake_case(dataset)
     try:
         resolved = Dataset(dataset_dir) if dataset_dir.is_dir() else Dataset.find(dataset, library_dir)
-        exported = export_dataset(resolved, destination, format=format, media=media)
+        options = {"include_record_fields": include_record_field} if include_record_field else None
+        exported = export_dataset(resolved, destination, format=format, media=media, options=options)
     except (PixanoDataError, FileNotFoundError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
@@ -368,3 +377,79 @@ def migrate_jsonl_command(
         typer.echo(f"- Needs attention: {note}", err=True)
     if report.needs_attention:
         typer.echo(f"{len(report.needs_attention)} line(s) need manual attention.", err=True)
+
+
+@data_app.command(name="fix-creation-dates")
+def fix_creation_dates(
+    data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Path to data directory."),
+) -> None:
+    """Fill empty ``creation_date`` fields of all datasets by using their oldest record timestamp."""
+    import os
+
+    from pixano.datasets.dataset import Dataset
+
+    library_dir = data_dir / "library"
+    if not library_dir.is_dir():
+        typer.echo(f"Error: Library directory not found at '{library_dir}'.", err=True)
+        raise typer.Exit(code=1)
+
+    updated = 0
+    skipped = 0
+
+    for info_json in sorted(library_dir.glob("*/info.json")):
+        dataset_name = info_json.parent.name
+        try:
+            raw_info = json.loads(info_json.read_text(encoding="utf-8"))
+            if raw_info.get("creation_date", ""):
+                skipped += 1
+                continue
+
+            dataset = Dataset(info_json.parent)
+            if "records" not in dataset.info.tables:
+                typer.echo(f"Skipping '{dataset_name}': no records table.", err=True)
+                skipped += 1
+                continue
+
+            table = dataset.open_table("records")
+            if table.count_rows() == 0:
+                typer.echo(f"Skipping '{dataset_name}': records table is empty.")
+                skipped += 1
+                continue
+
+            oldest_rows = dataset.get_data(
+                table_name="records",
+                sortcol="created_at",
+                order="asc",
+                limit=1,
+            )
+            if not oldest_rows:
+                typer.echo(f"Skipping '{dataset_name}': no records found.")
+                skipped += 1
+                continue
+
+            # Naive timestamps were stamped in local time; astimezone converts
+            # (rather than relabels) them to UTC.
+            oldest_date = oldest_rows[0].created_at.astimezone(datetime.timezone.utc)
+
+            backup_path = info_json.with_suffix(".json.bak")
+            shutil.copy2(info_json, backup_path)
+
+            # Patch the RAW json: a DatasetInfo round-trip would silently drop
+            # unknown keys and undeserializable views (the read-time tolerance
+            # must not become a write-time deletion). Same pattern as
+            # Dataset._upgrade_spec_version.
+            raw_info["creation_date"] = oldest_date.isoformat()
+            tmp_file = info_json.with_suffix(".json.tmp")
+            tmp_file.write_text(json.dumps(raw_info, indent=4), encoding="utf-8")
+            os.replace(tmp_file, info_json)
+            typer.echo(
+                f"Updated '{dataset_name}': creation_date = {raw_info['creation_date']} "
+                f"(backup saved to {backup_path.name})"
+            )
+            updated += 1
+
+        except Exception as e:
+            typer.echo(f"Error processing '{dataset_name}': {e}", err=True)
+            skipped += 1
+
+    typer.echo(f"\nDone: {updated} dataset(s) updated, {skipped} skipped.")

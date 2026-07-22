@@ -17,6 +17,8 @@ export interface DatasetInfoResponse {
   description: string;
   size: string;
   preview: string;
+  creation_date: string;
+  bookmarks: string[];
   workspace: string;
   storage_mode: string;
   num_records: number;
