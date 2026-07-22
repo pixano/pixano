@@ -17,6 +17,7 @@ License: CECILL-C
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import type { DatasetInfo } from "$lib/ui";
   import { icons } from "$lib/ui";
+  import { sortDatasets } from "$lib/utils/datasetSort";
   import { getExplorerRoute } from "$lib/utils/routes";
 
   /**
@@ -64,13 +65,6 @@ License: CECILL-C
       textClass: "text-yellow-500",
     },
   ];
-
-  function sortDatasets(list: DatasetInfo[], mode: "name" | "creation_date"): DatasetInfo[] {
-    return [...list].sort((a, b) => {
-      if (mode === "name") return a.name.localeCompare(b.name);
-      return a.creation_date.localeCompare(b.creation_date);
-    });
-  }
 
   const allDatasets = $derived(datasetsStore.value);
 

@@ -377,6 +377,21 @@ class TestDatasetInfo:
     def test_bookmarks_constant(self):
         assert BOOKMARK_TYPES == ("TODO", "NEW", "FAVORITE")
 
+    def test_creation_date_empty_and_stable_for_legacy_files(self):
+        """Pre-creation_date datasets load "" — never a fabricated load-time date."""
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        temp_file.write_text(
+            """{
+    "id": "id",
+    "name": "old",
+    "workspace": "image",
+    "record": {"base": "Record", "fields": {}},
+    "views": {}
+}"""
+        )
+        assert DatasetInfo.from_json(temp_file).creation_date == ""
+        assert DatasetInfo.from_json(temp_file).creation_date == ""  # stable across loads
+
 
 class TestSpecVersion:
     def test_defaults_to_2_for_new_infos(self):

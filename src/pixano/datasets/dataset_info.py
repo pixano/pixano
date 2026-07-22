@@ -150,13 +150,6 @@ class DatasetInfo(BaseModel):
             raise ValueError("id must not contain spaces")
         return v
 
-    @field_validator("creation_date", mode="before")
-    @classmethod
-    def _creation_date_validator(cls, v: str) -> str:
-        if not v:
-            return datetime.now(timezone.utc).isoformat()
-        return v
-
     @model_validator(mode="before")
     @classmethod
     def _normalize_input(cls, data: object) -> object:
@@ -293,6 +286,9 @@ class DatasetInfo(BaseModel):
         )
         # Datasets written before spec_version existed are layout version 1.
         info_json.setdefault("spec_version", 1)
+        # Datasets written before creation_date existed load a STABLE empty value —
+        # never a fabricated load-time date (the fix-creation-dates CLI backfills it).
+        info_json.setdefault("creation_date", "")
 
         for slot_name in supported_dataset_info_slots():
             schema_payload = info_json.get(slot_name)
