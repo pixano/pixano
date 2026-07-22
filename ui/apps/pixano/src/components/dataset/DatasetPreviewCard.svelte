@@ -43,16 +43,16 @@ License: CECILL-C
   };
 
   const STATUS_COLORS: Record<string, string> = {
-    new: "#EF4444",
-    done: "#22C55E",
-    validated: "#22C55E",
-    todo: "#EF4444",
-    review: "#EAB308",
-    inReview: "#EAB308",
+    todo: "#94A3B8",
+    new: "#94A3B8",
     wip: "#3B82F6",
     inProgress: "#3B82F6",
+    review: "#EAB308",
+    inReview: "#EAB308",
+    done: "#22C55E",
+    validated: "#22C55E",
   };
-  const STATUS_DEFAULT_COLOR = "#94A3B8";
+  const STATUS_DEFAULT_COLOR = "#DAE1F5";
 
   type SplitGroup = {
     split: string;

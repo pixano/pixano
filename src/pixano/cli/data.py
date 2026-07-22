@@ -368,3 +368,73 @@ def migrate_jsonl_command(
         typer.echo(f"- Needs attention: {note}", err=True)
     if report.needs_attention:
         typer.echo(f"{len(report.needs_attention)} line(s) need manual attention.", err=True)
+
+
+@data_app.command(name="fix-creation-dates")
+def fix_creation_dates(
+    data_dir: Path = typer.Argument(..., exists=True, dir_okay=True, help="Path to data directory."),
+) -> None:
+    """Fill empty ``creation_date`` fields of all datasets by using their oldest record timestamp."""
+    from pixano.datasets.dataset import Dataset
+
+    library_dir = data_dir / "library"
+    if not library_dir.is_dir():
+        typer.echo(f"Error: Library directory not found at '{library_dir}'.", err=True)
+        raise typer.Exit(code=1)
+
+    updated = 0
+    skipped = 0
+
+    for info_json in sorted(library_dir.glob("*/info.json")):
+        dataset_name = info_json.parent.name
+        raw_info = json.loads(info_json.read_text(encoding="utf-8"))
+        creation_date = raw_info.get("creation_date", "")
+
+        if creation_date:
+            skipped += 1
+            continue
+
+        try:
+            dataset = Dataset(info_json.parent)
+            if "records" not in dataset.info.tables:
+                typer.echo(f"Skipping '{dataset_name}': no records table.", err=True)
+                skipped += 1
+                continue
+
+            table = dataset.open_table("records")
+            if table.count_rows() == 0:
+                typer.echo(f"Skipping '{dataset_name}': records table is empty.")
+                skipped += 1
+                continue
+
+            oldest_rows = dataset.get_data(
+                table_name="records",
+                sortcol="created_at",
+                order="asc",
+                limit=1,
+            )
+            if not oldest_rows:
+                typer.echo(f"Skipping '{dataset_name}': no records found.")
+                skipped += 1
+                continue
+
+            oldest_date = oldest_rows[0].created_at
+            if oldest_date.tzinfo is None:
+                oldest_date = oldest_date.replace(tzinfo=timezone.utc)
+            dataset.info.creation_date = oldest_date.isoformat()
+
+            backup_path = info_json.with_suffix(".json.bak")
+            shutil.copy2(info_json, backup_path)
+
+            dataset.info.to_json(info_json)
+            typer.echo(
+                f"Updated '{dataset_name}': creation_date = {dataset.info.creation_date} "
+                f"(backup saved to {backup_path.name})"
+            )
+            updated += 1
+
+        except Exception as e:
+            typer.echo(f"Error processing '{dataset_name}': {e}", err=True)
+            skipped += 1
+
+    typer.echo(f"\nDone: {updated} dataset(s) updated, {skipped} skipped.")
