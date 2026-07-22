@@ -33,7 +33,11 @@ describe("sortDatasets", () => {
 
   it("name mode sorts alphabetically regardless of dates", () => {
     const sorted = sortDatasets(
-      [ds("bravo", "2026-07-01T00:00:00+00:00"), ds("alpha", ""), ds("charlie", "2026-01-01T00:00:00+00:00")],
+      [
+        ds("bravo", "2026-07-01T00:00:00+00:00"),
+        ds("alpha", ""),
+        ds("charlie", "2026-01-01T00:00:00+00:00"),
+      ],
       "name",
     );
     expect(sorted.map((d) => d.name)).toEqual(["alpha", "bravo", "charlie"]);

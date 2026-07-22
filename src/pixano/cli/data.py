@@ -381,9 +381,11 @@ def migrate_jsonl_command(
 
 @data_app.command(name="fix-creation-dates")
 def fix_creation_dates(
-    data_dir: Path = typer.Argument(..., exists=True, dir_okay=True, help="Path to data directory."),
+    data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Path to data directory."),
 ) -> None:
     """Fill empty ``creation_date`` fields of all datasets by using their oldest record timestamp."""
+    import os
+
     from pixano.datasets.dataset import Dataset
 
     library_dir = data_dir / "library"
@@ -396,14 +398,12 @@ def fix_creation_dates(
 
     for info_json in sorted(library_dir.glob("*/info.json")):
         dataset_name = info_json.parent.name
-        raw_info = json.loads(info_json.read_text(encoding="utf-8"))
-        creation_date = raw_info.get("creation_date", "")
-
-        if creation_date:
-            skipped += 1
-            continue
-
         try:
+            raw_info = json.loads(info_json.read_text(encoding="utf-8"))
+            if raw_info.get("creation_date", ""):
+                skipped += 1
+                continue
+
             dataset = Dataset(info_json.parent)
             if "records" not in dataset.info.tables:
                 typer.echo(f"Skipping '{dataset_name}': no records table.", err=True)
@@ -427,17 +427,23 @@ def fix_creation_dates(
                 skipped += 1
                 continue
 
-            oldest_date = oldest_rows[0].created_at
-            if oldest_date.tzinfo is None:
-                oldest_date = oldest_date.replace(tzinfo=datetime.timezone.utc)
-            dataset.info.creation_date = oldest_date.isoformat()
+            # Naive timestamps were stamped in local time; astimezone converts
+            # (rather than relabels) them to UTC.
+            oldest_date = oldest_rows[0].created_at.astimezone(datetime.timezone.utc)
 
             backup_path = info_json.with_suffix(".json.bak")
             shutil.copy2(info_json, backup_path)
 
-            dataset.info.to_json(info_json)
+            # Patch the RAW json: a DatasetInfo round-trip would silently drop
+            # unknown keys and undeserializable views (the read-time tolerance
+            # must not become a write-time deletion). Same pattern as
+            # Dataset._upgrade_spec_version.
+            raw_info["creation_date"] = oldest_date.isoformat()
+            tmp_file = info_json.with_suffix(".json.tmp")
+            tmp_file.write_text(json.dumps(raw_info, indent=4), encoding="utf-8")
+            os.replace(tmp_file, info_json)
             typer.echo(
-                f"Updated '{dataset_name}': creation_date = {dataset.info.creation_date} "
+                f"Updated '{dataset_name}': creation_date = {raw_info['creation_date']} "
                 f"(backup saved to {backup_path.name})"
             )
             updated += 1
