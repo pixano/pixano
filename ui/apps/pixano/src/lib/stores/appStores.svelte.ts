@@ -13,9 +13,16 @@ import type { DatasetInfo } from "$lib/types/dataset";
 export const currentDatasetStore = reactiveStore<DatasetInfo | undefined>(undefined);
 export const datasetsStore = reactiveStore<DatasetInfo[]>([]);
 export const datasetFilter = reactiveStore<string>("");
+export const datasetSortMode = reactiveStore<"name" | "creation_date">("creation_date");
 export const datasetItemIds = reactiveStore<Array<string>>([]);
 export const datasetTotalItemsCount = reactiveStore<number>(0);
 export const currentItemSaveCoordinator = createCurrentItemSaveCoordinator();
+
+export function updateDatasetInStore(datasetId: string, updates: Partial<DatasetInfo>) {
+  datasetsStore.update((datasets) =>
+    datasets.map((d) => (d.id === datasetId ? { ...d, ...updates } : d)),
+  );
+}
 
 // ─── Theme Store ────────────────────────────────────────────────────────────────
 

@@ -147,6 +147,7 @@ class _AnnBase(_Strict):
     id: str | None = None
     frame_index: int | None = None
     source: SourceSpec | None = None
+    attrs: dict[str, Any] = Field(default_factory=dict)
 
 
 class BBoxAnn(_AnnBase):

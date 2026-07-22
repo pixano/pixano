@@ -435,17 +435,31 @@ class JobRunner:
         except OSError:  # pragma: no cover - defensive
             pass
 
-    def submit_export(self, dataset_path: str, destination: str, format: str, media: str) -> JobRecord:
+    def submit_export(
+        self, dataset_path: str, destination: str, format: str, media: str, options: dict[str, Any] | None = None
+    ) -> JobRecord:
         """Create a pending export job and start it on the worker thread."""
-        job = self.store.create_job("export", dataset=Path(dataset_path).name, spec={"format": format, "media": media})
+        job = self.store.create_job(
+            "export", dataset=Path(dataset_path).name, spec={"format": format, "media": media, **(options or {})}
+        )
         thread = threading.Thread(
-            target=self._run_export, args=(job.id, dataset_path, destination, format, media), daemon=True
+            target=self._run_export,
+            args=(job.id, dataset_path, destination, format, media, options),
+            daemon=True,
         )
         self._threads.append(thread)
         thread.start()
         return job
 
-    def _run_export(self, job_id: str, dataset_path: str, destination: str, format: str, media: str) -> None:
+    def _run_export(
+        self,
+        job_id: str,
+        dataset_path: str,
+        destination: str,
+        format: str,
+        media: str,
+        options: dict[str, Any] | None = None,
+    ) -> None:
         from .api import export_dataset
 
         with self._lock:
@@ -454,7 +468,7 @@ class JobRunner:
                 return
             self.store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=time.time())
             try:
-                exported = export_dataset(dataset_path, destination, format=format, media=media)
+                exported = export_dataset(dataset_path, destination, format=format, media=media, options=options)
                 self.store.update_job(
                     job_id, status="done", progress={"phase": "done", "message": str(exported), "final": True}
                 )

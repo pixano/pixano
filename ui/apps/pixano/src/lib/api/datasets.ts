@@ -7,7 +7,7 @@ License: CECILL-C
 import { toDataset, toDatasetInfo } from "./adapters";
 import { apiFetch, requestJson } from "./apiClient";
 import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
-import type { Dataset, DatasetInfo } from "$lib/types/dataset";
+import type { Dataset, DatasetInfo, SplitStatusCount } from "$lib/types/dataset";
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
   const datasets = await apiFetch<DatasetInfoResponse[]>("/datasets", {}, [], "listDatasets");
@@ -28,4 +28,27 @@ export async function getDatasetStats(
     { method: "GET", signal: options?.signal },
     "getDatasetStats",
   );
+}
+
+export async function getDatasetSplits(
+  datasetId: string,
+  options?: { signal?: AbortSignal },
+): Promise<SplitStatusCount[]> {
+  return requestJson<SplitStatusCount[]>(
+    `/datasets/info/${datasetId}/splits`,
+    { method: "GET", signal: options?.signal },
+    "getDatasetSplits",
+  );
+}
+
+export async function updateDatasetBookmark(
+  datasetId: string,
+  bookmark: string,
+): Promise<DatasetInfo> {
+  const dto = await requestJson<DatasetInfoResponse>(
+    `/datasets/info/${datasetId}/bookmark?bookmark=${encodeURIComponent(bookmark)}`,
+    { method: "PATCH" },
+    "updateDatasetBookmark",
+  );
+  return toDatasetInfo(dto);
 }

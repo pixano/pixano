@@ -13,7 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pixano.api.models import DatasetInfoResponse, DatasetResponse
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
-from pixano.datasets import DatasetInfo
+from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets.dataset_info import BOOKMARK_TYPES
+from pixano.datasets.dataset_stat import SplitStatusCount
 from pixano.schemas.schema_group import SchemaGroup
 
 
@@ -112,6 +114,27 @@ def get_dataset_stats(
     return result
 
 
+@router.get("/info/{id}/splits", response_model=list[SplitStatusCount], operation_id="get_dataset_splits")
+def get_dataset_splits(
+    id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[SplitStatusCount]:
+    """Get split/status record counts for a dataset.
+
+    Args:
+        id: Dataset ID.
+        settings: App settings.
+
+    Returns:
+        List of split-status-count entries.
+    """
+    try:
+        dataset = Dataset.find(id, settings.library_dir)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+    return dataset.get_splits_count()
+
+
 @router.get("/{id}", response_model=DatasetResponse, operation_id="get_dataset")
 def get_dataset(
     id: str,
@@ -128,3 +151,42 @@ def get_dataset(
     """
     dataset = get_dataset_dep(id, settings)
     return DatasetResponse.from_dataset(dataset)
+
+
+@router.patch("/info/{id}/bookmark", response_model=DatasetInfoResponse, operation_id="toggle_dataset_bookmark")
+def toggle_dataset_bookmark(
+    id: str,
+    bookmark: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DatasetInfoResponse:
+    """Toggle a bookmark on a dataset.
+
+    If the bookmark is already present it is removed; otherwise it is added.
+
+    Args:
+        id: Dataset ID.
+        bookmark: Bookmark type (must be one of TODO, NEW, FAVORITE).
+        settings: App settings.
+
+    Returns:
+        Updated dataset info.
+    """
+    if bookmark not in BOOKMARK_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid bookmark type '{bookmark}'. Must be one of {BOOKMARK_TYPES}.",
+        )
+
+    try:
+        info, path = DatasetInfo.load_id(id, settings.library_dir, return_path=True)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
+
+    if bookmark in info.bookmarks:
+        info.bookmarks.remove(bookmark)
+    else:
+        info.bookmarks.append(bookmark)
+
+    info.to_json(path / "info.json")
+
+    return DatasetInfoResponse.from_dataset_info(info, path)

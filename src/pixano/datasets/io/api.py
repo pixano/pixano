@@ -14,7 +14,7 @@ tqdm sink; the REST layer does the same with a job-store sink.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from pixano.datasets.dataset_info import DatasetInfo
 
@@ -144,6 +144,7 @@ def export_dataset(
     destination: str | Path,
     format: str = "pixano_jsonl",
     media: str = "files",
+    options: dict[str, Any] | None = None,
 ) -> Path:
     """Export a dataset to a data format (spec §10).
 
@@ -160,7 +161,7 @@ def export_dataset(
     if format == "pixano_jsonl":
         from .formats.pixano_jsonl.exporter import PixanoJsonlExporter
 
-        return PixanoJsonlExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
+        return PixanoJsonlExporter(media=media, options=options).export(resolved, Path(destination))  # type: ignore[arg-type]
     if format == "coco":
         from .formats.coco.exporter import CocoExporter
 
